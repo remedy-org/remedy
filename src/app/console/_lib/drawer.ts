@@ -37,14 +37,14 @@ export interface DrawerClaim {
   recall: { id: string; autoPay: boolean };
 }
 
-const PRE = new Set(["session", "duplicate_photo", "payer", "payer_verified", "state"]);
+// Pre-check reasons and a person's review aren't model answers: the drawer shows them elsewhere.
+const NOT_MODEL = new Set(["session", "duplicate_photo", "payer", "payer_verified", "state", "review"]);
 
 function checkLabel(check: string, code: string): string {
   if (check === "label") return "Label";
   if (check === "code") return `Code ${code}`;
   if (check === "same_item") return "Same item";
   if (check === "screen") return "Real photo";
-  if (check === "review") return "Review";
   const step = check.match(/^step_(\d+)$/);
   return step ? `Step ${step[1]}` : check;
 }
@@ -63,7 +63,7 @@ export function photoUrl(claimId: string, n: number) {
 
 export function toDrawerClaim(c: Claim, recall: Recall): DrawerClaim {
   const checks = c.reasons
-    .filter((r) => !PRE.has(r.check))
+    .filter((r) => !NOT_MODEL.has(r.check))
     .map((r) => ({ id: r.check, label: checkLabel(r.check, c.code), outcome: r.outcome, rule: r.text, evidence: evidenceFor(r.check, c.verdict) }));
   return {
     id: c.id,

@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui";
 /** The claims page while it loads: heading, the four numbers, tabs and grid rows, in their real sizes. */
 export function ConsoleSkeleton() {
   return (
-    <main aria-busy="true" aria-label="Loading claims" className="flex flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+    <div aria-busy="true" aria-label="Loading claims" className="flex flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-3">
         <Skeleton className="h-3 w-56" />
         <Skeleton className="h-8 w-80 max-w-full" />
@@ -24,7 +24,7 @@ export function ConsoleSkeleton() {
         ))}
       </div>
       <SkeletonGrid rows={10} />
-    </main>
+    </div>
   );
 }
 

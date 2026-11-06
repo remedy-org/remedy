@@ -29,7 +29,11 @@ export const PublishInput = z.object({
   spec: SpecInput,
   refund: RefundValue,
   autoPay: z.boolean(),
-  slug: RecallSlug,
+  slug: z
+    .string()
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Use lowercase letters and numbers, joined by single dashes")
+    .max(64, "Keep it under 64 characters")
+    .pipe(RecallSlug),
 });
 
 export const SettingsInput = z.object({ refund: RefundValue, autoPay: z.boolean() });
@@ -52,7 +56,8 @@ export interface CpscSummary {
 
 export function summarizeCpsc(r: CpscRecord): CpscSummary {
   const product = r.Products.map((p) => p.Name).join("; ");
-  const firm = r.Manufacturers[0]?.Name ?? r.Retailers[0]?.Name ?? "";
+  // Retailer entries are sentences ("Sold At: Target..."), so fall back to the title's "<Firm> Recalls ..." instead.
+  const firm = r.Manufacturers[0]?.Name ?? r.Title.match(/^(.+?) Recalls? /)?.[1] ?? "";
   const image = r.Images[0];
   return {
     id: recallId(r),

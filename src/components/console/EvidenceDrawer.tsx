@@ -6,6 +6,7 @@ import { Button, CheckProgress, CrossIcon, ErrorState, ExhibitLabel, Skeleton, S
 import type { ApiError } from "@/app/console/_lib/api";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import type { PreCheckState } from "@/app/console/_lib/view";
+import { api } from "./api";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { formatClock, formatTime } from "./format";
 import { ReviewActions } from "./ReviewActions";
@@ -51,17 +52,13 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
 
   useEffect(() => {
-    const ctrl = new AbortController();
-    fetch(`/api/console/claims/${id}`, { signal: ctrl.signal })
-      .then(async (res) => {
-        const data = await res.json().catch(() => null);
-        if (res.ok && data) setLoad({ state: "ready", claim: data as DrawerClaim });
-        else setLoad({ state: "error", error: (data as ApiError | null) ?? { error: `Remedy answered ${res.status}.` } });
-      })
-      .catch((e: unknown) => {
-        if (!ctrl.signal.aborted) setLoad({ state: "error", error: { error: e instanceof Error ? "Remedy didn't answer. Check your connection." : String(e) } });
-      });
-    return () => ctrl.abort();
+    let live = true;
+    api<DrawerClaim>(`/api/console/claims/${id}`).then((res) => {
+      if (live) setLoad(res.ok ? { state: "ready", claim: res.data } : { state: "error", error: res.error });
+    });
+    return () => {
+      live = false;
+    };
   }, [id, attempt]);
 
   const claim = load.state === "ready" ? load.claim : null;
@@ -249,7 +246,7 @@ function Evidence({ claim }: { claim: DrawerClaim }) {
   );
 }
 
-function DrawerSkeleton() {
+export function DrawerSkeleton() {
   return (
     <div className="flex flex-col gap-8 px-4 py-6 sm:px-6">
       <div className="flex flex-col gap-3">

@@ -61,10 +61,10 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
         </Card>
 
         <div className="mt-8 flex w-full max-w-claim flex-col items-center gap-2 text-center text-ui text-muted">
-          <Button href="/" variant="tertiary" size="sm">
+          <Button href="/" variant="tertiary" size="sm" arrow={false}>
             Back to Remedy
           </Button>
-          <p>
+          <p className="text-balance">
             Own a recalled product? Use the claim link on the recall notice, or{" "}
             <Link href="/r/kikea-x-vesolje/try" className="text-text underline underline-offset-4 hover:text-accent-text">
               see a claim

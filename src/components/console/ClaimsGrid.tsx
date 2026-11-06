@@ -23,6 +23,7 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, RowApiModule, RowSelec
 
 // Below this width the grid keeps three columns: claim (with its time), decision and amount.
 const NARROW = 720;
+const WIDE_ONLY = new Set(["createdAt", "payer", "reason", "payoutStatus"]);
 
 export interface ClaimsGridProps {
   rows: ClaimRow[];
@@ -52,13 +53,13 @@ export function ClaimsGrid({ rows, selected, onOpen }: ClaimsGridProps) {
   }, [selected]);
 
   const columns = useMemo<ColDef<ClaimRow>[]>(() => {
-    const all: (ColDef<ClaimRow> & { wide?: boolean })[] = [
+    const all: ColDef<ClaimRow>[] = [
       { headerName: "Claim", field: "id", cellRenderer: ClaimCell, minWidth: narrow ? 116 : 170, flex: narrow ? 1 : 0, width: 170 },
-      { headerName: "Filed", field: "createdAt", cellRenderer: FiledCell, width: 140, sortable: true, sort: "desc", wide: true },
-      { headerName: "PayPal account", field: "payer", cellRenderer: PayerCell, width: 190, wide: true },
+      { headerName: "Filed", field: "createdAt", cellRenderer: FiledCell, width: 140, sortable: true, sort: "desc" },
+      { headerName: "PayPal account", field: "payer", cellRenderer: PayerCell, width: 190 },
       { headerName: "Decision", field: "decision", cellRenderer: DecisionCell, width: narrow ? 116 : 130 },
-      { headerName: "Reason", field: "reason", cellRenderer: ReasonCell, flex: 1, minWidth: 220, wide: true },
-      { headerName: "Payout", field: "payoutStatus", cellRenderer: PayoutCell, width: 120, wide: true },
+      { headerName: "Reason", field: "reason", cellRenderer: ReasonCell, flex: 1, minWidth: 220 },
+      { headerName: "Payout", field: "payoutStatus", cellRenderer: PayoutCell, width: 120 },
       {
         headerName: "Amount",
         field: "amount",
@@ -68,7 +69,7 @@ export function ClaimsGrid({ rows, selected, onOpen }: ClaimsGridProps) {
         cellClass: "!flex items-center justify-end",
       },
     ];
-    return all.filter((c) => !narrow || !c.wide).map(({ wide: _wide, ...c }) => ({ sortable: false, resizable: false, suppressMovable: true, cellClass: "!flex items-center", ...c }));
+    return all.filter((c) => !narrow || !WIDE_ONLY.has(c.field ?? "")).map((c) => ({ sortable: false, resizable: false, suppressMovable: true, cellClass: "!flex items-center", ...c }));
   }, [narrow]);
 
   return (

@@ -4,23 +4,9 @@ import { useState } from "react";
 import { Button, ErrorState, Field, Textarea } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
+import { api } from "./api";
 
 type Mode = "idle" | "approve" | "reject";
-
-async function post(url: string, json?: unknown): Promise<{ ok: true; claim: DrawerClaim } | { ok: false; error: ApiError }> {
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: json ? { "Content-Type": "application/json" } : undefined,
-      body: json ? JSON.stringify(json) : undefined,
-    });
-    const data = await res.json().catch(() => null);
-    if (res.ok && data) return { ok: true, claim: data as DrawerClaim };
-    return { ok: false, error: (data as ApiError | null) ?? { error: `Remedy answered ${res.status}. Try again.` } };
-  } catch {
-    return { ok: false, error: { error: "Remedy didn't answer. Check your connection; nothing changed." } };
-  }
-}
 
 /** Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit click. */
 export function ReviewActions({ claim, onDone }: { claim: DrawerClaim; onDone: (c: DrawerClaim) => void }) {
@@ -34,9 +20,9 @@ export function ReviewActions({ claim, onDone }: { claim: DrawerClaim; onDone: (
   const run = async (url: string, json?: unknown) => {
     setBusy(true);
     setError(null);
-    const result = await post(url, json);
+    const result = await api<DrawerClaim>(url, { method: "POST", json });
     setBusy(false);
-    if (result.ok) onDone(result.claim);
+    if (result.ok) onDone(result.data);
     else setError(result.error);
   };
 
@@ -85,6 +71,7 @@ export function ReviewActions({ claim, onDone }: { claim: DrawerClaim; onDone: (
 
       {mode === "reject" && (
         <form
+          noValidate
           className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
