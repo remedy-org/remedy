@@ -20,12 +20,15 @@ next-env.d.ts
 # vercel
 .vercel
 
-# local data and spike fixtures (test photos belong to their owners)
+# local data and eval fixtures (test photos belong to their owners)
 data/
-spikes/photos/
-spikes/out/
+eval/photos/
+eval/out/
 
 # misc
 .DS_Store
 *.pem
 npm-debug.log*
+
+# gstack local working files
+.gstack/

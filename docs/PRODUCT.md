@@ -10,7 +10,8 @@ Remedy is its own website built on PayPal's public APIs. Companies running a rec
 
 | Topic | Decision |
 |---|---|
-| Stack | One Next.js 16 app (TypeScript, Tailwind 4, AG Grid 36) on Vercel. API in route handlers; no separate backend. |
+| Stack | One Next.js 16 app (Tailwind 4, AG Grid 36) on Vercel. API in route handlers; no separate backend. |
+| Language | TypeScript, strict, for all new code. The `.mjs` spike scripts stay as the record of the experiments. |
 | Storage | Vercel Blob: private photos, one JSON file per claim, one index file. No database. |
 | Vision | GPT-6.1 Sol at high effort describes; a fixed rule in code decides. |
 | Photos | Real claims use the live camera only (laptop webcam or phone). Judges get a labelled "Try with sample photos" demo. |
@@ -49,7 +50,7 @@ Remedy is its own website built on PayPal's public APIs. Companies running a rec
 - **Claims grid:** claim, time, PayPal account (masked, verified), decision, reason, payout status, amount. Filter by decision; sort by time.
 - **Evidence drawer:** photos, every model answer with its quoted evidence, the pre-checks, the rule's decision, and approve or reject for held claims.
 - **Header:** units remedied of units sold, paid out, waiting for review, refused.
-- **Recall import:** paste a CPSC URL. The model drafts the checks under the five spec rules (`spikes/README.md`); the company edits, then publishes.
+- **Recall import:** paste a CPSC URL. The model drafts the checks under the five spec rules (`docs/EVAL.md`); the company edits, then publishes.
 
 ## Demo mode for judges
 

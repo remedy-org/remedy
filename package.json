@@ -11,8 +11,9 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "spike:paypal": "node --env-file=.env spikes/paypal-chain.mjs",
-    "spike:vision": "node --env-file=.env spikes/vision-check.mjs"
+    "eval:run": "tsx --env-file=.env eval/run.ts",
+    "eval:summarize": "tsx eval/summarize.ts",
+    "eval:photos": "tsx --env-file=.env eval/make-photos.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
@@ -35,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
   }

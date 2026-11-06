@@ -1,6 +1,6 @@
-# Remedy spikes: two tests before we build
+# Remedy evals: the two tests before we built
 
-Go/no-go: **Fri 6 Nov, 21:00 IST.** If either fails, we switch to Upkeep (IDEA.md §3).
+Go/no-go was **Fri 6 Nov, 21:00 IST**. If either failed, we'd switch to Upkeep (IDEA.md §3).
 
 **Both passed:** spike 1 on 6 Nov, spike 2 on 7 Nov. Build on GPT-6.1 Sol at high effort.
 
@@ -9,9 +9,11 @@ cd /Users/mohit/dev/hackathon/paypal_ai/remedy
 cp .env.example .env    # then fill it in as below; .env is git-ignored
 ```
 
-## Spike 1: the PayPal money chain (about 30 minutes, mostly clicking)
+## Spike 1: the PayPal money chain
 
-You do steps 1–4 in the PayPal dashboard yourself. They need your login, and nobody else should type your credentials.
+**Result, 6 Nov: pass.** In the sandbox: the app token carried the Payouts and Log in with PayPal scopes (test 1); a $1.00 payout by email succeeded (test 2); Log in with PayPal returned a verified payer ID, and a payout to that exact payer ID succeeded (test 3). Test 4, the fallback, wasn't needed. Results are in `eval/out/spike1.json`.
+
+The spike script is gone: `src/lib/paypal` now makes the same calls. The dashboard setup still applies. You do it yourself: it needs your login, and nobody else should type your credentials.
 
 1. **Create two US sandbox accounts.** Go to [developer.paypal.com](https://developer.paypal.com) → **Testing Tools → Sandbox Accounts → Create account**.
    - **Business**, country **United States**. This one sends the refunds.
@@ -21,20 +23,12 @@ You do steps 1–4 in the PayPal dashboard yourself. They need your login, and n
 3. **Turn on the features**, on the app's page:
    - Tick **Payouts**.
    - Tick **Log in with PayPal**, set the Return URL to `http://127.0.0.1:8787/callback`, and open **Advanced settings**. Tick email, full name, **PayPal account ID (payer ID)** and **account verification status**. If it asks for privacy-policy and user-agreement URLs, any URL works for the sandbox.
-   - Save. A `http://localhost…` Return URL makes the save fail ("Something went wrong saving the application", HTTP 520); `127.0.0.1` saves fine. If it still won't save, skip it: test 4 below is the fallback.
+   - Save. A `http://localhost…` Return URL makes the save fail ("Something went wrong saving the application", HTTP 520); `127.0.0.1` saves fine.
 4. **Finish `.env`.** Set `PAYPAL_RECEIVER_EMAIL` to the US personal sandbox account's email (from Sandbox Accounts → View/Edit).
-5. **Run it:**
-   ```bash
-   npm run spike:paypal
-   ```
-   It sends a $1.00 payout by email straight away. Then open http://127.0.0.1:8787 and use the **US personal** sandbox account:
-   - **Test 3, Log in with PayPal:** gets your payer ID, then pays exactly that account.
-   - **Test 4, a $1 hold then release:** the fallback identity check.
-   - Click **Finish** when done. Results are saved in `spikes/out/spike1.json`.
 
 If PayPal also rejects `127.0.0.1`, run `ngrok http 8787`. Use the `https://…ngrok…/callback` address both in the dashboard and as `PAYPAL_REDIRECT_URI` in `.env`.
 
-**Pass:** tests 1 and 2 pass, plus either test 3 or test 4.
+**Pass line:** tests 1 and 2 pass, plus either test 3 or test 4.
 
 ## Spike 2: the camera check
 
@@ -49,19 +43,34 @@ If PayPal also rejects `127.0.0.1`, run `ngrok http 8787`. Use the `https://…n
 | Set | Cases | What it tests |
 |---|---|---|
 | Web photos | `w01`–`w17`: real owner photos (Govee, Aloha Breeze, Midea); official "correct photo" examples (Steamfast, Lexmark); CPSC product shots (DREO, HotHands, Kikea); traps (other pillows, AI fakes from news coverage, a screenshot, a photo of a monitor, a photo against the wrong recall) | Reading labels and steps. No web photo can carry this claim's code, so none may ever pay. `w03` turns the code check off and should pass. |
-| Code-on | `c01`–`c14`, AI images made by `make-code-photos.mjs`: eight real-looking claims with the code (`c01`–`c08`); wrong codes (`c09` has K7O written, while `c11`–`c13` reuse a good photo under a different expected code); a photo of a screen (`c10`); an AI artifact (`c14`, three cut ends on two pieces) | The pass path, and the character-by-character code check |
+| Code-on | `c01`–`c14`, AI images made by `eval/make-photos.ts`: eight real-looking claims with the code (`c01`–`c08`); wrong codes (`c09` has K7O written, while `c11`–`c13` reuse a good photo under a different expected code); a photo of a screen (`c10`); an AI artifact (`c14`, three cut ends on two pieces) | The pass path, and the character-by-character code check |
 | Held out | `h01`–`h05`, written after the round-1 fixes: new HotHands and Kikea claims, a wrong label (X-VESOLIE), a model that isn't recalled (SF-430), a slit instead of a cut | Whether the fixes hold on photos they never saw |
 
-Each case scores every answer (label, each step, code, screen) against an answer key, not just the decision. Every image was checked by eye before its key was trusted. Sources and prompts are in `spikes/photos/SOURCES.md`; the images are git-ignored.
+Each claim is a folder under `eval/photos/` with 1-3 photos and a `case.json`:
 
-```bash
-npm run spike:vision                                    # GPT-6.1 Sol, high effort, all cases
-npm run spike:vision -- --model gpt-6.1-terra --effort medium --out spikes/out/x.json
-node --env-file=.env spikes/make-code-photos.mjs        # makes any code-on case that's missing
-node spikes/summarize.mjs spikes/out/runs               # one row per model across repeated runs
+```json
+{ "code": "K7Q", "expect": "pass", "spec": "eval/specs/standin-pillow.json",
+  "truth": { "label": "yes", "steps": ["done", "done"], "code": "yes", "screen": "no" } }
 ```
 
-Claude runs the same way with `--model claude-opus-5-5` once `ANTHROPIC_API_KEY` is in `.env`. It hasn't been run yet.
+`"code": null` turns the code check off. `expect` and each `truth` value may list several acceptable answers. Each case scores every answer (label, each step, code, screen) against this answer key, not just the decision. Every image was checked by eye before its key was trusted. Sources and prompts are in `eval/photos/SOURCES.md`; the images are git-ignored. The check specs are in `eval/specs/`.
+
+### Running it
+
+The runner calls the app's own `runVisionCheck` and `decide` from `src/lib`, so it tests exactly what the app runs: the same prompt, schema, image resizing and rule. It reads `.env`, which needs everything `src/lib/env.ts` asks for, `APP_URL` included.
+
+```bash
+npm run eval:run                                        # GPT-6.1 Sol, high effort, all cases
+npm run eval:run -- --model gpt-6.1-terra --effort medium --out eval/out/x.json
+npm run eval:run -- path/to/cases                       # another folder of case folders
+npm run eval:photos                                     # makes any code-on case that's missing
+npm run eval:photos -- c01-pillow-cut-daylight          # remakes one case
+npm run eval:summarize -- eval/out/runs                 # one row per model across repeated runs
+```
+
+**Go line:** at least 90% of decisions and answers match, no answer errs toward paying, and no fake is ever "pass".
+
+The results below came from the first runner, a plain-JS copy of the check that resized with macOS `sips`. The app's check keeps its prompt, schema and rule, and resizes with `sharp`. The app's check calls OpenAI only, so Claude can't be evaluated through it.
 
 ### Results: 3 runs per model, high effort
 
@@ -74,7 +83,7 @@ Round 2 covers the 31 `w` and `c` claims; the held-out set is the 5 `h` claims. 
 | GPT-6.1 Terra | 29–30 of 31 · 5 of 5 | 18 of 21 · 6 of 6 | 2, `c14` · 0 | 93% · 96% | 10 (max 19) | $0.005 |
 | GPT-6 Luna | 28–29 of 31 · 4–5 of 5 | 16 of 21 · 6 of 6 | 3, `c14` · 2, `h03` | 93% · 96% | 10 (max 27) | $0.0006 |
 
-All four models rejected all 12 wrong-code attempts and every web photo, in every run.
+All four models rejected all 12 wrong-code attempts and every web photo, in every run. The raw runs are in `eval/out/runs` (round 2) and `eval/out/holdout`.
 
 Why Sol:
 - **Terra** holds the two-photo claim because it can't confirm both photos show the same pillow.
@@ -82,7 +91,7 @@ Why Sol:
 - **Astra** is 6× the price and too slow to demo. It does catch the `c14` flaw (2 of 3 runs here, 3 of 3 in round 1).
 - **Sol at medium effort** matched Sol at high on the 17 web claims, at 8 s a claim. That's an option if the demo needs speed.
 
-The harness's strict GO line still prints NO-GO for every model, because every model paid `c14` at least once.
+The strict go line still prints NO-GO for every model, because every model paid `c14` at least once.
 
 ### What changed between rounds
 
@@ -94,7 +103,7 @@ In round 1, Sol paid 16 of 21 real claims and Terra only 3. None of the holds wa
    - **w05:** I wrote the key from the first frame only. The second frame does show the cut stub, as every large model said.
    - **c03:** its photo 2 had three cut ends on two pieces, which Astra spotted and I'd missed. It became `c14`, and `c03` was remade.
 
-Round 1 results are kept in `spikes/out/runs-v1`.
+Round 1 results are kept in `eval/out/runs-v1`.
 
 ### Rules for the spec generator (this feeds the build)
 
@@ -113,13 +122,13 @@ Round 1 results are kept in `spikes/out/runs-v1`.
 - **AI fakes.** The models passed `c01`–`c08`, and all of them are AI images. The vision check can't tell a clean AI image from a photo, so it isn't the defence against fakes. These are:
   - the capture path: a live camera only, with the code issued inside that session;
   - one claim per verified PayPal account per unit.
-- **Claude**, which needs an Anthropic key.
+- **Claude**, which needs an Anthropic key, and isn't wired into the app's check.
 - **An independent answer key.** One person wrote the keys and checked them by eye.
 
 Spend for the whole spike: about $18 of OpenAI usage. That's $0.83 on images and the rest on vision runs.
 
 ### Before the demo: one real capture
 
-Shoot one real claim on any phone: a cheap pillow or cushion as the stand-in, cut in half, with a paper tag reading `X-VESOLJE` and that claim's code. Put it in `spikes/photos/r01-real-capture/` with a `case.json` such as `{ "code": "<the code>", "expect": "pass", "spec": "spikes/specs/standin-pillow.json" }` and run `npm run spike:vision`.
+Shoot one real claim on any phone: a cheap pillow or cushion as the stand-in, cut in half, with a paper tag reading `X-VESOLJE` and that claim's code. Put it in `eval/photos/r01-real-capture/` with a `case.json` such as `{ "code": "<the code>", "expect": "pass", "spec": "eval/specs/standin-pillow.json" }` and run `npm run eval:run`. Save it as JPEG: the app's resizer, `sharp`, can't read an iPhone's HEIC.
 
 The model only describes what it sees; a fixed rule in the code decides pass, hold or reject.

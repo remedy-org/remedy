@@ -1,25 +1,43 @@
-// Makes the spike 2 cases that carry a one-time code, with an OpenAI image model: no photo from the web can have one.
+// Makes the eval cases that carry a one-time code, with an OpenAI image model: no photo from the web can have one.
 // Each case gets its photos plus a case.json with the answer key. Look at every image before trusting its key:
 // image models sometimes misspell text, and the key must describe what is actually in the picture.
-// Run: node --env-file=.env spikes/make-code-photos.mjs [c01-pillow-cut-daylight ...]
+// Run: npm run eval:photos [-- c01-pillow-cut-daylight ...]
 // With no names it makes every case that has no case.json yet.
 
 import OpenAI, { toFile } from "openai";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
+import type { Outcome } from "../src/lib/types";
+
+type Want = string | string[];
+interface Photo {
+  prompt: string;
+  from?: string[];
+}
+interface GenCase {
+  name: string;
+  code: string;
+  expect: Outcome | Outcome[];
+  spec: string;
+  truth: { label?: Want; steps?: Want[]; code?: Want; screen?: Want };
+  note: string;
+  photos?: Photo[];
+  // Reuse another case's 01.jpg instead of making a photo.
+  copy?: string;
+}
 
 const client = new OpenAI();
 const MODEL = "gpt-image-2.6-sunburst";
 // USD per million tokens, from developers.openai.com/api/docs/guides/image-generation (7 Nov 2026).
 const RATE = { out: 30, imageIn: 8, textIn: 5 };
 const PHONE = "It is an ordinary smartphone photo taken at home: natural light, slightly imperfect framing, real textures, no studio look, and no writing anywhere except what is described.";
-const STANDIN = "spikes/specs/standin-pillow.json";
+const STANDIN = "eval/specs/standin-pillow.json";
 const DONE = { label: "yes", steps: ["done", "done"], code: "yes", screen: "no" };
-const tag = (code, pen = "black marker") =>
+const tag = (code: string, pen = "black marker") =>
   `A white paper luggage tag is tied to it with string. On the tag, in ${pen} handwriting, the first line reads "X-VESOLJE" and the second line reads "${code}", both clearly legible.`;
-const dir = (name) => join("spikes/photos", name);
+const dir = (name: string) => join("eval/photos", name);
 
-const CASES = [
+const CASES: GenCase[] = [
   {
     name: "c01-pillow-cut-daylight", code: "K7Q", expect: "pass", spec: STANDIN, truth: DONE,
     note: "Stand-in pillow cut in half in daylight, tag with the label and the right code.",
@@ -59,17 +77,17 @@ const CASES = [
     photos: [{ prompt: `A beige C-shaped nursing pillow lies on a bathroom floor, cut fully in half: two separate pieces with stuffing out. ${tag("K7Q", "quick, slanted blue ballpoint")} The tag is half in shadow, but every character can still be read. ${PHONE}` }],
   },
   {
-    name: "c06-steamfast-tag", code: "K7Q", expect: "pass", spec: "spikes/specs/steamfast-steamer.json", truth: DONE,
+    name: "c06-steamfast-tag", code: "K7Q", expect: "pass", spec: "eval/specs/steamfast-steamer.json", truth: DONE,
     note: "Edit of the Steamfast example photo (w03): on a counter, annotations removed, code tag added.",
     photos: [{ from: ["w03-steamfast-photo-only/01.jpg"], prompt: `Turn this product picture into an ordinary smartphone photo of the same steamer lying on a kitchen counter. Remove both red rectangles. Keep the label and every character on it exactly as it is, and keep the cut black power cord. Add a small white paper tag taped to the steamer just below the label, with "K7Q" handwritten on it in black marker.` }],
   },
   {
-    name: "c07-hothands-marker", code: "K7Q", expect: "pass", spec: "spikes/specs/hothands-warmer.json", truth: DONE,
+    name: "c07-hothands-marker", code: "K7Q", expect: "pass", spec: "eval/specs/hothands-warmer.json", truth: DONE,
     note: "Edit of the CPSC HotHands label photo (w08): on a desk, annotations removed, \"RECALLED K7Q\" in marker, as the recall asks.",
     photos: [{ from: ["w08-hothands-product-photos/02.png"], prompt: `Turn this product picture into an ordinary smartphone photo of the same hand warmer lying on a wooden desk. Remove the red arrows, the red boxes and the red words "Model Number" and "Batch Number". Keep every character of the printed grey label exactly as it is, including "Model: H163650" and "E225". In the blank upper half of the warmer, add "RECALLED K7Q" handwritten in black permanent marker.` }],
   },
   {
-    name: "c08-kikea-cut", code: "K7Q", expect: "pass", spec: "spikes/specs/kikea-pillow.json", truth: { label: "yes", steps: ["done"], code: "yes", screen: "no" },
+    name: "c08-kikea-cut", code: "K7Q", expect: "pass", spec: "eval/specs/kikea-pillow.json", truth: { label: "yes", steps: ["done"], code: "yes", screen: "no" },
     note: "Edit of the CPSC Kikea photo (w09): the leaf-pattern pillow cut in half, code tag beside it.",
     photos: [{ from: ["w09-kikea-product-photo/01.png"], prompt: `An ordinary smartphone photo on a living-room rug of the leftmost pillow in this picture (C-shaped, white with blue flowers and green leaves), now cut fully in half with scissors: two separate pieces with stuffing spilling out. Beside it lies a white paper tag with "K7Q" handwritten on it in black marker. Only that one pillow appears.` }],
   },
@@ -85,12 +103,12 @@ const CASES = [
   },
   // Held out: written after the round-1 spec and key fixes, to check those fixes on photos the fixes never saw.
   {
-    name: "h01-hothands-in-hand", code: "H3W", expect: "pass", spec: "spikes/specs/hothands-warmer.json", truth: DONE,
+    name: "h01-hothands-in-hand", code: "H3W", expect: "pass", spec: "eval/specs/hothands-warmer.json", truth: DONE,
     note: "Held out. Edit of the CPSC HotHands label photo (w08), held in a hand outdoors.",
     photos: [{ from: ["w08-hothands-product-photos/02.png"], prompt: `Turn this product picture into an ordinary smartphone photo of the same hand warmer held in someone's hand outdoors on a cloudy day. Remove the red arrows, the red boxes and the red words "Model Number" and "Batch Number". Keep every character of the printed grey label exactly as it is. In the blank upper half of the warmer, add "RECALLED H3W" handwritten in black marker.` }],
   },
   {
-    name: "h02-kikea-feathers-cut", code: "T6M", expect: "pass", spec: "spikes/specs/kikea-pillow.json", truth: { label: "yes", steps: ["done"], code: "yes", screen: "no" },
+    name: "h02-kikea-feathers-cut", code: "T6M", expect: "pass", spec: "eval/specs/kikea-pillow.json", truth: { label: "yes", steps: ["done"], code: "yes", screen: "no" },
     note: "Held out. Edit of the CPSC Kikea photo (w09): the feather-print pillow, cut on a bed.",
     photos: [{ from: ["w09-kikea-product-photo/01.png"], prompt: `An ordinary smartphone photo on an unmade bed of the middle pillow in this picture (C-shaped, dark brown with multicoloured feathers), now cut fully in half with scissors: two separate pieces with stuffing spilling out. Beside it lies a white paper tag with "T6M" handwritten on it in black marker. Only that one pillow appears.` }],
   },
@@ -100,7 +118,7 @@ const CASES = [
     photos: [{ prompt: `A grey C-shaped nursing pillow lies on a wooden floor, cut fully in half: two separate pieces, stuffing spilling out. A white paper luggage tag is tied to it with string. On the tag, in neat black marker capitals, the first line reads "X-VESOLIE" (the letter before the E is a capital I, not a J) and the second line reads "N5K". ${PHONE}` }],
   },
   {
-    name: "h04-steamfast-wrong-model", code: "W2H", expect: "reject", spec: "spikes/specs/steamfast-steamer.json", truth: { ...DONE, label: "no" },
+    name: "h04-steamfast-wrong-model", code: "W2H", expect: "reject", spec: "eval/specs/steamfast-steamer.json", truth: { ...DONE, label: "no" },
     note: "Held out. Edit of the Steamfast photo (w03) with the model changed to SF-430, which isn't recalled.",
     photos: [{ from: ["w03-steamfast-photo-only/01.jpg"], prompt: `Turn this product picture into an ordinary smartphone photo of the same steamer lying on an ironing board. Remove both red rectangles. On the label, change only the model line so it reads "MODEL: SF-430 COMPACT FABRIC STEAMER"; keep every other character exactly as it is. Keep the cut black power cord. Add a small white paper tag taped just below the label with "W2H" handwritten on it in black marker.` }],
   },
@@ -110,38 +128,47 @@ const CASES = [
     photos: [{ prompt: `A grey C-shaped nursing pillow lies whole on a sofa, with one short slit about 10 cm long in its side and a little stuffing poking out of the slit; it is otherwise intact and in one piece. ${tag("J4C")} ${PHONE}` }],
   },
   { name: "c11-wrong-code-K7P", copy: "c01-pillow-cut-daylight", code: "K7P", expect: "reject", spec: STANDIN, truth: { ...DONE, code: "no" }, note: "c01's photo (K7Q written), but this claim's code is K7P." },
-  { name: "c12-wrong-code-K1Q", copy: "c06-steamfast-tag", code: "K1Q", expect: "reject", spec: "spikes/specs/steamfast-steamer.json", truth: { ...DONE, code: "no" }, note: "c06's photo (K7Q written), but this claim's code is K1Q." },
-  { name: "c13-wrong-code-K7G", copy: "c07-hothands-marker", code: "K7G", expect: "reject", spec: "spikes/specs/hothands-warmer.json", truth: { ...DONE, code: "no" }, note: "c07's photo (K7Q written), but this claim's code is K7G." },
+  { name: "c12-wrong-code-K1Q", copy: "c06-steamfast-tag", code: "K1Q", expect: "reject", spec: "eval/specs/steamfast-steamer.json", truth: { ...DONE, code: "no" }, note: "c06's photo (K7Q written), but this claim's code is K1Q." },
+  { name: "c13-wrong-code-K7G", copy: "c07-hothands-marker", code: "K7G", expect: "reject", spec: "eval/specs/hothands-warmer.json", truth: { ...DONE, code: "no" }, note: "c07's photo (K7Q written), but this claim's code is K7G." },
 ];
 
-const MIME = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png" };
+const MIME: Record<string, string> = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png" };
 let cost = 0;
 
-async function makePhoto({ prompt, from }) {
-  const common = { model: MODEL, prompt, size: "1024x1536", quality: "high", output_format: "jpeg" };
+async function makePhoto({ prompt, from }: Photo): Promise<Buffer> {
+  const common = { model: MODEL, prompt, size: "1024x1536", quality: "high", output_format: "jpeg" } as const;
   const result = from
     ? await client.images.edit({ ...common, image: await Promise.all(from.map((p) => toFile(readFileSync(dir(p)), basename(p), { type: MIME[extname(p)] }))) })
     : await client.images.generate(common);
   const u = result.usage;
-  const imageIn = u.input_tokens_details?.image_tokens ?? 0;
-  cost += (u.output_tokens * RATE.out + imageIn * RATE.imageIn + (u.input_tokens - imageIn) * RATE.textIn) / 1e6;
-  return Buffer.from(result.data[0].b64_json, "base64");
+  if (u) {
+    const imageIn = u.input_tokens_details?.image_tokens ?? 0;
+    cost += (u.output_tokens * RATE.out + imageIn * RATE.imageIn + (u.input_tokens - imageIn) * RATE.textIn) / 1e6;
+  }
+  const b64 = result.data?.[0]?.b64_json;
+  if (!b64) throw new Error("no image in the response");
+  return Buffer.from(b64, "base64");
 }
 
-const wanted = process.argv.slice(2);
-const made = {};
-for (const c of CASES) {
-  if (wanted.length ? !wanted.includes(c.name) : existsSync(join(dir(c.name), "case.json"))) continue;
-  // Cases built on another case's photo wait for that case first.
-  const needs = [c.copy, ...(c.photos || []).flatMap((p) => p.from || []).map((p) => p.split("/")[0])].filter((n) => made[n]);
-  made[c.name] = Promise.all(needs.map((n) => made[n])).then(async () => {
-    mkdirSync(dir(c.name), { recursive: true });
-    if (c.copy) copyFileSync(join(dir(c.copy), "01.jpg"), join(dir(c.name), "01.jpg"));
-    for (const [i, p] of (c.photos || []).entries()) writeFileSync(join(dir(c.name), `0${i + 1}.jpg`), await makePhoto(p));
-    const { name, copy, photos, ...rest } = c;
-    writeFileSync(join(dir(name), "case.json"), JSON.stringify({ ...rest, made: copy ? `copy of ${copy}` : MODEL }, null, 2));
-    console.log(`made ${name}`);
-  }).catch((e) => console.log(`FAILED ${c.name}: ${e.message}`));
+async function main() {
+  const wanted = process.argv.slice(2);
+  const made: Record<string, Promise<void>> = {};
+  for (const c of CASES) {
+    if (wanted.length ? !wanted.includes(c.name) : existsSync(join(dir(c.name), "case.json"))) continue;
+    // Cases built on another case's photo wait for that case first.
+    const needs = [c.copy, ...(c.photos || []).flatMap((p) => p.from || []).map((p) => p.split("/")[0])].filter((n): n is string => Boolean(n && made[n]));
+    made[c.name] = Promise.all(needs.map((n) => made[n])).then(async () => {
+      mkdirSync(dir(c.name), { recursive: true });
+      if (c.copy) copyFileSync(join(dir(c.copy), "01.jpg"), join(dir(c.name), "01.jpg"));
+      for (const [i, p] of (c.photos || []).entries()) writeFileSync(join(dir(c.name), `0${i + 1}.jpg`), await makePhoto(p));
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { name, copy, photos, ...rest } = c;
+      writeFileSync(join(dir(name), "case.json"), JSON.stringify({ ...rest, made: copy ? `copy of ${copy}` : MODEL }, null, 2));
+      console.log(`made ${name}`);
+    }).catch((e) => console.log(`FAILED ${c.name}: ${e instanceof Error ? e.message : e}`));
+  }
+  await Promise.all(Object.values(made));
+  console.log(`Image cost: about $${cost.toFixed(2)}.`);
 }
-await Promise.all(Object.values(made));
-console.log(`Image cost: about $${cost.toFixed(2)}.`);
+
+main();
