@@ -48,7 +48,7 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
           <CopyField value={url} label="Claim link" />
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <ClaimQr url={url} name={recall.slug} />
-            <Button href={`/r/${recall.slug}`} variant="tertiary" size="sm" target="_blank">
+            <Button href={`/r/${recall.slug}`} variant="tertiary" size="sm" target="_blank" className="self-start sm:self-auto">
               Open the claim page
             </Button>
           </div>

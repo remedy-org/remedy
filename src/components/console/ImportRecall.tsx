@@ -104,7 +104,7 @@ export function ImportRecall({ example }: { example: string }) {
 
   const error = step.at === "find" ? step.error : undefined;
   return (
-    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,40rem)_22rem] lg:justify-between">
+    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,40rem)_22rem] lg:gap-16">
       <form onSubmit={read} className="flex flex-col gap-6" noValidate>
         <Field
           label="CPSC recall URL or number"
