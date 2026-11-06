@@ -9,7 +9,8 @@ export function blobStore(token: string): Store {
   async function read(pathname: string, useCache = false) {
     const res = await get(pathname, { access: "private", token, useCache });
     if (!res || res.statusCode !== 200) return null;
-    return { data: Buffer.from(await new Response(res.stream).arrayBuffer()), etag: res.blob.etag };
+    // A compressed response carries a weak ETag (W/"…") with the same hash; ifMatch only accepts the strong form.
+    return { data: Buffer.from(await new Response(res.stream).arrayBuffer()), etag: res.blob.etag.replace(/^W\//, "") };
   }
 
   async function readJson<S extends z.ZodType>(pathname: string, schema: S): Promise<z.infer<S> | null> {
