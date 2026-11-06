@@ -31,7 +31,7 @@ const indexed = (fields: Record<string, string> | undefined, prefix: string) =>
 export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, onStartOver }: PublishFormProps) {
   const [spec, setSpec] = useState(initial);
   const [refund, setRefund] = useState("");
-  const [autoPay, setAutoPay] = useState(true);
+  const [autoPay, setAutoPay] = useState(false);
   const [slug, setSlug] = useState(notice.slug);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
@@ -97,7 +97,7 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
       <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
         <div>
           <h2 className="text-body font-semibold">Refund and claim link</h2>
-          <p className="mt-1 text-ui text-muted">Refunds go from your PayPal business account to each owner&apos;s PayPal account.</p>
+          <p className="mt-1 text-ui text-muted">Refunds go through PayPal Payouts to each owner&apos;s PayPal account. In this build they&apos;re sent from Remedy&apos;s PayPal account, so auto-pay starts off.</p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Refund per unit" help="In US dollars, paid through PayPal." error={f?.refund}>

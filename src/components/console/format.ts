@@ -6,6 +6,12 @@ const dateFmt = new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short
 /** "2026-11-05" -> "Nov 5, 2026". */
 export const formatDate = (isoDate: string) => dateFmt.format(new Date(`${isoDate.slice(0, 10)}T00:00:00Z`));
 
+const etFmt = new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short", year: "numeric", timeZone: "America/New_York" });
+
+/** The day a moment fell on in US Eastern time, CPSC's zone: "Nov 6, 2026". The report labels it "(ET)", so server
+ * and viewer agree whatever their own zones. */
+export const formatDayET = (iso: string) => etFmt.format(new Date(iso));
+
 const timeFmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 /** "Nov 7, 14:02" in the viewer's zone. Client components only, or the server's zone leaks in. */

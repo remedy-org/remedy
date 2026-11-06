@@ -8,6 +8,7 @@ import { RecallSettingsForm } from "@/components/console/RecallSettingsForm";
 import { Button, Card, CardHeader, CheckIcon } from "@/components/ui";
 import { requireSession } from "@/lib/session";
 import { claimUrl } from "../../_lib/links";
+import { formatMoney } from "../../_lib/view";
 import { loadRecallFor } from "../../_lib/workspace";
 
 export async function generateMetadata({ params }: PageProps<"/console/recalls/[id]">): Promise<Metadata> {
@@ -56,8 +57,29 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
 
         <div className="flex flex-col gap-6">
           <Card as="section" padding="lg" className="flex flex-col gap-6">
-            <CardHeader title="Settings" description="Changes apply to new claims; decided claims keep their amount." />
-            <RecallSettingsForm recallId={recall.id} refund={recall.refund.value} autoPay={recall.autoPay} />
+            {recall.owner === null ? (
+              <>
+                <CardHeader title="Settings" description="The demo recall is shared by every workspace, so its settings are fixed. Import your own recall to set a refund and auto-pay." />
+                <dl className="grid gap-6 text-ui sm:grid-cols-2">
+                  <div>
+                    <dt className="text-muted">Refund per unit</dt>
+                    <dd className="mt-1 font-mono text-body">{formatMoney(recall.refund)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">Auto-pay</dt>
+                    <dd className="mt-1 text-body">{recall.autoPay ? "On: passing claims are paid at once" : "Off: passing claims wait for approval"}</dd>
+                  </div>
+                </dl>
+                <Button href="/console/recalls/new" variant="tertiary" size="sm" className="self-start">
+                  Import your own recall
+                </Button>
+              </>
+            ) : (
+              <>
+                <CardHeader title="Settings" description="Changes apply to new claims; paid claims keep the amount they were paid." />
+                <RecallSettingsForm recallId={recall.id} refund={recall.refund.value} autoPay={recall.autoPay} />
+              </>
+            )}
           </Card>
 
           <Card as="section" padding="lg" className="flex flex-col gap-4">

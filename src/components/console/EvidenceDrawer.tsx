@@ -142,7 +142,7 @@ function Section({ title, children, aside }: { title: ReactNode; children: React
   );
 }
 
-const PRE_STATE: Record<PreCheckState, CheckState> = { pass: "pass", hold: "hold", reject: "blocked", waiting: "waiting" };
+const PRE_STATE: Record<PreCheckState, CheckState> = { pass: "pass", hold: "hold", reject: "blocked", waiting: "waiting", skipped: "skipped" };
 
 function Evidence({ claim }: { claim: DrawerClaim }) {
   const passed = claim.checks.filter((c) => c.outcome === "pass").length;
@@ -150,8 +150,9 @@ function Evidence({ claim }: { claim: DrawerClaim }) {
     <div className="flex flex-col gap-8 px-4 py-6 sm:px-6">
       <section className="flex flex-col gap-3" aria-label="Photos">
         <ExhibitLabel leader="right" leaderLength={24}>
-          Exhibit A · {claim.photos.length ? `${claim.photos.length} live ${claim.photos.length === 1 ? "photo" : "photos"}` : "No photos yet"}
+          Exhibit A · {claim.photos.length ? `${claim.photos.length} ${claim.seeded ? "sample" : "live"} ${claim.photos.length === 1 ? "photo" : "photos"}` : "No photos yet"}
         </ExhibitLabel>
+        {claim.seeded && <p className="text-ui text-muted">Sample photos from the demo data, shared by several seeded claims.</p>}
         {claim.photos.length ? (
           <div className={claim.photos.length === 1 ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
             {claim.photos.map((src, i) => (
@@ -214,9 +215,8 @@ function Evidence({ claim }: { claim: DrawerClaim }) {
             <dt className="text-muted">PayPal batch</dt>
             <dd className="truncate font-mono">{claim.payout.batchId}</dd>
             <dt className="text-muted">Status</dt>
-            <dd className={claim.payout.status === "SUCCESS" ? "font-mono text-pay" : "font-mono text-hold"}>
-              {claim.payout.status}
-              {claim.payout.status !== "SUCCESS" && <span className="font-sans text-muted"> · PayPal is still settling it</span>}
+            <dd className="text-muted">
+              {claim.payout.status === "SUCCESS" ? "Sent" : "Settling at PayPal"} <span className="font-mono">· {claim.payout.status}</span>
             </dd>
             <dt className="text-muted">Updated</dt>
             <dd className="font-mono">{formatTime(claim.payout.updatedAt)}</dd>

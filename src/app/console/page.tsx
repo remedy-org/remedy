@@ -31,7 +31,7 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
     );
   }
 
-  const { claims, unreadable } = await loadClaims(store, recall.id);
+  const { claims, unreadable } = await loadClaims(store, recall, session);
   const rows = claims.map((c) => toRow(c, recall));
   const stats = statsOf(claims, recall);
 

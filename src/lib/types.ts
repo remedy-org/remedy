@@ -79,6 +79,9 @@ export const Payout = z.object({
   // PayPal's own status string: batch status until the item status is known.
   status: z.string(),
   updatedAt: z.iso.datetime(),
+  // The amount sent, fixed at pay time, so a later change to the recall's refund never reprices a paid claim.
+  // Absent on claims paid before it was recorded: read it as the recall's refund.
+  amount: Money.optional(),
 });
 export type Payout = z.infer<typeof Payout>;
 

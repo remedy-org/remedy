@@ -1,5 +1,5 @@
 import type { Claim, Outcome, Recall } from "@/lib/types";
-import { decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
+import { amountOf, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
 
 // Everything the evidence drawer shows for one claim, built on the server so the client never sees a full payer id.
 
@@ -79,7 +79,7 @@ export function toDrawerClaim(c: Claim, recall: Recall): DrawerClaim {
     checks,
     summary: c.verdict?.summary ?? null,
     sentence: decisionSentence(c, recall),
-    amount: formatMoney(recall.refund),
+    amount: formatMoney(amountOf(c, recall)),
     payout: c.payout ? { batchId: c.payout.batchId, status: c.payout.status, updatedAt: c.payout.updatedAt } : null,
     events: c.events,
     review:

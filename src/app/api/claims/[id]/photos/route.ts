@@ -1,6 +1,6 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { toView } from "@/components/claim/model";
-import { demoSample } from "@/lib/demo";
+import { demoSample, isDemoAllowed } from "@/lib/demo";
 import { getSession } from "@/lib/session";
 import { liveDeps, samplePhotos } from "../../_lib/deps";
 import { fail, json } from "../../_lib/http";
@@ -32,6 +32,8 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/
     let photos: Buffer[];
     let sessionId: string;
     if (claim.demo) {
+      const recall = await deps.store.getRecall(claim.recallId);
+      if (!recall || !isDemoAllowed(recall)) return json(404, "Demo claims run only on the demo recall, in PayPal's sandbox");
       const sample = demoSample(demoSampleOf(claim) ?? "");
       if (!sample) throw new ClaimError(400, "This demo claim has no sample");
       photos = await samplePhotos(sample, request.nextUrl.origin);

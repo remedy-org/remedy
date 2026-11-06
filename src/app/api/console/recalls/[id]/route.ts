@@ -3,7 +3,8 @@ import { body, company, fail, isResponse } from "@/app/console/_lib/api";
 import { SettingsInput } from "@/app/console/_lib/recalls";
 import { loadRecallFor } from "@/app/console/_lib/workspace";
 
-// PATCH /api/console/recalls/27-071 {refund, autoPay}: recall settings. Claims already decided keep their amount.
+// PATCH /api/console/recalls/<id> {refund, autoPay}: a company's own recall's settings. Paid claims keep the amount
+// recorded on their payout.
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/console/recalls/[id]">) {
   const session = await company();
   if (isResponse(session)) return session;
@@ -11,6 +12,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/consol
   if (isResponse(input)) return input;
   const found = await loadRecallFor(session, (await ctx.params).id);
   if (!found) return fail(404, "No recall with that id in this workspace.");
+  if (found.recall.owner === null) return fail(403, "The demo recall's settings are fixed for everyone; import your own recall to change them.");
 
   const recall = { ...found.recall, refund: { value: input.refund, currency: "USD" as const }, autoPay: input.autoPay };
   try {

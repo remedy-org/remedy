@@ -12,6 +12,7 @@ const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: strin
   held: { title: "Nothing waiting for review", description: "Claims with an unclear answer, or any passing claim while auto-pay is off, wait here for a person." },
   rejected: { title: "No rejected claims", description: "A claim is rejected when the model's answer fails a check, such as a wrong code or label." },
   blocked: { title: "No blocked claims", description: "Blocked claims never reached the model: a reused photo, an expired camera session or a second claim from one account." },
+  pending: { title: "Nothing in progress", description: "A claim is in progress from the moment its owner gets a code until the photos are checked." },
 };
 
 /** Status tabs over the claims grid, and the evidence drawer for the row that was opened. */

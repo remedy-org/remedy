@@ -73,7 +73,7 @@ export function ClaimsGrid({ rows, selected, onOpen }: ClaimsGridProps) {
   }, [narrow]);
 
   return (
-    <div ref={wrap} className="w-full">
+    <div ref={wrap} className="claims-grid w-full">
       <AgGridReact<ClaimRow>
         theme={gridTheme}
         rowData={rows}
@@ -81,6 +81,8 @@ export function ClaimsGrid({ rows, selected, onOpen }: ClaimsGridProps) {
         context={{ narrow }}
         getRowId={(p) => p.data.id}
         domLayout="autoHeight"
+        // The narrow layout stacks the filing time under the claim id: two lines need taller rows.
+        rowHeight={narrow ? 56 : 44}
         rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: false }}
         suppressCellFocus={false}
         onGridReady={(e) => {

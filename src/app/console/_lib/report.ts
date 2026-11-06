@@ -1,5 +1,5 @@
 import type { Claim, Decision, Recall } from "@/lib/types";
-import { cents, statsOf, type Stats } from "./view";
+import { amountOf, cents, statsOf, type Stats } from "./view";
 
 // The CPSC progress-report draft, computed from the claims. Pure, so the numbers are unit-tested.
 
@@ -29,6 +29,8 @@ export interface Report {
   outcomes: OutcomeRow[];
   refusals: { reason: string; count: number }[];
   refundCents: number;
+  // The one amount every paid claim got, or null when the refund changed between payouts.
+  paidEachCents: number | null;
   settledCents: number;
   seeded: number;
   demo: number;
@@ -58,13 +60,15 @@ export function buildReport(claims: Claim[], recall: Recall): Report {
   }
 
   const times = claims.map((c) => c.createdAt).sort();
-  const settled = claims.filter((c) => c.decision === "paid" && c.payout?.status === "SUCCESS").length;
+  const paidAmounts = new Set(claims.filter((c) => c.decision === "paid").map((c) => cents(amountOf(c, recall))));
+  const settledCents = claims.filter((c) => c.decision === "paid" && c.payout?.status === "SUCCESS").reduce((sum, c) => sum + cents(amountOf(c, recall)), 0);
   return {
     stats,
     outcomes: rows.map(([decision, label, count, note]) => ({ decision, label, count, share: share(count, stats.total), note })),
     refusals: [...tally].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason)),
     refundCents: refund,
-    settledCents: settled * refund,
+    paidEachCents: paidAmounts.size === 1 ? [...paidAmounts][0] : null,
+    settledCents,
     seeded: claims.filter((c) => c.seeded).length,
     demo: claims.filter((c) => c.demo).length,
     firstClaim: times[0] ?? null,

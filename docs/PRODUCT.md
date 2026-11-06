@@ -4,7 +4,7 @@ What we build for the PayPal AI Hackathon (submit 11 Nov 2026), and how each scr
 
 **One line:** recall refunds in a minute for people who really destroyed the product, and never for a faked photo.
 
-Remedy is its own website built on PayPal's public APIs. Companies running a recall are the customers; owners of the recalled product never create a Remedy account. Refunds go from the company's PayPal business account straight to the owner's PayPal account; Remedy never holds money.
+Remedy is its own website built on PayPal's public APIs. Companies running a recall are the customers; owners of the recalled product never create a Remedy account. At launch, refunds go from the company's PayPal business account straight to the owner's PayPal account, and Remedy never holds money. In this build they come from Remedy's own PayPal sandbox business account (see Decisions), and the copy says so.
 
 ## Decisions (7 Nov 2026)
 
@@ -18,12 +18,14 @@ Remedy is its own website built on PayPal's public APIs. Companies running a rec
 | Company sign-in | Log in with PayPal (business account). A new company's workspace starts with the Kikea demo recall. |
 | Screens | Laptop first everywhere, and fully usable on a phone. |
 | Repo | Private until the freeze (Tue 10 Nov 23:59 IST), then public with its history. |
+| Payout account | This build sends every refund from Remedy's one PayPal sandbox business account (the app's `PAYPAL_CLIENT_ID`). Per-company accounts need PayPal partner onboarding, after the hackathon. Until then the copy names Remedy's account, recalls published from the console start with auto-pay off, and the demo recall's settings are fixed. |
+| Demo mode | `/r/<slug>/try` and sample claims exist only for the Kikea demo recall, and only while `PAYPAL_API_BASE` is PayPal's sandbox. Judges log in with a PayPal sandbox personal account. |
 
 ## Routes
 
 | Route | Who | What |
 |---|---|---|
-| `/` | Everyone, judges first | The homepage that sells the idea. Sign in for companies; a "See a claim" path for judges. |
+| `/` | Everyone, judges first | The homepage that sells the idea. Sign in for companies; a "Try a claim with sample photos" path for judges. |
 | `/signin` | Companies | Log in with PayPal, then on to `/console`. |
 | `/console` | Companies | Claims grid (AG Grid) with the evidence drawer, overrides and the remedied-against-sold meter. |
 | `/console/recalls/new` | Companies | Import a recall from a CPSC URL or number; review the drafted checks; publish. |

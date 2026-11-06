@@ -39,6 +39,8 @@ export function ImportRecall({ example }: { example: string }) {
 
   const read = async (e: FormEvent) => {
     e.preventDefault();
+    // Checked on submit, not by disabling the button: a disabled primary gives no reason.
+    if (ref.trim().length < 5) return setStep({ at: "find", error: { error: "Paste a CPSC recall URL or number", fields: { ref: "Paste a cpsc.gov recall URL or a number like 27-071" } } });
     setStep({ at: "reading" });
     const res = await api<CpscSummary>("/api/console/recalls/import", { json: { ref } });
     if (!res.ok) return setStep({ at: "find", error: res.error });
@@ -133,7 +135,7 @@ export function ImportRecall({ example }: { example: string }) {
           />
         )}
         <div>
-          <Button type="submit" size="lg" pending={step.at === "reading"} pendingLabel="Reading the notice" disabled={ref.trim().length < 5}>
+          <Button type="submit" size="lg" pending={step.at === "reading"} pendingLabel="Reading the notice">
             Read the notice
           </Button>
         </div>

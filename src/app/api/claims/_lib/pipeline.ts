@@ -245,7 +245,7 @@ export async function checkClaim(deps: PipelineDeps, claimId: string): Promise<C
   return (
     (await commit(store, claimId, (c) => {
       c.decision = "paid";
-      c.payout = { batchId: payout.batchId, ...(payout.itemId ? { itemId: payout.itemId } : {}), status: payout.itemStatus ?? payout.batchStatus, updatedAt: paidAt.toISOString() };
+      c.payout = { batchId: payout.batchId, ...(payout.itemId ? { itemId: payout.itemId } : {}), status: payout.itemStatus ?? payout.batchStatus, updatedAt: paidAt.toISOString(), amount: recall.refund };
       c.events.push(event(paidAt, "decided", "Every check passed"));
       c.events.push(event(paidAt, "payout_sent", `Payout of $${recall.refund.value} sent through PayPal`));
     })) ?? fresh

@@ -2,6 +2,7 @@ import "server-only";
 import { getAppStore } from "@/lib/demo";
 import type { Session } from "@/lib/session";
 import type { Store } from "@/lib/store";
+import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Recall } from "@/lib/types";
 
 // What a signed-in company can see: its own recalls plus the shared Kikea demo recall (owner null).
@@ -39,9 +40,16 @@ export interface RecallClaims {
   unreadable: string[];
 }
 
-// Every claim for one recall, newest first. The index has no reasons or amounts, so each claim file is read.
-export async function loadClaims(store: Store, recallId: string): Promise<RecallClaims> {
-  const rows = (await store.listClaims()).filter((r) => r.recallId === recallId);
+// On the shared demo recall every signed-in company is a different judge, so a company sees the seeded samples, the
+// demo claims (public sample photos, sandbox money) and real claims from its own PayPal account, never another
+// person's camera photos. A company's own recall shows every claim.
+export const canSeeClaim = (recall: Pick<Recall, "owner">, session: Pick<Session, "payerId">) => (c: Pick<ClaimSummary, "seeded" | "demo" | "payerId">) =>
+  recall.owner !== null || Boolean(c.seeded) || Boolean(c.demo) || c.payerId === session.payerId;
+
+// Every claim for one recall that this company may see, newest first. The index has no reasons or amounts, so each
+// claim file is read.
+export async function loadClaims(store: Store, recall: Recall, session: Pick<Session, "payerId">): Promise<RecallClaims> {
+  const rows = (await store.listClaims()).filter((r) => r.recallId === recall.id).filter(canSeeClaim(recall, session));
   const read = await Promise.allSettled(rows.map((r) => store.getClaim(r.id)));
   const claims: Claim[] = [];
   const unreadable: string[] = [];
@@ -59,12 +67,12 @@ export async function loadClaimFor(session: Session, claimId: string): Promise<{
   const claim = await store.getClaim(claimId);
   if (!claim) return null;
   const recall = await store.getRecall(claim.recallId);
-  if (!recall || !canSee(recall, session)) return null;
+  if (!recall || !canSee(recall, session) || !canSeeClaim(recall, session)(claim)) return null;
   return { store, claim, recall };
 }
 
-// Only a company's own recalls can be changed; the shared demo recall is editable by every workspace on purpose,
-// so judges can try the settings.
+// A recall the company may open. Only its own can be changed: the shared demo recall's settings are fixed (see the
+// PATCH route), or one judge's edit would change the demo for every other.
 export async function loadRecallFor(session: Session, recallId: string): Promise<{ store: Store; recall: Recall } | null> {
   const store = await getAppStore();
   const recall = await store.getRecall(recallId);

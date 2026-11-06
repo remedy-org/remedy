@@ -37,6 +37,14 @@ describe("console view", () => {
     expect(statsOf(claims, recall)).toEqual({ total: 6, remedied: 2, unitsSold: 19_596, paidCents: 5998, settling: 1, held: 1, rejected: 1, blocked: 1, pending: 1 });
   });
 
+  it("keeps a paid claim's recorded amount when the refund changes later", () => {
+    const paid = sampleClaim({ decision: "paid", payout: { batchId: "B", status: "SUCCESS", updatedAt: "2026-11-07T10:00:00.000Z", amount: { value: "29.99", currency: "USD" } } });
+    const repriced = { ...recall, refund: { value: "50.00", currency: "USD" as const } };
+    expect(statsOf([paid, sampleClaim({ decision: "paid" })], repriced).paidCents).toBe(2999 + 5000);
+    expect(toRow(paid, repriced).amount).toBe("$29.99");
+    expect(buildReport([paid], repriced)).toMatchObject({ settledCents: 2999, paidEachCents: 2999 });
+  });
+
   it("gives each row its reason and amount", () => {
     const row = toRow(sampleClaim({ decision: "rejected", reasons: [{ check: "label", outcome: "pass", text: "ok" }, reject("code", "Written code reads K7O")] }), recall);
     expect(row).toMatchObject({ decision: "rejected", reason: "Written code reads K7O", amount: null, payer: "•••• UJ3Q" });
@@ -63,6 +71,7 @@ describe("console view", () => {
       ["payer_verified", "pass"],
     ]);
     expect(preChecksOf(sampleClaim({ photos: [] })).every((r) => r.state === "waiting")).toBe(true);
+    expect(preChecksOf(sampleClaim({ seeded: true })).find((r) => r.id === "duplicate_photo")?.state).toBe("skipped");
   });
 
   it("offers review only on held claims, and never payment on a seeded one", () => {

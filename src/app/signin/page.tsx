@@ -6,7 +6,7 @@ import { DEFAULT_NEXT, getSession, safeNext } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Companies running a recall sign in to Remedy with their PayPal business account.",
+  description: "Companies running a recall sign in to Remedy with PayPal.",
 };
 
 const ERRORS: Record<string, { title: string; description: string }> = {
@@ -16,8 +16,10 @@ const ERRORS: Record<string, { title: string; description: string }> = {
 };
 
 const FACTS = [
-  "Your workspace opens with the Kikea X-VESOLJE demo recall and 40 sample claims to explore.",
-  "Refunds go from your PayPal business account straight to each owner's PayPal account. Remedy never holds the money.",
+  <>
+    Your workspace opens with the Kikea <span className="whitespace-nowrap">X-VESOLJE</span> demo recall and 40 sample claims to explore.
+  </>,
+  "In this build, refunds are sent from Remedy's PayPal sandbox business account. At launch each company connects its own through PayPal.",
   "Remedy reads your PayPal name, email and account id to open your workspace. Nothing else.",
 ];
 
@@ -41,7 +43,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
             For companies running a recall
           </ExhibitLabel>
           <h1 className="mt-4 text-h2 font-semibold">Sign in to your recall console</h1>
-          <p className="mt-3 text-body text-muted">Use the PayPal business account that will send the refunds. Your claims, payouts and CPSC report are there.</p>
+          <p className="mt-3 text-body text-muted">Log in with PayPal. Your claims, payouts and CPSC report are there.</p>
 
           {error && <ErrorState variant="inline" className="mt-6" title={error.title} description={error.description} />}
 
@@ -51,8 +53,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <p className="mt-3 text-center text-ui text-muted">You&apos;ll confirm on PayPal&apos;s own page, then come back here.</p>
 
           <ul className="mt-8 flex flex-col border-t border-line">
-            {FACTS.map((f) => (
-              <li key={f} className="flex gap-3 border-b border-line py-3 text-ui text-muted last:border-b-0 last:pb-0">
+            {FACTS.map((f, i) => (
+              <li key={i} className="flex gap-3 border-b border-line py-3 text-ui text-muted last:border-b-0 last:pb-0">
                 <CheckIcon className="mt-0.5 shrink-0 text-pay" />
                 <span>{f}</span>
               </li>

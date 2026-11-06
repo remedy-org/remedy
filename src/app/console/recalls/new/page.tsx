@@ -15,7 +15,7 @@ export default async function NewRecallPage() {
           Paste the notice. Remedy reads CPSC&apos;s record, drafts the photo checks from its text and photos, and you edit them before the claim page goes live.
         </p>
       </header>
-      <ImportRecall example="27-069 or a cpsc.gov recall link" />
+      <ImportRecall example="27-071 or a cpsc.gov recall link" />
     </main>
   );
 }

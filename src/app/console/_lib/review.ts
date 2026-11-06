@@ -1,9 +1,9 @@
-import { checkableClaims } from "@/lib/demo";
 import { PayPalError } from "@/lib/paypal/client";
 import { sendPayout, type PayoutStatus } from "@/lib/paypal/payouts";
 import { sendCheck } from "@/lib/rule";
 import type { Store } from "@/lib/store";
 import type { Claim, Reason, Recall } from "@/lib/types";
+import { othersFor } from "@/app/api/claims/_lib/pipeline";
 import { formatMoney, reviewReasonText } from "./view";
 
 // A person's decision on a held claim. Kept free of Next imports so the money path is unit-tested.
@@ -33,7 +33,8 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
   }
 
   // sendCheck treats any decision but pending as "already decided"; a held claim is exactly what a person may send.
-  const others = checkableClaims(await store.listClaims());
+  // The same set the owner's pipeline checked against: demo claims meet only the same judge's demo claims.
+  const others = othersFor(claim, await store.listClaims());
   const conflicts = sendCheck({ claim: { ...claim, decision: "pending" }, others });
   if (conflicts.length) {
     await store.putClaim({ ...claim, events: [...claim.events, event(now, "approve_refused", `Not paid on review: ${conflicts.map((r) => r.text).join("; ")}`)] });
@@ -64,7 +65,7 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
     ...approved,
     decision: "paid",
     reasons: [...approved.reasons, { check: "review", outcome: "pass", text: `Approved on review by ${by}` }],
-    payout: { batchId: sent.batchId, itemId: sent.itemId, status: sent.itemStatus ?? sent.batchStatus, updatedAt: at.toISOString() },
+    payout: { batchId: sent.batchId, itemId: sent.itemId, status: sent.itemStatus ?? sent.batchStatus, updatedAt: at.toISOString(), amount: recall.refund },
     events: [...approved.events, event(at, "payout_sent", `Payout of ${formatMoney(recall.refund)} sent through PayPal`)],
   };
   await store.putClaim(paid);

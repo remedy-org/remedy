@@ -9,7 +9,7 @@ const styles: Record<Status, { label: string; className: string; dot: string }> 
   rejected: { label: "Rejected", className: "bg-stop-soft text-stop", dot: "bg-stop" },
   // Blocked = stopped by a pre-check before the model; a hollow dot tells it apart from Rejected.
   blocked: { label: "Blocked", className: "bg-stop-soft text-stop", dot: "border border-stop" },
-  pending: { label: "Pending", className: "bg-surface-2 text-muted", dot: "border border-muted" },
+  pending: { label: "In progress", className: "bg-surface-2 text-muted", dot: "border border-muted" },
 };
 
 export interface StatusPillProps {

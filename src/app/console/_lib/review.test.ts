@@ -77,6 +77,28 @@ describe("approveClaim", () => {
     expect((await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay: async () => sent })).ok).toBe(true);
   });
 
+  it("checks a held demo claim only against the same judge's demo claims, as the pipeline did", async () => {
+    // Another judge's paid genuine sample: the same sample photo, a different PayPal account.
+    await store.putClaim(sampleClaim({ id: "RM-0001", payerId: "OTHERJUDGE001", decision: "paid", demo: true }));
+    // A real claim from this judge's account: real claims never meet demo claims.
+    await store.putClaim(sampleClaim({ id: "RM-0002", decision: "paid", photos: [{ key: "RM-0002/1.jpg", hash: "fedcba9876543210" }] }));
+    const claim = held({ demo: true });
+    await store.putClaim(claim);
+    const pay = vi.fn(async () => sent);
+
+    const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
+
+    expect(result.ok).toBe(true);
+    expect(pay).toHaveBeenCalledOnce();
+  });
+
+  it("records the amount paid on the payout", async () => {
+    const claim = held();
+    await store.putClaim(claim);
+    await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay: async () => sent });
+    expect((await store.getClaim("RM-0412"))?.payout?.amount).toEqual(sampleRecall().refund);
+  });
+
   it("keeps the claim held, with PayPal's debug id, when the payout fails", async () => {
     const claim = held();
     await store.putClaim(claim);

@@ -3,13 +3,15 @@
 import clsx from "clsx";
 import type { KeyboardEvent } from "react";
 
-export type Tab = "all" | "paid" | "held" | "rejected" | "blocked";
+export type Tab = "all" | "paid" | "held" | "rejected" | "blocked" | "pending";
 export const TABS: { id: Tab; label: string }[] = [
   { id: "all", label: "All" },
   { id: "paid", label: "Paid" },
   { id: "held", label: "Held" },
   { id: "rejected", label: "Rejected" },
   { id: "blocked", label: "Blocked" },
+  // A code issued and no photos yet, or the photos with the model: the same word as the pill and the report.
+  { id: "pending", label: "In progress" },
 ];
 
 /** AG Grid demo style status tabs: a word and its count, the current one underlined. Arrow keys move between them. */
@@ -23,7 +25,13 @@ export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; 
     document.getElementById(`tab-${next.id}`)?.focus();
   };
   return (
-    <div role="tablist" aria-label="Filter claims by decision" className="-mx-4 flex overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none]">
+    // On a phone the strip scrolls: an end spacer (a flex scroller drops its end padding) lets the last tab clear the
+    // faded right edge, and the fade shows there is more to scroll.
+    <div
+      role="tablist"
+      aria-label="Filter claims by decision"
+      className="-mx-4 flex overflow-x-auto px-4 [scrollbar-width:none] after:w-8 after:shrink-0 after:content-[''] max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] sm:mx-0 sm:px-0 sm:after:hidden"
+    >
       {TABS.map((t, i) => {
         const active = t.id === value;
         return (
@@ -38,8 +46,8 @@ export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; 
             onClick={() => onChange(t.id)}
             onKeyDown={(e) => move(e, i)}
             className={clsx(
-              "relative inline-flex min-h-11 shrink-0 items-center gap-1.5 px-2.5 text-ui sm:gap-2 sm:px-3 font-medium transition-colors first:pl-0",
-              active ? "text-text after:absolute after:inset-x-2.5 sm:after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted hover:text-text",
+              "relative inline-flex min-h-11 shrink-0 items-center gap-1.5 px-2 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 sm:gap-2 sm:px-3",
+              active ? "text-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0 sm:after:inset-x-3" : "text-muted hover:text-text",
             )}
           >
             {t.label}

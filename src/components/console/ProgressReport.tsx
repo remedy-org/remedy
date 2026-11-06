@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
 import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
-import { ExhibitLabel, Meter, StatusPill } from "@/components/ui";
+import { ExhibitLabel, Meter, NoBreakHyphens, StatusPill } from "@/components/ui";
 import type { Recall } from "@/lib/types";
-import { formatCount, formatDate, plural } from "./format";
+import { formatCount, formatDate, formatDayET, plural } from "./format";
 
 function H({ n, children }: { n: number; children: ReactNode }) {
   return (
@@ -32,7 +32,7 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
           <span className="font-mono text-micro text-muted">Generated {generated}</span>
         </div>
         <h1 className="text-h2 font-semibold text-balance">
-          CPSC {recall.id}: {recall.product}
+          CPSC {recall.id}: <NoBreakHyphens>{recall.product}</NoBreakHyphens>
         </h1>
         <p className="text-ui text-muted">{recall.title}</p>
         <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-ui sm:grid-cols-4">
@@ -40,7 +40,7 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
             ["Recall date", formatDate(recall.recallDate)],
             ["Remedy", "Refund for destroyed units"],
             ["Refund per unit", formatMoney(recall.refund)],
-            ["Claims period", report.firstClaim && report.lastClaim ? `${formatDate(report.firstClaim)} to ${formatDate(report.lastClaim)}` : "No claims yet"],
+            ["Claims period (ET)", report.firstClaim && report.lastClaim ? `${formatDayET(report.firstClaim)} to ${formatDayET(report.lastClaim)}` : "No claims yet"],
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="text-muted">{k}</dt>
@@ -68,42 +68,42 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
         <H n={2}>Claims by outcome</H>
-        <div className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
-          <table className="w-full min-w-[32rem] text-ui">
-            <thead>
-              <tr>
-                <th className={th}>Outcome</th>
-                <th className={`${th} text-right`}>Claims</th>
-                <th className={`${th} text-right`}>Share</th>
-                <th className={th}>Meaning</th>
+        {/* On a phone the meaning moves under its outcome, so the table fits the paper without scrolling. */}
+        <table className="w-full text-ui">
+          <thead>
+            <tr>
+              <th className={th}>Outcome</th>
+              <th className={`${th} text-right`}>Claims</th>
+              <th className={`${th} text-right`}>Share</th>
+              <th className={`${th} hidden sm:table-cell`}>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.outcomes.map((o) => (
+              <tr key={o.decision}>
+                <td className={td}>
+                  <StatusPill status={o.decision} label={o.label} />
+                  <span className="mt-1.5 block text-muted sm:hidden">{o.note}</span>
+                </td>
+                <td className={`${td} text-right font-mono`}>{formatCount(o.count)}</td>
+                <td className={`${td} text-right font-mono text-muted`}>{o.share}</td>
+                <td className={`${td} hidden text-muted sm:table-cell`}>{o.note}</td>
               </tr>
-            </thead>
-            <tbody>
-              {report.outcomes.map((o) => (
-                <tr key={o.decision}>
-                  <td className={td}>
-                    <StatusPill status={o.decision} label={o.label} />
-                  </td>
-                  <td className={`${td} text-right font-mono`}>{formatCount(o.count)}</td>
-                  <td className={`${td} text-right font-mono text-muted`}>{o.share}</td>
-                  <td className={`${td} text-muted`}>{o.note}</td>
-                </tr>
-              ))}
-              <tr>
-                <td className={`${td} font-medium`}>Total</td>
-                <td className={`${td} text-right font-mono font-medium`}>{formatCount(s.total)}</td>
-                <td className={td} />
-                <td className={td} />
-              </tr>
-            </tbody>
-          </table>
-        </div>
+            ))}
+            <tr>
+              <td className={`${td} font-medium`}>Total</td>
+              <td className={`${td} text-right font-mono font-medium`}>{formatCount(s.total)}</td>
+              <td className={td} />
+              <td className={`${td} hidden sm:table-cell`} />
+            </tr>
+          </tbody>
+        </table>
       </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
         <H n={3}>Refunds paid</H>
         <div className="grid gap-6 sm:grid-cols-3">
-          <Figure label="Paid out" value={formatCents(s.paidCents)} note={`${plural(s.remedied, "payout")} at ${formatCents(report.refundCents)}`} />
+          <Figure label="Paid out" value={formatCents(s.paidCents)} note={report.paidEachCents === null ? plural(s.remedied, "payout") : `${plural(s.remedied, "payout")} at ${formatCents(report.paidEachCents)}`} />
           <Figure label="Confirmed by PayPal" value={formatCents(report.settledCents)} note={s.settling ? `${formatCount(s.settling)} still settling` : "Every payout settled"} />
           <Figure label="Method" value="PayPal" note="Payouts to each owner's verified PayPal account" />
         </div>
@@ -141,7 +141,7 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
       </section>
 
       <footer className="mt-12 border-t border-line pt-4 font-mono text-micro text-muted">
-        Prepared by Remedy from {plural(s.total, "claim record")} on {generated}. Review before filing with CPSC. Amounts use the current refund per unit.
+        Prepared by Remedy from {plural(s.total, "claim record")} on {generated}. Review before filing with CPSC.
       </footer>
     </article>
   );

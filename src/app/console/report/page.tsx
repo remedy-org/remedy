@@ -1,4 +1,4 @@
-import { formatDate } from "@/components/console/format";
+import { formatDayET } from "@/components/console/format";
 import { PartialNotice } from "@/components/console/PartialNotice";
 import { PrintButton } from "@/components/console/PrintButton";
 import { ProgressReport } from "@/components/console/ProgressReport";
@@ -28,7 +28,7 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
     );
   }
 
-  const { claims, unreadable } = await loadClaims(store, recall.id);
+  const { claims, unreadable } = await loadClaims(store, recall, session);
   const report = buildReport(claims, recall);
 
   return (
@@ -46,7 +46,7 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
       <div className="mx-auto w-full max-w-[52rem] print:hidden">
         <PartialNotice what="claims" ids={unreadable} total={claims.length + unreadable.length} />
       </div>
-      <ProgressReport recall={recall} report={report} generated={formatDate(new Date().toISOString())} />
+      <ProgressReport recall={recall} report={report} generated={`${formatDayET(new Date().toISOString())} (ET)`} />
     </main>
   );
 }

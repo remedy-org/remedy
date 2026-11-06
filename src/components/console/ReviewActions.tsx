@@ -56,7 +56,7 @@ export function ReviewActions({ claim, onDone }: { claim: DrawerClaim; onDone: (
         <>
           <p className="text-ui text-muted">
             Remedy runs the duplicate and account checks again, then sends <span className="font-mono text-text">{claim.amount}</span> to{" "}
-            <span className="font-mono text-text">{claim.payer}</span> from your PayPal business account.
+            <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts, from Remedy&apos;s PayPal account in this build.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Paying through PayPal" className="flex-1 sm:flex-none">

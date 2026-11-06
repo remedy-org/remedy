@@ -56,11 +56,22 @@ export function ReasonCell({ data }: Cell) {
   ) : null;
 }
 
+const FAILED = new Set(["FAILED", "RETURNED", "BLOCKED", "DENIED", "REVERSED", "REFUNDED", "CANCELED"]);
+
+/** PayPal's status in a word: Sent, Settling or Failed. Never the held blue: a settling payout isn't held for a person.
+ * The raw status stays in the drawer's PayPal block and in the tooltip. */
 export function PayoutCell({ data }: Cell) {
   if (!data) return null;
   if (!data.payoutStatus) return <span className="text-faint" aria-label="No payout">—</span>;
-  const settled = data.payoutStatus === "SUCCESS";
-  return <span className={settled ? "font-mono text-micro text-muted" : "font-mono text-micro text-hold"}>{data.payoutStatus}</span>;
+  const status = data.payoutStatus;
+  const [word, mark] =
+    status === "SUCCESS" ? ["Sent", "bg-muted"] : FAILED.has(status) ? ["Failed", "bg-stop"] : ["Settling", "border border-muted"];
+  return (
+    <span className="inline-flex items-center gap-2 text-ui text-muted" title={`PayPal: ${status}`}>
+      <span className={`size-1.5 shrink-0 rounded-full ${mark}`} aria-hidden="true" />
+      {word}
+    </span>
+  );
 }
 
 export function AmountCell({ data }: Cell) {

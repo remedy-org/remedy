@@ -6,6 +6,7 @@ export { ExhibitLabel, type ExhibitLabelProps } from "./ExhibitLabel";
 export { Field, Input, Textarea, type FieldControlProps, type FieldProps, type InputProps, type TextareaProps } from "./Field";
 export { AlertIcon, ArrowRightIcon, BlockIcon, CheckIcon, ClockIcon, CrossIcon, HoldIcon } from "./icons";
 export { CheckProgress, Meter, type CheckProgressProps, type CheckState, type CheckStep, type MeterProps } from "./Progress";
+export { NoBreakHyphens } from "./NoBreakHyphens";
 export { Skeleton, SkeletonText, type SkeletonProps, type SkeletonTextProps } from "./Skeleton";
 export { StatusPill, statusLabel, type Status, type StatusPillProps } from "./StatusPill";
 export { THEME_STORAGE_KEY, type Theme } from "./theme";

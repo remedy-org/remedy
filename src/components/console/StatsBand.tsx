@@ -37,7 +37,7 @@ export function StatsBand({ stats }: { stats: Stats }) {
         {stats.settling ? `${plural(stats.remedied, "payout")}, ${formatCount(stats.settling)} settling` : plural(stats.remedied, "payout")}
       </Stat>
       <Stat label="Waiting for review" value={formatCount(stats.held)}>
-        {stats.pending ? `Held for a person; ${formatCount(stats.pending)} still checking` : "Held for a person"}
+        {stats.pending ? `Held for a person; ${formatCount(stats.pending)} more in progress` : "Held for a person"}
       </Stat>
       <Stat label="Refused" value={formatCount(stats.rejected + stats.blocked)}>
         {formatCount(stats.rejected)} rejected, {formatCount(stats.blocked)} blocked

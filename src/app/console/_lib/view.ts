@@ -10,6 +10,10 @@ export function formatCents(c: number): string {
 
 export const formatMoney = (m: Pick<Money, "value">) => formatCents(cents(m));
 
+/** What a claim pays or paid: the amount fixed at pay time, else the recall's current refund (held, or paid before
+ * amounts were recorded). Changing the refund never reprices money already sent. */
+export const amountOf = (c: Pick<Claim, "payout">, recall: Pick<Recall, "refund">): Money => c.payout?.amount ?? recall.refund;
+
 // PayPal payer ids are 13 characters; the console shows the last four, enough to tell accounts apart.
 export const maskPayer = (payerId: string) => `•••• ${payerId.slice(-4)}`;
 
@@ -54,7 +58,7 @@ export function toRow(c: Claim, recall: Recall): ClaimRow {
     decision: c.decision,
     reason: reasonOf(c, recall),
     payoutStatus: c.payout?.status ?? null,
-    amount: c.decision === "paid" || c.decision === "held" ? formatMoney(recall.refund) : null,
+    amount: c.decision === "paid" || c.decision === "held" ? formatMoney(amountOf(c, recall)) : null,
     seeded: Boolean(c.seeded),
     demo: Boolean(c.demo),
   };
@@ -82,7 +86,7 @@ export function statsOf(claims: Pick<Claim, "decision" | "payout">[], recall: Pi
     total: claims.length,
     remedied: paid.length,
     unitsSold: recall.unitsSold,
-    paidCents: paid.length * cents(recall.refund),
+    paidCents: paid.reduce((sum, c) => sum + cents(amountOf(c, recall)), 0),
     settling: paid.filter((c) => !SETTLED.has(c.payout?.status ?? "")).length,
     held: count("held"),
     rejected: count("rejected"),
@@ -101,7 +105,7 @@ export function percent(value: number, of: number): string {
 
 // The rule's decision in one sentence, for the evidence drawer.
 export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos" | "payout">, recall: Pick<Recall, "autoPay" | "refund">): string {
-  const amount = formatMoney(recall.refund);
+  const amount = formatMoney(amountOf(c, recall));
   const reviewed = c.reasons.find((r) => r.check === "review");
   switch (c.decision) {
     case "paid":
@@ -125,7 +129,7 @@ export const reviewReasonText = (reason: string) => `${REVIEW_PREFIX}${reason}`;
 const stripPrefix = (t: string) => (t.startsWith(REVIEW_PREFIX) ? t.slice(REVIEW_PREFIX.length) : t);
 const lower = (t: string) => (t ? t[0].toLowerCase() + t.slice(1) : t).replace(/[.\s]+$/, "");
 
-export type PreCheckState = "pass" | "hold" | "reject" | "waiting";
+export type PreCheckState = "pass" | "hold" | "reject" | "waiting" | "skipped";
 export interface PreCheckRow {
   id: string;
   label: string;
@@ -134,7 +138,7 @@ export interface PreCheckRow {
 }
 
 // The four cheap checks that run before any photo reaches the model, rebuilt from the claim's reasons.
-export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified">): PreCheckRow[] {
+export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified" | "seeded">): PreCheckRow[] {
   const ran = c.photos.length > 0 || c.decision === "blocked";
   // preCheck rejects (the claim is blocked); sendCheck, run again right before a payout, holds.
   const failed = (check: string) => c.reasons.find((r) => r.check === check && r.outcome !== "pass");
@@ -145,7 +149,11 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
   };
   return [
     row("session", "Live camera session", "Taken in this claim's camera session, before it expired"),
-    row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
+    // Seeded claims share a handful of sample photos, so the fingerprint check was never run on them: say so rather
+    // than show a pass next to another claim with the same photo.
+    c.seeded
+      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Sample photo shared by the seeded claims, so this check wasn't run" }
+      : row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
     row("payer", "First claim for this account", "No other live claim from this PayPal account"),
     row("payer_verified", "Verified PayPal account", "PayPal says the account is verified"),
   ];
