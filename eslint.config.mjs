@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Builder worktrees live inside the repo; each lints itself.
+    ".claude/**",
   ]),
 ]);
 

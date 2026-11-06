@@ -216,8 +216,6 @@ export interface EnsureOptions {
   now?: Date;
   // Rewrite the seeded claims with fresh times (same ids).
   reset?: boolean;
-  // Where the sample photos are read from.
-  photoDir?: string;
 }
 
 export interface EnsureResult {
@@ -228,7 +226,7 @@ export interface EnsureResult {
 
 // Idempotent: creates the Kikea recall if missing (never overwrites a company's edits to it) and the seeded claims
 // if none exist yet, or always with reset.
-export async function ensureDemoData(store: Store, { now = new Date(), reset = false, photoDir = join(process.cwd(), "public/demo") }: EnsureOptions = {}): Promise<EnsureResult> {
+export async function ensureDemoData(store: Store, { now = new Date(), reset = false }: EnsureOptions = {}): Promise<EnsureResult> {
   let recall = await store.getRecall(DEMO_RECALL_ID);
   const recallState = recall ? "kept" : "created";
   if (!recall) {
@@ -242,7 +240,8 @@ export async function ensureDemoData(store: Store, { now = new Date(), reset = f
 
   const hashes: Record<string, string> = {};
   for (const name of SEED_PHOTOS) {
-    const jpeg = await readFile(join(photoDir, name));
+    // A path rooted in public/demo, so the build traces only the sample photos, not the whole project.
+    const jpeg = await readFile(join(process.cwd(), "public", "demo", name));
     await store.putPhoto(`${SEED_PHOTO_PREFIX}${name}`, jpeg);
     hashes[name] = await dHash(jpeg);
   }
