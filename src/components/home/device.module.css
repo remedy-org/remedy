@@ -4,6 +4,11 @@
  * whole object scales as one piece from 1440px down to 375px.
  */
 
+/* The figure is a container too, so the checks card under the laptop switches at the same width as the screen. */
+.figure {
+  container-type: inline-size;
+}
+
 .stage {
   container-type: inline-size;
   position: relative;
@@ -29,6 +34,30 @@
     --rx: -13deg;
     --ry: 7deg;
     --scene-top: 12%;
+  }
+}
+
+/*
+ * Below 640px the screen's checks column would render at about 6px, so the lid shows the camera alone and the
+ * checks and payout move to a full-size card under the laptop (.narrowOnly), driven by the same phase.
+ */
+.narrowOnly {
+  display: none;
+}
+
+@container (max-width: 640px) {
+  .wideOnly {
+    display: none;
+  }
+
+  .cameraCol {
+    width: 100%;
+    max-width: 40em;
+    margin-inline: auto;
+  }
+
+  .narrowOnly {
+    display: block;
   }
 }
 
@@ -216,6 +245,13 @@
 .leaders line {
   stroke: color-mix(in oklch, var(--accent-text) 70%, transparent);
   stroke-width: 1;
+}
+
+/* A 3px page-coloured halo under each leader keeps any text it crosses legible. */
+.leaders .halo {
+  stroke: var(--bg);
+  stroke-width: 3;
+  stroke-linecap: round;
 }
 
 .leaders circle {

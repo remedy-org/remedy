@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import Image from "next/image";
 import { Button, StatusPill, type Status } from "@/components/ui";
+import { SANDBOX_ACCOUNTS_URL } from "@/components/claim/model";
 import { Section } from "./Section";
 
 // The checks in the order they run (src/lib/rule.ts): preCheck's three need no model; then the model describes and a
@@ -36,7 +37,7 @@ const CHECKS: { title: string; text: string; ai: boolean }[] = [
 // The judges' four demo samples (src/lib/demo/samples.ts) and the reason the rule gives for each.
 const SAMPLES: { photo: string; title: string; status: Status; check: string; reason: string }[] = [
   { photo: "/demo/c02-1.jpg", title: "A genuine claim", status: "paid", check: "Passed all five checks", reason: "$29.99 sent to the owner's PayPal account" },
-  { photo: "/demo/c08-1.jpg", title: "An AI image, sent in", status: "blocked", check: "Stopped at check 1", reason: "These photos weren't taken in this claim's camera session" },
+  { photo: "/demo/c08-1.jpg", title: "An AI image, sent in", status: "blocked", check: "Stopped at check 1", reason: "This photo wasn't taken in this claim's camera session" },
   { photo: "/demo/c02-1.jpg", title: "The same photo, reposted", status: "blocked", check: "Stopped at check 2", reason: "Photo 1 was already used in another claim" },
   { photo: "/demo/c11-1.jpg", title: "The wrong code", status: "rejected", check: "Rejected at check 4", reason: "Written code reads K7Q; this claim's code is K7P" },
 ];
@@ -81,14 +82,20 @@ export function Checks() {
           <div className="border-b border-line px-6 py-4">
             <h3 className="text-ui font-medium">Four claims a judge can run</h3>
             <p className="mt-1 text-ui text-muted">Same pipeline, sample photos, sandbox money.</p>
+            <p className="mt-1 text-ui text-faint">
+              Needs a PayPal sandbox personal account.{" "}
+              <a href={SANDBOX_ACCOUNTS_URL} className="underline underline-offset-4 transition-colors duration-160 hover:text-text">
+                How to make one
+              </a>
+            </p>
           </div>
           <ul>
             {SAMPLES.map((s) => (
               <li key={s.title} className="flex gap-4 border-b border-line px-6 py-4 last:border-b-0">
                 <Image src={s.photo} alt="" width={44} height={44} loading="eager" className="size-11 shrink-0 rounded-control border border-line object-cover" />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="truncate text-ui font-medium">{s.title}</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="min-w-0 text-ui font-medium text-pretty">{s.title}</span>
                     <StatusPill status={s.status} />
                   </div>
                   <p className="mt-1 text-ui text-muted">{s.reason}</p>

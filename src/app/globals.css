@@ -2,7 +2,7 @@
 
 /*
  * Evidence Room tokens (DESIGN.md). Dark is the brand and the default; light is opt-in with
- * data-theme="light" on <html> or on any subtree. The homepage pins data-theme="dark".
+ * data-theme="light" on <html> or on any subtree. The homepage pins data-theme="dark" on its wrapper.
  */
 :root,
 [data-theme="dark"] {
@@ -15,7 +15,8 @@
   --line-strong: oklch(0.52 0.012 255);
   --text: oklch(0.96 0.005 255);
   --muted: oklch(0.72 0.012 255);
-  --faint: oklch(0.56 0.012 255);
+  /* Reading text: 4.8:1 on --surface-2, 5.3:1 on --surface. */
+  --faint: oklch(0.64 0.012 255);
   --accent: oklch(0.8 0.15 75);
   --accent-hover: oklch(0.84 0.15 75);
   --accent-ink: oklch(0.22 0.03 70);
@@ -35,7 +36,8 @@
   --line-strong: oklch(0.64 0.015 255);
   --text: oklch(0.2 0.02 255);
   --muted: oklch(0.46 0.02 255);
-  --faint: oklch(0.6 0.015 255);
+  /* Reading text: 4.5:1 on --surface-2, 4.8:1 on --bg. */
+  --faint: oklch(0.54 0.015 255);
   --accent: oklch(0.74 0.15 72);
   --accent-hover: oklch(0.78 0.15 72);
   --accent-ink: oklch(0.22 0.03 70);
@@ -44,6 +46,15 @@
   --hold: oklch(0.52 0.12 250);
   --stop: oklch(0.55 0.19 27);
   --float-shadow: 0 16px 40px -20px oklch(0.2 0.02 255 / 0.25);
+}
+
+/*
+ * The homepage's <html> stays dark even when a light theme is saved, so the scrollbar and the overscroll band match
+ * the page. Its own rule: a browser without :has() drops only this, not the tokens above. Outranks [data-theme].
+ */
+html:has([data-marketing]) {
+  color-scheme: dark;
+  --bg: oklch(0.165 0.012 255);
 }
 
 /* Soft state backgrounds: the state colour at 14%. */
@@ -186,6 +197,18 @@
     letter-spacing: var(--text-micro--letter-spacing);
     text-transform: uppercase;
   }
+}
+
+/*
+ * AG Grid's auto-height layout keeps a 150px minimum under the rows, which leaves an empty band under a short list
+ * (the Held tab's 3 rows). The grid hugs its rows instead, and the last row lets the wrapper's border close the table.
+ */
+.claims-grid .ag-layout-auto-height.ag-grid-scrolling-rows {
+  min-height: 0;
+}
+
+.claims-grid .ag-row-last {
+  border-bottom-color: transparent;
 }
 
 /* Skeleton shimmer: opacity only, stops under reduced motion. */

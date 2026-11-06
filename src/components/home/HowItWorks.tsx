@@ -19,7 +19,7 @@ const STEPS = [
   },
   {
     title: "Paid through PayPal",
-    text: "Once the checks pass, PayPal Payouts sends the refund from the company's business account to the owner's PayPal account. Remedy never holds the money.",
+    text: "Once the checks pass, PayPal Payouts sends the refund to the owner's PayPal account. In this build it comes from Remedy's PayPal business account; at launch, from the company's.",
     mark: "$29.99 · 41 s",
   },
 ];

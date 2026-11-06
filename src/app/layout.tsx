@@ -19,13 +19,16 @@ const mono = IBM_Plex_Mono({
 const description =
   "Recall refunds in a minute for people who really destroyed the product, and never for a faked photo. Paid through PayPal.";
 
+// Absolute URLs for the link card: APP_URL, else Vercel's production domain, else the local dev server.
+const siteUrl = process.env.APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://127.0.0.1:3000");
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL || "http://127.0.0.1:3000"),
+  metadataBase: new URL(siteUrl),
   title: { default: "Remedy", template: "%s · Remedy" },
   description,
   applicationName: "Remedy",
   openGraph: { title: "Remedy", description, siteName: "Remedy", type: "website" },
-  twitter: { card: "summary", title: "Remedy", description },
+  twitter: { card: "summary_large_image", title: "Remedy", description },
 };
 
 export const viewport: Viewport = {

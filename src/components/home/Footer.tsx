@@ -5,7 +5,7 @@ const PRODUCT = [
   { href: "#how", label: "How it works" },
   { href: "#checks", label: "What stops a fake" },
   { href: "#proof", label: "Proof" },
-  { href: "/r/kikea-x-vesolje/try", label: "See a claim" },
+  { href: "/r/kikea-x-vesolje/try", label: "Try a demo claim" },
   { href: "/signin", label: "Sign in" },
 ];
 

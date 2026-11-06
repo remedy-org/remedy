@@ -58,7 +58,7 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
 | `--line` | `oklch(1 0 0 / 0.08)` | `oklch(0.2 0.02 255 / 0.1)` | Hairlines |
 | `--text` | `oklch(0.96 0.005 255)` | `oklch(0.2 0.02 255)` | Primary text |
 | `--muted` | `oklch(0.72 0.012 255)` | `oklch(0.46 0.02 255)` | Secondary text, second half of headlines |
-| `--faint` | `oklch(0.56 0.012 255)` | `oklch(0.6 0.015 255)` | Meta, disabled |
+| `--faint` | `oklch(0.64 0.012 255)` | `oklch(0.54 0.015 255)` | Meta and small print; still 4.5:1 on every surface |
 | `--accent` | `oklch(0.80 0.15 75)` | `oklch(0.74 0.15 72)` | Primary button fill, exhibit marks |
 | `--accent-ink` | `oklch(0.22 0.03 70)` | `oklch(0.22 0.03 70)` | Text on accent |
 | `--accent-text` | `oklch(0.82 0.13 78)` | `oklch(0.52 0.12 62)` | Amber used as text |
@@ -87,7 +87,7 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
 - **Micro-interactions:** 160ms ease-out (`cubic-bezier(0.2, 0.8, 0.2, 1)`), transform and opacity only.
 - **Larger transitions:** up to 360ms.
 - **Library:** Motion (`motion/react`), only where CSS can't do it.
-- **The hero moment:** the device sits in a slight 3D tilt on the light table (CSS perspective; up to 4° extra tilt following the pointer on desktop). Once it's in view, the four checks tick in one after another, 450ms apart, then the payout chip lands with the time. It plays once, and replays on a "Replay" control.
+- **The hero moment:** the device sits in a slight 3D tilt on the light table (CSS perspective; up to 4° extra tilt following the pointer on desktop). Once it's in view, the five checks (in the order of "What stops a fake") tick in one after another, 450ms apart, then the payout chip lands with the time. Below a 640px stage the screen shows the camera alone and the checks tick in a full-size card under the laptop. It plays once, and replays on a "Replay" control.
 - **Scroll reveals:** sections fade in and rise 8px when they enter. The resting state is always visible: no JS, reduced motion, or a screenshot all show the full page.
 - `prefers-reduced-motion`: no tilt, no sequence; the final state shows immediately.
 
@@ -122,7 +122,7 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
 
 **Homepage**, in the section order from the approved mockup:
 1. Nav: wordmark, How it works, Proof, For companies, Sign in, and **Start a recall**.
-2. Hero: a two-tone headline, the lead, **Start a recall** and "See a claim in 60 seconds →", and the device on the light table.
+2. Hero: a two-tone headline, the lead, **Start a recall** and "Try a claim with sample photos →" (with a faint line that the demo needs a PayPal sandbox personal account), and the device on the light table.
 3. The problem: 6–10% of recalled products come back, and real notices still say "email a photo to a @gmail.com inbox".
 4. How it works, in four steps.
 5. What stops a fake: the five checks in order.

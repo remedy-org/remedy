@@ -2,11 +2,13 @@ import clsx from "clsx";
 import Image from "next/image";
 import { motion } from "motion/react";
 import { CheckIcon } from "@/components/ui";
+import styles from "./device.module.css";
 
 // What the laptop in the hero shows: the judges' genuine demo claim (DEMO_SAMPLES "genuine": photo c02, code M4T)
 // on the Kikea X-VESOLJE recall, mid-check. Sizes are in em so the screen scales with the device.
 
-export const CHECKS = ["Live photo, this session", "Label reads X-VESOLJE", "Cut fully in half", "Code M4T matches"] as const;
+// The five checks in the order "What stops a fake" lists them (Checks.tsx): three without AI, then the model's two.
+export const CHECKS = ["Live camera session", "Photo not seen before", "Verified PayPal account", "Label and code M4T", "Cut fully in half"] as const;
 /** phase: how many checks have passed; CHECKS.length + 1 means the payout has landed. */
 export const FINAL_PHASE = CHECKS.length + 1;
 
@@ -32,7 +34,7 @@ function CheckRow({ label, state }: { label: string; state: "waiting" | "running
         <span
           className={clsx(
             "absolute inset-0 rounded-full border transition-colors duration-160",
-            state === "running" ? "border-accent" : "border-line-strong",
+            state === "running" ? "border-text/70" : "border-line-strong",
           )}
         />
         <motion.span
@@ -51,22 +53,21 @@ function CheckRow({ label, state }: { label: string; state: "waiting" | "running
 }
 
 export function ClaimScreen({ phase }: { phase: number }) {
-  const paid = phase >= FINAL_PHASE;
   return (
     <div className="flex h-full flex-col text-text">
-      {/* Top bar */}
-      <div className="flex h-[3.4em] shrink-0 items-center justify-between border-b border-line px-[1.6em]">
+      {/* Top bar, left-aligned so the exhibit leaders drop through the empty middle of the bar, not through text. */}
+      <div className="flex h-[3.4em] shrink-0 items-center gap-[1.4em] border-b border-line px-[1.6em]">
         <span className="flex items-center gap-[0.6em] font-mono text-[1.05em] tracking-[0.06em] text-pay uppercase">
           <span className="size-[0.6em] rounded-full bg-pay" />
           Live
         </span>
         <span className="text-[1.15em] text-muted">Kikea X-VESOLJE nursing pillow</span>
-        <span className="font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">CPSC 27-071</span>
+        <span className="ml-auto font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">CPSC 27-071</span>
       </div>
 
       <div className="flex min-h-0 flex-1">
         {/* Camera */}
-        <div className="flex min-w-0 flex-1 flex-col px-[1.6em] pt-[1.5em]">
+        <div className={clsx("flex min-w-0 flex-1 flex-col px-[1.6em] pt-[1.5em]", styles.cameraCol)}>
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[0.5em] bg-surface-2">
             <Image
               src="/demo/c02-1.jpg"
@@ -102,40 +103,50 @@ export function ClaimScreen({ phase }: { phase: number }) {
           </div>
         </div>
 
-        {/* Checks and result */}
-        <div className="flex w-[21.5em] shrink-0 flex-col border-l border-line px-[1.6em] pt-[1.3em] pb-[1.4em]">
-          <span className="font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Checks</span>
-          <ol className="mt-[0.4em]">
-            {CHECKS.map((label, i) => (
-              <CheckRow key={label} label={label} state={phase > i ? "pass" : phase === i ? "running" : "waiting"} />
-            ))}
-          </ol>
-
-          <span className="mt-auto font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Result</span>
-          <div className="relative mt-[0.7em] h-[3.6em]">
-            <span
-              data-seq="hide"
-              className={clsx(
-                "absolute inset-0 flex items-center rounded-[0.5em] border border-dashed border-line-strong px-[1em] text-[1.15em] text-faint transition-opacity duration-160",
-                paid && "opacity-0",
-              )}
-            >
-              {phase < CHECKS.length ? `Checking ${phase + 1} of ${CHECKS.length}` : "Sending refund"}
-            </span>
-            <motion.span
-              data-seq="show"
-              className="absolute inset-0 flex items-center gap-[0.5em] rounded-[0.5em] border border-pay/50 bg-pay-soft px-[1em] text-[1.2em] whitespace-nowrap text-pay"
-              initial={false}
-              animate={paid ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 8, scale: 0.96 }}
-              transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            >
-              <span className="font-mono font-semibold">$29.99</span>
-              <span>sent to PayPal · 41 s</span>
-            </motion.span>
-          </div>
-          <span className="mt-[0.9em] text-[1.05em] text-faint">PayPal Payouts · verified account</span>
+        {/* Checks and result. On a narrow stage they leave the screen for the full-size card under the laptop. */}
+        <div className={clsx("flex w-[21.5em] shrink-0 flex-col border-l border-line px-[1.6em] pt-[1.3em] pb-[1.4em]", styles.wideOnly)}>
+          <ChecksPanel phase={phase} />
         </div>
       </div>
     </div>
+  );
+}
+
+/** The checks ticking in, then the payout. Sized in em: inside the lid it scales with the device; under it, 1.2em = 14px. */
+export function ChecksPanel({ phase }: { phase: number }) {
+  const paid = phase >= FINAL_PHASE;
+  return (
+    <>
+      <span className="font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Checks</span>
+      <ol className="mt-[0.4em]">
+        {CHECKS.map((label, i) => (
+          <CheckRow key={label} label={label} state={phase > i ? "pass" : phase === i ? "running" : "waiting"} />
+        ))}
+      </ol>
+
+      <span className="mt-auto pt-[1em] font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Result</span>
+      <div className="relative mt-[0.7em] h-[3.6em]">
+        <span
+          data-seq="hide"
+          className={clsx(
+            "absolute inset-0 flex items-center rounded-[0.5em] border border-dashed border-line-strong px-[1em] text-[1.15em] text-faint transition-opacity duration-160",
+            paid && "opacity-0",
+          )}
+        >
+          {phase < CHECKS.length ? `Checking ${phase + 1} of ${CHECKS.length}` : "Sending refund"}
+        </span>
+        <motion.span
+          data-seq="show"
+          className="absolute inset-0 flex items-center gap-[0.5em] rounded-[0.5em] border border-pay/50 bg-pay-soft px-[1em] text-[1.2em] whitespace-nowrap text-pay"
+          initial={false}
+          animate={paid ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 8, scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+        >
+          <span className="font-mono font-semibold">$29.99</span>
+          <span>sent to PayPal · 41 s</span>
+        </motion.span>
+      </div>
+      <span className="mt-[0.9em] text-[1.05em] text-faint">PayPal Payouts · verified account</span>
+    </>
   );
 }

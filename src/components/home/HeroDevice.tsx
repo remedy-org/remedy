@@ -4,20 +4,20 @@ import clsx from "clsx";
 import { useInView, useMotionTemplate, useMotionValue, useSpring, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from "react";
 import { ExhibitLabel } from "@/components/ui";
-import { ClaimScreen, FINAL_PHASE, type AnchorId } from "./ClaimScreen";
+import { ChecksPanel, ClaimScreen, FINAL_PHASE, type AnchorId } from "./ClaimScreen";
 import { Laptop } from "./Laptop";
 import styles from "./device.module.css";
 
-// The hero moment (DESIGN.md, Motion): once the device is in view the four checks tick in 450ms apart, then the payout
-// chip lands. Plays once; Replay runs it again. Reduced motion shows the final state and no tilt. Without JS the
+// The hero moment (DESIGN.md, Motion): once the device is in view the five checks tick in 450ms apart, then the payout
+// chip lands. On a narrow stage the checks tick in a full-size card under the laptop instead of on its screen. Plays once; Replay runs it again. Reduced motion shows the final state and no tilt. Without JS the
 // <noscript> style below shows the final state too.
 
-const PHASE_AT = [700, 1150, 1600, 2050, 2550];
+const PHASE_AT = [700, 1150, 1600, 2050, 2500, 3000];
 const MAX_TILT = 4;
 
 const EXHIBITS: { id: AnchorId; n: string; text: string; className: string }[] = [
   { id: "label", n: "01", text: "Label", className: "left-[30%] top-0 sm:left-[28%] sm:-top-[2%]" },
-  { id: "cut", n: "02", text: "Cut", className: "left-0 top-[86%] sm:left-0 sm:top-[60%] xl:left-[3%] xl:top-[66%]" },
+  { id: "cut", n: "02", text: "Cut", className: "left-0 top-[86%] sm:left-0 sm:top-[54%] xl:left-[3%] xl:top-[58%]" },
   { id: "code", n: "03", text: "Code", className: "left-0 top-[95%] sm:left-[6%] sm:top-[80%] xl:left-[10%] xl:top-[84%]" },
 ];
 
@@ -86,11 +86,13 @@ export function HeroDevice() {
       const y1 = l.top + l.height / 2 - s.top;
       const x2 = a.left + a.width / 2 - s.left;
       const y2 = a.top + a.height / 2 - s.top;
-      const [line, ring, dot] = Array.from(group.children);
-      line.setAttribute("x1", String(x1));
-      line.setAttribute("y1", String(y1));
-      line.setAttribute("x2", String(x2));
-      line.setAttribute("y2", String(y2));
+      const [halo, line, ring, dot] = Array.from(group.children);
+      for (const l of [halo, line]) {
+        l.setAttribute("x1", String(x1));
+        l.setAttribute("y1", String(y1));
+        l.setAttribute("x2", String(x2));
+        l.setAttribute("y2", String(y2));
+      }
       for (const c of [ring, dot]) {
         c.setAttribute("cx", String(x2));
         c.setAttribute("cy", String(y2));
@@ -145,7 +147,7 @@ export function HeroDevice() {
   );
 
   return (
-    <figure className="relative m-0" data-hero-device>
+    <figure className={clsx("relative m-0", styles.figure)} data-hero-device>
       <noscript dangerouslySetInnerHTML={{ __html: NOSCRIPT }} />
       <div
         ref={stageRef}
@@ -153,7 +155,7 @@ export function HeroDevice() {
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         role="img"
-        aria-label="A Remedy claim on a laptop: the recalled Kikea pillow cut in half with code M4T written on its tag. Four checks pass, then $29.99 is sent to PayPal in 41 seconds."
+        aria-label="A Remedy claim on a laptop: the recalled Kikea pillow cut in half with code M4T written on its tag. Five checks pass, then $29.99 is sent to PayPal in 41 seconds."
       >
         <div className={styles.view}>
           <Laptop screen={<ClaimScreen phase={shown} />} renderTilt={renderTilt} />
@@ -161,6 +163,7 @@ export function HeroDevice() {
         <svg ref={svgRef} className={styles.leaders} aria-hidden="true">
           {EXHIBITS.map(({ id }) => (
             <g key={id} data-leader={id} visibility="hidden">
+              <line className={styles.halo} />
               <line />
               <circle className={styles.ring} r={6} />
               <circle r={2.5} />
@@ -176,7 +179,13 @@ export function HeroDevice() {
           </div>
         ))}
       </div>
-      <figcaption className="relative z-10 mt-14 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 sm:mt-4 sm:pl-[6%] xl:pr-[calc(2rem_+_max(0px,(100vw_-_75rem)/2))]">
+      {/* Phones: the checks at reading size, under the laptop. The screen reader hears the stage's label instead. */}
+      <div className={clsx("relative z-10 mt-12 sm:mt-6", styles.narrowOnly)} aria-hidden="true">
+        <div className="flex flex-col rounded-card border border-line bg-surface p-5 text-[calc(14px/1.2)]">
+          <ChecksPanel phase={shown} />
+        </div>
+      </div>
+      <figcaption className="relative z-10 mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 sm:mt-4 sm:pl-[6%] lg:pr-[calc(2rem_+_max(0px,(100vw_-_75rem)/2))]">
         <span className="text-ui text-faint">A demo claim on the Kikea recall. AI-made test photo; sandbox money.</span>
         <button
           type="button"

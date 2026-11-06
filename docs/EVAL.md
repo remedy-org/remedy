@@ -34,7 +34,7 @@ If PayPal also rejects `127.0.0.1`, run `ngrok http 8787`. Use the `https://…n
 
 **Result, 7 Nov: GO with GPT-6.1 Sol at high effort.**
 - Across 36 claims, 3 runs each, it paid every real claim and rejected every wrong code, wrong label and wrong model.
-- It never paid a web photo.
+- With the code check on, it never paid a web photo. (`w03`, the control with the code check off, is meant to pass.)
 - It costs about 1.1¢ and 16 seconds a claim.
 - Its one miss is an AI image with a subtle physical flaw. That's a job for the capture path, not the model (see "What this can't show").
 
@@ -74,16 +74,16 @@ The results below came from the first runner, a plain-JS copy of the check that 
 
 ### Results: 3 runs per model, high effort
 
-Round 2 covers the 31 `w` and `c` claims; the held-out set is the 5 `h` claims. Each cell shows round 2 first, then held out.
+Round 2 covers the 31 `w` and `c` claims; the held-out set is the 5 `h` claims. Each cell shows round 2 first, then held out. "Decisions right" counts claims in one run; the paid columns add up all 3 runs (7 genuine claims, `c01`–`c03` and `c05`–`c08`, make 21; the held-out `h01` and `h02` make 6).
 
-| Model | Decisions right | Real claims paid | Fakes paid | Answers right | Seconds per claim | Cost per claim |
+| Model | Decisions right | Genuine claims paid (3 runs) | Fakes paid (3 runs) | Answers right | Seconds per claim | Cost per claim |
 |---|---|---|---|---|---|---|
 | **GPT-6.1 Sol** | 29–30 of 31 · 5 of 5 | 21 of 21 · 6 of 6 | 3, all `c14` · 0 | 91% · 96% | 16 (max 40) | $0.011 |
 | GPT-6 Astra | 29–30 of 31 · 5 of 5 | 21 of 21 · 6 of 6 | 1, `c14` · 0 | 90% · 96% | 26 (max 67) | $0.064 |
 | GPT-6.1 Terra | 29–30 of 31 · 5 of 5 | 18 of 21 · 6 of 6 | 2, `c14` · 0 | 93% · 96% | 10 (max 19) | $0.005 |
 | GPT-6 Luna | 28–29 of 31 · 4–5 of 5 | 16 of 21 · 6 of 6 | 3, `c14` · 2, `h03` | 93% · 96% | 10 (max 27) | $0.0006 |
 
-All four models rejected all 12 wrong-code attempts and every web photo, in every run. The raw runs are in `eval/out/runs` (round 2) and `eval/out/holdout`.
+All four models rejected all 12 wrong-code attempts (4 cases, 3 runs) and, with the code check on, every web photo, in every run. `w03`, the control with the code check off, was paid as expected in 7 runs. The raw runs are in `eval/out/runs` (round 2) and `eval/out/holdout`.
 
 Why Sol:
 - **Terra** holds the two-photo claim because it can't confirm both photos show the same pillow.
