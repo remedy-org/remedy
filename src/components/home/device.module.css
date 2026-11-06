@@ -1,0 +1,228 @@
+/*
+ * The hero device: a laptop built in HTML/CSS, tilted in CSS 3D on a graphite light table.
+ * Every length inside the stage is in em, and 1em is a fixed share of the stage width, so the
+ * whole object scales as one piece from 1440px down to 375px.
+ */
+
+.stage {
+  container-type: inline-size;
+  position: relative;
+  aspect-ratio: 10 / 8.4;
+  width: 100%;
+}
+
+.view {
+  /* 1em = 1/80 of the stage width. */
+  font-size: calc(100cqw / 80);
+  position: absolute;
+  inset: 0;
+  perspective: 240em;
+  perspective-origin: 50% 20%;
+  --rx: -15deg;
+  --ry: 16deg;
+  --scene-top: 8%;
+}
+
+@container (max-width: 640px) {
+  .view {
+    font-size: calc(100cqw / 68);
+    --rx: -13deg;
+    --ry: 7deg;
+    --scene-top: 12%;
+  }
+}
+
+.scene {
+  position: absolute;
+  left: 50%;
+  top: var(--scene-top);
+  width: 64em;
+  height: 40em;
+  margin-left: -31em;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+}
+
+.tilt {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+/* The light table: graphite, a centimetre grid (1cm = 2.4em), a stronger line every 5cm. */
+.table {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 1.1em);
+  width: 220em;
+  height: 150em;
+  margin-left: -110em;
+  transform-origin: 50% 0;
+  transform: rotateX(90deg) translateY(-62em);
+  background-color: oklch(0.205 0.01 255);
+  background-image:
+    radial-gradient(ellipse 45% 40% at 50% 55%, oklch(0.27 0.012 255 / 0.9), transparent 70%),
+    linear-gradient(oklch(1 0 0 / 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(1 0 0 / 0.075) 1px, transparent 1px),
+    linear-gradient(oklch(1 0 0 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(1 0 0 / 0.035) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    12em 12em,
+    12em 12em,
+    2.4em 2.4em,
+    2.4em 2.4em;
+  background-position: 0 0, -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px;
+  -webkit-mask-image: radial-gradient(ellipse 40% 42% at 50% 55%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 40% 42% at 50% 55%, #000 55%, transparent 100%);
+}
+
+.ruler {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 1.5em;
+  letter-spacing: 0.06em;
+  color: oklch(1 0 0 / 0.28);
+  transform: translate(-50%, 0);
+  white-space: nowrap;
+}
+
+/* An evidence tag lying on the table, in perspective: the recall it belongs to. */
+.tag {
+  position: absolute;
+  padding: 1em 1.4em;
+  border: 1px solid color-mix(in oklch, var(--accent-text) 55%, transparent);
+  border-radius: 0.4em;
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: 1.15em;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tag hr {
+  border: 0;
+  border-top: 1px solid color-mix(in oklch, var(--accent-text) 40%, transparent);
+  margin: 0.5em 0;
+}
+
+/* The lid stands on its bottom edge, opened a little past upright. */
+.lid {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
+  transform: rotateX(5deg);
+  border-radius: 1.6em;
+  background: oklch(0.13 0.008 255);
+  border: 1px solid oklch(1 0 0 / 0.14);
+  padding: 1.15em 1.15em 1.6em;
+}
+
+.camera {
+  position: absolute;
+  top: 0.4em;
+  left: 50%;
+  width: 0.45em;
+  height: 0.45em;
+  margin-left: -0.225em;
+  border-radius: 50%;
+  background: oklch(0.3 0.01 255);
+}
+
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0.6em;
+  background: var(--bg);
+}
+
+/* The deck lies flat on the table, hinged to the lid's bottom edge. */
+.deck {
+  position: absolute;
+  left: -3em;
+  right: -3em;
+  top: 100%;
+  height: 43em;
+  transform-origin: 50% 0;
+  transform: rotateX(90deg);
+  transform-style: preserve-3d;
+  border-radius: 0.6em 0.6em 2em 2em;
+  background: linear-gradient(oklch(0.3 0.007 255), oklch(0.255 0.007 255));
+  border: 1px solid oklch(1 0 0 / 0.12);
+}
+
+.hinge {
+  position: absolute;
+  left: 3em;
+  right: 3em;
+  top: 0;
+  height: 1.4em;
+  background: linear-gradient(oklch(0.15 0.008 255), oklch(0.22 0.008 255));
+}
+
+.keys {
+  position: absolute;
+  left: 6em;
+  right: 6em;
+  top: 3em;
+  height: 20.5em;
+}
+
+.pad {
+  position: absolute;
+  left: 50%;
+  width: 26em;
+  margin-left: -13em;
+  top: 26em;
+  height: 14.5em;
+  border-radius: 1em;
+  background: oklch(0.285 0.007 255);
+  border: 1px solid oklch(1 0 0 / 0.08);
+}
+
+/* The deck's front edge: its thickness, facing the viewer. */
+.lip {
+  position: absolute;
+  left: 1.4em;
+  right: 1.4em;
+  bottom: 0;
+  height: 1.1em;
+  transform-origin: 50% 100%;
+  transform: rotateX(90deg);
+  border-radius: 0 0 1em 1em;
+  background: oklch(0.2 0.007 255);
+}
+
+/* Exhibit labels and their leader lines sit flat over the scene. */
+.label {
+  position: absolute;
+  z-index: 2;
+}
+
+.leaders {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.leaders line {
+  stroke: color-mix(in oklch, var(--accent-text) 70%, transparent);
+  stroke-width: 1;
+}
+
+.leaders circle {
+  fill: var(--accent);
+}
+
+.leaders .ring {
+  fill: none;
+  stroke: color-mix(in oklch, var(--accent) 50%, transparent);
+}
