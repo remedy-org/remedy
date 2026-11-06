@@ -1,17 +1,41 @@
 {
   "name": "remedy",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Recall refunds that reach real owners in a minute through PayPal, never a faked photo.",
   "license": "MIT",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
     "spike:paypal": "node --env-file=.env spikes/paypal-chain.mjs",
     "spike:vision": "node --env-file=.env spikes/vision-check.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
+    "@vercel/blob": "^2.8.2",
+    "ag-grid-community": "^36.2.0",
+    "ag-grid-react": "^36.2.0",
+    "motion": "^14.10.1",
+    "next": "16.3.6",
     "openai": "^7.53.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sharp": "^0.35.5",
     "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.6",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^5.1.0"
   }
 }
