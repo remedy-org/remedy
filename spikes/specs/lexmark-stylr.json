@@ -1,0 +1,10 @@
+{
+  "recall": "Lexmark Ventures SOLEXIO STYLR hair styler, model 8081-001",
+  "source": "https://www.lexmark.com/en_ca/legal/recall/solexio-stylr-product-recall.html",
+  "product": "SOLEXIO STYLR hair styler (flat iron)",
+  "label_must_show": ["model 8081-001 and a readable 13-character serial number"],
+  "proof_steps": [
+    "The cord is cut about 6 to 7 inches from the base of the styler",
+    "The serial number on the compliance label is visible and readable"
+  ]
+}

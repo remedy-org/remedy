@@ -1,0 +1,31 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# env files: secrets stay local; the example is committed
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# local data and spike fixtures (test photos belong to their owners)
+data/
+spikes/photos/
+spikes/out/
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*

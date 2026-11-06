@@ -1,0 +1,10 @@
+{
+  "recall": "Vornado handheld garment steamers (Steamfast, Sharper Image, Vornado brands)",
+  "source": "https://recalls.steamfast.com/recalls/hhgs/handheld-garment-steamer-recall-online-entry",
+  "product": "handheld garment steamer",
+  "label_must_show": ["one of the model numbers SF-425, SF-435, SF-440, SF-445, SF-447, SI-428 or VS-410"],
+  "proof_steps": [
+    "The power cord is cut",
+    "The label on the bottom of the steamer, showing the model and serial number, is visible"
+  ]
+}

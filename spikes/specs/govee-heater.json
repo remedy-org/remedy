@@ -1,0 +1,10 @@
+{
+  "recall": "GoveeLife and Govee smart electric space heaters (CPSC, Nov 2024)",
+  "source": "https://recall.goveelife.com/heater-recall",
+  "product": "GoveeLife or Govee smart electric space heater",
+  "label_must_show": ["one of the model numbers H7130, H7131, H7132, H7133, H7134 or H7135, and a serial number (SN)"],
+  "proof_steps": [
+    "The power cord is cut, so the heater can no longer be plugged in",
+    "The manufacturer's label with the model and serial number is visible"
+  ]
+}

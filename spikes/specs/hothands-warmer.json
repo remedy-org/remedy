@@ -1,0 +1,13 @@
+{
+  "recall": "Kobayashi HotHands rechargeable hand warmers, model H163650 (CPSC 27-011)",
+  "source": "https://www.cpsc.gov/Recalls/2027/Kobayashi-Recalls-Rechargeable-Hand-Warmers-Due-to-Risk-of-Serious-Injury-from-Fire-and-Burn-Hazards",
+  "product": "HotHands rechargeable hand warmer, model H163650",
+  "label_must_show": [
+    "model H163650 and the batch code printed at the bottom right of the label"
+  ],
+  "proof_steps": [
+    "\"Recalled\" and the one-time code (this claim's number) are written in marker on the hand warmer",
+    "The model number and the batch code are visible"
+  ],
+  "note": "The notice asks for permanent marker; a photo can't show permanence, so the check asks only for marker. Its label diagram puts the batch code at the bottom right."
+}

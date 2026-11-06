@@ -1,0 +1,10 @@
+{
+  "recall": "DREO DR-HSH015 space heaters (CPSC 27-054)",
+  "source": "https://www.cpsc.gov/Recalls/2027/DREO-Recalls-DR-HSH015-Space-Heaters-Due-to-Fire-and-Burn-Hazards",
+  "product": "DREO space heater, model DR-HSH015",
+  "label_must_show": ["model DR-HSH015 and a manufacture date in YYYY/MM format"],
+  "proof_steps": [
+    "The electrical cord is cut, so the heater can no longer be used",
+    "The label showing model DR-HSH015 is visible"
+  ]
+}
