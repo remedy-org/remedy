@@ -1,7 +1,7 @@
 import "server-only";
 import { notFound, redirect } from "next/navigation";
 import QRCode from "qrcode";
-import { demoSample, getAppStore } from "@/lib/demo";
+import { demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
 import { env } from "@/lib/env";
 import { getPayoutStatus } from "@/lib/paypal/payouts";
 import { getSession, loginPath } from "@/lib/session";
@@ -35,7 +35,7 @@ async function livePayout(claim: Claim): Promise<PayoutLive | undefined> {
 export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string; demo: boolean }) {
   const store = await getAppStore();
   const recall = await getRecallBySlug(slug, store);
-  if (!recall) notFound();
+  if (!recall || (demo && !isDemoAllowed(recall))) notFound();
 
   const here = `/r/${recall.slug}/${demo ? "try" : "claim"}/${id}`;
   const session = await getSession("owner");

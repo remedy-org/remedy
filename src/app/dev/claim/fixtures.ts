@@ -79,7 +79,7 @@ export const blocked = {
   claim: base("K7Q", {
     photos: photosOf(["c08-1.jpg"]),
     decision: "blocked",
-    reasons: [{ check: "session", outcome: "reject", text: "These photos weren't taken in this claim's camera session" }],
+    reasons: [{ check: "session", outcome: "reject", text: "This photo wasn't taken in this claim's camera session" }],
   }),
   photoUrls: ["/demo/c08-1.jpg"],
 };

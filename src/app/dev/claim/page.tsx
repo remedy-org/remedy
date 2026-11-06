@@ -154,7 +154,8 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "blocked-account": { group: "Result", note: "Blocked: repost from a paid account", render: () => result(fx.blockedAccount) },
   "demo-paid": { group: "Result", note: "Demo: genuine sample paid", render: () => result(fx.paid, { sample: genuine, payout: { status: "SUCCESS", fresh: true } }) },
   "demo-blocked": { group: "Result", note: "Demo: AI image refused", render: () => result(fx.blocked, { sample: demoSample("ai-no-session") }) },
-  loading: { group: "States", note: "Loading skeleton", render: () => <FlowSkeleton /> },
+  loading: { group: "States", note: "Loading skeleton: a step", render: () => <FlowSkeleton /> },
+  "loading-recall": { group: "States", note: "Loading skeleton: the recall screen", render: () => <FlowSkeleton wide /> },
   "not-found": { group: "States", note: "Unknown link", render: () => <FlowShell><NotFoundCard /></FlowShell> },
   error: {
     group: "States",

@@ -32,7 +32,7 @@ function toStep(r: CheckRow): CheckStep {
       r.detail || r.quote ? (
         <>
           {r.detail && <EvidenceText>{r.detail}</EvidenceText>}
-          {r.quote && <span className="mt-1 block font-mono text-micro text-faint">Model: &ldquo;{r.quote}&rdquo;</span>}
+          {r.quote && <span className="mt-1.5 block border-l border-line-strong pl-3 text-ui text-muted">Model: &ldquo;{r.quote}&rdquo;</span>}
         </>
       ) : undefined,
   };

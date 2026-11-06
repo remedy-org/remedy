@@ -5,6 +5,9 @@ import type { CheckSpec, Claim, Decision, Reason, Recall } from "@/lib/types";
 
 export type RowGroup = "pre" | "model" | "pay";
 
+/** PayPal's guide to sandbox test accounts: the judges' demo logs in with one, never a real PayPal account. */
+export const SANDBOX_ACCOUNTS_URL = "https://developer.paypal.com/tools/sandbox/accounts/";
+
 export interface CheckRow {
   id: string;
   group: RowGroup;
@@ -153,7 +156,7 @@ export function payoutWords(status: string | null | undefined): { label: string;
     case "":
       return { label: "Unknown", tone: "muted", note: "" };
     default:
-      return { label: "Processing at PayPal", tone: "hold", note: "Most payouts land within a few minutes." };
+      return { label: "Processing at PayPal", tone: "muted", note: "Most payouts land within a few minutes." };
   }
 }
 

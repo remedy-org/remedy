@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { RecallScreen } from "@/components/claim/RecallScreen";
-import { getAppStore } from "@/lib/demo";
+import { getAppStore, isDemoAllowed } from "@/lib/demo";
 import { getRecallBySlug } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Try a claim with sample photos" };
@@ -9,6 +9,6 @@ export const metadata: Metadata = { title: "Try a claim with sample photos" };
 // /r/<slug>/try: the judges' demo. The same flow and checks, with sample photos in place of the camera.
 export default async function TryPage({ params, searchParams }: PageProps<"/r/[recall]/try">) {
   const recall = await getRecallBySlug((await params).recall, await getAppStore());
-  if (!recall) notFound();
+  if (!recall || !isDemoAllowed(recall)) notFound();
   return <RecallScreen recall={recall} demo query={await searchParams} />;
 }

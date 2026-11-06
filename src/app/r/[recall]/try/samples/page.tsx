@@ -4,7 +4,7 @@ import { FlowShell } from "@/components/claim/FlowShell";
 import { companyName } from "@/components/claim/model";
 import { SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
 import { DEMO_STEPS, StepMeter } from "@/components/claim/StepMeter";
-import { DEMO_SAMPLES, demoSample, getAppStore } from "@/lib/demo";
+import { DEMO_SAMPLES, demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
 import { requireSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Pick a sample claim" };
 export default async function SamplesPage({ params }: PageProps<"/r/[recall]/try/samples">) {
   const store = await getAppStore();
   const recall = await getRecallBySlug((await params).recall, store);
-  if (!recall) notFound();
+  if (!recall || !isDemoAllowed(recall)) notFound();
   const session = await requireSession("owner", `/r/${recall.slug}/try/samples`);
 
   // This judge's own demo claims, newest first, with the sample each one used.

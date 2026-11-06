@@ -48,7 +48,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample }: Res
         <div className="flex items-end justify-between gap-6">
           <div className="flex min-w-0 flex-col gap-2">
             <p id="result-title" className="text-h1 font-semibold tabular-nums">
-              {money(recall.refund)}
+              {money(claim.payout?.amount ?? recall.refund)}
             </p>
             <p className="text-body text-muted">
               Refunded to your PayPal account by {companyName(recall)}
@@ -81,9 +81,10 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample }: Res
       <div className="flex flex-col gap-4 border-t border-line p-6 sm:p-8">
         <p className="text-ui text-muted">
           {payout && !payout.fresh ? "PayPal didn't answer just now, so this is the last status we saved. " : ""}
-          {words.note} PayPal also emails you a receipt.
+          {/* Sandbox payouts reach no real inbox: they show only in the sandbox account. */}
+          {sample ? "See it in your PayPal sandbox account's activity." : `${words.note} PayPal also emails you a receipt.`}
         </p>
-        <Evidence rows={rows} photoUrls={photoUrls} summary={`All ${rows.length} checks passed`} />
+        <Evidence rows={rows} photoUrls={photoUrls} summary={`All ${rows.length} checks passed`} open={Boolean(sample)} />
         {sample && <DemoFooter sample={sample} againHref={againHref} />}
       </div>
     </Card>
@@ -119,7 +120,7 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample }: ResultProps
         </Row>
       </Rows>
       <div className="flex flex-col gap-4 border-t border-line p-6 sm:p-8">
-        <Evidence rows={rows} photoUrls={photoUrls} summary={`Every check, and the ${photoUrls.length === 1 ? "photo" : "photos"} you sent`} />
+        <Evidence rows={rows} photoUrls={photoUrls} summary={`Every check, and the ${photoUrls.length === 1 ? "photo" : "photos"} you sent`} open={Boolean(sample)} />
         {sample && <DemoFooter sample={sample} againHref={againHref} />}
       </div>
     </Card>
@@ -130,7 +131,10 @@ function Refused({ claim, rows, photoUrls, againHref, sample }: ResultProps) {
   const blocked = claim.decision === "blocked";
   const reasons = decidingReasons(claim);
   const retry = canRetry(reasons);
-  const advice = [...new Set(reasons.map((r) => adviceFor(r.check)))];
+  // When starting over can't help (a second claim from one account), only that reason's advice applies: advice to
+  // start a new claim would lead to the same refusal.
+  const advice = [...new Set((retry ? reasons : reasons.filter((r) => !canRetry([r]))).map((r) => adviceFor(r.check)))];
+  const one = photoUrls.length === 1;
   return (
     <Card padding="none" as="section" aria-labelledby="result-title">
       <div className="flex flex-col gap-6 p-6 sm:p-8">
@@ -138,12 +142,12 @@ function Refused({ claim, rows, photoUrls, againHref, sample }: ResultProps) {
         <div className="flex items-start justify-between gap-6">
           <div className="flex flex-col gap-3">
             <h2 id="result-title" className="text-h2 font-semibold text-balance">
-              {blocked ? "Stopped before the photo check" : `${photoUrls.length === 1 ? "This photo doesn't" : "These photos don't"} prove the claim`}
+              {blocked ? "Stopped before the photo check" : `${one ? "This photo doesn't" : "These photos don't"} prove the claim`}
             </h2>
             <p className="text-body text-muted">
-            {blocked
-              ? "Some claims are refused before any photo reaches the model. No refund was sent."
-              : "The photo check read your photos and one of its answers rules the claim out. No refund was sent."}
+              {blocked
+                ? "Some claims are refused before any photo reaches the model. No refund was sent."
+                : `The photo check read your ${one ? "photo" : "photos"} and one of its answers rules the claim out. No refund was sent.`}
             </p>
           </div>
           {photoUrls[0] && <Thumb src={photoUrls[0]} className="hidden sm:flex" />}
@@ -170,7 +174,8 @@ function Refused({ claim, rows, photoUrls, againHref, sample }: ResultProps) {
         )}
       </div>
       <div className="border-t border-line p-6 sm:p-8">
-        <Evidence rows={rows} photoUrls={photoUrls} summary={`Every check, and the ${photoUrls.length === 1 ? "photo" : "photos"} you sent`} />
+        {/* Open for every refusal: the reason is only convincing next to the model's own reading. */}
+        <Evidence rows={rows} photoUrls={photoUrls} summary={`Every check, and the ${one ? "photo" : "photos"} you sent`} open />
       </div>
     </Card>
   );
@@ -223,10 +228,10 @@ function Reasons({ title, tone, icon, items }: { title: string; tone: "hold" | "
   );
 }
 
-/** The photos and every check, folded away: evidence next to the verdict, on request. */
-function Evidence({ rows, photoUrls, summary }: { rows: CheckRow[]; photoUrls: string[]; summary: string }) {
+/** The photos and every check: open beside a refusal or a demo result, folded on a real owner's paid or held receipt. */
+function Evidence({ rows, photoUrls, summary, open = false }: { rows: CheckRow[]; photoUrls: string[]; summary: string; open?: boolean }) {
   return (
-    <details className="group">
+    <details className="group" open={open}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-ui font-medium text-text [&::-webkit-details-marker]:hidden">
         <span>{summary}</span>
         <span className="micro text-faint group-open:hidden">Show</span>

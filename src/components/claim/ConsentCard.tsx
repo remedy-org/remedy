@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Button, Card, ClockIcon, ErrorState } from "@/components/ui";
 import type { Recall } from "@/lib/types";
 import { CameraIcon, EyeIcon } from "./icons";
-import { companyName, money } from "./model";
+import { companyName, money, SANDBOX_ACCOUNTS_URL } from "./model";
 
 export type AuthError = "denied" | "state" | "paypal";
 
@@ -55,7 +55,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <Bullet icon={<ClockIcon />} title="When you're paid">
           {demo
             ? `Seconds after the checks pass, ${amount} in sandbox money goes to the PayPal sandbox account you log in with.`
-            : `Usually within a minute of your photos, from ${company}'s PayPal account straight to yours.`}
+            : "Usually within a minute of your photos, straight to your PayPal account through PayPal Payouts."}
         </Bullet>
       </ul>
 
@@ -72,9 +72,19 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <Button href={href} size="lg" block prefetch={false}>
           {unverified ? "Log in with a verified account" : signedInAs ? (demo ? "Choose a sample claim" : "Continue to your code") : demo ? "Log in with PayPal sandbox" : "Log in with PayPal"}
         </Button>
-        <p className="text-center text-ui text-faint">
-          {signedInAs ? `Logged in with PayPal as ${signedInAs}.` : "You log in on PayPal's own page. Remedy never sees your password."}
-        </p>
+        {demo && !signedInAs ? (
+          <p className="text-center text-ui text-faint">
+            Needs a PayPal sandbox personal account, not your real PayPal login. Use the judges&apos; test login in the submission notes, or{" "}
+            <a href={SANDBOX_ACCOUNTS_URL} className="text-muted underline underline-offset-4 hover:text-text">
+              make one at developer.paypal.com
+            </a>
+            .
+          </p>
+        ) : (
+          <p className="text-center text-ui text-faint">
+            {signedInAs ? `Logged in with PayPal as ${signedInAs}.` : "You log in on PayPal's own page. Remedy never sees your password."}
+          </p>
+        )}
       </div>
     </Card>
   );

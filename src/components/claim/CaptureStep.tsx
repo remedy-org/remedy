@@ -107,6 +107,39 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     };
   }, [attempt, expired, preview, stop]);
 
+  // Photos can arrive from elsewhere: the phone from the QR handoff, or another tab. Poll the claim and move on to the
+  // checking step as soon as it has photos or a decision, instead of running the camera and countdown on regardless.
+  const onSentRef = useRef(onSent);
+  const sendingRef = useRef(sending);
+  useEffect(() => {
+    onSentRef.current = onSent;
+    sendingRef.current = sending;
+  });
+  useEffect(() => {
+    if (preview) return;
+    let done = false;
+    const poll = async () => {
+      if (done || sendingRef.current || document.hidden) return;
+      try {
+        const res = await fetch(`/api/claims/${claimId}`, { cache: "no-store" });
+        if (!res.ok || done || sendingRef.current) return;
+        const view = (await res.json()) as ClaimView;
+        if (view.photos > 0 || view.decision !== "pending") {
+          done = true;
+          stop();
+          onSentRef.current(view);
+        }
+      } catch {
+        // Offline for a moment: the next tick tries again.
+      }
+    };
+    const t = setInterval(poll, 3000);
+    return () => {
+      done = true;
+      clearInterval(t);
+    };
+  }, [claimId, preview, stop]);
+
   // Object URLs for the thumbnails are freed when the step goes away.
   const shotsRef = useRef(shots);
   useEffect(() => {
@@ -212,33 +245,31 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           Fit the label, the destroyed product and the code <span className="font-mono">{code}</span> in the frame
         </h2>
 
-        <div className="flex items-center gap-4">
-        <ul className="flex gap-2" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
-          {Array.from({ length: MAX_PHOTOS }, (_, i) => (
-            <li key={i} className="relative size-16 shrink-0">
-              {shots[i] ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={shots[i].url} alt={`Photo ${i + 1}`} className="size-full rounded-control border border-line object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => remove(i)}
-                    disabled={sending}
-                    aria-label={`Remove photo ${i + 1}`}
-                    className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-[oklch(0.12_0.01_255/0.8)] text-[oklch(0.96_0.005_255)] after:absolute after:-inset-2 after:content-[''] disabled:opacity-40"
-                  >
-                    <CrossIcon size={12} />
-                  </button>
-                </>
-              ) : (
-                <span className="flex size-full items-center justify-center rounded-control border border-dashed border-line-strong font-mono text-ui text-faint">{i + 1}</span>
-              )}
-            </li>
-          ))}
-        </ul>
-          <p className="font-mono text-ui whitespace-nowrap text-faint tabular-nums">
-            {n === 0 ? "Up to 3 photos" : `${n} of ${MAX_PHOTOS} taken`}
-          </p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <ul className="flex gap-2" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
+            {Array.from({ length: MAX_PHOTOS }, (_, i) => (
+              <li key={i} className="relative size-16 shrink-0">
+                {shots[i] ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={shots[i].url} alt={`Photo ${i + 1}`} className="size-full rounded-control border border-line object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => remove(i)}
+                      disabled={sending}
+                      aria-label={`Remove photo ${i + 1}`}
+                      className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-[oklch(0.12_0.01_255/0.8)] text-[oklch(0.96_0.005_255)] after:absolute after:-inset-2 after:content-[''] disabled:opacity-40"
+                    >
+                      <CrossIcon size={12} />
+                    </button>
+                  </>
+                ) : (
+                  <span className="flex size-full items-center justify-center rounded-control border border-dashed border-line-strong font-mono text-ui text-faint">{i + 1}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="font-mono text-ui text-faint tabular-nums">{n === 0 ? "Up to 3 photos" : `${n} of ${MAX_PHOTOS} taken`}</p>
         </div>
 
         {sendError && (

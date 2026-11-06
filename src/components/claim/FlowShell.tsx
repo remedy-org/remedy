@@ -40,7 +40,7 @@ export function FlowShell({ children, demo, company, wide }: FlowShellProps) {
 
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-content flex-col gap-1 px-4 py-6 text-ui text-faint sm:flex-row sm:justify-between sm:px-8">
-          <p>{company ? `Refunds are paid by ${company} through PayPal.` : "Refunds are paid through PayPal."} Remedy never holds the money.</p>
+          <p>{company ? `Refunds for ${company}'s recall are paid through PayPal Payouts.` : "Refunds are paid through PayPal Payouts."}</p>
           <p>Photos are seen only by Remedy and the company running the recall.</p>
         </div>
       </footer>

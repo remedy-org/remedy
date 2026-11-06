@@ -2,7 +2,7 @@ import clsx from "clsx";
 import type { ReactNode } from "react";
 import { BlockIcon, CheckIcon, CrossIcon, HoldIcon } from "./icons";
 
-export type CheckState = "waiting" | "running" | "pass" | "hold" | "reject" | "blocked";
+export type CheckState = "waiting" | "running" | "pass" | "hold" | "reject" | "blocked" | "skipped";
 
 export interface CheckStep {
   /** Stable key, e.g. "session" or "code". */
@@ -22,6 +22,7 @@ const word: Record<CheckState, string> = {
   hold: "Held",
   reject: "Failed",
   blocked: "Blocked",
+  skipped: "Not run",
 };
 
 function Marker({ state }: { state: CheckState }) {
@@ -36,7 +37,9 @@ function Marker({ state }: { state: CheckState }) {
     case "blocked":
       return <span className={clsx(ring, "bg-stop-soft text-stop")}><BlockIcon size={14} /></span>;
     case "running":
-      return <span className={clsx(ring, "border border-accent")}><span className="size-1.5 rounded-full bg-accent" /></span>;
+      return <span className={clsx(ring, "border border-line-strong")}><span className="size-1.5 rounded-full bg-text" /></span>;
+    case "skipped":
+      return <span className={clsx(ring, "border border-dashed border-line-strong")}><span className="h-px w-2 bg-muted" /></span>;
     default:
       return <span className={clsx(ring, "border border-line-strong")} />;
   }
@@ -68,7 +71,7 @@ export function CheckProgress({ steps, label = "Checks", className }: CheckProgr
           </div>
           {s.state === "running" && (
             <span className="absolute inset-x-0 bottom-0 h-px overflow-hidden" aria-hidden="true">
-              <span className="block h-full w-2/5 bg-accent animate-[progress-slide_1.2s_var(--ease-snap)_infinite]" />
+              <span className="block h-full w-2/5 bg-text/50 animate-[progress-slide_1.2s_var(--ease-snap)_infinite]" />
             </span>
           )}
         </li>
