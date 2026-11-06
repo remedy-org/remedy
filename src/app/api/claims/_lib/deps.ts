@@ -27,9 +27,11 @@ export async function liveDeps(): Promise<PipelineDeps> {
 export async function samplePhotos(sample: DemoSample, origin: string): Promise<Buffer[]> {
   return Promise.all(
     sample.photos.map(async (path) => {
-      if (!/^\/demo\/[a-z0-9-]+\.jpg$/.test(path)) throw new Error(`Unexpected sample path ${path}`);
+      const name = path.match(/^\/demo\/([a-z0-9-]+\.jpg)$/)?.[1];
+      if (!name) throw new Error(`Unexpected sample path ${path}`);
       try {
-        return await readFile(join(process.cwd(), "public", path));
+        // Scoped to public/demo so the build traces only the sample photos.
+        return await readFile(join(process.cwd(), "public/demo", name));
       } catch {
         const res = await fetch(new URL(path, origin || env().APP_URL));
         if (!res.ok) throw new Error(`Sample photo ${path} -> ${res.status}`);

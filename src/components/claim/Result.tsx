@@ -256,7 +256,7 @@ function DemoFooter({ sample, againHref }: { sample: DemoSample; againHref: stri
   return (
     <div className="flex flex-col gap-4 rounded-card border border-line bg-surface-2 p-4">
       <p className="text-ui text-muted">
-        <span className="font-medium text-text">What this sample shows.</span> {sample.description}
+        <span className="font-medium text-text">What this sample is meant to show.</span> {sample.description}
       </p>
       <Button href={againHref} variant="secondary" block prefetch={false}>
         Try another sample

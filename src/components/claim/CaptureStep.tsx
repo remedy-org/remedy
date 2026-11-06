@@ -236,7 +236,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             </li>
           ))}
         </ul>
-          <p className="font-mono text-ui text-faint tabular-nums">
+          <p className="font-mono text-ui whitespace-nowrap text-faint tabular-nums">
             {n === 0 ? "Up to 3 photos" : `${n} of ${MAX_PHOTOS} taken`}
           </p>
         </div>

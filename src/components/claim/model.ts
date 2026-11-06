@@ -76,7 +76,8 @@ export function checkRows(claim: ClaimLike, spec: CheckSpec): CheckRow[] {
       group: "model",
       label: c.label,
       state: reason ? OUTCOME[reason.outcome] : "waiting",
-      ...(reason ? { detail: reason.text } : {}),
+      // A passed step or photo check would only repeat its own label; the model's quote says more.
+      ...(reason && !(reason.outcome === "pass" && c.id !== "label" && c.id !== "code") ? { detail: reason.text } : {}),
       ...(reason && c.quote ? { quote: c.quote } : {}),
     });
   }
