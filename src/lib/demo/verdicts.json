@@ -1,0 +1,674 @@
+[
+  {
+    "case": "c01-pillow-cut-daylight",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r1.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c01-1.jpg"
+    ],
+    "seconds": 10.556,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "The handwritten text \"X-VESOLJE\" is visible on a white paper tag tied with string to the gray pillow."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "Two separate curved pillow halves are visible, with exposed cut ends and white stuffing spilling out. No fabric connection between the halves is visible."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The paper tag reading \"X-VESOLJE\" is visibly tied to the left cut half."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7Q",
+        "matches": "yes",
+        "evidence": "The handwritten code \"K7Q\" appears beneath \"X-VESOLJE\" on the attached tag and matches the expected code character by character."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The single submitted photo shows both required proof steps and the matching handwritten code. No visible signs indicate a photographed screen or print."
+    }
+  },
+  {
+    "case": "c03-pillow-two-photos",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r1.json",
+    "model": "gpt-6.1-sol",
+    "code": "R8D",
+    "photos": [
+      "c03-1.jpg",
+      "c03-2.jpg"
+    ],
+    "seconds": 12.6,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE\nR8D",
+        "matches_recalled_product": "yes",
+        "evidence": "The green curved pillow has a paper tag tied to it with string. The handwritten label reads \"X-VESOLJE\"."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The second photo shows two fully separated pillow sections, with exposed white filling at both cut ends and a clear gap between them."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The second photo shows the paper tag reading \"X-VESOLJE\" tied with string to the lower cut section."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "R8D",
+        "matches": "yes",
+        "evidence": "The handwritten code on the attached tag reads \"R8D\" in both photos, matching the expected characters R, 8, D."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "Both proof steps are visibly satisfied. The label and one-time code match. The green fabric and attached handwritten tag are consistent across the photos, with no visible signs of a photographed screen or print."
+    }
+  },
+  {
+    "case": "c05-pillow-code-scrawled",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r1.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c05-1.jpg"
+    ],
+    "seconds": 11.459,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "A paper tag tied to the pillow bears the handwritten text \"X-VESOLJE\"."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The pillow is separated into two pieces, with gaps between both pairs of cut ends. Exposed stuffing protrudes from the cuts and is scattered on the floor."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The paper tag reading \"X-VESOLJE\" is visibly tied with string to the right-hand pillow piece."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7Q",
+        "matches": "yes",
+        "evidence": "The tag has the handwritten code \"K7Q\", matching the expected characters K, 7, and Q in order."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The single photo shows the pillow cut into two separated pieces, with the required handwritten label and matching one-time code on a tied paper tag. No visible indication of a photographed screen or print."
+    }
+  },
+  {
+    "case": "c09-written-K7O",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r1.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c09-1.jpg"
+    ],
+    "seconds": 24.456,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "A paper tag handwritten with \"X-VESOLJE\" is tied by string to a green pillow section."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "Two fully separated green pillow sections are visible, with open cut edges, exposed white stuffing, and loose stuffing between them."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The tag reading \"X-VESOLJE\" is visibly tied to the right-hand cut section."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7O",
+        "matches": "no",
+        "evidence": "The tag appears to read \"K7O\". The final oval character could also be \"0\", but no tail identifying it as \"Q\" is visible. It does not match the expected \"K7Q\"."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The single photo shows both required proof steps and the requested label. However, the handwritten one-time code does not match the expected code."
+    }
+  },
+  {
+    "case": "c10-photo-of-screen",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r1.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c10-1.jpg"
+    ],
+    "seconds": 23.554,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "Within the displayed photograph, a paper tag tied to the left pillow section reads \"X-VESOLJE\"."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The displayed photograph shows two separated pillow sections with open cut ends and exposed white stuffing. This is visible only within an image on a laptop screen."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The displayed photograph shows the \"X-VESOLJE\" paper tag attached by string around the left cut section."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7Q",
+        "matches": "yes",
+        "evidence": "The tag's second line reads \"K7Q\": K, 7, and Q match the expected code character by character."
+      },
+      "same_item_in_all_photos": "unclear",
+      "looks_like_photo_of_screen_or_print": "yes",
+      "summary": "The displayed photograph depicts the requested cuts, attached label, and matching code. However, the submission is clearly a photograph of a laptop screen: the bezel, webcam, keyboard, reflections, and screen interference patterns are visible. It does not provide direct photographic proof of the physical item; only one submitted image is available for comparison."
+    }
+  },
+  {
+    "case": "c01-pillow-cut-daylight",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r2.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c01-1.jpg"
+    ],
+    "seconds": 14.798,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE\nK7Q",
+        "matches_recalled_product": "yes",
+        "evidence": "A paper tag tied to the gray pillow section visibly bears the handwritten text \"X-VESOLJE\"."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "Two fully separated gray pillow halves are visible, with exposed cut ends and white filling spilling out. No fabric connection is visible between them."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The paper tag reading \"X-VESOLJE\" is visibly tied with string around the left cut pillow half."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7Q",
+        "matches": "yes",
+        "evidence": "The handwritten code on the attached tag reads \"K7Q\", matching the expected characters K, 7, and Q in order."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The single submitted photo shows both required proof steps and the matching handwritten code. The two pillow halves have matching gray fabric, and no screen or print indicators are visible."
+    }
+  },
+  {
+    "case": "c03-pillow-two-photos",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r2.json",
+    "model": "gpt-6.1-sol",
+    "code": "R8D",
+    "photos": [
+      "c03-1.jpg",
+      "c03-2.jpg"
+    ],
+    "seconds": 11.319,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE\nR8D",
+        "matches_recalled_product": "yes",
+        "evidence": "Both photos show a paper tag with handwritten \"X-VESOLJE\" attached by string to the green pillow."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The second photo shows two fully separated pillow sections, with open cut ends, exposed white stuffing, and a visible gap between them."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The second photo shows the handwritten \"X-VESOLJE\" paper tag tied to the lower cut section."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "R8D",
+        "matches": "yes",
+        "evidence": "The handwritten code on the tag reads \"R8D\": R, 8, D, matching the expected code character by character."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "Both requested proof steps are visibly satisfied. The green fabric, seams, and handwritten tag are consistent across the photos. No screen or print indicators are visible."
+    }
+  },
+  {
+    "case": "c05-pillow-code-scrawled",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r2.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c05-1.jpg"
+    ],
+    "seconds": 11.395,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "The pillow has a paper tag bearing the handwritten text \"X-VESOLJE\", visibly tied to its right-hand piece with string."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The pillow is visibly separated into two pieces, with open fabric ends, exposed stuffing, and gaps between the pieces."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The paper tag reading \"X-VESOLJE\" is tied to the right-hand piece of the cut pillow."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7Q",
+        "matches": "yes",
+        "evidence": "The handwritten code \"K7Q\" appears below \"X-VESOLJE\" on the attached tag and matches the expected code character by character."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The single submitted photo shows a pillow separated into two pieces, with the required handwritten label and matching one-time code on a tied paper tag. Both proof steps are visibly satisfied."
+    }
+  },
+  {
+    "case": "c09-written-K7O",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r2.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c09-1.jpg"
+    ],
+    "seconds": 13.912,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "The handwritten text \"X-VESOLJE\" is visible on a paper tag tied by string to a cut pillow section."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "Two fully separated pillow sections are visible, with exposed cut edges and white stuffing spilling onto the floor."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The paper tag reading \"X-VESOLJE\" is visibly tied to the right-hand cut section."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7O",
+        "matches": "no",
+        "evidence": "The tag reads \"K7O\", not the expected \"K7Q\". The first two characters match; the final character is an oval without a visible Q tail."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The single photo shows the required tag and a pillow cut into two separated sections. However, the handwritten code does not match the expected code, so the proof does not satisfy all requirements."
+    }
+  },
+  {
+    "case": "c10-photo-of-screen",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r2.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c10-1.jpg"
+    ],
+    "seconds": 14.926,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "The image displayed on the laptop shows a gray nursing-style pillow with a paper tag reading \"X-VESOLJE\" tied to one section."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The displayed image shows two separated pillow sections with open cut ends and exposed white stuffing. This is visible only within a photograph shown on a laptop screen."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "A paper tag reading \"X-VESOLJE\" is visibly tied with string around the left cut pillow section in the displayed image."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7Q",
+        "matches": "yes",
+        "evidence": "The tag's second line reads \"K7Q\", matching the expected characters K, 7, and Q in order."
+      },
+      "same_item_in_all_photos": "unclear",
+      "looks_like_photo_of_screen_or_print": "yes",
+      "summary": "The displayed image shows both requested steps and the matching code. However, the submitted photo clearly depicts a laptop screen: its bezel, webcam, keyboard, glare, and screen interference patterns are visible. It is not direct photographic proof of the physical pillow. Only one submitted photo is available, so cross-photo item consistency cannot be assessed."
+    }
+  },
+  {
+    "case": "c01-pillow-cut-daylight",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r3.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c01-1.jpg"
+    ],
+    "seconds": 10.938,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "A paper tag tied to the gray pillow has the handwritten text \"X-VESOLJE\"."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The pillow is visibly separated into two pieces, with open cut ends and exposed white stuffing. No intact fabric connection is visible between the halves."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The paper tag reading \"X-VESOLJE\" is visibly tied with string around the left cut piece."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7Q",
+        "matches": "yes",
+        "evidence": "The handwritten code on the attached tag reads \"K7Q\", matching the expected characters K, 7, and Q in order."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The single submitted photo shows a gray nursing pillow cut into two separated pieces, with the required attached handwritten label and matching one-time code. No visible signs indicate a photographed screen or print."
+    }
+  },
+  {
+    "case": "c03-pillow-two-photos",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r3.json",
+    "model": "gpt-6.1-sol",
+    "code": "R8D",
+    "photos": [
+      "c03-1.jpg",
+      "c03-2.jpg"
+    ],
+    "seconds": 10.79,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE\nR8D",
+        "matches_recalled_product": "yes",
+        "evidence": "The green curved pillow has a paper tag tied to it with string. The handwritten label reads \"X-VESOLJE\"."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The second photo shows two fully separated pillow sections, with exposed white stuffing at both cut ends and loose stuffing between them."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The second photo shows the paper tag reading \"X-VESOLJE\" tied to the lower cut section."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "R8D",
+        "matches": "yes",
+        "evidence": "The handwritten code on the tied paper tag reads \"R8D\", matching the expected characters R, 8, and D in order."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "Both proof steps are visibly satisfied. The tied tag has the required label and matching one-time code. The green fabric, seams, and tag are consistent across the photos; no visible screen or print indicators are present."
+    }
+  },
+  {
+    "case": "c05-pillow-code-scrawled",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r3.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c05-1.jpg"
+    ],
+    "seconds": 13.503,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "A paper tag tied to the beige pillow bears the handwritten text \"X-VESOLJE\"."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The pillow is visibly separated into two large sections, with gaps between their cut ends, exposed white stuffing, and loose stuffing scattered on the floor."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The paper tag reading \"X-VESOLJE\" is visibly tied by string to the right-hand cut section."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7Q",
+        "matches": "yes",
+        "evidence": "The tag has the handwritten code \"K7Q\", matching the expected characters K, 7, and Q in order."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The single submitted photo visibly satisfies both proof steps and shows the matching label and one-time code. The two pillow sections have matching beige fabric. No screen or print indicators are visible."
+    }
+  },
+  {
+    "case": "c09-written-K7O",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r3.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c09-1.jpg"
+    ],
+    "seconds": 12.29,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "The handwritten paper tag reads \"X-VESOLJE\" and is tied to one cut pillow section."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "Two fully separated pillow sections are visible, with open cut ends, exposed white filling, and loose filling scattered between them."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The paper tag reading \"X-VESOLJE\" is visibly tied by string around the right-hand cut section."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7O",
+        "matches": "no",
+        "evidence": "The handwritten code reads \"K7O\". The first two characters match \"K7Q\", but the final character appears as \"O\", without a visible Q tail."
+      },
+      "same_item_in_all_photos": "yes",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The photo shows the pillow fully separated into two sections and the required tag attached. However, the visible code does not match the expected \"K7Q\", so the proof does not satisfy all requirements."
+    }
+  },
+  {
+    "case": "c10-photo-of-screen",
+    "source": "eval/out/runs/spike2-gpt-6.1-sol-r3.json",
+    "model": "gpt-6.1-sol",
+    "code": "K7Q",
+    "photos": [
+      "c10-1.jpg"
+    ],
+    "seconds": 18.967,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "The displayed image shows a paper tag tied to the gray pillow, reading \"X-VESOLJE\"."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The displayed image shows two separated pillow sections with exposed cut ends and loose white stuffing."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The paper tag reading \"X-VESOLJE\" is visibly tied around the left pillow section."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "K7Q",
+        "matches": "yes",
+        "evidence": "The tag shows handwritten \"K7Q\" beneath the label, matching the expected characters K, 7, and Q."
+      },
+      "same_item_in_all_photos": "unclear",
+      "looks_like_photo_of_screen_or_print": "yes",
+      "summary": "The displayed photograph shows the requested cuts, tied label, and matching code. However, the submission is a photograph of a laptop screen: the bezel, keyboard, reflections, and screen interference patterns are visible. It is not direct photographic proof of the physical item's current condition."
+    }
+  },
+  {
+    "case": "c03-pillow-two-photos",
+    "source": "eval/out/runs/spike2-gpt-6.1-terra-r1.json",
+    "model": "gpt-6.1-terra",
+    "code": "R8D",
+    "photos": [
+      "c03-1.jpg",
+      "c03-2.jpg"
+    ],
+    "seconds": 9.448,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "The handwritten text is visible on a paper tag tied to the green pillow."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The second photo shows two separated green pillow sections with frayed open ends and exposed stuffing."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The tag reading \"X-VESOLJE\" is tied to one of the cut sections."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "R8D",
+        "matches": "yes",
+        "evidence": "The handwritten code is R, 8, D, matching the expected code character by character."
+      },
+      "same_item_in_all_photos": "unclear",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "Both proof steps are visible in the second photo. The photos show similar green fabric and a tag with the same text, but the item's identity across photos cannot be established conclusively."
+    }
+  },
+  {
+    "case": "c03-pillow-two-photos",
+    "source": "eval/out/runs/spike2-gpt-6.1-terra-r2.json",
+    "model": "gpt-6.1-terra",
+    "code": "R8D",
+    "photos": [
+      "c03-1.jpg",
+      "c03-2.jpg"
+    ],
+    "seconds": 10.383,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "A paper tag tied to the green pillow bears the handwritten text \"X-VESOLJE\"."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The second photo shows two separated pillow sections with open, frayed ends and exposed stuffing."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The tag marked \"X-VESOLJE\" is on one of the cut sections in the second photo."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "R8D",
+        "matches": "yes",
+        "evidence": "The handwritten code on the tag is \"R8D\", matching the expected code character by character."
+      },
+      "same_item_in_all_photos": "unclear",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The tag and code match, and the second photo shows two separated pillow sections. The green fabric and tag look consistent across the photos, but the item's identity cannot be confirmed with certainty. No screen or print is visible."
+    }
+  },
+  {
+    "case": "c03-pillow-two-photos",
+    "source": "eval/out/runs/spike2-gpt-6.1-terra-r3.json",
+    "model": "gpt-6.1-terra",
+    "code": "R8D",
+    "photos": [
+      "c03-1.jpg",
+      "c03-2.jpg"
+    ],
+    "seconds": 11.831,
+    "verdict": {
+      "label": {
+        "text_seen": "X-VESOLJE",
+        "matches_recalled_product": "yes",
+        "evidence": "The handwritten paper tag reads \"X-VESOLJE\", matching the specified demo label."
+      },
+      "steps": [
+        {
+          "step": "The pillow is cut fully in half, so it can no longer be used",
+          "status": "done",
+          "evidence": "The second photo shows two separated green pillow sections with cut edges and exposed stuffing."
+        },
+        {
+          "step": "The X-VESOLJE tag is on the cut pillow",
+          "status": "done",
+          "evidence": "The tag reading \"X-VESOLJE\" is visible on one of the cut sections."
+        }
+      ],
+      "challenge_code": {
+        "text_seen": "R8D",
+        "matches": "yes",
+        "evidence": "The handwritten code matches the expected code \"R8D\" character by character."
+      },
+      "same_item_in_all_photos": "unclear",
+      "looks_like_photo_of_screen_or_print": "no",
+      "summary": "The cut pillow and matching tag and code are visible. The photos are consistent with the same item, but that cannot be confirmed from the close-up alone."
+    }
+  }
+]

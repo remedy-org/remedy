@@ -58,17 +58,29 @@ export async function fetchCpscRecall(input: string): Promise<CpscRecord | null>
   return records.find((r) => ("number" in ref ? r.RecallNumber === ref.number : samePage(r.URL, ref.url))) ?? null;
 }
 
-export function toRecall(r: CpscRecord, { refund, spec, now = new Date() }: { refund: Money; spec: CheckSpec; now?: Date }): Recall {
+// "About 19,596" -> 19596; several products are summed. 0 when CPSC gives no count.
+export function unitsSold(r: Pick<CpscRecord, "Products">): number {
+  return r.Products.reduce((sum, p) => sum + Number((p.NumberOfUnits ?? "").replace(/[^\d]/g, "") || 0), 0);
+}
+
+export function toRecall(
+  r: CpscRecord,
+  { refund, spec, slug, owner, autoPay = true, now = new Date() }: { refund: Money; spec: CheckSpec; slug: string; owner: string | null; autoPay?: boolean; now?: Date },
+): Recall {
   return {
     id: recallId(r),
+    slug,
+    owner,
     title: r.Title,
     url: r.URL,
     recallDate: r.RecallDate.slice(0, 10),
     product: r.Products.map((p) => p.Name).join("; "),
     units: r.Products.map((p) => p.NumberOfUnits).filter(Boolean).join("; "),
+    unitsSold: unitsSold(r),
     remedy: r.Remedies.map((x) => x.Name).join(" "),
     images: r.Images.map((i) => ({ url: i.URL, caption: i.Caption ?? "" })),
     refund,
+    autoPay,
     spec,
     createdAt: now.toISOString(),
   };

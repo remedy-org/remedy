@@ -24,14 +24,18 @@ export function sampleClaim(overrides: Partial<Claim> = {}): Claim {
 export function sampleRecall(): Recall {
   return {
     id: "27-071",
+    slug: "kikea-x-vesolje",
+    owner: null,
     title: "Kikea Store Recalls X-VESOLJE Nursing Pillows",
     url: "https://www.cpsc.gov/Recalls/2027/kikea",
     recallDate: "2026-11-05",
     product: "X-VESOLJE Nursing Pillows",
     units: "About 19,596",
+    unitsSold: 19596,
     remedy: "Cut the pillow in half.",
     images: [],
     refund: { value: "29.99", currency: "USD" },
+    autoPay: true,
     spec: { recall: "Kikea (CPSC 27-071)", source: "https://www.cpsc.gov/Recalls/2027/kikea", product: "nursing pillow", label_must_show: [], proof_steps: ["Cut in half"] },
     createdAt: "2026-11-06T09:00:00.000Z",
   };

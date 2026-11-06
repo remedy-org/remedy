@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { sampleClaim, sampleRecall } from "../__fixtures__/claim";
+import { getRecallBySlug } from "./index";
 import { localStore } from "./local";
 
 let dir: string;
@@ -60,6 +61,31 @@ describe("localStore", () => {
     const store = localStore(dir);
     await Promise.all(Array.from({ length: 20 }, (_, i) => store.putClaim(sampleClaim({ id: `RM-${String(i).padStart(4, "0")}` }))));
     expect(await store.listClaims()).toHaveLength(20);
+  });
+
+  it("indexes recalls by slug, oldest first, and refuses a taken slug", async () => {
+    const store = localStore(dir);
+    await store.putRecall(sampleRecall());
+    await store.putRecall({ ...sampleRecall(), id: "27-100", slug: "other", owner: "PAYER1", createdAt: "2026-11-07T09:00:00.000Z" });
+    await store.putRecall({ ...sampleRecall(), autoPay: false });
+
+    expect((await store.listRecalls()).map((r) => [r.id, r.slug, r.owner])).toEqual([
+      ["27-071", "kikea-x-vesolje", null],
+      ["27-100", "other", "PAYER1"],
+    ]);
+    expect((await getRecallBySlug("kikea-x-vesolje", store))?.autoPay).toBe(false);
+    expect(await getRecallBySlug("missing", store)).toBeNull();
+    await expect(store.putRecall({ ...sampleRecall(), id: "27-200", slug: "other" })).rejects.toThrow(/taken/);
+    expect(await store.getRecall("27-200")).toBeNull();
+  });
+
+  it("carries the seeded and demo flags into the index", async () => {
+    const store = localStore(dir);
+    await store.putClaim(sampleClaim({ seeded: true }));
+    await store.putClaim(sampleClaim({ id: "RM-0500" }));
+    const rows = await store.listClaims();
+    expect(rows.find((r) => r.id === "RM-0412")?.seeded).toBe(true);
+    expect(rows.find((r) => r.id === "RM-0500")).not.toHaveProperty("seeded");
   });
 
   it("rejects an invalid claim before writing it", async () => {

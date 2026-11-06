@@ -1,7 +1,7 @@
 import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { ClaimIndex, isValidClaimId, isValidRecallId, paths, summarize, upsert, type Store } from "./store";
+import { ClaimIndex, isValidClaimId, isValidRecallId, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, type Store } from "./store";
 
 // Production store: Vercel Blob, private access (the store itself must be created as private).
 export function blobStore(token: string): Store {
@@ -21,24 +21,31 @@ export function blobStore(token: string): Store {
     await put(pathname, body, { access: "private", token, contentType, allowOverwrite: true, ...(ifMatch ? { ifMatch } : {}) });
   }
 
-  // Serverless instances can write index.json at the same time: write only if it hasn't changed since we read it.
-  async function updateIndex(change: (index: ClaimIndex) => ClaimIndex) {
+  // Serverless instances can write an index at the same time: write only if it hasn't changed since we read it.
+  async function updateJson<S extends z.ZodType>(pathname: string, schema: S, empty: z.infer<S>, change: (index: z.infer<S>) => z.infer<S>) {
     for (let attempt = 0; attempt < 5; attempt++) {
-      const current = await read(paths.index);
-      const index = current ? ClaimIndex.parse(JSON.parse(current.data.toString("utf8"))) : { claims: [] };
+      const current = await read(pathname);
+      const index = current ? schema.parse(JSON.parse(current.data.toString("utf8"))) : empty;
       try {
-        await write(paths.index, JSON.stringify(change(index)), "application/json", current?.etag);
+        await write(pathname, JSON.stringify(change(index)), "application/json", current?.etag);
         return;
       } catch (e) {
         if (!(e instanceof BlobPreconditionFailedError)) throw e;
       }
     }
-    throw new Error("index.json kept changing under us; gave up after 5 tries");
+    throw new Error(`${pathname} kept changing under us; gave up after 5 tries`);
   }
+  const updateIndex = (change: (index: ClaimIndex) => ClaimIndex) => updateJson(paths.index, ClaimIndex, { claims: [] }, change);
 
   return {
     getRecall: async (id) => (isValidRecallId(id) ? readJson(paths.recall(id), Recall) : null),
-    putRecall: async (recall) => write(paths.recall(recall.id), JSON.stringify(Recall.parse(recall)), "application/json"),
+    async putRecall(recall) {
+      const parsed = Recall.parse(recall);
+      // Index first: a slug clash must fail before the recall file is written.
+      await updateJson(paths.recallIndex, RecallIndex, { recalls: [] }, (index) => upsertRecall(index, summarizeRecall(parsed)));
+      await write(paths.recall(parsed.id), JSON.stringify(parsed), "application/json");
+    },
+    listRecalls: async () => ((await readJson(paths.recallIndex, RecallIndex)) ?? { recalls: [] }).recalls,
     getClaim: async (id) => (isValidClaimId(id) ? readJson(paths.claim(id), Claim) : null),
     async putClaim(claim) {
       await write(paths.claim(claim.id), JSON.stringify(Claim.parse(claim)), "application/json");

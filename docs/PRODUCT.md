@@ -65,3 +65,10 @@ Each run states that it is demo mode, and all money is sandbox money.
 ## States every data view must handle
 
 Empty, loading, error, partial and success. Examples: a console with no claims yet; a claim whose payout is still pending; PayPal or the model being down (the claim is held, never lost).
+
+## Setup
+
+- **Log in with PayPal return URL:** the app returns to `APP_URL` + `/api/auth/paypal/callback`, e.g. `http://127.0.0.1:3000/api/auth/paypal/callback` locally. Add that Return URL under the app's **Log in with PayPal** settings in the PayPal dashboard (the owner does this; it needs the dashboard login). Browse the app at the `APP_URL` host: `/api/auth/paypal/start` moves `localhost` to `127.0.0.1` itself, so the login cookie and PayPal's return land on the same host.
+- **Sessions:** `SESSION_SECRET` signs the session cookies. Local dev has a built-in default; production refuses to start a session without its own (`openssl rand -base64 32`).
+- **Demo data:** in dev the Kikea recall (`/r/kikea-x-vesolje`) and about 40 sample claims seed themselves on the first read. In production, run `npm run seed` once with `BLOB_READ_WRITE_TOKEN` set; `npm run seed -- --reset` refreshes the sample claims' times. Sample claims are marked `seeded`, use fake PayPal accounts and were never paid.
+- **Screenshots:** with the dev server running, `npm run shots -- / /console --as company` writes full-page PNGs at 1440 and 375 px, dark and light, into `.shots/`.

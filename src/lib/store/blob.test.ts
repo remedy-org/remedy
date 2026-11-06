@@ -43,7 +43,7 @@ describe("blobStore", () => {
     await store.putClaim(sampleClaim());
     await store.putPhoto("RM-0412/1.jpg", Buffer.from("jpeg"));
 
-    expect([...blobs.keys()].sort()).toEqual(["claims/RM-0412.json", "index.json", "photos/RM-0412/1.jpg", "recalls/27-071.json"]);
+    expect([...blobs.keys()].sort()).toEqual(["claims/RM-0412.json", "index.json", "photos/RM-0412/1.jpg", "recalls.json", "recalls/27-071.json"]);
     expect([...blobs.values()].every((b) => b.access === "private")).toBe(true);
     expect(calls.put.every((c) => c.options.token === "tok")).toBe(true);
     expect(calls.put.find((c) => c.pathname.startsWith("photos/"))?.options.contentType).toBe("image/jpeg");

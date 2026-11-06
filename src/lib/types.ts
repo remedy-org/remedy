@@ -22,17 +22,27 @@ export const CheckSpec = z.object({
 });
 export type CheckSpec = z.infer<typeof CheckSpec>;
 
+// URL name for the claim page: /r/<slug>, e.g. "kikea-x-vesolje".
+export const RecallSlug = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(64);
+
 export const Recall = z.object({
   id: RecallId,
+  slug: RecallSlug,
+  // The company's PayPal payer ID; null for the shared demo recall every workspace starts with.
+  owner: z.string().nullable(),
   title: z.string(),
   url: z.url(),
   recallDate: z.string(),
   product: z.string(),
   // CPSC's own wording, e.g. "About 19,596".
   units: z.string(),
+  // The same count as a number, for the remedied-of-sold meter.
+  unitsSold: z.number().int().nonnegative(),
   remedy: z.string(),
   images: z.array(z.object({ url: z.url(), caption: z.string() })),
   refund: Money,
+  // On: a passing claim is paid at once. Off: every passing claim is held for a person.
+  autoPay: z.boolean(),
   spec: CheckSpec,
   createdAt: z.iso.datetime(),
 });
@@ -89,5 +99,9 @@ export const Claim = z.object({
   payout: Payout.nullable(),
   events: z.array(z.object({ at: z.iso.datetime(), type: z.string(), detail: z.string() })),
   createdAt: z.iso.datetime(),
+  // Sample claim written by src/lib/demo (photos and verdicts from the eval); never paid, never a real owner.
+  seeded: z.boolean().optional(),
+  // Filed through the judges' demo mode (/r/<slug>/try): sample photos, sandbox money.
+  demo: z.boolean().optional(),
 });
 export type Claim = z.infer<typeof Claim>;

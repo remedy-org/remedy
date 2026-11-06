@@ -1,0 +1,48 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beginLogin, callbackUrl, checkState, errorPath, STATE_MAX_AGE } from "./paypal-login";
+
+beforeEach(() => {
+  vi.stubEnv("PAYPAL_CLIENT_ID", "id");
+  vi.stubEnv("PAYPAL_CLIENT_SECRET", "secret");
+  vi.stubEnv("OPENAI_API_KEY", "sk");
+  vi.stubEnv("APP_URL", "http://127.0.0.1:3000");
+  vi.stubEnv("SESSION_SECRET", "s".repeat(40));
+});
+
+const now = new Date("2026-11-07T10:00:00Z");
+
+describe("Log in with PayPal state", () => {
+  it("returns to APP_URL's callback", () => {
+    expect(callbackUrl()).toBe("http://127.0.0.1:3000/api/auth/paypal/callback");
+  });
+
+  it("round-trips the role and a safe next path", () => {
+    const begun = beginLogin(new URLSearchParams({ as: "owner", next: "/r/kikea-x-vesolje/code" }), now);
+    if ("error" in begun) throw new Error("expected a login");
+    expect(checkState(begun.cookie, begun.state.state, now)).toMatchObject({ as: "owner", next: "/r/kikea-x-vesolje/code" });
+  });
+
+  it("defaults next per role and never leaves the site", () => {
+    const begun = beginLogin(new URLSearchParams({ as: "company", next: "https://evil.test" }), now);
+    if ("error" in begun) throw new Error("expected a login");
+    expect(begun.state.next).toBe("/console");
+    expect(beginLogin(new URLSearchParams({ as: "admin" }), now)).toEqual({ error: "role" });
+  });
+
+  it("refuses a wrong, missing or stale state", () => {
+    const begun = beginLogin(new URLSearchParams({ as: "company" }), now);
+    if ("error" in begun) throw new Error("expected a login");
+    expect(checkState(begun.cookie, "other", now)).toBeNull();
+    expect(checkState(undefined, begun.state.state, now)).toBeNull();
+    expect(checkState(begun.cookie, null, now)).toBeNull();
+    expect(checkState(begun.cookie, begun.state.state, new Date(now.getTime() + (STATE_MAX_AGE + 1) * 1000))).toBeNull();
+  });
+
+  it("sends a failed login back with the reason", () => {
+    const begun = beginLogin(new URLSearchParams({ as: "company", next: "/console/report" }), now);
+    if ("error" in begun) throw new Error("expected a login");
+    expect(errorPath(begun.state, "denied")).toBe("/signin?next=%2Fconsole%2Freport&auth_error=denied");
+    expect(errorPath({ ...begun.state, as: "owner", next: "/r/kikea-x-vesolje" }, "paypal")).toBe("/r/kikea-x-vesolje?auth_error=paypal");
+    expect(errorPath(null, "state")).toBe("/signin?auth_error=state");
+  });
+});

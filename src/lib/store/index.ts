@@ -4,7 +4,7 @@ import { blobStore } from "./blob";
 import { localStore } from "./local";
 import type { Store } from "./store";
 
-export type { ClaimSummary, Store } from "./store";
+export type { ClaimSummary, RecallSummary, Store } from "./store";
 
 let store: Store | undefined;
 
@@ -15,4 +15,10 @@ export function getStore(): Store {
     store = token ? blobStore(token) : localStore(join(process.cwd(), "data"));
   }
   return store;
+}
+
+// /r/<slug> lookups. Reads recalls.json, then the one recall.
+export async function getRecallBySlug(slug: string, store: Store = getStore()) {
+  const row = (await store.listRecalls()).find((r) => r.slug === slug);
+  return row ? store.getRecall(row.id) : null;
 }

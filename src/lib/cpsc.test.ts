@@ -52,9 +52,12 @@ describe("fetchCpscRecall", () => {
 describe("toRecall", () => {
   it("maps the Kikea record", () => {
     const spec = { recall: "x", source: kikea.URL, product: "pillow", label_must_show: [], proof_steps: ["cut"] };
-    const recall = toRecall(record, { refund: { value: "29.99", currency: "USD" }, spec, now: new Date("2026-11-06T09:00:00Z") });
+    const recall = toRecall(record, { refund: { value: "29.99", currency: "USD" }, spec, slug: "kikea-x-vesolje", owner: null, now: new Date("2026-11-06T09:00:00Z") });
     expect(recall).toMatchObject({
       id: "27-071",
+      slug: "kikea-x-vesolje",
+      unitsSold: 19596,
+      autoPay: true,
       recallDate: "2026-11-05",
       product: "X-VESOLJE Nursing Pillows",
       units: "About 19,596",

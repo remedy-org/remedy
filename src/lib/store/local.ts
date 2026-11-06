@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { ClaimIndex, isValidClaimId, isValidRecallId, paths, summarize, upsert, type Store } from "./store";
+import { ClaimIndex, isValidClaimId, isValidRecallId, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, type Store } from "./store";
 
 // Dev store: the same layout as the blob store, as files under `dir` (data/, git-ignored).
 export function localStore(dir: string): Store {
@@ -32,18 +32,25 @@ export function localStore(dir: string): Store {
 
   // One process, so a promise chain is enough to stop two index updates interleaving.
   let indexLock: Promise<unknown> = Promise.resolve();
-  function updateIndex(change: (index: ClaimIndex) => ClaimIndex) {
+  function updateJson<S extends z.ZodType>(rel: string, schema: S, empty: z.infer<S>, change: (index: z.infer<S>) => z.infer<S>) {
     const next = indexLock.then(async () => {
-      const index = (await readJson(paths.index, ClaimIndex)) ?? { claims: [] };
-      await write(paths.index, JSON.stringify(change(index), null, 2));
+      const index = (await readJson(rel, schema)) ?? empty;
+      await write(rel, JSON.stringify(change(index), null, 2));
     });
     indexLock = next.catch(() => {});
     return next;
   }
+  const updateIndex = (change: (index: ClaimIndex) => ClaimIndex) => updateJson(paths.index, ClaimIndex, { claims: [] }, change);
 
   return {
     getRecall: async (id) => (isValidRecallId(id) ? readJson(paths.recall(id), Recall) : null),
-    putRecall: async (recall) => write(paths.recall(recall.id), JSON.stringify(Recall.parse(recall), null, 2)),
+    async putRecall(recall) {
+      const parsed = Recall.parse(recall);
+      // Index first: a slug clash must fail before the recall file is written.
+      await updateJson(paths.recallIndex, RecallIndex, { recalls: [] }, (index) => upsertRecall(index, summarizeRecall(parsed)));
+      await write(paths.recall(parsed.id), JSON.stringify(parsed, null, 2));
+    },
+    listRecalls: async () => ((await readJson(paths.recallIndex, RecallIndex)) ?? { recalls: [] }).recalls,
     getClaim: async (id) => (isValidClaimId(id) ? readJson(paths.claim(id), Claim) : null),
     async putClaim(claim) {
       await write(paths.claim(claim.id), JSON.stringify(Claim.parse(claim), null, 2));

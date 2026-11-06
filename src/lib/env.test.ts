@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { env } from "./env";
+import { DEV_SESSION_SECRET, env } from "./env";
 
 describe("env", () => {
   it("applies defaults and treats empty values as missing", () => {
@@ -11,9 +11,11 @@ describe("env", () => {
     vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
     vi.stubEnv("VISION_MODEL", "");
     vi.stubEnv("VISION_EFFORT", "");
+    vi.stubEnv("SESSION_SECRET", "");
     const e = env();
     expect(e).toMatchObject({ PAYPAL_API_BASE: "https://api-m.sandbox.paypal.com", VISION_MODEL: "gpt-6.1-sol", VISION_EFFORT: "high" });
     expect(e.BLOB_READ_WRITE_TOKEN).toBeUndefined();
+    expect(e.SESSION_SECRET).toBe(DEV_SESSION_SECRET);
   });
 
   it("names what's missing", () => {

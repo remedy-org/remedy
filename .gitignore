@@ -32,3 +32,8 @@ npm-debug.log*
 
 # gstack local working files
 .gstack/
+
+# screenshots and Playwright output
+.shots/
+test-results/
+playwright-report/
