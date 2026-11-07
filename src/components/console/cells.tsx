@@ -4,7 +4,7 @@ import clsx from "clsx";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { StatusPill } from "@/components/ui";
 import { barsSentence, clock, type BarState, type CheckBar, type ClaimRow, type RowTimeline } from "@/app/console/_lib/view";
-import { formatTime } from "./format";
+import { formatClock, formatTime } from "./format";
 
 // The claims grid's cells (DESIGN.md "AG Grid", UI-SPEC §3.3). Every cell renders from the index row alone; nothing
 // here fetches except the thumbnails, which are sealed, cached, 96px and lazy (only rows AG Grid renders load them).
@@ -68,10 +68,16 @@ export function ClaimCell({ data }: Cell) {
           <span className="font-mono text-ui font-medium">{data.id}</span>
           <SampleMark row={data} />
         </span>
-        {/* The claim's one-time code, as the sign-in page's replica shows it, then when it was filed. */}
-        <span className="mt-0.5 font-mono text-micro whitespace-nowrap text-faint">
-          {data.code && <span className="text-muted">Code {data.code} · </span>}
-          {formatTime(data.createdAt)}
+        {/* The claim's one-time code, as the sign-in page's replica shows it, then the time it was filed (UTC; the full
+            date is in the tooltip), so the line fits the column. */}
+        <span className="mt-0.5 font-mono text-micro whitespace-nowrap text-faint" title={`Filed ${formatTime(data.createdAt)}`}>
+          {data.code ? (
+            <>
+              <span className="text-muted">Code {data.code}</span> · {formatClock(data.createdAt).slice(0, 5)}
+            </>
+          ) : (
+            formatTime(data.createdAt)
+          )}
         </span>
       </span>
     </span>

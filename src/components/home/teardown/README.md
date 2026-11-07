@@ -27,8 +27,8 @@ const exhibitP = useTransform(p, [STARTS[2], STARTS[5]], [0, 1]);
 ```
 
 - It fills its parent and does not pin itself.
-- Give that stretch of the custody pin about 500vh. `TOTAL_VH` in `model.ts` is 500: 8 beats at 30 to 95vh each.
-  DESIGN.md's pin cap was raised for this.
+- Give that stretch of the custody pin `TOTAL_VH` (520vh in `model.ts`): 7 beats at 70 to 85vh each, none under
+  DESIGN.md's 70vh floor. It ends on the paid pose; the pin cuts to the console from there.
 
 **On its own.** `<OpenedExhibit />` renders its own pinned section, `TOTAL_VH + 100svh` tall (400vh + 100svh on
 phones). It includes a "Skip the exhibit" link, and the check row's buttons jump to each check.
@@ -45,7 +45,7 @@ Schibsted Grotesk and JetBrains Mono fonts. The component itself reads only the 
 | `model.ts` | The one input, `p` → `stateAt(p)`: beats, part openness, camera shot, readouts, ticks, receipt. Pure; tested in `model.test.ts` |
 | `OpenedExhibit.tsx` | Chooses the form, owns the pin, draws one frame per change of `p`, and writes the DOM overlay (readouts, check row, callout and leader, receipt) |
 | `scene/` | three.js, behind a dynamic import: `index.ts` (studio, framing, render), `pillow.ts` (the cut C-shaped pillow, torn edge, stuffing), `parts.ts` (tag and twine, phone and frustum, prints and fingerprints), `textures.ts`, `noise.ts` |
-| `public/teardown/*.webp` | 32 pre-rendered stills (8 beats × 2 themes × desktop/phone), 1.4 MB in all, 21 to 75 KB each |
+| `public/teardown/*.webp` | 28 pre-rendered stills (7 beats × 2 themes × desktop/phone), 1.2 MB in all. The phone stills of the whole pillow are framed tight, so the object fills about 85% of a 375px screen |
 
 ### Forms, chosen after mount
 
@@ -55,8 +55,8 @@ The server always renders the static form.
   once the stage is within one viewport. The beat's poster shows until the scene has drawn its first frame.
 - **poster:** phones under 768px, no WebGL, or a GPU too slow for tier 1. The exhibit is pinned, and the stills cut
   over at each beat with the same DOM callouts.
-- **static:** reduced motion and no JS. It is not pinned. It shows the final still (a theme twin is picked in CSS),
-  every check with its quote, and the receipt.
+- **static:** reduced motion and no JS. It is not pinned. It shows the paid still (the halves parted; a theme twin is
+  picked in CSS) with the receipt lying on its lower right, and every check with its quote beside them.
 
 ### Performance
 
@@ -69,8 +69,13 @@ The server always renders the static form.
 - A frame is drawn only when `p`, the theme or the size changes. Nothing draws while idle or off-screen.
 - Tier 2 caps the pixel ratio at 1.5, uses a 1024 VSM shadow map, and draws two fibre shells.
 - Tier 1 drops to a pixel ratio of 1, 512 shadows and one shell. The drop happens:
-  - after a start-up benchmark of over 12 ms a frame;
-  - or when the median gap between scroll frames is over 28 ms.
+  - after a start-up benchmark of over 12 ms a frame. The benchmark ends on a 1px `readPixels`, which blocks until the
+    GPU has drawn every frame (`gl.finish()` does not block in Chrome, so it timed only the JS);
+  - or when the median of 8 gaps between scroll frames is over 28 ms, so a weak GPU falls back within one beat.
+
+  Software renderers (SwiftShader, llvmpipe, Microsoft Basic Render) go straight to the posters. The scene is built in
+  slices with the main thread given back between them (the fabric textures in 32-row slices, then each half, the
+  parts and the shader compile), because it arms mid-scroll, during chapter 02.
 
   A slow tier 1 falls back to the posters.
 - Each frame has 42 draw calls and about 220k triangles, shadow pass included.
@@ -78,12 +83,14 @@ The server always renders the static form.
 
   | Viewport | Mean frame | p95 | Start-up benchmark |
   |---|---|---|---|
-  | 1440×900 | 17.2 ms | 16.9 ms | 2.3 ms a frame |
+  | 1440×900 | 17.2 ms | 16.9 ms | 3.4 ms a frame (5.5 ms with the CPU throttled 4x), timed to a pixel readback |
   | 1920×1080 | 16.9 ms | 17.4 ms | |
 
-  That is display-locked 60 fps.
-- With SwiftShader, a CPU renderer that is a floor below any integrated GPU, frames ran about 150 ms. That case is why
-  the runtime tier drop exists.
+  That is display-locked 60 fps. Scrolling from chapter 02 into the exhibit while the scene builds (production build,
+  1440×900, 240 steps): mean 17.0 ms, p95 18.6 ms; with the CPU throttled 4x the longest gap is 121 ms (it was 233 ms
+  before the build was sliced).
+- SwiftShader, a CPU renderer that is a floor below any integrated GPU, is detected by its renderer string and gets the
+  posters without loading three.js (frames then hold 16.6 ms mean).
 - Integrated-GPU numbers (Iris Xe, M1) are not measured.
 
 ### Honesty

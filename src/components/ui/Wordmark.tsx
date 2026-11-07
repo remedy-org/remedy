@@ -20,7 +20,8 @@ export interface WordmarkProps {
  * tear, and the stub x10 to 15 with a 1px zig-zag on its torn edge, on the dark bg tile in both browser themes.
  *
  * Colours follow the theme through light-dark(), which reads the color-scheme each [data-theme] block sets:
- * dark: the tag is --paper, the stub --accent. Light: the tag is --text and the stub a deeper amber, because
+ * dark: the tag is --paper, the stub --accent. Light: the tag is --ink-muted (it still reads as card, not a black
+ * block) and the stub a deeper amber, because
  * --accent measures 2:1 on the light page; oklch(0.64 0.14 60) (#c8741d) measures 3.26:1 on --bg, 3.46:1 on
  * --surface and 3.09:1 on --surface-2 (WCAG graphics need 3:1). Override --mark-tag / --mark-stub to recolour it.
  */
@@ -28,7 +29,7 @@ const TAG = "M0 3L3 0H11.15A1.6 1.6 0 0 0 12 1.413V12.587A1.6 1.6 0 0 0 11.15 14
 const STUB = "M14.35 0H20A1 1 0 0 1 21 1V13A1 1 0 0 1 20 14H14.35A1.6 1.6 0 0 0 13.5 12.587V1.413A1.6 1.6 0 0 0 14.35 0Z";
 
 const markColours = {
-  "--mark-tag": "light-dark(var(--text), var(--paper))",
+  "--mark-tag": "light-dark(var(--ink-muted), var(--paper))",
   "--mark-stub": "light-dark(oklch(0.64 0.14 60), var(--accent))",
 } as CSSProperties;
 

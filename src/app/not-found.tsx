@@ -8,7 +8,9 @@ export const metadata: Metadata = { title: "Not found · Remedy" };
 export default function NotFound() {
   return (
     <FlowShell>
-      <NotFoundCard description="This link may be mistyped, or the page has moved. A recall's claim link is on the company's recall notice." />
+      <div className="mx-auto w-full max-w-claim pt-8 sm:pt-16">
+        <NotFoundCard description="This link may be mistyped, or the page has moved. A recall's claim link is on the company's recall notice." />
+      </div>
     </FlowShell>
   );
 }

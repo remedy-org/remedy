@@ -57,7 +57,8 @@ export function captions({ paid, samples, sampleAmount, answered }: ReturnType<t
   const sent = paid - samples;
   return {
     remedied: all ? "Sample claims · never sent" : some ? `Paid claims · ${share}` : "Paid claims",
-    paid: samples ? `Sandbox · ${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
+    // The tile title already says sandbox; the caption must fit one line of the tile at 1440 (about 200px).
+    paid: samples ? `${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
     timeTitle: sent ? "Avg photo to PayPal" : "Avg photo check",
     timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
     time: sent ? `Average of ${sent} sent ${sent === 1 ? "payout" : "payouts"}` : `None sent yet · ${answered} ${answered === 1 ? "claim" : "claims"} checked`,
