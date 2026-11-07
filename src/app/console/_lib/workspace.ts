@@ -1,5 +1,6 @@
 import "server-only";
 import { getAppStore } from "@/lib/demo";
+import { refreshPayouts } from "@/lib/paypal/status";
 import type { Session } from "@/lib/session";
 import type { Store } from "@/lib/store";
 import type { ClaimSummary } from "@/lib/store";
@@ -47,7 +48,8 @@ export const canSeeClaim = (recall: Pick<Recall, "owner">, session: Pick<Session
   recall.owner !== null || Boolean(c.seeded) || Boolean(c.demo) || c.payerId === session.payerId;
 
 // Every claim for one recall that this company may see, newest first. The index has no reasons or amounts, so each
-// claim file is read.
+// claim file is read. Payouts PayPal hasn't settled are checked again (a few, briefly), so the grid is right without
+// webhooks.
 export async function loadClaims(store: Store, recall: Recall, session: Pick<Session, "payerId">): Promise<RecallClaims> {
   const rows = (await store.listClaims()).filter((r) => r.recallId === recall.id).filter(canSeeClaim(recall, session));
   const read = await Promise.allSettled(rows.map((r) => store.getClaim(r.id)));
@@ -58,7 +60,7 @@ export async function loadClaims(store: Store, recall: Recall, session: Pick<Ses
     else unreadable.push(rows[i].id);
   });
   claims.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return { claims, unreadable };
+  return { claims: await refreshPayouts(store, claims), unreadable };
 }
 
 // A claim the company may open: its recall must be in the workspace.

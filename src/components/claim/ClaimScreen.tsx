@@ -1,11 +1,13 @@
 import "server-only";
 import { notFound, redirect } from "next/navigation";
+import { after } from "next/server";
 import QRCode from "qrcode";
 import { demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
 import { env } from "@/lib/env";
 import { getPayoutStatus } from "@/lib/paypal/payouts";
+import { savePayoutStatus } from "@/lib/paypal/status";
 import { getSession, loginPath } from "@/lib/session";
-import { getRecallBySlug } from "@/lib/store";
+import { getRecallBySlug, type Store } from "@/lib/store";
 import type { Claim } from "@/lib/types";
 import { ClaimFlow } from "./ClaimFlow";
 import { ExpiredCard } from "./ExpiredCard";
@@ -19,13 +21,17 @@ const QR_COLORS = { dark: "#15181d", light: "#ffffff" };
 const requestTime = () => Date.now();
 
 // PayPal's live status for the receipt; the stored one if PayPal is slow or down (a partial result, never an error).
-async function livePayout(claim: Claim): Promise<PayoutLive | undefined> {
+// A new status is saved after the response, so the console shows it too.
+async function livePayout(store: Store, claim: Claim): Promise<PayoutLive | undefined> {
   if (!claim.payout) return undefined;
   if (claim.payout.batchId.startsWith("SEED")) return { status: claim.payout.status, fresh: true };
+  const { batchId } = claim.payout;
   try {
     const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000));
-    const s = await Promise.race([getPayoutStatus(claim.payout.batchId), timeout]);
-    return { status: s.itemStatus ?? s.batchStatus, fresh: true };
+    const s = await Promise.race([getPayoutStatus(batchId), timeout]);
+    const status = s.itemStatus ?? s.batchStatus;
+    after(() => savePayoutStatus(store, claim.id, batchId, { status, itemId: s.itemId, at: new Date() }).catch(() => undefined));
+    return { status, fresh: true };
   } catch {
     return { status: claim.payout.status, fresh: false };
   }
@@ -56,7 +62,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
       <FlowShell demo={demo} company={company}>
         <div className="flex flex-col gap-6">
           <StepMeter current={steps.length + 1} steps={steps} />
-          <Result claim={claim} recall={recall} rows={checkRows(claim, recall.spec)} photoUrls={photoUrls} payout={await livePayout(claim)} againHref={againHref} sample={sample} />
+          <Result claim={claim} recall={recall} rows={checkRows(claim, recall.spec)} photoUrls={photoUrls} payout={await livePayout(store, claim)} againHref={againHref} sample={sample} />
         </div>
       </FlowShell>
     );
