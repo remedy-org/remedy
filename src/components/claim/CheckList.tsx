@@ -54,7 +54,7 @@ export function CodeCells({ code, passed }: { code: string; passed: boolean }) {
           key={i}
           style={{ "--flip-delay": `${i * 60}ms` } as CSSProperties}
           className={clsx(
-            "flex h-10 w-8 items-center justify-center rounded-control border font-mono text-body font-semibold",
+            "flex h-10 w-8 items-center justify-center rounded-control border font-mono text-body font-medium",
             styles.flip,
             passed ? "border-pay/60 bg-pay-soft text-pay" : "border-line-strong text-muted",
           )}
@@ -77,7 +77,7 @@ function toStep(r: CheckRow, code?: string, quoteClassName?: string): CheckStep 
           </span>
         )}
         {r.detail && <EvidenceText>{r.detail}</EvidenceText>}
-        {r.quote && <span className={clsx("mt-1.5 block border-l border-line-strong pl-3 font-mono text-micro leading-relaxed text-muted", styles.rise, quoteClassName)}>&ldquo;{r.quote}&rdquo;</span>}
+        {r.quote && <span className={clsx("mt-1.5 block border-l border-line-strong pl-3 text-ui leading-[1.55] text-muted", styles.rise, quoteClassName)}>&ldquo;{r.quote}&rdquo;</span>}
       </>
     ) : undefined;
   return { id: r.id, label: r.label, state: r.state, detail };

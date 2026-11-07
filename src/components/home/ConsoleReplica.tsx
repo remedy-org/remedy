@@ -164,7 +164,7 @@ function EvidencePanel({ row }: { row: PreviewRow }) {
               {e.check}
               <span className={clsx("micro ml-auto", e.bar === "hold" ? "text-hold" : "text-faint")}>{e.bar === "hold" ? "Unclear" : "Yes"}</span>
             </span>
-            <q className="mt-1 block font-mono text-micro leading-relaxed text-muted">{e.quote}</q>
+            <q className="mt-1 block text-ui leading-[1.55] text-muted">{e.quote}</q>
           </li>
         ))}
       </ol>

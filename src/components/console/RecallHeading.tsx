@@ -20,7 +20,7 @@ export function RecallHeading({ recall, recalls, basePath, actions }: RecallHead
         <ExhibitLabel leader="none">
           CPSC {recall.id} · Recalled {formatDate(recall.recallDate)}
         </ExhibitLabel>
-        <h1 className="mt-3 text-h2 font-semibold text-balance">
+        <h1 className="mt-3 text-h2 font-medium text-balance">
           <NoBreakHyphens>{recall.product}</NoBreakHyphens>
         </h1>
         <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-ui text-muted">

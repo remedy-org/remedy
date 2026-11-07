@@ -135,7 +135,7 @@ function EvidenceStill({ claim }: { claim: DrawerClaim }) {
               id: c.id,
               label: c.label,
               state: c.outcome === "reject" ? "reject" : c.outcome,
-              detail: c.evidence ? <q className="block font-mono text-micro leading-relaxed text-muted">{c.evidence}</q> : c.rule,
+              detail: c.evidence ? <q className="block text-ui leading-[1.55] text-muted">{c.evidence}</q> : c.rule,
             }))}
           />
         </div>

@@ -278,7 +278,7 @@ function Deciding({ claim }: { claim: DrawerClaim }) {
     <section aria-label="What decided it" className={clsx("rounded-control border-l-2 px-3.5 py-3", claim.decision === "held" ? "border-hold bg-hold-soft" : "border-stop bg-stop-soft")}>
       <p className="micro text-muted">{claim.decision === "held" ? "Why it's held" : "Why it was refused"} · {label}</p>
       <p className="mt-1.5 text-ui text-text">{text}</p>
-      {check?.evidence && <q className="mt-1.5 block font-mono text-micro leading-relaxed text-muted">{check.evidence}</q>}
+      {check?.evidence && <q className="mt-1.5 block font-sans text-ui leading-[1.55] text-muted">{check.evidence}</q>}
     </section>
   );
 }
@@ -330,7 +330,7 @@ function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
                 detail: (
                   <>
                     {c.rule}
-                    {c.evidence && <q className="mt-1.5 block border-l border-line-strong pl-3 font-mono text-micro leading-relaxed text-muted">{c.evidence}</q>}
+                    {c.evidence && <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">{c.evidence}</q>}
                   </>
                 ),
               }))}
@@ -338,7 +338,7 @@ function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
             {claim.summary && (
               <p className="rounded-control bg-surface-2 px-4 py-3 text-ui text-muted">
                 <span className="micro mb-1 block text-muted">Model summary</span>
-                <span className="font-mono text-micro leading-relaxed text-text">{claim.summary}</span>
+                <span className="font-sans text-ui leading-[1.55] text-text-2">{claim.summary}</span>
               </p>
             )}
           </>

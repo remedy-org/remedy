@@ -16,14 +16,14 @@ export interface FlowShellProps {
 }
 
 /**
- * The claim flow's frame: a quiet header, the steps on graphite with the film grain, a plain footer. Each step sets its
- * own width (480px for a card, 640px for the camera and the samples, 960px for the checks).
+ * The claim flow's frame, on the homepage's own page frame (.page: the same gutter, so the wordmark never moves between
+ * them): a quiet header, the steps on graphite with the film grain, a plain footer. Each step sets its own width (480px for a card, 640px for the camera and the samples, 960px for the checks).
  */
 export function FlowShell({ children, demo, sandbox, company, wide }: FlowShellProps) {
   return (
     <div className="grain flex min-h-dvh flex-col">
       <header className="border-b border-line">
-        <div className="mx-auto flex h-16 max-w-content items-center justify-between gap-4 px-4 sm:px-8">
+        <div className="page flex h-16 items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <Wordmark href="/" />
             {(demo || sandbox) && (
@@ -38,11 +38,11 @@ export function FlowShell({ children, demo, sandbox, company, wide }: FlowShellP
         </div>
       </header>
 
-      <main className={clsx("mx-auto w-full max-w-content flex-1 px-4 pt-8 pb-16 sm:px-8 sm:pt-12 max-sm:[body:has([data-camera])_&]:pb-6", wide && "lg:pt-16")}>{children}</main>
+      <main className={clsx("page flex-1 pt-8 pb-16 sm:pt-12 max-sm:[body:has([data-camera])_&]:pb-6", wide && "lg:pt-16")}>{children}</main>
 
       {/* A phone's camera step fills the screen; the footer would only sit under it. */}
       <footer className="border-t border-line max-sm:[body:has([data-camera])_&]:hidden">
-        <div className="mx-auto flex max-w-content flex-col gap-1 px-4 py-6 text-ui text-faint sm:flex-row sm:justify-between sm:px-8">
+        <div className="page flex flex-col gap-1 py-6 text-ui text-faint sm:flex-row sm:justify-between">
           <p>{company ? `Refunds for ${company}'s recall are sent through PayPal Payouts.` : "Refunds are sent through PayPal Payouts."}</p>
           <p>Photos are seen only by Remedy and the company running the recall.</p>
         </div>

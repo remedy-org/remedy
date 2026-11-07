@@ -18,7 +18,7 @@ export function EmptyState({ title, description, action, eyebrow, className }: E
   return (
     <div className={clsx("flex flex-col items-center gap-3 rounded-card border border-line px-6 py-12 text-center", className)}>
       {eyebrow && <p className="micro text-faint">{eyebrow}</p>}
-      <p className="text-body font-semibold text-text">{title}</p>
+      <p className="text-body font-medium text-text">{title}</p>
       {description && <p className="max-w-read text-ui text-muted">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>

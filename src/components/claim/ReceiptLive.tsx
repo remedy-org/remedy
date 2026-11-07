@@ -75,7 +75,8 @@ export function ReceiptLive({ claimId, status: initial, live, amount, sandbox }:
           {words.label}
         </dd>
       </div>
-      <p className="text-right text-ui text-ink-muted">{sandbox ? "Sandbox money shows in your PayPal sandbox account's activity." : words.note}</p>
+      {/* A full-width line of its own, left-aligned under the status, so it reads as a sentence and never wraps ragged. */}
+      <p className="mt-1 text-pretty text-ui text-ink-muted">{sandbox ? "Sandbox money shows in your PayPal sandbox account's activity." : words.note}</p>
       <p className="sr-only" aria-live="polite">
         {changed && words.tone === "pay" ? `Received. ${amount} is in your PayPal ${sandbox ? "sandbox " : ""}account.` : changed ? `Payout status: ${words.label}.` : ""}
       </p>

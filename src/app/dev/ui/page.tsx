@@ -147,7 +147,7 @@ export default function DevUiPage() {
             </p>
           </Spec>
           <Spec name="text-title" detail="Sans 600, 32px; 26px on phones. Claim-flow screen titles.">
-            <p className="text-title font-semibold">Checking your photo</p>
+            <p className="text-title font-medium">Checking your photo</p>
           </Spec>
           <Spec name="text-body · ui · micro" detail="16 / 14 / 12, the running text.">
             <div className="flex max-w-[60ch] flex-col gap-3">
@@ -167,7 +167,7 @@ export default function DevUiPage() {
                 <figure className="m-0 flex flex-col items-start gap-3">
                   <Paper variant="tag" hole tilt={-2} className="w-60">
                     <p className="micro text-ink-muted">CPSC 27-071 · X-VESOLJE</p>
-                    <p className="mt-3 font-mono text-[2.5rem] leading-none font-semibold tracking-[0.12em]">M4T</p>
+                    <p className="mt-3 font-mono text-[2.5rem] leading-none font-medium tracking-[0.12em]">M4T</p>
                     <p className="mt-3 text-ui text-ink-muted">Write it big, in marker.</p>
                   </Paper>
                   <figcaption className="font-mono text-micro text-faint">variant=&quot;tag&quot; hole tilt=-2</figcaption>
@@ -178,7 +178,7 @@ export default function DevUiPage() {
                       <p className="micro text-ink-muted">Verdict sheet</p>
                       <Stamp tone="hold">Held for review</Stamp>
                     </div>
-                    <p className="mt-6 text-body font-semibold">A person at Kikea Store will look at this.</p>
+                    <p className="mt-6 text-body font-medium">A person at Kikea Store will look at this.</p>
                     <p className="mt-2 text-ui text-ink-muted">It&rsquo;s saved and nothing is lost. Kikea Store&rsquo;s recall team reviews held claims within 2 business days.</p>
                   </Paper>
                   <figcaption className="font-mono text-micro text-faint">variant=&quot;sheet&quot;</figcaption>

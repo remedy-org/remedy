@@ -119,11 +119,13 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
 
       <div className="flex flex-col gap-4">
         {demo && !signedInAs && (
-          <div className="flex gap-3 rounded-card bg-hold-soft p-4 text-ui">
-            <InfoIcon className="mt-0.5 shrink-0 text-hold" />
+          // Information, so neutral: the held blue means "waiting for a person" and nothing else. Under the button on a
+          // phone, so the button clears the first screen.
+          <div className="flex gap-3 rounded-card bg-surface-2 p-4 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] max-sm:order-last">
+            <InfoIcon className="mt-0.5 shrink-0 text-muted" />
             <div className="flex flex-col gap-1">
               <p className="font-medium text-text">
-                Log in with a PayPal <strong className="font-semibold">sandbox</strong> personal account.
+                Log in with a PayPal <strong className="font-medium">sandbox</strong> personal account.
               </p>
               <p className="text-muted">
                 The judges&apos; test login is in the submission notes. Your real PayPal login won&apos;t work here. No login?{" "}
@@ -162,7 +164,7 @@ function Parties({ company }: { company: string }) {
   return (
     <div className="flex items-center gap-3">
       <span className="flex shrink-0" aria-hidden="true">
-        <span className="flex size-11 items-center justify-center rounded-card border border-line bg-surface-2 text-ui font-semibold text-text">{initials}</span>
+        <span className="flex size-11 items-center justify-center rounded-card border border-line bg-surface-2 text-ui font-medium text-text">{initials}</span>
         <span className="-ml-2.5 flex size-11 items-center justify-center rounded-card bg-bg ring-2 ring-surface">
           <RemedyMark className="h-4 w-6" />
         </span>

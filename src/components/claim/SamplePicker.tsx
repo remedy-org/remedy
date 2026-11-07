@@ -79,7 +79,8 @@ export function SamplePicker({
                 aria-disabled={locked ? true : undefined}
                 className={clsx(
                   "group relative flex cursor-pointer gap-4 rounded-card border border-line bg-surface p-2 sm:gap-3.5 transition-[border-color,box-shadow,background-color] duration-160 hover:bg-surface-2 sm:p-3",
-                  "has-checked:border-accent has-checked:shadow-[0_0_0_2px_var(--bg),0_0_0_4px_var(--accent)] has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-accent",
+                  // Selected: a neutral ring in the text colour. The screen's one amber is "Run this sample".
+                  "has-checked:border-text/70 has-checked:shadow-[0_0_0_2px_var(--bg),0_0_0_3px_var(--text)] has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-accent",
                   locked && "cursor-not-allowed hover:bg-surface",
                 )}
               >
@@ -90,7 +91,7 @@ export function SamplePicker({
                   <img src={sample.photos[0]} alt="" className={clsx("absolute inset-0 size-full object-cover object-[50%_65%]", locked && "opacity-50 grayscale")} />
                   <span
                     aria-hidden="true"
-                    className="absolute top-1.5 left-1.5 flex size-7 items-center justify-center rounded-control bg-paper font-mono text-ui font-semibold text-ink shadow-paper transition-colors duration-160 group-has-checked:bg-accent group-has-checked:text-accent-ink"
+                    className="absolute top-1.5 left-1.5 flex size-7 items-center justify-center rounded-control bg-paper font-mono text-ui font-medium text-ink shadow-paper"
                   >
                     {letter}
                   </span>

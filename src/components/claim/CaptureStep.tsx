@@ -334,7 +334,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                         <img src={shots[i].url} alt={`Photo ${i + 1}`} className="size-full rounded-[3px] object-cover" />
                       </span>
                       {/* The letter and the remove button sit inside the print's corners, so neighbours never collide. */}
-                      <span aria-hidden="true" className="absolute bottom-[3px] left-[3px] flex size-4 items-center justify-center rounded-[3px] bg-accent font-mono text-[10px] leading-none font-semibold text-accent-ink">
+                      <span aria-hidden="true" className="absolute bottom-[3px] left-[3px] flex size-4 items-center justify-center rounded-[3px] bg-accent font-mono text-[10px] leading-none font-medium text-accent-ink">
                         {String.fromCharCode(65 + i)}
                       </span>
                       <button
@@ -441,7 +441,7 @@ function FrameMessage({ camera, onRetry }: { camera: Exclude<CameraState, "live"
       <span className={clsx("flex size-10 items-center justify-center rounded-full border", m.tone === "stop" ? "border-stop text-stop" : "border-line-strong text-muted", camera === "starting" && "animate-[skeleton-pulse_1.6s_ease-in-out_infinite]")}>
         {m.tone === "stop" ? <AlertIcon /> : <CameraIcon />}
       </span>
-      <p className="text-body font-semibold text-text">{m.title}</p>
+      <p className="text-body font-medium text-text">{m.title}</p>
       <p className="max-w-80 text-ui text-muted">{m.body}</p>
       {m.retry && (
         <Button variant="secondary" size="sm" onClick={onRetry} className="mt-1">

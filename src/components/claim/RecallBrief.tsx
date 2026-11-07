@@ -10,7 +10,7 @@ export const hazardLine = (recall: Pick<Recall, "title">) => {
 
 function Hazard({ text }: { text: string }) {
   return (
-    <p role="note" className="flex gap-3 rounded-card bg-stop-soft px-4 py-3 text-body font-semibold text-text sm:py-4">
+    <p role="note" className="flex gap-3 rounded-card bg-stop-soft px-4 py-3 text-body font-medium text-text sm:py-4">
       <AlertIcon className="mt-1 shrink-0 text-stop" />
       {text}
     </p>
@@ -40,12 +40,12 @@ export function RecallBrief({ recall, sandbox }: { recall: Recall; sandbox?: boo
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="micro truncate text-faint">CPSC {recall.id}</span>
-          <p aria-hidden="true" className="line-clamp-2 text-ui leading-tight font-semibold text-text">
+          <p aria-hidden="true" className="line-clamp-2 text-ui leading-tight font-medium text-text">
             {recall.product}
           </p>
         </div>
         <span className="flex shrink-0 flex-col items-end gap-0.5">
-          <Money value={Number(recall.refund.value)} currency={recall.refund.currency} size="inline" className="text-body font-semibold text-text" />
+          <Money value={Number(recall.refund.value)} currency={recall.refund.currency} size="inline" className="text-body font-medium text-text" />
           {sandbox && <span className="micro text-faint">Sandbox</span>}
         </span>
       </div>
@@ -54,7 +54,7 @@ export function RecallBrief({ recall, sandbox }: { recall: Recall; sandbox?: boo
       <ExhibitLabel leader="none" as="p" className="max-sm:hidden">
         CPSC {recall.id} · Recalled {day(recall.recallDate)}
       </ExhibitLabel>
-      <p aria-hidden="true" className="max-w-[20ch] text-title font-semibold text-balance max-sm:hidden">
+      <p aria-hidden="true" className="max-w-[20ch] text-title font-medium text-balance max-sm:hidden">
         {recall.product}
       </p>
       {hazard && <Hazard text={hazard} />}

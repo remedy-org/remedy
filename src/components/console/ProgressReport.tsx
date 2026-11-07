@@ -7,7 +7,7 @@ import { formatCount, formatDate, formatDayET, plural } from "./format";
 
 function H({ n, children }: { n: number; children: ReactNode }) {
   return (
-    <h2 className="flex items-baseline gap-3 text-body font-semibold">
+    <h2 className="flex items-baseline gap-3 text-body font-medium">
       <span className="font-mono text-micro text-muted">{String(n).padStart(2, "0")}</span>
       {children}
     </h2>
@@ -27,13 +27,15 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
   const each = report.paidEachCents === null ? "" : ` at ${formatCents(report.paidEachCents)}`;
   const sampleNote = report.samplesPaid ? ` · ${formatCents(report.sampleCents)} sample, never sent` : "";
   return (
-    <article data-theme="light" className="mx-auto w-full max-w-[52rem] rounded-card border border-line bg-surface px-6 py-8 text-text sm:px-12 sm:py-12 print:max-w-none print:rounded-none print:border-0 print:p-0">
+    // On screen it is a paper document, like every receipt, tag and notice (light-theme tokens inside, which pass on
+    // --paper); printed, plain white.
+    <article data-theme="light" className="mx-auto w-full max-w-[52rem] rounded-card bg-paper px-6 py-8 text-text shadow-paper sm:px-12 sm:py-12 print:max-w-none print:rounded-none print:bg-white print:p-0 print:shadow-none">
       <header className="flex flex-col gap-3 border-b border-line pb-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ExhibitLabel leader="none">Recall progress report · Draft</ExhibitLabel>
           <span className="font-mono text-micro text-muted">Generated {generated}</span>
         </div>
-        <h1 className="text-h2 font-semibold text-balance">
+        <h1 className="text-h2 font-medium text-balance">
           CPSC {recall.id}: <NoBreakHyphens>{recall.product}</NoBreakHyphens>
         </h1>
         <p className="text-ui text-muted">{recall.title}</p>
@@ -53,7 +55,7 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
       </header>
 
       {report.seeded > 0 && (
-        <p className="mt-8 rounded-control border border-line bg-hold-soft px-4 py-3 text-ui text-text">
+        <p className="mt-8 rounded-control border border-line bg-surface-2 px-4 py-3 text-ui text-text">
           Includes {plural(report.seeded, "seeded sample claim")} from the demo data, which were never paid. Do not file these numbers with CPSC.
         </p>
       )}
@@ -157,7 +159,7 @@ function Figure({ label, value, note }: { label: string; value: string; note?: s
   return (
     <div className="flex flex-col gap-1">
       <span className="text-ui text-muted">{label}</span>
-      <span className="text-h2 font-semibold">{value}</span>
+      <span className="text-head-sm font-medium">{value}</span>
       {note && <span className="text-ui text-muted">{note}</span>}
     </div>
   );

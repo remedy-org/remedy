@@ -67,7 +67,7 @@ export function ImportRecall({ example }: { example: string }) {
       <Layout notice={step.notice}>
         <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
           <div>
-            <h2 className="text-body font-semibold">Drafting the photo checks</h2>
+            <h2 className="text-body font-medium">Drafting the photo checks</h2>
             <p className="mt-1 text-ui text-muted">The model reads the notice and its photos, then writes what an owner&apos;s photos must show. You review every line before it goes live.</p>
           </div>
           <CheckProgress

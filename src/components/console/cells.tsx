@@ -68,7 +68,11 @@ export function ClaimCell({ data }: Cell) {
           <span className="font-mono text-ui font-medium">{data.id}</span>
           <SampleMark row={data} />
         </span>
-        <span className="mt-0.5 font-mono text-micro text-faint">{formatTime(data.createdAt)}</span>
+        {/* The claim's one-time code, as the sign-in page's replica shows it, then when it was filed. */}
+        <span className="mt-0.5 font-mono text-micro whitespace-nowrap text-faint">
+          {data.code && <span className="text-muted">Code {data.code} · </span>}
+          {formatTime(data.createdAt)}
+        </span>
       </span>
     </span>
   );

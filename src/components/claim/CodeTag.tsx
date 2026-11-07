@@ -29,7 +29,7 @@ export function CodeTag({ code, label = "Your one-time code", foot, string, expi
       )}
       <Paper variant="tag" hole padding="lg" tilt={-2} className={clsx(expired && "opacity-60")}>
         <p className="micro text-ink-muted">{label}</p>
-        <p aria-hidden="true" className="mt-4 text-center font-mono text-[4rem] leading-none font-semibold tracking-[0.14em] text-ink">
+        <p aria-hidden="true" className="mt-4 text-center font-mono text-[4rem] leading-none font-medium tracking-[0.14em] text-ink">
           {code}
         </p>
         {foot && <p className="mt-6 border-t border-dashed border-paper-line pt-3 text-ui text-ink-muted">{foot}</p>}

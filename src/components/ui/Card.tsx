@@ -41,7 +41,7 @@ export function CardHeader({ title, description, actions, level = 2, className }
   return (
     <div className={clsx("flex flex-wrap items-start justify-between gap-x-6 gap-y-3", className)}>
       <div className="min-w-0">
-        <H className="text-body font-semibold text-text">{title}</H>
+        <H className="text-body font-medium text-text">{title}</H>
         {description && <p className="mt-1 text-ui text-muted">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

@@ -27,7 +27,7 @@ export function JudgesSheet({ children }: { children: ReactNode }) {
       aria-haspopup="dialog"
       className="micro inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 whitespace-nowrap text-text transition-colors duration-160 after:absolute after:-inset-y-1.5 after:inset-x-0 after:content-[''] hover:bg-surface-2 relative"
     >
-      <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
+      <span className="size-1.5 rounded-full bg-faint" aria-hidden="true" />
       <span className="max-[399px]:hidden">For judges</span>
       <span className="min-[400px]:hidden">Judges</span>
     </button>

@@ -172,7 +172,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
                 e.currentTarget.blur();
               }
             }}
-            placeholder="Search claims, codes, reasons"
+            placeholder="Search claims, codes…"
             className="h-9 w-full rounded-control border border-line bg-surface pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0"
           />
           <kbd

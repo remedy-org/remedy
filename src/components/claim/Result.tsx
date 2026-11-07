@@ -199,7 +199,7 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
           </Stamp>
         </span>
         <p className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Claim {claim.id}</p>
-        <p className="mt-6 text-body font-semibold text-ink">Nothing is lost.</p>
+        <p className="mt-6 text-body font-medium text-ink">Nothing is lost.</p>
         <p className="mt-1 max-w-[34ch] text-body text-ink-muted">
           Your claim is saved. If {company} approves it, {money(recall.refund)} goes to your PayPal account{sb ? " in sandbox money" : " and PayPal emails you"}.
         </p>
@@ -268,7 +268,7 @@ function Reasons({ reasons, rows, summary }: { reasons: Claim["reasons"]; rows: 
               <span className="text-ink">
                 <EvidenceText>{r.text}</EvidenceText>
               </span>
-              {quote && <span className="border-l border-paper-line pl-3 font-mono text-micro leading-relaxed text-ink-muted">&ldquo;{quote}&rdquo;</span>}
+              {quote && <span className="border-l border-paper-line pl-3 text-ui leading-[1.55] text-ink-muted">&ldquo;{quote}&rdquo;</span>}
             </span>
           </li>
         );
@@ -366,7 +366,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
 function CodeDiff({ code, seen }: { code: string; seen: string | null | undefined }) {
   const { cells, caption, readable } = codeDiff(code, seen);
   const spoken = `Your code ${code.split("").join(", ")}. ${readable ? `Read on the tag ${cells.map((c) => c.seen || "nothing").join(", ")}.` : "Nothing readable on the tag."} ${caption}`;
-  const cell = "flex h-13 w-11 items-center justify-center rounded-control font-mono text-[1.75rem] leading-none font-semibold";
+  const cell = "flex h-13 w-11 items-center justify-center rounded-control font-mono text-[1.75rem] leading-none font-medium";
   return (
     <figure className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5 sm:p-6">
       <p className="sr-only">{spoken}</p>
@@ -489,9 +489,12 @@ function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { ro
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photoUrls[0]} alt="" className="size-16 shrink-0 rounded-[4px] bg-paper object-cover p-[2px]" />
         )}
-        <span className="flex-1">{summary}</span>
-        <span className="micro text-faint group-open:hidden">Show evidence</span>
-        <span className="micro hidden text-faint group-open:inline">Hide</span>
+        {/* Below 480px the toggle stacks under the summary, so the summary keeps the width and wraps to two lines. */}
+        <span className="flex min-w-0 flex-1 flex-col gap-1 min-[480px]:flex-row min-[480px]:items-center min-[480px]:gap-4">
+          <span className="min-[480px]:flex-1">{summary}</span>
+          <span className="micro text-faint group-open:hidden">Show evidence</span>
+          <span className="micro hidden text-faint group-open:inline">Hide</span>
+        </span>
       </summary>
       <div className="flex flex-col gap-6 border-t border-line p-4 sm:p-5">
         {photoUrls.length > 0 && (

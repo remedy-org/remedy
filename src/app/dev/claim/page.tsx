@@ -268,7 +268,7 @@ export default async function DevClaimPage({ searchParams }: PageProps<"/dev/cla
   const groups = [...new Set(Object.values(STATES).map((x) => x.group))];
   return (
     <main className="mx-auto max-w-content px-4 py-12 sm:px-8">
-      <h1 className="text-h2 font-semibold">Claim flow previews</h1>
+      <h1 className="text-h2 font-medium">Claim flow previews</h1>
       <p className="mt-2 text-body text-muted">Every step and result with fixtures. Model answers are real stored ones from the eval.</p>
       <div className="mt-10 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
         {groups.map((g) => (

@@ -9,7 +9,7 @@ export function CpscNotice({ notice }: { notice: CpscSummary }) {
       <ExhibitLabel leader="right" leaderLength={24}>
         CPSC {notice.id} · {formatDate(notice.recallDate)}
       </ExhibitLabel>
-      <h2 className="text-body font-semibold text-balance">{notice.title}</h2>
+      <h2 className="text-body font-medium text-balance">{notice.title}</h2>
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-ui">
         <dt className="text-muted">Product</dt>
         <dd>{notice.product || "Not named"}</dd>

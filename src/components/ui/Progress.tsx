@@ -65,9 +65,10 @@ export function CheckProgress({ steps, label = "Checks", className }: CheckProgr
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-3">
               <span className={clsx("text-ui font-medium", s.state === "waiting" ? "text-faint" : "text-text")}>{s.label}</span>
-              <span className="micro shrink-0 text-faint">{word[s.state]}</span>
+              {/* The check running now is the one amber label on the list (DESIGN.md: the active state). */}
+              <span className={clsx("micro shrink-0", s.state === "running" ? "text-accent-text" : "text-faint")}>{word[s.state]}</span>
             </div>
-            {s.detail && <p className={clsx("mt-1 text-ui text-muted", s.evidence && "font-mono text-micro leading-relaxed")}>{s.detail}</p>}
+            {s.detail && <p className={clsx("mt-1 text-ui text-muted", s.evidence && "leading-[1.55]")}>{s.detail}</p>}
           </div>
           {s.state === "running" && (
             <span className="absolute inset-x-0 bottom-0 h-px overflow-hidden" aria-hidden="true">

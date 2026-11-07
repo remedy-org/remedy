@@ -38,7 +38,7 @@ export function ExhibitPhoto({ src, alt, letter = "A", sample, frame = "aspect-[
         {sample && <SampleChip className="absolute bottom-2 left-2" />}
         {children}
       </div>
-      <span aria-hidden="true" className="absolute -top-2.5 -left-2.5 flex size-6 items-center justify-center rounded-control bg-accent font-mono text-micro font-semibold text-accent-ink shadow-[0_0_0_2px_var(--bg)]">
+      <span aria-hidden="true" className="absolute -top-2.5 -left-2.5 flex size-6 items-center justify-center rounded-control bg-paper font-mono text-micro font-medium text-ink shadow-[0_0_0_2px_var(--bg)]">
         {letter}
       </span>
     </figure>
@@ -48,7 +48,7 @@ export function ExhibitPhoto({ src, alt, letter = "A", sample, frame = "aspect-[
 /** A screen's title: the h2 that focus moves to on every step change. */
 export function StepTitle({ id, className, children }: { id: string; className?: string; children: ReactNode }) {
   return (
-    <h2 id={id} tabIndex={-1} className={clsx("text-title font-semibold text-balance outline-none focus-visible:outline-2 focus-visible:outline-offset-4", className)}>
+    <h2 id={id} tabIndex={-1} className={clsx("text-title font-medium text-balance outline-none focus-visible:outline-2 focus-visible:outline-offset-4", className)}>
       {children}
     </h2>
   );

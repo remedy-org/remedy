@@ -21,7 +21,7 @@ export default async function StatesPage() {
   await requireSession("company", "/console/states");
   return (
     <main className="flex flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-h2 font-semibold">Console states</h1>
+      <h1 className="text-h2 font-medium">Console states</h1>
 
       <State name="Claims · empty (a recall with no claims)">
         <EmptyState

@@ -55,7 +55,7 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
           <ExhibitLabel leader="right" leaderLength={24}>
             {drafted ? "Drafted from the notice" : "Written by you"}
           </ExhibitLabel>
-          <h2 className="mt-3 text-body font-semibold">What an owner&apos;s photos must show</h2>
+          <h2 className="mt-3 text-body font-medium">What an owner&apos;s photos must show</h2>
           <p className="mt-1 text-ui text-muted">
             The model checks every claim against these lines, and money moves only if each one is visibly confirmed. Ask only for what a photo can show.
           </p>
@@ -96,7 +96,7 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
 
       <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
         <div>
-          <h2 className="text-body font-semibold">Refund and claim link</h2>
+          <h2 className="text-body font-medium">Refund and claim link</h2>
           <p className="mt-1 text-ui text-muted">Refunds go through PayPal Payouts to each owner&apos;s PayPal account. In this build they&apos;re sent from Remedy&apos;s PayPal account, so auto-pay starts off.</p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2">

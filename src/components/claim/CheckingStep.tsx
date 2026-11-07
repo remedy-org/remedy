@@ -178,7 +178,7 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
                 </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className="text-text">{r.label}</span>
-                  <q className="line-clamp-2 font-mono text-micro leading-relaxed text-muted">{r.quote}</q>
+                  <q className="line-clamp-2 text-ui leading-[1.55] text-muted">{r.quote}</q>
                 </span>
               </li>
             ))}

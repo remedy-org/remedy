@@ -52,7 +52,7 @@ export function Ledger({ ledger, className, sandbox = false }: { ledger: LedgerD
             {ledger.sampleCents > 0 && (
               <span className="text-faint">
                 {" "}
-                · <span className="font-mono">{formatCents(ledger.sampleCents)}</span> sample, never sent
+                · {formatCents(ledger.sampleCents)} sample, never sent
               </span>
             )}
           </>

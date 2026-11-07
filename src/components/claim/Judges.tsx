@@ -41,7 +41,7 @@ function Notes({ step, note: own, children }: { step: JudgeStep; note?: string; 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <p className="micro text-accent-text">For judges · {title}</p>
+        <p className="micro text-faint">For judges · {title}</p>
         <p className="text-ui text-muted">{note}</p>
       </div>
       {children}
@@ -80,14 +80,14 @@ export interface WithJudgesProps {
 }
 
 /**
- * The judges' notes beside a demo step: a 280px rail at 1200px and up; below, a "For judges" pill in the header that
- * opens a sheet.
- * The step itself sits centred in the space left of the rail.
+ * The judges' notes beside a demo step: a rail on columns 10 to 12 of the page grid at 1200px and up; below, a "For
+ * judges" pill in the header that opens a sheet. The step sits on columns 2 to 9, centred there, so the card and the
+ * rail read as one composition rather than two islands.
  */
 export function WithJudges({ demo, step, extra, note, children, className }: WithJudgesProps) {
   if (!demo) return <div className={className}>{children}</div>;
   return (
-    <div className={clsx("grid gap-6 min-[1200px]:grid-cols-[minmax(0,1fr)_280px] min-[1200px]:gap-12", className)}>
+    <div className={clsx("grid gap-6 min-[1200px]:grid-cols-12 min-[1200px]:gap-x-(--col-gap)", className)}>
       {/* Below 1200px: a pill docked in the header (never over a step's button) that opens the notes as a sheet. */}
       <div className="contents min-[1200px]:hidden">
         <JudgesSheet>
@@ -96,8 +96,8 @@ export function WithJudges({ demo, step, extra, note, children, className }: Wit
           </Notes>
         </JudgesSheet>
       </div>
-      <div className="min-w-0">{children}</div>
-      <aside aria-label="Notes for judges" className="hidden min-[1200px]:block">
+      <div className="min-w-0 min-[1200px]:col-span-8 min-[1200px]:col-start-2">{children}</div>
+      <aside aria-label="Notes for judges" className="hidden min-[1200px]:col-span-3 min-[1200px]:col-start-10 min-[1200px]:block">
         <div className="sticky top-8 border-l border-line pl-6">
           <Notes step={step} note={note}>
             {extra}
