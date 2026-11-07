@@ -36,7 +36,7 @@ export function MobileSummary({ data }: { data: InsightsData }) {
 
       <div className="rounded-card border border-line bg-surface p-4">
         <h2 className="text-ui font-medium">Check funnel</h2>
-        <p className="micro mt-0.5 text-accent-text">Exhibit C · where claims stop</p>
+        <p className="micro mt-0.5 text-faint">Exhibit C · where claims stop</p>
         <ol className="mt-3 flex flex-col gap-2">
           {steps.map((s, i) => (
             <li key={s.stage} className="flex flex-col gap-1">
