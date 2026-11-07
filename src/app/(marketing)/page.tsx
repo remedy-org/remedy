@@ -18,7 +18,7 @@ export default function Home() {
     <>
       <Nav />
       {/* clip, not hidden: the light table runs past the edges without a horizontal scrollbar or breaking sticky. */}
-      <main className="overflow-x-clip">
+      <main id="main" tabIndex={-1} className="scroll-mt-16 overflow-x-clip outline-none">
         <Hero />
         <Problem />
         <Checks />

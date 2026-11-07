@@ -6,7 +6,7 @@ import { ConsoleNav } from "./ConsoleNav";
 export function ConsoleHeader({ session }: { session: Session | null }) {
   const who = session?.name ?? session?.email ?? null;
   return (
-    <header className="border-b border-line bg-bg print:hidden">
+    <header data-console-header className="border-b border-line bg-bg print:hidden">
       <div className="flex h-14 items-center gap-8 px-4 sm:px-6 lg:px-8">
         <Wordmark href="/console" />
         <ConsoleNav className="hidden self-stretch sm:flex" />

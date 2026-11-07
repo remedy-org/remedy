@@ -155,7 +155,9 @@ Colours are OKLCH tokens in `src/app/globals.css`, exposed to Tailwind through `
 
 **The mark:** an amber evidence tag (top corners cut, a punched hole, the code written on it) on a string loop, hanging at the stamp's -8°. 22px in the homepage nav, 18px in app chrome. The string draws in once on load (600ms `--ease-in-out-quart`), static under reduced motion.
 
-**Theme toggle:** a 36px icon button with a 44px hit area and an `aria-label`; the glyph is a half-lit disc that turns over with the theme. It stores "dark" or "light", so a choice outlasts the system preference. The homepage nav has one too.
+**Theme toggle:** a 36px icon button with a 44px hit area and an `aria-label`; the glyph is a half-lit disc that turns over with the theme. It stores "dark" or "light", so a choice outlasts the system preference. The homepage nav has one too, and so does the company sign-in, beside its "← Back to Remedy".
+
+**Skip links** (`SkipLink`): the first Tab stop on every page is "Skip to content" (to `#main`), and on the claims queue a second, "Skip to claims", lands on the open claim's row or the first. Hidden until focused, then a `--surface-2` chip lying over the wordmark with the amber focus ring.
 
 **Evidence panel** (the console's; one component, `EvidencePanel` in `EvidenceDrawer.tsx`):
 1. the photos, numbered Photo 1, 2, 3 as the camera's slots are, uncropped, which open in the photo viewer (every photo side by side at full size, the claim id and what held it on top, ← → between photos, Esc back, approve and reject in reach); on a held claim "Tag must read K7P" in mono sits beside them and in the viewer's header; a blocked repost shows its photo beside the earlier claim's, whose id opens that row;

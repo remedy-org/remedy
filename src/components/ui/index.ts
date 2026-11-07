@@ -10,6 +10,7 @@ export { DURATION, EASE, SPRING } from "./motion";
 export { Paper, type PaperProps, type PaperVariant } from "./Paper";
 export { CheckProgress, Meter, type CheckProgressProps, type CheckState, type CheckStep, type MeterProps } from "./Progress";
 export { NoBreakHyphens } from "./NoBreakHyphens";
+export { SkipLink } from "./SkipLink";
 export { Skeleton, SkeletonText, type SkeletonProps, type SkeletonTextProps } from "./Skeleton";
 export { Stamp, type StampProps, type StampTone } from "./Stamp";
 export { StatusPill, statusLabel, type Status, type StatusPillProps } from "./StatusPill";

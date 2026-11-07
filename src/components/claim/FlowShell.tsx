@@ -37,7 +37,7 @@ export function FlowShell({ children, demo, sandbox, company }: FlowShellProps) 
         </div>
       </header>
 
-      <main className="page flex-1 pt-8 pb-16 sm:pt-12 max-sm:[body:has([data-camera])_&]:pb-6">{children}</main>
+      <main id="main" tabIndex={-1} className="page flex-1 outline-none pt-8 pb-16 sm:pt-12 max-sm:[body:has([data-camera])_&]:pb-6">{children}</main>
 
       {/* A phone's camera step fills the screen; the footer would only sit under it. */}
       <footer className="border-t border-line max-sm:[body:has([data-camera])_&]:hidden">

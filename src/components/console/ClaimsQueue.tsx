@@ -340,10 +340,18 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
             id="claims-panel"
             role="tabpanel"
             aria-labelledby={`tab-${tab}`}
+            // The console's "Skip to claims" link lands here, and focus goes on into the list: the open claim's row, else
+            // the first. Only from that link, so a click on the panel's empty space never moves focus.
+            tabIndex={-1}
             className="relative min-h-0 flex-1"
             onPointerEnter={() => setPointerIn(true)}
             onPointerLeave={() => setPointerIn(false)}
-            onFocus={() => setFocusIn(true)}
+            onFocus={(e) => {
+              setFocusIn(true);
+              if (e.target !== e.currentTarget || !(e.relatedTarget instanceof HTMLAnchorElement) || e.relatedTarget.hash !== "#claims-panel") return;
+              if (open) grid.current?.focusRow(open);
+              else grid.current?.focusFirst();
+            }}
             onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setFocusIn(false)}
           >
             {pending > 0 && (

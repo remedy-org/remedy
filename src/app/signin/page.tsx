@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { JudgeLoginPanel } from "@/components/claim/JudgeLoginPanel";
 import { ConsoleReplica, PREVIEW_ROWS } from "@/components/home/ConsoleReplica";
-import { Button, Card, CheckIcon, ErrorState, ExhibitLabel, Wordmark } from "@/components/ui";
+import { Button, Card, CheckIcon, ErrorState, ExhibitLabel, ThemeToggle, Wordmark } from "@/components/ui";
 import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { DEFAULT_NEXT, getSession, safeNext } from "@/lib/session";
 
@@ -47,10 +47,17 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
     // On the homepage's page frame and 12-column grid: the wordmark on the gutter, the card in columns 1 to 5, and the
     // console still from column 7, running off the right edge like the hero's laptop.
     <div className="flex min-h-dvh flex-col overflow-x-clip">
-      <header className="page flex h-16 items-center">
+      {/* The way back and the theme stay in reach above the fold, as on every page. */}
+      <header className="page flex h-16 items-center justify-between gap-4">
         <Wordmark href="/" />
+        <div className="flex items-center gap-2 sm:gap-5">
+          <Link href="/" className="inline-flex min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text">
+            <span aria-hidden="true">&larr;&nbsp;</span>Back to Remedy
+          </Link>
+          <ThemeToggle />
+        </div>
       </header>
-      <main className="page grid-12 flex-1 content-center items-center py-12 sm:py-16">
+      <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none sm:py-16">
         <div className="col-span-12 flex flex-col items-center lg:col-span-5 lg:items-stretch">
           <Card padding="lg" className="w-full max-w-claim">
             <ExhibitLabel leader="right" leaderLength={24}>
@@ -90,10 +97,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
             </ol>
           </Card>
 
-          <div className="mt-8 flex w-full max-w-claim flex-col items-center gap-2 text-center text-ui text-muted">
-            <Button href="/" variant="tertiary" size="sm" arrow={false}>
-              Back to Remedy
-            </Button>
+          <div className="mt-8 flex w-full max-w-claim flex-col items-center text-center text-ui text-muted">
             <p className="text-balance">
               Own a recalled product? Use the claim link on the recall notice, or{" "}
               <Link href="/r/kikea-x-vesolje/try" className="text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
