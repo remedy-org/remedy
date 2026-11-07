@@ -1,0 +1,710 @@
+"use client";
+
+import clsx from "clsx";
+import { useScroll, type MotionValue } from "motion/react";
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
+import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
+import { CHECKS, EXHIBIT, RECEIPT_ROWS } from "./claim";
+import { BEATS, RANGES, TOTAL_VH, clock, holdOf, stateAt, type BeatId, type ExhibitState, type Shot } from "./model";
+import type { Colors, Exhibit, Rect, Tier } from "./scene";
+import styles from "./teardown.module.css";
+
+// The Opened Exhibit (wave 3, concept 1): claim RM-0442's evidence in 3D, each of the five checks opening the part it
+// is about, then the fixed rule and the sandbox payout. One input, claim progress p in [0, 1], drives the scene, the
+// readouts, the check row, the callouts and the receipt (model.ts). See README.md for where it mounts.
+//
+// Forms, chosen after mount (the server renders the static one):
+// - live: laptops with motion and WebGL. Pinned; three.js is imported when the section is within a viewport.
+// - poster: phones (under 768px), no WebGL, or a GPU too slow for tier 1. Pinned; pre-rendered stills crossfade.
+// - static: reduced motion, no JS. Not pinned; the final still, every check with its quote, and the receipt.
+
+type Mode = "static" | "poster" | "live";
+
+const subscribeMedia = (q: string) => (cb: () => void) => {
+  const m = window.matchMedia(q);
+  m.addEventListener("change", cb);
+  return () => m.removeEventListener("change", cb);
+};
+function useMedia(q: string, server: boolean) {
+  return useSyncExternalStore(
+    subscribeMedia(q),
+    () => window.matchMedia(q).matches,
+    () => server,
+  );
+}
+
+let webgl: boolean | undefined;
+function hasWebGL() {
+  if (webgl === undefined) {
+    try {
+      const c = document.createElement("canvas");
+      const g = c.getContext("webgl2");
+      webgl = !!g;
+      g?.getExtension("WEBGL_lose_context")?.loseContext();
+    } catch {
+      webgl = false;
+    }
+  }
+  return webgl;
+}
+const noop = () => () => {};
+
+/** The beats that get a pre-rendered still, in order (posters/<theme>-<beat>-<d|m>.webp). */
+const POSTER_BEATS: BeatId[] = ["intro", "live", "fp", "acct", "code", "torn", "paid", "settle"];
+const posterSrc = (beat: BeatId, dark: boolean, small: boolean) => `/teardown/${dark ? "dark" : "light"}-${beat}-${small ? "m" : "d"}.webp`;
+
+/** Resolves any CSS colour (oklch, color-mix, var-free) to #rrggbb through a 1px canvas. */
+function resolveColor(css: string, fallback: string) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 1;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  if (!g || !css) return fallback;
+  g.fillStyle = fallback;
+  g.fillStyle = css;
+  g.fillRect(0, 0, 1, 1);
+  const [r, gg, b] = g.getImageData(0, 0, 1, 1).data;
+  return `#${[r, gg, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function readColors(el: HTMLElement): Colors {
+  const cs = getComputedStyle(el);
+  const v = (name: string) => cs.getPropertyValue(name).trim();
+  const bg = resolveColor(v("--bg"), "#0d0c0a");
+  const n = parseInt(bg.slice(1), 16);
+  const lum = (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  return {
+    dark: lum < 0.5,
+    accent: resolveColor(v("--accent"), "#f3aa40"),
+    paper: resolveColor(v("--paper"), "#efebe1"),
+    ink: resolveColor(v("--ink"), "#201c18"),
+    faint: resolveColor(v("--faint"), "#9a9895"),
+  };
+}
+
+/** One check in the row along the foot: number, name, who reads it, and a tick once passed. */
+function CheckCell({ i, done, active, onSeek }: { i: number; done: boolean; active: boolean; onSeek?: (i: number) => void }) {
+  const c = CHECKS[i];
+  const body = (
+    <>
+      <span className={clsx("font-mono text-micro", active ? "text-accent-text" : "text-faint")}>{c.n}</span>
+      <span className="min-w-0">
+        <span className={clsx("block truncate text-ui font-medium", done || active ? "text-text" : "text-muted")}>{c.label}</span>
+        <span className="block text-micro text-faint">{c.ai ? "The model reads" : "No AI"}</span>
+      </span>
+      <span className={clsx("text-pay transition-opacity duration-160", done ? "opacity-100" : "opacity-0")}>
+        <CheckIcon />
+        <span className="sr-only">{done ? "passed" : ""}</span>
+      </span>
+    </>
+  );
+  return (
+    <li className={styles.cell} data-done={done || undefined} data-active={active || undefined}>
+      <span className={styles.bar} aria-hidden="true">
+        <span data-fill={i} />
+      </span>
+      {onSeek ? (
+        <button type="button" className={styles.cellBody} onClick={() => onSeek(i)} aria-label={`Show check ${c.n}: ${c.label}`}>
+          {body}
+        </button>
+      ) : (
+        <div className={styles.cellBody}>{body}</div>
+      )}
+    </li>
+  );
+}
+
+function Receipt({ stamped, className, style }: { stamped: boolean; className?: string; style?: CSSProperties }) {
+  return (
+    <div className={clsx(styles.receipt, className)} style={style}>
+      <Paper variant="receipt" perforated padding="md" className="w-full">
+        <p className="micro text-ink-muted">Refund · {EXHIBIT.id}</p>
+        <p className="mt-3 text-ink">
+          <Money value={EXHIBIT.amount} size="amount" />
+        </p>
+        <dl className="mt-5 border-t border-dashed border-paper-line">
+          {RECEIPT_ROWS.map(([k, v]) => (
+            <div key={k} className="flex items-baseline justify-between gap-4 border-b border-dashed border-paper-line py-1.5 text-ui">
+              <dt className="text-ink-muted">{k}</dt>
+              <dd className="font-mono text-ink">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <p className="text-micro text-ink-muted">Illustration · not a real receipt</p>
+          <span className={styles.stampSlot}>
+            {stamped && (
+              <Stamp tone="pay" land>
+                PAID · SANDBOX
+              </Stamp>
+            )}
+          </span>
+        </div>
+      </Paper>
+    </div>
+  );
+}
+
+/** Everything a screen reader needs, in one static list: the canvas and the moving readouts are hidden from it. */
+function ScreenReaderSummary() {
+  return (
+    <div className="sr-only">
+      <p>{EXHIBIT.honesty}.</p>
+      <ol>
+        {CHECKS.map((c) => (
+          <li key={c.id}>
+            Check {c.n}, {c.label}, {c.ai ? "read by the model" : "no AI"}: passed. {c.note} {c.quote ? `The model’s words: “${c.quote}”` : ""}
+          </li>
+        ))}
+      </ol>
+      <p>
+        A fixed rule decided to pay. ${EXHIBIT.amount} was sent through PayPal {EXHIBIT.seconds} seconds after the photo, in sandbox money.
+      </p>
+    </div>
+  );
+}
+
+function Header({ compact }: { compact?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <p className="micro text-faint">Exhibit · Claim {EXHIBIT.id}</p>
+      <h2 className={clsx("mt-3 max-w-[24ch] text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>
+        Five checks on the evidence itself. <span className="text-muted">Then a fixed rule pays.</span>
+      </h2>
+    </div>
+  );
+}
+
+function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done" | "sent"> }) {
+  const items: [string, React.ReactNode][] = [
+    [
+      "Since the photo",
+      <span key="c" className="font-mono">
+        {clock(s.seconds)}
+      </span>,
+    ],
+    [
+      "Decision",
+      s.decision === "pay" ? (
+        <span key="d" className="text-pay">
+          Pay
+        </span>
+      ) : s.decision === "checking" ? (
+        `Checking · ${Math.max(1, s.done)} of 5`
+      ) : (
+        "No photo yet"
+      ),
+    ],
+    [
+      "Payout",
+      s.sent ? (
+        <span key="p">
+          <Money value={EXHIBIT.amount} /> · sandbox
+        </span>
+      ) : (
+        "Not sent"
+      ),
+    ],
+  ];
+  return (
+    <dl className={styles.readouts} aria-hidden="true">
+      {items.map(([k, v]) => (
+        <div key={k}>
+          <dt className="micro text-faint">{k}</dt>
+          <dd className="mt-1.5 text-body font-medium whitespace-nowrap">{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function Callout({ s }: { s: ExhibitState }) {
+  const i = s.active;
+  if (i < 0) return null;
+  const c = CHECKS[i];
+  return (
+    <div className={styles.callout}>
+      <p className="micro text-accent-text">
+        Check {i + 1} of 5 · {c.ai ? "the model reads" : "no AI"}
+      </p>
+      <p className="mt-2 text-body font-medium text-text">{c.label}</p>
+      <p className="mt-1 text-ui text-muted">{c.note}</p>
+      {c.quote && (
+        <figure className="mt-4">
+          <blockquote className="font-mono text-ui leading-[1.6] text-[color:var(--text-2,var(--muted))]">“{c.quote}”</blockquote>
+          <figcaption className="mt-2 text-micro text-faint">The model’s words on this photo, verbatim</figcaption>
+        </figure>
+      )}
+    </div>
+  );
+}
+
+// ---- The pinned stage (live and poster forms).
+
+interface StageProps {
+  p: MotionValue<number>;
+  mode: "live" | "poster";
+  small: boolean;
+  onSeek?: (i: number) => void;
+  /** Dev and capture only: draw at this p and keep the drawing buffer for screenshots. */
+  capture?: boolean;
+}
+
+function discreteKey(s: ExhibitState) {
+  return [s.beat, s.active, s.done, s.chars, s.charNow, clock(s.seconds), s.decision, s.sent, s.stamped, s.receipt > 0].join("|");
+}
+
+function Stage({ p, mode, small, onSeek, capture }: StageProps) {
+  const root = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const subject = useRef<HTMLDivElement>(null);
+  const calloutBox = useRef<HTMLDivElement>(null);
+  const leader = useRef<SVGPathElement>(null);
+  const dot = useRef<SVGCircleElement>(null);
+  const receipt = useRef<HTMLDivElement>(null);
+  const posters = useRef<HTMLDivElement>(null);
+  const [s, setS] = useState<ExhibitState>(() => stateAt(p.get()));
+  const [dark, setDark] = useState(true);
+  const [warm, setWarm] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const scene = useRef<Exhibit | null>(null);
+  const rectOverride = useRef<Rect | null>(null);
+  const shotOverride = useRef<Shot | null>(null);
+  const live = mode === "live" && !failed;
+
+  // Tier drop on long frames, measured where it matters: while scrolling, consecutive draws more than 28 ms apart
+  // (median of 24) step down to tier 1, then to the posters. The start-up benchmark can't see compositing costs.
+  const frames = useRef<{ last: number; gaps: number[] }>({
+    last: 0,
+    gaps: [],
+  });
+  const watchFrames = useCallback(
+    (ex: Exhibit) => {
+      if (capture) return;
+      const f = frames.current;
+      const now = performance.now();
+      const gap = now - f.last;
+      f.last = now;
+      if (gap > 120) return;
+      f.gaps.push(gap);
+      if (f.gaps.length < 24) return;
+      const median = [...f.gaps].sort((a, b) => a - b)[12];
+      f.gaps = [];
+      if (median <= 28) return;
+      if (ex.info().tier === 2) {
+        ex.setTier(1);
+        const r = root.current?.getBoundingClientRect();
+        if (r) ex.resize(r.width, r.height, devicePixelRatio);
+        if (root.current) root.current.dataset.tier = "1";
+      } else setFailed(true);
+    },
+    [capture],
+  );
+
+  // Draw one frame for the current p: the scene, then the continuous DOM (leader, callout, receipt, poster fades).
+  const draw = useCallback(() => {
+    const el = root.current;
+    if (!el) return;
+    const st = stateAt(p.get());
+    if (shotOverride.current) st.shot = shotOverride.current;
+    const key = discreteKey(st);
+    setS((prev) => (discreteKey(prev) === key ? prev : st));
+    const stage = el.getBoundingClientRect();
+    let anchor: { x: number; y: number } | null = null;
+    const ex = scene.current;
+    if (ex && live) watchFrames(ex);
+    if (ex && live) {
+      const r = subject.current?.getBoundingClientRect();
+      const rect: Rect =
+        rectOverride.current ??
+        (r
+          ? {
+              x0: (r.left - stage.left) / stage.width,
+              y0: (r.top - stage.top) / stage.height,
+              x1: (r.right - stage.left) / stage.width,
+              y1: (r.bottom - stage.top) / stage.height,
+            }
+          : { x0: 0.05, y0: 0.2, x1: 0.65, y1: 0.8 });
+      anchor = ex.render(st, rect).anchor;
+    }
+    // Leader: from the part to the callout's first line, drawn on like ink as the part opens.
+    const box = calloutBox.current?.getBoundingClientRect();
+    const path = leader.current;
+    if (path && dot.current) {
+      const vis = anchor && box && st.callout > 0.01 ? st.callout : 0;
+      if (anchor && box && vis) {
+        const tx = box.left - stage.left - 12;
+        const ty = box.top - stage.top + 9;
+        path.setAttribute("d", `M${anchor.x.toFixed(1)},${anchor.y.toFixed(1)} L${(tx - 18).toFixed(1)},${ty.toFixed(1)} L${tx.toFixed(1)},${ty.toFixed(1)}`);
+        dot.current.setAttribute("cx", anchor.x.toFixed(1));
+        dot.current.setAttribute("cy", anchor.y.toFixed(1));
+      }
+      path.style.strokeDashoffset = String(1 - vis);
+      path.style.opacity = vis ? "1" : "0";
+      dot.current.style.opacity = String(vis);
+    }
+    if (calloutBox.current) {
+      calloutBox.current.style.opacity = String(st.callout);
+      calloutBox.current.style.transform = `translateY(${((1 - st.callout) * 8).toFixed(1)}px)`;
+    }
+    if (receipt.current) {
+      receipt.current.style.opacity = String(Math.min(1, st.receipt * 1.4));
+      receipt.current.style.transform = `translateY(${((1 - st.receipt) * 48).toFixed(1)}px) rotate(${(1.2 - st.receipt * 2.4).toFixed(2)}deg)`;
+    }
+    // Active check's bar fills with its beat.
+    el.querySelectorAll<HTMLElement>("[data-fill]").forEach((f) => {
+      const id = CHECKS[Number(f.dataset.fill)].id;
+      const [a, z] = RANGES[id];
+      const t = Math.min(1, Math.max(0, (st.p - a) / (z - a)));
+      f.style.transform = `scaleX(${st.p >= z ? 1 : t})`;
+    });
+    // Posters: crossfade between neighbouring stills over the middle of each change.
+    if (posters.current && (!live || !scene.current)) {
+      const holds = POSTER_BEATS.map(holdOf);
+      posters.current.querySelectorAll<HTMLElement>("[data-poster]").forEach((img, k) => {
+        const a = holds[k - 1] ?? -1;
+        const b = holds[k];
+        const c = holds[k + 1] ?? 2;
+        // A short dissolve at the beat change, so a still is never a double exposure for long.
+        const fadeIn = k === 0 ? 1 : Math.min(1, Math.max(0, (st.p - (a + (b - a) * 0.5)) / ((b - a) * 0.08)));
+        const fadeOut = k === holds.length - 1 ? 1 : 1 - Math.min(1, Math.max(0, (st.p - (b + (c - b) * 0.5)) / ((c - b) * 0.08)));
+        img.style.opacity = String(Math.min(fadeIn, fadeOut));
+      });
+    }
+  }, [p, live, watchFrames]);
+
+  // One frame per change of p (scroll), theme or size; nothing at all while idle or off-screen.
+  const raf = useRef(0);
+  const visible = useRef(true);
+  const schedule = useCallback(() => {
+    if (raf.current || !visible.current) return;
+    raf.current = requestAnimationFrame(() => {
+      raf.current = 0;
+      draw();
+    });
+  }, [draw]);
+  useEffect(() => p.on("change", schedule), [p, schedule]);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(raf.current);
+      raf.current = 0;
+    },
+    [],
+  );
+
+  // Theme: re-read the tokens when <html> changes theme or the OS scheme flips.
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const apply = () => {
+      const c = readColors(el);
+      setDark(c.dark);
+      scene.current?.setColors(c);
+      schedule();
+    };
+    apply();
+    const mo = new MutationObserver(apply);
+    mo.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class", "style"],
+    });
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener("change", apply);
+    return () => {
+      mo.disconnect();
+      mq.removeEventListener("change", apply);
+    };
+  }, [schedule]);
+
+  // Load three.js and build the scene once the stage is within about a viewport; pause while it is off-screen.
+  useEffect(() => {
+    const el = root.current;
+    if (!el || !live) return;
+    let cancelled = false;
+    let started = false;
+    const start = async () => {
+      started = true;
+      try {
+        const { createExhibit } = await import("./scene");
+        if (cancelled || !canvas.current) return;
+        const c = readColors(el);
+        const ex = await createExhibit(canvas.current, {
+          tier: 2,
+          colors: c,
+          preserve: capture,
+        });
+        if (cancelled) return ex.dispose();
+        scene.current = ex;
+        const r = el.getBoundingClientRect();
+        ex.resize(r.width, r.height, devicePixelRatio);
+        // Quality tier: after two warm-up frames (texture uploads, the first shadow map), time four real frames. Over
+        // 12 ms a frame drops to tier 1 (pixel ratio 1, 512 shadows, one fibre shell); over 28 ms at tier 1, posters.
+        let tier: Tier = 2;
+        const rect = { x0: 0.05, y0: 0.2, x1: 0.65, y1: 0.8 };
+        const sample = [0, 3, 6, 4].map((b) => stateAt(holdOf(BEATS[b].id)));
+        ex.bench(sample.slice(0, 2), rect);
+        if (!capture) {
+          let ms = ex.bench(sample, rect);
+          el.dataset.ms = ms.toFixed(1);
+          if (ms > 12) {
+            tier = 1;
+            ex.setTier(1);
+            ex.resize(r.width, r.height, devicePixelRatio);
+            ex.bench(sample.slice(0, 1), rect);
+            ms = ex.bench(sample, rect);
+            el.dataset.ms += ` / ${ms.toFixed(1)}`;
+            if (ms > 28) {
+              ex.dispose();
+              scene.current = null;
+              setFailed(true);
+              return;
+            }
+          }
+        }
+        el.dataset.tier = String(tier);
+        draw();
+        setWarm(true);
+      } catch (e) {
+        // The posters stand in. In development, say why.
+        if (process.env.NODE_ENV !== "production") console.error("Opened Exhibit: falling back to posters", e);
+        if (!cancelled) setFailed(true);
+      }
+    };
+    const near = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting && !started) void start();
+      },
+      { rootMargin: "100% 0px" },
+    );
+    const onScreen = new IntersectionObserver(([e]) => {
+      visible.current = e.isIntersecting;
+      if (e.isIntersecting) schedule();
+    });
+    near.observe(el);
+    onScreen.observe(el);
+    return () => {
+      cancelled = true;
+      near.disconnect();
+      onScreen.disconnect();
+      scene.current?.dispose();
+      scene.current = null;
+    };
+  }, [live, capture, draw, schedule]);
+
+  // A frame after every React commit, so the DOM the frame writes (leader, receipt, fills) is never stale.
+  useEffect(() => schedule(), [s, schedule]);
+
+  // Size: the canvas fills the stage. The scene fades out under the header, the check row and the callout column
+  // (a CSS mask from their measured edges), so the evidence can never sit under text.
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      const head = el.querySelector(`.${styles.head}`)?.getBoundingClientRect();
+      const foot = el.querySelector(`.${styles.foot}`)?.getBoundingClientRect();
+      const side = el.querySelector(`.${styles.side}`)?.getBoundingClientRect();
+      if (head) el.style.setProperty("--m-top", `${Math.round(head.bottom - r.top)}px`);
+      if (foot) el.style.setProperty("--m-bot", `${Math.round(foot.top - r.top)}px`);
+      if (side) el.style.setProperty("--m-side", `${Math.round(side.left - r.left)}px`);
+      scene.current?.resize(r.width, r.height, devicePixelRatio);
+      schedule();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [schedule]);
+
+  // The capture tool drives the stage directly: window.__exhibit.at(p) draws that frame now.
+  useEffect(() => {
+    if (!capture) return;
+    const w = window as unknown as { __exhibit?: unknown };
+    w.__exhibit = {
+      ready: () => !!scene.current,
+      at: (v: number, rect?: Rect, shot?: Shot) => {
+        rectOverride.current = rect ?? null;
+        shotOverride.current = shot ?? null;
+        p.set(v);
+        draw();
+      },
+      bounds: () => scene.current?.bounds() ?? [],
+      info: () => scene.current?.info(),
+    };
+  }, [capture, p, draw]);
+
+  const showPosters = !live || !warm;
+  const beatIndex = POSTER_BEATS.indexOf(s.beat);
+  const postersEl = showPosters && (
+    <div ref={posters} className={styles.posters} aria-hidden="true">
+      {POSTER_BEATS.map((b, k) => (
+        // eslint-disable-next-line @next/next/no-img-element -- pre-rendered stills, swapped by scroll; next/image adds nothing here
+        <img
+          key={b}
+          data-poster={b}
+          alt=""
+          src={Math.abs(k - beatIndex) <= 1 ? posterSrc(b, dark, small) : undefined}
+          style={{ opacity: k === beatIndex ? 1 : 0 }}
+          decoding="async"
+        />
+      ))}
+    </div>
+  );
+
+  return (
+    <div ref={root} className={clsx(styles.stage, small && styles.small)} data-mode={live ? "live" : "poster"} data-beat={s.beat} data-warm={warm || undefined}>
+      <div className={styles.pool} aria-hidden="true" />
+      {!small && postersEl}
+      {mode === "live" && <canvas ref={canvas} className={clsx(styles.canvas, warm && styles.canvasOn)} aria-hidden="true" />}
+      <svg className={styles.leaders} aria-hidden="true">
+        <path ref={leader} pathLength={1} />
+        <circle ref={dot} r={2.5} />
+      </svg>
+
+      <div className={styles.layout}>
+        <header className={styles.head}>
+          <Header compact={small} />
+          <Readouts s={s} />
+        </header>
+        <div className={styles.main}>
+          <div ref={subject} className={styles.subject} aria-hidden="true">
+            {small && postersEl}
+          </div>
+          <div className={styles.side} aria-hidden="true">
+            <div ref={calloutBox} className={styles.calloutWrap}>
+              <Callout s={s} />
+            </div>
+            {s.receipt > 0 && (
+              <div ref={receipt} className={styles.receiptWrap}>
+                <Receipt stamped={s.stamped} />
+              </div>
+            )}
+          </div>
+        </div>
+        <footer className={styles.foot}>
+          <p className={clsx(styles.honesty, "micro text-faint")}>{EXHIBIT.honesty}</p>
+          <ol className={styles.row}>
+            {CHECKS.map((c, i) => (
+              <CheckCell key={c.id} i={i} done={i < s.done} active={i === s.active} onSeek={onSeek} />
+            ))}
+          </ol>
+        </footer>
+      </div>
+      <ScreenReaderSummary />
+    </div>
+  );
+}
+
+// ---- The static form: reduced motion, no JS, and the server render.
+
+function StaticExhibit() {
+  return (
+    <section className={styles.static} aria-label={`Exhibit: claim ${EXHIBIT.id}`}>
+      <Header />
+      <div className={styles.staticGrid}>
+        <figure className={styles.staticFigure}>
+          <div className={styles.pool} aria-hidden="true" />
+          <picture>
+            <source media="(max-width: 767px)" srcSet={posterSrc("settle", true, true)} />
+            <img
+              className={styles.onDark}
+              src={posterSrc("settle", true, false)}
+              alt={`Illustration: the X-VESOLJE nursing pillow from claim ${EXHIBIT.id}, cut in half, with its paper tag reading X-VESOLJE M4T.`}
+            />
+          </picture>
+          <picture>
+            <source media="(max-width: 767px)" srcSet={posterSrc("settle", false, true)} />
+            <img className={styles.onLight} src={posterSrc("settle", false, false)} alt="" aria-hidden="true" />
+          </picture>
+          <figcaption className="micro mt-4 text-faint">{EXHIBIT.honesty}</figcaption>
+        </figure>
+        <div className="flex flex-col gap-10">
+          <ol className="flex flex-col">
+            {CHECKS.map((c) => (
+              <li key={c.id} className="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-x-2 border-t border-line py-4">
+                <span className="font-mono text-micro text-faint">{c.n}</span>
+                <div>
+                  <p className="text-body font-medium">{c.label}</p>
+                  <p className="mt-1 text-ui text-muted">{c.note}</p>
+                  {c.quote && <blockquote className="mt-3 font-mono text-ui leading-[1.6] text-[color:var(--text-2,var(--muted))]">“{c.quote}”</blockquote>}
+                </div>
+                <span className="text-pay">
+                  <CheckIcon />
+                  <span className="sr-only">passed</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <Receipt stamped className="max-w-[22rem]" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---- The exported component.
+
+export interface OpenedExhibitProps {
+  /**
+   * Claim progress, 0 to 1, from the parent's own pin (the Chain of Custody's chapters 03 to 05). The exhibit then fills
+   * its parent and does not pin itself. Without it, the exhibit is its own pinned section of TOTAL_VH + 100vh.
+   */
+  progress?: MotionValue<number>;
+  /** With `progress`: called when a check is chosen in the row, with the p that shows it. */
+  onSeek?: (p: number) => void;
+  /** Dev and capture only (the /dev/teardown page). */
+  capture?: boolean;
+}
+
+function SelfPinned({ mode, small, capture }: { mode: "live" | "poster"; small: boolean; capture?: boolean }) {
+  const runway = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: runway as RefObject<HTMLElement>,
+    offset: ["start start", "end end"],
+  });
+  const skipId = useId();
+  const seek = (i: number) => {
+    const el = runway.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + scrollY;
+    const travel = el.offsetHeight - innerHeight;
+    scrollTo({ top: top + holdOf(CHECKS[i].id) * travel, behavior: "instant" });
+  };
+  const vh = small ? Math.round(TOTAL_VH * 0.8) : TOTAL_VH;
+  return (
+    <section
+      ref={runway}
+      className={styles.runway}
+      style={{ height: `calc(${vh}vh + 100svh)` }}
+      aria-label={`Exhibit: claim ${EXHIBIT.id}, five checks and the payout`}
+      data-exhibit-runway
+    >
+      <a href={`#${skipId}-after`} className={styles.skip}>
+        Skip the exhibit
+      </a>
+      <div className={styles.sticky}>
+        <Stage p={scrollYProgress} mode={mode} small={small} onSeek={seek} capture={capture} />
+      </div>
+      <span id={`${skipId}-after`} className={styles.after} tabIndex={-1} />
+    </section>
+  );
+}
+
+export function OpenedExhibit({ progress, onSeek, capture }: OpenedExhibitProps) {
+  const hydrated = useSyncExternalStore(
+    noop,
+    () => true,
+    () => false,
+  );
+  const reduce = useMedia("(prefers-reduced-motion: reduce)", true);
+  const small = useMedia("(max-width: 767px)", false);
+  const gl = useSyncExternalStore(noop, hasWebGL, () => false);
+  // The capture page always draws live, at any size: it renders the posters the other forms show.
+  const mode: Mode = capture && hydrated ? "live" : !hydrated || reduce ? "static" : small || !gl ? "poster" : "live";
+
+  if (mode === "static") return <StaticExhibit />;
+  if (progress)
+    return (
+      <div className="relative h-full w-full">
+        <Stage p={progress} mode={mode} small={small && !capture} capture={capture} onSeek={onSeek ? (i) => onSeek(holdOf(CHECKS[i].id)) : undefined} />
+      </div>
+    );
+  return <SelfPinned mode={mode} small={small} capture={capture} />;
+}
