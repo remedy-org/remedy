@@ -1,0 +1,419 @@
+/*
+ * The Opened Exhibit. Colours and fonts come only from the site's tokens (var(--bg), var(--accent), ...), so the
+ * palette and type follow the theme and whatever values globals.css holds. The canvas is transparent: the page's own
+ * --bg shows through it, so there is never a seam between the scene and the page.
+ */
+
+.runway {
+  position: relative;
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.after {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.skip {
+  position: absolute;
+  z-index: 10;
+  top: 16px;
+  left: var(--gutter, clamp(24px, 4.45vw, 64px));
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-ui);
+  transform: translateY(-200%);
+}
+
+.skip:focus-visible {
+  transform: none;
+}
+
+.stage {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* The light table: one warm pool under the evidence, never behind text. */
+.pool {
+  position: absolute;
+  z-index: -1;
+  left: 4%;
+  top: 30%;
+  width: 62%;
+  height: 62%;
+  pointer-events: none;
+  background: radial-gradient(closest-side, var(--pool, oklch(0.8 0.1 75 / 0.1)), transparent);
+}
+
+.canvas,
+.posters {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.stage:not(.small) .canvas,
+.stage:not(.small) .posters {
+  mask-image:
+    linear-gradient(
+      to bottom,
+      transparent calc(var(--m-top, 160px) - 16px),
+      #000 calc(var(--m-top, 160px) + 56px),
+      #000 calc(var(--m-bot, 760px) - 56px),
+      transparent calc(var(--m-bot, 760px) + 4px)
+    ),
+    linear-gradient(to right, #000 calc(var(--m-side, 1000px) - 72px), transparent calc(var(--m-side, 1000px) + 24px));
+  mask-composite: intersect;
+}
+
+.canvas {
+  opacity: 0;
+  transition: opacity 400ms var(--ease-out-quart);
+}
+
+.canvasOn {
+  opacity: 1;
+}
+
+.posters img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.leaders {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.leaders path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+}
+
+.leaders circle {
+  fill: var(--accent);
+  opacity: 0;
+}
+
+/* The DOM over the scene: on the page's grid, with the page's gutters. */
+.layout {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  max-width: calc(82rem + 2 * var(--gutter, clamp(24px, 4.45vw, 64px)));
+  margin-inline: auto;
+  padding: clamp(24px, 5vh, 56px) var(--gutter, clamp(24px, 4.45vw, 64px)) clamp(20px, 4vh, 40px);
+  pointer-events: none;
+}
+
+.layout button,
+.layout a {
+  pointer-events: auto;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.readouts {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 40px;
+  margin: 4px 0 0;
+}
+
+.readouts dd {
+  margin: 0;
+}
+
+.main {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 21rem);
+  gap: 56px;
+  min-height: 0;
+  padding-block: 24px;
+}
+
+.subject {
+  min-height: 0;
+}
+
+.side {
+  display: grid;
+  align-items: center;
+  min-height: 0;
+}
+
+.side > * {
+  grid-area: 1 / 1;
+}
+
+.calloutWrap {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+.callout {
+  max-width: 21rem;
+}
+
+.receiptWrap {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+.receipt {
+  width: 100%;
+  max-width: 21rem;
+}
+
+.stampSlot {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+}
+
+.foot {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.honesty {
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cell {
+  position: relative;
+  padding-top: 12px;
+}
+
+.bar {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  overflow: hidden;
+  background: var(--line);
+}
+
+.bar > span {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--accent);
+}
+
+.cell[data-done] .bar > span {
+  background: var(--muted);
+}
+
+.cellBody {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.cellBody {
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+button.cellBody:hover .label {
+  color: var(--text);
+}
+
+/* Phones: the still above, the callout under it, the check row as five numbered steps. */
+.small .layout {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: 20px 16px 16px;
+}
+
+.small .head {
+  flex-direction: column;
+  gap: 16px;
+}
+
+.small .readouts {
+  gap: 16px;
+}
+
+.small .readouts dt {
+  white-space: nowrap;
+}
+
+.small .readouts dd {
+  font-size: var(--text-ui);
+}
+
+.small .main {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding-block: 8px;
+}
+
+.small .side {
+  align-items: end;
+  min-height: 8.5rem;
+}
+
+.small .row {
+  gap: 8px;
+}
+
+.small .cellBody {
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  min-height: 32px;
+}
+
+.small .cellBody > span:nth-child(2) {
+  display: none;
+}
+
+.small .pool {
+  left: 0;
+  top: 22%;
+  width: 100%;
+  height: 46%;
+}
+
+.small .subject {
+  position: relative;
+}
+
+.small .posters img {
+  object-fit: contain;
+}
+
+.small .receipt {
+  max-width: 100%;
+}
+
+/* On a phone the receipt lands over the still rather than pushing it out of the way. */
+.small .receiptWrap {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 8px;
+  left: 0;
+}
+
+/* The static form. */
+.static {
+  max-width: calc(82rem + 2 * var(--gutter, clamp(24px, 4.45vw, 64px)));
+  margin-inline: auto;
+  padding: 96px var(--gutter, clamp(24px, 4.45vw, 64px));
+}
+
+.staticGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 64px;
+  margin-top: 48px;
+}
+
+.staticFigure {
+  position: relative;
+  isolation: isolate;
+  align-self: start;
+  margin: 0;
+}
+
+.staticFigure .pool {
+  inset: 10% 0 auto;
+  width: 100%;
+  height: 80%;
+}
+
+/* The desktop still is framed for the live stage (evidence left of centre): crop it to the evidence. */
+.staticFigure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 5 / 4;
+  object-fit: cover;
+  object-position: 26% 58%;
+}
+
+@media (max-width: 767px) {
+  .staticFigure img {
+    aspect-ratio: 1;
+  }
+}
+
+.onLight {
+  display: none !important;
+}
+
+:global([data-theme="light"]) .onLight {
+  display: block !important;
+}
+
+:global([data-theme="light"]) .onDark {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .static {
+    padding: 72px 16px;
+  }
+
+  .staticGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+}
