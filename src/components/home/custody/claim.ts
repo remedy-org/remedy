@@ -52,36 +52,8 @@ export const CHAPTERS = [
   },
 ] as const;
 
-// The five checks in the order "What stops a fake" lists them (src/lib/rule.ts: preCheck's three, then the model's).
-// Quotes are GPT-6.1 Sol's own words on this photo (eval/out/runs/spike2-gpt-6.1-sol-r1.json, case c02), verbatim.
-export const CHECKS: { label: string; ai: boolean; quote?: string; region?: RegionId }[] = [
-  { label: "Live camera session", ai: false },
-  { label: "Photo not seen before", ai: false },
-  { label: "Verified PayPal account", ai: false },
-  {
-    label: "Label and code M4T",
-    ai: true,
-    quote: "The handwritten code on the attached paper tag reads “M4T”, matching the expected code character by character.",
-    region: "code",
-  },
-  {
-    label: "Cut fully in half",
-    ai: true,
-    quote: "Two separated pillow halves are visible, with exposed cut edges and stuffing spilling out.",
-    region: "cut",
-  },
-];
-
-// Where the model looked, as a share of the 4:3 crop (left, top, width, height), placed by eye on c02-1.jpg.
-export type RegionId = "code" | "cut";
-export const REGIONS: Record<RegionId, { x: number; y: number; w: number; h: number }> = {
-  code: { x: 0.66, y: 0.6, w: 0.3, h: 0.24 },
-  cut: { x: 0.18, y: 0.3, w: 0.42, h: 0.36 },
-};
-
-// The scroll thresholds (spec H2): when each check ticks, and when each code character appears.
-// Tuned a little early against the spec's table so the AC frames (0.40, 0.70) land on finished states.
-export const TICK_AT = [0.615, 0.63, 0.645, 0.665, 0.705];
+// The scroll thresholds (spec H2): when each code character appears. (Chapters 03 to 05, with the five checks and
+// their quotes, are the Opened Exhibit's: src/components/home/teardown/claim.ts.)
 export const CODE_AT = [0.35, 0.36, 0.37];
 /** The tag is written left to right after the last character appears. */
 export const WRITE_AT = [0.375, 0.397] as const;

@@ -3,16 +3,17 @@
 import clsx from "clsx";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { OpenedExhibit } from "@/components/home/teardown";
 import { Money, StatusPill } from "@/components/ui";
 import { CHAPTERS, CLAIM } from "./claim";
-import { AiLabel, ChecksChapter, CodeTag, ConsentChapter, ExhibitPrint, PaidChapter, useDone } from "./chapters";
+import { CodeTag, ConsentChapter } from "./chapters";
 
 // The Chain of Custody at rest: what the server renders, what reduced motion and no-JS visitors get, and what a
 // full-page screenshot shows. The pinned sequence replaces it after hydration only when the viewport and the visitor's
-// motion setting allow (HeroRunway). Three chapters are shown as real screens at 1:1 (consent, the five checks, the
-// payout), so no text is ever smaller than it is in the product; the code tag, the photo and the console row sit
-// beside them as small paper objects. Reading order runs across two columns, row by row. The screens are pictures
-// (aria-hidden); each caption carries the chapter in words.
+// motion setting allow (HeroRunway). Chapter 01 is the real consent screen at 1:1 and chapter 02 the code tag beside
+// it; chapters 03 to 05 are the Opened Exhibit's static form (the evidence still, every check with its quote, and the
+// sandbox receipt); then the console row the claim lands in. The screens are pictures (aria-hidden); each caption
+// carries the chapter in words.
 
 function Caption({ n, title, text }: { n: string; title: string; text: string }) {
   return (
@@ -51,49 +52,39 @@ function PaperObject({ n, title, text, children, className }: { n: string; title
 }
 
 export function StaticFigures() {
-  const done = useDone();
   return (
-    <div className="page pt-18 pb-18 lg:pt-24 lg:pb-32">
-      <div className="grid-12 gap-y-5 lg:items-end">
-        <div className="col-span-12 lg:col-span-7">
-          <p className="micro text-faint">How it works</p>
-          <h2 id="how-title" className="mt-5 text-title-lg font-medium text-balance">
-            One real claim, start to finish. <span className="text-muted">Paid {CLAIM.seconds}&nbsp;s after the photo.</span>
-          </h2>
-        </div>
-        <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8 lg:pb-1">
-          Claim {CLAIM.id} ran through the judges&rsquo; demo on 7 Nov, on the Kikea X-VESOLJE recall, in PayPal sandbox money.
-        </p>
-      </div>
-      {/* Two columns in reading order: 01 beside 02, 03 beside 04, then 05 across. The small paper objects sit centred
-          beside the tall screens, like things laid on the table next to them. */}
-      <div className="mt-12 grid gap-x-[var(--col-gap)] gap-y-12 lg:mt-16 lg:grid-cols-2 lg:gap-y-16">
-        <Screen i={0}>
-          <ConsentChapter />
-        </Screen>
-        <PaperObject n={CHAPTERS[1].n} title={CHAPTERS[1].title} text={CHAPTERS[1].text} className="lg:self-center">
-          <CodeTag className="max-w-[17rem] -rotate-2" />
-        </PaperObject>
-        <PaperObject n={CHAPTERS[2].n} title={CHAPTERS[2].title} text={CHAPTERS[2].text} className="lg:self-center">
-          <ExhibitPrint sizes="272px" className="w-full max-w-[17rem] rotate-[1.5deg]">
-            <AiLabel className="bottom-2 left-2" />
-          </ExhibitPrint>
-        </PaperObject>
-        <Screen i={3}>
-          <ChecksChapter p={done} />
-        </Screen>
-        {/* The payout wide enough for the rule card and the numeral side by side; the console row beside it. */}
-        <div className="grid gap-x-[var(--col-gap)] gap-y-12 lg:col-span-2 lg:grid-cols-12">
-          <div className="lg:col-span-9">
-            <Screen i={4}>
-              <PaidChapter p={done} />
-            </Screen>
+    <>
+      <div className="page pt-18 lg:pt-24">
+        <div className="grid-12 gap-y-5 lg:items-end">
+          <div className="col-span-12 lg:col-span-7">
+            <p className="micro text-faint">How it works</p>
+            <h2 id="how-title" className="mt-5 text-title-lg font-medium text-balance">
+              One real claim, start to finish. <span className="text-muted">Paid {CLAIM.seconds}&nbsp;s after the photo.</span>
+            </h2>
           </div>
+          <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8 lg:pb-1">
+            Claim {CLAIM.id} ran through the judges&rsquo; demo on 7 Nov, on the Kikea X-VESOLJE recall, in PayPal sandbox money.
+          </p>
+        </div>
+        {/* 01 beside 02: the tall consent screen, and the code tag centred beside it like a thing laid on the table. */}
+        <div className="mt-12 grid gap-x-[var(--col-gap)] gap-y-12 lg:mt-16 lg:grid-cols-2">
+          <Screen i={0}>
+            <ConsentChapter />
+          </Screen>
+          <PaperObject n={CHAPTERS[1].n} title={CHAPTERS[1].title} text={CHAPTERS[1].text} className="lg:self-center">
+            <CodeTag className="max-w-[17rem] -rotate-2" />
+          </PaperObject>
+        </div>
+      </div>
+      {/* 03 to 05: the photo, the five checks and the payout, as the exhibit. */}
+      <OpenedExhibit />
+      <div className="page pb-18 lg:pb-32">
+        <div className="grid-12">
           <PaperObject
             n="→"
             title="Kikea Store's console"
             text="The paid claim lands in the company's queue with its photo, its checks and the time from photo to PayPal."
-            className="lg:col-span-3"
+            className="col-span-12 lg:col-span-4"
           >
             <div className="w-full max-w-[20rem] overflow-hidden rounded-card bg-surface shadow-card">
               <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
@@ -120,6 +111,6 @@ export function StaticFigures() {
           </PaperObject>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -3,15 +3,17 @@
 // through the runway maps onto p piecewise, so each beat gets its own share of the scroll instead of p's share: about
 // 80 to 100vh of wheel per beat (BRIEF decision 4), so nothing flies past. Change the budget here, never the thresholds.
 
+import { TOTAL_VH as EXHIBIT_VH } from "../teardown/model";
+
 /** The beats, as [where the beat starts on p, the vh of scroll it gets]. */
 const BEATS: [p: number, vh: number][] = [
   [0, 16], // the hero at rest, before the dolly starts
   [0.04, 64], // the dolly: the laptop's screen becomes the stage
   [0.2, 80], // 01 Log in with PayPal
   [0.34, 80], // 02 One-time code
-  [0.48, 84], // 03 Live photo
-  [0.6, 104], // 04 Five checks: five ticks and two leader lines
-  [0.8, 84], // 05 Paid
+  // 03 to 05: the Opened Exhibit, one linear stretch, so its own eight beats (teardown/model.ts) keep the share of
+  // the scroll they were designed for: 30 to 95vh each, the code check longest.
+  [0.48, EXHIBIT_VH],
   [0.9, 72], // the console
 ];
 

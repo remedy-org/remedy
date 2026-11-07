@@ -1,27 +1,37 @@
 "use client";
 
-import { useMotionValueEvent, useScroll } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useMotionValueEvent, useScroll, useTransform } from "motion/react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { OpenedExhibit } from "@/components/home/teardown";
+import { TOTAL_VH as EXHIBIT_VH } from "@/components/home/teardown/model";
+import { useMedia } from "../HeroDevice";
 import { CHAPTERS } from "./claim";
-import { CodeChapter, ChecksChapter, Compact, ConsentChapter, PaidChapter, PhotoChapter, useDone } from "./chapters";
+import { CodeChapter, Compact, ConsentChapter, useDone } from "./chapters";
 import { PhoneFrame } from "./frames";
 import styles from "./custody.module.css";
 
-const STEP = [1, 2, 3, 4, 4];
+const STEP = [1, 2];
+/** Scroll per claim-screen chapter (01 and 02), in vh. */
+const CHAPTER_VH = 72;
 /** Below this chapter-well height (an iPhone SE, or Safari with its toolbars) the chapters use their compact forms. */
 const COMPACT_BELOW = 600;
 
-// Below 1024px (or under 700px tall), with motion allowed: the same five chapters in a sticky phone at 1:1 over a
-// 240vh runway, the chapter caption above it. Each chapter shows its final state; changing chapter is a 240ms
-// crossfade with a 6px rise. No laptop and no dolly. On short phones the chapters drop their secondary parts (the
-// consent marks and steps, the code's instructions, the model's quotes) so nothing is cut off at the frame's edge.
+// Below 1024px (or under 700px tall), with motion allowed: chapters 01 and 02 in a sticky phone at 1:1, 72vh of scroll
+// each, the chapter caption above it. Each shows its final state; changing chapter is a 240ms crossfade with a 6px rise.
+// Chapters 03 to 05 are then the Opened Exhibit filling the stage (the pinned stills on phones, the 3D on tablets),
+// scrubbed by the rest of the runway: 80% of its laptop length under 768px, as its own pin would be. No laptop and no
+// dolly. On short phones the chapters drop their secondary parts so nothing is cut off at the frame's edge.
 export function PhoneRunway({ skip }: { skip: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const well = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
+  const small = useMedia("(max-width: 767px)");
+  const exhibitVh = small ? Math.round(EXHIBIT_VH * 0.8) : EXHIBIT_VH;
+  const split = (2 * CHAPTER_VH) / (2 * CHAPTER_VH + exhibitVh);
   const [at, setAt] = useState(0);
   const [compact, setCompact] = useState(false);
-  useMotionValueEvent(scrollYProgress, "change", (v) => setAt(Math.min(4, Math.floor(v * 5))));
+  useMotionValueEvent(scrollYProgress, "change", (v) => setAt(v < split ? Math.min(1, Math.floor((v / split) * 2)) : 2));
+  const exhibitP = useTransform(scrollYProgress, [split, 1], [0, 1], { clamp: true });
   useEffect(() => {
     const el = well.current;
     if (!el) return;
@@ -30,10 +40,15 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
     return () => ro.disconnect();
   }, []);
   const done = useDone();
-  const chapter = [<ConsentChapter key="01" />, <CodeChapter key="02" p={done} />, <PhotoChapter key="03" p={done} />, <ChecksChapter key="04" p={done} />, <PaidChapter key="05" p={done} />][at];
-  const c = CHAPTERS[at];
+  const seek = (q: number) => {
+    const el = ref.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: top + (split + q * (1 - split)) * (el.offsetHeight - window.innerHeight), behavior: "instant" });
+  };
+  const c = CHAPTERS[Math.min(at, 1)];
   return (
-    <div ref={ref} className={styles.phoneRunway} data-runway>
+    <div ref={ref} className={styles.phoneRunway} style={{ "--scroll": `${2 * CHAPTER_VH + exhibitVh}vh` } as CSSProperties} data-runway>
       <div className={styles.phoneStage}>
         <div className="flex w-80 max-w-full items-baseline justify-between gap-4 px-1" aria-hidden="true">
           <span key={c.n} className={`micro text-accent-text ${styles.chapterIn}`}>
@@ -41,14 +56,20 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
           </span>
           <span className="font-mono text-micro text-faint tabular-nums">{c.n} / 05</span>
         </div>
-        <PhoneFrame step={STEP[at]} className="flex min-h-0 flex-1 flex-col">
+        <PhoneFrame step={STEP[Math.min(at, 1)]} className="flex min-h-0 flex-1 flex-col">
           <div ref={well} className="relative min-h-0 flex-1">
-            <div key={at} className={`absolute inset-0 overflow-hidden p-4 ${styles.chapterIn}`} aria-hidden="true">
-              <Compact.Provider value={compact}>{chapter}</Compact.Provider>
+            <div key={Math.min(at, 1)} className={`absolute inset-0 overflow-hidden p-4 ${styles.chapterIn}`} aria-hidden="true">
+              <Compact.Provider value={compact}>{at === 0 ? <ConsentChapter /> : <CodeChapter p={done} />}</Compact.Provider>
             </div>
           </div>
         </PhoneFrame>
         {skip}
+        {/* Mounted from chapter 02 on, so the exhibit's stills are loading before it cuts in. */}
+        {at >= 1 && (
+          <div className="absolute inset-0 z-[5] bg-bg" style={{ visibility: at >= 2 ? "visible" : "hidden" }}>
+            <OpenedExhibit progress={exhibitP} onSeek={seek} />
+          </div>
+        )}
       </div>
     </div>
   );

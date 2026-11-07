@@ -278,7 +278,7 @@ button.cellBody:hover .label {
 /* Phones: the still above, the callout under it, the check row as five numbered steps. */
 .small .layout {
   grid-template-rows: auto minmax(0, 1fr) auto;
-  padding: 20px 16px 16px;
+  padding: 20px var(--gutter, 24px) 16px;
 }
 
 .small .head {
@@ -359,11 +359,22 @@ button.cellBody:hover .label {
   padding: 96px var(--gutter, clamp(24px, 4.45vw, 64px));
 }
 
+/* On the page's 12-column grid: the still in columns 1 to 7, the checks and receipt from column 8, the line every
+   section's second text block starts on. */
 .staticGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  gap: 64px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap, 24px);
+  row-gap: 64px;
   margin-top: 48px;
+}
+
+.staticGrid > :first-child {
+  grid-column: 1 / span 7;
+}
+
+.staticGrid > :last-child {
+  grid-column: 8 / -1;
 }
 
 .staticFigure {
@@ -409,11 +420,15 @@ button.cellBody:hover .label {
 
 @media (max-width: 767px) {
   .static {
-    padding: 72px 16px;
+    padding: 72px var(--gutter, 24px);
   }
 
   .staticGrid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 40px;
+    row-gap: 40px;
+  }
+
+  .staticGrid > :first-child,
+  .staticGrid > :last-child {
+    grid-column: 1 / -1;
   }
 }

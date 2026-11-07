@@ -4,8 +4,9 @@ import clsx from "clsx";
 import { frame as motionFrame, motion, useMotionValueEvent, useTransform } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { CHAPTERS, CLAIM } from "./claim";
-import { CodeChapter, ChecksChapter, Compact, ConsentChapter, ConsoleChapter, PaidChapter, PhotoChapter, type Progress } from "./chapters";
+import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, type Progress } from "./chapters";
 import { ExhibitSlot } from "./ExhibitSlot";
+import { scrollAt } from "./pace";
 import { ScreenBar } from "./frames";
 import styles from "./custody.module.css";
 
@@ -39,6 +40,9 @@ export function share(p: number, i: number) {
   const fout = clamp01((b - OUT[1] - p) / (OUT[0] - OUT[1]));
   return Math.min(fin, fout);
 }
+
+/** The Opened Exhibit's opacity: chapters 03 to 05 together, cut in and out like any chapter. */
+const exhibitShare = (v: number) => Math.max(share(v, 2), share(v, 3), share(v, 4));
 
 function Layer({ p, i, compact, children }: { p: Progress; i: number; compact: boolean; children: ReactNode }) {
   const opacity = useTransform(p, (v) => share(v, i));
@@ -114,6 +118,14 @@ function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
   el.style.clipPath = `inset(${box.t.toFixed(1)}px ${box.r.toFixed(1)}px ${box.b.toFixed(1)}px ${box.l.toFixed(1)}px round ${box.round.toFixed(1)}px)`;
 }
 
+/** Scrolls the runway (the stage's parent) so the timeline reads t: for the exhibit's check buttons. */
+function seekTo(st: HTMLElement | null, t: number) {
+  const runway = st?.parentElement;
+  if (!runway) return;
+  const top = runway.getBoundingClientRect().top + window.scrollY;
+  window.scrollTo({ top: top + scrollAt(t) * (runway.offsetHeight - window.innerHeight), behavior: "instant" });
+}
+
 export interface CustodyStageProps {
   p: Progress;
   stage: RefObject<HTMLDivElement | null>;
@@ -170,18 +182,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
               <Layer p={p} i={1} compact={compact}>
                 <CodeChapter p={p} />
               </Layer>
-              {/* Chapters 03 to 05: the exhibit slot, where the 3D "Opened Exhibit" mounts (ExhibitSlot.tsx). */}
-              <ExhibitSlot p={p} compact={compact} share={share}>
-                <Layer p={p} i={2} compact={compact}>
-                  <PhotoChapter p={p} />
-                </Layer>
-                <Layer p={p} i={3} compact={compact}>
-                  <ChecksChapter p={p} />
-                </Layer>
-                <Layer p={p} i={4} compact={compact}>
-                  <PaidChapter p={p} />
-                </Layer>
-              </ExhibitSlot>
+              {/* Chapters 03 to 05 are the Opened Exhibit, a full-stage layer above the screen and the rail (below). */}
               <Layer p={p} i={5} compact={compact}>
                 <ConsoleChapter p={p} />
               </Layer>
@@ -210,6 +211,8 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
           {skip}
         </motion.div>
       </div>
+
+      <ExhibitSlot p={p} visible={exhibitShare} onSeek={(t) => seekTo(stage.current, t)} />
     </>
   );
 }

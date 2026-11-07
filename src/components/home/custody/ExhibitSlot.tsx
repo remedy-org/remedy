@@ -1,30 +1,32 @@
 "use client";
 
-import { motion, useTransform } from "motion/react";
-import type { ReactNode } from "react";
+import { motion, useMotionValueEvent, useTransform } from "motion/react";
+import { useState } from "react";
+import { OpenedExhibit } from "@/components/home/teardown";
 import type { Progress } from "./chapters";
 
-/** Chapters 03 to 05 (Live photo, Five checks, Paid) on the timeline p: where the exhibit slot owns the screen. */
+/** Chapters 03 to 05 (Live photo, Five checks, Paid) on the timeline p: where the Opened Exhibit owns the stage. */
 export const EXHIBIT_RANGE = [0.48, 0.9] as const;
+/** The exhibit mounts (and three.js starts loading) once chapter 02 is on screen, so the hero never pays for it. */
+const ARM_AT = 0.3;
 
 /**
- * The mount point for the 3D "Opened Exhibit" (src/components/home/teardown/, built separately), inside the pinned
- * Chain of Custody. The contract for what mounts here:
- * - It fills this box: the screen layer's chapter well, grid columns 4 to 12 under the screen bar, unscaled.
- * - It draws from `p` alone (the paced timeline, 0 to 1 over the whole runway; its chapters run EXHIBIT_RANGE), so
- *   scrolling back and forth, a poster frame and a screenshot all agree.
- * - `visible` is its opacity: 0 outside chapters 03 to 05, 1 inside, cut (never crossfaded) against chapter 02 and
- *   the console, as the chapter layers are.
- * - Until it is warm, and wherever WebGL is missing, the 2D chapters (children) render instead. The static figures
- *   and the phone use those same chapters, so the 3D needs no second copy of the story.
- * The rail beside the screen keeps naming chapters 03 to 05 and their captions either way.
+ * The 3D "Opened Exhibit" (src/components/home/teardown/) inside the pinned Chain of Custody. It replaces the device
+ * frame and the rail for chapters 03 to 05: a full-stage layer above both, on the page's own grid and gutters, so the
+ * evidence gets the whole screen. It draws from `p` alone, so scrolling back and forth, a poster frame and a screenshot
+ * all agree. `visible` cuts it in and out like a chapter layer (never a long crossfade).
  */
-export function ExhibitSlot({ p, share, children }: { p: Progress; compact: boolean; share: (v: number, i: number) => number; children: ReactNode }) {
-  const visible = useTransform(p, (v) => Math.max(share(v, 2), share(v, 3), share(v, 4)));
-  const visibility = useTransform(visible, (o) => (o > 0 ? "visible" : "hidden"));
+export function ExhibitSlot({ p, visible, onSeek }: { p: Progress; visible: (v: number) => number; onSeek: (t: number) => void }) {
+  const [armed, setArmed] = useState(() => p.get() >= ARM_AT);
+  useMotionValueEvent(p, "change", (v) => {
+    if (v >= ARM_AT && !armed) setArmed(true);
+  });
+  const progress = useTransform(p, EXHIBIT_RANGE as unknown as number[], [0, 1], { clamp: true });
+  const opacity = useTransform(p, visible);
+  const visibility = useTransform(opacity, (o) => (o > 0 ? "visible" : "hidden"));
   return (
-    <motion.div data-exhibit-slot className="absolute inset-0" style={{ visibility }}>
-      {children}
+    <motion.div data-exhibit-slot className="absolute inset-0 z-[5] bg-bg" style={{ opacity, visibility }}>
+      {armed && <OpenedExhibit progress={progress} onSeek={(q) => onSeek(EXHIBIT_RANGE[0] + q * (EXHIBIT_RANGE[1] - EXHIBIT_RANGE[0]))} />}
     </motion.div>
   );
 }
