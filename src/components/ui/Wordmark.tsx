@@ -1,48 +1,59 @@
 import clsx from "clsx";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 
 export interface WordmarkProps {
-  /** sm for app chrome (16px type, 18px mark), md for the homepage nav (20px type, 22px mark). */
+  /** sm for app chrome (body-size type), md for the homepage nav and footer (lead-size type). */
   size?: "sm" | "md";
   /** Wrap in a link, usually "/". */
   href?: string;
   className?: string;
 }
 
-/**
- * The mark is an evidence tag: amber card, top corners cut, a punched hole the page shows through, the code written
- * on it, and a string loop. It hangs at the stamp's -8deg. The string draws in once on load (static under reduced
- * motion, see .mark-string in globals.css).
+/*
+ * The mark is a claim check: one tag torn in two. The tag (punched hole, 45deg chamfers) stays on the destroyed
+ * product as the proof; the amber stub is the refund the owner keeps. Drawn 21 x 14 units: tag 12, a straight 1.5
+ * tear, stub 7.5 (8 : 5, the same split as the 16px favicon), one r1.6 notch on each long edge biting both halves.
+ * The hole is cut out, so the page shows through. src/app/icon.svg, apple-icon.png and opengraph-image.tsx draw the
+ * same geometry.
+ *
+ * Colours follow the theme through light-dark(), which reads the color-scheme each [data-theme] block sets:
+ * dark: the tag is --paper, the stub --accent. Light: the tag is --text and the stub a deeper amber, because
+ * --accent measures 2:1 on the light page; oklch(0.64 0.14 60) (#c8741d) measures 3.26:1 on --bg, 3.46:1 on
+ * --surface and 3.09:1 on --surface-2 (WCAG graphics need 3:1). Override --mark-tag / --mark-stub to recolour it.
  */
-function Mark({ size }: { size: number }) {
+const TAG = "M0 3L3 0H11.15A1.6 1.6 0 0 0 12 1.413V12.587A1.6 1.6 0 0 0 11.15 14H3L0 11ZM5 7A1.25 1.25 0 1 0 2.5 7A1.25 1.25 0 1 0 5 7Z";
+const STUB = "M14.35 0H20A1 1 0 0 1 21 1V13A1 1 0 0 1 20 14H14.35A1.6 1.6 0 0 0 13.5 12.587V1.413A1.6 1.6 0 0 0 14.35 0Z";
+
+const markColours = {
+  "--mark-tag": "light-dark(var(--text), var(--paper))",
+  "--mark-stub": "light-dark(oklch(0.64 0.14 60), var(--accent))",
+} as CSSProperties;
+
+/** The mark alone, decorative. Size it with className (it is 3 : 2); the default is the wordmark's cap height. */
+export function RemedyMark({ className }: { className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="1.5 2.5 21 21" aria-hidden="true" focusable="false" className="shrink-0 overflow-visible">
-      <g transform="rotate(-8 12 15)">
-        <path
-          fillRule="evenodd"
-          fill="var(--accent)"
-          d="M9.5 8.5h5l3.5 3.5v9.25c0 .97-.78 1.75-1.75 1.75h-8.5c-.97 0-1.75-.78-1.75-1.75V12zM13.5 12a1.5 1.5 0 1 0-3 0a1.5 1.5 0 1 0 3 0z"
-        />
-        <path d="M9 16.25h6M9 19.25h3.5" stroke="var(--accent-ink)" strokeWidth="1.5" strokeLinecap="round" />
-        <path
-          className="mark-string"
-          pathLength={1}
-          d="M12 12C10.4 9 9.2 5 11.6 3.6c2.4-1.4 4.2 1.8 2.1 4.8-.6.9-1.1 2.1-1.3 3.5"
-          fill="none"
-          stroke="var(--muted)"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </g>
+    <svg viewBox="0 0 21 14" aria-hidden="true" focusable="false" className={clsx("shrink-0", className ?? "h-[0.727em] w-[1.09em]")} style={markColours}>
+      <path fillRule="evenodd" fill="var(--mark-tag)" d={TAG} />
+      <path fill="var(--mark-stub)" d={STUB} />
     </svg>
   );
 }
 
+/*
+ * Lockup: Schibsted Grotesk (the site's sans) 600 at -0.025em. The mark is the cap height (0.703em) plus a 0.012em
+ * overshoot above and below, so its top lines up with the R and its foot with the baseline; 0.3em from the name.
+ */
 export function Wordmark({ size = "sm", href, className }: WordmarkProps) {
   const body = (
-    <span className={clsx("inline-flex items-center gap-2 font-semibold tracking-[-0.01em] text-text", size === "md" ? "text-lead" : "text-body", className)}>
-      <Mark size={size === "md" ? 22 : 18} />
+    <span
+      className={clsx(
+        "inline-flex items-baseline gap-[0.3em] font-semibold tracking-[-0.025em] text-text",
+        size === "md" ? "text-lead" : "text-body",
+        className,
+      )}
+    >
+      <RemedyMark className="relative top-[0.012em] h-[0.727em] w-[1.09em]" />
       Remedy
     </span>
   );
