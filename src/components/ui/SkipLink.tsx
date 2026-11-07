@@ -15,8 +15,10 @@ export function SkipLink({ href, children }: { href: string; children: ReactNode
         "focus:not-sr-only focus:fixed focus:top-2.5 focus:z-50 focus:inline-flex focus:h-11 focus:items-center focus:px-4",
         // .page's content edge: the gutter, or the centred frame's edge on a wide screen.
         "focus:left-[max(var(--gutter),calc((100%-var(--container-content))/2))]",
+        // In the console, over the wordmark on a phone (the nav is a row of its own there); from 640px, where the nav
+        // sits beside the wordmark, just under the header, so the chip never covers "Claims".
         "[body:has([data-console-header])_&]:focus:top-1.5 [body:has([data-console-header])_&]:focus:left-4",
-        "sm:[body:has([data-console-header])_&]:focus:left-6 lg:[body:has([data-console-header])_&]:focus:left-8",
+        "sm:[body:has([data-console-header])_&]:focus:top-[calc(3.5rem+6px)] sm:[body:has([data-console-header])_&]:focus:left-6 lg:[body:has([data-console-header])_&]:focus:left-8",
       )}
     >
       {children}

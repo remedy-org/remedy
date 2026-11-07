@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimRefusal, nextUtcDay, parseRefusal, refusalQuery, retryIn, utcDay, type Limits } from "./limits";
+import { abandonedDemo, claimRefusal, nextUtcDay, parseRefusal, refusalQuery, retryIn, utcDay, type Limits } from "./limits";
 
 const NOW = new Date("2026-11-07T18:30:00.000Z");
 const TOMORROW = new Date("2026-11-08T00:00:00.000Z");
@@ -34,6 +34,21 @@ describe("claimRefusal", () => {
     const demos = [1, 2, 3].map((h) => row(`2026-11-07T0${h}:00:00.000Z`, { demo: true }));
     expect(refuse(demos, { demo: true })).toMatchObject({ kind: "account", limit: 3 });
     expect(refuse(demos)).toBeNull();
+  });
+
+  it("leaves a demo start out once its camera session ended with no photo sent; never a real one", () => {
+    const left = { createdAt: "2026-11-07T18:15:00.000Z", decision: "pending" as const, photoHashes: [] };
+    const demos = [1, 2, 3].map((h) => ({ ...row(`2026-11-07T1${h}:00:00.000Z`, { demo: true }), ...left }));
+    expect(refuse(demos, { demo: true })).toBeNull();
+    // Still inside its 10-minute session, or with its photo in: it counts.
+    expect(refuse(demos.map((d) => ({ ...d, createdAt: "2026-11-07T18:25:00.000Z" })), { demo: true })).toMatchObject({ kind: "account", limit: 3 });
+    expect(refuse(demos.map((d) => ({ ...d, photoHashes: ["0123456789abcdef"] })), { demo: true })).toMatchObject({ kind: "account", limit: 3 });
+    expect(abandonedDemo({ ...left, demo: true }, NOW)).toBe(true);
+    expect(abandonedDemo({ ...left, demo: false }, NOW)).toBe(false);
+    expect(abandonedDemo({ ...left, demo: true, decision: "held" }, NOW)).toBe(false);
+    // Real starts left the same way keep counting.
+    const real = [1, 2].map((h) => ({ ...row(`2026-11-07T1${h}:00:00.000Z`), ...left }));
+    expect(refuse(real)).toMatchObject({ kind: "account", limit: 2 });
   });
 
   it("never counts seeded claims", () => {

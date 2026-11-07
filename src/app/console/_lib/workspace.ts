@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from "node:util";
 import { recoverStale, STALE_AFTER_MS } from "@/app/api/claims/_lib/pipeline";
 import { getAppStore } from "@/lib/demo";
 import { CAPTURE_SESSION_MINUTES } from "@/lib/ids";
+import { abandonedDemo } from "@/lib/limits";
 import { isTerminal, refreshPayouts } from "@/lib/paypal/status";
 import type { Session } from "@/lib/session";
 import type { Store } from "@/lib/store";
@@ -53,6 +54,14 @@ export function pickRecall(recalls: Recall[], wanted: string | string[] | undefi
 export const canSeeClaim = (recall: Pick<Recall, "owner">, session: Pick<Session, "payerId">) => (c: Pick<ClaimSummary, "seeded" | "demo" | "payerId">) =>
   recall.owner !== null || Boolean(c.seeded) || Boolean(c.demo) || c.payerId === session.payerId;
 
+/**
+ * One recall's rows as the console lists them, from index.json: the claims this company may see, less the judges' demo
+ * starts left before a photo was sent (abandonedDemo), which hold no evidence and no money. The queue, Insights and the
+ * report all list through here, so their totals agree.
+ */
+export const listedClaims = <R extends ClaimSummary>(rows: R[], recall: Recall, session: Pick<Session, "payerId">, now = Date.now()): R[] =>
+  rows.filter((r) => r.recallId === recall.id && canSeeClaim(recall, session)(r) && !abandonedDemo(r, new Date(now)));
+
 // When this instance last read a claim whose row looks out of date. A payout that stays unsettled is asked about at
 // most once a minute per instance, not on every load: each ask reads the claim file.
 const RECHECK_MS = 60_000;
@@ -69,7 +78,7 @@ const stuck = (r: ClaimSummary, now: number) => r.decision === "pending" && r.ph
 // grid, the stats and the report show. Rows that can't stay as they are (a payout settling, a check stuck) are read
 // again (a few, briefly), so the grid is right without webhooks; only those claims' files are read.
 export async function loadClaims(store: Store, recall: Recall, session: Pick<Session, "payerId">, now = Date.now()): Promise<ClaimSummary[]> {
-  const rows = (await store.listClaims()).filter((r) => r.recallId === recall.id).filter(canSeeClaim(recall, session));
+  const rows = listedClaims(await store.listClaims(), recall, session, now);
   const due = rows
     .filter((r) => !r.seeded && (settling(r) || stuck(r, now)))
     .filter((r) => now - (lastChecked.get(r.id) ?? 0) >= RECHECK_MS)

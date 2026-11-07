@@ -239,7 +239,7 @@ export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls): C
     photos: photoUrls ? (c.photoKeys ?? []).map(photoUrls) : [],
     bars,
     // A refused payout is the newest thing about a held claim, and what the reviewer acts on: it leads the verdict.
-    note: failedAt ? "PayPal didn't take the payout: retry or reject" : noteOf(c, bars, recall),
+    note: failedAt ? "Payout not sent: retry or reject" : noteOf(c, bars, recall),
     payoutFailedAt: failedAt,
     timeline,
     toPay: timeline && c.decision === "paid" ? timeline.sent : null,
@@ -441,16 +441,17 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
     c.seeded
       ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Sample photo shared by the seeded claims, so this check wasn't run" }
       : // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the
-        // same sample photo once: say that, next to the other rounds' claims with the same photo and code.
+        // same sample photo once: say that, next to the other rounds' claims with the same photo and code. The company
+        // reads a round as a demo session.
         c.demo
-        ? row("duplicate_photo", "Photo not seen before", "No other claim in this demo round used these photos; other judges' rounds reuse the same samples")
+        ? row("duplicate_photo", "Photo not seen before", "No other claim in this demo session used these photos. Every demo session sends the same sample photos, so each is compared on its own")
         : row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
     // In the demo only the genuine sample is held to one claim, within its round (pipeline.ts receivePhotos). A person's
     // approve checks every sample (review.ts), and a conflict it found shows here.
     !c.demo
       ? row("payer", "One claim per account", "No other paid or open claim for this recall from this PayPal account")
       : oneClaimChecked(c) || failed("payer")
-        ? row("payer", "One claim per account", "Checked within this demo round: no other paid or open genuine claim from this PayPal account")
+        ? row("payer", "One claim per account", "Checked within this demo session: no other paid or open genuine claim from this PayPal account")
         : ran
           ? { id: "payer", label: "One claim per account", state: "skipped", detail: "Skipped for demo samples: one judge's account sends all four, so this check would stop the rest" }
           : row("payer", "One claim per account", ""),

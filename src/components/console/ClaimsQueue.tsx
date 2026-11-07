@@ -144,6 +144,10 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
     setOpen(id);
   }, []);
 
+  // A claim opened from a link in another's evidence (the account's other claim): the panel offers the way back to it.
+  const [trail, setTrail] = useState<{ id: string; from: string } | null>(null);
+  const back = trail && trail.id === open ? trail.from : null;
+
   // A tab that doesn't list the open claim closes its panel: the evidence beside a list must be one of its rows.
   const changeTab = useCallback(
     (t: Tab) => {
@@ -157,8 +161,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
     [open, rows],
   );
 
-  // A claim the panel links to (the claim a repost copied): its row, in the list that shows it.
-  const goTo = useCallback(
+  // A claim the panel links to (the claim a repost copied, the account's other claim): its row, in the list that shows it.
+  const show = useCallback(
     (id: string) => {
       if (!found.some((r) => r.id === id)) {
         setTab("all");
@@ -170,6 +174,18 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
     },
     [found, openClaim, wide],
   );
+  const goTo = useCallback(
+    (id: string) => {
+      if (open && id !== open) setTrail({ id, from: open });
+      show(id);
+    },
+    [open, show],
+  );
+  const goBack = useCallback(() => {
+    if (!back) return;
+    setTrail(null);
+    show(back);
+  }, [back, show]);
 
   // After a person pays or rejects a held claim, the next held claim in the list as it stood: the panel offers it, so
   // working the queue never means hunting for the next row.
@@ -251,6 +267,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
 
   const samples = ledger.samples;
   const demos = ledger.demos;
+  // Every claim the legend doesn't mark: real owners' (on the demo recall, this company's own), so its parts add up to All.
+  const live = rows.length - samples - demos;
 
   const clearSearch = () => {
     setSearch("");
@@ -309,30 +327,33 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
             </div>
           </div>
 
-          {/* The legend for the marks after claim ids, on one line so opening a claim never moves the grid; the full
-              text is in its title when the panel narrows it. */}
+          {/* The legend for the marks after claim ids, naming every claim in All, on one line so opening a claim never
+              moves the grid (the full text is in its title when the panel narrows it); on a phone, where the evidence is
+              a sheet, it wraps. */}
           {(samples > 0 || demos > 0) && (
             <p
-              className="flex min-w-0 items-center gap-x-4 overflow-hidden py-2.5 font-mono text-micro whitespace-nowrap text-faint"
+              className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 py-2.5 font-mono text-micro text-faint sm:flex-nowrap sm:overflow-hidden sm:whitespace-nowrap"
               title={[
                 samples > 0 && `${plural(samples, "sample claim")} from the eval set: AI-made test photos, never paid.`,
-                demos > 0 && `${plural(demos, "judges' demo claim")}: sample photos and sandbox money. Each demo round's duplicate checks run on their own.`,
+                demos > 0 && `${plural(demos, "judges' demo claim")}: sample photos and sandbox money. Every demo session sends the same sample photos, so each session's duplicate check runs on its own.`,
+                live > 0 && `${plural(live, "live claim")} from a real owner's PayPal account.`,
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
               {samples > 0 && (
-                <span className="inline-flex shrink-0 items-center gap-2">
+                <span className="inline-flex min-w-0 items-center gap-2 sm:shrink-0">
                   <SampleDiamond />
-                  {plural(samples, "sample")}: AI-made photos, never paid
+                  <span className="truncate">{plural(samples, "sample")}: AI-made photos, never paid</span>
                 </span>
               )}
               {demos > 0 && (
                 <span className="inline-flex min-w-0 items-center gap-2">
                   <SampleDiamond demo />
-                  <span className="truncate">{formatCount(demos)} judges&apos; demo: sandbox money, checked per round</span>
+                  <span className="truncate">{formatCount(demos)} judges&apos; demo: sandbox money</span>
                 </span>
               )}
+              {live > 0 && <span className="shrink-0">+ {plural(live, "live claim")}</span>}
             </p>
           )}
 
@@ -375,6 +396,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
                   <ClaimsGrid
                     ref={grid}
                     rows={found}
+                    // Held claims wait for a person: the longest waiting first.
+                    oldestFirst={tab === "held"}
                     openId={open}
                     onOpen={openClaim}
                     onFocusRow={(id) => open && wide && id !== open && openClaim(id)}
@@ -417,11 +440,23 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
 
         {wide && open && (
           <div className="flex min-h-0 w-[440px] shrink-0 pt-2">
-            <EvidencePanel claimId={open} version={openRow?.version} onClose={close} intent={intent} onOpen={goTo} onDecided={decided} nextHeld={nextHeld} />
+            <EvidencePanel
+              claimId={open}
+              version={openRow?.version}
+              onClose={close}
+              intent={intent}
+              onOpen={goTo}
+              onDecided={decided}
+              nextHeld={nextHeld}
+              back={back}
+              onBack={goBack}
+            />
           </div>
         )}
       </div>
-      {!wide && open && <EvidenceDrawer claimId={open} version={openRow?.version} onClose={close} onOpen={goTo} onDecided={decided} nextHeld={nextHeld} />}
+      {!wide && open && (
+        <EvidenceDrawer claimId={open} version={openRow?.version} onClose={close} onOpen={goTo} onDecided={decided} nextHeld={nextHeld} back={back} onBack={goBack} />
+      )}
 
       {help && <ShortcutSheet onClose={() => setHelp(false)} />}
     </section>
@@ -472,7 +507,7 @@ const SHORTCUTS: [string[], string][] = [
   [["↑", "↓"], "Move between claims; the panel follows. ↓ or j from anywhere starts the list"],
   [["Enter"], "Open a claim's evidence"],
   [["Esc"], "Close the evidence"],
-  [["A"], "Approve the open or focused held claim; A again, or Enter on Pay, pays"],
+  [["A"], "Pay the open or focused held claim: A opens the confirm, A again or Enter on Pay sends it"],
   [["R"], "Reject the open or focused held claim"],
 ];
 

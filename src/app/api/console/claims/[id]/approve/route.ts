@@ -16,8 +16,11 @@ export async function POST(_request: NextRequest, ctx: RouteContext<"/api/consol
 
   const result = await approveClaim({ ...found, by: reviewer(session) });
   if (!result.ok) {
-    const detail = result.reasons?.map((r) => r.text).join("; ");
-    return fail(result.status, detail ? `${result.message} ${detail}.` : result.message, result.reference ? { reference: result.reference } : {});
+    const reasons = result.reasons?.map((r) => r.text);
+    return fail(result.status, reasons?.length ? `${result.message} ${reasons.join("; ")}.` : result.message, {
+      ...(result.reference ? { reference: result.reference } : {}),
+      ...(reasons?.length ? { reasons } : {}),
+    });
   }
   return NextResponse.json<ReviewedClaim>({ ...toDrawerClaim(result.claim, found.recall), ...(result.sample ? { sample: result.sample } : {}) });
 }

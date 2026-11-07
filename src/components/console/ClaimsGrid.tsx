@@ -85,6 +85,8 @@ export interface ClaimsGridProps {
   fill?: boolean;
   /** Read only (the homepage preview): no keyboard opening, no tooltips. */
   still?: boolean;
+  /** Sort oldest first (the held tab: the longest waiting leads) instead of newest first. */
+  oldestFirst?: boolean;
   /** The first rows are drawn (the skeleton has gone). */
   onReady?: () => void;
   className?: string;
@@ -93,7 +95,7 @@ export interface ClaimsGridProps {
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function ClaimsGrid(
-  { rows, openId, onOpen, onFocusRow, fill = false, still = false, onReady, className },
+  { rows, openId, onOpen, onFocusRow, fill = false, still = false, oldestFirst = false, onReady, className },
   ref,
 ) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -164,8 +166,10 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         pinned: "left",
         lockPinned: true,
         sortable: !still,
-        // The queue is newest first; the homepage's still keeps the order its rows come in (curated in preview.ts).
-        sort: still ? undefined : "desc",
+        // The queue is newest first, the held tab oldest first; the homepage's still keeps the order its rows come in
+        // (curated in preview.ts). A header click flips the order, with no unsorted step between.
+        sort: still ? undefined : oldestFirst ? "asc" : "desc",
+        sortingOrder: ["desc", "asc"],
         tooltip: (p) => (!still && p.data?.photos.length ? p.data.id : undefined),
         tooltipComponent: PhotoTooltip,
       },
@@ -179,6 +183,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         flex: 1,
         minWidth: still ? VERDICT_MIN.still : VERDICT_MIN.queue,
         enableCellChangeFlash: true,
+        // The flash is the paid colour only when the claim became paid; any other change (a refused approve, a reject)
+        // flashes neutral, since no money moved (claims-grid.css).
+        cellClass: (p) => (p.data?.decision === "paid" ? undefined : "flash-neutral"),
       },
       {
         colId: "checks",
@@ -194,7 +201,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         headerName: "Timeline",
         headerTooltip: still
           ? undefined
-          : "From the photos arriving to PayPal settling, on a 2-minute scale: the model's answer, the rule's decision, PayPal sent and settled. The chip is photo to payout; a grey time is the model's answer alone.",
+          : "From the photos arriving to PayPal settling, on a 2-minute scale: the model's answer, the rule's decision, PayPal sent and settled. The boxed time is photos to payout; a grey time, the model's answer alone (no payout to time).",
         cellRenderer: TimelineCell,
         width: 168,
         tooltip: (p) => (!still && p.data?.timeline ? p.data.id : undefined),
@@ -219,6 +226,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         cellRenderer: PayoutCell,
         width: 112,
         enableCellChangeFlash: true,
+        cellClass: (p) => (p.data?.payoutStatus === "SUCCESS" ? undefined : "flash-neutral"),
       },
       {
         colId: "amount",
@@ -239,7 +247,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       hide: hidden.has(c.colId ?? ""),
       ...c,
     }));
-  }, [hidden, still]);
+  }, [hidden, still, oldestFirst]);
 
   const focusTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(focusTimer.current), []);

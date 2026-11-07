@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sampleClaim, sampleRecall } from "@/lib/__fixtures__/claim";
+import { abandonedDemo } from "@/lib/limits";
 import { countingStore } from "@/lib/__fixtures__/counting";
 import { getRecallBySlug, type Store } from "@/lib/store";
 import { withRecallCache } from "@/lib/store/cache";
@@ -146,7 +147,10 @@ describe.each([50, 200])("the console with %i claims", (n) => {
     expect(counter.counts.reads).toBeLessThanOrEqual(4);
     expect(counter.counts.calls.getClaim).toBe(1);
     expect(counter.counts.writes).toBe(0);
-    expect(rows).toEqual(claims.map(summarize).reverse());
+    // Judges' demo starts left before a photo was sent are left out (abandonedDemo); everything else is listed.
+    const listed = claims.map(summarize).filter((r) => !abandonedDemo(r, new Date(now)));
+    expect(listed.length).toBeLessThan(n);
+    expect(rows).toEqual(listed.reverse());
 
     // router.refresh() after a drawer action, within the minute: the recalls are cached, the payout just checked.
     counter.reset();
@@ -235,9 +239,9 @@ describe("the claims grid (P4)", () => {
   const params = <T extends object>(p: T) => ({ params: Promise.resolve(p) });
 
   it("polls index.json alone: 3 reads cold, 1 warm, whatever the number of claims", async () => {
-    await seed(200);
+    const claims = await seed(200);
     const res = await pollQueue(new NextRequest("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
-    expect((await res.json()).rows).toHaveLength(200);
+    expect((await res.json()).rows).toHaveLength(claims.filter((c) => !abandonedDemo(summarize(c), new Date())).length);
     expect(counter.counts.reads).toBeLessThanOrEqual(3);
     expect(counter.counts.calls.getClaim).toBeUndefined();
 
@@ -274,7 +278,7 @@ describe("the claims grid (P4)", () => {
   });
 
   it("opens the evidence panel at a row's version: the claim once, its recall from the cache", async () => {
-    await seed(50);
+    const claims = await seed(50);
     const open = (id = "RM-0002") => openEvidence(new NextRequest(`http://127.0.0.1:3000/api/console/claims/${id}?v=1`), params({ id }));
     const first = await (await open()).json();
     expect(first.photos[0]).toMatch(/^\/api\/console\/claims\/RM-0002\/photos\/0\?t=[\w-]+$/);
@@ -286,12 +290,15 @@ describe("the claims grid (P4)", () => {
 
     // Walking 10 rows with ↓: 1 read for each new claim, then none on the way back up.
     const ids = ["RM-0003", "RM-0004", "RM-0005", "RM-0006", "RM-0008", "RM-0009", "RM-0010", "RM-0011", "RM-0012", "RM-0013"];
+    // A held claim a person can pay reads index.json too, each time: what approve's checks would stop now.
+    const held = claims.filter((c) => ids.includes(c.id) && c.decision === "held" && !c.seeded).length;
+    expect(held).toBeGreaterThan(0);
     counter.reset();
     for (const id of ids) await open(id);
-    expect(counter.counts.calls).toEqual({ getClaim: ids.length });
+    expect(counter.counts.calls).toEqual({ getClaim: ids.length, listClaims: held });
     counter.reset();
     for (const id of ids.toReversed()) await open(id);
-    expect(counter.counts.reads).toBe(0);
+    expect(counter.counts.reads).toBe(held);
   });
 
   it("stops polling for an abandoned claim or a payout parked at UNCLAIMED: 0 polls", async () => {

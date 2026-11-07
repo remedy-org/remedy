@@ -7,7 +7,7 @@ import { PayPalError } from "@/lib/paypal/client";
 import { localStore } from "@/lib/store/local";
 import type { Store } from "@/lib/store";
 import type { Claim } from "@/lib/types";
-import { approveClaim, rejectClaim } from "./review";
+import { approveClaim, approveConflicts, rejectClaim } from "./review";
 
 let dir: string;
 let store: Store;
@@ -178,6 +178,31 @@ describe("approveClaim", () => {
     expect(saved?.decision).toBe("held");
     expect(saved?.payout).toBeNull();
     expect(saved?.events.map((e) => e.type)).toEqual(["created", "approved", "payout_failed"]);
+    expect(saved?.events.at(-1)?.detail).toBe("PayPal didn't take the payout: INSUFFICIENT_FUNDS, debug id dbg-9");
+  });
+
+  it("says when Remedy couldn't reach PayPal at all, so nothing left, and never calls it PayPal's answer", async () => {
+    const claim = held();
+    await store.putClaim(claim);
+    const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay: async () => Promise.reject(new TypeError("fetch failed")) });
+    expect(result).toMatchObject({ ok: false, status: 502, message: expect.stringMatching(/^Remedy couldn't reach PayPal\. Nothing was sent/) });
+    expect((await store.getClaim("RM-0412"))?.events.at(-1)?.detail).toBe("Remedy couldn't reach PayPal: fetch failed");
+  });
+
+  it("forecasts exactly what approve's checks stop: the account's other claim, and nothing once it is rejected", async () => {
+    const claim = held();
+    const other = sampleClaim({ id: "RM-2584", decision: "paid", photos: [{ key: "b/1.jpg", hash: "fedcba9876543210" }] });
+    await store.putClaim(claim);
+    await store.putClaim(other);
+    const forecast = approveConflicts(claim, await store.listClaims()).map((r) => r.text);
+    expect(forecast).toEqual(["This PayPal account already has a claim for this recall (RM-2584)"]);
+    const pay = vi.fn(async () => sent);
+    const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
+    expect(result).toMatchObject({ ok: false, status: 409, code: "send_check" });
+    expect(result.ok ? [] : result.reasons?.map((r) => r.text)).toEqual(forecast);
+    expect(pay).not.toHaveBeenCalled();
+    await store.putClaim({ ...other, decision: "rejected" });
+    expect(approveConflicts(claim, await store.listClaims())).toEqual([]);
   });
 });
 

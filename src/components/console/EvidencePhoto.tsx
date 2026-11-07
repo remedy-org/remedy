@@ -75,7 +75,17 @@ export function EvidencePhoto({
           {inner}
         </a>
       )}
-      <figcaption className="font-mono text-micro text-muted">{label}</figcaption>
+      <figcaption className="font-mono text-micro text-muted">
+        {label}
+        {/* The cue the zoom cursor alone didn't give; the button's name says it to screen readers. */}
+        {onOpen && (
+          <span aria-hidden="true" className="text-faint">
+            {" "}
+            · <span className="pointer-coarse:hidden">click</span>
+            <span className="hidden pointer-coarse:inline">tap</span> to enlarge
+          </span>
+        )}
+      </figcaption>
     </figure>
   );
 }

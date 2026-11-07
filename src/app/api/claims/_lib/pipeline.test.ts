@@ -18,6 +18,7 @@ import {
   LIMIT_HOLD,
   LimitReached,
   notYet,
+  openStart,
   othersFor,
   receivePhotos,
   recoverStale,
@@ -154,6 +155,23 @@ describe("createClaim limits", () => {
     // The real totals are full, yet another sandbox account still runs the samples; this one has used its own four.
     expect((await createClaim(deps, { recall, payer: { payerId: "JUDGE0000002", verified: true }, sample: demoSample("genuine")! })).demo).toBe(true);
     await expect(createClaim(deps, { recall, payer: owner, sample: demoSample("genuine")! })).rejects.toMatchObject({ refusal: { kind: "account", limit: 4 } });
+  });
+
+  it("stops counting a demo start left before its photo once its camera session is over; a sent one keeps counting", async () => {
+    deps.limits.accountDemosPerDay = 2;
+    const left = await createClaim(deps, { recall, payer: owner, sample: demoSample("wrong-code")! });
+    const sent = await createClaim(deps, { recall, payer: owner, sample: demoSample("genuine")! });
+    await receivePhotos(deps, { claimId: sent.id, payerId: owner.payerId, sessionId: sent.captureSession!.id, photos: [photo("00000000000000ff")] });
+    // Both count while the left one's camera session is still open.
+    await expect(createClaim(deps, { recall, payer: owner, sample: demoSample("wrong-code")! })).rejects.toMatchObject({ refusal: { kind: "account", limit: 2 } });
+    clock = new Date(T0.getTime() + 10 * 60_000);
+    const again = await createClaim(deps, { recall, payer: owner, sample: demoSample("wrong-code")! });
+    expect(again.id).not.toBe(left.id);
+    // Real claims never stop counting: an abandoned real start still uses the account's day.
+    deps.limits.accountClaimsPerDay = 1;
+    await createClaim(deps, { recall, payer: owner });
+    clock = new Date(T0.getTime() + 30 * 60_000);
+    await expect(createClaim(deps, { recall, payer: owner })).rejects.toMatchObject({ refusal: { kind: "account", limit: 1 } });
   });
 
   it("refuses a demo start once today's photo checks are used up, but still starts a real claim", async () => {
@@ -405,6 +423,20 @@ describe("demo rounds", () => {
     const genuine = await run("genuine", A, other);
     expect(genuine.decision).toBe("pending");
     expect((await checkClaim(deps, genuine.id)).decision).toBe("paid");
+  });
+
+  it("continues a sample's start still waiting for its photo, rather than leaving another empty one", async () => {
+    const first = await createClaim(deps, { recall, payer: judge, sample: demoSample("wrong-code")!, round: A });
+    const mine = async () => roundClaims(await store.listClaims(), recall.id, A, judge.payerId);
+    expect(openStart(await mine(), "wrong-code", clock)?.id).toBe(first.id);
+    // Another sample, another round, or a start whose photo was sent: a new claim.
+    expect(openStart(await mine(), "genuine", clock)).toBeNull();
+    expect(openStart(roundClaims(await store.listClaims(), recall.id, B, judge.payerId), "wrong-code", clock)).toBeNull();
+    await receivePhotos(deps, { claimId: first.id, payerId: judge.payerId, sessionId: first.captureSession!.id, photos: [photo("00000000000000ff")] });
+    expect(openStart(await mine(), "wrong-code", clock)).toBeNull();
+    // Past half its camera session, a start isn't worth continuing: the owner would run out of time.
+    await createClaim(deps, { recall, payer: judge, sample: demoSample("genuine")!, round: A });
+    expect(openStart(await mine(), "genuine", new Date(clock.getTime() + 5 * 60_000))).toBeNull();
   });
 
   it("files the repost only once this round's genuine photo was sent", async () => {

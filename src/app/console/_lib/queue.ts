@@ -5,7 +5,7 @@ import type { ClaimSummary } from "@/lib/store";
 import type { Recall } from "@/lib/types";
 import { sealedPhotoUrl } from "./photoToken";
 import { toRow, type ClaimRow } from "./view";
-import { canSee, canSeeClaim } from "./workspace";
+import { canSee, listedClaims } from "./workspace";
 
 /** The grid's rows for one company: each photo's URLs carry a sealed ticket, so thumbnails never open a claim file. */
 export function gridRows(claims: ClaimSummary[], recall: Recall, session: Pick<Session, "payerId">, now = Date.now()): ClaimRow[] {
@@ -37,6 +37,6 @@ export async function loadQueue(session: Pick<Session, "payerId">, wanted: strin
   if (!row) return null;
   const recall = await store.getRecall(row.id);
   if (!recall || !canSee(recall, session)) return null;
-  const claims = (await store.listClaims()).filter((c) => c.recallId === recall.id).filter(canSeeClaim(recall, session));
+  const claims = listedClaims(await store.listClaims(), recall, session);
   return { recall, rows: gridRows(claims, recall, session) };
 }

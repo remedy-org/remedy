@@ -4,6 +4,8 @@ import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { Button, CrossIcon } from "@/components/ui";
 import { Keys } from "./Keys";
+import { LinkedIds } from "./LinkedIds";
+import type { reviewLabels } from "./ReviewActions";
 
 export interface PhotoViewerProps {
   claimId: string;
@@ -18,6 +20,10 @@ export interface PhotoViewerProps {
   question?: { lead: string; text: string } | null;
   /** Held: approve or reject from here. The viewer closes and the panel's footer opens the same confirm. */
   onReview?: (mode: "approve" | "reject") => void;
+  /** The panel's names for those actions, and which leads (reviewLabels): the viewer says them the same way. */
+  labels?: ReturnType<typeof reviewLabels>;
+  /** Opens a claim the question names, in the panel. */
+  onOpen?: (id: string) => void;
   onClose: () => void;
 }
 
@@ -26,7 +32,7 @@ export interface PhotoViewerProps {
  * question that held it on top. ← and → move between the photos, Esc goes back to the panel (the dialog returns focus
  * to the thumbnail that opened it). On a phone it shows one photo at a time.
  */
-export function PhotoViewer({ claimId, photos, start, sample, code, question, onReview, onClose }: PhotoViewerProps) {
+export function PhotoViewer({ claimId, photos, start, sample, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const figures = useRef<(HTMLElement | null)[]>([]);
   const [current, setCurrent] = useState(start);
@@ -74,7 +80,7 @@ export function PhotoViewer({ claimId, photos, start, sample, code, question, on
           </h2>
           {question && (
             <p className="mt-1 text-ui text-muted">
-              <span className="text-text-2">{question.lead}:</span> {question.text}
+              <span className="text-text-2">{question.lead}:</span> <LinkedIds text={question.text} onOpen={onOpen} self={claimId} />
             </p>
           )}
         </div>
@@ -121,13 +127,16 @@ export function PhotoViewer({ claimId, photos, start, sample, code, question, on
       </div>
 
       <footer className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line px-5 py-3">
-        {onReview && (
+        {onReview && labels && (
+          // As in the panel's footer: Reject leads, and approve isn't offered, while approve's checks would stop the payout.
           <div className="flex flex-wrap gap-3">
-            <Button size="sm" onClick={() => review("approve")}>
-              Approve…
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => review("reject")}>
-              Reject…
+            {!labels.blocked && (
+              <Button size="sm" onClick={() => review("approve")}>
+                {labels.approve}
+              </Button>
+            )}
+            <Button size="sm" variant={labels.blocked ? "primary" : "secondary"} onClick={() => review("reject")}>
+              {labels.reject}
             </Button>
           </div>
         )}

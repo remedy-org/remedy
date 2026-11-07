@@ -212,8 +212,8 @@ function timelineSentence(d: ClaimRow): string {
   return `From the photos: ${steps.join(", ") || "checking"}${tail}`;
 }
 
-/** The track, then the time to pay as a chip ("0:41"). A sample claim was never paid, so it shows the model's time
- * from the eval run instead, unboxed. */
+/** The track, then the time to pay as a chip ("0:41"). A claim with no payout to time (held, refused, a sample) shows
+ * the model's answer time instead, unboxed, in the same "0:03" format; the hover card says which it is. */
 export function TimelineCell({ data }: Cell) {
   if (!data) return null;
   if (!data.timeline) return <span className="font-mono text-micro text-faint">{data.photoCount ? "—" : "No photos yet"}</span>;
@@ -228,7 +228,7 @@ export function TimelineCell({ data }: Cell) {
       ) : data.modelSec !== null ? (
         // No payout to time (held, refused, or a sample): the model's answer time, whenever it answered.
         <span className="font-mono text-micro text-faint tabular-nums" aria-hidden="true">
-          {data.modelSec} s
+          {duration(data.modelSec)}
         </span>
       ) : null}
     </span>
@@ -254,7 +254,7 @@ export function PayoutCell({ data }: Cell) {
   if (!data) return null;
   if (data.payoutFailedAt) {
     return (
-      <span className="flex h-full flex-col justify-center leading-tight" title={`PayPal didn't take the payout at ${formatTime(data.payoutFailedAt)}: nothing was paid`}>
+      <span className="flex h-full flex-col justify-center leading-tight" title={`The payout wasn't sent at ${formatTime(data.payoutFailedAt)}: nothing was paid`}>
         <span className="inline-flex items-center gap-1.5 text-ui text-stop">
           <span className="size-1.5 shrink-0 rounded-full bg-stop" aria-hidden="true" />
           Not sent
@@ -319,10 +319,11 @@ export function CardRow({ data }: Cell) {
           </span>
           <StatusPill status={data.decision} />
         </span>
-        <span className="flex items-center gap-3">
-          {data.bars ? <Barcode bars={data.bars} /> : <span className="font-mono text-micro text-faint">{formatTime(data.createdAt)}</span>}
-          {data.toPay !== null && <span className="font-mono text-micro text-muted tabular-nums">{duration(data.toPay)}</span>}
-          <span className="ml-auto">{data.amount ? <AmountText amount={data.amount} muted={data.decision !== "paid" || data.seeded} /> : <span className="text-faint">—</span>}</span>
+        {/* The amount always fits: the time to pay goes first on a narrow card (it is in the evidence too). */}
+        <span className="flex min-w-0 items-center gap-3">
+          {data.bars ? <Barcode bars={data.bars} /> : <span className="min-w-0 truncate font-mono text-micro text-faint">{formatTime(data.createdAt)}</span>}
+          {data.toPay !== null && <span className="font-mono text-micro text-muted tabular-nums max-[359px]:hidden">{duration(data.toPay)}</span>}
+          <span className="ml-auto shrink-0">{data.amount ? <AmountText amount={data.amount} muted={data.decision !== "paid" || data.seeded} /> : <span className="text-faint">—</span>}</span>
         </span>
       </span>
     </span>
@@ -354,10 +355,11 @@ export function ChecksTooltip({ data, location, value }: CustomTooltipProps<Clai
           <p className="micro text-faint">{g.title}</p>
           <ul className="mt-1.5 flex flex-col gap-1">
             {g.bars.map((b) => (
-              <li key={b.id} className="flex items-center gap-2.5 text-ui">
+              // The check's full name always; a long state wraps to its own line under it.
+              <li key={b.id} className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-ui">
                 <Bar bar={b} />
-                <span className="min-w-0 flex-1 truncate text-text-2">{b.label}</span>
-                <span className="shrink-0 text-micro text-muted">{barNote(data, b)}</span>
+                <span className="flex-1 whitespace-nowrap text-text-2">{b.label}</span>
+                <span className="ml-auto text-micro text-muted">{barNote(data, b)}</span>
               </li>
             ))}
           </ul>
@@ -396,6 +398,20 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Cl
         ))}
       </dl>
       {tail && <p className="mt-2 text-micro text-muted">{tail}</p>}
+      {/* What the time beside the track measures. */}
+      {(data.toPay !== null || data.modelSec !== null) && (
+        <p className="mt-2 border-t border-line pt-2 text-micro text-muted">
+          {data.toPay !== null ? (
+            <>
+              The boxed <span className="font-mono">{duration(data.toPay)}</span> is photos to PayPal payout.
+            </>
+          ) : (
+            <>
+              The grey <span className="font-mono">{duration(data.modelSec!)}</span> is the model&apos;s answer time: there is no payout to time.
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }

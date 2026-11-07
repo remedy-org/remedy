@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { canSee, canSeeClaim, pickRecall } from "@/app/console/_lib/workspace";
+import { canSee, listedClaims, pickRecall } from "@/app/console/_lib/workspace";
 import { getAppStore } from "@/lib/demo";
 import type { Session } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
@@ -34,7 +34,7 @@ export async function loadInsights(session: Session, wanted: string | string[] |
   const recall = pickRecall(recalls, wanted);
   if (!recall) return { recall: null, recalls, claims: [], unreadable: [] };
 
-  const index = (await store.listClaims()).filter((r) => r.recallId === recall.id).filter(canSeeClaim(recall, session));
+  const index = listedClaims(await store.listClaims(), recall, session);
   const read = await Promise.allSettled(index.map((r) => (r.version === undefined ? store.getClaim(r.id) : claimAt(r.id, r.version))));
   const claims: Claim[] = [];
   const unreadable: string[] = [];

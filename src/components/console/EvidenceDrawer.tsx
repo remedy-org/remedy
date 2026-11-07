@@ -11,8 +11,9 @@ import { api } from "./api";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { formatClock, formatTime } from "./format";
 import { Keys } from "./Keys";
+import { LinkedIds } from "./LinkedIds";
 import { PhotoViewer } from "./PhotoViewer";
-import { payoutFailure, ReviewActions, type ReviewIntent } from "./ReviewActions";
+import { payoutFailure, ReviewActions, reviewLabels, type ReviewIntent } from "./ReviewActions";
 
 // The evidence for one claim: on laptops a non-modal panel docked beside the grid (Mercury's detail card), so ↑/↓
 // keeps walking the queue; on phones and tablets a full-screen modal. Both show the same content: the money's
@@ -32,6 +33,9 @@ export interface EvidenceProps {
   onDecided?: (id: string) => void;
   // After a decision: the next held claim in the list, null when none is left, undefined before.
   nextHeld?: string | null;
+  // The claim this one was opened from through a link in its evidence: the header offers the way back.
+  back?: string | null;
+  onBack?: () => void;
 }
 
 // Claims this page view already loaded, by id and version: walking back up the queue costs nothing.
@@ -87,7 +91,7 @@ function useClaim(id: string, version: number | null | undefined) {
 }
 
 /** Laptops: an aside beside the grid. No backdrop, the grid stays live; Esc closes it (ClaimsQueue returns focus). */
-export function EvidencePanel({ claimId, version, onClose, intent, onOpen, onDecided, nextHeld }: EvidenceProps) {
+export function EvidencePanel({ claimId, version, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
   if (!claimId) return null;
   return (
     <aside
@@ -95,13 +99,24 @@ export function EvidencePanel({ claimId, version, onClose, intent, onOpen, onDec
       aria-label={`Evidence for ${claimId}`}
       className="evidence-panel flex h-full w-[440px] shrink-0 flex-col overflow-hidden rounded-card bg-surface shadow-float transition-[translate,opacity] duration-160 ease-out-expo starting:translate-x-4 starting:opacity-0"
     >
-      <EvidenceContent id={claimId} version={version} onClose={onClose} intent={intent} onOpen={onOpen} onDecided={onDecided} nextHeld={nextHeld} variant="panel" />
+      <EvidenceContent
+        id={claimId}
+        version={version}
+        onClose={onClose}
+        intent={intent}
+        onOpen={onOpen}
+        onDecided={onDecided}
+        nextHeld={nextHeld}
+        back={back}
+        onBack={onBack}
+        variant="panel"
+      />
     </aside>
   );
 }
 
 /** Phones and tablets: a full-screen modal dialog (a sheet from the right on tablets). */
-export function EvidenceDrawer({ claimId, version, onClose, intent, onOpen, onDecided, nextHeld }: EvidenceProps) {
+export function EvidenceDrawer({ claimId, version, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -132,6 +147,8 @@ export function EvidenceDrawer({ claimId, version, onClose, intent, onOpen, onDe
           onOpen={onOpen}
           onDecided={onDecided}
           nextHeld={nextHeld}
+          back={back}
+          onBack={onBack}
           variant="sheet"
         />
       )}
@@ -147,6 +164,8 @@ function EvidenceContent({
   onOpen,
   onDecided,
   nextHeld,
+  back,
+  onBack,
   variant,
 }: Omit<EvidenceProps, "claimId"> & { id: string; variant: "panel" | "sheet" }) {
   const router = useRouter();
@@ -154,6 +173,9 @@ function EvidenceContent({
   // The decision this view just saved: said in the footer, which then offers the next held claim.
   const [saved, setSaved] = useState<{ id: string; decision: DrawerClaim["decision"]; at: string } | null>(null);
   const done = (c: DrawerClaim) => {
+    // Another claim's evidence may now read differently (approving this one makes the account's other claim stop on
+    // approve, rejecting it frees it): every claim loads afresh from here.
+    seen.clear();
     replace(c);
     setSaved({ id: c.id, decision: c.decision, at: new Date().toISOString() });
     onDecided?.(c.id);
@@ -184,6 +206,7 @@ function EvidenceContent({
     setAct(intent);
   }
   const review = claim?.review ? (mode: ReviewIntent["mode"]) => setAct((i) => ({ mode, n: (i?.n ?? 0) + 1 })) : undefined;
+  const labels = claim?.review ? reviewLabels(claim) : null;
   const body = claim ?? stale;
   const pad = variant === "panel" ? "px-5" : "px-4 sm:px-6";
 
@@ -191,6 +214,11 @@ function EvidenceContent({
     <div className="flex h-full min-h-0 flex-col" aria-busy={load.state === "loading" || undefined}>
       <header className={clsx("flex items-start gap-3 border-b border-line py-3", pad)}>
         <div className="min-w-0 flex-1">
+          {back && onBack && (
+            <button type="button" onClick={onBack} className="-mt-1 mb-1 inline-flex min-h-8 items-center gap-1.5 text-ui text-muted hover:text-text">
+              <span aria-hidden="true">←</span> Back to <span className="font-mono">{back}</span>
+            </button>
+          )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             {/* A programmatic focus target only (the sheet's showModal lands here): no ring, which on a phone read as a
                 stray keyboard selection. */}
@@ -252,7 +280,7 @@ function EvidenceContent({
 
       {claim?.review && (
         <footer className={clsx("border-t border-line bg-surface py-4", pad)}>
-          <ReviewActions key={claim.id} claim={claim} onDone={done} onFailed={() => router.refresh()} intent={act} onMode={onMode} />
+          <ReviewActions key={claim.id} claim={claim} onDone={done} onFailed={() => router.refresh()} intent={act} onMode={onMode} onOpen={onOpen} />
         </footer>
       )}
       {claim && justSaved && (
@@ -278,8 +306,8 @@ function EvidenceContent({
       {variant === "panel" && (
         <p className={clsx("flex h-9 shrink-0 items-center gap-4 border-t border-line font-mono text-[11px] text-faint [@media(max-height:960px)]:h-7", pad)} aria-hidden="true">
           <Keys k={["↑", "↓"]}>Next claim</Keys>
-          {claim?.review && <Keys k={["A"]}>Approve</Keys>}
-          {claim?.review && <Keys k={["R"]}>Reject</Keys>}
+          {labels && !labels.blocked && <Keys k={["A"]}>{labels.approveKey}</Keys>}
+          {labels && <Keys k={["R"]}>Reject</Keys>}
           <Keys k={["Esc"]}>Close</Keys>
         </p>
       )}
@@ -319,7 +347,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
   if (failure) {
     return [
       ...steps,
-      { label: "Not sent", at: failure.at, failed: true, note: `PayPal didn't take the payout at ${formatClock(failure.at)} UTC: nothing was paid, and the claim is still held.` },
+      { label: "Not sent", at: failure.at, failed: true, note: `${failure.what} at ${formatClock(failure.at)} UTC: nothing was paid, and the claim is still held.` },
       { label: "Settled", at: null },
     ];
   }
@@ -376,7 +404,7 @@ function deciding(claim: DrawerClaim): { lead: string; text: string; evidence: s
   const failure = payoutFailure(claim);
   const refused = claim.refused;
   if (failure && (!refused || failure.at > refused.at)) {
-    return { lead: "Why it's held · PayPal", text: `PayPal didn't take the payout at ${formatClock(failure.at)} UTC, so nothing was paid. Try again, or reject it.`, evidence: null };
+    return { lead: "Why it's held · PayPal", text: `${failure.what} at ${formatClock(failure.at)} UTC. ${failure.next}`, evidence: null };
   }
   if (refused) {
     return {
@@ -411,16 +439,33 @@ function deciding(claim: DrawerClaim): { lead: string; text: string; evidence: s
   };
 }
 
-/** Held or refused: what decided it, first, with the model's own words, before the photos and the full list. */
-function Deciding({ claim }: { claim: DrawerClaim }) {
+/** Held or refused: what decided it, first, with the model's own words, then the five checks in one line (the grid's
+ * count), before the photos and the full list. Claim ids it names open in the panel. */
+function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: string) => void }) {
   const d = deciding(claim);
   if (!d) return null;
   return (
     <section aria-label="What decided it" className={clsx("rounded-control border-l-2 px-3.5 py-3", claim.decision === "held" ? "border-hold bg-hold-soft" : "border-stop bg-stop-soft")}>
       <p className="micro text-muted">{d.lead}</p>
-      <p className="mt-1.5 text-ui text-text">{d.text}</p>
+      <p className="mt-1.5 text-ui text-text">
+        <LinkedIds text={d.text} onOpen={onOpen} self={claim.id} />
+      </p>
       {d.evidence && <q className="mt-1.5 block font-sans text-ui leading-[1.55] text-muted">{d.evidence}</q>}
+      {claim.five && <p className="mt-2 text-ui text-muted">{claim.five}</p>}
     </section>
+  );
+}
+
+/** Under a check list: the passed rows' details, folded by default so what held or failed is in view first. */
+function PassedToggle({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
+  if (!count) return null;
+  return (
+    <button type="button" aria-expanded={open} onClick={onToggle} className="-mt-1 inline-flex min-h-8 items-center gap-1.5 self-start text-ui text-muted hover:text-text">
+      <span aria-hidden="true" className={clsx("inline-block transition-transform", open && "rotate-90")}>
+        ›
+      </span>
+      {open ? "Hide what the passed checks found" : `Show what the ${count === 1 ? "passed check" : `${count} passed checks`} found`}
+    </button>
   );
 }
 
@@ -445,12 +490,17 @@ function Evidence({
   const [viewing, setViewing] = useState<{ id: string; n: number } | null>(null);
   const viewer = viewing?.id === claim.id ? viewing.n : null;
   const d = deciding(claim);
+  // The passed rows' details, open or folded, per claim: ↑/↓ to the next claim folds them again.
+  const [unfolded, setUnfolded] = useState<{ id: string; pre: boolean; model: boolean }>({ id: claim.id, pre: false, model: false });
+  const open = unfolded.id === claim.id ? unfolded : { id: claim.id, pre: false, model: false };
+  const toggle = (which: "pre" | "model") => setUnfolded({ ...open, [which]: !open[which] });
+  const link = (text: string) => <LinkedIds text={text} onOpen={onOpen} self={claim.id} />;
   // The summary is already quoted under the check it explains (Same item, Real photo): don't print it twice.
   const summary = claim.summary && !claim.checks.some((c) => c.evidence === claim.summary) ? claim.summary : null;
   return (
     <div className={clsx("flex flex-col gap-7 py-5", pad)}>
       {/* What decided it, then the photos, so a laptop's first view of the panel holds both. */}
-      <Deciding claim={claim} />
+      <Deciding claim={claim} onOpen={onOpen} />
       <section ref={photosRef} className="flex scroll-mt-4 flex-col gap-3" aria-label="Photos">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <ExhibitLabel leader="right" leaderLength={24}>
@@ -490,6 +540,8 @@ function Evidence({
             sample={sample}
             code={claim.code}
             question={d && { lead: d.lead, text: d.text }}
+            labels={claim.review ? reviewLabels(claim) : undefined}
+            onOpen={onOpen}
             onReview={onReview}
             onClose={() => setViewing(null)}
           />
@@ -503,8 +555,9 @@ function Evidence({
       <Section title="Before the model" aside="No AI">
         <CheckProgress
           label={`Pre-checks for ${claim.id}`}
-          steps={claim.preChecks.map((p) => ({ id: p.id, label: p.label, state: PRE_STATE[p.state], detail: p.detail }))}
+          steps={claim.preChecks.map((p) => ({ id: p.id, label: p.label, state: PRE_STATE[p.state], detail: p.state === "pass" && !open.pre ? undefined : link(p.detail) }))}
         />
+        <PassedToggle count={claim.preChecks.filter((p) => p.state === "pass").length} open={open.pre} onToggle={() => toggle("pre")} />
       </Section>
 
       <Section title="The model's answers" aside={answers.length ? `${passed} of ${answers.length} passed` : claim.checks.length ? "No answer" : undefined}>
@@ -516,14 +569,16 @@ function Evidence({
                 id: c.id,
                 label: c.label,
                 state: c.outcome === "reject" ? "reject" : c.outcome,
-                detail: (
-                  <>
-                    {c.rule}
-                    {c.evidence && <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">{c.evidence}</q>}
-                  </>
-                ),
+                detail:
+                  c.outcome === "pass" && !open.model ? undefined : (
+                    <>
+                      {link(c.rule)}
+                      {c.evidence && <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">{c.evidence}</q>}
+                    </>
+                  ),
               }))}
             />
+            <PassedToggle count={claim.checks.filter((c) => c.outcome === "pass").length} open={open.model} onToggle={() => toggle("model")} />
             {summary && (
               <p className="rounded-control bg-surface-2 px-4 py-3 text-ui text-muted">
                 <span className="micro mb-1 block text-muted">Model summary</span>

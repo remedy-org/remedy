@@ -4,9 +4,10 @@ import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from
 import clsx from "clsx";
 import { AlertIcon, Button, ErrorState, Field, Textarea } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
-import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
+import type { DrawerClaim, PayoutFailureWords, ReviewedClaim } from "@/app/console/_lib/drawer";
 import { api } from "./api";
 import { formatClock } from "./format";
+import { idsIn, LinkedIds } from "./LinkedIds";
 
 type Mode = "idle" | "approve" | "reject";
 
@@ -27,19 +28,40 @@ export interface ReviewIntent {
   n: number;
 }
 
-type PayoutFailure = { at: string; detail: string };
+type PayoutFailure = PayoutFailureWords & { at: string; raw: string };
 
 const typingIn = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
 
-/** A held claim whose last payout attempt PayPal refused: when, and PayPal's answer. The panel keeps saying so (and
- * offers to try again) until a payout goes through; the claim's history keeps it after. */
+const NETWORK: PayoutFailureWords = { kind: "network", what: "Remedy couldn't reach PayPal (a network error)", next: "Nothing was sent, so it's safe to try again." };
+const REFUSED: PayoutFailureWords = { kind: "paypal", what: "PayPal didn't take the payout", next: "Nothing was sent." };
+
+/** A held claim whose last payout attempt failed: when, what happened in words (drawer.ts), and the raw answer for
+ * support. The panel keeps saying so (and offers to try again) until a payout goes through; the history keeps it after. */
 export function payoutFailure(claim: Pick<DrawerClaim, "decision" | "events">): PayoutFailure | null {
   if (claim.decision !== "held") return null;
   const last = [...claim.events].reverse().find((e) => e.type === "payout_failed" || e.type === "payout_sent");
   if (last?.type !== "payout_failed") return null;
-  // PayPal's own answer: kept apart from the plain line by the drawer (drawer.ts), or after it on older views.
-  const raw = last.raw ?? last.detail.replace(/^PayPal didn't take the payout[:;]\s*/, "");
-  return { at: last.at, detail: raw.startsWith("nothing was paid") ? "" : raw };
+  return { at: last.at, ...(last.failure ?? REFUSED), raw: last.raw ?? "" };
+}
+
+const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+
+/**
+ * One name for each review action, the same on the panel's buttons, the photo viewer's and the key hints: "Pay $29.99
+ * (sandbox)…" (or "Try again: pay…" after a payout that failed on the way to PayPal), "Reject…"; a seeded sample's are
+ * "Approve the sample…" and "Reject the sample…", since nothing is paid. blocked: approve's checks would stop the payout
+ * now (DrawerClaim.stops), so Reject leads and approve isn't offered as a button.
+ */
+export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "sandbox" | "decision" | "events" | "stops">) {
+  const sample = Boolean(claim.review?.sample);
+  const failure = payoutFailure(claim);
+  const blocked = !sample && claim.stops.length > 0;
+  return {
+    blocked,
+    approve: sample ? "Approve the sample…" : `${failure ? "Try again: pay" : "Pay"} ${claim.amount}${claim.sandbox ? " (sandbox)" : ""}…`,
+    approveKey: sample ? "Approve" : "Pay",
+    reject: sample ? "Reject the sample…" : "Reject…",
+  };
 }
 
 /**
@@ -55,6 +77,7 @@ export function ReviewActions({
   onFailed,
   intent,
   onMode,
+  onOpen,
 }: {
   claim: DrawerClaim;
   onMode?: (mode: Mode) => void;
@@ -62,6 +85,8 @@ export function ReviewActions({
   // A refused approve still writes the claim's history (payout_failed, approve_refused): the panel reloads it.
   onFailed?: () => void;
   intent?: ReviewIntent | null;
+  // Opens a claim a refusal names (the account's other claim) in the same panel.
+  onOpen?: (id: string) => void;
 }) {
   // A or R pressed while the panel was still loading opens the confirm as soon as it mounts.
   const [mode, setMode] = useState<Mode>(intent?.mode ?? "idle");
@@ -71,9 +96,12 @@ export function ReviewActions({
   const [error, setError] = useState<ApiError | null>(null);
   const [reason, setReason] = useState("");
   const [sample, setSample] = useState<string | null>(null);
-  // PayPal refused the payout just now: shown at once, as the reloaded claim will show it (payoutFailure), not as a
-  // second design of the same message.
+  // The payout failed just now: shown at once, as the reloaded claim will show it (payoutFailure), not as a second
+  // design of the same message.
   const [refused, setRefused] = useState<PayoutFailure | null>(null);
+  // An approve the checks run again stopped: said in one result line, as a saved decision is (EvidenceDrawer), and kept
+  // through the reload that follows, until the next action.
+  const [notPaid, setNotPaid] = useState<{ at: string; reasons: string[] } | null>(null);
   // A press on Pay that didn't send: the second click of a double-click on Approve. Said, never silent.
   const [dropped, setDropped] = useState(false);
   const form = useRef<HTMLFormElement>(null);
@@ -92,6 +120,7 @@ export function ReviewActions({
     if (intent && !busy) {
       setSample(null);
       setError(null);
+      setNotPaid(null);
       setDropped(false);
       setMode(intent.mode);
     }
@@ -105,17 +134,27 @@ export function ReviewActions({
   const review = claim.review;
   if (!review) return null;
   const failure = payoutFailure(claim) ?? refused;
+  const labels = reviewLabels(claim);
+  // The claim the stopping check names (the account's other claim): the footer offers to open it.
+  const other = idsIn(claim.stops.join(" ")).find((id) => id !== claim.id);
 
   const run = async (url: string, json?: unknown) => {
     setBusy(true);
     setError(null);
+    setNotPaid(null);
     const result = await api<ReviewedClaim>(url, { method: "POST", json });
     setBusy(false);
     if (!result.ok) {
       if (result.status === 502 && mode === "approve") {
-        // PayPal didn't take it: back to the held claim's buttons, under the titled alert the reload keeps showing.
-        setRefused({ at: new Date().toISOString(), detail: "" });
+        // The payout didn't reach PayPal or PayPal didn't take it: back to the held claim's buttons, under the titled
+        // alert the reload keeps showing.
+        setRefused({ at: new Date().toISOString(), ...(result.error.error.startsWith("Remedy couldn't reach PayPal") ? NETWORK : REFUSED), raw: "" });
         setBack("approve");
+        setMode("idle");
+      } else if (result.status === 409 && mode === "approve" && result.error.reasons?.length) {
+        // The checks run again stopped the payout: one result line says so, and Reject is in reach.
+        setNotPaid({ at: new Date().toISOString(), reasons: result.error.reasons });
+        setBack("reject");
         setMode("idle");
       } else {
         setError(result.error);
@@ -150,9 +189,9 @@ export function ReviewActions({
     setError(null);
     setDropped(false);
   };
-  // The checks run again on approve stopped the payout, and nothing was approved since: approving again meets the same
-  // conflict, so Reject leads.
-  const stuck = Boolean(claim.refused) && !failure;
+  // The checks run again on approve would stop the payout (they did, or would now): Reject leads.
+  const stuck = labels.blocked || Boolean(notPaid);
+  const openReject = () => (setSample(null), setNotPaid(null), setMode("reject"));
 
   return (
     <div
@@ -166,7 +205,7 @@ export function ReviewActions({
           reset();
         }
         // A again pays, as the shortcuts say (A opened this confirm); a held A's repeats don't.
-        if ((e.key === "a" || e.key === "A") && mode === "approve" && !busy && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !typingIn(e.target)) {
+        if ((e.key === "a" || e.key === "A") && mode === "approve" && !labels.blocked && !busy && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !typingIn(e.target)) {
           e.preventDefault();
           run(`${base}/approve`);
         }
@@ -183,45 +222,85 @@ export function ReviewActions({
               <span className="micro mr-2 text-text-2">Sample result</span>
               {sample}
             </p>
+          ) : notPaid ? (
+            // The same result line as a saved decision's (EvidenceDrawer), for the approve that paid nothing.
+            <p role="status" className="text-ui text-muted">
+              <span className="font-medium text-text">
+                Approved · not paid at <span className="font-mono">{formatClock(notPaid.at)}</span> UTC:
+              </span>{" "}
+              <LinkedIds text={lowerFirst(notPaid.reasons.join("; "))} onOpen={onOpen} self={claim.id} />. Nothing was sent.
+            </p>
           ) : failure && !error && !payoutFailure(claim) ? (
             // Just now, before the panel reloads the claim; after it, the panel's top box says it (EvidenceDrawer).
-            <div className="flex gap-3 rounded-card border border-line bg-stop-soft px-4 py-3">
+            <div role="status" className="flex gap-3 rounded-card border border-line bg-stop-soft px-4 py-3">
               <AlertIcon className="mt-0.5 shrink-0 text-stop" />
               <div className="min-w-0 text-ui text-muted">
                 <p className="font-medium text-text">
-                  PayPal didn&apos;t take the payout at <span className="font-mono">{formatClock(failure.at)}</span> UTC
+                  {failure.what} at <span className="font-mono">{formatClock(failure.at)}</span> UTC
                 </p>
-                <p className="mt-1">Nothing was paid and the claim is still held. Try again, or reject it.</p>
+                <p className="mt-1">{failure.next} The claim is still held: try again, or reject it.</p>
               </div>
             </div>
-          ) : failure?.detail && !error ? (
+          ) : failure?.raw && !error ? (
+            // The plain words lead in the panel's top box; the service's own answer is for support.
             <details className="text-micro text-faint">
-              <summary className="cursor-pointer hover:text-muted">PayPal&apos;s answer at {formatClock(failure.at)} UTC</summary>
-              <p className="mt-1 font-mono break-words">{failure.detail}</p>
+              <summary className="cursor-pointer hover:text-muted">Details for support · {formatClock(failure.at)} UTC</summary>
+              <p className="mt-1 font-mono break-words">{failure.raw}</p>
             </details>
           ) : null}
           <div className="flex flex-wrap gap-3">
-            <Button
-              variant={stuck ? "secondary" : "primary"}
-              onClick={() => (setSample(null), setMode("approve"))}
-              autoFocus={back === "approve"}
-              className="flex-1 sm:flex-none"
-            >
-              {review.sample ? "Approve" : `${failure || stuck ? "Try again: pay" : "Approve and pay"} ${claim.amount}${claim.sandbox ? " sandbox" : ""}`}
+            {labels.blocked ? (
+              // Approve isn't a button while its checks would stop the payout: Reject leads, and the claim they name opens
+              // beside it. The A key still opens the confirm, which says why.
+              <>
+                <Button key="reject" onClick={openReject} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
+                  {labels.reject}
+                </Button>
+                {other && onOpen && (
+                  <Button key="open" variant="secondary" onClick={() => onOpen(other)} className="flex-1 sm:flex-none">
+                    Open <span className="font-mono">{other}</span>
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                <Button
+                  key="approve"
+                  variant={stuck ? "secondary" : "primary"}
+                  onClick={() => (setSample(null), setNotPaid(null), setMode("approve"))}
+                  autoFocus={back === "approve"}
+                  className="flex-1 sm:flex-none"
+                >
+                  {labels.approve}
+                </Button>
+                <Button key="reject" variant={stuck ? "primary" : "secondary"} onClick={openReject} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
+                  {labels.reject}
+                </Button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {mode === "approve" && labels.blocked && (
+        <>
+          <p className="text-ui text-muted">
+            <span className="font-medium text-text">Approve won&apos;t pay:</span>{" "}
+            <LinkedIds text={lowerFirst(claim.stops.join("; "))} onOpen={onOpen} self={claim.id} />. Remedy runs this check again on approve and would stop the payout, so
+            nothing would be sent.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={openReject} autoFocus className="flex-1 sm:flex-none">
+              {labels.reject}
             </Button>
-            <Button
-              variant={stuck ? "primary" : "secondary"}
-              onClick={() => (setSample(null), setMode("reject"))}
-              autoFocus={back === "reject"}
-              className="flex-1 sm:flex-none"
-            >
-              Reject
+            <Button variant="secondary" onClick={reset} className="flex-1 sm:flex-none">
+              Cancel
             </Button>
           </div>
         </>
       )}
 
-      {mode === "approve" && (
+      {mode === "approve" && !labels.blocked && (
         <>
           {review.sample ? (
             <p className="text-ui text-muted">
@@ -248,7 +327,7 @@ export function ReviewActions({
             ) : (
               <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Paying through PayPal" autoFocus className="flex-1 sm:flex-none">
                 Pay {claim.amount}
-                {claim.sandbox ? " sandbox" : ""}
+                {claim.sandbox ? " (sandbox)" : ""}
               </Button>
             )}
             <Button variant="secondary" onClick={reset} disabled={busy} className="flex-1 sm:flex-none">
@@ -262,7 +341,8 @@ export function ReviewActions({
         <form
           ref={form}
           noValidate
-          className="flex flex-col gap-4"
+          // Compact, so the photos it is about keep their room above it: the code to read is beside them (TagCode).
+          className="flex flex-col gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             if (reason.trim().length < REASON_MIN) {
@@ -275,12 +355,7 @@ export function ReviewActions({
         >
           <Field
             label="Why it's rejected"
-            hint={
-              <>
-                Tag must read <span className="font-mono font-medium text-text">{claim.code}</span>
-              </>
-            }
-            help="The owner sees this on their claim page."
+            hint="The owner reads this on their claim page"
             error={error?.fields?.reason}
           >
             {(f) => <Textarea {...f} rows={2} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={REASON_MIN} />}

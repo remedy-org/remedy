@@ -1,9 +1,9 @@
 import { PayPalError } from "@/lib/paypal/client";
 import { sendPayout, type PayoutStatus } from "@/lib/paypal/payouts";
 import { sendCheck } from "@/lib/rule";
-import type { Store } from "@/lib/store";
+import type { ClaimSummary, Store } from "@/lib/store";
 import type { Claim, Reason, Recall } from "@/lib/types";
-import { othersFor, payoutNote } from "@/app/api/claims/_lib/pipeline";
+import { othersFor, payoutFailedDetail, payoutNote } from "@/app/api/claims/_lib/pipeline";
 import { formatMoney, reviewReasonText } from "./view";
 
 // A person's decision on a held claim. Kept free of Next imports so the money path is unit-tested. Every save goes
@@ -37,6 +37,16 @@ async function notHeld(store: Store, id: string): Promise<ReviewResult> {
 // answers what would happen but saves nothing: no payout to a fake account, and one judge's reject doesn't empty the
 // next judge's review queue.
 
+/**
+ * What the checks run again on approve would stop the payout for, from index.json's rows: the same set the owner's
+ * pipeline checked against (othersFor; demo claims meet only their own round's). Empty means approve would pay. The
+ * evidence panel shows it before the decision, so what the reviewer reads is what approve will do.
+ */
+export function approveConflicts(claim: Claim, rows: ClaimSummary[]): Reason[] {
+  // sendCheck treats any decision but pending as "already decided"; a held claim is exactly what a person may send.
+  return sendCheck({ claim: { ...claim, decision: "pending" }, others: othersFor(claim, rows) });
+}
+
 // Approve and pay: a fresh read of the claim and the index, sendCheck, then sendPayout with the claim's payoutKey
 // (PayPal's request id), as the owner's pipeline does, so a retried approve can never pay twice. If PayPal fails, the
 // claim stays held.
@@ -52,10 +62,7 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
     };
   }
 
-  // sendCheck treats any decision but pending as "already decided"; a held claim is exactly what a person may send.
-  // The same set the owner's pipeline checked against: demo claims meet only their own round's.
-  const others = othersFor(claim, await store.listClaims());
-  const conflicts = sendCheck({ claim: { ...claim, decision: "pending" }, others });
+  const conflicts = approveConflicts(claim, await store.listClaims());
   if (conflicts.length) {
     // The conflicts join the claim's reasons as holds, as the pipeline's own sendCheck does, so the queue and the
     // pre-checks show what stopped the payout. Appended: the reason it was first held still leads (decidingReason).
@@ -75,9 +82,9 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
     sent = await pay({ claimId: claim.id, payoutKey: claim.payoutKey, payerId: claim.payerId, amount: recall.refund, note: payoutNote(recall, claim) });
   } catch (e) {
     const reference = e instanceof PayPalError ? (e.debugId ?? undefined) : undefined;
-    const detail = e instanceof Error ? e.message : String(e);
-    await store.updateClaim(claim.id, (c) => append(c, new Date(), "payout_failed", `PayPal didn't take the payout: ${detail}`));
-    return { ok: false, status: 502, code: "paypal", message: "PayPal didn't take the payout. The claim is still held and nothing was paid; try again.", reference };
+    await store.updateClaim(claim.id, (c) => append(c, new Date(), "payout_failed", payoutFailedDetail(e)));
+    const what = e instanceof PayPalError ? "PayPal didn't take the payout" : "Remedy couldn't reach PayPal";
+    return { ok: false, status: 502, code: "paypal", message: `${what}. Nothing was sent and the claim is still held; it's safe to try again.`, reference };
   }
 
   // PayPal has the money, so the claim says paid whatever happened to it meanwhile. An approve that got here first

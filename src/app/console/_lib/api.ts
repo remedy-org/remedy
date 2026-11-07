@@ -12,6 +12,8 @@ export interface ApiError {
   reference?: string;
   // A recall that already exists: its id, when this workspace can open it.
   existing?: string;
+  // An approve the checks stopped: what they found, in the history's words.
+  reasons?: string[];
 }
 
 export const fail = (status: number, error: string, extra: Omit<ApiError, "error"> = {}) => NextResponse.json<ApiError>({ error, ...extra }, { status });

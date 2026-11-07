@@ -109,6 +109,15 @@ export function duplicateOf(claim: Pick<Claim, "id" | "demo" | "payerId" | "demo
 export const roundClaims = (rows: ClaimSummary[], recallId: string, round: string, payerId: string) =>
   rows.filter((r) => r.demo === true && r.recallId === recallId && r.demoRound === round && r.payerId === payerId);
 
+/**
+ * A start of this sample in the round that is still waiting for its photo, with at least half its camera session left:
+ * "Run this sample" pressed again (after Back, or in a second tab) continues it instead of leaving another empty start.
+ */
+export function openStart(round: ClaimSummary[], sample: string, now: Date): ClaimSummary | null {
+  const fresh = (r: ClaimSummary) => now.getTime() - Date.parse(r.createdAt) < (CAPTURE_SESSION_MINUTES * 60_000) / 2;
+  return round.find((r) => r.sample === sample && r.decision === "pending" && r.photoHashes.length === 0 && fresh(r)) ?? null;
+}
+
 /** Why this sample can't be filed in the round yet, or null: the repost needs the round's genuine photo already sent. */
 export function notYet(sample: DemoSample, round: ClaimSummary[]): string | null {
   if (!sample.after || round.some((r) => r.sample === sample.after && r.photoHashes.length > 0)) return null;
@@ -121,6 +130,15 @@ export { demoSampleOf };
 /** The note the owner reads on the payout in PayPal, whether the rule or a person sent it. */
 export const payoutNote = (recall: Pick<Recall, "id" | "product">, claim: Pick<Claim, "id" | "demo">) =>
   `Recall refund for ${recall.product} (CPSC ${recall.id}), claim ${claim.id}${claim.demo ? ", demo mode" : ""}`;
+
+/**
+ * A payout that failed, for the claim's history: whether Remedy couldn't reach PayPal (a network error, so nothing left)
+ * or PayPal refused it, then the raw answer, which the console keeps behind a toggle for support (drawer.ts).
+ */
+export function payoutFailedDetail(e: unknown): string {
+  if (e instanceof PayPalError) return `PayPal didn't take the payout: ${e.issue ?? e.status}${e.debugId ? `, debug id ${e.debugId}` : ""}`;
+  return `Remedy couldn't reach PayPal: ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
+}
 
 /** The page for a claim: demo claims live under /try. */
 export const claimPath = (slug: string, claim: Pick<Claim, "id" | "demo">) => `/r/${slug}/${claim.demo ? "try" : "claim"}/${claim.id}`;
@@ -144,14 +162,15 @@ export async function findOpenClaim(deps: Pick<PipelineDeps, "store" | "now">, r
 
 /**
  * Issues the code and opens the 10-minute camera session. A demo claim takes its code from the sample and joins the
- * browser's round. Throws LimitReached, saving nothing, when a claim limit is hit.
+ * browser's round. Throws LimitReached, saving nothing, when a claim limit is hit. rows: index.json, when the caller has
+ * just read it (the limits are counted on the index as it's written either way).
  */
 export async function createClaim(
   deps: Pick<PipelineDeps, "store" | "now" | "limits">,
-  { recall, payer, sample, round }: { recall: Recall; payer: Payer; sample?: DemoSample; round?: string },
+  { recall, payer, sample, round, rows: read }: { recall: Recall; payer: Payer; sample?: DemoSample; round?: string; rows?: ClaimSummary[] },
 ): Promise<Claim> {
   const now = deps.now();
-  const rows = await deps.store.listClaims();
+  const rows = read ?? (await deps.store.listClaims());
   const visionUsed = sample ? (await deps.store.getUsage(utcDay(now))).vision : 0;
   const taken = new Set(rows.map((r) => r.id));
   const code = sample?.code ?? newCode();
@@ -317,10 +336,9 @@ export async function checkClaim(deps: PipelineDeps, claimId: string): Promise<C
     });
   } catch (e) {
     const reason: Reason = { check: "payout", outcome: "hold", text: "PayPal didn't accept the payout, so a person will send it" };
-    const why = e instanceof PayPalError ? `${e.issue ?? e.status}${e.debugId ? `, debug id ${e.debugId}` : ""}` : e instanceof Error ? e.message.slice(0, 200) : String(e);
     return (
       (await commit(store, claimId, (c) => {
-        c.events.push(event(deps.now(), "payout_failed", `PayPal refused the payout: ${why}`));
+        c.events.push(event(deps.now(), "payout_failed", payoutFailedDetail(e)));
         hold(c, deps.now(), [...c.reasons, reason], reason.text);
       })) ?? fresh
     );

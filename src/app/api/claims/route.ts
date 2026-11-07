@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
 import { liveDeps } from "./_lib/deps";
 import { fail, json, seeOther, toLogin } from "./_lib/http";
-import { claimPath, createClaim, LimitReached, notYet, roundClaims } from "./_lib/pipeline";
+import { claimPath, createClaim, LimitReached, notYet, openStart, roundClaims } from "./_lib/pipeline";
 
 // POST /api/claims (form: recall=<slug>, sample=<demo sample id>): files a demo claim with the sample's code, in the
 // browser's demo round (src/lib/demo/round.ts).
@@ -23,12 +23,15 @@ export async function POST(request: NextRequest) {
     if (!session) return toLogin(`/r/${recall.slug}/try/samples`);
     // The browser's round; one without (an API client, an expired cookie) starts one here.
     const round = parseDemoRound(request.cookies.get(DEMO_ROUND_COOKIE)?.value) ?? newDemoRound();
+    const rows = await deps.store.listClaims();
+    const mine = roundClaims(rows, recall.id, round, session.payerId);
     // The picker's order, enforced here too: the repost needs this round's genuine photo already sent.
     if (sample.after) {
-      const blocked = notYet(sample, roundClaims(await deps.store.listClaims(), recall.id, round, session.payerId));
+      const blocked = notYet(sample, mine);
       if (blocked) return json(409, blocked);
     }
-    const claim = await createClaim(deps, { recall, payer: session, sample, round });
+    // This sample's start from a moment ago, still waiting for its photo, continues: no second empty claim.
+    const claim = openStart(mine, sample.id, deps.now()) ?? (await createClaim(deps, { recall, payer: session, sample, round, rows }));
     const response = seeOther(claimPath(recall.slug, claim));
     response.cookies.set(DEMO_ROUND_COOKIE, round, demoRoundCookie());
     return response;

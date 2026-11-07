@@ -83,3 +83,9 @@
     opacity: 0.3;
   }
 }
+
+/* A change where no money moved (a refused approve, a reject, a payout not sent) flashes neutral, not the paid colour
+   (ClaimsGrid's cellClass): green only ever means paid. */
+.claims-grid .ag-cell.flash-neutral {
+  --ag-value-change-value-highlight-background-color: color-mix(in oklch, var(--text) 10%, transparent);
+}

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sampleClaim, sampleRecall } from "@/lib/__fixtures__/claim";
 import { summarize } from "@/lib/store/store";
 import type { Reason } from "@/lib/types";
-import { duplicateFor, toDrawerClaim } from "./drawer";
+import { duplicateFor, payoutFailureWords, toDrawerClaim } from "./drawer";
 import { PublishInput, RefundValue, slugify, summarizeCpsc, uniqueSlug } from "./recalls";
 import { buildReport } from "./report";
 import { companyReasonText, decisionSentence, duration, formatCents, maskPayer, median, percent, preChecksOf, reasonOf, statsOf, toRow } from "./view";
@@ -95,7 +95,7 @@ describe("console view", () => {
     const payer = (c: Parameters<typeof sampleClaim>[0]) => preChecksOf(sampleClaim(c)).find((r) => r.id === "payer")!;
     const demo = (sample: string) => ({ demo: true, events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] });
     expect(payer({})).toMatchObject({ state: "pass", detail: "No other paid or open claim for this recall from this PayPal account" });
-    expect(payer(demo("genuine"))).toMatchObject({ state: "pass", detail: expect.stringMatching(/^Checked within this demo round/) });
+    expect(payer(demo("genuine"))).toMatchObject({ state: "pass", detail: expect.stringMatching(/^Checked within this demo session/) });
     expect(payer(demo("wrong-code")).state).toBe("skipped");
     expect(payer({ ...demo("wrong-code"), photos: [] }).state).toBe("waiting");
   });
@@ -128,7 +128,8 @@ describe("console view", () => {
     ];
     const failed = toRow(summarize(sampleClaim({ decision: "held", events })), recall);
     expect(failed.payoutFailedAt).toBe("2026-11-07T10:05:01.000Z");
-    expect(failed.note).toContain("PayPal didn't take the payout");
+    // The row says what it means for the reviewer; the panel says which failure it was (payoutFailureWords).
+    expect(failed.note).toBe("Payout not sent: retry or reject");
     expect(toRow(summarize(sampleClaim({ decision: "held", events: events.slice(0, 2) })), recall).payoutFailedAt).toBeNull();
     // Seeded claims never reach PayPal, and the index row of a refused claim doesn't carry it.
     expect(summarize(sampleClaim({ decision: "held", seeded: true, events }))).not.toHaveProperty("payoutFailedAt");
@@ -157,6 +158,36 @@ describe("console view", () => {
     expect(toDrawerClaim(sampleClaim({ decision: "held", reasons: [model], events: [refused, later] }), recall).refused).toBeNull();
   });
 
+  it("says a failed payout in words, telling a network error from PayPal's refusal, the raw answer apart", () => {
+    expect(payoutFailureWords("Remedy couldn't reach PayPal: fetch failed")).toMatchObject({ kind: "network", next: expect.stringContaining("Nothing was sent"), raw: "fetch failed" });
+    // Older claims called a network error PayPal's answer.
+    expect(payoutFailureWords("PayPal didn't take the payout: getaddrinfo ENOTFOUND api-m.sandbox.paypal.com")?.kind).toBe("network");
+    expect(payoutFailureWords("PayPal refused the payout: RECEIVER_UNREGISTERED, debug id dbg-9")).toEqual({
+      kind: "paypal",
+      what: "PayPal didn't take the payout: the owner's PayPal account can't receive payouts",
+      next: "Nothing was sent.",
+      raw: "RECEIVER_UNREGISTERED, debug id dbg-9",
+    });
+    expect(payoutFailureWords("PayPal didn't take the payout: SOMETHING_NEW")?.what).toBe("PayPal didn't take the payout (SOMETHING_NEW)");
+    expect(payoutFailureWords("Payout of $29.99 sent through PayPal")).toBeNull();
+  });
+
+  it("says on the pre-check, before anyone decides, that approve would be stopped, and counts the five checks as recorded", () => {
+    const model: Reason = { check: "model", outcome: "hold", text: "The photo check didn't answer, so a person will look at your photos instead" };
+    const conflict = "This PayPal account already has a claim for this recall (RM-2584)";
+    const claim = sampleClaim({ decision: "held", reasons: [model] });
+    const before = toDrawerClaim(claim, recall);
+    expect(before.stops).toEqual([]);
+    expect(before.preChecks.find((p) => p.id === "payer")?.state).toBe("pass");
+    const d = toDrawerClaim(claim, recall, { stops: [conflict] });
+    expect(d.stops).toEqual([conflict]);
+    expect(d.preChecks.find((p) => p.id === "payer")).toMatchObject({ state: "hold", detail: expect.stringMatching(/^Approve won't pay: this PayPal account already has a claim for this recall \(RM-2584\)/) });
+    // The five-check line is what was recorded, as the grid's barcode counts it, not the forecast.
+    expect(d.five).toBe(before.five);
+    // Only a held claim a person can pay has a forecast.
+    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true, reasons: [model] }), recall, { stops: [conflict] }).stops).toEqual([]);
+  });
+
   it("says a person's reject with who and when, and keeps raw service answers and sample ids out of the history", () => {
     const rejected = sampleClaim({
       decision: "rejected",
@@ -173,9 +204,10 @@ describe("console view", () => {
     expect(d.events.map((e) => e.detail)).toEqual([
       'Filed with the judges\' sample "The wrong code"',
       "Held for a person: the photo check service didn't answer",
-      "PayPal didn't take the payout; nothing was paid",
+      "Remedy couldn't reach PayPal (a network error). Nothing was sent, so it's safe to try again.",
       "Rejected on review: The tag reads K7Q. (by Kikea Store)",
     ]);
+    expect(d.events[2].failure?.kind).toBe("network");
     expect(d.events.map((e) => e.raw)).toEqual([undefined, "401 Incorrect API key provided: sk-****", "fetch failed", undefined]);
   });
 
@@ -191,7 +223,8 @@ describe("console view", () => {
   it("says a demo claim's duplicate check covers only its own demo round", () => {
     const photos = [{ key: "a/1.jpg", hash: "0123456789abcdef" }];
     const dup = (c: Parameters<typeof sampleClaim>[0]) => preChecksOf(sampleClaim({ decision: "held", photos, ...c })).find((p) => p.id === "duplicate_photo")!;
-    expect(dup({ demo: true }).detail).toContain("this demo round");
+    expect(dup({ demo: true }).detail).toContain("this demo session");
+    expect(dup({ demo: true }).detail).not.toMatch(/round/);
     expect(dup({}).detail).toBe("No other claim used these photos");
   });
 

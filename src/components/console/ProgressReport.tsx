@@ -17,12 +17,15 @@ function H({ n, children }: { n: number; children: ReactNode }) {
 const th = "py-2 pr-4 text-left font-mono text-micro font-medium uppercase tracking-[0.06em] text-muted last:pr-0";
 const td = "border-t border-line py-2.5 pr-4 align-top last:pr-0";
 
-// Every claim in the totals that is not a real owner's, in Insights' words: the seeded samples and the judges' demo claims.
-function provenance({ seeded, demo }: Pick<Report, "seeded" | "demo">) {
+// Where every claim in the totals came from, in Insights' words: the seeded samples, the judges' demo claims and the
+// real owners' live claims, so the parts add up to the claim records the report is prepared from.
+function provenance({ seeded, demo }: Pick<Report, "seeded" | "demo">, total: number) {
   const parts = [];
-  if (seeded) parts.push(`${plural(seeded, "seeded sample claim")}, never paid to a real owner`);
+  const live = total - seeded - demo;
+  if (seeded) parts.push(`${plural(seeded, "seeded sample claim")} (never paid to a real owner)`);
   if (demo) parts.push(`${plural(demo, "judges’ demo claim")} in sandbox money`);
-  return parts.join(", and ");
+  if (live) parts.push(`${plural(live, "live claim")} from ${live === 1 ? "a real owner" : "real owners"}`);
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0];
 }
 
 // CPSC's own wording of units sold, only when it says more than the figure above it (a range, several products).
@@ -67,7 +70,7 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
 
       {(report.seeded > 0 || report.demo > 0) && (
         <p className="mt-8 rounded-control border border-line bg-surface-2 px-4 py-3 text-ui text-text">
-          Includes {provenance(report)}. Do not file these numbers with CPSC.
+          The {plural(s.total, "claim record")}: {provenance(report, s.total)}. Do not file these numbers with CPSC.
         </p>
       )}
 
