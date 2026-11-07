@@ -98,23 +98,6 @@
   }
 }
 
-/*
- * The static figures on laptops: each chapter laid out at its full screen width (about 1,050px, so the side-by-side
- * layouts apply) and zoomed to fit its half of the grid. Zoom re-lays out the text rather than scaling a bitmap, so it
- * stays sharp. Phones get the chapters at 1:1, stacked.
- */
-@media (min-width: 1024px) {
-  .figureZoom {
-    zoom: 0.41;
-  }
-}
-
-@media (min-width: 1200px) {
-  .figureZoom {
-    zoom: 0.5;
-  }
-}
-
 /* --------------------------------------------------------------------------- The pinned stage (laptops). */
 .runway {
   position: relative;
@@ -126,6 +109,8 @@
   top: 4rem;
   height: calc(100svh - 4rem);
   overflow: clip;
+  /* The 1200px content column's edge, where the page rails run: the rail and the screen sit on it. */
+  --edge: max(0px, (100% - 75rem) / 2);
 }
 
 /* The flat screen layer that takes over from the laptop: full stage, unscaled, revealed by its clip-path. */
@@ -138,7 +123,7 @@
 
 .screenInner {
   position: absolute;
-  inset: 1rem 1rem 1rem 18.5rem;
+  inset: 1rem calc(var(--edge) + 1rem) 1rem calc(var(--edge) + 18.5rem);
   display: flex;
   flex-direction: column;
 }
@@ -148,20 +133,20 @@
   z-index: 4;
   top: 1rem;
   bottom: 1rem;
-  left: 0;
+  left: var(--edge);
   width: 17.5rem;
   padding: 2rem 1.5rem 1.5rem 2rem;
   display: flex;
   flex-direction: column;
 }
 
-/* The custody thread: an amber line down the stage's right edge that fills with the scroll. */
+/* The custody thread: an amber line down the right page rail that fills with the scroll. */
 .thread {
   position: absolute;
   z-index: 4;
   top: 1rem;
   bottom: 1rem;
-  right: 0.4375rem;
+  right: max(0.4375rem, var(--edge) - 1px);
   width: 2px;
   background: var(--line);
 }

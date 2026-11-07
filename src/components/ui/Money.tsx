@@ -29,9 +29,9 @@ const sizes: Record<MoneySize, { root: string; cents: string }> = {
   // Mercury's hero cents: 55%, top-aligned near the cap height.
   numeral: { root: "font-serif text-numeral font-normal italic", cents: "text-[0.55em] align-[0.62em] tracking-normal" },
   amount: { root: "font-sans text-amount font-semibold", cents: "text-[0.55em] align-[0.62em] tracking-normal" },
-  // Mercury's table cents: 73%, raised about 0.2em.
-  inline: { root: "", cents: "relative -top-[0.2em] text-[0.73em]" },
-  grid: { root: "font-mono text-ui", cents: "relative -top-[0.2em] text-[0.73em]" },
+  // Mercury's table cents: 73%, raised about 0.2em, and never under the 12px floor (73% of 14px would be 10.2px).
+  inline: { root: "", cents: "relative -top-[0.2em] text-[length:max(12px,0.73em)]" },
+  grid: { root: "font-mono text-ui", cents: "relative -top-[0.2em] text-[length:max(12px,0.73em)]" },
 };
 
 /**

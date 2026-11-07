@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertIcon, CheckIcon, ClockIcon, Money, Paper, SPRING, StatusPill } from "@/components/ui";
 import { CHECKS, CLAIM, CODE_AT, CONSOLE_ROWS, REGIONS, TICK_AT, WRITE_AT, type RegionId } from "./claim";
 import styles from "./custody.module.css";
@@ -15,6 +15,12 @@ import styles from "./custody.module.css";
 // text alternative is CHAPTERS in claim.ts.
 
 export type Progress = MotionValue<number>;
+
+/**
+ * True where the chapters must fit a short screen: a laptop stage under 800px tall, or a phone whose chapter well is
+ * under 560px. Compact layouts drop secondary parts and tighten gaps; they never shrink the type.
+ */
+export const Compact = createContext(false);
 
 /** A progress fixed at 1: every chapter at rest in its final state. */
 export function useDone() {
@@ -35,7 +41,7 @@ const outQuart = (t: number) => 1 - (1 - t) ** 4;
 const CHIP = "inline-flex h-6 items-center rounded-control px-2 font-mono text-micro tracking-[0.06em] uppercase";
 
 /** The honest label every rendering of the AI-made sample photo carries. */
-function AiLabel({ className }: { className?: string }) {
+export function AiLabel({ className }: { className?: string }) {
   return <span className={clsx(CHIP, "absolute bg-bg/80 text-text", className)}>AI-made test photo</span>;
 }
 
@@ -76,10 +82,11 @@ function RefundLine() {
 const CONSENT_STEPS = ["Cut it in half, as the notice says", "Write your one-time code on a tag and photograph it here", "Paid to your PayPal, usually within a minute"];
 
 export function ConsentChapter() {
+  const compact = useContext(Compact);
   return (
     <div className="@container">
-      <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-14">
-        <div className="hidden flex-col gap-6 @min-[720px]:flex">
+      <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
+        <div className={clsx("hidden flex-col @min-[720px]:flex", compact ? "gap-4" : "gap-6")}>
           <span className="micro text-accent-text">
             {CLAIM.recall} · Recalled {CLAIM.recalled}
           </span>
@@ -89,7 +96,7 @@ export function ConsentChapter() {
             Risk of serious injury or death from suffocation. Stop using it now.
           </p>
           <RefundLine />
-          <dl className="grid grid-cols-2 border-t border-line text-ui">
+          <dl className={clsx("grid grid-cols-2 border-t border-line text-ui", compact && "hidden")}>
             {[
               ["Units recalled", CLAIM.units],
               ["Sold by", CLAIM.company],
@@ -102,8 +109,15 @@ export function ConsentChapter() {
           </dl>
         </div>
 
-        <div className="flex flex-col gap-5 @min-[720px]:gap-6 @min-[720px]:rounded-card @min-[720px]:bg-surface @min-[720px]:p-8 @min-[720px]:shadow-ring">
-          <div className="flex flex-col gap-3">
+        <div
+          data-dolly-target
+          className={clsx(
+            "flex flex-col gap-5 @min-[720px]:rounded-card @min-[720px]:bg-surface @min-[720px]:shadow-ring",
+            compact ? "@min-[720px]:gap-5 @min-[720px]:p-6" : "@min-[720px]:gap-6 @min-[720px]:p-8",
+          )}
+        >
+          {/* On a short phone the marks and the steps give way, so the button stays in the frame. */}
+          <div className={clsx("flex flex-col gap-3", compact && "@max-[719px]:hidden")}>
             <div className="flex">
               <span className="flex size-11 items-center justify-center rounded-card bg-surface-2 text-body font-semibold text-text">KS</span>
               <span className="-ml-2.5 flex size-11 items-center justify-center rounded-card bg-bg ring-2 ring-surface">
@@ -116,7 +130,12 @@ export function ConsentChapter() {
             Get $29.99 back for your X-VESOLJE pillow.{" "}
             <span className="text-muted">Remedy sends it through PayPal for Kikea Store once your photo shows it&rsquo;s destroyed.</span>
           </p>
-          <ol className="relative flex flex-col gap-3 before:absolute before:top-1 before:bottom-1 before:left-[7px] before:w-px before:bg-line">
+          <ol
+            className={clsx(
+              "relative flex flex-col gap-3 before:absolute before:top-1 before:bottom-1 before:left-[7px] before:w-px before:bg-line",
+              compact && "@max-[719px]:hidden",
+            )}
+          >
             {CONSENT_STEPS.map((s, i) => (
               <li key={s} className="relative grid grid-cols-[1.75rem_minmax(0,1fr)] items-baseline text-ui font-medium">
                 <span className="relative bg-bg font-mono text-micro text-faint @min-[720px]:bg-surface">{String(i + 1).padStart(2, "0")}</span>
@@ -148,12 +167,13 @@ function CodeCell({ p, at, char }: { p: Progress; at: number; char: string }) {
 const SHOT_LIST = ["The X-VESOLJE tag", "The pillow cut fully in half", `The code ${CLAIM.code}, on the tag`];
 
 export function CodeChapter({ p }: { p: Progress }) {
+  const compact = useContext(Compact);
   const swung = useAfter(p, 0.34);
   const wipe = useTransform(p, (v) => `inset(-0.2em ${((1 - ramp(v, WRITE_AT[0], WRITE_AT[1])) * 100).toFixed(2)}% -0.2em 0)`);
   return (
     <div className="@container">
-      <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] @min-[720px]:gap-14">
-        <div className="flex flex-col gap-6">
+      <div className={clsx("grid items-center @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] @min-[720px]:gap-14", compact ? "gap-6" : "gap-10")}>
+        <div className={clsx("flex flex-col", compact ? "gap-4" : "gap-6")}>
           <div className="flex items-center justify-between gap-4">
             <p className="text-title font-semibold">Your one-time code</p>
             <span className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-line px-2.5 font-mono text-ui text-muted tabular-nums">
@@ -166,7 +186,7 @@ export function CodeChapter({ p }: { p: Progress }) {
               <CodeCell key={c} p={p} at={CODE_AT[i]} char={c} />
             ))}
           </div>
-          <p className="max-w-[44ch] text-body text-muted">Write it on a tag with X-VESOLJE, big, in marker. Then photograph the cut pillow with the tag on it, in this page&rsquo;s camera.</p>
+          <p className={clsx("max-w-[44ch] text-body text-muted", compact && "@max-[719px]:hidden")}>Write it on a tag with X-VESOLJE, big, in marker. Then photograph the cut pillow with the tag on it, in this page&rsquo;s camera.</p>
           <div className="hidden flex-col gap-2 @min-[720px]:flex">
             <span className="micro text-faint">Your photo must show</span>
             <ol className="flex flex-col gap-1.5">
@@ -180,9 +200,9 @@ export function CodeChapter({ p }: { p: Progress }) {
           </div>
         </div>
 
-        <div className="flex justify-center pt-12 @min-[720px]:pt-14">
+        <div className={clsx("flex justify-center", compact ? "pt-6 @min-[720px]:pt-10" : "pt-12 @min-[720px]:pt-14")}>
           <motion.div
-            className="relative w-full max-w-[18rem] origin-[50%_19px] @min-[720px]:max-w-[22rem]"
+            className={clsx("relative w-full origin-[50%_19px] @min-[720px]:max-w-[22rem]", compact ? "max-w-[15rem]" : "max-w-[18rem]")}
             initial={false}
             animate={swung ? { rotate: -2, y: 0, opacity: 1 } : { rotate: -8, y: -28, opacity: 0 }}
             transition={swung ? SPRING.drop : { duration: 0.16 }}
@@ -191,16 +211,7 @@ export function CodeChapter({ p }: { p: Progress }) {
             <svg className="absolute bottom-[calc(100%-19px)] left-1/2 h-20 w-10 -translate-x-[3px] overflow-visible" viewBox="0 0 40 80" aria-hidden="true">
               <path d="M3 80 C 6 52, -6 30, 10 0" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            <Paper variant="tag" hole padding="lg" className="w-full">
-              <p className="micro text-ink-muted">
-                {CLAIM.recall} · {CLAIM.company}
-              </p>
-              <motion.p className="mt-5 font-mono leading-none font-semibold tracking-[0.08em]" style={{ clipPath: wipe }}>
-                <span className="block text-[1.75rem]">X-VESOLJE</span>
-                <span className="mt-3 block text-[3.5rem] tracking-[0.14em]">{CLAIM.code}</span>
-              </motion.p>
-              <p className="mt-6 border-t border-dashed border-paper-line pt-3 text-ui text-ink-muted">Write it big, in marker.</p>
-            </Paper>
+            <CodeTag wipe={wipe} short={compact} />
           </motion.div>
         </div>
       </div>
@@ -208,10 +219,27 @@ export function CodeChapter({ p }: { p: Progress }) {
   );
 }
 
+/** The owner's paper tag with the recall's name and the one-time code, written left to right as `wipe` opens. */
+export function CodeTag({ wipe, short, className }: { wipe?: MotionValue<string>; short?: boolean; className?: string }) {
+  return (
+    <Paper variant="tag" hole padding="lg" className={clsx("w-full", className)}>
+      <p className="micro text-ink-muted">
+        {CLAIM.recall} · {CLAIM.company}
+      </p>
+      <motion.p className="mt-5 font-mono leading-none font-semibold tracking-[0.08em]" style={wipe ? { clipPath: wipe } : undefined}>
+        <span className="block text-[1.75rem]">X-VESOLJE</span>
+        <span className="mt-3 block text-[3.5rem] tracking-[0.14em]">{CLAIM.code}</span>
+      </motion.p>
+      {/* On a short phone the tag's foot gives way; the laptop and the static figure always show it. */}
+      <p className={clsx("mt-6 border-t border-dashed border-paper-line pt-3 text-ui text-ink-muted", short && "@max-[719px]:hidden")}>Write it big, in marker.</p>
+    </Paper>
+  );
+}
+
 /* ------------------------------------------------------------------------------------------- 03 Live photo */
 
 /** The captured photo as a print: a 3px paper border and the amber exhibit letter. */
-function ExhibitPrint({ children, className, sizes }: { children?: ReactNode; className?: string; sizes: string }) {
+export function ExhibitPrint({ children, className, sizes }: { children?: ReactNode; className?: string; sizes: string }) {
   return (
     <div className={clsx("relative rounded-control bg-paper p-[3px] shadow-paper", className)}>
       <div className="relative aspect-[4/3] overflow-hidden rounded-[3px] bg-surface-2">
@@ -304,12 +332,13 @@ export function PhotoChapter({ p }: { p: Progress }) {
 /* ----------------------------------------------------------------------------------------- 04 Five checks */
 
 function CheckRow({ p, i }: { p: Progress; i: number }) {
+  const compact = useContext(Compact);
   const check = CHECKS[i];
   const t = useTransform(p, (v) => ramp(v, TICK_AT[i] - 0.006, TICK_AT[i] + 0.006));
   const scale = useTransform(t, [0, 1], [0.4, 1]);
   const text = useTransform(t, [0, 1], [0.55, 1]);
   return (
-    <li className="flex flex-col border-b border-line py-2 last:border-b-0 @min-[720px]:py-3">
+    <li className={clsx("flex flex-col border-b border-line last:border-b-0", compact ? "py-1.5 @min-[720px]:py-2" : "py-2 @min-[720px]:py-3")}>
       <div className="flex items-center gap-3">
         <span className="relative flex size-6 shrink-0 items-center justify-center rounded-full border border-line-strong">
           <motion.span className="absolute -inset-px flex items-center justify-center rounded-full bg-pay-soft text-pay" style={{ opacity: t, scale }}>
@@ -324,7 +353,12 @@ function CheckRow({ p, i }: { p: Progress; i: number }) {
         </span>
       </div>
       {check.quote && (
-        <motion.p data-quote={check.region} className="mt-2 border-l border-line-strong pl-3 font-mono text-micro text-pretty text-muted @min-[720px]:ml-9" style={{ opacity: t }}>
+        // On a short phone the quotes give way to the five checks; the laptop always shows them, with their leaders.
+        <motion.p
+          data-quote={check.region}
+          className={clsx("mt-2 border-l border-line-strong pl-3 font-mono text-micro text-pretty text-muted @min-[720px]:ml-9", compact && "@max-[719px]:hidden")}
+          style={{ opacity: t }}
+        >
           &ldquo;{check.quote}&rdquo;
         </motion.p>
       )}
@@ -357,6 +391,7 @@ function Region({ p, id, n, at }: { p: Progress; id: RegionId; n: number; at: nu
 type Leader = { id: RegionId; d: string; x2: number; y2: number };
 
 export function ChecksChapter({ p }: { p: Progress }) {
+  const compact = useContext(Compact);
   const root = useRef<HTMLDivElement>(null);
   const [leaders, setLeaders] = useState<Leader[]>([]);
 
@@ -396,7 +431,7 @@ export function ChecksChapter({ p }: { p: Progress }) {
   return (
     <div className="@container">
       <div ref={root} className="relative grid items-center gap-8 @min-[720px]:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] @min-[720px]:gap-20">
-        <ExhibitPrint sizes="(min-width: 1024px) 560px, 320px" className="mx-auto w-2/3 @min-[720px]:mx-0 @min-[720px]:w-auto">
+        <ExhibitPrint sizes="(min-width: 1024px) 560px, 320px" className={clsx("mx-auto @min-[720px]:mx-0 @min-[720px]:w-auto", compact ? "w-3/5" : "w-2/3")}>
           <AiLabel className="bottom-2 left-2" />
           {CHECKS.map((c, i) => c.region && <Region key={c.region} p={p} id={c.region} n={i + 1} at={TICK_AT[i]} />)}
         </ExhibitPrint>
@@ -438,23 +473,27 @@ const RULE: { when: string; then: string; pay?: boolean }[] = [
   { when: "every check passes", then: "pay", pay: true },
 ];
 
-function Digit({ p, d, i }: { p: Progress; d: number; i: number }) {
-  // An odometer wheel: 0 to 9 stacked, rolled up to d between 0.82 and 0.86, the later wheels a little behind.
-  const y = useTransform(p, (v) => `${(-d * outQuart(ramp(v, 0.82 + i * 0.004, 0.848 + i * 0.004))).toFixed(3)}em`);
+function Digit({ p, d, i, lead }: { p: Progress; d: number; i: number; lead?: boolean }) {
+  // An odometer wheel: 0 to 9 stacked, rolled up to d between 0.82 and 0.86, the later wheels a little behind. A
+  // leading wheel starts blank and narrow, then opens to its digit's width as it rolls, so the figure reads $0.00,
+  // never $00.00.
+  const t = useTransform(p, (v) => outQuart(ramp(v, 0.82 + i * 0.004, 0.848 + i * 0.004)));
+  const y = useTransform(t, (k) => `${(-d * k).toFixed(3)}em`);
+  const maxWidth = useTransform(t, (k) => `${Math.min(1, k * d).toFixed(3)}em`);
   return (
-    <span className={styles.wheel}>
+    <motion.span className={styles.wheel} style={lead ? { maxWidth } : undefined}>
       <motion.span className={styles.strip} style={{ y }}>
-        {"0123456789".split("").map((n) => (
-          <span key={n}>{n}</span>
+        {(lead ? "\u00a0123456789" : "0123456789").split("").map((n, k) => (
+          <span key={k}>{n}</span>
         ))}
       </motion.span>
       {/* Sizes the wheel to its own digit, so proportional widths stay right at rest. */}
       <span className={styles.sizer}>{d}</span>
-    </span>
+    </motion.span>
   );
 }
 
-/** $29.99 in the monumental serif, rolling up from $00.00. Screen readers and copy get the plain amount. */
+/** $29.99 in the monumental serif, rolling up from $0.00. Screen readers and copy get the plain amount. */
 export function Odometer({ p }: { p: Progress }) {
   const [whole, cents] = CLAIM.amount.toFixed(2).split(".");
   return (
@@ -463,7 +502,7 @@ export function Odometer({ p }: { p: Progress }) {
       <span aria-hidden="true" className={styles.figure}>
         <span>$</span>
         {whole.split("").map((n, i) => (
-          <Digit key={i} p={p} d={Number(n)} i={i} />
+          <Digit key={i} p={p} d={Number(n)} i={i} lead={i === 0 && whole.length > 1} />
         ))}
         <span className={styles.cents}>
           .
@@ -477,6 +516,7 @@ export function Odometer({ p }: { p: Progress }) {
 }
 
 export function PaidChapter({ p }: { p: Progress }) {
+  const compact = useContext(Compact);
   const decided = useTransform(p, (v) => ramp(v, 0.805, 0.815));
   return (
     <div className="@container">
@@ -499,7 +539,7 @@ export function PaidChapter({ p }: { p: Progress }) {
               </div>
             ))}
           </div>
-          <p className="text-ui text-muted">The model never moves money. The rule is in the code, the same for every claim.</p>
+          <p className={clsx("text-ui text-muted", compact && "@max-[719px]:hidden")}>The model never moves money. The rule is in the code, the same for every claim.</p>
         </div>
         <div className="flex flex-col gap-4">
           <span className="micro text-faint">Sent to the owner&rsquo;s PayPal account</span>
@@ -556,17 +596,30 @@ function Thumb({ src }: { src: string }) {
 
 const GRID = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[11rem_minmax(0,1fr)_6rem_6.5rem_5rem]";
 
-function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number] & { id?: string }; first?: boolean }) {
+/** Claim RM-0442 as Kikea Store's console lists it, paid. */
+const M4T_ROW = {
+  photo: CLAIM.photo,
+  code: CLAIM.code,
+  id: CLAIM.id,
+  status: "paid" as const,
+  reason: "Every check passed",
+  time: `0:${String(CLAIM.seconds).padStart(2, "0")}`,
+  amount: CLAIM.amount,
+};
+
+function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?: boolean }) {
+  const compact = useContext(Compact);
   return (
-    <div className={clsx(GRID, "h-14 border-b border-line text-ui")}>
+    <div className={clsx(GRID, compact ? "h-12" : "h-14", "border-b border-line text-ui")}>
       <span className="flex min-w-0 items-center gap-3">
         <Thumb src={row.photo} />
         <span className="flex min-w-0 flex-col leading-tight">
+          {/* The console's own convention: the claim id first, its one-time code under it. */}
           <span className="flex items-center gap-1.5 font-mono font-medium">
-            {row.code}
+            {row.id}
             {row.sample && <span className="size-1.5 rotate-45 border border-faint" title="Sample claim" />}
           </span>
-          <span className="truncate font-mono text-micro text-faint">{row.id ?? "sample"}</span>
+          <span className="truncate font-mono text-micro text-faint">Code {row.code}</span>
         </span>
       </span>
       <span className="hidden min-w-0 items-center gap-3 @min-[720px]:flex">
@@ -588,10 +641,10 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number] & { id?
 }
 
 export function ConsoleChapter({ p }: { p: Progress }) {
-  const height = useTransform(p, (v) => `${(outQuart(ramp(v, 0.915, 0.95)) * 3.5).toFixed(3)}rem`);
+  const compact = useContext(Compact);
+  const height = useTransform(p, (v) => `${(outQuart(ramp(v, 0.915, 0.95)) * (compact ? 3 : 3.5)).toFixed(3)}rem`);
   const opacity = useTransform(p, (v) => ramp(v, 0.93, 0.95));
   const flash = useTransform(p, (v) => `color-mix(in oklch, var(--accent) ${(14 * (1 - ramp(v, 0.95, 1))).toFixed(2)}%, transparent)`);
-  const m4t = { photo: CLAIM.photo, code: CLAIM.code, id: CLAIM.id, status: "paid" as const, reason: "Every check passed", time: `0:${String(CLAIM.seconds).padStart(2, "0")}`, amount: CLAIM.amount };
   return (
     <div className="@container">
       <div className="flex flex-col gap-6">
@@ -625,11 +678,11 @@ export function ConsoleChapter({ p }: { p: Progress }) {
           </div>
           <motion.div className="overflow-hidden" style={{ height }}>
             <motion.div style={{ opacity, backgroundColor: flash }}>
-              <ConsoleRow row={m4t} first />
+              <ConsoleRow row={M4T_ROW} first />
             </motion.div>
           </motion.div>
           {CONSOLE_ROWS.map((r) => (
-            <ConsoleRow key={r.code} row={r} />
+            <ConsoleRow key={r.id} row={r} />
           ))}
         </div>
       </div>

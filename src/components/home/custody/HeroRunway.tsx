@@ -15,7 +15,6 @@ import styles from "./custody.module.css";
 // sticky phone. The hero is the same element, in the same place, in every form, so the switch never moves it.
 type Mode = "static" | "pinned" | "phone";
 
-const RAIL_W = 296;
 const DOLLY = [0.04, 0.2] as const;
 const SCALE = 1.35;
 
@@ -47,7 +46,8 @@ function ChapterList() {
 }
 
 function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null>, device: RefObject<HTMLDivElement | null>) {
-  // Where the laptop has to go so its screen sits in the middle of the custody screen at 1.35x: measured at rest.
+  // Where the laptop has to go so its screen sits over chapter 01's consent card at 1.35x, measured at rest: the
+  // screen layer takes over inside the laptop's screen rect, so the dolly lands on the card it zoomed into.
   const target = useRef({ x: 0, y: 0 });
   useEffect(() => {
     const st = stage.current;
@@ -59,10 +59,11 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
       const S = st.getBoundingClientRect();
       const D = dev.getBoundingClientRect();
       const P = scr.getBoundingClientRect();
+      const card = st.querySelector("[data-dolly-target]")?.getBoundingClientRect();
       const cx = D.left + D.width / 2;
       const cy = D.top + D.height / 2;
-      const tx = S.left + RAIL_W + (S.width - 16 - RAIL_W) / 2;
-      const ty = S.top + S.height / 2;
+      const tx = card ? card.left + card.width / 2 : S.left + S.width / 2;
+      const ty = card ? card.top + card.height / 2 : S.top + S.height / 2;
       target.current = { x: tx - cx - SCALE * (P.left + P.width / 2 - cx), y: ty - cy - SCALE * (P.top + P.height / 2 - cy) };
     };
     measure();

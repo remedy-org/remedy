@@ -86,11 +86,12 @@ export const CODE_AT = [0.35, 0.36, 0.37];
 /** The tag is written left to right after the last character appears. */
 export const WRITE_AT = [0.375, 0.397] as const;
 
-// The console replica after the payout: the M4T claim slides in over the seeded sample claims the demo workspace starts
-// with (src/lib/demo/seed.ts keeps their eval photos' codes; the reasons are rule.ts's words). Samples were never paid.
-export const CONSOLE_ROWS: { photo: string; code: string; id?: string; status: Status; reason: string; time?: string; amount?: number; sample?: boolean }[] = [
-  { photo: "/demo/c01-1.jpg", code: "K7Q", status: "paid", reason: "Every check passed", amount: 29.99, sample: true },
-  { photo: "/demo/c03-1.jpg", code: "R9D", status: "held", reason: "Couldn't tell if both photos show the same item", sample: true },
-  { photo: "/demo/c11-1.jpg", code: "K7P", status: "rejected", reason: "Written code reads K7Q; this claim's code is K7P", sample: true },
-  { photo: "/demo/c08-1.jpg", code: "K7X", status: "blocked", reason: "This photo wasn't taken in this claim's camera session", sample: true },
+// The console replica after the payout: the M4T claim slides in over sample claims the demo workspace starts with, with
+// the ids, codes, photos and reasons buildSeedClaims gives them (src/lib/demo/seed.ts, seed 27071), as in the "For
+// companies" replica (ConsoleReplica.tsx). Seeded claims are eval samples and were never paid.
+export const CONSOLE_ROWS: { photo: string; code: string; id: string; status: Status; reason: string; time?: string; amount?: number; sample?: boolean }[] = [
+  { photo: "/demo/c01-1.jpg", code: "K7Q", id: "RM-7581", status: "paid", reason: "Every check passed", amount: 29.99, sample: true },
+  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-9629", status: "held", reason: "Couldn't tell if both photos show the same item", sample: true },
+  { photo: "/demo/c10-1.jpg", code: "K7Q", id: "RM-9545", status: "rejected", reason: "Looks like a photo of a screen or a print", sample: true },
+  { photo: "/demo/c01-1.jpg", code: "R8D", id: "RM-0120", status: "blocked", reason: "Photo 1 was already used in another claim", sample: true },
 ];
