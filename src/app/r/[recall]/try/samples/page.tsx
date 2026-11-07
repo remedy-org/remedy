@@ -17,12 +17,12 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   const store = await getAppStore();
   const recall = await getRecallBySlug((await params).recall, store);
   if (!recall || !isDemoAllowed(recall)) notFound();
-  await requireSession("owner", `/r/${recall.slug}/try/samples`);
+  const session = await requireSession("owner", `/r/${recall.slug}/try/samples`);
 
-  // This round's demo claims, newest first, with the sample each one used: all from index.json's rows. The proxy
-  // started a round for this browser if it had none.
+  // This round's demo claims for this PayPal account, newest first, with the sample each one used: all from
+  // index.json's rows. The proxy started a round for this browser if it had none.
   const round = await getDemoRound();
-  const rows = round ? roundClaims(await store.listClaims(), recall.id, round) : [];
+  const rows = round ? roundClaims(await store.listClaims(), recall.id, round, session.payerId) : [];
   const runs: DemoRun[] = rows.slice(0, 12).map((r) => ({ id: r.id, href: `/r/${recall.slug}/try/${r.id}`, title: demoSample(r.sample ?? "")?.title ?? "Sample claim", decision: r.decision }));
   const ran = new Set(rows.filter((r) => r.photoHashes.length > 0).map((r) => r.sample));
 

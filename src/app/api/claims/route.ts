@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const round = parseDemoRound(request.cookies.get(DEMO_ROUND_COOKIE)?.value) ?? newDemoRound();
     // The picker's order, enforced here too: the repost needs this round's genuine photo already sent.
     if (sample.after) {
-      const blocked = notYet(sample, roundClaims(await deps.store.listClaims(), recall.id, round));
+      const blocked = notYet(sample, roundClaims(await deps.store.listClaims(), recall.id, round, session.payerId));
       if (blocked) return json(409, blocked);
     }
     const claim = await createClaim(deps, { recall, payer: session, sample, round });

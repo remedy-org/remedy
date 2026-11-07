@@ -237,8 +237,8 @@ describe("demo claims without a round (filed before rounds)", () => {
     // Another judge's genuine claim passes too.
     expect((await run("genuine", { payerId: "JUDGE0000002", verified: true })).decision).toBe("pending");
     const rows = await store.listClaims();
-    expect(othersFor({ demo: true, payerId: judge.payerId }, rows).map((o) => o.id)).toEqual([g1.id]);
-    expect(othersFor({ payerId: owner.payerId }, rows).map((o) => o.id)).toEqual([real.id]);
+    expect(othersFor({ demo: true, payerId: judge.payerId, events: [] }, rows).map((o) => o.id)).toEqual([g1.id]);
+    expect(othersFor({ payerId: owner.payerId, events: [] }, rows).map((o) => o.id)).toEqual([real.id]);
   });
 
   it("lets the genuine sample pass once per judge, then blocks it", async () => {
@@ -285,18 +285,20 @@ describe("demo rounds", () => {
     const legacy = await run("genuine", undefined);
     const a1 = await run("genuine", A);
     const b1 = await run("genuine", B);
-    // Another account in round A: the round is the browser's, whoever is logged in.
+    // Another account logged in with round A's cookie: a round of its own, so a second login in one browser starts afresh.
     const a2 = await run("wrong-code", A, { payerId: "JUDGE0000002", verified: true }, "f0f0f0f0f0f0f0f0");
     const rows = await store.listClaims();
-    const ids = (claim: Parameters<typeof othersFor>[0]) => othersFor(claim, rows).map((o) => o.id).sort();
-    expect(ids({ demo: true, payerId: judge.payerId, demoRound: A })).toEqual([a1.id, a2.id].sort());
+    const ids = (claim: Omit<Parameters<typeof othersFor>[0], "events">) => othersFor({ ...claim, events: [] }, rows).map((o) => o.id).sort();
+    expect(ids({ demo: true, payerId: judge.payerId, demoRound: A })).toEqual([a1.id]);
+    expect(ids({ demo: true, payerId: "JUDGE0000002", demoRound: A })).toEqual([a2.id]);
     expect(ids({ demo: true, payerId: judge.payerId, demoRound: B })).toEqual([b1.id]);
     // A claim from before rounds meets only that account's claims from before rounds.
     expect(ids({ demo: true, payerId: judge.payerId })).toEqual([legacy.id]);
     expect(ids({ demo: true, payerId: "JUDGE0000002" })).toEqual([]);
     expect(ids({ payerId: owner.payerId })).toEqual([real.id]);
-    expect(roundClaims(rows, recall.id, A).map((r) => r.id).sort()).toEqual([a1.id, a2.id].sort());
-    expect(roundClaims(rows, "other-recall", A)).toEqual([]);
+    expect(roundClaims(rows, recall.id, A, judge.payerId).map((r) => r.id)).toEqual([a1.id]);
+    expect(roundClaims(rows, recall.id, A, "JUDGE0000002").map((r) => r.id)).toEqual([a2.id]);
+    expect(roundClaims(rows, "other-recall", A, judge.payerId)).toEqual([]);
   });
 
   it("pays the genuine sample once in every round on one account, and still blocks it twice in one round", async () => {
@@ -316,15 +318,49 @@ describe("demo rounds", () => {
     expect(again.reasons.map((r) => r.check)).toEqual(["duplicate_photo", "payer"]);
   });
 
+  it("pays the genuine sample when the other samples run while it is at the model", async () => {
+    const genuine = await run("genuine", A);
+    // Sent from another tab during the genuine claim's model call: waiting on the model, blocked as a repost.
+    const wrong = await run("wrong-code", A, judge, "f0f0f0f0f0f0f0f0");
+    expect(wrong.decision).toBe("pending");
+    const repost = await run("reposted", A);
+    expect(repost.decision).toBe("blocked");
+    expect(repost.reasons.map((r) => r.check)).toEqual(["duplicate_photo"]);
+    expect((await checkClaim(deps, genuine.id)).decision).toBe("paid");
+  });
+
+  it("never blocks the genuine sample behind another sample waiting on the model or held", async () => {
+    const wrong = await run("wrong-code", A, judge, "f0f0f0f0f0f0f0f0");
+    expect((await run("genuine", A)).decision).toBe("pending");
+    // The model couldn't read the wrong code's tag, so that claim is held for a person.
+    deps.vision.mockImplementationOnce(async () => ({ verdict: verdict({ code: "K7Q", matches: "unclear" }), seconds: 1, model: "gpt-test" }));
+    expect((await checkClaim(deps, wrong.id)).decision).toBe("held");
+    const genuine = await run("genuine", B);
+    await run("wrong-code", B, judge, "f0f0f0f0f0f0f0f0");
+    expect(genuine.decision).toBe("pending");
+    expect((await checkClaim(deps, genuine.id)).decision).toBe("paid");
+  });
+
+  it("starts a second PayPal login in the same browser on a round of its own", async () => {
+    const other = { payerId: "JUDGE0000002", verified: true };
+    await checkClaim(deps, (await run("genuine", A)).id);
+    expect(roundClaims(await store.listClaims(), recall.id, A, other.payerId)).toEqual([]);
+    expect(notYet(demoSample("reposted")!, roundClaims(await store.listClaims(), recall.id, A, other.payerId))).not.toBeNull();
+    const genuine = await run("genuine", A, other);
+    expect(genuine.decision).toBe("pending");
+    expect((await checkClaim(deps, genuine.id)).decision).toBe("paid");
+  });
+
   it("files the repost only once this round's genuine photo was sent", async () => {
     const repost = demoSample("reposted")!;
-    expect(notYet(repost, roundClaims(await store.listClaims(), recall.id, A))).toMatch(/^Send "A genuine claim" first/);
+    const mine = async () => roundClaims(await store.listClaims(), recall.id, A, judge.payerId);
+    expect(notYet(repost, await mine())).toMatch(/^Send "A genuine claim" first/);
     // Filed but no photo yet, or sent in another round: still not yet.
     await createClaim(deps, { recall, payer: judge, sample: demoSample("genuine")!, round: A });
     await run("genuine", B);
-    expect(notYet(repost, roundClaims(await store.listClaims(), recall.id, A))).not.toBeNull();
+    expect(notYet(repost, await mine())).not.toBeNull();
     await run("genuine", A);
-    expect(notYet(repost, roundClaims(await store.listClaims(), recall.id, A))).toBeNull();
+    expect(notYet(repost, await mine())).toBeNull();
     // Samples with nothing to wait for are never held back.
     expect(notYet(demoSample("wrong-code")!, [])).toBeNull();
   });

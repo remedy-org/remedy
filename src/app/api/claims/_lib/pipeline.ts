@@ -55,21 +55,26 @@ const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
 const toOther = (r: ClaimSummary): OtherClaim => ({ id: r.id, recallId: r.recallId, payerId: r.payerId, decision: r.decision, photoHashes: r.photoHashes });
 
-// Whether a row is a demo claim of this demo claim's round (src/lib/demo/round.ts). Claims filed before rounds
-// existed have none: they make one legacy round per PayPal account, as they were checked then.
+// Whether a row is a demo claim of this demo claim's round (src/lib/demo/round.ts): the browser's round id and the
+// PayPal account, so a second login in one browser starts afresh. Claims filed before rounds existed have no round id:
+// they make one legacy round per PayPal account, as they were checked then.
 const inRound = (claim: Pick<Claim, "payerId" | "demoRound">, r: ClaimSummary) =>
-  r.demo === true && (claim.demoRound ? r.demoRound === claim.demoRound : !r.demoRound && r.payerId === claim.payerId);
+  r.demo === true && r.payerId === claim.payerId && (claim.demoRound ? r.demoRound === claim.demoRound : !r.demoRound);
 
 // Who a claim is checked against. Seeded claims never count. Real claims never meet demo claims, and a demo claim
 // only meets its own round's, so every round sees the genuine sample pass once, however many judges share a login.
-export function othersFor(claim: Pick<Claim, "demo" | "payerId" | "demoRound">, rows: ClaimSummary[]): OtherClaim[] {
+// The genuine sample meets only the round's other genuine claims: the other samples, waiting on the model or held,
+// and a repost of its photo sent while it is checked, must not block or hold the one that should be paid.
+export function othersFor(claim: Pick<Claim, "demo" | "payerId" | "demoRound" | "events">, rows: ClaimSummary[]): OtherClaim[] {
+  const genuine = demoSampleOf(claim) === "genuine";
   return checkableClaims(rows)
-    .filter((r) => (claim.demo ? inRound(claim, r) : !r.demo))
+    .filter((r) => (claim.demo ? inRound(claim, r) && (!genuine || r.sample === "genuine") : !r.demo))
     .map(toOther);
 }
 
-/** A round's demo claims on this recall, newest first as the index keeps them. */
-export const roundClaims = (rows: ClaimSummary[], recallId: string, round: string) => rows.filter((r) => r.demo === true && r.recallId === recallId && r.demoRound === round);
+/** A round's demo claims on this recall for this PayPal account, newest first as the index keeps them. */
+export const roundClaims = (rows: ClaimSummary[], recallId: string, round: string, payerId: string) =>
+  rows.filter((r) => r.demo === true && r.recallId === recallId && r.demoRound === round && r.payerId === payerId);
 
 /** Why this sample can't be filed in the round yet, or null: the repost needs the round's genuine photo already sent. */
 export function notYet(sample: DemoSample, round: ClaimSummary[]): string | null {
