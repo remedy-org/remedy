@@ -1,0 +1,10 @@
+# Uploaded by `vercel deploy`: the source, not local secrets, worktrees or test output.
+.env*
+!.env.example
+.claude/
+.gstack/
+data/
+.shots/
+test-results/
+playwright-report/
+coverage/
