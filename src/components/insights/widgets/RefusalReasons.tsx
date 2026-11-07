@@ -57,7 +57,7 @@ export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
             >
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate text-ui text-text">{i.reason}</span>
-                <span className="shrink-0 rounded-[4px] border border-line px-1.5 font-mono text-[0.6875rem] leading-[1.125rem] tracking-[0.06em] text-muted">{GATE_LABEL[i.gate] ?? i.gate.toUpperCase()}</span>
+                <span className="shrink-0 rounded-[4px] border border-line px-1.5 font-mono text-micro leading-[1.125rem] tracking-[0.06em] text-muted">{GATE_LABEL[i.gate] ?? i.gate.toUpperCase()}</span>
               </span>
               <span className="text-right font-mono text-ui text-text tabular-nums">{i.count}</span>
               <span aria-hidden="true" className="col-span-2 h-1.5 rounded-full bg-surface-2">

@@ -62,6 +62,8 @@ export interface ClaimFact {
   amountPaid: number;
   /** Dollars really sent through PayPal (sandbox in this build): 0 for a sample claim, whose payout never left. */
   amountSent: number;
+  /** The grid's refund cell, as the console's payout cell says it: "$29.99", "$29.99 · not sent" for a sample, or "—". */
+  refund: string;
   /** 1 when paid: a unit taken out of use and refunded. */
   remedied: number;
   /** 1 when a sample claim was "paid": counted in remedied, but no money ever reached a real owner. */
@@ -144,6 +146,8 @@ function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
   return { stage: "Passed photo check", stopReason: c.reasons.find((r) => r.outcome === "hold")?.text ?? "Held for a person" };
 }
 
+const dollars = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
 export function claimFact(c: Claim, recall: Recall): ClaimFact {
   const failed = c.reasons.find((r) => r.outcome === "reject") ?? c.reasons.find((r) => r.outcome === "hold") ?? null;
   const refused = c.decision === "rejected" || c.decision === "blocked";
@@ -163,6 +167,7 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     verified: c.payerVerified,
     amountPaid: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
     amountSent: c.decision === "paid" && !c.seeded ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
+    refund: c.decision !== "paid" ? "—" : `${dollars.format(cents(amountOf(c.payout?.amount, recall)) / 100)}${c.seeded ? " · not sent" : ""}`,
     remedied: c.decision === "paid" ? 1 : 0,
     remediedSample: c.decision === "paid" && c.seeded ? 1 : 0,
     refused: refused ? 1 : 0,

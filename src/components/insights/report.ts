@@ -57,7 +57,7 @@ export function captions({ paid, samples, sampleAmount, answered }: ReturnType<t
   const sent = paid - samples;
   return {
     remedied: all ? "Sample claims · never sent" : some ? `Paid claims · ${share}` : "Paid claims",
-    paid: samples ? `Sandbox USD · ${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
+    paid: samples ? `Sandbox · ${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
     timeTitle: sent ? "Avg photo to PayPal" : "Avg photo check",
     timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
     time: sent ? `Average of ${sent} sent ${sent === 1 ? "payout" : "payouts"}` : `None sent yet · ${answered} ${answered === 1 ? "claim" : "claims"} checked`,
@@ -119,7 +119,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
         type: "grid",
         dataMapping: {
           // Short columns first, so the amount and whether a row is a sample are always in view; the reason runs last.
-          cols: [{ id: "claims.id" }, { id: "claims.decision" }, sum("claims.amountPaid"), { id: "claims.source" }, { id: "claims.reason" }],
+          cols: [{ id: "claims.id" }, { id: "claims.decision" }, { id: "claims.refund" }, { id: "claims.source" }, { id: "claims.reason" }],
         },
         sort: [{ field: { id: "claims.filedAt" }, direction: "desc" }],
         // No grand total: a sum under a column of decisions and reasons says nothing.

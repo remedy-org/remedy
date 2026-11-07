@@ -43,6 +43,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["payer", "PayPal account", "textFormat", { description: "Last four characters of the PayPal payer id only." }],
           ["verified", "PayPal verified", "booleanFormat"],
           ["amountPaid", "Paid out", "currencyFormat", { ...usd, description: "USD the rule paid for this claim; 0 unless paid. On a sample claim it was decided, never sent." }],
+          ["refund", "Refund", "textFormat", { description: "The refund as the console shows it: the amount, \"· not sent\" on a sample claim, or — when nothing was paid." }],
           ["amountSent", "Paid through PayPal", "currencyFormat", { ...usd, description: "USD really sent through PayPal (sandbox in this build); 0 for sample claims, whose payouts never left." }],
           ["remedied", "Units remedied", "integerFormat", { ...whole, description: "1 when the claim was paid: a unit destroyed and refunded." }],
           ["remediedSample", "Sample units remedied", "integerFormat", { ...whole, hide: true, description: "1 when a sample claim was decided paid. Its payout was never sent to a real owner." }],

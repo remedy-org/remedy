@@ -95,7 +95,7 @@ function Note(p: AgAiToolDetailParams) {
         >
           {copied ? "Copied" : "Copy note"}
         </button>
-        <a href={data.href} className="inline-flex min-h-11 items-center px-2 text-ui text-accent-text hover:text-text">
+        <a href={data.href} className="inline-flex min-h-11 items-center px-2 text-ui text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
           Open {data.claimId} <span aria-hidden="true">&nbsp;→</span>
         </a>
       </div>

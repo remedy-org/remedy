@@ -51,7 +51,8 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   subtleTextColor: token("muted"),
   backgroundColor: token("surface"),
   borderColor: token("line"),
-  accentColor: token("accent-text"),
+  // Neutral: links and Send stay in the text colour; amber is kept for the few active states below.
+  accentColor: token("text"),
   iconColor: token("muted"),
   rowHoverColor: token("surface-2"),
   invalidColor: token("stop"),
@@ -97,7 +98,8 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   studioWidgetToolbarBorder: line("line"),
   studioWidgetLoadingOverlayBackgroundColor: token("surface"),
   studioWidgetNoDataOverlayBackgroundColor: token("surface"),
-  studioValueWidgetFontSize: 36,
+  // title-lg's phone floor on the type scale: the KPI row reads as a ledger, not four display numbers.
+  studioValueWidgetFontSize: 28,
 
   studioPanelContainerBackgroundColor: token("surface"),
   studioPanelContainerBorder: line("line"),

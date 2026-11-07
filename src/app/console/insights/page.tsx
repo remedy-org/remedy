@@ -69,7 +69,7 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
           <ExhibitLabel leader="none">
             CPSC {recall.id} · Recalled {formatDate(recall.recallDate)} · Insights
           </ExhibitLabel>
-          <h1 className="mt-2 text-h2 font-semibold text-balance">
+          <h1 className="mt-2 text-h2 font-medium text-balance">
             <NoBreakHyphens>{recall.product}</NoBreakHyphens>
           </h1>
           <p className="mt-1.5 max-w-[100ch] text-ui text-muted">{whose(data.claims.length, samples, demo)}</p>
@@ -77,7 +77,7 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
         <div className="flex flex-wrap items-center gap-3">
           {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/insights" />}
           <p className="flex items-center gap-2 rounded-full border border-line py-1 pr-3 pl-2 text-micro whitespace-nowrap text-muted" title="The analyst reads, charts and drafts. Approving, rejecting and paying stay with a person and the rule.">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
+            <span aria-hidden="true" className="size-1.5 rounded-full bg-faint" />
             <span className="text-text">Recall analyst</span>
             <span className="hidden font-mono text-faint sm:inline">{analystModel()}</span>
             <span aria-hidden="true" className="text-faint">·</span>

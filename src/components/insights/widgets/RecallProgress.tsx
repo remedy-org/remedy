@@ -41,7 +41,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
       </p>
       <div aria-hidden="true" className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
         <p className="flex items-baseline gap-2">
-          <span className="text-[2.25rem] leading-none font-semibold tracking-[-0.02em]">{done.toLocaleString("en-US")}</span>
+          <span className="text-head-sm leading-none font-medium">{done.toLocaleString("en-US")}</span>
           <span className="text-ui text-muted">of {total.toLocaleString("en-US")} units remedied</span>
         </p>
         <p className="font-mono text-ui text-text tabular-nums">{pct(share)}</p>
@@ -54,8 +54,8 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
             style={{
               left: at(TYPICAL_RETURN.from),
               width: `calc(${at(TYPICAL_RETURN.to)} - ${at(TYPICAL_RETURN.from)})`,
-              background: "repeating-linear-gradient(135deg, color-mix(in oklch, var(--accent) 70%, transparent) 0 2px, transparent 2px 6px)",
-              boxShadow: "inset 0 0 0 1px color-mix(in oklch, var(--accent) 55%, transparent)",
+              background: "repeating-linear-gradient(135deg, var(--faint) 0 1.5px, transparent 1.5px 6px)",
+              boxShadow: "inset 0 0 0 1px var(--line-2)",
             }}
           />
           <div className="absolute inset-y-0 left-0 rounded-full bg-pay" style={{ width: `max(3px, ${at(share)})` }} />
@@ -66,7 +66,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
           </span>
         </div>
         <div className="absolute top-0 -translate-x-1/2 text-center" style={{ left: `calc((${at(TYPICAL_RETURN.from)} + ${at(TYPICAL_RETURN.to)}) / 2)` }}>
-          <span className="micro whitespace-nowrap text-accent-text">Typical recall</span>
+          <span className="micro whitespace-nowrap text-muted">Typical recall</span>
         </div>
         {TICKS.map((t) => (
           <div key={t} className={clsx("absolute bottom-0 flex flex-col gap-1", t === 0 ? "items-start" : "-translate-x-1/2 items-center")} style={{ left: at(t) }}>
@@ -80,7 +80,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
         <span
           aria-hidden="true"
           className="inline-block h-2.5 w-4 rounded-[2px]"
-          style={{ background: "repeating-linear-gradient(135deg, color-mix(in oklch, var(--accent) 70%, transparent) 0 2px, transparent 2px 6px)" }}
+          style={{ background: "repeating-linear-gradient(135deg, var(--faint) 0 1.5px, transparent 1.5px 6px)" }}
         />
         <span>
           {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}% of recalled products are ever returned or destroyed.

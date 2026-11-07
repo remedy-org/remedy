@@ -28,7 +28,7 @@ export function MobileSummary({ data }: { data: InsightsData }) {
         {kpis.map((k) => (
           <div key={k.label} className="flex flex-col gap-1 rounded-card border border-line bg-surface p-3">
             <dt className="text-micro text-muted">{k.label}</dt>
-            <dd className="text-[1.5rem] leading-tight font-semibold tracking-[-0.02em]">{k.value}</dd>
+            <dd className="text-head-sm leading-tight font-medium">{k.value}</dd>
             <dd className="text-micro text-faint">{k.note}</dd>
           </div>
         ))}
