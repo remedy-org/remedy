@@ -108,9 +108,11 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           </div>
         </div>
 
-        {/* What you're signing in to: the console on the demo recall, as a still. Decorative; the card says it in words. */}
+        {/* What you're signing in to: the console on the demo recall, as a still. Decorative; the card says it in words.
+            It keeps its 48rem layout and is zoomed to fit columns 7 to 12 (tilt included), so no word is cut at the
+            viewport's edge: each step fits the narrowest screen it covers. */}
         <aside aria-hidden="true" inert className="hidden lg:col-span-6 lg:col-start-7 lg:block">
-          <div className="w-[48rem] rotate-2">
+          <div className="w-[48rem] rotate-2 lg:[zoom:0.57] xl:[zoom:0.71] min-[85rem]:[zoom:0.76] min-[90rem]:[zoom:0.8]">
             <ExhibitLabel leader="right" leaderLength={48} className="mb-5 ml-8">
               40 sample claims waiting
             </ExhibitLabel>

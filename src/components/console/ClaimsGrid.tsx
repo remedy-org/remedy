@@ -253,7 +253,12 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
   useEffect(() => () => window.clearTimeout(focusTimer.current), []);
 
   return (
-    <div ref={wrap} className={className ?? (fill ? "claims-grid relative h-full w-full" : "claims-grid relative w-full")} aria-busy={!ready || undefined}>
+    // While loading, a filled grid clips its skeleton: 12 skeleton rows outgrow a short panel and covered the footer below.
+    <div
+      ref={wrap}
+      className={className ?? (fill ? `claims-grid relative h-full w-full${ready ? "" : " overflow-hidden"}` : "claims-grid relative w-full")}
+      aria-busy={!ready || undefined}
+    >
       {!ready && <SkeletonGrid rows={Math.min(rows.length, 12)} cards={cards} />}
       {width !== null && (
         <div className={ready ? (fill && !cards ? "h-full" : undefined) : "invisible absolute inset-x-0 top-0"}>

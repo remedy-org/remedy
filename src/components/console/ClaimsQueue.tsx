@@ -431,7 +431,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
             <button
               type="button"
               onClick={() => setHelp(true)}
-              className="ml-auto hidden items-center gap-1.5 rounded-control px-1 hover:text-muted lg:inline-flex"
+              className="-my-1 ml-auto hidden h-8 items-center gap-1.5 rounded-control px-2 hover:text-muted lg:inline-flex"
             >
               <Keys k={["?"]}>Shortcuts</Keys>
             </button>
@@ -532,7 +532,7 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={() => ref.current?.close()}
           aria-label="Close shortcuts (Esc)"
-          className="rounded-control px-2 py-1 font-mono text-micro text-faint hover:text-text"
+          className="inline-flex h-8 items-center rounded-control px-2.5 font-mono text-micro text-faint hover:text-text"
         >
           Esc
         </button>
