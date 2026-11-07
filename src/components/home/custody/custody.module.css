@@ -1,0 +1,208 @@
+/*
+ * The Chain of Custody (spec H2) and the hero's focus-in. Motion here is scroll-driven from JS (Motion's useScroll);
+ * this file holds the layout and the few CSS-only moves. The resting state is always the final one.
+ */
+
+/* ---------------------------------------------------------------- Focus-in: the hero's first paint, CSS only. */
+/*
+ * The h1, then the lead, 80ms apart. It starts at 1% opacity, not 0, so the browser counts the h1 as painted on the
+ * first frame: the LCP is the headline at first paint, not whichever image is opaque first.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .focusIn {
+    animation: focus-in 900ms var(--ease-out-expo) both;
+    animation-delay: calc(var(--line, 0) * 80ms);
+  }
+}
+
+@keyframes focus-in {
+  from {
+    opacity: 0.01;
+    filter: blur(10px);
+    translate: 0 12px;
+  }
+  to {
+    opacity: 1;
+    filter: none;
+    translate: none;
+  }
+}
+
+/* ------------------------------------------------------------------ The odometer under the payout numeral. */
+.odometer {
+  display: inline-block;
+  letter-spacing: -0.02em;
+}
+
+.figure {
+  display: inline-flex;
+  align-items: flex-start;
+  line-height: 1;
+}
+
+.wheel {
+  position: relative;
+  display: inline-block;
+  height: 1em;
+  /* Clip the wheel top and bottom only: the italic leans past the box on the right. */
+  clip-path: inset(0 -0.4em);
+}
+
+.strip {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.strip > span,
+.sizer {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+.sizer {
+  visibility: hidden;
+}
+
+/* Mercury's hero cents: 55%, raised to the cap height. */
+.cents {
+  display: inline-flex;
+  align-items: flex-start;
+  margin-top: 0.12em;
+  font-size: 0.55em;
+  letter-spacing: 0;
+}
+
+/* ------------------------------------------------------------------------------- The hero device (laptops). */
+/*
+ * The laptop sits under the h1, right of the lead, and its lid rises into the second line's row, right of its last
+ * glyph. --d is the display size, so the device tracks the headline from 1024px up; it is also held to the viewport's
+ * height so the screen's top half is always above the fold. It bleeds off the right edge onto the table.
+ */
+.device {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .device {
+    --d: clamp(2.75rem, 7.8vw, 7.25rem);
+    display: block;
+    position: absolute;
+    z-index: 0;
+    --bleed: calc(max(2rem, (100vw - 75rem) / 2) + 1rem);
+    width: min(50vw, calc((100svh - 4rem - 1.88 * var(--d)) * 1.02));
+    right: calc(-1 * var(--bleed));
+    top: calc(1.88 * var(--d) - 2rem);
+  }
+}
+
+/*
+ * The static figures on laptops: each chapter laid out at its full screen width (about 1,050px, so the side-by-side
+ * layouts apply) and zoomed to fit its half of the grid. Zoom re-lays out the text rather than scaling a bitmap, so it
+ * stays sharp. Phones get the chapters at 1:1, stacked.
+ */
+@media (min-width: 1024px) {
+  .figureZoom {
+    zoom: 0.41;
+  }
+}
+
+@media (min-width: 1200px) {
+  .figureZoom {
+    zoom: 0.5;
+  }
+}
+
+/* --------------------------------------------------------------------------- The pinned stage (laptops). */
+.runway {
+  position: relative;
+  height: 320vh;
+}
+
+.stage {
+  position: sticky;
+  top: 4rem;
+  height: calc(100svh - 4rem);
+  overflow: clip;
+}
+
+/* The flat screen layer that takes over from the laptop: full stage, unscaled, revealed by its clip-path. */
+.screen {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--bg);
+}
+
+.screenInner {
+  position: absolute;
+  inset: 1rem 1rem 1rem 18.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.rail {
+  position: absolute;
+  z-index: 4;
+  top: 1rem;
+  bottom: 1rem;
+  left: 0;
+  width: 17.5rem;
+  padding: 2rem 1.5rem 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The custody thread: an amber line down the stage's right edge that fills with the scroll. */
+.thread {
+  position: absolute;
+  z-index: 4;
+  top: 1rem;
+  bottom: 1rem;
+  right: 0.4375rem;
+  width: 2px;
+  background: var(--line);
+}
+
+.threadFill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform-origin: 50% 0;
+}
+
+/* ------------------------------------------------------------------------- The sticky phone (below 1024px). */
+.phoneRunway {
+  position: relative;
+  height: 240vh;
+}
+
+.phoneStage {
+  position: sticky;
+  top: 4rem;
+  height: calc(100svh - 4rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0 1.5rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chapterIn {
+    animation: chapter-in 240ms var(--ease-snap) both;
+  }
+}
+
+@keyframes chapter-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: none;
+  }
+}
