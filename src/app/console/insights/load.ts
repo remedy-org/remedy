@@ -1,8 +1,21 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { canSee, canSeeClaim, pickRecall } from "@/app/console/_lib/workspace";
 import { getAppStore } from "@/lib/demo";
 import type { Session } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
+
+// A claim file never changes without its event count (the index row's version) going up, so one read per claim
+// version serves every later Insights view and keeps the page inside the Blob plan. A missing file throws, so a claim
+// whose index row is written before its file is never cached as unreadable.
+const claimAt = unstable_cache(
+  async (id: string, version: number) => {
+    const claim = await (await getAppStore()).getClaim(id);
+    if (!claim) throw new Error(`claim ${id} (version ${version}) not readable yet`);
+    return claim;
+  },
+  ["insights-claim-at-version"],
+);
 
 export interface InsightsLoad {
   recall: Recall | null;
@@ -22,7 +35,7 @@ export async function loadInsights(session: Session, wanted: string | string[] |
   if (!recall) return { recall: null, recalls, claims: [], unreadable: [] };
 
   const index = (await store.listClaims()).filter((r) => r.recallId === recall.id).filter(canSeeClaim(recall, session));
-  const read = await Promise.allSettled(index.map((r) => store.getClaim(r.id)));
+  const read = await Promise.allSettled(index.map((r) => (r.version === undefined ? store.getClaim(r.id) : claimAt(r.id, r.version))));
   const claims: Claim[] = [];
   const unreadable: string[] = [];
   read.forEach((r, i) => {

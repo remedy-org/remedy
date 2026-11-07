@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { demoRecall } from "@/lib/demo/kikea";
 import { buildSeedClaims, SEED_PHOTOS } from "@/lib/demo/seed";
+import { summarize } from "@/lib/store/store";
 import type { Claim } from "@/lib/types";
 import { buildReport } from "../_lib/report";
 import { reasonSummary } from "@/components/insights/funnel";
@@ -14,7 +15,7 @@ const data = buildInsights(claims, recall, now);
 
 describe("buildInsights", () => {
   it("has one row per claim, and agrees with the CPSC report on every count", () => {
-    const report = buildReport(claims, recall);
+    const report = buildReport(claims.map(summarize), recall);
     expect(data.claims).toHaveLength(claims.length);
     const sum = (k: "remedied" | "refused" | "held" | "amountPaid") => data.claims.reduce((n, c) => n + c[k], 0);
     expect(sum("remedied")).toBe(report.stats.remedied);

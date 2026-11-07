@@ -1,5 +1,6 @@
 import { toDrawerClaim } from "@/app/console/_lib/drawer";
 import { amountOf, cents, reasonOf } from "@/app/console/_lib/view";
+import { summarize } from "@/lib/store/store";
 import type { Claim, Decision, Recall } from "@/lib/types";
 import type { Stage } from "@/components/insights/funnel";
 
@@ -152,11 +153,11 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     refusalReason: refused ? refusalLabel(refusedBy?.check ?? "") : null,
     refusalGate: !refused ? null : refusedBy?.check === "review" ? "Person" : !refusedBy || PRE_CHECKS.has(refusedBy.check) ? "No AI" : "Model reads",
     failedCheck: failed?.check ?? null,
-    reason: reasonOf(c, recall),
+    reason: reasonOf(summarize(c), recall),
     source: sourceOf(c),
     payer: `•••• ${c.payerId.slice(-4)}`,
     verified: c.payerVerified,
-    amountPaid: c.decision === "paid" ? cents(amountOf(c, recall)) / 100 : 0,
+    amountPaid: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
     remedied: c.decision === "paid" ? 1 : 0,
     remediedSample: c.decision === "paid" && c.seeded ? 1 : 0,
     refused: refused ? 1 : 0,
