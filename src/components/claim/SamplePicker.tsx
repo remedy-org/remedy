@@ -69,7 +69,7 @@ export function SamplePicker({
 
       <form action="/api/claims" method="post" className="flex flex-col gap-6">
         <input type="hidden" name="recall" value={slug} />
-        <fieldset className="grid grid-cols-2 gap-3 sm:gap-4">
+        <fieldset className="grid gap-3 sm:grid-cols-2 sm:gap-4">
           <legend className="sr-only">Sample claims</legend>
           {options.map(({ sample, locked }, i) => {
             const letter = String.fromCharCode(65 + i);
@@ -78,13 +78,13 @@ export function SamplePicker({
                 key={sample.id}
                 aria-disabled={locked ? true : undefined}
                 className={clsx(
-                  "group relative flex cursor-pointer flex-col gap-3 rounded-card border border-line bg-surface p-2 pb-3 transition-[border-color,box-shadow,background-color] duration-160 hover:bg-surface-2 sm:p-3 sm:pb-4",
+                  "group relative flex cursor-pointer gap-4 rounded-card border border-line bg-surface p-2 transition-[border-color,box-shadow,background-color] duration-160 hover:bg-surface-2 sm:flex-col sm:gap-3 sm:p-3 sm:pb-4",
                   "has-checked:border-accent has-checked:shadow-[0_0_0_2px_var(--bg),0_0_0_4px_var(--accent)] has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-accent",
                   locked && "cursor-not-allowed hover:bg-surface",
                 )}
               >
                 <input type="radio" name="sample" value={sample.id} defaultChecked={sample.id === selected} disabled={Boolean(locked)} className="peer sr-only" />
-                <span className="relative block aspect-[4/5] overflow-hidden rounded-control bg-surface-2">
+                <span className="relative block aspect-[4/5] w-24 shrink-0 overflow-hidden rounded-control bg-surface-2 sm:w-auto">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={sample.photos[0]} alt="" className={clsx("absolute inset-0 size-full object-cover", locked && "opacity-50 grayscale")} />
                   <span
@@ -94,15 +94,16 @@ export function SamplePicker({
                     {letter}
                   </span>
                   {locked ? (
-                    <span className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-control bg-[oklch(0.12_0.01_255/0.85)] px-2 py-1.5 text-ui text-[oklch(0.96_0.005_255)]">
+                    <span className="absolute inset-x-1.5 bottom-1.5 flex items-center gap-1.5 rounded-control sm:inset-x-2 sm:bottom-2 bg-[oklch(0.12_0.01_255/0.85)] px-2 py-1.5 text-ui text-[oklch(0.96_0.005_255)]">
                       <LockIcon className="shrink-0" />
-                      Run the genuine claim first
+                      <span className="max-sm:hidden">Run the genuine claim first</span>
+                      <span className="sm:hidden">After A</span>
                     </span>
                   ) : (
                     <SampleChip className="absolute bottom-2 left-2 max-sm:hidden">AI-made sample</SampleChip>
                   )}
                 </span>
-                <span className="flex flex-col gap-1.5 px-1">
+                <span className="flex min-w-0 flex-col gap-1.5 py-1 sm:px-1 sm:py-0">
                   <span className="text-ui font-medium text-text">
                     <span className="sr-only">Sample {letter}: </span>
                     {sample.title}

@@ -82,7 +82,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       {demo ? (
         <div className="flex flex-col gap-3 max-sm:order-last">
           <h3 className="micro text-faint">Four sample claims you&apos;ll run</h3>
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-4">
+          <ul className="grid gap-x-4 gap-y-3 sm:grid-cols-2 sm:gap-y-4">
             {DEMO_SAMPLES.map((s) => (
               <li key={s.id} className="flex min-w-0 items-start gap-3">
                 <SampleTag src={s.photos[0]} />

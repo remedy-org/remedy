@@ -112,6 +112,17 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
         options: DEMO_SAMPLES.map((sample) => ({ sample })),
       }),
   },
+  "picker-locked-runs": {
+    group: "Demo",
+    note: "The AC state: a run scored, the repost locked",
+    render: () =>
+      picker({
+        selected: "genuine",
+        runs: [run("RM-5309", "ai-no-session", "blocked"), run("RM-5307", "wrong-code", "rejected")],
+        roundDone: false,
+        options: DEMO_SAMPLES.map((sample) => ({ sample, locked: locked(sample) })),
+      }),
+  },
   "picker-unexpected": {
     group: "Demo",
     note: "Scoreboard with one outcome not as expected",

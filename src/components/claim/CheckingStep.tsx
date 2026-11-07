@@ -233,7 +233,13 @@ const STAGES: { id: string; label: string; at: string[] }[] = [
 /** The claim's own stages with their times relative to the photos arriving (Wise's transfer tracker). */
 function Stages({ timeline, decision }: { timeline: TimelineEvent[]; decision: ClaimView["decision"] }) {
   const t0 = timeline.find((e) => e.type === "photos_received")?.at;
-  const time = (types: string[]) => timeline.find((e) => types.includes(e.type))?.at;
+  // The earliest matching event. The pipeline saves "decided" after the payout it allowed, so the rule's stage also
+  // counts the payout: the rule had decided by the time PayPal was asked.
+  const time = (types: string[]) =>
+    timeline
+      .filter((e) => types.includes(e.type) || (types.includes("decided") && e.type === "payout_sent"))
+      .map((e) => e.at)
+      .sort()[0];
   const decided = decision !== "pending";
   const current = STAGES.findIndex((s) => !time(s.at));
   return (

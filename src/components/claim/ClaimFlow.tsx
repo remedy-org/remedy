@@ -51,8 +51,8 @@ export function ClaimFlow(props: ClaimFlowProps) {
   const moved = useRef(false);
   useEffect(() => {
     if (!moved.current) return;
-    document.getElementById(TITLE[phase])?.focus({ preventScroll: true });
-  }, [phase]);
+    document.getElementById(phase === "capture" && demo ? "sample-title" : TITLE[phase])?.focus({ preventScroll: true });
+  }, [phase, demo]);
 
   // A local photo URL is freed when the flow goes away (the result replaces it).
   useEffect(() => () => void (photoUrl?.startsWith("blob:") && URL.revokeObjectURL(photoUrl)), [photoUrl]);
