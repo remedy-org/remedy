@@ -3,14 +3,17 @@ import { sendPayout, type PayoutStatus } from "@/lib/paypal/payouts";
 import { sendCheck } from "@/lib/rule";
 import type { Store } from "@/lib/store";
 import type { Claim, Reason, Recall } from "@/lib/types";
-import { othersFor } from "@/app/api/claims/_lib/pipeline";
+import { othersFor, payoutNote } from "@/app/api/claims/_lib/pipeline";
 import { formatMoney, reviewReasonText } from "./view";
 
-// A person's decision on a held claim. Kept free of Next imports so the money path is unit-tested.
+// A person's decision on a held claim. Kept free of Next imports so the money path is unit-tested. Every save goes
+// through store.updateClaim, so a decision is written only over the claim it was made on: a webhook or payout refresh
+// that lands in between is kept, never overwritten.
 
 export type ReviewResult =
-  | { ok: true; claim: Claim }
-  | { ok: false; status: number; code: "not_held" | "seeded" | "send_check" | "paypal"; message: string; reasons?: Reason[]; reference?: string };
+  // sample: the answer to a seeded claim's review, which is shown but never saved.
+  | { ok: true; claim: Claim; sample?: string }
+  | { ok: false; status: number; code: "not_held" | "send_check" | "paypal"; message: string; reasons?: Reason[]; reference?: string };
 
 interface ReviewInput {
   store: Store;
@@ -23,13 +26,30 @@ interface ReviewInput {
 
 const event = (now: Date, type: string, detail: string) => ({ at: now.toISOString(), type, detail });
 
+const append = (c: Claim, at: Date, type: string, detail: string): Claim => ({ ...c, events: [...c.events, event(at, type, detail)] });
+
+async function notHeld(store: Store, id: string): Promise<ReviewResult> {
+  const current = await store.getClaim(id);
+  return { ok: false, status: 409, code: "not_held", message: current ? `This claim is already ${current.decision}.` : "This claim is gone." };
+}
+
+// Seeded claims sit on the shared demo recall, in every company's console, with made-up PayPal accounts. Reviewing one
+// answers what would happen but saves nothing: no payout to a fake account, and one judge's reject doesn't empty the
+// next judge's review queue.
+
 // Approve and pay: a fresh read of the claim and the index, sendCheck, then sendPayout with the claim's payoutKey
-// (PayPal's request id), so a retried approve can never pay twice. If PayPal fails, the claim stays held.
+// (PayPal's request id), as the owner's pipeline does, so a retried approve can never pay twice. If PayPal fails, the
+// claim stays held.
 export async function approveClaim({ store, claim: stale, recall, by, now = new Date(), pay = sendPayout }: ReviewInput & { pay?: typeof sendPayout }): Promise<ReviewResult> {
   const claim = (await store.getClaim(stale.id)) ?? stale;
-  if (claim.decision !== "held") return { ok: false, status: 409, code: "not_held", message: `This claim is already ${claim.decision}.` };
+  if (claim.decision !== "held") return notHeld(store, claim.id);
+  const amount = formatMoney(recall.refund);
   if (claim.seeded) {
-    return { ok: false, status: 422, code: "seeded", message: "This is a seeded sample claim with a made-up PayPal account, so it can't be paid." };
+    return {
+      ok: true,
+      claim,
+      sample: `Sample only, nothing saved. This seeded claim's PayPal account is made up, so Remedy sent no money and the claim stays held for the next reviewer. On a real claim, Approve runs the duplicate and account checks again, then sends ${amount} through PayPal Payouts.`,
+    };
   }
 
   // sendCheck treats any decision but pending as "already decided"; a held claim is exactly what a person may send.
@@ -37,52 +57,58 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
   const others = othersFor(claim, await store.listClaims());
   const conflicts = sendCheck({ claim: { ...claim, decision: "pending" }, others });
   if (conflicts.length) {
-    await store.putClaim({ ...claim, events: [...claim.events, event(now, "approve_refused", `Not paid on review: ${conflicts.map((r) => r.text).join("; ")}`)] });
+    await store.updateClaim(claim.id, (c) => (c.decision === "held" ? append(c, now, "approve_refused", `Not paid on review: ${conflicts.map((r) => r.text).join("; ")}`) : null));
     return { ok: false, status: 409, code: "send_check", message: "Remedy didn't send the payout: a check failed when it looked again.", reasons: conflicts };
   }
 
-  const approved: Claim = { ...claim, events: [...claim.events, event(now, "approved", `Approved on review by ${by}`)] };
-  await store.putClaim(approved);
+  const approved = await store.updateClaim(claim.id, (c) => (c.decision === "held" ? append(c, now, "approved", `Approved on review by ${by}`) : null));
+  if (!approved) return notHeld(store, claim.id);
 
   let sent: PayoutStatus;
   try {
-    sent = await pay({
-      claimId: claim.id,
-      payoutKey: claim.payoutKey,
-      payerId: claim.payerId,
-      amount: recall.refund,
-      note: `Refund for CPSC recall ${recall.id}, claim ${claim.id}`,
-    });
+    sent = await pay({ claimId: claim.id, payoutKey: claim.payoutKey, payerId: claim.payerId, amount: recall.refund, note: payoutNote(recall, claim) });
   } catch (e) {
     const reference = e instanceof PayPalError ? (e.debugId ?? undefined) : undefined;
     const detail = e instanceof Error ? e.message : String(e);
-    await store.putClaim({ ...approved, events: [...approved.events, event(new Date(), "payout_failed", `PayPal didn't take the payout: ${detail}`)] });
+    await store.updateClaim(claim.id, (c) => append(c, new Date(), "payout_failed", `PayPal didn't take the payout: ${detail}`));
     return { ok: false, status: 502, code: "paypal", message: "PayPal didn't take the payout. The claim is still held and nothing was paid; try again.", reference };
   }
 
+  // PayPal has the money, so the claim says paid whatever happened to it meanwhile. An approve that got here first
+  // (the same payoutKey, so the same batch) has already saved it.
   const at = new Date();
-  const paid: Claim = {
-    ...approved,
-    decision: "paid",
-    reasons: [...approved.reasons, { check: "review", outcome: "pass", text: `Approved on review by ${by}` }],
-    payout: { batchId: sent.batchId, itemId: sent.itemId, status: sent.itemStatus ?? sent.batchStatus, updatedAt: at.toISOString(), amount: recall.refund },
-    events: [...approved.events, event(at, "payout_sent", `Payout of ${formatMoney(recall.refund)} sent through PayPal`)],
-  };
-  await store.putClaim(paid);
-  return { ok: true, claim: paid };
+  const paid = await store.updateClaim(claim.id, (c) =>
+    c.payout?.batchId === sent.batchId
+      ? null
+      : {
+          ...c,
+          decision: "paid",
+          reasons: [...c.reasons, { check: "review", outcome: "pass", text: `Approved on review by ${by}` }],
+          payout: { batchId: sent.batchId, ...(sent.itemId ? { itemId: sent.itemId } : {}), status: sent.itemStatus ?? sent.batchStatus, updatedAt: at.toISOString(), amount: recall.refund },
+          events: [...c.events, event(at, "payout_sent", `Payout of ${amount} sent through PayPal`)],
+        },
+  );
+  const saved = paid ?? (await store.getClaim(claim.id));
+  if (!saved) throw new Error(`Claim ${claim.id} is gone after its payout was sent (batch ${sent.batchId})`);
+  return { ok: true, claim: saved };
 }
 
 // Reject with a reason the owner can act on. No money moves.
 export async function rejectClaim({ store, claim: stale, by, reason, now = new Date() }: ReviewInput & { reason: string }): Promise<ReviewResult> {
   const claim = (await store.getClaim(stale.id)) ?? stale;
-  if (claim.decision !== "held") return { ok: false, status: 409, code: "not_held", message: `This claim is already ${claim.decision}.` };
+  if (claim.decision !== "held") return notHeld(store, claim.id);
   const text = reviewReasonText(reason);
-  const rejected: Claim = {
-    ...claim,
-    decision: "rejected",
-    reasons: [...claim.reasons, { check: "review", outcome: "reject", text }],
-    events: [...claim.events, event(now, "rejected", `${text} (by ${by})`)],
-  };
-  await store.putClaim(rejected);
-  return { ok: true, claim: rejected };
+  if (claim.seeded) {
+    return {
+      ok: true,
+      claim,
+      sample: `Sample only, nothing saved. Seeded claims are shared by every company's console, so this one stays held for the next reviewer. On a real claim, the owner would read: "${text}".`,
+    };
+  }
+  const rejected = await store.updateClaim(claim.id, (c) =>
+    c.decision === "held"
+      ? { ...c, decision: "rejected", reasons: [...c.reasons, { check: "review", outcome: "reject", text }], events: [...c.events, event(now, "rejected", `${text} (by ${by})`)] }
+      : null,
+  );
+  return rejected ? { ok: true, claim: rejected } : notHeld(store, claim.id);
 }

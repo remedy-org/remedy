@@ -150,7 +150,7 @@ function Evidence({ claim }: { claim: DrawerClaim }) {
     <div className="flex flex-col gap-8 px-4 py-6 sm:px-6">
       <section className="flex flex-col gap-3" aria-label="Photos">
         <ExhibitLabel leader="right" leaderLength={24}>
-          Exhibit A · {claim.photos.length ? `${claim.photos.length} ${claim.seeded ? "sample" : "live"} ${claim.photos.length === 1 ? "photo" : "photos"}` : "No photos yet"}
+          Exhibit A · {claim.photos.length ? `${claim.photos.length} ${claim.seeded || claim.demo ? "sample" : "live"} ${claim.photos.length === 1 ? "photo" : "photos"}` : "No photos yet"}
         </ExhibitLabel>
         {claim.seeded && <p className="text-ui text-muted">Sample photos from the demo data, shared by several seeded claims.</p>}
         {claim.photos.length ? (

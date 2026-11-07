@@ -50,7 +50,7 @@ Remedy is its own website built on PayPal's public APIs. Companies running a rec
 ## The company's console
 
 - **Claims grid:** claim, time, PayPal account (masked, verified), decision, reason, payout status, amount. Filter by decision; sort by time.
-- **Evidence drawer:** photos, every model answer with its quoted evidence, the pre-checks, the rule's decision, and approve or reject for held claims.
+- **Evidence drawer:** photos, every model answer with its quoted evidence, the pre-checks, the rule's decision, and approve or reject for held claims. Approve re-runs the duplicate and account checks, then pays through the same idempotent payout as the pipeline (the claim's payoutKey); if PayPal refuses, the claim stays held. Seeded sample claims are in every workspace and have made-up PayPal accounts, so approving or rejecting one says what would happen and saves nothing.
 - **Header:** units remedied of units sold, paid out, waiting for review, refused.
 - **Recall import:** paste a CPSC URL. The model drafts the checks under the five spec rules (`docs/EVAL.md`); the company edits, then publishes.
 

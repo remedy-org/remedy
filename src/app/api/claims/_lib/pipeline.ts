@@ -55,6 +55,10 @@ export function othersFor(claim: Pick<Claim, "demo" | "payerId">, rows: ClaimSum
 /** The demo sample a demo claim was filed with, from its events. */
 export const demoSampleOf = (claim: Pick<Claim, "demo" | "events">) => (claim.demo ? (claim.events.find((e) => e.type === "demo_sample")?.detail ?? null) : null);
 
+/** The note the owner reads on the payout in PayPal, whether the rule or a person sent it. */
+export const payoutNote = (recall: Pick<Recall, "id" | "product">, claim: Pick<Claim, "id" | "demo">) =>
+  `Recall refund for ${recall.product} (CPSC ${recall.id}), claim ${claim.id}${claim.demo ? ", demo mode" : ""}`;
+
 /** The page for a claim: demo claims live under /try. */
 export const claimPath = (slug: string, claim: Pick<Claim, "id" | "demo">) => `/r/${slug}/${claim.demo ? "try" : "claim"}/${claim.id}`;
 
@@ -228,7 +232,7 @@ export async function checkClaim(deps: PipelineDeps, claimId: string): Promise<C
       payoutKey: fresh.payoutKey,
       payerId: fresh.payerId,
       amount: recall.refund,
-      note: `Recall refund for ${recall.product} (CPSC ${recall.id}), claim ${fresh.id}${fresh.demo ? ", demo mode" : ""}`,
+      note: payoutNote(recall, fresh),
     });
   } catch (e) {
     const reason: Reason = { check: "payout", outcome: "hold", text: "PayPal didn't accept the payout, so a person will send it" };

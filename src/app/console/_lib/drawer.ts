@@ -32,10 +32,13 @@ export interface DrawerClaim {
   amount: string;
   payout: { batchId: string; status: string; updatedAt: string } | null;
   events: Claim["events"];
-  // Approve and reject are offered for held claims; seeded ones can be rejected but never paid.
-  review: { approve: boolean; reject: boolean; note: string | null } | null;
+  // Approve and reject for held claims. A seeded one's review is a sample: answered, but never paid or saved.
+  review: { sample: boolean; note: string | null } | null;
   recall: { id: string; autoPay: boolean };
 }
+
+// What approve and reject answer: the claim, and for a seeded claim what the review would have done.
+export type ReviewedClaim = DrawerClaim & { sample?: string };
 
 // Pre-check reasons and a person's review aren't model answers: the drawer shows them elsewhere.
 const NOT_MODEL = new Set(["session", "duplicate_photo", "payer", "payer_verified", "state", "review"]);
@@ -85,8 +88,8 @@ export function toDrawerClaim(c: Claim, recall: Recall): DrawerClaim {
     review:
       c.decision === "held"
         ? c.seeded
-          ? { approve: false, reject: true, note: "Seeded sample: its PayPal account is made up, so it can be rejected but not paid." }
-          : { approve: true, reject: true, note: null }
+          ? { sample: true, note: "Seeded sample, in every company's console, with a made-up PayPal account. Approve or reject shows what each does; no money moves and nothing is saved." }
+          : { sample: false, note: null }
         : null,
     recall: { id: recall.id, autoPay: recall.autoPay },
   };

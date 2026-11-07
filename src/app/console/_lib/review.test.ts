@@ -47,12 +47,70 @@ describe("approveClaim", () => {
     expect(pay).not.toHaveBeenCalled();
   });
 
-  it("never pays a seeded sample claim", async () => {
+  it("answers a seeded sample claim's approve without paying or saving", async () => {
     const claim = held({ seeded: true });
     await store.putClaim(claim);
     const pay = vi.fn();
-    expect(await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay })).toMatchObject({ ok: false, code: "seeded" });
+    const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
+    expect(result).toMatchObject({ ok: true, claim: { decision: "held" }, sample: expect.stringContaining("sent no money") });
     expect(pay).not.toHaveBeenCalled();
+    expect(await store.getClaim("RM-0412")).toEqual(claim);
+  });
+
+  it("doesn't approve a claim decided between its read and the save", async () => {
+    const claim = held();
+    await store.putClaim(claim);
+    // Another reviewer rejects it while this approve runs its checks.
+    const racing: Store = {
+      ...store,
+      listClaims: async () => {
+        await store.putClaim({ ...claim, decision: "rejected" });
+        return store.listClaims();
+      },
+    };
+    const pay = vi.fn();
+
+    const result = await approveClaim({ store: racing, claim, recall: sampleRecall(), by: "x", pay });
+
+    expect(result).toMatchObject({ ok: false, status: 409, code: "not_held", message: "This claim is already rejected." });
+    expect(pay).not.toHaveBeenCalled();
+    expect((await store.getClaim("RM-0412"))?.decision).toBe("rejected");
+  });
+
+  it("saves the payout over the claim as it is after PayPal answers, keeping what landed meanwhile", async () => {
+    const claim = held();
+    await store.putClaim(claim);
+    const pay = vi.fn(async () => {
+      const now = (await store.getClaim("RM-0412"))!;
+      await store.putClaim({ ...now, events: [...now.events, { at: "2026-11-07T10:05:00.000Z", type: "note", detail: "saved while paying" }] });
+      return sent;
+    });
+
+    await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
+
+    expect((await store.getClaim("RM-0412"))?.events.map((e) => e.type)).toEqual(["created", "approved", "note", "payout_sent"]);
+  });
+
+  it("records one payout when two approves race, both sending the same payoutKey", async () => {
+    const claim = held();
+    await store.putClaim(claim);
+    const pay = vi.fn<(input: { payoutKey: string }) => Promise<typeof sent>>(async () => sent);
+
+    const results = await Promise.all([1, 2].map(() => approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay })));
+
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(new Set(pay.mock.calls.map(([input]) => input.payoutKey))).toEqual(new Set([claim.payoutKey]));
+    const saved = await store.getClaim("RM-0412");
+    expect(saved?.decision).toBe("paid");
+    expect(saved?.events.filter((e) => e.type === "payout_sent")).toHaveLength(1);
+  });
+
+  it("sends the same payout note as the owner's pipeline", async () => {
+    const claim = held({ demo: true });
+    await store.putClaim(claim);
+    const pay = vi.fn(async () => sent);
+    await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
+    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ note: "Recall refund for X-VESOLJE Nursing Pillows (CPSC 27-071), claim RM-0412, demo mode" }));
   });
 
   it("holds instead of paying when sendCheck finds another live claim from the account", async () => {
@@ -125,6 +183,21 @@ describe("rejectClaim", () => {
     const saved = await store.getClaim("RM-0412");
     expect(saved?.decision).toBe("rejected");
     expect(saved?.reasons.at(-1)).toEqual({ check: "review", outcome: "reject", text: "Rejected on review: The code isn't on the cut pillow" });
+  });
+
+  it("answers a seeded sample claim's reject without saving it", async () => {
+    const claim = held({ seeded: true });
+    await store.putClaim(claim);
+    const result = await rejectClaim({ store, claim, recall: sampleRecall(), by: "x", reason: "The code isn't on the cut pillow" });
+    expect(result).toMatchObject({ ok: true, claim: { decision: "held" }, sample: expect.stringContaining("Rejected on review: The code isn't on the cut pillow") });
+    expect(await store.getClaim("RM-0412")).toEqual(claim);
+  });
+
+  it("leaves a claim decided since the drawer read it, and says how it was decided", async () => {
+    const claim = held();
+    await store.putClaim({ ...claim, decision: "paid" });
+    expect(await rejectClaim({ store, claim, recall: sampleRecall(), by: "x", reason: "too late now" })).toMatchObject({ ok: false, code: "not_held", message: "This claim is already paid." });
+    expect((await store.getClaim("RM-0412"))?.decision).toBe("paid");
   });
 
   it("refuses a claim that isn't held", async () => {

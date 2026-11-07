@@ -3,27 +3,33 @@
 import { useState } from "react";
 import { Button, ErrorState, Field, Textarea } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
-import type { DrawerClaim } from "@/app/console/_lib/drawer";
+import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
 import { api } from "./api";
 
 type Mode = "idle" | "approve" | "reject";
 
-/** Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit click. */
+/**
+ * Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit click. A seeded claim's
+ * review is a sample: the server says what it would have done, and the claim stays held.
+ */
 export function ReviewActions({ claim, onDone }: { claim: DrawerClaim; onDone: (c: DrawerClaim) => void }) {
   const [mode, setMode] = useState<Mode>("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [reason, setReason] = useState("");
+  const [sample, setSample] = useState<string | null>(null);
   const review = claim.review;
   if (!review) return null;
 
   const run = async (url: string, json?: unknown) => {
     setBusy(true);
     setError(null);
-    const result = await api<DrawerClaim>(url, { method: "POST", json });
+    const result = await api<ReviewedClaim>(url, { method: "POST", json });
     setBusy(false);
-    if (result.ok) onDone(result.data);
-    else setError(result.error);
+    if (!result.ok) return setError(result.error);
+    if (!result.data.sample) return onDone(result.data);
+    setSample(result.data.sample);
+    setMode("idle");
   };
 
   const base = `/api/console/claims/${claim.id}`;
@@ -38,14 +44,18 @@ export function ReviewActions({ claim, onDone }: { claim: DrawerClaim; onDone: (
 
       {mode === "idle" && (
         <>
-          {review.note && <p className="text-ui text-muted">{review.note}</p>}
+          {sample ? (
+            <p role="status" className="rounded-control border border-line bg-surface-2 px-4 py-3 text-ui text-muted">
+              {sample}
+            </p>
+          ) : (
+            review.note && <p className="text-ui text-muted">{review.note}</p>
+          )}
           <div className="flex flex-wrap gap-3">
-            {review.approve && (
-              <Button onClick={() => setMode("approve")} className="flex-1 sm:flex-none">
-                Approve and pay {claim.amount}
-              </Button>
-            )}
-            <Button variant="secondary" onClick={() => setMode("reject")} className="flex-1 sm:flex-none">
+            <Button onClick={() => (setSample(null), setMode("approve"))} className="flex-1 sm:flex-none">
+              {review.sample ? "Approve" : `Approve and pay ${claim.amount}`}
+            </Button>
+            <Button variant="secondary" onClick={() => (setSample(null), setMode("reject"))} className="flex-1 sm:flex-none">
               Reject
             </Button>
           </div>
@@ -54,14 +64,27 @@ export function ReviewActions({ claim, onDone }: { claim: DrawerClaim; onDone: (
 
       {mode === "approve" && (
         <>
-          <p className="text-ui text-muted">
-            Remedy runs the duplicate and account checks again, then sends <span className="font-mono text-text">{claim.amount}</span> to{" "}
-            <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts, from Remedy&apos;s PayPal account in this build.
-          </p>
+          {review.sample ? (
+            <p className="text-ui text-muted">
+              On a real claim, this sends <span className="font-mono text-text">{claim.amount}</span> through PayPal Payouts. This sample&apos;s account,{" "}
+              <span className="font-mono text-text">{claim.payer}</span>, is made up, so Remedy sends nothing and the claim stays held.
+            </p>
+          ) : (
+            <p className="text-ui text-muted">
+              Remedy runs the duplicate and account checks again, then sends <span className="font-mono text-text">{claim.amount}</span> to{" "}
+              <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts, from Remedy&apos;s PayPal account in this build.
+            </p>
+          )}
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Paying through PayPal" className="flex-1 sm:flex-none">
-              Pay {claim.amount}
-            </Button>
+            {review.sample ? (
+              <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Approving the sample" className="flex-1 sm:flex-none">
+                Approve the sample
+              </Button>
+            ) : (
+              <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Paying through PayPal" className="flex-1 sm:flex-none">
+                Pay {claim.amount}
+              </Button>
+            )}
             <Button variant="secondary" onClick={reset} disabled={busy} className="flex-1 sm:flex-none">
               Cancel
             </Button>
@@ -87,7 +110,7 @@ export function ReviewActions({ claim, onDone }: { claim: DrawerClaim; onDone: (
           </Field>
           <div className="flex flex-wrap gap-3">
             <Button type="submit" variant="secondary" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
-              Reject claim
+              {review.sample ? "Reject the sample" : "Reject claim"}
             </Button>
             <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>
               Cancel
