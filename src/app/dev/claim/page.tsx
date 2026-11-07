@@ -74,7 +74,7 @@ const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug">) => (
   <FlowShell demo company="Kikea Store">
     <WithJudges demo step="samples">
       <div className="flex flex-col gap-6">
-        <StepMeter current={2} steps={DEMO_STEPS} className="mx-auto w-full max-w-[40rem]" />
+        <StepMeter current={2} steps={DEMO_STEPS} />
         <SamplePicker slug={fx.recall.slug} {...props} />
       </div>
     </WithJudges>
@@ -157,20 +157,13 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     note: "Under a minute left",
     render: () => flow({ preview: { phase: "code" } }, { ...fx.open, captureSession: { id: "cs_preview", expiresAt: new Date(fx.NOW + 42_000).toISOString() } }),
   },
-  "demo-code": { group: "Code", note: "Demo: the sample's code", render: () => flow({ sample: genuine, preview: { phase: "code" } }) },
-  ...Object.fromEntries(
-    DEMO_SAMPLES.filter((s) => s.id !== "genuine").map((sample) => [
-      `demo-code-${sample.id}`,
-      { group: "Code", note: `Demo: ${sample.title.toLowerCase()}`, render: () => flow({ sample, preview: { phase: "code" } }, { ...fx.open, code: sample.code ?? "H6W" }) },
-    ]),
-  ),
   expired: {
     group: "Code",
     note: "Session ended before any photo",
     render: () => (
       <FlowShell sandbox={isSandboxBuild()} company="Kikea Store">
         <div className="flex flex-col gap-6">
-          <StepMeter current={2} className="mx-auto w-full max-w-claim" />
+          <StepMeter current={2} />
           <ExpiredCard code="M4T" againHref="#" />
         </div>
       </FlowShell>
@@ -196,6 +189,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     render: () => flow({ preview: { phase: "capture", capture: { camera: "live" } } }, { ...fx.open, captureSession: { id: "cs_preview", expiresAt: new Date(fx.NOW - 1000).toISOString() } }),
   },
   "demo-capture": { group: "Camera", note: "Demo: the sample in the viewfinder", render: () => flow({ sample: genuine, preview: { phase: "capture" } }) },
+  "demo-capture-wrong-code": { group: "Camera", note: "Demo: the wrong code, its tag reading another", render: () => flow({ sample: wrongCode, preview: { phase: "capture" } }, { ...fx.open, code: "K7P" }) },
   "demo-capture-ai": { group: "Camera", note: "Demo: the AI image, sent from outside", render: () => flow({ sample: demoSample("ai-no-session"), preview: { phase: "capture" } }, { ...fx.open, code: "H6W" }) },
   checking: { group: "Checking", note: "Exhibit A read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
   "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
@@ -231,6 +225,11 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     group: "Result",
     note: "Demo: the wrong code, rejected",
     render: () => result(fx.demoWrongCode, { sample: wrongCode, round: fx.roundAfter(["genuine", "wrong-code"]) }),
+  },
+  "demo-unanswered": {
+    group: "Result",
+    note: "Demo: the model didn't answer, run it again",
+    render: () => result(fx.heldModel, { sample: genuine, round: { runs: [{ sample: "genuine", decision: "held", unanswered: true }] } }),
   },
   "demo-blocked": { group: "Result", note: "Demo: AI image refused", render: () => result(fx.blocked, { sample: demoSample("ai-no-session"), round: fx.roundAfter(["genuine", "wrong-code", "ai-no-session"]) }) },
   "demo-done": {

@@ -10,18 +10,18 @@ export interface StepMeterProps {
   steps?: readonly string[];
   /** Phones on the camera step: hidden (still read out), so the camera gets the whole screen; it shows its own chip. */
   compact?: boolean;
-  className?: string;
 }
 
 /**
  * The steps of a claim as hairline segments: done and current in text colour (the current one fills in), the rest
- * faint. From 640px a quiet mono counter, "2/4", leads them.
+ * faint. From 640px a quiet mono counter, "2/4", leads them. One frame on every step (640px, centred), so the meter never
+ * moves between steps; only the content under it changes width.
  */
-export function StepMeter({ current, steps = REAL_STEPS, compact, className }: StepMeterProps) {
+export function StepMeter({ current, steps = REAL_STEPS, compact }: StepMeterProps) {
   const at = Math.min(current, steps.length);
   const label = `Step ${at} of ${steps.length}`;
   return (
-    <div className={clsx("flex items-end gap-4", compact && "max-sm:sr-only", className)}>
+    <div className={clsx("mx-auto flex w-full max-w-[40rem] items-end gap-4", compact && "max-sm:sr-only")}>
       <span aria-hidden="true" className="micro w-7 shrink-0 text-faint tabular-nums max-sm:hidden">
         <span className="text-text">{at}</span>/{steps.length}
       </span>

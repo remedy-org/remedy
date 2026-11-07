@@ -37,10 +37,14 @@ export interface ClaimFlowProps {
 const TITLE: Record<Phase, string> = { code: "code-title", capture: "capture-title", checking: "checking-title" };
 const JUDGE: Record<Phase, JudgeStep> = { code: "code", capture: "capture", checking: "checking" };
 
-/** Code, camera, checking: the steps of an open claim, in the browser. The result is rendered by the server. */
+/**
+ * Code, camera, checking: the steps of an open claim, in the browser. The result is rendered by the server. A demo claim
+ * opens on its sample's photo: the tag is already written, so there is no code to write and no timer to beat; the photo
+ * step names the code.
+ */
 export function ClaimFlow(props: ClaimFlowProps) {
   const { claimId, code, view: initial, sample, preview } = props;
-  const [phase, setPhase] = useState<Phase>(preview?.phase ?? (initial.photos > 0 ? "checking" : "code"));
+  const [phase, setPhase] = useState<Phase>(preview?.phase ?? (initial.photos > 0 ? "checking" : sample ? "capture" : "code"));
   const [view, setView] = useState(initial);
   // Exhibit A on the checking screen: the photo just sent (a local object URL, or the sample's public file).
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(preview?.photoUrl ?? (initial.photos > 0 && sample ? sample.photos[0] : undefined));
@@ -75,7 +79,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
   return (
     <WithJudges demo={demo} step={JUDGE[phase]}>
       <div className="flex flex-col gap-6">
-        <StepMeter current={current} steps={steps} compact={phase === "capture"} className={phase === "checking" ? "mx-auto w-full max-w-[60rem]" : phase === "capture" ? "mx-auto w-full max-w-[40rem]" : "mx-auto w-full max-w-claim lg:max-w-[55rem]"} />
+        <StepMeter current={current} steps={steps} compact={phase === "capture"} />
         {phase === "code" && (
           <div className="mx-auto w-full max-w-claim lg:max-w-[55rem]">
             <CodeStep
@@ -84,7 +88,6 @@ export function ClaimFlow(props: ClaimFlowProps) {
               expiresAt={props.expiresAt}
               startNow={props.startNow}
               frozen={Boolean(preview)}
-              sample={sample}
               qrSvg={props.qrSvg}
               phoneUrl={props.phoneUrl}
               onContinue={() => go("capture")}

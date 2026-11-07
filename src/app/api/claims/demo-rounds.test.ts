@@ -138,6 +138,23 @@ describe("demo rounds on one shared PayPal account", () => {
     expect((await runSample(repost, round)).claim?.decision).toBe("blocked");
   });
 
+  it("runs a sample again after the model didn't answer, reaching the expected outcome", async () => {
+    const answer = deps.vision;
+    deps.vision = async () => {
+      throw new Error("model timed out");
+    };
+    const outage = await runSample(DEMO_SAMPLES[0], null);
+    expect(outage.claim).toMatchObject({ decision: "held", reasons: [{ check: "model" }] });
+    const wrong = await runSample(DEMO_SAMPLES[1], outage.round);
+    expect(wrong.claim?.decision).toBe("held");
+
+    deps.vision = answer;
+    expect((await runSample(DEMO_SAMPLES[0], outage.round)).claim?.decision).toBe("paid");
+    expect((await runSample(DEMO_SAMPLES[1], outage.round)).claim?.reasons.find((r) => r.outcome !== "pass")?.check).toBe("code");
+    // The repost still meets the unanswered genuine run's photo.
+    expect((await runSample(DEMO_SAMPLES[3], outage.round)).claim?.reasons[0]?.check).toBe("duplicate_photo");
+  });
+
   it("never lets an old demo claim without a round block a new round", async () => {
     // A genuine claim paid before rounds existed, on the same account.
     const legacy = await runSample(DEMO_SAMPLES[0], null);

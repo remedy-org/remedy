@@ -1,6 +1,5 @@
 import clsx from "clsx";
 import { Button, Card, ClockIcon, NoBreakHyphens } from "@/components/ui";
-import type { DemoSample } from "@/lib/demo";
 import type { CheckSpec } from "@/lib/types";
 import { CodeTag } from "./CodeTag";
 import { StepTitle } from "./Exhibit";
@@ -18,8 +17,6 @@ export interface CodeStepProps {
   expiresAt: string;
   startNow: number;
   frozen?: boolean;
-  /** Demo: the sample whose photo is sent instead of the camera's. */
-  sample?: DemoSample | null;
   /** Real claims on a laptop: the QR code that carries this claim to a phone. */
   qrSvg?: string;
   phoneUrl?: string;
@@ -43,16 +40,15 @@ export function TimerPill({ left, className }: { left: number; className?: strin
  * The one-time code, as the paper tag it should end up on. A 2px line along the card's top edge runs down with the
  * 10-minute session. On a laptop the phone is the recommended camera: its QR leads, and the laptop's camera is second.
  */
-export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, qrSvg, phoneUrl, onContinue }: CodeStepProps) {
-  const demo = Boolean(sample);
+export function CodeStep({ code, spec, expiresAt, startNow, frozen, qrSvg, phoneUrl, onContinue }: CodeStepProps) {
   const left = useCountdown(expiresAt, startNow, frozen);
   // A recall whose label is itself hand-written on the tag (the demo's stand-in) gets one tag with both on it.
   const written = handWrittenLabel(spec);
   const destroyed = cutInHalf(spec) ? "cut" : "destroyed";
   const must = [...spec.label_must_show.map((l) => `The label: ${ownerLabel(l)}`), ...spec.proof_steps, written ? `The code ${code}, on the same tag` : `The code ${code}, hand-written in marker`];
-  const handoff = !demo && qrSvg && phoneUrl;
+  const handoff = qrSvg && phoneUrl;
   // The whole job in one sentence, above the button: the list below is the detail.
-  const instruction = !demo && (
+  const instruction = (
     <p className="text-body text-pretty text-text">
       {written ? (
         <>
@@ -76,7 +72,7 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, qrSv
           </li>
         ))}
       </ol>
-      {!demo && <p className="text-ui text-muted">One photo with all of it is fine, or up to three.</p>}
+      <p className="text-ui text-muted">One photo with all of it is fine, or up to three.</p>
       {acceptsStandIn(spec) && <p className="text-ui text-muted">This is a demo recall: the real product has no label, so a stand-in with the hand-written {written ?? "label"} tag counts.</p>}
     </div>
   );
@@ -95,19 +91,17 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, qrSv
 
       <div className="flex flex-col gap-3 lg:[grid-area:head]">
         <div className="flex items-start justify-between gap-4">
-          <StepTitle id="code-title">{demo ? `This sample's code is ${code}` : "Write this code on a paper tag"}</StepTitle>
+          <StepTitle id="code-title">Write this code on a paper tag</StepTitle>
           <TimerPill left={left} className="mt-1" />
         </div>
         {/* Phones: the instruction above the button says it, and the tag's foot says how big, so the button stays on the first screen. */}
-        <p className={clsx("max-w-[60ch] text-body text-muted", !demo && "max-sm:hidden")}>
-          {sample
-            ? `A real claim gets a fresh code here, inside a 10-minute camera session. ${sample.tag}`
-            : "Write it big: letters at least 3 cm tall, in marker. It ties your photos to this claim, so a photo taken earlier, or for someone else, can't be used."}
+        <p className="max-w-[60ch] text-body text-muted max-sm:hidden">
+          Write it big: letters at least 3 cm tall, in marker. It ties your photos to this claim, so a photo taken earlier, or for someone else, can&apos;t be used.
         </p>
       </div>
 
       <div className="pt-6 pb-2 lg:[grid-area:tag]">
-        <CodeTag code={code} string foot={demo ? "This sample's tag is already written." : "Write it big, 3 cm tall, in marker. Valid for 10 minutes."} />
+        <CodeTag code={code} string foot="Write it big, 3 cm tall, in marker. Valid for 10 minutes." />
       </div>
 
       <div className="flex flex-col gap-4 lg:[grid-area:act] lg:self-start">
@@ -129,7 +123,7 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, qrSv
           </>
         ) : (
           <Button size="lg" block onClick={onContinue} disabled={left <= 0}>
-            {demo ? "Continue to the sample photo" : "I've written it. Open the camera"}
+            I&apos;ve written it. Open the camera
           </Button>
         )}
       </div>

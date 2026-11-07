@@ -185,7 +185,8 @@ It docks 440px wide beside the grid from 1280px, opens as a sheet over the grid 
 
 **Claim flow:** one step per screen on the graphite background, following Stripe Identity; focus moves to each step's heading:
 - **Consent screen:** the 56px refund (40px on phones) and the hazard banner above the fold, the company and Remedy side by side, the numbered steps, then one full-width primary button. The demo (`/try`) swaps the steps for the four sample claims (thumbnail and expected outcome), adds a sandbox callout above the button, and a judges' rail (280px at 1440; a "For judges" pill on phones).
-- **Code step:** the paper tag with the one-time code, a timer pill, and the phone QR leading on laptops.
+- **Code step:** the paper tag with the one-time code, a timer pill, and the phone QR leading on laptops. Demo claims skip it: their sample's photo step names the code.
+- **Step meter:** one 640px frame, centred, in the same place on every step (the recall screen included); only the content under it changes width.
 - **Camera step:** a full-width viewfinder with the shutter on the first phone screen, guide chips and the Space key as shutter on laptops.
 - **Checking:** the first photo as Exhibit A beside a five-stage timeline that fills with the model's quotes.
 - **Result:** paper. Paid is a perforated receipt with the 56px amount, a PAID stamp and the live PayPal status ("Paid N s after your photo", then "Received"; the receipt asks every 5 s for 30 s, then every 15 s, for 2 minutes at most, never while the tab is hidden, and stops on a settled status, rather than the spec's 4 s for 3 minutes, to stay inside the Blob budget); in a sandbox build the stamp reads PAID · SANDBOX and the line says sandbox money, sample or not; held and refused are a sheet with the evidence, the stamp and, when refused, the one failing check in red.

@@ -94,6 +94,18 @@ describe("the demo round", () => {
     ] as const;
     expect(scoreLine([...all]).text).toBe("All 4 run · 4 of 4 as expected");
   });
+  it("counts a run the model never answered as model unavailable, not as a miss", () => {
+    expect(scoreLine([{ sample: "genuine", decision: "held", unanswered: true }]).text).toBe("1 of 4 run · 1 model unavailable");
+    const round = [
+      { sample: "reposted", decision: "blocked" },
+      { sample: "ai-no-session", decision: "blocked" },
+      { sample: "wrong-code", decision: "held", unanswered: true },
+      { sample: "genuine", decision: "held", unanswered: true },
+    ] as const;
+    expect(scoreLine([...round])).toMatchObject({ expected: 2, unanswered: 2, text: "All 4 run · 2 of 2 as expected · 2 model unavailable" });
+    // A run again that the model answered replaces it.
+    expect(scoreLine([{ sample: "genuine", decision: "paid" }, ...round]).text).toBe("All 4 run · 3 of 3 as expected · 1 model unavailable");
+  });
   it("suggests the next unrun sample in the guided order", () => {
     expect(nextSample([{ sample: "genuine", decision: "paid" }], "genuine")?.id).toBe("wrong-code");
     expect(nextSample([{ sample: "wrong-code", decision: "rejected" }], "wrong-code")?.id).toBe("genuine");

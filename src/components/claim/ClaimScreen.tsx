@@ -15,7 +15,7 @@ import { ContinueCard } from "./ContinueCard";
 import { ExpiredCard } from "./ExpiredCard";
 import { FlowShell } from "./FlowShell";
 import { WithJudges } from "./Judges";
-import { checkRows, companyName, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
+import { checkRows, companyName, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
 import { markAsked } from "./payout-live";
 import { Result, type DemoRound, type PayoutLive } from "./Result";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
@@ -50,7 +50,7 @@ async function livePayout(store: Store, claim: Claim, now: number): Promise<Payo
 async function demoRound(store: Store, recall: Recall, payerId: string): Promise<DemoRound> {
   const round = await getDemoRound();
   const rows = round ? roundClaims(await store.listClaims(), recall.id, round, payerId) : [];
-  return { runs: rows.filter((r) => r.photoHashes.length > 0 && r.sample).map((r) => ({ sample: r.sample!, decision: r.decision })) };
+  return { runs: rows.filter((r) => r.photoHashes.length > 0 && r.sample).map((r) => ({ sample: r.sample!, decision: r.decision, unanswered: noModelAnswer(r.decision, [r.reason]) })) };
 }
 
 /** One claim, owner only: the open steps (code, camera, checking) in the browser, or the result. */
@@ -109,7 +109,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
       <FlowShell demo={demo} sandbox={sandbox} company={company}>
         <WithJudges demo={demo} step="code">
           <div className="flex flex-col gap-6">
-            <StepMeter current={demo ? 3 : 2} steps={steps} className="mx-auto w-full max-w-claim" />
+            <StepMeter current={demo ? 3 : 2} steps={steps} />
             <ExpiredCard code={claim.code} againHref={againHref} demo={demo} />
           </div>
         </WithJudges>

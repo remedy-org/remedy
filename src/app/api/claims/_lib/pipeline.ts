@@ -65,10 +65,14 @@ const inRound = (claim: Pick<Claim, "payerId" | "demoRound">, r: ClaimSummary) =
 // only meets its own round's, so every round sees the genuine sample pass once, however many judges share a login.
 // The genuine sample meets only the round's other genuine claims: the other samples, waiting on the model or held,
 // and a repost of its photo sent while it is checked, must not block or hold the one that should be paid.
+// A run of the same sample that the model never answered (held with a "model" reason) doesn't count either, so the
+// result's "Run again" gets the model's answer instead of a duplicate-photo block.
 export function othersFor(claim: Pick<Claim, "demo" | "payerId" | "demoRound" | "events">, rows: ClaimSummary[]): OtherClaim[] {
-  const genuine = demoSampleOf(claim) === "genuine";
+  const sample = demoSampleOf(claim);
+  const genuine = sample === "genuine";
+  const unanswered = (r: ClaimSummary) => r.sample === sample && r.decision === "held" && r.reason?.check === "model";
   return checkableClaims(rows)
-    .filter((r) => (claim.demo ? inRound(claim, r) && (!genuine || r.sample === "genuine") : !r.demo))
+    .filter((r) => (claim.demo ? inRound(claim, r) && (!genuine || r.sample === "genuine") && !unanswered(r) : !r.demo))
     .map(toOther);
 }
 

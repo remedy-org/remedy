@@ -20,12 +20,13 @@ import {
   decidingReasons,
   maskPayer,
   money,
+  noModelAnswer,
   refusalHeadline,
   secondsBetween,
   type CheckRow,
 } from "./model";
 import { ReceiptLive } from "./ReceiptLive";
-import { nextSample, Scoreboard, scoreLine, type RoundRun } from "./Scoreboard";
+import { nextSample, runMark, Scoreboard, scoreLine, type RoundRun } from "./Scoreboard";
 
 export interface PayoutLive {
   /** PayPal's status: live from getPayoutStatus, or the last one stored if PayPal couldn't be reached. */
@@ -67,20 +68,28 @@ const RESULT_NOTES: Partial<Record<Claim["decision"], string>> = {
   rejected: "The rule refused it on the model's quoted reading. No payout was attempted.",
   blocked: "A check with no AI stopped it before the model saw the photo. No payout was attempted.",
 };
+// A hold because the model never answered: the designed fallback, not the rule's verdict on the photo.
+const UNANSWERED_NOTE =
+  "The photo model didn't respond, so Remedy's safe fallback held it for a person instead of guessing. That's the designed outcome when the model is down: nothing is paid without its answer. Run it again for the model's answer.";
 
 /** The end of a claim, as a paper object: a receipt when paid; a sheet with the evidence when held or refused. */
 export function Result(props: ResultProps) {
   const { sample } = props;
   const body = props.claim.decision === "paid" ? <Paid {...props} /> : props.claim.decision === "held" ? <Held {...props} /> : <Refused {...props} />;
+  const unanswered = noModelAnswer(props.claim.decision, props.claim.reasons);
   return (
     <WithJudges
       demo={Boolean(sample)}
       step="result"
-      note={RESULT_NOTES[props.claim.decision]}
-      extra={sample && <JudgeVerdict sample={sample} decision={props.claim.decision} round={props.round} claimId={props.claim.id} />}
+      note={unanswered ? UNANSWERED_NOTE : RESULT_NOTES[props.claim.decision]}
+      extra={
+        sample && (
+          <JudgeVerdict sample={sample} run={{ sample: sample.id, decision: props.claim.decision, unanswered }} round={props.round} claimId={props.claim.id} slug={props.recall.slug} againHref={props.againHref} />
+        )
+      }
     >
       <FocusTitle id="result-title" />
-      {props.meter && <div className="mx-auto mb-6 w-full max-w-claim">{props.meter}</div>}
+      {props.meter && <div className="mb-6">{props.meter}</div>}
       {body}
     </WithJudges>
   );
@@ -174,7 +183,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
         {!sb && <p className="mt-3 text-ui text-ink-muted">PayPal emails you a receipt too.</p>}
       </Paper>
 
-      {sample && <DemoActions sample={sample} againHref={againHref} round={round} />}
+      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} />}
       <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={passedSummary(rows)} open={false} code={claim.code} />
     </section>
   );
@@ -244,7 +253,7 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
         </dl>
       </Paper>
 
-      {sample && <DemoActions sample={sample} againHref={againHref} round={round} />}
+      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} unanswered={noModelAnswer(claim.decision, claim.reasons)} />}
       <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={`Every check, and the ${photoUrls.length === 1 ? "photo" : "photos"} you sent`} open={Boolean(sample)} code={claim.code} />
     </section>
   );
@@ -374,7 +383,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
         </Button>
       )}
 
-      {sample && <DemoActions sample={sample} againHref={againHref} round={round} />}
+      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} />}
       {/* The verdict sheet above already shows Exhibit A and the deciding quote; the rest of the checks wait folded. */}
       <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={otherSummary(rows)} open={false} code={claim.code} />
     </section>
@@ -530,32 +539,86 @@ function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { ro
   );
 }
 
-/** Demo results: the next sample in the guided order is the primary action. */
-function DemoActions({ sample, againHref, round }: { sample: DemoSample; againHref: string; round?: DemoRound | null }) {
-  const runs = round?.runs ?? [];
-  const next = nextSample(runs, sample.id);
-  const { ran, expected, text } = scoreLine(runs);
+/** A form that files a demo claim for one sample and lands on its photo step (POST /api/claims, as the picker does). */
+function RunSample({ slug, sample, children, rail, secondary }: { slug: string; sample: string; children: ReactNode; rail?: boolean; secondary?: boolean }) {
   return (
-    <div className="flex flex-col gap-3">
-      {next ? (
-        <Button href={`${againHref}?sample=${next.id}`} size="lg" block prefetch={false}>
-          Next sample: {next.title}
-        </Button>
-      ) : (
-        <p className="rounded-card border border-line bg-surface px-4 py-3 text-ui text-text">
-          {ran === 4 ? `All 4 run · ${expected} of 4 as expected.` : text} Run them again for the same outcomes.
-        </p>
-      )}
-      <Button href={againHref} variant="secondary" block prefetch={false}>
-        {next ? "Choose another sample" : "Back to the samples"}
+    <form action="/api/claims" method="post">
+      <input type="hidden" name="recall" value={slug} />
+      <input type="hidden" name="sample" value={sample} />
+      <Button type="submit" variant={secondary ? "secondary" : "primary"} size={rail || secondary ? "md" : "lg"} block className={clsx(rail && "h-auto min-h-11 py-2.5 whitespace-normal")}>
+        {children}
       </Button>
-    </div>
+    </form>
   );
 }
 
-/** The judges' rail on a demo result: what should have happened, what did, this round's score, the console. */
-function JudgeVerdict({ sample, decision, round, claimId }: { sample: DemoSample; decision: Claim["decision"]; round?: DemoRound | null; claimId: string }) {
-  const ok = decision === sample.expect;
+interface DemoActionsProps {
+  sample: DemoSample;
+  slug: string;
+  againHref: string;
+  round?: DemoRound | null;
+  /** The model never answered: running this sample again is the primary action. */
+  unanswered?: boolean;
+  /** In the judges' rail (1200px and up). Otherwise under the result, which hides them there; on a phone the primary
+   * action waits in a bar at the bottom of the screen until the page reaches it. */
+  rail?: boolean;
+}
+
+/** Demo results: the next sample in the guided order is the primary action, straight to its photo; after a model outage, running this one again. */
+function DemoActions({ sample, slug, againHref, round, unanswered, rail }: DemoActionsProps) {
+  const runs = round?.runs ?? [];
+  const next = nextSample(runs, sample.id);
+  const { text } = scoreLine(runs);
+  const primary = unanswered ? (
+    <RunSample slug={slug} sample={sample.id} rail={rail}>
+      Run this sample again
+    </RunSample>
+  ) : next ? (
+    <RunSample slug={slug} sample={next.id} rail={rail}>
+      Next sample: {next.title}
+    </RunSample>
+  ) : (
+    <p className="rounded-card border border-line bg-surface px-4 py-3 text-ui text-text">{text}. Run them again for the same outcomes.</p>
+  );
+  // After an outage the next sample stays one click away, so a judge can carry on while the model is down.
+  const secondary =
+    unanswered && next ? (
+      <RunSample slug={slug} sample={next.id} rail={rail} secondary>
+        Next sample: {next.title}
+      </RunSample>
+    ) : (
+      <Button href={againHref} variant="secondary" size={rail ? "sm" : "md"} block prefetch={false}>
+        {next ? "Choose another sample" : "Back to the samples"}
+      </Button>
+    );
+  if (rail) {
+    return (
+      <div className="flex flex-col gap-3">
+        {primary}
+        {secondary}
+      </div>
+    );
+  }
+  // Direct children of the result's column, so the sticky bar can travel the column's height on a phone.
+  return (
+    <>
+      <div
+        className={clsx(
+          "min-[1200px]:hidden",
+          (unanswered || next) &&
+            "z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md",
+        )}
+      >
+        {primary}
+      </div>
+      <div className="-mt-3 min-[1200px]:hidden">{secondary}</div>
+    </>
+  );
+}
+
+/** The judges' rail on a demo result: what should have happened, what did, the next action, this round's score, the console. */
+function JudgeVerdict({ sample, run, round, claimId, slug, againHref }: { sample: DemoSample; run: RoundRun; round?: DemoRound | null; claimId: string; slug: string; againHref: string }) {
+  const mark = runMark(sample, run);
   return (
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-ui">
@@ -565,13 +628,15 @@ function JudgeVerdict({ sample, decision, round, claimId }: { sample: DemoSample
         </dd>
         <dt className="micro text-faint">Got</dt>
         <dd className="flex items-center gap-2 whitespace-nowrap">
-          <StatusPill status={decision} />
-          <span className={clsx("inline-flex items-center gap-1 whitespace-nowrap", ok ? "text-pay" : "text-stop")}>
-            {ok ? <CheckIcon size={14} /> : <CrossIcon size={14} />}
-            {ok ? "As expected" : "Not as expected"}
+          <StatusPill status={run.decision} />
+          {/* A model outage is the fallback working, so it's neutral: never the red of a wrong outcome. */}
+          <span className={clsx("inline-flex items-center gap-1 whitespace-nowrap", mark === "expected" ? "text-pay" : mark === "missed" ? "text-stop" : "text-muted")}>
+            {mark === "expected" ? <CheckIcon size={14} /> : mark === "missed" ? <CrossIcon size={14} /> : null}
+            {mark === "expected" ? "As expected" : mark === "missed" ? "Not as expected" : "Model unavailable"}
           </span>
         </dd>
       </dl>
+      <DemoActions sample={sample} slug={slug} againHref={againHref} round={round} unanswered={run.unanswered} rail />
       <p className="text-ui text-muted">
         <NoBreakHyphens>{sample.description}</NoBreakHyphens>
       </p>

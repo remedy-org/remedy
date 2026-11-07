@@ -7,7 +7,7 @@ import type { Decision } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { LockIcon } from "./icons";
 import { LimitNotice } from "./LimitNotice";
-import { Scoreboard, type RoundRun } from "./Scoreboard";
+import { latestRuns, RunResult, scoreLine, type RoundRun } from "./Scoreboard";
 
 export interface SampleOption {
   sample: DemoSample;
@@ -22,6 +22,8 @@ export interface DemoRun {
   decision: Decision;
   /** The sample it ran, for the scoreboard. */
   sample?: string;
+  /** Held because the model gave no answer (noModelAnswer). */
+  unanswered?: boolean;
 }
 
 // What each sample proves, in one line under its title.
@@ -33,11 +35,12 @@ const TESTS: Record<string, string> = {
 };
 
 /** This round's runs that reached the photos step, as the scoreboard counts them. */
-export const roundRuns = (runs: DemoRun[]): RoundRun[] => runs.flatMap((r) => (r.sample ? [{ sample: r.sample, decision: r.decision }] : []));
+export const roundRuns = (runs: DemoRun[]): RoundRun[] => runs.flatMap((r) => (r.sample ? [{ sample: r.sample, decision: r.decision, unanswered: r.unanswered }] : []));
 
 /**
- * Demo mode's stand-in for the camera: four case files in a 2x2 grid, the photo the hero of each, with what it tests and
- * what should happen. The next unrun sample is selected. A plain form, no script needed.
+ * Demo mode's stand-in for the camera: four case files in a 2x2 grid, the photo the hero of each, with what it tests,
+ * what should happen and what its latest run this round got. The next unrun sample is selected. A plain form, no script
+ * needed; on a phone "Run this sample" waits in a bar at the bottom of the screen while the cards scroll.
  */
 export function SamplePicker({
   slug,
@@ -57,12 +60,13 @@ export function SamplePicker({
   refusal?: Refusal | null;
 }) {
   const scored = roundRuns(runs);
+  const latest = latestRuns(scored);
   return (
     <section aria-labelledby="picker-title" className="mx-auto flex w-full max-w-[40rem] flex-col gap-6">
       <div className="flex flex-col gap-3">
         <StepTitle id="picker-title">Pick a sample claim</StepTitle>
         <p className="text-body text-muted">Each one runs the real checks and the real rule. Only the genuine claim should be paid, and only once per round.</p>
-        {scored.length > 0 && <Scoreboard runs={scored} className="pt-1" />}
+        {scored.length > 0 && <p className="font-mono text-micro text-muted">{scoreLine(scored).text}</p>}
       </div>
 
       {refusal && <LimitNotice refusal={refusal} demo />}
@@ -73,6 +77,7 @@ export function SamplePicker({
           <legend className="sr-only">Sample claims</legend>
           {options.map(({ sample, locked }, i) => {
             const letter = String.fromCharCode(65 + i);
+            const run = latest.get(sample.id);
             return (
               <label
                 key={sample.id}
@@ -113,6 +118,7 @@ export function SamplePicker({
                   </span>
                   <span className="font-mono text-micro text-faint">Tests: {TESTS[sample.id] ?? sample.decidedBy}</span>
                   <StatusPill status={sample.expect} label={`Should be ${statusLabel(sample.expect).toLowerCase()}`} className="mt-1 self-start" />
+                  {run && <RunResult sample={sample} run={run} prefix={<span className="text-ui text-faint">Got</span>} className="flex-wrap gap-y-1" />}
                   {locked && <span className="sr-only">{locked}</span>}
                 </span>
               </label>
@@ -120,9 +126,11 @@ export function SamplePicker({
           })}
         </fieldset>
         <p className="text-ui text-faint">All four photos are AI-made samples, not from a camera.</p>
-        <Button type="submit" size="lg" block>
-          Run this sample
-        </Button>
+        <div className="z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md">
+          <Button type="submit" size="lg" block>
+            Run this sample
+          </Button>
+        </div>
       </form>
 
       {runs.length > 0 && (

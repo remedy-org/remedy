@@ -141,6 +141,12 @@ export function decidingReasons(claim: Pick<Claim, "decision" | "reasons">): Rea
   return claim.reasons.filter((r) => r.outcome === want);
 }
 
+/**
+ * Held because the photo model gave no answer (an error, a timeout, today's limit): Remedy's fallback, not a verdict on
+ * the photos. Takes a claim's reasons, or an index row's one deciding reason.
+ */
+export const noModelAnswer = (decision: Decision, reasons: (Reason | null | undefined)[]) => decision === "held" && reasons.some((r) => r?.check === "model");
+
 // What to do next, per failed check. Keys are rule.ts check names (step_N share one).
 const ADVICE: Record<string, string> = {
   session: "Photos only count when they're taken on this page's camera within 10 minutes of getting the code. Start a new claim for a fresh code.",

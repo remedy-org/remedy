@@ -16,8 +16,8 @@ export interface DemoSample {
   photos: string[];
   /** The code this demo claim is issued, so the photo's hand-written code matches (or deliberately doesn't). null: issue a fresh one. */
   code: string | null;
-  /** The code step's line on what the photo's tag shows. */
-  tag: string;
+  /** The code hand-written on the photo's tag: this claim's code, or deliberately another one. */
+  tagReads: string;
   /** false: the photos arrive without this claim's camera session (preCheck's "session" check refuses them). */
   liveSession: boolean;
   /** The decision the pipeline should reach. */
@@ -37,7 +37,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
     description: "The pillow cut in half, with the X-VESOLJE tag and this claim's code, M4T, written on it. Every check passes and the refund is paid.",
     photos: ["/demo/c02-1.jpg"],
     code: "M4T",
-    tag: "This sample's photo has this code written on its tag.",
+    tagReads: "M4T",
     liveSession: true,
     expect: "paid",
     decidedBy: "all",
@@ -49,7 +49,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
     description: "A real-looking cut pillow, but the tag reads K7Q and this claim's code is K7P. The model reads the tag character by character, and the claim is rejected.",
     photos: ["/demo/c11-1.jpg"],
     code: "K7P",
-    tag: "This sample's tag reads K7Q on purpose, not this claim's code.",
+    tagReads: "K7Q",
     liveSession: true,
     expect: "rejected",
     decidedBy: "code",
@@ -61,7 +61,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
     description: "An AI-made photo of the real Kikea pillow, cut, with someone else's code on the tag. It never reaches the model: it wasn't taken in this claim's live camera session.",
     photos: ["/demo/c08-1.jpg"],
     code: null,
-    tag: "This sample's photo was made outside Remedy, with someone else's code on the tag.",
+    tagReads: "K7Q",
     liveSession: false,
     expect: "blocked",
     decidedBy: "session",
@@ -73,7 +73,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
     description: "The genuine claim's photo, sent again from another PayPal account. It matches a photo already claimed, so it's refused before the model.",
     photos: ["/demo/c02-1.jpg"],
     code: null,
-    tag: "This sample reposts the genuine claim's photo, so its tag shows that claim's code, M4T.",
+    tagReads: "M4T",
     liveSession: true,
     expect: "blocked",
     decidedBy: "duplicate_photo",

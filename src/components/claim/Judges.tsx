@@ -20,7 +20,7 @@ const NOTES: Record<JudgeStep, { title: string; note: string }> = {
   },
   capture: {
     title: "The photo",
-    note: "A real owner can't upload a file: photos only come from this page's live camera. Samples are sent by the server from its own copy.",
+    note: "A real owner gets a fresh code, writes it on a tag and has 10 minutes to photograph it on this page's live camera: no file uploads. A sample's tag is already written, and the server sends its own copy of the photo.",
   },
   checking: {
     title: "The checks",

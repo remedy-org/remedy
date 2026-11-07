@@ -1,4 +1,3 @@
-import clsx from "clsx";
 import type { ReactNode } from "react";
 import { ThemeToggle, Wordmark } from "@/components/ui";
 import { JUDGES_DOCK_ID } from "./JudgesSheet";
@@ -11,15 +10,13 @@ export interface FlowShellProps {
   sandbox?: boolean;
   /** The company running the recall, for the footer. */
   company?: string;
-  /** Kept for the loading skeleton: the recall screen is wide; every step sets its own width inside. */
-  wide?: boolean;
 }
 
 /**
  * The claim flow's frame, on the homepage's own page frame (.page: the same gutter, so the wordmark never moves between
  * them): a quiet header, the steps on graphite with the film grain, a plain footer. Each step sets its own width (480px for a card, 640px for the camera and the samples, 960px for the checks).
  */
-export function FlowShell({ children, demo, sandbox, company, wide }: FlowShellProps) {
+export function FlowShell({ children, demo, sandbox, company }: FlowShellProps) {
   return (
     <div className="grain flex min-h-dvh flex-col">
       <header className="border-b border-line">
@@ -38,7 +35,7 @@ export function FlowShell({ children, demo, sandbox, company, wide }: FlowShellP
         </div>
       </header>
 
-      <main className={clsx("page flex-1 pt-8 pb-16 sm:pt-12 max-sm:[body:has([data-camera])_&]:pb-6", wide && "lg:pt-16")}>{children}</main>
+      <main className="page flex-1 pt-8 pb-16 sm:pt-12 max-sm:[body:has([data-camera])_&]:pb-6">{children}</main>
 
       {/* A phone's camera step fills the screen; the footer would only sit under it. */}
       <footer className="border-t border-line max-sm:[body:has([data-camera])_&]:hidden">

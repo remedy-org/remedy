@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { notYet, roundClaims } from "@/app/api/claims/_lib/pipeline";
 import { FlowShell } from "@/components/claim/FlowShell";
 import { WithJudges } from "@/components/claim/Judges";
-import { companyName } from "@/components/claim/model";
+import { companyName, noModelAnswer } from "@/components/claim/model";
 import { roundRuns, SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
 import { Scoreboard } from "@/components/claim/Scoreboard";
 import { DEMO_STEPS, StepMeter } from "@/components/claim/StepMeter";
@@ -29,7 +29,7 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   const rows = round ? roundClaims(await store.listClaims(), recall.id, round, session.payerId) : [];
   const runs: DemoRun[] = rows
     .slice(0, 12)
-    .map((r) => ({ id: r.id, href: `/r/${recall.slug}/try/${r.id}`, title: demoSample(r.sample ?? "")?.title ?? "Sample claim", decision: r.decision, sample: r.photoHashes.length ? r.sample : undefined }));
+    .map((r) => ({ id: r.id, href: `/r/${recall.slug}/try/${r.id}`, title: demoSample(r.sample ?? "")?.title ?? "Sample claim", decision: r.decision, sample: r.photoHashes.length ? r.sample : undefined, unanswered: noModelAnswer(r.decision, [r.reason]) }));
   const ran = new Set(rows.filter((r) => r.photoHashes.length > 0).map((r) => r.sample));
 
   const options: SampleOption[] = DEMO_SAMPLES.map((sample) => ({ sample, locked: notYet(sample, rows) ?? undefined }));
@@ -42,7 +42,7 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
     <FlowShell demo company={companyName(recall)}>
       <WithJudges demo step="samples" extra={scored.length > 0 && <Scoreboard runs={scored} />}>
         <div className="flex flex-col gap-6">
-          <StepMeter current={2} steps={DEMO_STEPS} className="mx-auto w-full max-w-[40rem]" />
+          <StepMeter current={2} steps={DEMO_STEPS} />
           <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={parseRefusal(query, new Date())} />
         </div>
       </WithJudges>

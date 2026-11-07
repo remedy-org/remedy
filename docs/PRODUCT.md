@@ -64,7 +64,9 @@ Remedy is its own website built on PayPal's public APIs. Companies running a rec
 
 Each run states that it is demo mode, and all money is sandbox money.
 
-Demo claims are grouped in rounds, one per browser and PayPal account (an httpOnly cookie the samples page sets): the duplicate-photo, one-claim-per-account and repost-after-genuine checks compare a demo claim only with its own round's, never with real claims, so many judges on one sandbox login each get the four outcomes, and "Run the samples again" starts a new round. The genuine sample is compared only with the round's other genuine claims, so the other samples, run alongside it, never hold or block it. The per-account and global daily limits still count every demo claim.
+Demo claims are grouped in rounds, one per browser and PayPal account (an httpOnly cookie the samples page sets): the duplicate-photo, one-claim-per-account and repost-after-genuine checks compare a demo claim only with its own round's, never with real claims, so many judges on one sandbox login each get the four outcomes, and "Run the samples again" starts a new round. The genuine sample is compared only with the round's other genuine claims, so the other samples, run alongside it, never hold or block it. A run the model never answered (held for a person by the fallback) doesn't count against a run of the same sample, so the result's "Run this sample again" gets the model's answer; the scoreboard counts such runs as "model unavailable", not as misses. The per-account and global daily limits still count every demo claim.
+
+A demo claim opens on its sample's photo: the tag is already written, so there is no code step and no timer. The photo step names the claim's code, what the photo must show and what the tag in it reads. "Next sample" on a result files the next sample and lands on its photo.
 
 ## States every data view must handle
 

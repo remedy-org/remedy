@@ -33,15 +33,20 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
   );
 }
 
-/** The recall screen's layout: the brief beside the consent card on a laptop, stacked on a phone. */
+/**
+ * The recall screen's layout: the step meter in the same place as on every step, then the brief beside the consent card
+ * on a laptop, stacked on a phone. Logged in (and verified, for a real claim), the PayPal step is done and the judges'
+ * rail moves on to the samples.
+ */
 export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?: boolean }) {
+  const ready = Boolean(props.signedInAs) && !props.unverified;
   return (
-    <FlowShell wide demo={props.demo} sandbox={sandbox} company={companyName(props.recall)}>
-      <WithJudges demo={Boolean(props.demo)} step="consent">
-        <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
-          <RecallBrief recall={props.recall} sandbox={sandbox || props.demo} />
-          <div className="flex flex-col gap-4 sm:gap-6">
-            <StepMeter current={1} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
+    <FlowShell demo={props.demo} sandbox={sandbox} company={companyName(props.recall)}>
+      <WithJudges demo={Boolean(props.demo)} step={ready ? "samples" : "consent"}>
+        <div className="flex flex-col gap-6">
+          <StepMeter current={ready ? 2 : 1} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
+          <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
+            <RecallBrief recall={props.recall} sandbox={sandbox || props.demo} demo={props.demo} />
             <ConsentCard {...props} />
           </div>
         </div>

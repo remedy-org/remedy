@@ -18,8 +18,9 @@ export interface DemoCaptureStepProps {
 }
 
 /**
- * Demo mode's stand-in for the camera: the sample's photo inside the same viewfinder chrome, labelled as an AI-made
- * sample, and "Send this sample" in place of the shutter. The server sends its own copy of the photo.
+ * Demo mode's stand-in for the camera, and the demo claim's first screen: the sample's photo inside the same viewfinder
+ * chrome, labelled as an AI-made sample, with this claim's code, what the photo must show, and what the tag in it
+ * actually reads; "Send this sample" in place of the shutter. The server sends its own copy of the photo.
  */
 export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent, preview }: DemoCaptureStepProps) {
   const [sending, setSending] = useState(preview?.sending ?? false);
@@ -64,18 +65,27 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
         </figure>
         <InstructionBar className="flex-col gap-2">
           <h2 id="sample-title" tabIndex={-1} className="text-ui font-medium text-[oklch(0.96_0.006_85)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
-            {sample.title}, with the code <span className="font-mono">{code}</span>
+            {sample.title}. This claim&apos;s code is <span className="font-mono whitespace-nowrap">{code}</span>
           </h2>
-          {/* What the photo needs, under the frame rather than over the tag it points at. */}
+          {/* What the photo needs, as requirements, under the frame rather than over the tag it points at. */}
           {reminders.length > 0 && (
-            <ul aria-label="What the photo shows" className="flex flex-wrap justify-center gap-1.5">
-              {reminders.map((t) => (
-                <li key={t} className="inline-flex h-6 items-center rounded-control border border-[oklch(1_0_0/0.18)] px-2 font-mono text-micro tracking-[0.06em] whitespace-nowrap text-[oklch(0.86_0.005_80)] uppercase">
-                  {t}
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              <span id="sample-must" className="font-mono text-micro tracking-[0.06em] text-[oklch(0.74_0.005_80)] uppercase">
+                Must show
+              </span>
+              <ul aria-labelledby="sample-must" className="flex flex-wrap justify-center gap-1.5">
+                {reminders.map((t) => (
+                  <li key={t} className="inline-flex h-6 items-center rounded-control border border-[oklch(1_0_0/0.18)] px-2 font-mono text-micro tracking-[0.06em] whitespace-nowrap text-[oklch(0.86_0.005_80)] uppercase">
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
+          <p className="text-ui text-[oklch(0.86_0.005_80)]">
+            The tag in this photo reads <span className="font-mono whitespace-nowrap">{sample.tagReads}</span>
+            {sample.tagReads === code ? ": this claim's code." : <>, not <span className="font-mono whitespace-nowrap">{code}</span>.</>}
+          </p>
         </InstructionBar>
         <Dock
           short

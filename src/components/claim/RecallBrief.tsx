@@ -21,7 +21,7 @@ function Hazard({ text }: { text: string }) {
  * What was recalled and why: on a laptop the left column (notice line, product, hazard banner, the CPSC photo on a paper
  * plate, facts); on a phone one 64px row with the refund, then the hazard banner, so the action stays above the fold.
  */
-export function RecallBrief({ recall, sandbox }: { recall: Recall; sandbox?: boolean }) {
+export function RecallBrief({ recall, sandbox, demo }: { recall: Recall; sandbox?: boolean; demo?: boolean }) {
   const hazard = hazardLine(recall);
   const image = recall.images[0];
   const company = companyName(recall);
@@ -70,6 +70,8 @@ export function RecallBrief({ recall, sandbox }: { recall: Recall; sandbox?: boo
           <figcaption className="flex flex-col gap-1.5 pl-1">
             <ExhibitLabel leaderLength={24}>Exhibit · recalled product</ExhibitLabel>
             {image.caption && <span className="max-w-read text-ui text-faint">{image.caption}</span>}
+            {/* The samples' AI-made pillow is a plain stand-in, not these covers: say so before the photos look like another recall. */}
+            {demo && <span className="max-w-read text-ui text-muted">The sample photos show an AI-made stand-in of this pillow; these are the real recalled covers.</span>}
           </figcaption>
         </figure>
       )}

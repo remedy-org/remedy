@@ -109,6 +109,6 @@ describe("demo samples", () => {
   });
 
   it("say the reposted photo's tag shows the code of the claim it reposts", () => {
-    for (const s of DEMO_SAMPLES.filter((s) => s.after)) expect(s.tag).toContain(DEMO_SAMPLES.find((o) => o.id === s.after)!.code!);
+    for (const s of DEMO_SAMPLES.filter((s) => s.after)) expect(s.tagReads).toBe(DEMO_SAMPLES.find((o) => o.id === s.after)!.code);
   });
 });
