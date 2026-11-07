@@ -27,7 +27,7 @@ export function CopyField({ value, label }: { value: string; label: string }) {
       <button
         type="button"
         onClick={copy}
-        className="inline-flex min-w-20 shrink-0 items-center justify-center gap-1.5 border-l border-line-strong px-3 text-ui font-medium text-text hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+        className="inline-flex min-w-20 shrink-0 items-center justify-center gap-1.5 border-l border-line-strong px-3 text-ui font-medium text-text hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
       >
         {copied === "yes" ? (
           <>

@@ -142,6 +142,20 @@ describe("createClaim limits", () => {
     expect(await store.listClaims()).toHaveLength(3);
   });
 
+  it("keeps demo starts out of the daily and 30-day totals: judges can't fill them, and real owners can't lock judges out", async () => {
+    deps.limits.claimsPerDay = 2;
+    deps.limits.claimsPerMonth = 2;
+    deps.limits.accountDemosPerDay = 4;
+    for (let i = 0; i < 4; i++) await createClaim(deps, { recall, payer: owner, sample: demoSample("genuine")! });
+    // Four demo claims on the day: a real owner still starts, up to the real totals.
+    await createClaim(deps, { recall, payer: { payerId: "OWNER0000002", verified: true } });
+    await createClaim(deps, { recall, payer: { payerId: "OWNER0000003", verified: true } });
+    await expect(createClaim(deps, { recall, payer: { payerId: "OWNER0000004", verified: true } })).rejects.toMatchObject({ refusal: { kind: "monthly", limit: 2 } });
+    // The real totals are full, yet another sandbox account still runs the samples; this one has used its own four.
+    expect((await createClaim(deps, { recall, payer: { payerId: "JUDGE0000002", verified: true }, sample: demoSample("genuine")! })).demo).toBe(true);
+    await expect(createClaim(deps, { recall, payer: owner, sample: demoSample("genuine")! })).rejects.toMatchObject({ refusal: { kind: "account", limit: 4 } });
+  });
+
   it("refuses a demo start once today's photo checks are used up, but still starts a real claim", async () => {
     deps.limits.vision = 1;
     expect(await store.takeUsage("2026-11-07", "vision", 1)).toBe(true);
@@ -614,7 +628,7 @@ describe("checkRows", () => {
   it("walks the checks in order: pre-checks, the model's answers, then the payout", async () => {
     const claim = await send(await open());
     const pending = checkRows(claim, recall.spec);
-    expect(pending.map((r) => r.id)).toEqual(["session", "duplicate_photo", "account", "label", "step_1", "step_2", "code", "screen", "payout"]);
+    expect(pending.map((r) => r.id)).toEqual(["session", "duplicate_photo", "account", "label", "code", "step_1", "step_2", "screen", "payout"]);
     expect(pending.map((r) => r.state)).toEqual(["pass", "pass", "pass", "waiting", "waiting", "waiting", "waiting", "waiting", "waiting"]);
 
     const paid = checkRows(await checkClaim(deps, claim.id), recall.spec);

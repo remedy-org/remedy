@@ -19,7 +19,7 @@ export function RecallPicker({ recalls, current, basePath }: { recalls: RecallOp
         value={current}
         aria-busy={pending || undefined}
         onChange={(e) => start(() => router.push(`${basePath}?recall=${encodeURIComponent(e.target.value)}`))}
-        className="h-9 max-w-[60vw] truncate rounded-control border border-line-strong bg-surface px-2 text-ui text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:max-w-[32ch]"
+        className="h-9 max-w-[60vw] truncate rounded-control border border-line-strong bg-surface px-2 text-ui text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus sm:max-w-[32ch]"
       >
         {recalls.map((r) => (
           <option key={r.id} value={r.id}>

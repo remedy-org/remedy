@@ -32,6 +32,8 @@
   --accent-hover: oklch(0.83 0.135 72);
   --accent-ink: oklch(0.22 0.03 65);
   --accent-text: oklch(0.82 0.12 76);
+  /* The focus ring: amber on the dark room, where it clears 3:1 on every surface. Never the screen's amber focal element. */
+  --focus: var(--accent);
   --pay: oklch(0.79 0.15 150);
   --hold: oklch(0.78 0.08 240);
   --stop: oklch(0.72 0.16 28);
@@ -68,6 +70,8 @@
   --accent-hover: oklch(0.81 0.135 70);
   --accent-ink: oklch(0.22 0.03 65);
   --accent-text: oklch(0.5 0.12 60);
+  /* In light, amber is under 2.1:1 on the page, a card and an amber button: the ring is ink, 3:1 on all of them. */
+  --focus: var(--text);
   --pay: oklch(0.45 0.13 150);
   --hold: oklch(0.44 0.11 250);
   --stop: oklch(0.48 0.18 28);
@@ -165,6 +169,7 @@
   --color-accent-ink: var(--accent-ink);
   --color-accent-text: var(--accent-text);
   --color-accent-soft: var(--accent-soft);
+  --color-focus: var(--focus);
   --color-pay: var(--pay);
   --color-pay-soft: var(--pay-soft);
   --color-hold: var(--hold);
@@ -322,7 +327,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -462,7 +467,7 @@
 }
 
 /*
- * The keyboard on the canvas (InsightsStudio names each panel's stop): Tab lands on a panel, which gets the app's amber
+ * The keyboard on the canvas (InsightsStudio names each panel's stop): Tab lands on a panel, which gets the app's focus
  * ring on its card in place of Studio's grey box, and its header shows the key that goes in; inside, it shows the key
  * that comes back out. A panel with nothing to operate (a KPI tile) is read, not visited: no stop.
  */
@@ -476,7 +481,7 @@
 }
 
 .insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-container {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 

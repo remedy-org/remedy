@@ -55,14 +55,15 @@ const PRE = [
 
 const OUTCOME: Record<Reason["outcome"], CheckState> = { pass: "pass", hold: "hold", reject: "reject" };
 
-// The checks decide() reports, in the order the screen shows them: label, steps, code, then the photo itself.
+// The checks decide() reports, in the order the screen shows them: grouped under the homepage's checks 4 (the label and
+// the code) and 5 (each step, then the photo itself), as src/lib/fiveChecks.ts numbers them.
 function modelChecks(claim: ClaimLike, spec: CheckSpec) {
   const steps = Math.max(spec.proof_steps.length, claim.verdict?.steps.length ?? 0);
   const v = claim.verdict;
   const list: { id: string; label: string; quote?: string }[] = [
     { id: "label", label: spec.label_must_show.length ? "Label matches the recall" : "Looks like the recalled product", quote: v?.label.evidence },
-    ...Array.from({ length: steps }, (_, i) => ({ id: `step_${i + 1}`, label: spec.proof_steps[i] ?? v?.steps[i]?.step ?? `Step ${i + 1}`, quote: v?.steps[i]?.evidence })),
     { id: "code", label: `Code ${claim.code} written by hand`, quote: v?.challenge_code.evidence },
+    ...Array.from({ length: steps }, (_, i) => ({ id: `step_${i + 1}`, label: spec.proof_steps[i] ?? v?.steps[i]?.step ?? `Step ${i + 1}`, quote: v?.steps[i]?.evidence })),
   ];
   if (claim.photos.length > 1) list.push({ id: "same_item", label: "The same item in every photo" });
   list.push({ id: "screen", label: "A real photo, not a screen or a print" });

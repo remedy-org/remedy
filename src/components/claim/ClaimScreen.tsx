@@ -123,7 +123,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           round={round}
           duplicate={duplicate}
           now={now}
-          meter={<StepMeter {...resultMeter(claim.decision, steps)} steps={steps} />}
+          meter={<StepMeter {...resultMeter(claim.decision, steps)} steps={steps} width="max-w-claim" />}
           sandbox={sandbox}
           account={session.email ? maskEmail(session.email) : null}
         />
@@ -137,7 +137,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
       <FlowShell demo={demo} sandbox={sandbox} company={company}>
         <WithJudges demo={demo} step="code">
           <div className="flex flex-col gap-6">
-            <StepMeter current={demo ? 3 : 2} steps={steps} />
+            <StepMeter current={demo ? 3 : 2} steps={steps} width="max-w-claim" />
             <ExpiredCard code={claim.code} againHref={againHref} demo={demo} />
           </div>
         </WithJudges>

@@ -21,7 +21,7 @@ export function Switch({ checked, onChange, id, disabled, ...aria }: SwitchProps
       disabled={disabled}
       onClick={() => onChange(!checked)}
       {...aria}
-      className="group inline-flex min-h-11 shrink-0 items-center rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40"
+      className="group inline-flex min-h-11 shrink-0 items-center rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-40"
     >
       <span className={clsx("relative h-6 w-10 rounded-full border transition-colors", checked ? "border-pay bg-pay-soft" : "border-line-strong bg-surface-2")}>
         <span

@@ -51,10 +51,12 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
   return (
     <section aria-labelledby="sample-title" className="mx-auto flex w-full max-w-[40rem] flex-col gap-5">
       <div data-theme="dark" data-camera="" className={CAMERA_FRAME}>
-        <figure className={CAMERA_VIEW}>
+        {/* On a short screen (a laptop at 200% zoom) the photo gives up height, so its heading and button fit beside it. */}
+        <figure className={clsx(CAMERA_VIEW, "sm:max-h-[55svh] sm:w-full")}>
           {/* The samples are 2:3 portraits: framed from 70% down, so the tag and its code stay in the 4:3 frame. */}
+          {/* A short name: the description under the frame says what it shows, so a screen reader hears it once. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={sample.photos[0]} alt={sample.description} className="absolute inset-0 size-full object-cover object-[50%_70%]" />
+          <img src={sample.photos[0]} alt={`Sample photo: ${sample.title}`} className="absolute inset-0 size-full object-cover object-[50%_70%]" />
           <Cutout>
             <GlassChip className="absolute top-2 left-2">Photo 1</GlassChip>
           </Cutout>

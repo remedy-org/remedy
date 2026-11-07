@@ -8,7 +8,7 @@ import type { Decision, Recall } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { InfoIcon, LockIcon } from "./icons";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
-import { LimitNotice, RetryLabel, retryLabel } from "./LimitNotice";
+import { LimitNextStep, LimitNotice } from "./LimitNotice";
 import { companyName, cutInHalf, handWrittenLabel, money, productNoun, SANDBOX_ACCOUNTS_URL } from "./model";
 import { SAMPLE_TESTS } from "./SamplePicker";
 
@@ -52,10 +52,12 @@ export interface ConsentCardProps {
   sandbox?: boolean;
 }
 
+/** The judges' sandbox login in the card: the phone's bar shows it before it offers the PayPal login. */
+export const JUDGE_LOGIN_ID = "judge-login";
+
 /** The primary button's words, shared with the phone's sticky bar. */
-export function consentAction({ signedInAs, demo, unverified, refusal, yourClaim }: Pick<ConsentCardProps, "signedInAs" | "demo" | "unverified" | "refusal" | "yourClaim">): string {
+export function consentAction({ signedInAs, demo, unverified, yourClaim }: Pick<ConsentCardProps, "signedInAs" | "demo" | "unverified" | "yourClaim">): string {
   if (yourClaim) return yourClaim.decision === "pending" && !yourClaim.photos ? "Continue your claim" : "See your claim";
-  if (refusal) return retryLabel(refusal);
   if (unverified) return "Log in with a verified account";
   if (signedInAs) return demo ? "Choose a sample claim" : "Continue to your code";
   return demo ? "Log in with PayPal sandbox" : "Log in with PayPal";
@@ -67,7 +69,9 @@ export function consentAction({ signedInAs, demo, unverified, refusal, yourClaim
  */
 export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin, sandbox }: ConsentCardProps) {
   const company = companyName(recall);
-  const action = consentAction({ signedInAs, demo, unverified, refusal, yourClaim });
+  const action = consentAction({ signedInAs, demo, unverified, yourClaim });
+  // Refused by a limit, a real owner's way on is the company's recall notice.
+  const notice = demo ? undefined : { company, url: recall.url };
   const amount = money(recall.refund);
   const error = authError ? AUTH_ERRORS[authError] : null;
   const steps = [
@@ -128,13 +132,13 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         />
       )}
       {error && <ErrorState variant="inline" title={error.title} description={error.description} />}
-      {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} sandbox={sandbox} />}
+      {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} sandbox={sandbox} notice={notice} />}
 
       {/* With a claim under way its own button leads, at the top, and nothing new starts here. */}
       {!yourClaim && (
         <div className="flex flex-col gap-4">
           {/* Before the button, so the copy buttons come first in reading and Tab order. */}
-          {demo && !signedInAs && judgeLogin && <JudgeLoginPanel login={judgeLogin} />}
+          {demo && !signedInAs && judgeLogin && <JudgeLoginPanel id={JUDGE_LOGIN_ID} login={judgeLogin} />}
           {demo && !signedInAs && !judgeLogin && (
             // Information, so neutral: the held blue means "waiting for a person" and nothing else. Under the button on a
             // phone, so the button clears the first screen.
@@ -154,7 +158,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
               </div>
             </div>
           )}
-          {!demo && (
+          {!demo && !refusal && (
             // The code's 10 minutes start on the next screen: say what to have at hand before they do.
             <p className="flex gap-2.5 text-ui text-text">
               <ClockIcon className="mt-0.5 shrink-0 text-muted" />
@@ -164,11 +168,9 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
               </span>
             </p>
           )}
-          {/* Refused by a limit: nothing to tap until it resets. */}
+          {/* Refused by a limit: nothing starts until it resets, so the button is the notice's next step instead. */}
           {refusal ? (
-            <Button id="consent-cta" size="lg" block disabled>
-              <RetryLabel refusal={refusal} />
-            </Button>
+            <LimitNextStep demo={Boolean(demo)} notice={notice} />
           ) : (
             // Below 360px "Log in with PayPal sandbox" is wider than the card: it wraps rather than run off the card.
             <Button id="consent-cta" href={href} size="lg" block prefetch={false} className="max-[359px]:h-auto max-[359px]:min-h-12 max-[359px]:py-3 max-[359px]:text-center max-[359px]:text-balance max-[359px]:whitespace-normal">

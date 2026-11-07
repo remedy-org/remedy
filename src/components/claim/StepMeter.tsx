@@ -18,6 +18,8 @@ export interface StepMeterProps {
   compact?: boolean;
   /** The recall screen: the meter spans its two columns instead of the centred 640px frame. */
   span?: boolean;
+  /** The step's content width, when it isn't 640px (the checks' 960px, a result's 480px): the meter shares its edges. */
+  width?: string;
 }
 
 // The word the step takes in place of its name, so the outcome is never shown by colour alone.
@@ -31,16 +33,15 @@ export function resultMeter(decision: Decision, steps: readonly string[]): Pick<
 
 /**
  * The steps of a claim as hairline segments: done and current in text colour (the current one fills in), the rest
- * faint. From 640px a quiet mono counter, "2/4", leads them. One frame on every step (640px, centred), so the meter never
- * moves between steps; only the content under it changes width. The recall screen's two columns are wider than that
- * frame, so there it spans them.
+ * faint. From 640px a quiet mono counter, "2/4", leads them. Centred, on the step's own column (640px unless `width`
+ * says otherwise), so its edges always sit on the content's; the recall screen's two columns it spans.
  */
-export function StepMeter({ current, steps = REAL_STEPS, outcome, compact, span }: StepMeterProps) {
+export function StepMeter({ current, steps = REAL_STEPS, outcome, compact, span, width = "max-w-[40rem]" }: StepMeterProps) {
   const at = Math.min(current, steps.length);
   const label = `Step ${at} of ${steps.length}`;
   const end = outcome ? OUTCOME[outcome] : null;
   return (
-    <div className={clsx("mx-auto flex w-full items-end gap-4", !span && "max-w-[40rem]", compact && "max-sm:sr-only")}>
+    <div className={clsx("mx-auto flex w-full items-end gap-4", !span && width, compact && "max-sm:sr-only")}>
       <span aria-hidden="true" className="micro w-7 shrink-0 text-faint tabular-nums max-sm:hidden">
         <span className="text-text">{at}</span>/{steps.length}
       </span>

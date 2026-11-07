@@ -1,5 +1,6 @@
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
+import { fiveSummary } from "@/lib/fiveChecks";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
@@ -104,7 +105,7 @@ export function checkLabel(check: string, code: string): string {
 
 /** The evidence barcode, from the index row alone: the four pre-checks, then each model check the rule recorded (or
  * the ones it would run, waiting or skipped, when the model hasn't answered). */
-export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashes" | "seeded" | "code">, recall: Pick<Recall, "spec">): CheckBar[] | null {
+export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashes" | "seeded" | "code" | "demo" | "sample">, recall: Pick<Recall, "spec">): CheckBar[] | null {
   if (!c.checks) return null;
   const code = c.code ?? "";
   const ran = c.photoHashes.length > 0 || c.decision === "blocked";
@@ -114,6 +115,8 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
     if (f) return { id, label, state: f.outcome };
     // Seeded claims share a few sample photos, so their fingerprint check was never run (preChecksOf says so too).
     if (id === "duplicate_photo" && c.seeded) return { id, label, state: "skipped" };
+    // Only a round's genuine demo claim is held to one claim per account (the drawer's pre-checks say so too).
+    if (id === "payer" && c.demo && c.sample !== "genuine" && ran) return { id, label, state: "skipped" };
     return { id, label, state: ran ? "pass" : "waiting" };
   });
   const answered = c.checks.filter((r) => !PRE_IDS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK);
@@ -123,16 +126,12 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
   return [...pre, ...expected.map((id) => ({ id, label: checkLabel(id, code), state }))];
 }
 
-/** "9 checks: 8 passed, 1 held (Same item)": the barcode as a sentence, for screen readers and the tooltip. */
+/**
+ * "1 of 5 held: the same item · 4 passed": the barcode as a sentence in the homepage's five checks (src/lib/fiveChecks.ts),
+ * the same count the claim's receipt gives, for screen readers.
+ */
 export function barsSentence(bars: CheckBar[]): string {
-  const words: Record<BarState, string> = { pass: "passed", hold: "held", reject: "failed", waiting: "waiting", skipped: "not run" };
-  const parts = (Object.keys(words) as BarState[]).flatMap((s) => {
-    const of = bars.filter((b) => b.state === s);
-    if (!of.length) return [];
-    const named = s === "hold" || s === "reject" ? ` (${of.map((b) => b.label).join(", ")})` : "";
-    return [`${of.length} ${words[s]}${named}`];
-  });
-  return `${bars.length} checks: ${parts.join(", ")}`;
+  return fiveSummary(bars, { open: "waiting", skipped: "not run" });
 }
 
 const since = (from: string | undefined, to: string | undefined) => (from && to ? Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 1000)) : null);

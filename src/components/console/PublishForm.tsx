@@ -114,7 +114,7 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
         </div>
         <Field label="Claim link" help="Lowercase letters, numbers and dashes. Owners open this from the notice or a QR code." error={f?.slug}>
           {(c) => (
-            <div className="flex min-w-0 items-stretch overflow-hidden rounded-control border border-line-strong focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+            <div className="flex min-w-0 items-stretch overflow-hidden rounded-control border border-line-strong focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus">
               <span className="flex items-center border-r border-line-strong bg-surface-2 px-3 font-mono text-ui text-muted">/r/</span>
               <input
                 id={c.id}

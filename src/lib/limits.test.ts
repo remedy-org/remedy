@@ -41,10 +41,32 @@ describe("claimRefusal", () => {
     expect(refuse(seeded)).toBeNull();
   });
 
-  it("refuses everyone once today's claims reach the daily total", () => {
-    const rows = Array.from({ length: 6 }, (_, i) => row(`2026-11-07T0${i}:00:00.000Z`, { payerId: `OTHER${i}`, demo: i % 2 === 0 }));
+  it("refuses every real start once today's real claims reach the daily total", () => {
+    const rows = Array.from({ length: 6 }, (_, i) => row(`2026-11-07T0${i}:00:00.000Z`, { payerId: `OTHER${i}` }));
     expect(refuse(rows)).toEqual({ kind: "daily", limit: 6, until: TOMORROW });
-    expect(refuse(rows, { demo: true })).toMatchObject({ kind: "daily" });
+    expect(refuse(rows.slice(1))).toBeNull();
+  });
+
+  it("never counts demo claims towards the daily or 30-day totals, so judges can't lock real owners out", () => {
+    // Far more demo claims than either total, today and over the month, from the judges' one shared login.
+    const demos = Array.from({ length: 40 }, (_, i) => row(new Date(Date.UTC(2026, 10, 7, 0, i)).toISOString(), { payerId: "JUDGES", demo: true }));
+    const older = Array.from({ length: 20 }, (_, i) => row(new Date(Date.UTC(2026, 9, 20 + (i % 15))).toISOString(), { payerId: "JUDGES", demo: true }));
+    expect(refuse([...demos, ...older])).toBeNull();
+    // A real owner still meets the real totals as before.
+    const real = Array.from({ length: 6 }, (_, i) => row(`2026-11-07T0${i}:00:00.000Z`, { payerId: `OWNER${i}` }));
+    expect(refuse([...demos, ...real])).toMatchObject({ kind: "daily", limit: 6 });
+  });
+
+  it("lets demo claims run when the real totals are full, up to the account's own demo limit", () => {
+    const real = Array.from({ length: 10 }, (_, i) => row(`2026-11-07T0${i}:00:00.000Z`, { payerId: `OWNER${i}` }));
+    expect(refuse(real)).toMatchObject({ kind: "monthly" });
+    expect(refuse(real, { demo: true })).toBeNull();
+    const demos = [1, 2, 3].map((h) => row(`2026-11-07T1${h}:00:00.000Z`, { demo: true }));
+    expect(refuse([...real, ...demos], { demo: true })).toEqual({ kind: "account", limit: 3, until: TOMORROW });
+    // Another sandbox account has its own demo limit.
+    expect(refuse([...real, ...demos], { demo: true, payerId: "PAYER2" })).toBeNull();
+    // Yesterday's demo runs don't count.
+    expect(refuse([row("2026-11-06T23:00:00.000Z", { demo: true }), ...demos.slice(1)], { demo: true })).toBeNull();
   });
 
   it("refuses at the 30-day total until enough of those claims turn 30 days old", () => {

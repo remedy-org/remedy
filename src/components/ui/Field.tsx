@@ -4,7 +4,7 @@ import { useId, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttri
 const control =
   "w-full rounded-control border bg-surface px-3 text-body text-text placeholder:text-faint " +
   "transition-[border-color,box-shadow] duration-160 ease-snap " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus " +
   "disabled:cursor-not-allowed disabled:opacity-40";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {

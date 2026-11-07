@@ -43,7 +43,8 @@ describe("the grid's evidence cells", () => {
       "step_1:pass",
     ]);
     expect(row.note).toBe("All checks passed");
-    expect(barsSentence(row.bars!)).toBe("8 checks: 7 passed, 1 not run");
+    // Counted as the homepage's five checks: the seeded claim's fingerprint check is the one not run.
+    expect(barsSentence(row.bars!)).toBe("4 of 5 passed · 1 not run");
   });
 
   it("show the checks a claim will run as waiting, and a blocked claim's model checks as not run", () => {
@@ -52,7 +53,15 @@ describe("the grid's evidence cells", () => {
     expect(blocked.bars?.slice(0, 4).map((b) => b.state)).toEqual(["reject", "pass", "pass", "pass"]);
     // label, code, screen and the recall's one step, none of them run.
     expect(blocked.bars?.slice(4).map((b) => b.state)).toEqual(["skipped", "skipped", "skipped", "skipped"]);
-    expect(barsSentence(blocked.bars!)).toBe("8 checks: 3 passed, 1 failed (Live camera session), 4 not run");
+    expect(barsSentence(blocked.bars!)).toBe("1 of 5 failed: the live camera · 2 passed · 2 not run");
+  });
+
+  it("count a demo sample's checks as its receipt does: one claim per account is skipped unless it's the genuine one", () => {
+    const demo = (sample: string) =>
+      toRow(summarize(sampleClaim({ decision: "rejected", demo: true, reasons: [{ check: "label", outcome: "pass", text: "" }, reject("code", "Written code reads K7Q"), { check: "step_1", outcome: "pass", text: "" }, { check: "screen", outcome: "pass", text: "" }], events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] })), recall);
+    expect(demo("wrong-code").bars?.find((b) => b.id === "payer")?.state).toBe("skipped");
+    expect(barsSentence(demo("wrong-code").bars!)).toBe("1 of 5 failed: the code · 3 passed · 1 not run");
+    expect(demo("genuine").bars?.find((b) => b.id === "payer")?.state).toBe("pass");
   });
 
   it("tolerate rows written before the index carried the evidence fields", () => {

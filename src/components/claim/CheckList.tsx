@@ -1,15 +1,24 @@
 import clsx from "clsx";
 import type { CSSProperties } from "react";
 import { CheckProgress, type CheckStep } from "@/components/ui";
+import { checkOf, FIVE_CHECKS } from "@/lib/fiveChecks";
 import { EvidenceText, ModelQuote } from "./EvidenceText";
 import styles from "./flow.module.css";
 import type { CheckRow } from "./model";
 
+// Numbered as the homepage's five checks (src/lib/fiveChecks.ts): 1 to 3 need no AI, 4 and 5 are the model's answers.
 const GROUPS: Record<CheckRow["group"], string> = {
-  pre: "Before the photo check · no AI",
-  model: "The photo check · the model reads",
+  pre: "Checks 1 to 3 · no AI",
+  model: "Checks 4 and 5 · the model reads",
   pay: "The refund",
 };
+
+/** The model's answers under the check each belongs to: 4, the label and the code; 5, really destroyed. */
+function byCheck(rows: CheckRow[]): { title: string | null; rows: CheckRow[] }[] {
+  const parts = FIVE_CHECKS.filter((c) => c.n >= 4).map((c) => ({ title: `${c.n} · ${c.short}`, rows: rows.filter((r) => checkOf(r.id) === c.n) }));
+  // A hold from the process (the model never answered) belongs to neither.
+  return [...parts, { title: null, rows: rows.filter((r) => checkOf(r.id) === null) }].filter((p) => p.rows.length);
+}
 
 /**
  * The claim's checks in groups, each with its result and, for the model's answers, its own words in mono. `times` puts
@@ -38,14 +47,23 @@ export function CheckList({
             <GroupName name={GROUPS[g]} />
             {times?.[g] && <span className="shrink-0 normal-case">{times[g]}</span>}
           </h3>
-          <CheckProgress label={GROUPS[g]} steps={rows.map((r) => toStep(r, code, quoteClassName))} />
+          {g === "model" ? (
+            byCheck(rows).map((part) => (
+              <div key={part.title ?? "other"}>
+                {part.title && <h4 className="pt-3 font-mono text-micro text-faint">{part.title}</h4>}
+                <CheckProgress label={part.title ?? GROUPS[g]} steps={part.rows.map((r) => toStep(r, code, quoteClassName))} />
+              </div>
+            ))
+          ) : (
+            <CheckProgress label={GROUPS[g]} steps={rows.map((r) => toStep(r, code, quoteClassName))} />
+          )}
         </section>
       ))}
     </div>
   );
 }
 
-/** "Before the photo check · no AI": the tag after the dot never splits from itself ("no" / "AI") when the header wraps. */
+/** "Checks 1 to 3 · no AI": the tag after the dot never splits from itself ("no" / "AI") when the header wraps. */
 function GroupName({ name }: { name: string }) {
   const [head, tag] = name.split(" · ");
   return (

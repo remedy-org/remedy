@@ -7,6 +7,7 @@ import { CaptureStep, type CapturePreview } from "./CaptureStep";
 import { CheckingStep } from "./CheckingStep";
 import { CodeStep } from "./CodeStep";
 import { DemoCaptureStep } from "./DemoCaptureStep";
+import { focusInView } from "./FocusTitle";
 import { WithJudges, type JudgeStep } from "./Judges";
 import { cutInHalf, handWrittenLabel, taggedThing, type ClaimView } from "./model";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
@@ -36,6 +37,8 @@ export interface ClaimFlowProps {
 // Each phase's h2: focus moves there on arrival and on every step change, so a keyboard or screen reader lands on the new step.
 const TITLE: Record<Phase, string> = { code: "code-title", capture: "capture-title", checking: "checking-title" };
 const JUDGE: Record<Phase, JudgeStep> = { code: "code", capture: "capture", checking: "checking" };
+// The meter takes each step's column, so its edges sit on the content's: the code card, the camera, the checks.
+const METER_WIDTH: Record<Phase, string> = { code: "max-w-claim lg:max-w-[55rem]", capture: "max-w-[40rem]", checking: "max-w-[60rem]" };
 
 /**
  * Code, camera, checking: the steps of an open claim, in the browser. The result is rendered by the server. A demo claim
@@ -58,7 +61,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
 
   // On arrival too: the first step loads by a full navigation (a form post, a redirect), which leaves focus on the body.
   useEffect(() => {
-    document.getElementById(phase === "capture" && demo ? "sample-title" : TITLE[phase])?.focus({ preventScroll: true });
+    focusInView(document.getElementById(phase === "capture" && demo ? "sample-title" : TITLE[phase]));
   }, [phase, demo]);
 
   // A local photo URL is freed when the flow goes away (the result replaces it).
@@ -80,7 +83,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
   return (
     <WithJudges demo={demo} step={JUDGE[phase]}>
       <div className="flex flex-col gap-6">
-        <StepMeter current={current} steps={steps} compact={phase === "capture"} />
+        <StepMeter current={current} steps={steps} compact={phase === "capture"} width={METER_WIDTH[phase]} />
         {phase === "code" && (
           <div className="mx-auto w-full max-w-claim lg:max-w-[55rem]">
             <CodeStep

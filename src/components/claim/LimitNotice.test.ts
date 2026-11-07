@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { limitCopy, retryLabel } from "./LimitNotice";
+import { limitCopy } from "./LimitNotice";
 import { resetWords } from "./model";
 
 const now = new Date("2026-11-07T18:30:00.000Z");
@@ -26,20 +26,20 @@ describe("limitCopy", () => {
 
   it("speaks of sample claims in demo mode", () => {
     expect(limitCopy({ kind: "checks", limit: 100, until: tomorrow }, { demo: true, now }).description).toBe(
-      "This sandbox runs at most 100 photo checks a day, to keep its costs down. No sample claim was started.",
+      "This sandbox runs at most 100 photo checks a day, to keep its costs down. No sample claim was started and nothing was paid.",
     );
-    expect(limitCopy({ kind: "account", limit: 60, until: tomorrow }, { demo: true, now }).title).toBe("This PayPal account has run today's sample claims");
+  });
+
+  it("tells a judge whose account ran its sample claims what happened, that nothing was paid, and when it resets", () => {
+    expect(limitCopy({ kind: "account", limit: 60, until: tomorrow }, { demo: true, now })).toEqual({
+      title: "This PayPal account has run today's sample claims",
+      description: "Each PayPal account can run 60 sample claims a day in this sandbox, to keep its costs down. No sample claim was started and nothing was paid.",
+      retry: "in about 6 hours",
+    });
   });
 
   it("gives days for the 30-day limit", () => {
     expect(limitCopy({ kind: "monthly", limit: 150, until: new Date("2026-11-10T09:00:00.000Z") }, { demo: false, now }).retry).toBe("in 3 days");
-  });
-});
-
-describe("retryLabel", () => {
-  it("says when the refused button comes back, with no time zone", () => {
-    expect(retryLabel({ kind: "account", limit: 5, until: tomorrow }, now)).toBe("Available again in about 6 hours");
-    expect(retryLabel({ kind: "monthly", limit: 150, until: new Date("2026-11-10T09:00:00.000Z") }, now)).toBe("Available again in 3 days");
   });
 });
 

@@ -2,6 +2,7 @@ import clsx from "clsx";
 import type { CSSProperties, ReactNode } from "react";
 import { Button, CheckIcon, CrossIcon, Money, NoBreakHyphens, Paper, Stamp, StatusPill, statusLabel } from "@/components/ui";
 import { canAskForReview, reviewAsked } from "@/lib/appeal";
+import { fiveSummary } from "@/lib/fiveChecks";
 import type { DemoSample } from "@/lib/demo";
 import type { Claim, Recall } from "@/lib/types";
 import { CheckList } from "./CheckList";
@@ -10,7 +11,7 @@ import { ExhibitPhoto, SampleChip, StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
 import { FocusTitle } from "./FocusTitle";
 import { WithJudges } from "./Judges";
-import { LocalTime } from "./LocalTime";
+import { ClaimTime } from "./LocalTime";
 import {
   adviceFor,
   businessDaysAfter,
@@ -99,7 +100,7 @@ export function Result(props: ResultProps) {
       note={unanswered ? UNANSWERED_NOTE : RESULT_NOTES[props.claim.decision]}
       extra={
         sample && (
-          <JudgeVerdict sample={sample} run={{ sample: sample.id, decision: props.claim.decision, unanswered }} round={props.round} claimId={props.claim.id} slug={props.recall.slug} againHref={props.againHref} />
+          <JudgeVerdict sample={sample} run={{ sample: sample.id, decision: props.claim.decision, unanswered }} round={props.round} claimId={props.claim.id} slug={props.recall.slug} company={companyName(props.recall)} againHref={props.againHref} />
         )
       }
     >
@@ -174,13 +175,15 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
           />
           {sentAt && (
             <ReceiptRow label="Sent">
-              <LocalTime iso={sentAt} format="stamp" />
+              <ClaimTime iso={sentAt} format="stamp" />
             </ReceiptRow>
           )}
           {/* The PayPal login the owner knows, masked; without one, the payer ID's tail, with "Verified" in the label so the
               ID never wraps on a narrow receipt. */}
           {account ? (
-            <ReceiptRow label="Paid to">{account}</ReceiptRow>
+            <ReceiptRow label="Paid to">
+              <Masked text={account} />
+            </ReceiptRow>
           ) : (
             <ReceiptRow label={claim.payerVerified ? "Verified PayPal account" : "PayPal account"} mono>
               {maskPayer(claim.payerId)}
@@ -197,9 +200,22 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
         {!sb && <p className="mt-3 text-ui text-ink-muted">PayPal emails you a receipt too.</p>}
       </Paper>
 
-      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
-      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={passedSummary(rows)} open={false} code={claim.code} />
+      {sample && <DemoActions sample={sample} slug={recall.slug} company={companyName(recall)} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
+      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={fiveSummary(rows)} open={false} code={claim.code} />
     </section>
+  );
+}
+
+/** "p••@owner.test": Schibsted's bullets sit wide apart, so the mask's run of them is set in mono, as the console's is. */
+function Masked({ text }: { text: string }) {
+  return text.split(/(•+)/).map((part, i) =>
+    part.startsWith("•") ? (
+      <span key={i} className="font-mono tracking-[-0.08em]">
+        {part}
+      </span>
+    ) : (
+      part
+    ),
   );
 }
 
@@ -265,7 +281,7 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
             {sb ? " sandbox" : ""}
           </ReceiptRow>
           <ReceiptRow label="Photos sent">
-            <LocalTime iso={submitted} format="stamp" />
+            <ClaimTime iso={submitted} format="stamp" />
           </ReceiptRow>
           <ReceiptRow label="Your code" mono>
             {claim.code}
@@ -274,14 +290,14 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
       </Paper>
 
       {sample && (
-        <DemoActions sample={sample} slug={recall.slug} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} unanswered={noModelAnswer(claim.decision, claim.reasons)} />
+        <DemoActions sample={sample} slug={recall.slug} company={companyName(recall)} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} unanswered={noModelAnswer(claim.decision, claim.reasons)} />
       )}
-      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={`Every check, and the ${photoUrls.length === 1 ? "photo" : "photos"} you sent`} open={Boolean(sample)} code={claim.code} />
+      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={fiveSummary(rows)} open={Boolean(sample)} code={claim.code} />
     </section>
   );
 }
 
-/** `time`: an ISO time, shown to the minute in the viewer's zone. */
+/** `time`: an ISO time, shown to the minute in UTC, as the console shows it. */
 function TimelineRow({ state, label, time }: { state: "done" | "now" | "next"; label: string; time?: string }) {
   return (
     <li className="relative grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center text-ui">
@@ -292,7 +308,7 @@ function TimelineRow({ state, label, time }: { state: "done" | "now" | "next"; l
       <span className={state === "next" ? "font-medium text-ink" : state === "now" ? "text-ink" : "text-ink-muted"}>{label}</span>
       {time && (
         <span className="pl-3 font-mono text-micro text-ink-muted tabular-nums">
-          <LocalTime iso={time} format="clock" />
+          <ClaimTime iso={time} format="clock" />
         </span>
       )}
     </li>
@@ -443,9 +459,9 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
         </Button>
       )}
 
-      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
+      {sample && <DemoActions sample={sample} slug={recall.slug} company={companyName(recall)} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
       {/* The verdict sheet above already shows photo 1 and the deciding quote; the rest of the checks wait folded. */}
-      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={otherSummary(rows, blocked)} open={false} code={claim.code} />
+      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={fiveSummary(rows)} open={false} code={claim.code} />
     </section>
   );
 }
@@ -505,7 +521,7 @@ function Provenance({ claim }: { claim: Pick<Claim, "code" | "events"> }) {
             {issued ? (
               <span className="font-mono whitespace-nowrap">
                 {" "}
-                <LocalTime iso={issued} format="clock" />
+                <ClaimTime iso={issued} format="clock" />
               </span>
             ) : null}
           </span>
@@ -568,22 +584,6 @@ function DuplicatePair({ claimId, photoUrls, duplicate, sample }: { claimId: str
 
 /* ------------------------------------------------------------------------------------------ Shared parts */
 
-// The receipt counts decision checks only, by group, the way the checklist and the judges' rail name them: the refund
-// row is the outcome, not a check.
-const count = (rows: CheckRow[], group: CheckRow["group"]) => rows.filter((r) => r.group === group).length;
-
-function passedSummary(rows: CheckRow[]): string {
-  // One number for the owner; the split (no AI, then the photo check's answers, one per row) is in the evidence below.
-  return `All ${count(rows, "pre") + count(rows, "model")} checks passed`;
-}
-
-// The folded evidence under a refusal: blocked claims never reached the model, so nothing is said to have passed there.
-function otherSummary(rows: CheckRow[], blocked: boolean): string {
-  if (blocked || !rows.some((r) => r.group === "model" && r.state !== "waiting")) return "The photo check didn't run";
-  const others = rows.filter((r) => r.group !== "pay" && r.state !== "reject" && r.state !== "blocked");
-  return others.length && others.every((r) => r.state === "pass") ? "Every other check passed" : "Every check";
-}
-
 function Top({ status, id }: { status: ReactNode; id: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
@@ -641,6 +641,8 @@ function RunSample({ slug, sample, children, rail, secondary }: { slug: string; 
 interface DemoActionsProps {
   sample: DemoSample;
   slug: string;
+  /** The recall's company, whose console shows the claim. */
+  company: string;
   againHref: string;
   claimId: string;
   decision: Claim["decision"];
@@ -653,6 +655,9 @@ interface DemoActionsProps {
 }
 
 const consoleHref = (claimId: string) => `/console?claim=${claimId}`;
+// The console link's words wherever it shows: the claim's place there, and the login it takes.
+const consoleWords = (company: string) => `See it in ${company}\u2019s console`;
+const CONSOLE_LOGIN = "Business sandbox login";
 
 /** The round is over: every sample has run and this one got the model's answer, so the console is what's left to see. */
 const roundOver = (runs: RoundRun[], sample: DemoSample, unanswered?: boolean) => !unanswered && !nextSample(runs, sample.id);
@@ -683,7 +688,7 @@ function ExpectedGot({ sample, run }: { sample: DemoSample; run: RoundRun }) {
  * Demo results: the next sample in the guided order is the primary action, straight to its photo; after a model outage,
  * running this one again; once the round is over, this claim in the company's console.
  */
-function DemoActions({ sample, slug, againHref, claimId, decision, round, unanswered, rail }: DemoActionsProps) {
+function DemoActions({ sample, slug, company, againHref, claimId, decision, round, unanswered, rail }: DemoActionsProps) {
   const runs = round?.runs ?? [];
   const next = nextSample(runs, sample.id);
   const over = roundOver(runs, sample, unanswered);
@@ -696,16 +701,13 @@ function DemoActions({ sample, slug, againHref, claimId, decision, round, unansw
       Next sample: {next.title}
     </RunSample>
   ) : (
-    <Button href={consoleHref(claimId)} size={rail ? "md" : "lg"} block prefetch={false} className={clsx("h-auto! py-2.5 text-center whitespace-normal!", rail ? "min-h-11" : "min-h-12")}>
-      {rail ? (
-        "Sign in as Kikea Store to see this claim"
-      ) : (
-        // One line in the phone's pinned bar.
-        <>
-          <span className="sm:hidden">See it in the console</span>
-          <span className="max-sm:hidden">Sign in as Kikea Store to see this claim</span>
-        </>
-      )}
+    <Button href={consoleHref(claimId)} size={rail ? "md" : "lg"} block prefetch={false} className={clsx("h-auto! py-2 text-center whitespace-normal!", rail ? "min-h-11" : "min-h-12")}>
+      {/* The same words on every screen, and up front that it's a second login: the company's, PayPal's business sandbox. */}
+      <span className="flex flex-col items-center gap-0.5">
+        <span>{consoleWords(company)}</span>
+        <span className="sr-only">, </span>
+        <span className="text-ui font-normal">{CONSOLE_LOGIN}</span>
+      </span>
     </Button>
   );
   // The round's end, said once in plain words above its one action: no fanfare, just the score.
@@ -748,8 +750,8 @@ function DemoActions({ sample, slug, againHref, claimId, decision, round, unansw
       <div className="-mt-3 flex flex-col gap-3 min-[1200px]:hidden">
         {secondary}
         {!over && (
-          <Button href={consoleHref(claimId)} variant="tertiary" size="sm" prefetch={false} className="self-start">
-            Sign in as Kikea Store to see this claim
+          <Button href={consoleHref(claimId)} variant="tertiary" size="sm" prefetch={false} className="self-start text-left whitespace-normal!">
+            {consoleWords(company)} · {CONSOLE_LOGIN.toLowerCase()}
           </Button>
         )}
       </div>
@@ -758,20 +760,20 @@ function DemoActions({ sample, slug, againHref, claimId, decision, round, unansw
 }
 
 /** The judges' rail on a demo result: what should have happened, what did, the next action, this round's score, the console. */
-function JudgeVerdict({ sample, run, round, claimId, slug, againHref }: { sample: DemoSample; run: RoundRun; round?: DemoRound | null; claimId: string; slug: string; againHref: string }) {
+function JudgeVerdict({ sample, run, round, claimId, slug, company, againHref }: { sample: DemoSample; run: RoundRun; round?: DemoRound | null; claimId: string; slug: string; company: string; againHref: string }) {
   const over = roundOver(round?.runs ?? [], sample, run.unanswered);
   return (
     <div className="flex flex-col gap-4">
       <ExpectedGot sample={sample} run={run} />
-      <DemoActions sample={sample} slug={slug} againHref={againHref} claimId={claimId} decision={run.decision} round={round} unanswered={run.unanswered} rail />
+      <DemoActions sample={sample} slug={slug} company={company} againHref={againHref} claimId={claimId} decision={run.decision} round={round} unanswered={run.unanswered} rail />
       <p className="text-ui text-muted">
         <NoBreakHyphens>{sample.description}</NoBreakHyphens>
       </p>
       {round && <Scoreboard runs={round.runs} complete={over} />}
       {/* Once the round is over the console is the primary action above. */}
       {!over && (
-        <Button href={consoleHref(claimId)} variant="tertiary" size="sm" prefetch={false} className="self-start">
-          Sign in as Kikea Store to see this claim
+        <Button href={consoleHref(claimId)} variant="tertiary" size="sm" prefetch={false} className="self-start text-left whitespace-normal!">
+          {consoleWords(company)} · {CONSOLE_LOGIN.toLowerCase()}
         </Button>
       )}
     </div>

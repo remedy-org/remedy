@@ -7,13 +7,19 @@ import { CopyValue } from "./CopyValue";
  * The judges' PayPal sandbox login, in the open: neutral (information, never the amber of the action), the email and
  * password as mono text with a copy button each, and one line of how-to. Rendered on the server from judgeLogin().
  */
-export function JudgeLoginPanel({ login, why, className }: { login: JudgeLogin; why?: ReactNode; className?: string }) {
+export function JudgeLoginPanel({ login, why, id, className }: { login: JudgeLogin; why?: ReactNode; id?: string; className?: string }) {
   const rows = [
     { label: "email", value: login.email },
     { label: "password", value: login.password },
   ];
   return (
-    <section aria-label="Judges' sandbox login" className={clsx("flex flex-col gap-3 rounded-card bg-surface-2 p-4 text-ui shadow-[inset_0_0_0_1px_var(--line-2)]", className)}>
+    // id: the phone's bar brings it into view and focuses it before it offers the PayPal login.
+    <section
+      id={id}
+      tabIndex={id ? -1 : undefined}
+      aria-label="Judges' sandbox login"
+      className={clsx("flex scroll-mt-24 flex-col gap-3 rounded-card bg-surface-2 p-4 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus", className)}
+    >
       <div className="flex flex-col gap-1">
         <h3 className="micro text-faint">Judges&apos; sandbox login</h3>
         {why && <p className="text-text">{why}</p>}

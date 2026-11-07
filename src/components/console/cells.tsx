@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { StatusPill } from "@/components/ui";
+import { checkOf, FIVE_CHECKS } from "@/lib/fiveChecks";
 import { barsSentence, duration, type BarState, type CheckBar, type ClaimRow, type RowTimeline } from "@/app/console/_lib/view";
 import { formatClock, formatTime } from "./format";
 
@@ -138,13 +139,20 @@ function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
   );
 }
 
-/** The evidence barcode: one 8x16 bar per check, the four pre-checks, a 6px gap, then the model's checks. Shape carries
- * the outcome as well as colour (filled, half, slashed, outline, dotted). */
+/** The bars under the homepage's five checks, in order, then any hold from the process (the model down, PayPal). */
+function byCheck(bars: CheckBar[]): { title: string; bars: CheckBar[] }[] {
+  return [
+    ...FIVE_CHECKS.map((c) => ({ title: `${c.n} · ${c.short}`, bars: bars.filter((b) => checkOf(b.id) === c.n) })),
+    { title: "Other holds", bars: bars.filter((b) => checkOf(b.id) === null) },
+  ].filter((g) => g.bars.length);
+}
+
+/** The evidence barcode: one 8x16 bar per answer recorded, grouped by the five checks with a 4px gap between them. Shape
+ * carries the outcome as well as colour (filled, half, slashed, outline, dotted). */
 export function Barcode({ bars }: { bars: CheckBar[] }) {
-  const split = bars.findIndex((b) => !["session", "duplicate_photo", "payer", "payer_verified"].includes(b.id));
-  const groups = split < 0 ? [bars] : [bars.slice(0, split), bars.slice(split)];
+  const groups = byCheck(bars).map((g) => g.bars);
   return (
-    <span role="img" aria-label={barsSentence(bars)} className="flex items-center gap-1.5">
+    <span role="img" aria-label={barsSentence(bars)} className="flex items-center gap-1">
       {groups.map((g, i) => (
         <span key={i} className="flex gap-0.5">
           {g.map((b) => (
@@ -321,7 +329,6 @@ export function CardRow({ data }: Cell) {
   );
 }
 
-const PRE_IDS = new Set(["session", "duplicate_photo", "payer", "payer_verified"]);
 // A seeded sample's fingerprint check (why it's dotted), and the photo check that never answered.
 function barNote(row: ClaimRow, b: CheckBar): string {
   if (b.id === "duplicate_photo" && b.state === "skipped" && row.seeded) return "not run: shared sample photo";
@@ -334,16 +341,14 @@ function HeaderTip({ text }: { text: unknown }) {
   return <p className="w-[280px] rounded-card bg-surface px-3.5 py-3 text-ui text-muted shadow-float">{String(text ?? "")}</p>;
 }
 
-/** Hovering the barcode: each bar named, with its state, the pre-checks and the model's apart. */
+/** Hovering the barcode: the five checks, each with its bars named and their states. */
 export function ChecksTooltip({ data, location, value }: CustomTooltipProps<ClaimRow>) {
   if (location === "header") return <HeaderTip text={value} />;
   if (!data?.bars) return null;
-  const groups = [
-    { title: "Before the model", bars: data.bars.filter((b) => PRE_IDS.has(b.id)) },
-    { title: "The model's answers", bars: data.bars.filter((b) => !PRE_IDS.has(b.id)) },
-  ].filter((g) => g.bars.length);
+  const groups = byCheck(data.bars);
   return (
     <div className="w-[296px] rounded-card bg-surface px-3.5 py-3 shadow-float">
+      <p className="mb-2.5 text-ui text-text">{barsSentence(data.bars)}</p>
       {groups.map((g) => (
         <div key={g.title} className="mt-2.5 first:mt-0">
           <p className="micro text-faint">{g.title}</p>

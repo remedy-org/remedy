@@ -45,5 +45,5 @@ export const gridTheme = themeQuartz.withParams({
   selectedRowBackgroundColor: "var(--accent-soft)",
   // A payout settling at PayPal that lands flashes its cell in the paid colour.
   valueChangeValueHighlightBackgroundColor: "var(--pay-soft)",
-  focusShadow: { radius: 0, spread: 2, color: "var(--accent)" },
+  focusShadow: { radius: 0, spread: 2, color: "var(--focus)" },
 });

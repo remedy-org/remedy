@@ -5,7 +5,7 @@ import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
-import { consentAction, ConsentCard, SampleList, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
+import { consentAction, ConsentCard, JUDGE_LOGIN_ID, SampleList, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
 import { FlowShell } from "./FlowShell";
 import { WithJudges } from "./Judges";
 import { MobileCta } from "./MobileCta";
@@ -91,8 +91,17 @@ export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?:
           </div>
         </div>
       </WithJudges>
-      {/* Refused by a limit, there's nothing to tap until it resets: the notice in the card says when. */}
-      {!(props.refusal && !claim) && <MobileCta target="consent-cta" href={claim?.href ?? props.href} label={consentAction(props)} />}
+      {/* Refused by a limit, there's nothing to tap until it resets: the notice in the card says when. On the demo, the
+          judges' sandbox login sits under the four samples on a phone: the bar's first tap brings it up, so nobody reaches
+          PayPal's page without the login it asks for. */}
+      {!(props.refusal && !claim) && (
+        <MobileCta
+          target="consent-cta"
+          href={claim?.href ?? props.href}
+          label={consentAction(props)}
+          first={props.demo && !props.signedInAs && props.judgeLogin && !claim ? { target: JUDGE_LOGIN_ID, label: "Show the sandbox login" } : undefined}
+        />
+      )}
     </FlowShell>
   );
 }

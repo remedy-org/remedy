@@ -14,24 +14,12 @@ const useLocal = () =>
   );
 
 /**
- * A claim's time in the viewer's own time zone, to the minute and with no zone label, since it's their own: "20:15"
- * (another day: "6 Nov, 20:15"), "7 Nov, 20:15". The server, and the first paint before hydration, print UTC (clock,
- * stamp), so the two never mismatch.
+ * A claim's time as the company's console prints it, in UTC and saying so, so the owner's receipt and the console name
+ * one moment the same way: "14:32 UTC" (clock), "7 Nov 2026, 14:32 UTC" (stamp).
  */
-export function LocalTime({ iso, format }: { iso: string; format: "clock" | "stamp" }) {
-  const local = useLocal();
-  const d = new Date(iso);
-  const now = new Date();
-  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  // A stamp breaks only after its comma; this year's date drops the year, so on a narrow receipt "7 Nov, 20:02" fits one line.
-  const date = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(d.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }) });
-  const today = d.toDateString() === now.toDateString();
-  const text = !local ? (format === "clock" ? `${clock(iso).slice(0, 5)} UTC` : stamp(iso)) : format === "clock" && today ? time : `${nbsp(date)}, ${time}`;
-  return (
-    <time dateTime={iso} suppressHydrationWarning>
-      {text}
-    </time>
-  );
+export function ClaimTime({ iso, format }: { iso: string; format: "clock" | "stamp" }) {
+  // A stamp breaks only after its comma, so on a narrow receipt the date and the time each stay whole.
+  return <time dateTime={iso}>{format === "clock" ? nbsp(`${clock(iso).slice(0, 5)} UTC`) : stamp(iso).split(", ").map(nbsp).join(", ")}</time>;
 }
 
 /**

@@ -10,13 +10,13 @@ export interface Limits {
   vision: number;
   /** Recall-check drafts a day, every company together. */
   draft: number;
-  /** New claims a day, real and demo together. */
+  /** New real claims a day, every recall together. Demo and seeded claims never count. */
   claimsPerDay: number;
-  /** New claims in any 30 days: Blob's quota is monthly, so daily limits alone can't protect it. */
+  /** New real claims in any 30 days: Blob's quota is monthly, so daily limits alone can't protect it. */
   claimsPerMonth: number;
   /** Real claims one PayPal account can start a day; abandoned and expired ones count too. */
   accountClaimsPerDay: number;
-  /** Demo claims one PayPal account can run a day. */
+  /** Demo claims one PayPal account can run a day, abandoned ones too: the demo's own limit. */
   accountDemosPerDay: number;
 }
 
@@ -52,32 +52,37 @@ export interface Refusal {
 }
 
 /**
- * Whether a new claim may start, from index.json's rows. Seeded claims never count. A real start counts the account's
- * real claims today, a demo start its demo claims; every start counts towards the daily and 30-day totals. A demo
- * start is also refused once today's photo checks are used up, since its check couldn't run; a real claim still
- * starts, and is held for a person if its check can't run. When several limits are hit, the one that lasts longest.
+ * Whether a new claim may start, from index.json's rows. Seeded claims never count. Demo and real claims are counted
+ * apart, so judges sharing one server and one sandbox login can never use up the claims real owners need: a real start
+ * counts the account's real claims today and every real claim towards the daily and 30-day totals; a demo start counts
+ * only the account's demo claims today, and is refused once today's photo checks are used up, since its check couldn't
+ * run (a real claim still starts, and is held for a person if its check can't run). When several limits are hit, the
+ * one that lasts longest.
  */
 export function claimRefusal(
   rows: Pick<ClaimSummary, "payerId" | "createdAt" | "seeded" | "demo">[],
   { payerId, demo, now, limits, visionUsed = 0 }: { payerId: string; demo: boolean; now: Date; limits: Limits; visionUsed?: number },
 ): Refusal | null {
-  const counted = rows.filter((r) => !r.seeded);
+  const counted = rows.filter((r) => !r.seeded && Boolean(r.demo) === demo);
   const tomorrow = nextUtcDay(now);
   const dayStart = tomorrow.getTime() - 24 * HOUR_MS;
   const today = counted.filter((r) => Date.parse(r.createdAt) >= dayStart);
-  // Oldest first: the 30-day total drops as the oldest of these turn 30 days old.
-  const month = counted.filter((r) => Date.parse(r.createdAt) > now.getTime() - MONTH_MS).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
   const hits: Refusal[] = [];
   const perAccount = demo ? limits.accountDemosPerDay : limits.accountClaimsPerDay;
-  if (today.filter((r) => r.payerId === payerId && Boolean(r.demo) === demo).length >= perAccount) hits.push({ kind: "account", limit: perAccount, until: tomorrow });
-  if (today.length >= limits.claimsPerDay) hits.push({ kind: "daily", limit: limits.claimsPerDay, until: tomorrow });
-  if (month.length >= limits.claimsPerMonth) {
-    // A start fits once all but limit - 1 of these are older than 30 days.
-    const frees = month[month.length - limits.claimsPerMonth];
-    hits.push({ kind: "monthly", limit: limits.claimsPerMonth, until: new Date((frees ? Date.parse(frees.createdAt) : now.getTime()) + MONTH_MS) });
+  if (today.filter((r) => r.payerId === payerId).length >= perAccount) hits.push({ kind: "account", limit: perAccount, until: tomorrow });
+  if (demo) {
+    if (visionUsed >= limits.vision) hits.push({ kind: "checks", limit: limits.vision, until: tomorrow });
+  } else {
+    if (today.length >= limits.claimsPerDay) hits.push({ kind: "daily", limit: limits.claimsPerDay, until: tomorrow });
+    // Oldest first: the 30-day total drops as the oldest of these turn 30 days old.
+    const month = counted.filter((r) => Date.parse(r.createdAt) > now.getTime() - MONTH_MS).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    if (month.length >= limits.claimsPerMonth) {
+      // A start fits once all but limit - 1 of these are older than 30 days.
+      const frees = month[month.length - limits.claimsPerMonth];
+      hits.push({ kind: "monthly", limit: limits.claimsPerMonth, until: new Date((frees ? Date.parse(frees.createdAt) : now.getTime()) + MONTH_MS) });
+    }
   }
-  if (demo && visionUsed >= limits.vision) hits.push({ kind: "checks", limit: limits.vision, until: tomorrow });
   return hits.reduce<Refusal | null>((longest, r) => (!longest || r.until > longest.until ? r : longest), null);
 }
 

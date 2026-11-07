@@ -2,7 +2,7 @@
 // (clipped to gamut, as browsers render it) -> WCAG 2.x relative luminance. Translucent colours (the 14% soft state
 // backgrounds, the 85% stamp ink, the highlighter) are composited over their backdrop in gamma sRGB, as a browser does.
 //   npx tsx scripts/contrast.ts            prints every pair, exits 1 if a required pair fails
-// Required: text pairs at 4.5:1 (ink on paper, state text, body text), UI borders at 3:1.
+// Required: text pairs at 4.5:1 (ink on paper, state text, body text), UI borders and the focus ring at 3:1.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -127,7 +127,13 @@ const app: Pair[] = [
   ]),
   ...["--bg", "--surface", "--surface-2"].map((bg) => ({ fg: "--line-strong", bg, min: 3, note: "input border" })),
   { fg: "--photo-scrim-text", bg: "white+--photo-scrim", min: 4.5, note: "AI-made photo label, scrim over a white photo" },
+  // The 2px focus ring, 2px off the control: 3:1 against every surface it can lie on (WCAG 1.4.11, 2.4.13).
+  ...["--bg", "--surface", "--surface-2", "--surface-3", "--section-lift"].map((bg) => ({ fg: "--focus", bg, min: 3, note: "focus ring" })),
 ];
+
+// The ring around the amber primary button. In light it must clear the button itself; in dark it is the button's own
+// amber, and only the 2px offset of page colour between them (the ring is 10:1 on that) sets it apart.
+const ringOnAccent = (min: number): Pair[] => [{ fg: "--focus", bg: "--accent", min, note: min ? "focus ring around the primary button" : "info: the offset gap separates them" }];
 
 const paperBgs = ["--paper", "--paper-2"];
 // Paper and its inks are fixed, but the band and the sheet on it differ by theme, and so does the highlighter's amber:
@@ -166,8 +172,8 @@ if (Math.abs(ratio(white, black) - 21) > 0.01) throw new Error("contrast maths i
 
 report("Paper and ink, dark", themes.dark, paper);
 report("Paper and ink, light", themes.light, paper);
-report("App tokens, dark", themes.dark, app);
-report("App tokens, light", themes.light, app);
+report("App tokens, dark", themes.dark, [...app, ...ringOnAccent(0)]);
+report("App tokens, light", themes.light, [...app, ...ringOnAccent(3)]);
 
 console.log(failed ? `\n${failed} pair(s) below the minimum.` : "\nEvery required pair passes.");
 process.exit(failed ? 1 : 0);

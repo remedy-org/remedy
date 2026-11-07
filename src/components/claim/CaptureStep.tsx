@@ -381,7 +381,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                           onClick={() => setViewing(i)}
                           aria-haspopup="dialog"
                           aria-label={`Photo ${i + 1}: open it to check it or retake it`}
-                          className="relative block size-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                          className="relative block size-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                         >
                           <span className={clsx("block size-full rounded-control bg-paper p-[2px] shadow-paper", styles.drop)}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -416,7 +416,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                     aria-label={n >= MAX_PHOTOS ? "Three photos taken" : `Take photo ${n + 1} of ${MAX_PHOTOS}`}
                     aria-keyshortcuts="Space"
                     className={clsx(
-                      "flex size-[4.5rem] items-center justify-center rounded-full border-4 border-[oklch(1_0_0/0.9)] transition-opacity duration-160 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent disabled:opacity-35",
+                      "flex size-[4.5rem] items-center justify-center rounded-full border-4 border-[oklch(1_0_0/0.9)] transition-opacity duration-160 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus disabled:opacity-35",
                       styles.shutter,
                     )}
                   >

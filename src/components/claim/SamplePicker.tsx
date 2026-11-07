@@ -1,13 +1,13 @@
 import clsx from "clsx";
 import Link from "next/link";
-import { Button, StatusPill, statusLabel } from "@/components/ui";
+import { Button, CheckIcon, StatusPill, statusLabel } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
 import type { Refusal } from "@/lib/limits";
 import type { Decision } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { FocusTitle } from "./FocusTitle";
 import { LockIcon } from "./icons";
-import { LimitNotice, RetryLabel } from "./LimitNotice";
+import { LimitNextStep, LimitNotice } from "./LimitNotice";
 import { latestRuns, RunResult, scoreLine, type RoundRun } from "./Scoreboard";
 
 export interface SampleOption {
@@ -51,6 +51,7 @@ export function SamplePicker({
   runs,
   roundDone,
   refusal,
+  elsewhere,
 }: {
   slug: string;
   options: SampleOption[];
@@ -60,6 +61,8 @@ export function SamplePicker({
   /** Every sample has run in this round. */
   roundDone: boolean;
   refusal?: Refusal | null;
+  /** This browser's round is new, and this PayPal login has demo claims in other rounds (another device, or a judge). */
+  elsewhere?: boolean;
 }) {
   const scored = roundRuns(runs);
   // Refused by a limit: the cards stay as a record, and nothing can be run until it resets.
@@ -73,6 +76,11 @@ export function SamplePicker({
         <StepTitle id="picker-title">Pick a sample claim</StepTitle>
         <p className="text-body text-muted">Each one runs the real checks and the real rule. Only the genuine claim should be paid, and only once per round.</p>
         {scored.length > 0 && <p className="font-mono text-micro text-muted">{scoreLine(scored).text}</p>}
+        {elsewhere && (
+          <p className="text-ui text-muted">
+            A new round on this device. Runs from other devices on this sandbox login keep their own rounds; the company console shows them all.
+          </p>
+        )}
       </div>
 
       {refusal && <LimitNotice refusal={refusal} demo />}
@@ -91,11 +99,15 @@ export function SamplePicker({
                 key={sample.id}
                 aria-disabled={locked || off ? true : undefined}
                 className={clsx(
-                  "group relative flex gap-4 rounded-card border border-line bg-surface p-2 sm:gap-3.5 transition-[border-color,box-shadow,background-color] duration-160 sm:p-3",
-                  // Selected: a neutral ring in the text colour. The screen's one amber is "Run this sample".
-                  "has-checked:border-text/70 has-checked:shadow-[0_0_0_2px_var(--bg),0_0_0_3px_var(--text)] has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-accent",
+                  "group relative flex gap-4 rounded-card border border-line bg-surface p-2 sm:gap-3.5 transition-[border-color,background-color,opacity] duration-160 sm:p-3",
+                  // Selected: a tinted card, a firmer hairline and a check on the photo, never an outline, which is focus's
+                  // alone. The screen's one amber is "Run this sample".
+                  !off && "has-checked:border-line-strong has-checked:bg-surface-2",
+                  "has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-focus",
                   !roundDone && !off && "cursor-pointer hover:bg-surface-2",
                   locked && "cursor-not-allowed hover:bg-surface",
+                  // Refused by a limit: the cards are only a record until it resets.
+                  off && "opacity-60",
                 )}
               >
                 {!roundDone && <input type="radio" name="sample" value={sample.id} defaultChecked={sample.id === selected} disabled={Boolean(locked)} className="peer sr-only" />}
@@ -109,6 +121,14 @@ export function SamplePicker({
                   >
                     {letter}
                   </span>
+                  {!off && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute top-1.5 right-1.5 hidden size-6 items-center justify-center rounded-full bg-text text-bg shadow-paper group-has-checked:flex"
+                    >
+                      <CheckIcon size={14} />
+                    </span>
+                  )}
                   {locked && (
                     <span className="absolute inset-x-1.5 top-1/2 flex -translate-y-1/2 items-center justify-center gap-1.5 rounded-control bg-[oklch(0.12_0.004_75/0.85)] px-2 py-1.5 text-ui text-[oklch(0.96_0.006_85)]">
                       <LockIcon className="shrink-0" />
@@ -137,9 +157,14 @@ export function SamplePicker({
         <p className="text-ui text-faint">All four photos are AI-made samples, not from a camera.</p>
         {roundDone && <p className="text-ui text-muted">All four samples have run. A new round checks them only against each other, so they reach the same four outcomes.</p>}
         <div data-action-bar="" className="z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md">
-          <Button type="submit" size="lg" block disabled={off}>
-            {refusal ? <RetryLabel refusal={refusal} /> : roundDone ? "Run the samples again" : "Run this sample"}
-          </Button>
+          {/* Refused by a limit, nothing can run until it resets: the console, where the runs are, takes the button. */}
+          {off ? (
+            <LimitNextStep demo />
+          ) : (
+            <Button type="submit" size="lg" block>
+              {roundDone ? "Run the samples again" : "Run this sample"}
+            </Button>
+          )}
         </div>
       </form>
 
