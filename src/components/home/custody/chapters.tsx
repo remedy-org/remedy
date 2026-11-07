@@ -396,7 +396,7 @@ export function ChecksChapter({ p }: { p: Progress }) {
   return (
     <div className="@container">
       <div ref={root} className="relative grid items-center gap-8 @min-[720px]:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] @min-[720px]:gap-20">
-        <ExhibitPrint sizes="(min-width: 1024px) 560px, 320px" className="mx-auto w-2/3 @min-[720px]:w-auto">
+        <ExhibitPrint sizes="(min-width: 1024px) 560px, 320px" className="mx-auto w-2/3 @min-[720px]:mx-0 @min-[720px]:w-auto">
           <AiLabel className="bottom-2 left-2" />
           {CHECKS.map((c, i) => c.region && <Region key={c.region} p={p} id={c.region} n={i + 1} at={TICK_AT[i]} />)}
         </ExhibitPrint>
@@ -488,7 +488,7 @@ export function PaidChapter({ p }: { p: Progress }) {
           <div className="flex flex-col rounded-card border border-line bg-surface font-mono text-micro @min-[720px]:text-ui">
             {RULE.map((r) => (
               <div key={r.when} className={clsx("relative flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0", r.pay && "pr-10 @min-[720px]:pr-4")}>
-                <span className="flex-1 text-muted @min-[720px]:w-[18ch] @min-[720px]:flex-none">{r.when}</span>
+                <span className="flex-1 text-muted @min-[720px]:w-[19ch] @min-[720px]:flex-none @min-[720px]:whitespace-nowrap">{r.when}</span>
                 <span className="text-faint">&rarr;</span>
                 <span className={r.pay ? "text-text" : "text-muted"}>{r.then}</span>
                 {r.pay && (

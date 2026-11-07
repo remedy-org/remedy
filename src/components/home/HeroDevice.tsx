@@ -21,7 +21,7 @@ const MAX_TILT = 4;
 const EXHIBITS: { id: AnchorId; n: string; text: string; className: string }[] = [
   { id: "label", n: "01", text: "Label", className: "left-[22%] -top-[1%]" },
   { id: "cut", n: "02", text: "Cut", className: "left-[1%] top-[63%]" },
-  { id: "code", n: "03", text: "Code", className: "left-[8%] top-[73%]" },
+  { id: "code", n: "03", text: "Code", className: "left-[24%] top-[75%]" },
 ];
 
 const NOSCRIPT = `<style>[data-hero-device] [data-seq=show]{opacity:1!important;transform:none!important}[data-hero-device] [data-seq=hide]{opacity:0!important}</style>`;
@@ -91,8 +91,10 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
       const c = chip.getBoundingClientRect();
       const r = tag.getBoundingClientRect();
       const s = Math.min(1, c.height / r.height / 0.75);
-      const x = c.left + c.width / 2 - (r.left + r.width / 2);
-      const y = c.top + c.height / 2 - (r.top + r.height / 2);
+      // The receipt may be scaled down on short screens (device.module.css): move in its own, unscaled px.
+      const k = r.width / tag.offsetWidth || 1;
+      const x = (c.left + c.width / 2 - (r.left + r.width / 2)) / k;
+      const y = (c.top + c.height / 2 - (r.top + r.height / 2)) / k;
       const a = animate(tag, { x: [x, 0], y: [y, 0], scale: [s, 1], opacity: [0, 1, 1], rotate: [6, -3] }, { duration: 0.52, ease: [0.2, 0.8, 0.2, 1] });
       const b = animate(shadow, { opacity: [0, 1] }, { duration: 0.2, delay: 0.38 });
       stop = () => {
@@ -250,7 +252,7 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
       </div>
       <figcaption className="relative z-10 mt-2 flex flex-wrap items-center justify-end gap-x-6 gap-y-1 pr-[calc(var(--bleed,0px)+2rem)]">
         <span className="text-ui text-faint">
-          Claim {CLAIM.id}, run through the judges&rsquo; demo on 7 Nov. AI-made test photo; sandbox money.
+          Claim {CLAIM.id} · AI-made test photo · sandbox money
         </span>
         <button
           type="button"

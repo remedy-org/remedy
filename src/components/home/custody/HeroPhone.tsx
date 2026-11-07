@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
+import { Money, Paper, Stamp } from "@/components/ui";
 import { CLAIM } from "./claim";
 import { PhoneFrame } from "./frames";
 
@@ -16,19 +16,14 @@ export function HeroPhone() {
                 <span className="tracking-[0.06em] uppercase">Refund receipt</span>
                 <span>Claim {CLAIM.id}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-pay-ink text-paper">
-                  <CheckIcon size={20} />
-                </span>
-                <Money value={CLAIM.amount} size="amount" />
-              </div>
-              <p className="text-ui text-ink-muted">Refunded to your PayPal account through Remedy for Kikea Store, in PayPal sandbox money.</p>
               <div className="flex items-center justify-between gap-3">
-                <span className="inline-flex h-7 items-center rounded-control bg-paper-2 px-2.5 font-mono text-micro">
-                  Paid {CLAIM.seconds} s after your photo
-                </span>
+                <Money value={CLAIM.amount} size="amount" />
                 <Stamp tone="pay">Paid</Stamp>
               </div>
+              <p className="text-ui text-ink-muted">Refunded to your PayPal account through Remedy for Kikea Store, in PayPal sandbox money.</p>
+              <span className="inline-flex h-7 items-center self-start rounded-control bg-paper-2 px-2.5 font-mono text-micro whitespace-nowrap">
+                Paid {CLAIM.seconds} s after your photo
+              </span>
               <dl className="text-ui">
                 {[
                   ["Status", "Sent to PayPal"],
