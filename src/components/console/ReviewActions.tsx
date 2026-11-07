@@ -8,16 +8,32 @@ import { api } from "./api";
 
 type Mode = "idle" | "approve" | "reject";
 
+export interface ReviewIntent {
+  mode: "approve" | "reject";
+  // Changes on every key press, so pressing A twice re-opens the confirm.
+  n: number;
+}
+
 /**
  * Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit click. A seeded claim's
- * review is a sample: the server says what it would have done, and the claim stays held.
+ * review is a sample: the server says what it would have done, and the claim stays held. The keyboard's A and R
+ * (intent) open the same confirm or form as the buttons; paying still takes the second click.
  */
-export function ReviewActions({ claim, onDone }: { claim: DrawerClaim; onDone: (c: DrawerClaim) => void }) {
+export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; onDone: (c: DrawerClaim) => void; intent?: ReviewIntent | null }) {
   const [mode, setMode] = useState<Mode>("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [reason, setReason] = useState("");
   const [sample, setSample] = useState<string | null>(null);
+  const [seenIntent, setSeenIntent] = useState(intent);
+  if (intent !== seenIntent) {
+    setSeenIntent(intent);
+    if (intent && !busy) {
+      setSample(null);
+      setError(null);
+      setMode(intent.mode);
+    }
+  }
   const review = claim.review;
   if (!review) return null;
 
