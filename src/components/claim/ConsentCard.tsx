@@ -44,7 +44,9 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <p className="text-body text-muted">
           {demo
             ? `The real checks and a real PayPal sandbox payout of ${amount}, on photos we provide. About 2 minutes.`
-            : `Get ${amount} back in your PayPal account once your photos are checked. It takes about 5 minutes.`}
+            : recall.autoPay
+              ? `Get ${amount} back in your PayPal account once your photos are checked. It takes about 5 minutes.`
+              : `Get ${amount} back in your PayPal account once your photos are checked and ${company} approves the refund. Your part takes about 5 minutes.`}
         </p>
       </div>
 
@@ -60,7 +62,9 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <Bullet icon={<ClockIcon />} title="When you're paid">
           {demo
             ? `Seconds after the checks pass, ${amount} in sandbox money goes to the PayPal sandbox account you log in with.`
-            : "Usually within a minute of your photos, straight to your PayPal account through PayPal Payouts."}
+            : recall.autoPay
+              ? "Usually within a minute of your photos, straight to your PayPal account through PayPal Payouts."
+              : `When a person at ${company} approves your claim, straight to your PayPal account through PayPal Payouts.`}
         </Bullet>
       </ul>
 

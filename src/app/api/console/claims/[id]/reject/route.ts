@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { body, company, fail, isResponse, reviewer } from "@/app/console/_lib/api";
-import { toDrawerClaim } from "@/app/console/_lib/drawer";
+import { toDrawerClaim, type ReviewedClaim } from "@/app/console/_lib/drawer";
 import { rejectClaim } from "@/app/console/_lib/review";
 import { loadClaimFor } from "@/app/console/_lib/workspace";
 import { ClaimId } from "@/lib/types";
@@ -23,5 +23,5 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/console
 
   const result = await rejectClaim({ ...found, by: reviewer(session), reason: input.reason });
   if (!result.ok) return fail(result.status, result.message);
-  return NextResponse.json(toDrawerClaim(result.claim, found.recall));
+  return NextResponse.json<ReviewedClaim>({ ...toDrawerClaim(result.claim, found.recall), ...(result.sample ? { sample: result.sample } : {}) });
 }

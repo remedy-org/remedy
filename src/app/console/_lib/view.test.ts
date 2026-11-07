@@ -74,9 +74,9 @@ describe("console view", () => {
     expect(preChecksOf(sampleClaim({ seeded: true })).find((r) => r.id === "duplicate_photo")?.state).toBe("skipped");
   });
 
-  it("offers review only on held claims, and never payment on a seeded one", () => {
-    expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ approve: true, reject: true, note: null });
-    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review?.approve).toBe(false);
+  it("offers review only on held claims, and only a sample review on a seeded one", () => {
+    expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false, note: null });
+    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toMatchObject({ sample: true, note: expect.stringContaining("nothing is saved") });
     expect(toDrawerClaim(sampleClaim({ decision: "paid" }), recall).review).toBeNull();
     expect(toDrawerClaim(sampleClaim(), recall).photos).toEqual(["/api/console/claims/RM-0412/photos/0"]);
   });
