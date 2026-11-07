@@ -1,6 +1,6 @@
 # Remedy design system: "Evidence Room"
 
-Approved 7 Nov 2026 from three explored directions (variant B). It will be refined as we build; changes land here first, then in code. `docs/PRODUCT.md` owns what exists; this file owns how it looks and moves.
+Approved 7 Nov 2026 from three explored directions (variant B), then made physical the same day ("Evidence Room, made physical": paper objects, stamps, a lit light table, one serif for money). It will be refined as we build; changes land here first, then in code. `docs/PRODUCT.md` owns what exists; this file owns how it looks and moves.
 
 ## Brief
 
@@ -8,9 +8,9 @@ Approved 7 Nov 2026 from three explored directions (variant B). It will be refin
 
 | Surface | Archetype | Density | Motion budget |
 |---|---|---|---|
-| Homepage | Marketing, product-first hero | Roomy | One orchestrated hero moment, quiet scroll reveals |
-| Claim flow | Guided verification (Stripe Identity patterns) | Roomy, one action per screen | State changes only |
-| Seller console | Data, calm density (AG Grid) | Tight | Near zero |
+| Homepage | Marketing, product-first hero | Roomy | Exactly four moves: focus-in, one scrubbed sequence, ink, drop (see Motion) |
+| Claim flow | Guided verification (Stripe Identity patterns) | Roomy, one action per screen | State changes, plus one arrival moment (the receipt) |
+| Seller console | Data, calm density (AG Grid) | Tight | Near zero: panel 160ms, cell flash, row insert |
 
 **One brand hue:** evidence-tag amber, used for the primary action and the "exhibit" annotations. Everything else is tinted graphite.
 
@@ -26,25 +26,36 @@ These patterns come from measured reference sites (Stripe, Linear, Mercury, Pers
 - **Navigation (Linear, Mercury):** "Sign in" as quiet text, one filled primary button.
 - **Grid (AG Grid's own demo):** status tabs, dot pills, two-line cells.
 
-**Never:** a pinned full-screen hero that shows an empty screen, a fade-in from black, gradient or acid brand colours, illustration carousels, walls of logos and video tiles, emoji, lorem ipsum, or PayPal's logo (we name PayPal in plain text only).
+**Never:** more than one pinned sequence per page; a pin longer than 320vh; a pinned frame that is ever empty; a pin without a skip link; a fade-in from black, gradient or acid brand colours, illustration carousels, walls of logos and video tiles, emoji, lorem ipsum, or PayPal's logo (we name PayPal in plain text only).
 
 ## Type
 
 - **Instrument Sans** for headings and body, loaded with `next/font/google`. It is not the create-next-app default, so it doesn't read as a template.
 - **IBM Plex Mono** for evidence: codes (`K7M`), claim IDs, payer IDs, amounts in grids, timestamps and exhibit labels.
+- **Instrument Serif, 400 italic only**, for monumental money and the hero's second line, on the homepage only (`font-serif`). It's loaded in the root layout without a preload, so a page that sets no text in it never downloads it.
 - **Weights:** 400 for body, 500 for UI labels, 600 for headings. Nothing heavier.
 
-| Token | Size / line height | Use |
+| Token | Size / line height | Use (and only this) |
 |---|---|---|
-| `display` | clamp(40px, 5.2vw, 72px) / 1.02, letter-spacing -0.025em | Homepage hero only |
-| `h1` | 44 / 1.08, -0.02em | Section titles on the homepage |
-| `h2` | 28 / 1.15, -0.015em | Screen titles in the app |
-| `lead` | 20 / 1.5 | Hero and section intros |
+| `numeral` | Serif italic 400, clamp(72px, 11vw, 160px) / 0.9, -0.02em, tabular | Monumental numbers: the custody payout `$29.99`, Problem stats, Proof's `0` |
+| `display` | Sans 600, clamp(44px, 7.8vw, 116px) / 0.94, -0.04em; line 2 in serif italic 400, -0.02em, `--muted` | Homepage hero h1 only (112px at 1440) |
+| `title-lg` | Sans 600, clamp(36px, 4.4vw, 64px) / 1.0, -0.035em | Homepage statement titles; at most two two-tone uses on the page |
+| `head-sm` | Sans 500, 20 / 1.3, -0.01em, two-tone | Homepage small section heads |
+| `h1` | 44 / 1.08, -0.02em | App only; not used on the homepage |
+| `title` | Sans 600, 32 / 1.1, -0.02em; 26 below 640px | Claim-flow screen titles |
+| `amount` | Sans 600, 64 / 1.0, -0.03em, tabular; 52 below 640px | Claim-flow refund and receipt amount |
+| `h2` | 28 / 1.15, -0.015em | Screen titles in the console |
+| `lead` | 20 / 1.5 | Hero and section intros, at most 60ch wide |
 | `body` | 16 / 1.6 | Running text, at most 68ch wide |
 | `ui` | 14 / 1.45 | Controls, grid cells, labels |
 | `micro` | 12 / 1.4, +0.06em, uppercase in mono | Exhibit labels, eyebrows |
 
-Use tabular numbers everywhere digits line up.
+Use tabular numbers everywhere digits line up. The homepage may use seven sizes (160 / 112 / 64 / 20 / 16 / 14 / 12); app screens keep six.
+
+**Money** (`<Money value={29.99} size="numeral|amount|inline|grid" />`): the whole part, then the cents de-emphasised, as Mercury does.
+- `numeral` and `amount`: cents at 55%, raised to the cap height (`vertical-align: .62em`).
+- `inline` (the surrounding text's font) and `grid` (14px mono): cents at 73%, raised 0.2em.
+- Screen readers and copy-paste get the plain "$29.99"; the split parts are hidden from assistive tech.
 
 ## Colour
 
@@ -62,14 +73,32 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
 | `--accent` | `oklch(0.80 0.15 75)` | `oklch(0.74 0.15 72)` | Primary button fill, exhibit marks |
 | `--accent-ink` | `oklch(0.22 0.03 70)` | `oklch(0.22 0.03 70)` | Text on accent |
 | `--accent-text` | `oklch(0.82 0.13 78)` | `oklch(0.52 0.12 62)` | Amber used as text |
-| `--pay` | `oklch(0.78 0.16 150)` | `oklch(0.52 0.14 150)` | Paid, check passed |
-| `--hold` | `oklch(0.76 0.10 240)` | `oklch(0.52 0.12 250)` | Held for a person |
-| `--stop` | `oklch(0.70 0.17 25)` | `oklch(0.55 0.19 27)` | Rejected, blocked |
+| `--pay` | `oklch(0.78 0.16 150)` | `oklch(0.48 0.14 150)` | Paid, check passed |
+| `--hold` | `oklch(0.76 0.10 240)` | `oklch(0.50 0.12 250)` | Held for a person |
+| `--stop` | `oklch(0.70 0.17 25)` | `oklch(0.51 0.19 27)` | Rejected, blocked |
+
+**Paper and ink** keep their colour in both themes, like the real objects (the tag, the receipt, the notice):
+
+| Token | Value | Role |
+|---|---|---|
+| `--paper` | `oklch(0.95 0.012 85)` | Tags, sheets, receipts; the Problem band |
+| `--paper-2` | `oklch(0.91 0.014 85)` | Chips and rows on paper; notices lying on paper |
+| `--paper-line` | `oklch(0.24 0.02 255 / 0.18)` | Hairlines and dashed rows on paper |
+| `--ink` | `oklch(0.24 0.02 255)` | Text on paper |
+| `--ink-muted` | `oklch(0.42 0.02 255)` | Secondary text and exhibit labels on paper |
+| `--pay-ink` | `oklch(0.44 0.14 150)` | Paid, on paper |
+| `--hold-ink` | `oklch(0.46 0.12 250)` | Held, on paper |
+| `--stop-ink` | `oklch(0.50 0.18 27)` | Refused, on paper |
+| `--highlight` | `--accent` at 55% | Highlighter under ink |
+| `--table-glow` | an amber radial under the hero device | The lit light table (dark surfaces only) |
+| `--rail` | `oklch(1 0 0 / 0.06)` | The homepage's page rails |
 
 **Rules:**
 - Each state colour has a soft background at 14% alpha and its text colour. State is never shown by colour alone: it always has a word and an icon.
 - Held is blue, not amber, so it never reads as the brand.
-- Body text meets 4.5:1 and UI borders 3:1 in both themes.
+- Body text meets 4.5:1 and UI borders 3:1 in both themes. Every ink meets 4.5:1 on `--paper` and `--paper-2`, a stamp's ink at 85% included, and every state colour meets 4.5:1 on its soft pill in both themes.
+- `npx tsx scripts/contrast.ts` checks all of these from `globals.css` (OKLCH to sRGB to WCAG) and fails on any miss. Run it after changing a colour; when a pair fails, lower that colour's lightness in 0.02 steps until it passes. (It set the inks at 0.44 / 0.46 / 0.50 and the light state colours at 0.48 / 0.50 / 0.51.)
+- Amber never sits on paper as text (1.5:1); on paper, exhibit labels use `--ink-muted`.
 
 ## Space, radius, depth
 
@@ -80,16 +109,35 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
   - 10px for cards and drawers;
   - 16px for device frames;
   - 999px for status pills only.
-- **Depth:** 1px hairline borders do the structural work. Floating layers (menus, drawer, toasts) get a ring (`0 0 0 1px var(--line)`) plus one soft shadow. No other shadows.
+- **Depth:** 1px hairline borders do the structural work. Floating layers (menus, drawer, toasts) get a ring (`0 0 0 1px var(--line)`) plus one soft shadow. Paper objects get a `--paper-line` ring plus `--paper-shadow` (`--paper-shadow-flat` when paper lies on paper). No other shadows.
+- **Grain** (homepage and claim flow, not the console): `.grain` on the layout root adds a fixed 160px `feTurbulence` noise tile at 3.5%, with no blend mode so scrolling never repaints the viewport.
+- **Rails** (homepage only, 1024px and up): two 1px `--rail` lines at the 1200px content edges with a 6px tick every 96px.
+- **Light table:** `--table-glow` under the device and a 1px top bevel highlight (`inset 0 1px 0 oklch(1 0 0 / .06)`) on the table plane.
 
 ## Motion
 
 - **Micro-interactions:** 160ms ease-out (`cubic-bezier(0.2, 0.8, 0.2, 1)`), transform and opacity only.
 - **Larger transitions:** up to 360ms.
 - **Library:** Motion (`motion/react`), only where CSS can't do it.
+- **Tokens** (CSS in `globals.css`, mirrored as `EASE`, `DURATION` and `SPRING` in `src/components/ui/motion.ts`):
+
+| Token | Curve | Use |
+|---|---|---|
+| `--ease-snap` | `cubic-bezier(0.2, 0.8, 0.2, 1)` | UI, 160ms (`--dur-ui`) |
+| `--ease-out-expo` | `cubic-bezier(0.16, 1, 0.3, 1)` | Reveals 700–1000ms (`--dur-reveal` 900ms); panels 160ms |
+| `--ease-out-quart` | `cubic-bezier(0.165, 0.84, 0.44, 1)` | Objects moving 500–800ms (`--dur-object` 560ms); lines and strings drawing |
+| `--ease-in-out-quart` | `cubic-bezier(0.76, 0, 0.24, 1)` | Flips triggered at a threshold, 600–700ms |
+| `--ease-back` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Stamps landing, 200ms |
+| `SPRING.drop` | spring, stiffness 320, damping 26 (Motion only) | Tags and thumbnails settling |
+
+- **The homepage's four moves**, and nothing else animates:
+  1. **Focus-in:** headings and leads go from blur 10px, 12px down and transparent to rest over 900ms `--ease-out-expo`, 80ms apart per line. Above the fold it runs in CSS on first paint; below, at 35% in view. Text only, never the 3D laptop.
+  2. **Scrub:** the one pinned Chain of Custody sequence.
+  3. **Ink:** things drawn by a pen. The highlighter (`background-size` 0 to 100%, 700ms), leader lines and strings (`pathLength` 0 to 1, 600ms `--ease-out-quart`), stamps (`.stamp-land`: scale 1.4 to 1 and fade in, 200ms `--ease-back`; the tilt never moves).
+  4. **Drop:** paper objects settling, with `SPRING.drop` and a 2° rotation settle.
 - **The hero moment:** the device sits in a slight 3D tilt on the light table (CSS perspective; up to 4° extra tilt following the pointer on desktop). Once it's in view, the five checks (in the order of "What stops a fake") tick in one after another, 450ms apart, then the payout chip lands with the time. Below a 640px stage the screen shows the camera alone and the checks tick in a full-size card under the laptop. It plays once, and replays on a "Replay" control.
-- **Scroll reveals:** sections fade in and rise 8px when they enter. The resting state is always visible: no JS, reduced motion, or a screenshot all show the full page.
-- `prefers-reduced-motion`: no tilt, no sequence; the final state shows immediately.
+- **Resting state:** always the final one. No JS, reduced motion, or a screenshot all show the full page; CSS entrances run only under `prefers-reduced-motion: no-preference`.
+- `prefers-reduced-motion`: no tilt, no pin, no blur, no flash, no spring; final states render immediately.
 
 ## Components
 
@@ -105,7 +153,15 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
 
 **Status pill:** a dot, then a word ("Paid", "Held", "Rejected", "Blocked"), in the state's soft background and text colour.
 
-**Exhibit label:** mono, micro size, amber text with a hairline leader line to what it annotates.
+**Exhibit label:** mono, micro size, amber text with a hairline leader line to what it annotates. On paper it uses `--ink-muted`.
+
+**Paper** (`<Paper variant="tag|sheet|receipt|notice">`): `--paper` and `--ink`, radius 6, ring plus `--paper-shadow`. A tag has its top corners cut; a notice is `--paper-2` with the flat shadow, for a document lying on the paper band. Options: `hole` (a 10px punched hole with a reinforcement ring, 14px from the top edge), `perforated` (a torn top edge), `tilt` (-1.5° to 2°). The hole and the perforation are real cut-outs: the surface behind shows through.
+
+**Stamp** (`<Stamp tone="pay|hold|stop|neutral">PAID</Stamp>`): 2px border, radius 6, 14px Plex Mono 600, +0.14em tracking, the tone's ink at 85%, rotated -8°. Decorative (`aria-hidden`): the status is always also in text. Never bigger than 14px type, never textured, one colour. `land` plays the landing once on mount.
+
+**The mark:** an amber evidence tag (top corners cut, a punched hole, the code written on it) on a string loop, hanging at the stamp's -8°. 22px in the homepage nav, 18px in app chrome. The string draws in once on load (600ms `--ease-in-out-quart`), static under reduced motion.
+
+**Theme toggle:** a 36px icon button with a 44px hit area and an `aria-label`; the glyph is a half-lit disc that turns over with the theme.
 
 **Evidence drawer:**
 1. the photo, which opens full size;
@@ -146,7 +202,7 @@ Every data view ships all five: empty, loading (skeletons shaped like the conten
 A screen is done only when it passes the anti-slop gate in the `design` skill:
 - grayscale and squint tests;
 - spacing on the 4px scale;
-- at most 6 sizes and 3 weights;
+- at most 6 sizes and 3 weights (7 sizes on the homepage);
 - real copy;
 - all five states;
 - works at 375px;

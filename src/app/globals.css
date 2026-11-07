@@ -42,9 +42,9 @@
   --accent-hover: oklch(0.78 0.15 72);
   --accent-ink: oklch(0.22 0.03 70);
   --accent-text: oklch(0.52 0.12 62);
-  --pay: oklch(0.52 0.14 150);
-  --hold: oklch(0.52 0.12 250);
-  --stop: oklch(0.55 0.19 27);
+  --pay: oklch(0.48 0.14 150);
+  --hold: oklch(0.5 0.12 250);
+  --stop: oklch(0.51 0.19 27);
   --float-shadow: 0 16px 40px -20px oklch(0.2 0.02 255 / 0.25);
 }
 
@@ -57,13 +57,58 @@ html:has([data-marketing]) {
   --bg: oklch(0.165 0.012 255);
 }
 
-/* Soft state backgrounds: the state colour at 14%. */
+/*
+ * Soft state backgrounds (the state colour at 14%), and the paper objects: the tag, the receipt, the notice. Paper
+ * and its inks are fixed colours in both themes, like the real thing. Every ink clears 4.5:1 on --paper and --paper-2,
+ * stamps included at 85%: run `npx tsx scripts/contrast.ts` after changing any of them.
+ */
 :root,
 [data-theme] {
   --pay-soft: color-mix(in oklch, var(--pay) 14%, transparent);
   --hold-soft: color-mix(in oklch, var(--hold) 14%, transparent);
   --stop-soft: color-mix(in oklch, var(--stop) 14%, transparent);
   --accent-soft: color-mix(in oklch, var(--accent) 10%, transparent);
+
+  --paper: oklch(0.95 0.012 85);
+  --paper-2: oklch(0.91 0.014 85);
+  --paper-line: oklch(0.24 0.02 255 / 0.18);
+  --ink: oklch(0.24 0.02 255);
+  --ink-muted: oklch(0.42 0.02 255);
+  --pay-ink: oklch(0.44 0.14 150);
+  --hold-ink: oklch(0.46 0.12 250);
+  --stop-ink: oklch(0.5 0.18 27);
+  /* Highlighter under ink, drawn left to right (.highlight). */
+  --highlight: color-mix(in oklch, var(--accent) 55%, transparent);
+  /* A paper object resting on graphite, and one resting on paper. */
+  --paper-shadow: 0 1px 1px oklch(0 0 0 / 0.18), 0 18px 32px -14px oklch(0 0 0 / 0.55);
+  --paper-shadow-flat: 0 1px 2px oklch(0.24 0.02 255 / 0.08), 0 10px 24px -14px oklch(0.24 0.02 255 / 0.3);
+
+  /* The lit light table under the hero device, and the homepage's page rails. */
+  --table-glow: radial-gradient(ellipse 60% 45% at 60% 42%, oklch(0.32 0.04 75 / 0.55), transparent 62%);
+  --rail: oklch(1 0 0 / 0.06);
+
+  /* Motion (DESIGN.md). Mirrored for Motion JS in src/components/ui/motion.ts. */
+  --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-ui: 160ms;
+  --dur-move: 360ms;
+  --dur-object: 560ms;
+  --dur-reveal: 900ms;
+
+  /* Sizes that step down on phones (below 640px). */
+  --title-size: 1.625rem;
+  --amount-size: 3.25rem;
+}
+
+@media (min-width: 640px) {
+  :root,
+  [data-theme] {
+    --title-size: 2rem;
+    --amount-size: 4rem;
+  }
 }
 
 /*
@@ -93,14 +138,46 @@ html:has([data-marketing]) {
   --color-hold-soft: var(--hold-soft);
   --color-stop: var(--stop);
   --color-stop-soft: var(--stop-soft);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-line: var(--paper-line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-pay-ink: var(--pay-ink);
+  --color-hold-ink: var(--hold-ink);
+  --color-stop-ink: var(--stop-ink);
+  --color-rail: var(--rail);
 
   --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  /* Instrument Serif, 400 italic only: monumental numbers and the hero's second line. Homepage only. */
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
 
   --text-*: initial;
-  --text-display: clamp(2.5rem, 5.2vw, 4.5rem);
-  --text-display--line-height: 1.02;
-  --text-display--letter-spacing: -0.025em;
+  /* Monumental numbers (use with font-serif italic): the custody payout, Problem stats, Proof's 0. */
+  --text-numeral: clamp(4.5rem, 11vw, 10rem);
+  --text-numeral--line-height: 0.9;
+  --text-numeral--letter-spacing: -0.02em;
+  /* Homepage hero h1 only: 112px at 1440, 44px at 375. */
+  --text-display: clamp(2.75rem, 7.8vw, 7.25rem);
+  --text-display--line-height: 0.94;
+  --text-display--letter-spacing: -0.04em;
+  /* Homepage statement titles; two two-tone uses at most. */
+  --text-title-lg: clamp(2.25rem, 4.4vw, 4rem);
+  --text-title-lg--line-height: 1;
+  --text-title-lg--letter-spacing: -0.035em;
+  /* Homepage small section heads, weight 500, two-tone. */
+  --text-head-sm: 1.25rem;
+  --text-head-sm--line-height: 1.3;
+  --text-head-sm--letter-spacing: -0.01em;
+  /* Claim-flow refund and receipt amount: 64px, 52px on phones. */
+  --text-amount: var(--amount-size);
+  --text-amount--line-height: 1;
+  --text-amount--letter-spacing: -0.03em;
+  /* Claim-flow screen titles: 32px, 26px on phones. */
+  --text-title: var(--title-size);
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.02em;
   --text-h1: 2.75rem;
   --text-h1--line-height: 1.08;
   --text-h1--letter-spacing: -0.02em;
@@ -130,12 +207,17 @@ html:has([data-marketing]) {
   --shadow-*: initial;
   --shadow-float: 0 0 0 1px var(--line), var(--float-shadow);
   --shadow-ring: 0 0 0 1px var(--line);
+  --shadow-paper: 0 0 0 1px var(--paper-line), var(--paper-shadow);
 
   --container-content: 75rem;
   --container-claim: 30rem;
   --container-read: 68ch;
 
-  --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-snap: var(--ease-snap);
+  --ease-out-expo: var(--ease-out-expo);
+  --ease-out-quart: var(--ease-out-quart);
+  --ease-in-out-quart: var(--ease-in-out-quart);
+  --ease-back: var(--ease-back);
   --default-transition-duration: 160ms;
   --default-transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -196,6 +278,96 @@ html:has([data-marketing]) {
     line-height: var(--text-micro--line-height);
     letter-spacing: var(--text-micro--letter-spacing);
     text-transform: uppercase;
+  }
+
+  /*
+   * Film grain over the homepage and the claim flow (not the console): put .grain on the layout root. A fixed 160px
+   * noise tile at 3.5%, no blend mode, so scrolling never repaints the whole viewport.
+   */
+  .grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0.035;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")
+      0 0 / 160px 160px repeat;
+  }
+
+  /*
+   * Paper objects (ui/Paper.tsx). The punched hole and the perforated top edge are real cut-outs (masks), so the page
+   * shows through them; the shadow then has to come from a drop-shadow on the wrapper, because a mask clips box-shadow.
+   */
+  .paper-cut {
+    --paper-hole: linear-gradient(#000 0 0);
+    --paper-perf: linear-gradient(#000 0 0);
+    mask: var(--paper-hole), var(--paper-perf);
+    mask-composite: intersect;
+  }
+
+  .paper-hole {
+    --paper-hole: radial-gradient(circle 5px at 50% 19px, #0000 96%, #000);
+  }
+
+  /* The hole's reinforcement ring, as on a real tag. */
+  .paper-hole::before {
+    content: "";
+    position: absolute;
+    top: 11px;
+    left: calc(50% - 8px);
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    border: 3px solid oklch(0.84 0.022 85);
+    pointer-events: none;
+  }
+
+  .paper-perforated {
+    --paper-perf: radial-gradient(circle 5px at 6px 0, #0000 98%, #000) -6px 0 / 12px 100% repeat-x;
+  }
+
+  /* A tag: the top corners cut off. --tag-cut sets the size (14px; smaller on tiny thumbnails). */
+  .paper-tag {
+    clip-path: polygon(var(--tag-cut, 14px) 0, calc(100% - var(--tag-cut, 14px)) 0, 100% var(--tag-cut, 14px), 100% 100%, 0 100%, 0 var(--tag-cut, 14px));
+  }
+
+  .paper-lifted {
+    filter: drop-shadow(0 0 0.5px oklch(0.24 0.02 255 / 0.35)) drop-shadow(0 14px 18px oklch(0 0 0 / 0.38));
+  }
+}
+
+/* Ink moves, only when motion is allowed: the resting state is the final one (reduced motion, no JS, screenshots). */
+@media (prefers-reduced-motion: no-preference) {
+  /* A stamp landing: scale 1.4 to 1 and fade in, 200ms, slight overshoot. The tilt is the separate rotate property. */
+  .stamp-land {
+    animation: stamp-land 200ms var(--ease-back) var(--stamp-delay, 0ms) both;
+  }
+
+  /* The wordmark's string draws in once on load. */
+  .mark-string {
+    stroke-dasharray: 1;
+    animation: string-draw 600ms var(--ease-in-out-quart) 120ms both;
+  }
+}
+
+@keyframes stamp-land {
+  from {
+    opacity: 0;
+    scale: 1.4;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes string-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
 

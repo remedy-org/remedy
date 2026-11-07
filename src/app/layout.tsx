@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Instrument_Sans, Instrument_Serif } from "next/font/google";
 import { THEME_STORAGE_KEY } from "@/components/ui/theme";
 import "./globals.css";
 
@@ -14,6 +14,17 @@ const mono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   display: "swap",
+});
+
+// Monumental numbers and the hero's second line, homepage only (DESIGN.md). Not preloaded: a browser fetches the file
+// only for a page that sets text in it, so the claim flow and the console never download it.
+const serif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: "italic",
+  display: "swap",
+  preload: false,
 });
 
 const description =
@@ -41,7 +52,7 @@ const themeScript = `try{if(localStorage.getItem(${JSON.stringify(THEME_STORAGE_
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} ${mono.variable} ${serif.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
