@@ -17,6 +17,8 @@ const MAX_PHOTOS = 3;
 const MAX_BYTES = 4.4 * 1024 * 1024;
 // Each poll is one read of the claim from the store, and those are capped per month.
 const POLL_MS = 5000;
+// Photos sent from the phone just before the code ran out are still checked, so the poll goes on this long after it.
+const POLL_GRACE_MS = 2 * 60_000;
 
 interface Shot {
   url: string;
@@ -70,6 +72,12 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const coarse = useSyncExternalStore(subscribeCoarse, () => window.matchMedia("(pointer: coarse)").matches, () => false);
   const left = useCountdown(expiresAt, startNow, Boolean(preview));
   const expired = left <= 0;
+  const [pollOver, setPollOver] = useState(false);
+  useEffect(() => {
+    if (!expired || preview) return;
+    const t = setTimeout(() => setPollOver(true), Math.max(0, Date.parse(expiresAt) + POLL_GRACE_MS - Date.now()));
+    return () => clearTimeout(t);
+  }, [expired, expiresAt, preview]);
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -111,7 +119,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
 
   // Photos can arrive from elsewhere: the phone from the QR handoff, or another tab. Poll the claim's status and move
   // on to the checking step as soon as it has photos or a decision, instead of running the camera and countdown on
-  // regardless. Not while the tab is hidden, and not once the session has ended.
+  // regardless. Not while the tab is hidden, and not past POLL_GRACE_MS after the session ended.
   const onSentRef = useRef(onSent);
   const sendingRef = useRef(sending);
   useEffect(() => {
@@ -119,7 +127,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     sendingRef.current = sending;
   });
   useEffect(() => {
-    if (preview || expired) return;
+    if (preview || pollOver) return;
     let done = false;
     const poll = async () => {
       if (done || sendingRef.current || document.hidden) return;
@@ -146,7 +154,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
       clearInterval(t);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [claimId, expired, preview, stop]);
+  }, [claimId, pollOver, preview, stop]);
 
   // Object URLs for the thumbnails are freed when the step goes away.
   const shotsRef = useRef(shots);

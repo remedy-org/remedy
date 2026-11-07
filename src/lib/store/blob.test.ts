@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sampleClaim, sampleRecall } from "../__fixtures__/claim";
+import { summarize } from "./store";
 
 // An in-memory stand-in for @vercel/blob's put/get, with its etag and ifMatch behaviour.
 const blobs = vi.hoisted(() => new Map<string, { body: Buffer; etag: string; access: string }>());
@@ -149,6 +150,33 @@ describe("blobStore", () => {
     expect(saved).toBeNull();
     expect((await store.getClaim("RM-0412"))?.decision).toBe("rejected");
     expect(await store.updateClaim("RM-9999", (c) => c)).toBeNull();
+  });
+
+  it("keeps a newer save's index row when an older save's index write retries after it", async () => {
+    const store = blobStore("tok");
+    const pending = sampleClaim({ decision: "paid", payout: { batchId: "B1", status: "PENDING", updatedAt: "2026-11-07T10:01:00.000Z" } });
+    await store.putClaim(pending);
+    const settled = { ...pending, payout: { ...pending.payout!, status: "SUCCESS" }, events: [...pending.events, { at: "2026-11-07T10:02:00.000Z", type: "a", detail: "" }, { at: "2026-11-07T10:03:00.000Z", type: "b", detail: "" }] };
+    const { put } = await import("@vercel/blob");
+    const real = vi.mocked(put).getMockImplementation()!;
+    let raced = false;
+    // The newer save's row lands between this save's index read and write.
+    vi.mocked(put).mockImplementation(async (pathname, body, options) => {
+      if (pathname === "index.json" && !raced) {
+        raced = true;
+        await real(pathname, JSON.stringify({ claims: [summarize(settled)] }), { access: "private", allowOverwrite: true });
+      }
+      return real(pathname, body, options);
+    });
+    await store.updateClaim("RM-0412", (c) => ({ ...c, payout: { ...c.payout!, status: "ONHOLD" }, events: [...c.events, { at: "2026-11-07T10:02:00.000Z", type: "a", detail: "" }] }));
+    vi.mocked(put).mockImplementation(real);
+    expect((await store.listClaims())[0].payoutStatus).toBe("SUCCESS");
+
+    // Writing a row again that the index already has writes nothing.
+    calls.put.length = 0;
+    expect(await store.reindexClaim(settled)).toBe(false);
+    expect(await store.reindexClaim(pending)).toBe(false);
+    expect(calls.put).toEqual([]);
   });
 
   it("counts model calls in one private file per UTC day, over the copy it read, and writes nothing at the limit", async () => {

@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { ClaimId, Decision, Money, Reason, RecallId, RecallSlug, type Claim, type Recall } from "../types";
 
@@ -20,6 +21,8 @@ export const ClaimSummary = z.object({
   sample: z.string().optional(),
   seeded: z.boolean().optional(),
   demo: z.boolean().optional(),
+  // The claim's event count. Every save adds an event, so a row with a higher count describes a newer claim.
+  version: z.number().int().nonnegative().optional(),
 });
 export type ClaimSummary = z.infer<typeof ClaimSummary>;
 
@@ -72,6 +75,9 @@ export interface Store {
   // Reads the claim and saves change's result only if the claim hasn't changed since; when it has, reads it again and
   // re-runs change. Returns the saved claim, or null when the claim is missing or change returns null.
   updateClaim(id: string, change: (claim: Claim) => Claim | null): Promise<Claim | null>;
+  // Writes the claim's row in index.json from the claim as given, unless the index already has that row or a newer
+  // one. Repairs a row whose write failed, or lost a race, after its claim's was saved. True if it wrote.
+  reindexClaim(claim: Claim): Promise<boolean>;
   // Reads index.json only: listing the blob store on every page load costs quota. Old rows are completed once
   // (completeRows).
   listClaims(): Promise<ClaimSummary[]>;
@@ -119,6 +125,7 @@ export function summarize(c: Claim): ClaimSummary {
     ...(sample ? { sample } : {}),
     ...(c.seeded ? { seeded: true } : {}),
     ...(c.demo ? { demo: true } : {}),
+    version: c.events.length,
   };
 }
 
@@ -170,6 +177,14 @@ export function upsert(index: ClaimIndex, row: ClaimSummary): ClaimIndex {
   const claims = [row, ...index.claims.filter((c) => c.id !== row.id)];
   claims.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return { claims };
+}
+
+// A saved claim's row, unless the index has it already or a newer one: two saves of one claim can reach the index in
+// either order (each index write retries on contention), and the older must not win. Null writes nothing.
+export function reindex(index: ClaimIndex, row: ClaimSummary): ClaimIndex | null {
+  const current = index.claims.find((c) => c.id === row.id);
+  if (current && ((current.version ?? -1) > (row.version ?? -1) || isDeepStrictEqual(current, row))) return null;
+  return upsert(index, row);
 }
 
 // Ids arrive from URLs: validate before they become paths, so "../" can't escape the store.

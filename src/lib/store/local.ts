@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { bump, ClaimIndex, completeRows, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type IndexRow, type Store } from "./store";
+import { bump, ClaimIndex, completeRows, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, reindex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type IndexRow, type Store } from "./store";
 
 // Dev store: the same layout as the blob store, as files under `dir` (data/, git-ignored).
 export function localStore(dir: string): Store {
@@ -86,6 +86,7 @@ export function localStore(dir: string): Store {
     putClaim,
     addClaim,
     updateClaim,
+    reindexClaim: async (claim) => updateIndex((index) => reindex(index, summarize(claim))),
     listClaims: async () => completeRows(((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims, getClaim, updateIndex),
     putPhoto: async (key, jpeg) => write(paths.photo(key), jpeg),
     getPhoto: async (key) => read(paths.photo(key)),

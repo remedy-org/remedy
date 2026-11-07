@@ -1,9 +1,13 @@
 import type { Store } from "../store";
 
-// Test-only: wraps a store and counts the calls that reach it. On the blob store each read below is one get(), a
-// Simple Operation when it misses the CDN cache (all but photos read past it); each write is one or more put()s,
-// Advanced Operations. Wrap it inside withRecallCache to count only what the cache lets through.
+// Test-only: wraps a store and counts the calls that reach it. reads counts the blob store's get()s, the writes' own
+// included: each is a Simple Operation when it misses the CDN cache (all but photos read past it). writes counts
+// write calls, each one or more put()s (Advanced Operations). Wrap it inside withRecallCache to count only what the
+// cache lets through.
 const READS = new Set(["getRecall", "listRecalls", "getClaim", "listClaims", "getUsage", "getPhoto"]);
+// The get()s a write makes itself on the blob store, when nothing races it: the conditional index or usage writes
+// read first, and updateClaim reads the claim before its index. A retry on contention reads again; that isn't counted.
+const WRITE_READS: Record<string, number> = { putRecall: 1, putClaim: 1, addClaim: 1, updateClaim: 2, reindexClaim: 1, takeUsage: 1 };
 
 export interface Counts {
   reads: number;
@@ -17,11 +21,14 @@ export function countingStore(inner: Store): { store: Store; counts: Counts; res
   const store = Object.fromEntries(
     Object.entries(inner).map(([name, fn]) => [
       name,
-      (...args: unknown[]) => {
+      async (...args: unknown[]) => {
         counts.calls[name] = (counts.calls[name] ?? 0) + 1;
         if (READS.has(name)) counts.reads++;
         else counts.writes++;
-        return (fn as (...a: unknown[]) => unknown)(...args);
+        const result = await (fn as (...a: unknown[]) => Promise<unknown>)(...args);
+        // A claim that's missing, or a change that returns null, stops updateClaim after its first read.
+        counts.reads += name === "updateClaim" && result === null ? 1 : (WRITE_READS[name] ?? 0);
+        return result;
       },
     ]),
   ) as unknown as Store;

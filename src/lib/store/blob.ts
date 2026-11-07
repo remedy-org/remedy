@@ -1,7 +1,7 @@
 import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { bump, ClaimIndex, completeRows, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type IndexRow, type Store } from "./store";
+import { bump, ClaimIndex, completeRows, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, reindex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type IndexRow, type Store } from "./store";
 
 // Production store: Vercel Blob, private access (the store itself must be created as private).
 export function blobStore(token: string): Store {
@@ -77,11 +77,12 @@ export function blobStore(token: string): Store {
           if (!(e instanceof BlobPreconditionFailedError)) throw e;
           continue;
         }
-        await updateIndex((index) => upsert(index, summarize(next)));
+        await updateIndex((index) => reindex(index, summarize(next)));
         return next;
       }
       throw new Error(`claim ${id} kept changing under us; gave up after 5 tries`);
     },
+    reindexClaim: async (claim) => updateIndex((index) => reindex(index, summarize(claim))),
     listClaims: async () => completeRows(((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims, getClaim, updateIndex),
     putPhoto: async (key, jpeg) => write(paths.photo(key), jpeg, "image/jpeg"),
     // Photos never change once written, so the CDN copy is fine.

@@ -79,20 +79,20 @@ Empty, loading, error, partial and success. Examples: a console with no claims y
   - `CLAIM_DAILY_LIMIT` (60) and `CLAIM_MONTHLY_LIMIT` (150, any 30 days): new claims, real and demo together, counted from `index.json` at no extra write. A claim costs about 10 Vercel Blob writes and the Hobby plan allows 2,000 a month.
   - `ACCOUNT_CLAIM_DAILY_LIMIT` (5) and `ACCOUNT_DEMO_DAILY_LIMIT` (60): real claims one PayPal account can start a day (abandoned and expired ones count), and demo claims it can run. The demo limit matches the daily one because judges share one sandbox login.
   - A refused start is never a lost claim: nothing was saved, and the recall screen or sample picker says which limit was hit and when to try again.
-- **Blob budget:** the Hobby plan allows 10,000 Simple Operations (a `get()` that misses the cache) and 2,000 Advanced Operations (`put`) a month, and suspends the store for 30 days past either. Claims are always read past the cache, so every read counts. To stay inside it: the console renders from `index.json` alone (each row carries what the grid, stats and report show) and opens a claim file only for the drawer and for unsettled payouts; recalls are cached per server instance for 60 s (`src/lib/store/cache.ts`), except where money or an edit depends on them; the camera step polls a claim-only status route every 5 s while the tab is visible and stops when the session ends. `src/app/blob-budget.test.ts` pins these. Simple Operations per action, before and after (after: a warm instance; a cold one adds up to 2 recall reads), measured with the store calls counted:
+- **Blob budget:** the Hobby plan allows 10,000 Simple Operations (a `get()` that misses the cache) and 2,000 Advanced Operations (`put`) a month, and suspends the store for 30 days past either. Claims are always read past the cache, so every read counts. To stay inside it: the console renders from `index.json` alone (each row carries what the grid, stats and report show) and opens a claim file only for the drawer and for unsettled payouts; recalls are cached per server instance for 60 s (`src/lib/store/cache.ts`), except where money or an edit depends on them; the camera step polls a claim-only status route every 5 s while the tab is visible and stops 2 minutes after the session ends. `src/app/blob-budget.test.ts` pins every After figure below, counting each store call's own reads as the Blob store makes them (`src/lib/__fixtures__/counting.ts`). Simple Operations per action, before and after (after: a warm instance; a cold one adds up to 2 recall reads):
 
   | Action | Before | After |
   | --- | --- | --- |
-  | Console or CPSC report view, 47 claims / 200 claims | 50 / 203 | 1 (3 cold), any number of claims; +1 per unsettled payout, once a minute |
+  | Console or CPSC report view, 47 claims / 200 claims | 50 / 203 | 1 (3 cold), any number of claims; +1 when the recall shown is the company's own (read fresh); +1 per unsettled payout or stuck check, once a minute |
   | Evidence drawer with one photo | 4 | 3 |
-  | Camera step poll | 2 every 3 s, up to 400 a session | 1 every 5 s while visible, up to 120 |
+  | Camera step poll | 2 every 3 s, up to 400 a session | 1 every 5 s while visible, up to 144 |
   | Checking step poll | 2 every 1.5 s, about 22 a check | 1 every 2 s, about 8 |
-  | Claim page, recall page | 3, 4 | 1, 0 |
+  | Claim page, recall page | 3, 4 | 1 (+1 per result photo on its first view), 0 (an unknown slug: 1 at most every 10 s per instance) |
   | Sample picker | 3 + up to 12 | 1 |
   | Start a demo claim | 5 (+1, +1 per sent sample, for the repost) | 3 (+1 for the repost) |
   | Photos upload and check | 15 | 13 (+1 photo read) |
-  | A whole demo run: picker to result | about 60 | about 32 |
+  | A whole demo run: picker to result | about 60 | about 30 |
 
-  A month of 300 demo claims and 2,000 other page views (half of them console views) comes to about 300 × 32 + 2,000 × 2 ≈ 13,600 Simple Operations (before: about 70,000), still over the cap, and 300 × 12 ≈ 3,600 Advanced Operations (10 per claim, 2 more when the result page saves PayPal's status), also over. `CLAIM_MONTHLY_LIMIT` (150) is what keeps both inside: about 8,800 Simple and 1,800 Advanced.
+  A month of 300 demo claims and 2,000 other page views (half of them console views) comes to about 300 × 30 + 2,000 × 2 ≈ 13,000 Simple Operations (before: about 70,000), still over the cap, and 300 × 12 ≈ 3,600 Advanced Operations (10 per claim, 2 more when the result page saves a new PayPal status), also over. `CLAIM_MONTHLY_LIMIT` (150) is what keeps both inside: about 8,500 Simple and 1,800 Advanced.
 - **Demo data:** in dev the Kikea recall (`/r/kikea-x-vesolje`) and about 40 sample claims seed themselves on the first read. In production, run `npm run seed` once with `BLOB_READ_WRITE_TOKEN` set; `npm run seed -- --reset` refreshes the sample claims' times. Sample claims are marked `seeded`, use fake PayPal accounts and were never paid. Decided sample claims keep the eval photos' codes (K7Q, R8D), which Remedy no longer issues (no Q, no 8): the code is written in each photo, so changing it would change the decision.
 - **Screenshots:** with the dev server running, `npm run shots -- / /console --as company` writes full-page PNGs at 1440 and 375 px, dark and light, into `.shots/`.

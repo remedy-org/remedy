@@ -1,6 +1,8 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sampleClaim, sampleRecall } from "@/lib/__fixtures__/claim";
 import { countingStore } from "@/lib/__fixtures__/counting";
@@ -9,22 +11,51 @@ import { withRecallCache } from "@/lib/store/cache";
 import { localStore } from "@/lib/store/local";
 import { summarize } from "@/lib/store/store";
 import type { Session } from "@/lib/session";
-import type { Claim, Decision } from "@/lib/types";
+import type { Claim, Decision, Recall, Verdict } from "@/lib/types";
+import type { PipelineDeps } from "./api/claims/_lib/pipeline";
 
 // The Vercel Blob plan caps reads at 10,000 a month (docs/PRODUCT.md, "Blob budget"). These pin how many store reads
-// each hot action costs, so a change that reads every claim again fails here first.
+// each hot action costs, a write's own reads included (countingStore), so a change that reads every claim again
+// fails here first.
 
 vi.mock("server-only", () => ({}));
 let app: Store;
 vi.mock("@/lib/demo", async (original) => ({ ...(await original<typeof import("@/lib/demo")>()), getAppStore: async () => app }));
 const owner: Session = { role: "owner", payerId: "47KT8H23PUJ3Q", verified: true, name: null, email: null, iat: 0 };
 const company: Session = { role: "company", payerId: "COMPANY00001", verified: true, name: null, email: null, iat: 0 };
-vi.mock("@/lib/session", () => ({ getSession: async (role: string) => (role === "owner" ? owner : company) }));
-// PayPal still says PENDING for the one unsettled payout: no network, and nothing to save.
-vi.mock("@/lib/paypal/payouts", () => ({ getPayoutStatus: async (batchId: string) => ({ batchId, batchStatus: "PENDING", itemStatus: "PENDING" }), sendPayout: vi.fn() }));
+vi.mock("@/lib/session", async (original) => {
+  const session = (role: string) => (role === "owner" ? owner : company);
+  return { ...(await original<typeof import("@/lib/session")>()), getSession: async (role: string) => session(role), requireSession: async (role: string) => session(role) };
+});
+// PayPal still says PENDING for an unsettled payout: no network, and nothing to save.
+const getPayoutStatus = vi.hoisted(() => vi.fn(async (batchId: string) => ({ batchId, batchStatus: "PENDING", itemStatus: "PENDING" })));
+vi.mock("@/lib/paypal/payouts", () => ({ getPayoutStatus, sendPayout: vi.fn() }));
+// Work after the response runs at once, and is awaited before counting.
+const later = vi.hoisted(() => [] as Promise<unknown>[]);
+vi.mock("next/server", async (original) => ({ ...(await original<typeof import("next/server")>()), after: (fn: () => unknown) => void later.push(Promise.resolve().then(fn)) }));
+// The model passes every photo and PayPal takes every payout, without the network.
+let deps: PipelineDeps;
+vi.mock("./api/claims/_lib/deps", async (original) => ({ ...(await original<typeof import("./api/claims/_lib/deps")>()), liveDeps: async () => deps }));
 
 const { loadClaimFor, loadClaims, loadWorkspace, pickRecall } = await import("./console/_lib/workspace");
 const { GET: pollStatus } = await import("./api/claims/[id]/status/route");
+const { GET: pollClaim } = await import("./api/claims/[id]/route");
+const { GET: getPhoto } = await import("./api/claims/[id]/photos/[n]/route");
+const { POST: sendPhotos } = await import("./api/claims/[id]/photos/route");
+const { POST: startDemo } = await import("./api/claims/route");
+const { ClaimScreen } = await import("@/components/claim/ClaimScreen");
+const { default: SamplesPage } = await import("./r/[recall]/try/samples/page");
+
+function pass(recall: Recall, code: string): Verdict {
+  return {
+    label: { text_seen: "X-VESOLJE", matches_recalled_product: "yes", evidence: "Tag reads X-VESOLJE" },
+    steps: recall.spec.proof_steps.map((step) => ({ step, status: "done" as const, evidence: "Done" })),
+    challenge_code: { text_seen: code, matches: "yes", evidence: `Tag reads ${code}` },
+    same_item_in_all_photos: "yes",
+    looks_like_photo_of_screen_or_print: "no",
+    summary: "A cut pillow with a tag",
+  };
+}
 
 let dir: string;
 let inner: Store;
@@ -35,6 +66,18 @@ beforeEach(async () => {
   counter = countingStore(inner);
   app = withRecallCache(counter.store);
   await inner.putRecall(sampleRecall());
+  later.length = 0;
+  getPayoutStatus.mockClear();
+  // env() wants them set; nothing here calls PayPal or OpenAI.
+  for (const k of ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "OPENAI_API_KEY"]) vi.stubEnv(k, "unused");
+  deps = {
+    store: app,
+    vision: async ({ spec, code }) => ({ verdict: pass({ ...sampleRecall(), spec }, code ?? ""), seconds: 12.3, model: "gpt-test" }),
+    pay: async () => ({ batchId: "LIVEBATCH1", batchStatus: "PENDING" }),
+    hash: async (b) => createHash("sha256").update(b).digest("hex").slice(0, 16),
+    now: () => new Date(),
+    limits: { vision: 100, draft: 20, claimsPerDay: 60, claimsPerMonth: 150, accountClaimsPerDay: 5, accountDemosPerDay: 12 },
+  };
 });
 afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
@@ -43,7 +86,7 @@ afterEach(async () => {
 const DECISIONS: Decision[] = ["paid", "held", "rejected", "blocked", "pending"];
 
 // n claims on the demo recall that the company may see: seeded samples, demo claims and its own. Exactly one has a
-// payout PayPal hasn't settled.
+// payout PayPal hasn't settled. The pending ones are still waiting for their photos.
 function claimsFor(n: number): Claim[] {
   return Array.from({ length: n }, (_, i) => {
     const decision = DECISIONS[i % DECISIONS.length];
@@ -52,6 +95,7 @@ function claimsFor(n: number): Claim[] {
       id: `RM-${String(i + 1).padStart(4, "0")}`,
       payerId: i % 3 === 0 ? company.payerId : `PAYER${String(i).padStart(8, "0")}`,
       decision,
+      ...(decision === "pending" ? { photos: [] } : {}),
       reasons: decision === "rejected" || decision === "blocked" ? [{ check: "code", outcome: "reject", text: "Written code reads K7O" }] : [],
       payout: paid ? { batchId: i === 0 ? "LIVEBATCH1" : `SEED${i}`, status: i === 0 ? "PENDING" : "SUCCESS", updatedAt: "2026-11-07T10:00:00.000Z" } : null,
       createdAt: new Date(Date.parse("2026-11-07T10:00:00.000Z") + i * 60_000).toISOString(),
@@ -68,7 +112,7 @@ async function seed(n: number) {
 }
 
 describe.each([50, 200])("the console with %i claims", (n) => {
-  // Distinct per case: the payout recheck is throttled per claim id, per instance.
+  // Distinct per case: the recheck is throttled per claim id, per instance.
   const now = Date.parse("2026-11-08T00:00:00.000Z") + n * 3_600_000;
 
   it("renders the grid from index.json: at most 4 reads cold, 1 warm", async () => {
@@ -87,6 +131,74 @@ describe.each([50, 200])("the console with %i claims", (n) => {
     counter.reset();
     await loadClaims(app, (await loadWorkspace(company)).recalls[0], company, now + 5_000);
     expect(counter.counts.reads).toBe(1);
+  });
+});
+
+describe("the console for a company with recalls of its own", () => {
+  it("reads only the recall it shows past the cache", async () => {
+    for (const i of [1, 2, 3]) await inner.putRecall({ ...sampleRecall(), id: `27-10${i}`, slug: `own-${i}`, owner: company.payerId, createdAt: `2026-11-07T0${i}:00:00.000Z` });
+    await loadWorkspace(company);
+    counter.reset();
+
+    // Warm: the demo recall from the cache; an own recall, fresh.
+    const demo = await loadWorkspace(company);
+    expect(demo.recalls).toHaveLength(4);
+    expect(counter.counts.reads).toBe(0);
+    await loadWorkspace(company, "27-102");
+    expect(counter.counts.calls).toEqual({ getRecall: 1 });
+  });
+});
+
+describe("index rows that disagree with their claim", () => {
+  const now = Date.parse("2026-11-09T00:00:00.000Z");
+  // The claim file is saved, then its index row's write fails: the file moves on, the row stays.
+  async function drift(row: Claim, file: Claim) {
+    await inner.putClaim(row);
+    await writeFile(join(dir, "claims", `${file.id}.json`), JSON.stringify(file));
+    counter.reset();
+  }
+  const paid = (status: string): Partial<Claim> => ({ decision: "paid", payout: { batchId: "LIVEBATCH1", status, updatedAt: "2026-11-07T10:01:00.000Z" } });
+  const index = async () => JSON.parse(await readFile(join(dir, "index.json"), "utf8")).claims[0];
+
+  it("writes a settled payout's row again, once", async () => {
+    const pending = sampleClaim({ id: "RM-0901", payerId: company.payerId, ...paid("PENDING") });
+    const settled = { ...pending, ...paid("SUCCESS"), events: [...pending.events, { at: "2026-11-07T10:01:00.000Z", type: "payout_updated", detail: "PayPal: SUCCESS" }] };
+    await drift(pending, settled);
+    const recall = sampleRecall();
+
+    expect((await loadClaims(app, recall, company, now))[0].payoutStatus).toBe("SUCCESS");
+    expect(getPayoutStatus).not.toHaveBeenCalled();
+    expect(counter.counts.calls).toEqual({ listClaims: 1, getClaim: 1, reindexClaim: 1 });
+    expect((await index()).payoutStatus).toBe("SUCCESS");
+
+    // A minute on, the row is settled: index.json alone.
+    counter.reset();
+    expect((await loadClaims(app, recall, company, now + 60_000))[0].payoutStatus).toBe("SUCCESS");
+    expect(counter.counts.calls).toEqual({ listClaims: 1 });
+  });
+
+  it("writes a paid claim's row that still says it's checking", async () => {
+    const checking = sampleClaim({ id: "RM-0902", payerId: company.payerId });
+    const decided = { ...checking, ...paid("SUCCESS"), events: [...checking.events, { at: "2026-11-07T10:01:00.000Z", type: "decided", detail: "Every check passed" }] };
+    await drift(checking, decided);
+
+    expect((await loadClaims(app, sampleRecall(), company, now))[0]).toMatchObject({ decision: "paid", payoutStatus: "SUCCESS" });
+    expect((await index()).decision).toBe("paid");
+  });
+
+  it("holds a claim whose check died, as its own page would", async () => {
+    await inner.putClaim(sampleClaim({ id: "RM-0903", payerId: company.payerId, events: [{ at: "2026-11-07T10:00:00.000Z", type: "photos_received", detail: "1 photo" }] }));
+    counter.reset();
+
+    expect((await loadClaims(app, sampleRecall(), company, now))[0].decision).toBe("held");
+    expect((await index()).decision).toBe("held");
+  });
+
+  it("leaves a claim still inside its session alone", async () => {
+    await inner.putClaim(sampleClaim({ id: "RM-0904", payerId: company.payerId, createdAt: new Date(now - 60_000).toISOString() }));
+    counter.reset();
+    expect((await loadClaims(app, sampleRecall(), company, now))[0].decision).toBe("pending");
+    expect(counter.counts.calls).toEqual({ listClaims: 1 });
   });
 });
 
@@ -118,5 +230,77 @@ describe("recall reads", () => {
     expect(await app.getRecall("27-071")).not.toBeNull();
     expect(await app.listRecalls()).toHaveLength(1);
     expect(counter.counts.reads).toBe(0);
+  });
+
+  it("look an unknown slug up fresh at most once per 10 s, and an invalid one never", async () => {
+    const t = Date.parse("2026-11-08T00:00:00.000Z");
+    expect(await getRecallBySlug("no-such-recall", app, t)).toBeNull();
+    expect(counter.counts.calls).toEqual({ listRecalls: 2 });
+    counter.reset();
+    expect(await getRecallBySlug("no-such-recall", app, t + 9_999)).toBeNull();
+    expect(await getRecallBySlug("another-one", app, t + 9_999)).toBeNull();
+    expect(await getRecallBySlug("../../etc", app, t + 60_000)).toBeNull();
+    expect(counter.counts.reads).toBe(0);
+    await getRecallBySlug("no-such-recall", app, t + 10_000);
+    expect(counter.counts.calls).toEqual({ listRecalls: 1 });
+  });
+});
+
+// One judge's demo run on a warm instance (the recall cached), from the picker to the result.
+describe("a demo run", () => {
+  const params = <T extends object>(p: T) => ({ params: Promise.resolve(p) });
+  const slug = "kikea-x-vesolje";
+
+  it("costs what docs/PRODUCT.md says, action by action", async () => {
+    await seed(50);
+    await getRecallBySlug(slug, app);
+    const reads: Record<string, number> = {};
+    const step = async (name: string, run: () => Promise<unknown>) => {
+      counter.reset();
+      await run();
+      await Promise.all(later);
+      later.length = 0;
+      reads[name] = counter.counts.reads;
+    };
+
+    await step("samples page", () => SamplesPage({ params: Promise.resolve({ recall: slug }), searchParams: Promise.resolve({}) } as never));
+    let res!: Response;
+    await step("start", async () => {
+      const form = new FormData();
+      form.set("recall", slug);
+      form.set("sample", "genuine");
+      res = await startDemo(new NextRequest("http://127.0.0.1:3000/api/claims", { method: "POST", body: form }));
+    });
+    const id = res.headers.get("location")!.split("/").pop()!;
+    await step("claim page, open", () => ClaimScreen({ slug, id, demo: true }));
+    await step("photos and check", () => sendPhotos(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}/photos`, { method: "POST", body: new FormData() }), params({ id })));
+    await step("checking poll", () => pollClaim(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}`), params({ id })));
+    await step("claim page, paid", () => ClaimScreen({ slug, id, demo: true }));
+    await step("result photo", () => getPhoto(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}/photos/1`), params({ id, n: "1" })));
+
+    expect((await inner.getClaim(id))?.payout?.status).toBe("PENDING");
+    expect(reads).toEqual({
+      "samples page": 1,
+      // index.json for the limits, the day's usage, then addClaim's conditional index write.
+      start: 3,
+      "claim page, open": 1,
+      // The route's claim and photo reads, the pre-checks and the check: see checkClaim.
+      "photos and check": 14,
+      "checking poll": 1,
+      // PayPal still says PENDING: nothing to save, so no second read of the claim.
+      "claim page, paid": 1,
+      // The claim, to check whose photo it is, then the photo itself (a CDN read after the first).
+      "result photo": 2,
+    });
+  });
+
+  it("doesn't ask PayPal about a settled payout on the result page", async () => {
+    await inner.putClaim(sampleClaim({ decision: "paid", demo: true, payout: { batchId: "LIVEBATCH1", status: "SUCCESS", updatedAt: "2026-11-07T10:01:00.000Z" }, events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: "genuine" }] }));
+    await getRecallBySlug(slug, app);
+    counter.reset();
+    await ClaimScreen({ slug, id: "RM-0412", demo: true });
+    await Promise.all(later);
+    expect(getPayoutStatus).not.toHaveBeenCalled();
+    expect(counter.counts.calls).toEqual({ getClaim: 1 });
   });
 });

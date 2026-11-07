@@ -1,5 +1,8 @@
 import "server-only";
+import { isDeepStrictEqual } from "node:util";
+import { recoverStale, STALE_AFTER_MS } from "@/app/api/claims/_lib/pipeline";
 import { getAppStore } from "@/lib/demo";
+import { CAPTURE_SESSION_MINUTES } from "@/lib/ids";
 import { isTerminal, refreshPayouts } from "@/lib/paypal/status";
 import type { Session } from "@/lib/session";
 import type { Store } from "@/lib/store";
@@ -16,16 +19,19 @@ export interface Workspace {
   unreadable: string[];
 }
 
-// Recalls come through the recall cache, except the company's own: those are the ones that change, and the console
-// must show their current refund and auto-pay. The shared demo recall's settings are fixed. A wanted recall the
-// cached list doesn't have yet (published a moment ago on another instance) is looked up fresh.
+// Recalls come through the recall cache, except the one shown when it's the company's own: its refund and auto-pay
+// change, and the console must show them as they are. The others only name themselves in the picker, and the shared
+// demo recall's settings are fixed. A wanted recall the cached list doesn't have yet (published a moment ago on
+// another instance) is looked up fresh.
 export async function loadWorkspace(session: Session, wanted?: string | string[]): Promise<Workspace> {
   const store = await getAppStore();
   const id = Array.isArray(wanted) ? wanted[0] : wanted;
   let listed = await store.listRecalls();
   if (id && !listed.some((r) => r.id === id)) listed = await store.listRecalls({ fresh: true });
   const rows = listed.filter((r) => canSee(r, session));
-  const read = await Promise.allSettled(rows.map((r) => store.getRecall(r.id, { fresh: r.owner !== null })));
+  // pickRecall's choice.
+  const shown = rows.find((r) => r.id === id) ?? rows[0];
+  const read = await Promise.allSettled(rows.map((r) => store.getRecall(r.id, { fresh: r === shown && r.owner !== null })));
   const recalls: Recall[] = [];
   const unreadable: string[] = [];
   read.forEach((r, i) => {
@@ -47,25 +53,43 @@ export function pickRecall(recalls: Recall[], wanted: string | string[] | undefi
 export const canSeeClaim = (recall: Pick<Recall, "owner">, session: Pick<Session, "payerId">) => (c: Pick<ClaimSummary, "seeded" | "demo" | "payerId">) =>
   recall.owner !== null || Boolean(c.seeded) || Boolean(c.demo) || c.payerId === session.payerId;
 
-// When this instance last asked PayPal about a claim's payout. A payout that stays unsettled is asked about at most
-// once a minute per instance, not on every load: each ask reads the claim file.
-const PAYOUT_RECHECK_MS = 60_000;
-const payoutChecked = new Map<string, number>();
+// When this instance last read a claim whose row looks out of date. A payout that stays unsettled is asked about at
+// most once a minute per instance, not on every load: each ask reads the claim file.
+const RECHECK_MS = 60_000;
+const lastChecked = new Map<string, number>();
+
+// A payout PayPal hasn't settled: PayPal is asked again.
+const settling = (r: ClaimSummary) => r.decision === "paid" && r.payoutStatus !== null && !isTerminal(r.payoutStatus);
+// A claim can't still be checking this long after it was created: its camera session is over, and its own page holds
+// a check that died (recoverStale). The row missed a later write, or nobody has looked since the check died.
+const STUCK_AFTER_MS = CAPTURE_SESSION_MINUTES * 60_000 + STALE_AFTER_MS;
+const stuck = (r: ClaimSummary, now: number) => r.decision === "pending" && r.photoHashes.length > 0 && now - Date.parse(r.createdAt) >= STUCK_AFTER_MS;
 
 // Every claim for one recall that this company may see, newest first, from index.json alone: its rows carry what the
-// grid, the stats and the report show. Payouts PayPal hasn't settled are checked again (a few, briefly), so the grid
-// is right without webhooks; only those claims' files are read.
+// grid, the stats and the report show. Rows that can't stay as they are (a payout settling, a check stuck) are read
+// again (a few, briefly), so the grid is right without webhooks; only those claims' files are read.
 export async function loadClaims(store: Store, recall: Recall, session: Pick<Session, "payerId">, now = Date.now()): Promise<ClaimSummary[]> {
   const rows = (await store.listClaims()).filter((r) => r.recallId === recall.id).filter(canSeeClaim(recall, session));
   const due = rows
-    .filter((r) => r.decision === "paid" && !r.seeded && r.payoutStatus !== null && !isTerminal(r.payoutStatus))
-    .filter((r) => now - (payoutChecked.get(r.id) ?? 0) >= PAYOUT_RECHECK_MS)
+    .filter((r) => !r.seeded && (settling(r) || stuck(r, now)))
+    .filter((r) => now - (lastChecked.get(r.id) ?? 0) >= RECHECK_MS)
     .slice(0, 10);
   if (!due.length) return rows;
-  due.forEach((r) => payoutChecked.set(r.id, now));
+  due.forEach((r) => lastChecked.set(r.id, now));
   const read = await Promise.allSettled(due.map((r) => store.getClaim(r.id)));
   const claims = read.flatMap((r) => (r.status === "fulfilled" && r.value ? [r.value] : []));
-  const fresh = new Map((await refreshPayouts(store, claims)).map((c) => [c.id, summarize(c)]));
+  const deps = { store, now: () => new Date(now) };
+  const recovered = await Promise.all(claims.map((c) => recoverStale(deps, c).catch(() => c)));
+  const latest = await refreshPayouts(store, recovered);
+  // A save above wrote its own row. A claim nothing changed can still disagree with its row, when the row's write
+  // failed or lost a race after the claim's: write the row again, so the next view is right without a read. One at a
+  // time, as each rewrites the shared index.
+  const row = new Map(rows.map((r) => [r.id, r]));
+  for (const [i, c] of latest.entries()) {
+    if (c !== claims[i] || isDeepStrictEqual(summarize(c), row.get(c.id))) continue;
+    await store.reindexClaim(c).catch(() => false);
+  }
+  const fresh = new Map(latest.map((c) => [c.id, summarize(c)]));
   return rows.map((r) => fresh.get(r.id) ?? r);
 }
 
