@@ -163,35 +163,40 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
 
 **Theme toggle:** a 36px icon button with a 44px hit area and an `aria-label`; the glyph is a half-lit disc that turns over with the theme.
 
-**Evidence drawer:**
-1. the photo, which opens full size;
+**Evidence panel** (the console's; one component, `EvidencePanel` in `EvidenceDrawer.tsx`):
+1. the photos as Exhibit A, which open full size;
 2. each check with its outcome icon, the model's quoted evidence in mono, and the pre-checks;
 3. the rule's decision in one sentence;
-4. actions.
+4. actions (Approve needs a second click to pay; A and R open the same confirm).
+
+It docks 440px wide beside the grid from 1280px, opens as a sheet over the grid from 1024px, and fills the screen on phones. Esc closes it and returns focus to the row; moving through the grid's rows with ↑ and ↓ moves it with them.
 
 **AG Grid:**
 - Theming API (`themeQuartz.withParams`) mapped to the tokens above.
-- Header 40px, rows 44px, font `ui` and mono for IDs and amounts.
-- No zebra stripes; hairline row borders; the selected row tinted `--accent` at 10%.
+- Header 36px, rows 52px (two-line cells), font `ui` and mono for IDs and amounts.
+- Evidence cells: photo thumbnails, the decision pill with its reason, an evidence barcode (one bar per check: pre-checks, then the model's), payout status, and a timeline chip.
+- No zebra stripes; hairline row borders; the selected row tinted `--accent` at 8%, the open row with a 2px amber edge.
+- Below 720px of grid width each claim is one card row (72px). The homepage's read-only still keeps its columns down to 592px.
 
 ## Screens
 
-**Homepage**, in the section order from the approved mockup:
-1. Nav: wordmark, How it works, Proof, For companies, Sign in, and **Start a recall**.
-2. Hero: a two-tone headline, the lead, **Start a recall** and "Try a claim with sample photos →" (with a faint line that the demo needs a PayPal sandbox personal account), and the device on the light table.
-3. The problem: 6–10% of recalled products come back, and real notices still say "email a photo to a @gmail.com inbox".
-4. How it works, in four steps.
-5. What stops a fake: the five checks in order.
-6. Proof: the eval table from `docs/EVAL.md`.
-7. For companies: Log in with PayPal.
-8. Footer.
+**Homepage**, as shipped (`src/app/(marketing)/page.tsx`); the reduced-motion page is at most 7,600px tall at 1440 (7,552px now):
+1. Nav: wordmark, How it works, then the exhibits by letter (A Problem, B Checks, C Proof, D For companies), Sign in, and **Start a recall**.
+2. Hero, which is also "How it works": a two-tone headline, the lead, **Start a recall** and "Try a claim with sample photos →" (with a faint line that the demo needs a PayPal sandbox personal account), the device on the light table, and the Chain of Custody: one real claim in five chapters (Log in with PayPal, One-time code, Live photo, Five checks, Paid). It is the one pinned sequence on laptops of at least 1024×700 with motion allowed, a sticky phone on smaller screens, and static figures without JS or under reduced motion. There is no separate "How it works" section.
+3. Exhibit A, the problem, on paper: 6–10% of recalled products come back, and real notices still say "email a photo to a @gmail.com inbox".
+4. Exhibit B, what stops a fake: the five checks as a gate pipeline, the first three needing no AI, and "Run these four yourself".
+5. Exhibit C, proof: the eval table from `docs/EVAL.md`.
+6. Exhibit D, for companies: the real read-only claims grid (`ClaimsGridPreview`) on the 40 seeded sample claims, loaded one viewport ahead; the static `ConsoleReplica` stands in, at the same 809px at 1440, until it loads and without JS. Both are labelled SAMPLE DATA, with "Sample / not sent" payouts and AI-made photo labels. Phones get four card rows, one of each outcome. Then Log in with PayPal.
+7. Footer.
 
-**Claim flow:** one card per step on the graphite background, following Stripe Identity:
-- **Consent screen:** the company name and Remedy side by side, three bullets (what you'll do, what we see, when you're paid), then one full-width primary button.
-- **Camera step:** one instruction line under the frame.
-- **Result:** a Checkout-style receipt: the large amount, hairline rows and the payout status.
+**Claim flow:** one step per screen on the graphite background, following Stripe Identity; focus moves to each step's heading:
+- **Consent screen:** the 64px refund and the hazard banner above the fold, the company and Remedy side by side, the numbered steps, then one full-width primary button. The demo (`/try`) swaps the steps for the four sample claims (thumbnail and expected outcome), adds a sandbox callout above the button, and a judges' rail (280px at 1440; a "For judges" pill on phones).
+- **Code step:** the paper tag with the one-time code, a timer pill, and the phone QR leading on laptops.
+- **Camera step:** a full-width viewfinder with the shutter on the first phone screen, guide chips and the Space key as shutter on laptops.
+- **Checking:** the first photo as Exhibit A beside a five-stage timeline that fills with the model's quotes.
+- **Result:** paper. Paid is a perforated receipt with the 64px amount, a PAID stamp and the live PayPal status ("Paid N s after your photo", then "Received"); held and refused are a sheet with the evidence, the stamp and, when refused, the one failing check in red.
 
-**Console:** the claims grid fills the page, with a header of four numbers (remedied of sold with a meter, paid out, waiting, refused), status tabs (All, Paid, Held, Rejected), and the evidence drawer on the right.
+**Console:** from 1024px the queue fills the viewport: the recall's ledger (remedied of sold with a meter, paid out, held, refused), status tabs (All, Paid, Held, Rejected, Blocked, In progress) with search, the claims grid, and the evidence panel docked on the right. It polls for new claims every 8s only while one is checking or settling, flashing the cells that change. Phones get card rows and no horizontal scroll.
 
 ## States
 
