@@ -35,6 +35,12 @@ describe("the five checks", () => {
     expect(fiveSummary([...pre(), ...model({ screen: "hold" })])).toBe("1 of 5 held: a real photo · 4 passed");
     expect(fiveSummary([...pre(), ...model().map((m) => ({ ...m, state: "waiting" as const }))], { open: "waiting" })).toBe("3 of 5 passed · 2 waiting");
     expect(fiveSummary([], { open: "waiting" })).toBe("5 checks waiting");
+    expect(fiveSummary([...pre(), ...model({ label: "hold", code: "hold", screen: "hold" })])).toBe("2 of 5 held: the label, the code and a real photo · 3 passed");
+  });
+
+  it("names a reused photo by what went wrong", () => {
+    const reused = [{ id: "session", state: "pass" as const }, { id: "duplicate_photo", state: "blocked" as const }];
+    expect(fiveSummary(reused)).toBe("1 of 5 failed: the photo was used before · 1 passed · 3 not run");
   });
 
   it("counts a check as passed only when all of it ran", () => {

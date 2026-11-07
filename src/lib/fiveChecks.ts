@@ -27,7 +27,8 @@ export function checkOf(id: string): CheckNumber | null {
 /** A recorded check's name in a sentence: "failed: the code". */
 function nameOf(id: string): string {
   if (id === "session") return "the live camera";
-  if (id === "duplicate_photo") return "photo not seen before";
+  // Named by what went wrong: it only ever fails, and "failed: photo not seen before" reads as its opposite.
+  if (id === "duplicate_photo") return "the photo was used before";
   if (id === "label") return "the label";
   if (id === "code") return "the code";
   if (id === "same_item") return "the same item";
@@ -67,7 +68,11 @@ export function fiveSummary(items: { id: string; state: State }[], { open = "not
   const passed = count("pass").length;
   if (passed === total) return `${total} of ${total} checks passed`;
   if (count("open").length === total) return `${total} checks ${open}`;
-  const names = (o: Outcome) => [...new Set(count(o).flatMap((x) => x.names))].join(" and ");
+  // "the code", "the code and the label", "the code, the label and really destroyed".
+  const names = (o: Outcome) => {
+    const all = [...new Set(count(o).flatMap((x) => x.names))];
+    return all.length > 1 ? `${all.slice(0, -1).join(", ")} and ${all.at(-1)}` : (all[0] ?? "");
+  };
   const lead = count("fail").length ? `${count("fail").length} of ${total} failed: ${names("fail")}` : count("hold").length ? `${count("hold").length} of ${total} held: ${names("hold")}` : null;
   const parts = [
     lead,

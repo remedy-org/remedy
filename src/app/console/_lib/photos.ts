@@ -37,12 +37,13 @@ export async function resizedPhoto(key: string, width: PhotoWidth): Promise<Buff
 /**
  * A claim at a version (its event count, from the index row). A claim file never changes without its event count
  * going up, so the evidence panel reads each version once and walking the queue with ↑/↓ costs no claim reads on a
- * second pass. A missing file throws, so it's never cached as missing.
+ * second pass. A missing file throws, so it's never cached as missing. The row's filed time is in the key too: reseeded
+ * demo data reuses claim ids at the same versions, and an older claim must never come back under one.
  */
 export const claimAtVersion = unstable_cache(
-  async (id: string, version: number): Promise<Claim> => {
+  async (id: string, version: number, filedAt: string): Promise<Claim> => {
     const claim = await (await getAppStore()).getClaim(id);
-    if (!claim) throw new Error(`claim ${id} (version ${version}) not readable yet`);
+    if (!claim) throw new Error(`claim ${id} (version ${version}, filed ${filedAt || "?"}) not readable yet`);
     return claim;
   },
   ["console-claim-at-version-v1"],

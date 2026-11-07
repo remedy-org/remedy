@@ -24,6 +24,8 @@ export interface EvidenceProps {
   claimId: string | null;
   // The grid row's version: the panel asks for the claim at it, which the server caches (Blob budget).
   version?: number | null;
+  // The grid row's filed time: part of that cache's key, so a claim id the demo data reused never shows an older claim.
+  filedAt?: string;
   onClose: () => void;
   // A held claim's approve or reject, opened from the keyboard (A / R).
   intent?: ReviewIntent | null;
@@ -45,7 +47,7 @@ const seenKey = (id: string, version: number | null | undefined) => `${id}@${ver
 type Load = { state: "loading" } | { state: "error"; error: ApiError } | { state: "ready" };
 
 /** Loads a claim, keeping the one shown before on screen until the next arrives (no skeleton flash between rows). */
-function useClaim(id: string, version: number | null | undefined) {
+function useClaim(id: string, version: number | null | undefined, filedAt: string | undefined) {
   const key = seenKey(id, version);
   // Bumped when a fetch lands in `seen`, so this renders again.
   const [, setLanded] = useState(0);
@@ -62,7 +64,7 @@ function useClaim(id: string, version: number | null | undefined) {
   useEffect(() => {
     if (seen.has(key)) return;
     let live = true;
-    api<DrawerClaim>(`/api/console/claims/${id}${version ? `?v=${version}` : ""}`).then((res) => {
+    api<DrawerClaim>(`/api/console/claims/${id}${version ? `?v=${version}${filedAt ? `&at=${encodeURIComponent(filedAt)}` : ""}` : ""}`).then((res) => {
       if (!live) return;
       if (res.ok) {
         seen.set(key, res.data);
@@ -72,7 +74,7 @@ function useClaim(id: string, version: number | null | undefined) {
     return () => {
       live = false;
     };
-  }, [id, version, key, attempt]);
+  }, [id, version, filedAt, key, attempt]);
 
   const load: Load = current ? { state: "ready" } : failure?.key === key ? { state: "error", error: failure.error } : { state: "loading" };
   return {
@@ -91,7 +93,7 @@ function useClaim(id: string, version: number | null | undefined) {
 }
 
 /** Laptops: an aside beside the grid. No backdrop, the grid stays live; Esc closes it (ClaimsQueue returns focus). */
-export function EvidencePanel({ claimId, version, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
+export function EvidencePanel({ claimId, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
   if (!claimId) return null;
   return (
     <aside
@@ -102,6 +104,7 @@ export function EvidencePanel({ claimId, version, onClose, intent, onOpen, onDec
       <EvidenceContent
         id={claimId}
         version={version}
+        filedAt={filedAt}
         onClose={onClose}
         intent={intent}
         onOpen={onOpen}
@@ -116,7 +119,7 @@ export function EvidencePanel({ claimId, version, onClose, intent, onOpen, onDec
 }
 
 /** Phones and tablets: a full-screen modal dialog (a sheet from the right on tablets). */
-export function EvidenceDrawer({ claimId, version, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
+export function EvidenceDrawer({ claimId, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -142,6 +145,7 @@ export function EvidenceDrawer({ claimId, version, onClose, intent, onOpen, onDe
           key={claimId}
           id={claimId}
           version={version}
+          filedAt={filedAt}
           onClose={() => ref.current?.close()}
           intent={intent}
           onOpen={onOpen}
@@ -159,6 +163,7 @@ export function EvidenceDrawer({ claimId, version, onClose, intent, onOpen, onDe
 function EvidenceContent({
   id,
   version,
+  filedAt,
   onClose,
   intent,
   onOpen,
@@ -169,7 +174,7 @@ function EvidenceContent({
   variant,
 }: Omit<EvidenceProps, "claimId"> & { id: string; variant: "panel" | "sheet" }) {
   const router = useRouter();
-  const { claim, stale, load, retry, replace } = useClaim(id, version);
+  const { claim, stale, load, retry, replace } = useClaim(id, version, filedAt);
   // The decision this view just saved: said in the footer, which then offers the next held claim.
   const [saved, setSaved] = useState<{ id: string; decision: DrawerClaim["decision"]; at: string } | null>(null);
   const done = (c: DrawerClaim) => {

@@ -23,10 +23,11 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/
   const id = ClaimId.safeParse((await ctx.params).id);
   if (!id.success) return fail(404, "No claim with that id.");
   const v = Version.safeParse(request.nextUrl.searchParams.get("v"));
+  const at = request.nextUrl.searchParams.get("at") ?? "";
 
   let found: Awaited<ReturnType<typeof loadClaimFor>>;
   if (v.success) {
-    const claim = await claimAtVersion(id.data, v.data).catch(() => null);
+    const claim = await claimAtVersion(id.data, v.data, at).catch(() => null);
     const store = await getAppStore();
     const recall = claim ? await store.getRecall(claim.recallId) : null;
     found = claim && recall && canSee(recall, session) && canSeeClaim(recall, session)(claim) ? { store, claim, recall } : null;

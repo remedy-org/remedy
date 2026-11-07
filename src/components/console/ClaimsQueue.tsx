@@ -443,6 +443,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
             <EvidencePanel
               claimId={open}
               version={openRow?.version}
+              filedAt={openRow?.createdAt}
               onClose={close}
               intent={intent}
               onOpen={goTo}
@@ -455,7 +456,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
         )}
       </div>
       {!wide && open && (
-        <EvidenceDrawer claimId={open} version={openRow?.version} onClose={close} onOpen={goTo} onDecided={decided} nextHeld={nextHeld} back={back} onBack={goBack} />
+        <EvidenceDrawer claimId={open} version={openRow?.version} filedAt={openRow?.createdAt} onClose={close} onOpen={goTo} onDecided={decided} nextHeld={nextHeld} back={back} onBack={goBack} />
       )}
 
       {help && <ShortcutSheet onClose={() => setHelp(false)} />}
