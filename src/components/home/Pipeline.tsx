@@ -82,8 +82,7 @@ const SAMPLES: Sample[] = [
 
 const RULE = (
   <>
-    any &ldquo;no&rdquo; &rarr; reject <span className="text-faint">·</span> any &ldquo;unclear&rdquo; &rarr; hold <span className="text-faint">·</span> the model never moves
-    money
+    any &ldquo;no&rdquo; &rarr; reject <span className="text-faint">·</span> any &ldquo;unclear&rdquo; &rarr; hold <span className="text-faint">·</span> <span className="whitespace-nowrap">the model never moves money</span>
   </>
 );
 

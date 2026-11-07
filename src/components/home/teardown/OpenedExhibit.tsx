@@ -234,7 +234,30 @@ function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done"
   );
 }
 
+/** What the owner's photo must show, as the claim page's camera lists it (the code chapter's shot list). */
+const FRAME_LIST = [`The ${EXHIBIT.label} tag`, "The pillow cut fully in half", `The code ${EXHIBIT.code}, on the tag`];
+
+/** The intro's callout: the owner cutting the pillow and framing it, each thing coming into the frame in turn. */
+function IntroCallout({ framed }: { framed: number }) {
+  return (
+    <div className={styles.callout}>
+      <p className="micro text-accent-text">In the claim page&rsquo;s camera</p>
+      <p className="mt-2 text-body font-medium text-text">The owner cuts the pillow and frames it, tag and all.</p>
+      <p className="mt-1 text-ui text-muted">Nothing is checked or paid until the photo is taken.</p>
+      <ol className="mt-4 flex flex-col gap-1.5">
+        {FRAME_LIST.map((f, i) => (
+          <li key={f} className={clsx("grid grid-cols-[1.75rem_minmax(0,1fr)] items-baseline text-ui transition-opacity duration-160", i < framed ? "opacity-100" : "opacity-35")}>
+            <span className="font-mono text-micro text-faint">{String(i + 1).padStart(2, "0")}</span>
+            {f}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 function Callout({ s }: { s: ExhibitState }) {
+  if (s.beat === "intro") return <IntroCallout framed={s.framed} />;
   const i = s.active;
   if (i < 0) return null;
   const c = CHECKS[i];
@@ -271,7 +294,7 @@ interface StageProps {
 }
 
 function discreteKey(s: ExhibitState) {
-  return [s.beat, s.active, s.done, s.chars, s.charNow, clock(s.seconds), s.decision, s.sent, s.stamped, s.receipt > 0].join("|");
+  return [s.beat, s.active, s.framed, s.done, s.chars, s.charNow, clock(s.seconds), s.decision, s.sent, s.stamped, s.receipt > 0].join("|");
 }
 
 function Stage({ p, mode, small, onSeek, chain = false, skip, capture }: StageProps) {

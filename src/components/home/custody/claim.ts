@@ -52,11 +52,17 @@ export const CHAPTERS = [
   },
 ] as const;
 
-// The scroll thresholds (spec H2): when each code character appears. (Chapters 03 to 05, with the five checks and
-// their quotes, are the Opened Exhibit's: src/components/home/teardown/claim.ts.)
-export const CODE_AT = [0.35, 0.36, 0.37];
+// The scroll thresholds (spec H2), spread across each chapter's beat (01 is 0.2 to 0.34, 02 is 0.34 to 0.48 in
+// pace.ts) so no stretch of a hold is still. (Chapters 03 to 05, with the five checks and their quotes, are the Opened
+// Exhibit's: src/components/home/teardown/claim.ts.)
+/** 01: each consent step lights in turn, the first as the chapter settles (the #how anchor is at 0.215). */
+export const CONSENT_AT = [0.2, 0.255, 0.31];
+/** 02: when each code character appears. */
+export const CODE_AT = [0.352, 0.372, 0.392];
 /** The tag is written left to right after the last character appears. */
-export const WRITE_AT = [0.375, 0.397] as const;
+export const WRITE_AT = [0.398, 0.436] as const;
+/** Then what the photo must show lights in turn, leading into 03. */
+export const SHOT_AT = [0.432, 0.444, 0.456];
 
 // The console replica after the payout: the M4T claim slides in over sample claims the demo workspace starts with, with
 // the ids, codes, photos and reasons buildSeedClaims gives them (src/lib/demo/seed.ts, seed 27071), as in the "For

@@ -294,6 +294,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
               focusTimer.current = window.setTimeout(() => onFocusRow(id), 120);
             }}
             rowClass={still ? undefined : "cursor-pointer"}
+            // Nor does a row light up under the pointer: the still's rows open nothing.
+            suppressRowHoverHighlight={still}
             // The homepage's still is a picture: no cell or header takes focus. In both, Tab leaves the grid in one step
             // (to the evidence panel and the footer); the arrow keys move between cells.
             suppressCellFocus={still}

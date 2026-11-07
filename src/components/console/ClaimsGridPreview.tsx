@@ -102,8 +102,12 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
           </div>
         )}
       </div>
+      {/* The tab counts cover every sample claim; the frame holds only the first few, so it says how many it shows. */}
       <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">
-        {tally.all} sample claims from the eval set · AI-made test photos · no money moved
+        {tab === "all"
+          ? `${shown.length < tally.all ? `${shown.length} of ` : ""}${tally.all} sample claims from the eval set`
+          : `${shown.length} of ${tally[tab]} ${TABS.find((t) => t.id === tab)?.label.toLowerCase()} shown · ${tally.all} sample claims from the eval set`}{" "}
+        · AI-made test photos · no money moved
       </p>
     </div>
   );

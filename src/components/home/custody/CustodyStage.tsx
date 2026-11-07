@@ -36,20 +36,33 @@ function Layer({ p, i, compact, children }: { p: Progress; i: number; compact: b
   );
 }
 
+/** Where each rail item's entrance starts after RAIL_IN, and how long it takes: the last one has settled by 0.201, ahead
+ * of the #how anchor (0.215), so a jump there never lands mid-entrance. */
+const RAIL_STAGGER = 0.004;
+const RAIL_ENTER = 0.015;
+
 function RailItem({ p, i }: { p: Progress; i: number }) {
   const c = CHAPTERS[i];
-  // Enters 0.16 to 0.21, once the backdrop has covered the page rail behind it, then 100% while its chapter is on
+  // Enters 0.17 to 0.20, once the backdrop has covered the page rail behind it, then 100% while its chapter is on
   // screen, else 35%.
+  const enter = (v: number) => clamp01((v - RAIL_IN - i * RAIL_STAGGER) / RAIL_ENTER);
   const opacity = useTransform(p, (v) => {
-    const enter = clamp01((v - RAIL_IN - i * 0.008) / 0.02);
     const on = Math.max(share(v, i), i === 4 ? share(v, 5) : 0);
-    return enter * (0.35 + 0.65 * on);
+    return enter(v) * (0.35 + 0.65 * on);
   });
-  const x = useTransform(p, (v) => Math.round(-12 * (1 - clamp01((v - RAIL_IN - i * 0.008) / 0.02))));
-  const lead = useTransform(p, (v) => Math.max(share(v, i), i === 4 ? share(v, 5) : 0));
+  const x = useTransform(p, (v) => Math.round(-12 * (1 - enter(v))));
+  // The amber edge marks the chapter on screen, and for 01 and 02 fills down from a quarter through the chapter's
+  // beat (01 from the end of the dolly), so a long hold always shows progress. Chapters 03 to 05 are under the exhibit;
+  // 05's edge marks the console.
+  const lead = useTransform(p, (v) => {
+    const on = Math.max(share(v, i), i === 4 ? share(v, 5) : 0);
+    if (i >= 2) return on;
+    const from = i === 0 ? HANDOFF[1] : STARTS[i];
+    return on * (0.25 + 0.75 * clamp01((v - from) / (STARTS[i + 1] - OUT[0] - from)));
+  });
   return (
     <motion.li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] items-baseline py-2.5" style={{ opacity, x }}>
-      <motion.span className="absolute inset-y-1.5 -left-4 w-0.5 rounded-full bg-accent" style={{ scaleY: lead, originY: 0.5 }} />
+      <motion.span className="absolute inset-y-1.5 -left-4 w-0.5 rounded-full bg-accent" style={{ scaleY: lead, originY: 0 }} />
       <span className="font-mono text-micro text-faint">{c.n}</span>
       <span className="text-body font-medium">{c.title}</span>
     </motion.li>
@@ -163,7 +176,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
           <div className="relative min-h-0 flex-1">
             <Compact.Provider value={compact}>
               <Layer p={p} i={0} compact={compact}>
-                <ConsentChapter />
+                <ConsentChapter p={p} />
               </Layer>
               <Layer p={p} i={1} compact={compact}>
                 <CodeChapter p={p} />

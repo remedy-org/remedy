@@ -3,10 +3,10 @@
 import clsx from "clsx";
 import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { AlertIcon, ClockIcon, Money, Paper, SPRING, StatusPill } from "@/components/ui";
 import { RemedyMark } from "@/components/ui/Wordmark";
-import { CLAIM, CODE_AT, CONSOLE_ROWS, WRITE_AT } from "./claim";
+import { CLAIM, CODE_AT, CONSENT_AT, CONSOLE_ROWS, SHOT_AT, WRITE_AT } from "./claim";
 
 // The five chapters of the Chain of Custody, as presentational copies of the real claim screens. Each one is drawn from
 // a scroll progress `p` (0 to 1 over the whole runway, spec H2); a progress fixed at 1 (useDone) gives every chapter's
@@ -38,6 +38,16 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const ramp = (v: number, a: number, b: number) => clamp01((v - a) / (b - a));
 const outQuart = (t: number) => 1 - (1 - t) ** 4;
 
+/** A line that lights from 35% once the progress passes `at`, so a step can come up in its turn. Lit at rest. */
+function Lit({ p, at, className, children }: { p?: Progress; at: number; className?: string; children: ReactNode }) {
+  const done = useDone();
+  const opacity = useTransform(p ?? done, (v) => 0.35 + 0.65 * ramp(v, at, at + 0.012));
+  return (
+    <motion.span className={className} style={{ opacity }}>
+      {children}
+    </motion.span>
+  );
+}
 
 function RefundLine() {
   return (
@@ -55,7 +65,8 @@ function RefundLine() {
 
 const CONSENT_STEPS = ["Cut it in half, as the notice says", "Write your one-time code on a tag and photograph it here", "Paid to your PayPal, usually within a minute"];
 
-export function ConsentChapter() {
+/** `p` lights the steps in turn (the pinned laptop); without it they are all lit. */
+export function ConsentChapter({ p }: { p?: Progress }) {
   const compact = useContext(Compact);
   return (
     <div className="@container">
@@ -112,12 +123,21 @@ export function ConsentChapter() {
           >
             {CONSENT_STEPS.map((s, i) => (
               <li key={s} className="relative grid grid-cols-[1.75rem_minmax(0,1fr)] items-baseline text-ui font-medium">
-                <span className="relative bg-bg font-mono text-micro text-faint @min-[720px]:bg-surface">{String(i + 1).padStart(2, "0")}</span>
-                {s}
+                <span className="relative bg-bg font-mono text-micro text-faint @min-[720px]:bg-surface">
+                  <Lit p={p} at={CONSENT_AT[i]}>
+                    {String(i + 1).padStart(2, "0")}
+                  </Lit>
+                </span>
+                <Lit p={p} at={CONSENT_AT[i]}>
+                  {s}
+                </Lit>
               </li>
             ))}
           </ol>
-          <span className="flex h-12 items-center justify-center rounded-control bg-accent text-body font-medium text-accent-ink">Log in with PayPal</span>
+          {/* A picture of the claim page's button, so it is drawn quiet: the amber stays on the page's real actions. */}
+          <span className="flex h-12 items-center justify-center rounded-control bg-surface-2 text-body font-medium text-muted shadow-[inset_0_0_0_1px_var(--line-2)]">
+            Log in with PayPal
+          </span>
         </div>
       </div>
     </div>
@@ -140,9 +160,16 @@ function CodeCell({ p, at, char }: { p: Progress; at: number; char: string }) {
 
 const SHOT_LIST = ["The X-VESOLJE tag", "The pillow cut fully in half", `The code ${CLAIM.code}, on the tag`];
 
+/** The 10-minute camera session, counting down through the beat to where the static figure rests (9:42). */
+const sessionLeft = (v: number) => {
+  const s = Math.round(600 - 18 * ramp(v, 0.34, 0.48));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+
 export function CodeChapter({ p }: { p: Progress }) {
   const compact = useContext(Compact);
   const swung = useAfter(p, 0.34);
+  const left = useTransform(p, sessionLeft);
   const wipe = useTransform(p, (v) => `inset(-0.2em ${((1 - ramp(v, WRITE_AT[0], WRITE_AT[1])) * 100).toFixed(2)}% -0.2em 0)`);
   return (
     <div className="@container">
@@ -152,7 +179,7 @@ export function CodeChapter({ p }: { p: Progress }) {
             <p className="text-title font-medium">Your one-time code</p>
             <span className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-line px-2.5 font-mono text-ui text-muted tabular-nums">
               <ClockIcon size={14} />
-              9:42
+              <motion.span>{left}</motion.span>
             </span>
           </div>
           <div className="flex gap-2" aria-hidden="true">
@@ -166,8 +193,12 @@ export function CodeChapter({ p }: { p: Progress }) {
             <ol className="flex flex-col gap-1.5">
               {SHOT_LIST.map((s, i) => (
                 <li key={s} className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-baseline text-ui">
-                  <span className="font-mono text-micro text-faint">{String(i + 1).padStart(2, "0")}</span>
-                  {s}
+                  <Lit p={p} at={SHOT_AT[i]} className="font-mono text-micro text-faint">
+                    {String(i + 1).padStart(2, "0")}
+                  </Lit>
+                  <Lit p={p} at={SHOT_AT[i]}>
+                    {s}
+                  </Lit>
                 </li>
               ))}
             </ol>

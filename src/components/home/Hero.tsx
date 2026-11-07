@@ -40,7 +40,7 @@ export function Hero() {
           Try a claim with sample photos
         </Button>
       </div>
-      <p className="mt-4 font-mono text-micro text-faint">
+      <p className={clsx("mt-4 font-mono text-micro text-faint", styles.focusIn)} style={line(3)}>
         Needs a PayPal sandbox personal account ·{" "}
         <a
           href={SANDBOX_ACCOUNTS_URL}
@@ -56,7 +56,7 @@ export function Hero() {
     </>
   );
   const facts = (
-    <dl className="grid gap-x-[var(--col-gap)] gap-y-3 sm:grid-cols-3">
+    <dl className={clsx("grid gap-x-[var(--col-gap)] gap-y-3 sm:grid-cols-3", styles.focusIn)} style={line(4)}>
       {FACTS.map((f) => (
         <div key={f.figure} className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-baseline gap-x-3 sm:flex sm:flex-col sm:gap-1">
           <dt className="text-head-sm font-medium whitespace-nowrap">{f.figure}</dt>

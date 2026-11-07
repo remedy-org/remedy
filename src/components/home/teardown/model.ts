@@ -100,7 +100,7 @@ export const HERO: Shot = {
 /** Each beat's shot, held while its part hangs open. The camera pushes in 6% over the hold. */
 export const SHOTS: Record<BeatId, Shot> = {
   intro: HERO,
-  // Behind and above the owner's phone: the phone in the foreground, its frustum running out to the evidence.
+  // Behind and above the owner's phone: the phone in the foreground, its frustum running out toward the evidence.
   live: { az: 8, el: 34, at: [0.0, 0.16, 0.2], rx: 0.42, ry: 0.32 },
   // The print, held up out to the left; from this side the pillow is out of the frame and the earlier prints stack
   // behind it.
@@ -173,8 +173,10 @@ export interface ExhibitState {
   charNow: number;
   /** Index of the check being shown (0 to 4), or -1. */
   active: number;
-  /** How visible the active check's callout is. */
+  /** How visible the side callout is: the active check's, or in the intro the photo being framed. */
   callout: number;
+  /** In the intro, how many of the three things the photo must show are in the frame so far (0 to 3). */
+  framed: number;
   /** Checks passed so far. */
   done: number;
   seconds: number | null;
@@ -187,6 +189,9 @@ export interface ExhibitState {
 }
 
 const CHECK_IDS = CHECKS.map((c) => c.id);
+
+/** Where in the intro each thing the photo must show comes into the frame: the tag, the cut, the code. */
+const FRAMED_AT = [0.3, 0.5, 0.7];
 
 export function stateAt(pIn: number): ExhibitState {
   const p = clamp01(pIn);
@@ -212,7 +217,9 @@ export function stateAt(pIn: number): ExhibitState {
     chars,
     charNow,
     active,
-    callout: active >= 0 ? opened(beat, p) : 0,
+    // The intro has a callout too (the photo being framed), so the side column is never empty while the pillow is cut.
+    callout: active >= 0 || beat === "intro" ? opened(beat, p) : 0,
+    framed: p > RANGES.intro[1] ? 3 : FRAMED_AT.filter((t) => local("intro", p) >= t).length,
     done,
     seconds: elapsed(p),
     decision: ruled ? "pay" : elapsed(p) === null ? "waiting" : "checking",

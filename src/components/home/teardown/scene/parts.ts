@@ -221,6 +221,9 @@ export interface Phone {
   lens(out: T.Vector3): T.Vector3;
 }
 
+/** How far down the view, as a share of the lens-to-evidence distance, the frustum's frame floats. */
+const FRUSTUM_FAR = 0.45;
+
 export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   const group = new THREE.Group();
   const bw = 0.072;
@@ -310,14 +313,15 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     group.updateMatrixWorld(true);
     return group.localToWorld(out.copy(lensLocal));
   };
-  // The camera's view as a frustum gizmo: from the lens to a 3:4 portrait frame at the evidence's distance, 48
-  // degrees tall, so the frame just holds the cut pillow (as the RM-0442 photo does).
+  // The camera's view as a frustum gizmo: from the lens to a 3:4 portrait frame, 48 degrees tall, so seen from the
+  // lens the frame just holds the cut pillow (as the RM-0442 photo does). The frame floats a little over half way
+  // down, clear of the evidence: at the evidence's own distance it cut through the stuffing and read as a seam.
   group.updateMatrixWorld(true);
   const o = lens(new THREE.Vector3());
   const ax = new THREE.Vector3(1, 0, 0).transformDirection(group.matrixWorld);
   const ay = new THREE.Vector3(0, 1, 0).transformDirection(group.matrixWorld);
   const az = new THREE.Vector3(0, 0, 1).transformDirection(group.matrixWorld);
-  const far = o.distanceTo(new THREE.Vector3(0, 0.04, 0.02)) * 0.92;
+  const far = o.distanceTo(new THREE.Vector3(0, 0.04, 0.02)) * FRUSTUM_FAR;
   const tv = Math.tan((48 / 2) * (Math.PI / 180));
   const th = tv * 0.75;
   const frameAt = (dist: number) =>
@@ -351,7 +355,7 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
         const b = corners[(i + 1) % 4];
         pts.push(a.x, a.y, a.z, b.x, b.y, b.z);
       }
-    // The scan: the frame's cross-section travels from the lens to the evidence and through it.
+    // The scan: the frame's cross-section travels from the lens down to the frame.
     const s = Math.max(0, Math.min(1, scan));
     const on = open > 0.5 && s > 0 && s < 1;
     const q = frameAt(far * (0.12 + 0.88 * s));
@@ -371,7 +375,7 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     );
     sheet.visible = on;
     sheetMat.opacity = 0.1 * Math.sin(Math.PI * s);
-    lineMat.opacity = 0.45 * open;
+    lineMat.opacity = 0.8 * open;
     lines.visible = open > 0.01;
   }
   return { group, lines, sheet, lineMat, sheetMat, pose, lens };
