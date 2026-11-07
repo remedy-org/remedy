@@ -2,8 +2,10 @@ import "server-only";
 import { parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
 import type { Recall } from "@/lib/types";
-import { ConsentCard, type AuthError, type ConsentCardProps } from "./ConsentCard";
+import { consentAction, ConsentCard, type AuthError, type ConsentCardProps } from "./ConsentCard";
 import { FlowShell } from "./FlowShell";
+import { WithJudges } from "./Judges";
+import { MobileCta } from "./MobileCta";
 import { companyName, maskPayer } from "./model";
 import { RecallBrief } from "./RecallBrief";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
@@ -33,13 +35,16 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
 export function RecallView(props: ConsentCardProps) {
   return (
     <FlowShell wide demo={props.demo} company={companyName(props.recall)}>
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-20">
-        <RecallBrief recall={props.recall} />
-        <div className="flex flex-col gap-6">
-          <StepMeter current={1} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
-          <ConsentCard {...props} />
+      <WithJudges demo={Boolean(props.demo)} step="consent">
+        <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
+          <RecallBrief recall={props.recall} />
+          <div className="flex flex-col gap-4 sm:gap-6">
+            <StepMeter current={1} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
+            <ConsentCard {...props} />
+          </div>
         </div>
-      </div>
+      </WithJudges>
+      <MobileCta target="consent-cta" href={props.href} label={consentAction(props)} />
     </FlowShell>
   );
 }

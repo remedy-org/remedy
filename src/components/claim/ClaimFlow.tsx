@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DemoSample } from "@/lib/demo";
 import type { CheckSpec } from "@/lib/types";
 import { CaptureStep, type CapturePreview } from "./CaptureStep";
 import { CheckingStep } from "./CheckingStep";
 import { CodeStep } from "./CodeStep";
 import { DemoCaptureStep } from "./DemoCaptureStep";
-import type { ClaimView } from "./model";
+import { WithJudges, type JudgeStep } from "./Judges";
+import { cutInHalf, type ClaimView } from "./model";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
 
 export type Phase = "code" | "capture" | "checking";
@@ -28,52 +29,95 @@ export interface ClaimFlowProps {
   loginHref: string;
   sample?: DemoSample | null;
   /** Dev previews: start at a phase, with the camera or checks pinned. */
-  preview?: { phase: Phase; capture?: CapturePreview; checking?: { elapsed?: number; offline?: boolean }; sending?: boolean };
+  preview?: { phase: Phase; capture?: CapturePreview; checking?: { elapsed?: number; offline?: boolean }; sending?: boolean; photoUrl?: string };
 }
+
+// Each phase's h2: focus moves there on every step change, so a keyboard or screen reader lands on the new step.
+const TITLE: Record<Phase, string> = { code: "code-title", capture: "capture-title", checking: "checking-title" };
+const JUDGE: Record<Phase, JudgeStep> = { code: "code", capture: "capture", checking: "checking" };
 
 /** Code, camera, checking: the steps of an open claim, in the browser. The result is rendered by the server. */
 export function ClaimFlow(props: ClaimFlowProps) {
   const { claimId, code, view: initial, sample, preview } = props;
   const [phase, setPhase] = useState<Phase>(preview?.phase ?? (initial.photos > 0 ? "checking" : "code"));
   const [view, setView] = useState(initial);
+  // Exhibit A on the checking screen: the photo just sent (a local object URL, or the sample's public file).
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(preview?.photoUrl ?? (initial.photos > 0 && sample ? sample.photos[0] : undefined));
   const demo = Boolean(sample);
   const steps = demo ? DEMO_STEPS : REAL_STEPS;
   const current = phase === "checking" ? 4 : demo ? 3 : phase === "code" ? 2 : 3;
+  const reminders = ["Label", cutInHalf(props.spec) ? "Cut in half" : "Destroyed", `Code ${code}`];
+
+  const moved = useRef(false);
+  useEffect(() => {
+    if (!moved.current) return;
+    document.getElementById(TITLE[phase])?.focus({ preventScroll: true });
+  }, [phase]);
+
+  // A local photo URL is freed when the flow goes away (the result replaces it).
+  useEffect(() => () => void (photoUrl?.startsWith("blob:") && URL.revokeObjectURL(photoUrl)), [photoUrl]);
 
   const go = (next: Phase) => {
+    moved.current = true;
     setPhase(next);
     window.scrollTo({ top: 0 });
   };
-  const sent = (next: ClaimView | null) => {
+  const sent = (next: ClaimView | null, url?: string) => {
     if (next) setView(next);
+    if (url) setPhotoUrl(url);
     go("checking");
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <StepMeter current={current} steps={steps} />
-      {phase === "code" && (
-        <CodeStep code={code} spec={props.spec} expiresAt={props.expiresAt} startNow={props.startNow} frozen={Boolean(preview)} sample={sample} onContinue={() => go("capture")} />
-      )}
-      {phase === "capture" &&
-        (sample ? (
-          <DemoCaptureStep claimId={claimId} code={code} sample={sample} onSent={sent} preview={preview && { sending: preview.sending }} />
-        ) : (
-          <CaptureStep
+    <WithJudges demo={demo} step={JUDGE[phase]}>
+      <div className="flex flex-col gap-6">
+        <StepMeter current={current} steps={steps} compact={phase === "capture"} className={phase === "checking" ? "mx-auto w-full max-w-[60rem]" : phase === "capture" ? "mx-auto w-full max-w-[40rem]" : "mx-auto w-full max-w-claim"} />
+        {phase === "code" && (
+          <div className="mx-auto w-full max-w-claim">
+            <CodeStep
+              code={code}
+              spec={props.spec}
+              expiresAt={props.expiresAt}
+              startNow={props.startNow}
+              frozen={Boolean(preview)}
+              sample={sample}
+              qrSvg={props.qrSvg}
+              phoneUrl={props.phoneUrl}
+              onContinue={() => go("capture")}
+            />
+          </div>
+        )}
+        {phase === "capture" &&
+          (sample ? (
+            <DemoCaptureStep claimId={claimId} code={code} sample={sample} reminders={reminders} onSent={sent} preview={preview && { sending: preview.sending }} />
+          ) : (
+            <CaptureStep
+              claimId={claimId}
+              sessionId={props.sessionId}
+              code={code}
+              expiresAt={props.expiresAt}
+              startNow={props.startNow}
+              qrSvg={props.qrSvg}
+              phoneUrl={props.phoneUrl}
+              newClaimHref={props.newClaimHref}
+              loginHref={props.loginHref}
+              reminders={reminders}
+              onSent={sent}
+              preview={preview?.capture}
+            />
+          ))}
+        {phase === "checking" && (
+          <CheckingStep
             claimId={claimId}
-            sessionId={props.sessionId}
-            code={code}
-            expiresAt={props.expiresAt}
+            view={view}
             startNow={props.startNow}
-            qrSvg={props.qrSvg}
-            phoneUrl={props.phoneUrl}
-            newClaimHref={props.newClaimHref}
-            loginHref={props.loginHref}
-            onSent={sent}
-            preview={preview?.capture}
+            photoUrl={photoUrl}
+            sample={demo}
+            sending={preview?.sending}
+            preview={preview?.checking ?? (preview ? {} : undefined)}
           />
-        ))}
-      {phase === "checking" && <CheckingStep claimId={claimId} view={view} sending={preview?.sending} preview={preview?.checking ?? (preview ? {} : undefined)} />}
-    </div>
+        )}
+      </div>
+    </WithJudges>
   );
 }

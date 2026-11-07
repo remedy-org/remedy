@@ -1,9 +1,13 @@
+import clsx from "clsx";
 import Link from "next/link";
-import { Button, Card, StatusPill, statusLabel } from "@/components/ui";
+import { Button, StatusPill, statusLabel } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
 import type { Refusal } from "@/lib/limits";
 import type { Decision } from "@/lib/types";
+import { SampleChip, StepTitle } from "./Exhibit";
+import { LockIcon } from "./icons";
 import { LimitNotice } from "./LimitNotice";
+import { Scoreboard, type RoundRun } from "./Scoreboard";
 
 export interface SampleOption {
   sample: DemoSample;
@@ -16,9 +20,25 @@ export interface DemoRun {
   href: string;
   title: string;
   decision: Decision;
+  /** The sample it ran, for the scoreboard. */
+  sample?: string;
 }
 
-/** Demo mode's stand-in for the camera: pick one of the four sample claims. A plain form, no script needed. */
+// What each sample proves, in one line under its title.
+const TESTS: Record<string, string> = {
+  genuine: "the happy path",
+  "wrong-code": "the model reading the code",
+  "ai-no-session": "the live-camera rule",
+  reposted: "the duplicate-photo rule",
+};
+
+/** This round's runs that reached the photos step, as the scoreboard counts them. */
+export const roundRuns = (runs: DemoRun[]): RoundRun[] => runs.flatMap((r) => (r.sample ? [{ sample: r.sample, decision: r.decision }] : []));
+
+/**
+ * Demo mode's stand-in for the camera: four case files in a 2x2 grid, the photo the hero of each, with what it tests and
+ * what should happen. The next unrun sample is selected. A plain form, no script needed.
+ */
 export function SamplePicker({
   slug,
   options,
@@ -36,47 +56,74 @@ export function SamplePicker({
   roundDone: boolean;
   refusal?: Refusal | null;
 }) {
+  const scored = roundRuns(runs);
   return (
-    <Card padding="lg" as="section" aria-labelledby="picker-title" className="flex flex-col gap-8">
+    <section aria-labelledby="picker-title" className="mx-auto flex w-full max-w-[40rem] flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <h2 id="picker-title" className="text-h2 font-semibold">
-          Pick a sample claim
-        </h2>
-        <p className="text-body text-muted">Each one runs the real checks. Only the genuine claim should be paid, and only once per round.</p>
+        <StepTitle id="picker-title">Pick a sample claim</StepTitle>
+        <p className="text-body text-muted">Each one runs the real checks and the real rule. Only the genuine claim should be paid, and only once per round.</p>
+        {scored.length > 0 && <Scoreboard runs={scored} className="pt-1" />}
       </div>
 
       {refusal && <LimitNotice refusal={refusal} demo />}
 
       <form action="/api/claims" method="post" className="flex flex-col gap-6">
         <input type="hidden" name="recall" value={slug} />
-        <fieldset className="flex flex-col gap-3">
+        <fieldset className="grid grid-cols-2 gap-3 sm:gap-4">
           <legend className="sr-only">Sample claims</legend>
-          {options.map(({ sample, locked }) => (
-            <label
-              key={sample.id}
-              className="flex cursor-pointer gap-4 rounded-card border border-line p-3 transition-colors duration-160 hover:bg-surface-2 has-checked:border-accent has-checked:bg-accent-soft has-disabled:cursor-not-allowed has-disabled:opacity-60 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
-            >
-              <input type="radio" name="sample" value={sample.id} defaultChecked={sample.id === selected} disabled={Boolean(locked)} className="sr-only" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={sample.photos[0]} alt="" className="h-20 w-16 shrink-0 rounded-control border border-line object-cover" />
-              <span className="flex min-w-0 flex-col gap-1.5">
-                <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                  <span className="text-ui font-medium text-text">{sample.title}</span>
-                  <StatusPill status={sample.expect} label={`Should be ${statusLabel(sample.expect).toLowerCase()}`} />
+          {options.map(({ sample, locked }, i) => {
+            const letter = String.fromCharCode(65 + i);
+            return (
+              <label
+                key={sample.id}
+                aria-disabled={locked ? true : undefined}
+                className={clsx(
+                  "group relative flex cursor-pointer flex-col gap-3 rounded-card border border-line bg-surface p-2 pb-3 transition-[border-color,box-shadow,background-color] duration-160 hover:bg-surface-2 sm:p-3 sm:pb-4",
+                  "has-checked:border-accent has-checked:shadow-[0_0_0_2px_var(--bg),0_0_0_4px_var(--accent)] has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-accent",
+                  locked && "cursor-not-allowed hover:bg-surface",
+                )}
+              >
+                <input type="radio" name="sample" value={sample.id} defaultChecked={sample.id === selected} disabled={Boolean(locked)} className="peer sr-only" />
+                <span className="relative block aspect-[4/5] overflow-hidden rounded-control bg-surface-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={sample.photos[0]} alt="" className={clsx("absolute inset-0 size-full object-cover", locked && "opacity-50 grayscale")} />
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-2 left-2 flex size-7 items-center justify-center rounded-control bg-paper font-mono text-ui font-semibold text-ink shadow-paper transition-colors duration-160 group-has-checked:bg-accent group-has-checked:text-accent-ink"
+                  >
+                    {letter}
+                  </span>
+                  {locked ? (
+                    <span className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-control bg-[oklch(0.12_0.01_255/0.85)] px-2 py-1.5 text-ui text-[oklch(0.96_0.005_255)]">
+                      <LockIcon className="shrink-0" />
+                      Run the genuine claim first
+                    </span>
+                  ) : (
+                    <SampleChip className="absolute bottom-2 left-2 max-sm:hidden">AI-made sample</SampleChip>
+                  )}
                 </span>
-                <span className="text-ui text-muted">{locked ?? sample.description}</span>
-              </span>
-            </label>
-          ))}
+                <span className="flex flex-col gap-1.5 px-1">
+                  <span className="text-ui font-medium text-text">
+                    <span className="sr-only">Sample {letter}: </span>
+                    {sample.title}
+                  </span>
+                  <span className="font-mono text-micro text-faint">Tests: {TESTS[sample.id] ?? sample.decidedBy}</span>
+                  <StatusPill status={sample.expect} label={`Should be ${statusLabel(sample.expect).toLowerCase()}`} className="mt-1 self-start" />
+                  {locked && <span className="sr-only">{locked}</span>}
+                </span>
+              </label>
+            );
+          })}
         </fieldset>
+        <p className="text-ui text-faint">All four photos are AI-made samples, not from a camera.</p>
         <Button type="submit" size="lg" block>
-          Use this sample
+          Run this sample
         </Button>
       </form>
 
       {runs.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h3 className="micro text-faint">Your demo claims</h3>
+        <div className="flex flex-col gap-2 pt-2">
+          <h3 className="micro text-faint">Your demo claims this round</h3>
           <ul className="flex flex-col">
             {runs.map((r) => (
               <li key={r.id} className="border-b border-line last:border-b-0">
@@ -99,6 +146,6 @@ export function SamplePicker({
           </form>
         </div>
       )}
-    </Card>
+    </section>
   );
 }

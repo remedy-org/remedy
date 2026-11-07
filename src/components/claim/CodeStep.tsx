@@ -1,8 +1,15 @@
+import clsx from "clsx";
 import { Button, Card, ClockIcon } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
 import type { CheckSpec } from "@/lib/types";
 import { CodeTag } from "./CodeTag";
+import { StepTitle } from "./Exhibit";
+import styles from "./flow.module.css";
+import { PhoneHandoff } from "./PhoneHandoff";
 import { mmss, useCountdown } from "./useCountdown";
+
+// The camera session's length: the countdown's line depletes over it.
+const SESSION_MS = 10 * 60_000;
 
 export interface CodeStepProps {
   code: string;
@@ -12,51 +19,62 @@ export interface CodeStepProps {
   frozen?: boolean;
   /** Demo: the sample whose photo is sent instead of the camera's. */
   sample?: DemoSample | null;
+  /** Real claims on a laptop: the QR code that carries this claim to a phone. */
+  qrSvg?: string;
+  phoneUrl?: string;
   onContinue(): void;
 }
 
-/** The one-time code, how to write it, and what the photos must show. The 10-minute session is already running. */
-export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, onContinue }: CodeStepProps) {
+/** The countdown as a quiet pill (Wise's quote timer): amber under a minute, "Ended" at zero. */
+export function TimerPill({ left, className }: { left: number; className?: string }) {
+  const low = left > 0 && left < 60_000;
+  return (
+    <span className={clsx("inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-2.5 font-mono text-ui tabular-nums", low ? "border-accent/50 text-accent-text" : "border-line text-muted", className)}>
+      <ClockIcon size={14} />
+      <span role="timer" aria-live="off" aria-label={left > 0 ? `${mmss(left)} left on the camera session` : "The camera session has ended"} className={clsx(left > 0 && left < 10_000 && styles.urgent)}>
+        {left > 0 ? mmss(left) : "Ended"}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The one-time code, as the paper tag it should end up on. A 2px line along the card's top edge runs down with the
+ * 10-minute session. On a laptop the phone is the recommended camera: its QR leads, and the laptop's camera is second.
+ */
+export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, qrSvg, phoneUrl, onContinue }: CodeStepProps) {
   const demo = Boolean(sample);
   const left = useCountdown(expiresAt, startNow, frozen);
-  const must = [
-    ...spec.label_must_show.map((l) => `The label: ${l}`),
-    ...spec.proof_steps,
-    `The code ${code}, hand-written in marker`,
-  ];
+  const must = [...spec.label_must_show.map((l) => `The label: ${l}`), ...spec.proof_steps, `The code ${code}, hand-written in marker`];
+  const handoff = !demo && qrSvg && phoneUrl;
   return (
-    <Card padding="lg" as="section" aria-labelledby="code-title" className="flex flex-col gap-8">
+    <Card padding="lg" as="section" aria-labelledby="code-title" className="relative flex flex-col gap-8 overflow-hidden">
+      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-line">
+        <span className={clsx("block h-full", styles.deplete, left < 60_000 ? "bg-accent" : "bg-text/70")} style={{ transform: `scaleX(${Math.min(1, left / SESSION_MS)})` }} />
+      </span>
+
       <div className="flex flex-col gap-3">
-        <h2 id="code-title" className="text-h2 font-semibold text-balance">
-          {demo ? `This sample's code is ${code}` : "Write this code on a paper tag"}
-        </h2>
+        <div className="flex items-start justify-between gap-4">
+          <StepTitle id="code-title">{demo ? `This sample's code is ${code}` : "Write this code on a paper tag"}</StepTitle>
+          <TimerPill left={left} className="mt-1" />
+        </div>
         <p className="text-body text-muted">
           {sample
             ? `A real claim gets a fresh code here, inside a 10-minute camera session. ${sample.tag}`
-            : "Large and clear, in marker. It ties your photos to this claim, so a photo taken earlier, or for someone else, can't be used."}
+            : "Write it big: letters at least 3 cm tall, in marker. It ties your photos to this claim, so a photo taken earlier, or for someone else, can't be used."}
         </p>
       </div>
 
-      <div className="rounded-card border border-line bg-surface-2 px-4 py-6">
-        <CodeTag code={code} />
+      <div className="pt-6 pb-2">
+        <CodeTag code={code} string foot={demo ? "This sample's tag is already written." : "Write it big, in marker."} />
       </div>
 
-      <p className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2.5 text-ui">
-        <span className="flex items-center gap-2 text-muted">
-          <ClockIcon />
-          Camera session
-        </span>
-        <span className="font-mono tabular-nums text-text" role="timer" aria-live="off">
-          {left > 0 ? `${mmss(left)} left` : "Ended"}
-        </span>
-      </p>
-
       <div className="flex flex-col gap-3">
-        <h3 className="micro text-faint">Your photos must show</h3>
+        <h3 className="micro text-faint">Your photo must show</h3>
         <ol className="flex flex-col">
           {must.map((m, i) => (
-            <li key={m} className="flex gap-3 border-b border-line py-2.5 text-ui last:border-b-0">
-              <span className="w-4 shrink-0 font-mono text-faint tabular-nums">{i + 1}</span>
+            <li key={m} className="grid grid-cols-[2rem_minmax(0,1fr)] items-baseline border-b border-line py-2.5 text-ui last:border-b-0">
+              <span className="font-mono text-micro text-faint tabular-nums">{String(i + 1).padStart(2, "0")}</span>
               <span className="text-text">{m}</span>
             </li>
           ))}
@@ -64,10 +82,26 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, onCo
         {!demo && <p className="text-ui text-muted">One photo with all of it is fine, or up to three.</p>}
       </div>
 
-      <Button size="lg" block onClick={onContinue} disabled={left <= 0}>
-        {demo ? "Continue to the sample photo" : "I've written it. Open the camera"}
-      </Button>
+      {handoff ? (
+        <div className="flex flex-col gap-4">
+          {/* A laptop (a fine pointer, 640px and up): the phone leads. A phone or tablet: its own camera, the primary action. */}
+          <div className="hidden flex-col gap-4 sm:pointer-fine:flex">
+            <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} primary />
+            <Button size="lg" block variant="secondary" onClick={onContinue} disabled={left <= 0}>
+              Open this laptop&apos;s camera
+            </Button>
+          </div>
+          <div className="flex flex-col sm:pointer-fine:hidden">
+            <Button size="lg" block onClick={onContinue} disabled={left <= 0}>
+              I&apos;ve written it. Open the camera
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button size="lg" block onClick={onContinue} disabled={left <= 0}>
+          {demo ? "Continue to the sample photo" : "I've written it. Open the camera"}
+        </Button>
+      )}
     </Card>
   );
 }
-

@@ -49,6 +49,7 @@ const { GET: getPhoto } = await import("./api/claims/[id]/photos/[n]/route");
 const { POST: sendPhotos } = await import("./api/claims/[id]/photos/route");
 const { POST: startDemo } = await import("./api/claims/route");
 const { ClaimScreen } = await import("@/components/claim/ClaimScreen");
+const model = await import("@/components/claim/model");
 const { default: SamplesPage } = await import("./r/[recall]/try/samples/page");
 
 function pass(recall: Recall, code: string): Verdict {
@@ -226,6 +227,76 @@ describe("the owner's camera step", () => {
   });
 });
 
+// The paid receipt polls the same route (ReceiptLive): every 5 s for 30 s, then every 15 s, for 2 minutes at most, and
+// only for a payout sent in the last 10 minutes that hasn't settled. One read a poll; PayPal at most once a minute.
+describe("the paid receipt's live status", () => {
+  const poll = async (id: string) => {
+    const res = await pollStatus(new Request(`http://127.0.0.1:3000/api/claims/${id}/status`) as never, { params: Promise.resolve({ id }) });
+    await Promise.all(later);
+    return res;
+  };
+  const paidClaim = (id: string, status: string) =>
+    sampleClaim({ id, decision: "paid", payout: { batchId: `LIVE${id.slice(3)}`, status, updatedAt: "2026-11-07T10:01:00.000Z" }, events: [{ at: "2026-11-07T10:01:00.000Z", type: "payout_sent", detail: "sent" }] });
+
+  it("polls at most 12 times, and never past 2 minutes", () => {
+    const { receiptPollDelay } = model;
+    let at = 0;
+    let polls = 0;
+    for (let d = receiptPollDelay(at); d !== null; d = receiptPollDelay(at)) {
+      at += d;
+      polls++;
+    }
+    expect(polls).toBe(12);
+    expect(at).toBeLessThanOrEqual(120_000);
+  });
+
+  it("reads the claim once a poll, and asks PayPal at most once a minute", async () => {
+    await inner.putClaim(paidClaim("RM-0601", "PENDING"));
+    counter.reset();
+
+    const first = await poll("RM-0601");
+    expect(first.headers.get("Cache-Control")).toBe("no-store");
+    expect(await first.json()).toEqual({ decision: "paid", photos: 1, payout: "PENDING" });
+    // PayPal still says PENDING: nothing saved, so only the poll's own read.
+    expect(getPayoutStatus).toHaveBeenCalledTimes(1);
+    expect(counter.counts.calls).toEqual({ getClaim: 1 });
+
+    // The next poll, seconds later: the claim alone, no PayPal.
+    counter.reset();
+    expect(await (await poll("RM-0601")).json()).toMatchObject({ payout: "PENDING" });
+    expect(getPayoutStatus).toHaveBeenCalledTimes(1);
+    expect(counter.counts.calls).toEqual({ getClaim: 1 });
+  });
+
+  it("saves PayPal's new status when it moves, so the console shows it too", async () => {
+    await inner.putClaim(paidClaim("RM-0602", "PENDING"));
+    counter.reset();
+    getPayoutStatus.mockResolvedValueOnce({ batchId: "LIVE0602", batchStatus: "SUCCESS", itemStatus: "SUCCESS" });
+
+    expect(await (await poll("RM-0602")).json()).toMatchObject({ payout: "SUCCESS" });
+    expect(counter.counts.calls).toEqual({ getClaim: 1, updateClaim: 1 });
+    expect(counter.counts.reads).toBe(3);
+    expect((await inner.getClaim("RM-0602"))?.payout?.status).toBe("SUCCESS");
+  });
+
+  it("never asks PayPal about a settled payout", async () => {
+    await inner.putClaim(paidClaim("RM-0603", "SUCCESS"));
+    counter.reset();
+    expect(await (await poll("RM-0603")).json()).toMatchObject({ payout: "SUCCESS" });
+    expect(getPayoutStatus).not.toHaveBeenCalled();
+    expect(counter.counts.reads).toBe(1);
+  });
+
+  it("shows another owner's claim to no one", async () => {
+    await inner.putClaim(paidClaim("RM-0604", "PENDING"));
+    await inner.putClaim({ ...paidClaim("RM-0605", "PENDING"), payerId: "SOMEONEELSE1" });
+    const res = await poll("RM-0605");
+    expect(res.status).toBe(404);
+    expect(JSON.stringify(await res.json())).not.toContain("PENDING");
+    expect(getPayoutStatus).not.toHaveBeenCalled();
+  });
+});
+
 describe("recall reads", () => {
   it("hit the cache on the second call", async () => {
     expect(await getRecallBySlug("kikea-x-vesolje", app)).not.toBeNull();
@@ -281,6 +352,7 @@ describe("a demo run", () => {
     await step("photos and check", () => sendPhotos(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}/photos`, { method: "POST", body: new FormData() }), params({ id })));
     await step("checking poll", () => pollClaim(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}`), params({ id })));
     await step("claim page, paid", () => ClaimScreen({ slug, id, demo: true }));
+    await step("receipt poll", () => pollStatus(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}/status`), params({ id })));
     await step("result photo", () => getPhoto(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}/photos/1`), params({ id, n: "1" })));
 
     expect((await inner.getClaim(id))?.payout?.status).toBe("PENDING");
@@ -292,8 +364,11 @@ describe("a demo run", () => {
       // The route's claim and photo reads, the pre-checks and the check: see checkClaim.
       "photos and check": 14,
       "checking poll": 1,
-      // PayPal still says PENDING: nothing to save, so no second read of the claim.
-      "claim page, paid": 1,
+      // PayPal still says PENDING: nothing to save, so no second read of the claim. A demo result also reads
+      // index.json once, for this round's scoreboard and "Next sample".
+      "claim page, paid": 2,
+      // The receipt's live status: the claim alone; PayPal was asked a moment ago, by the page.
+      "receipt poll": 1,
       // The claim, to check whose photo it is, then the photo itself (a CDN read after the first).
       "result photo": 2,
     });
@@ -306,6 +381,7 @@ describe("a demo run", () => {
     await ClaimScreen({ slug, id: "RM-0412", demo: true });
     await Promise.all(later);
     expect(getPayoutStatus).not.toHaveBeenCalled();
-    expect(counter.counts.calls).toEqual({ getClaim: 1 });
+    // The claim, and index.json for the round's scoreboard.
+    expect(counter.counts.calls).toEqual({ getClaim: 1, listClaims: 1 });
   });
 });

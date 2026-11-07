@@ -2,18 +2,21 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import QRCode from "qrcode";
+import { roundClaims } from "@/app/api/claims/_lib/pipeline";
 import { demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
 import { env } from "@/lib/env";
 import { getPayoutStatus } from "@/lib/paypal/payouts";
 import { isTerminal, savePayoutStatus } from "@/lib/paypal/status";
-import { getSession, loginPath } from "@/lib/session";
+import { getDemoRound, getSession, loginPath } from "@/lib/session";
 import { getRecallBySlug, type Store } from "@/lib/store";
-import type { Claim } from "@/lib/types";
+import type { Claim, Recall } from "@/lib/types";
 import { ClaimFlow } from "./ClaimFlow";
 import { ExpiredCard } from "./ExpiredCard";
 import { FlowShell } from "./FlowShell";
-import { checkRows, companyName, toView } from "./model";
-import { Result, type PayoutLive } from "./Result";
+import { WithJudges } from "./Judges";
+import { checkRows, companyName, RECEIPT_LIVE_MS, toView } from "./model";
+import { markAsked } from "./payout-live";
+import { Result, type DemoRound, type PayoutLive } from "./Result";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
 
 const QR_COLORS = { dark: "#15181d", light: "#ffffff" };
@@ -22,20 +25,31 @@ const requestTime = () => Date.now();
 
 // PayPal's live status for the receipt; the stored one if PayPal is slow or down (a partial result, never an error).
 // A settled payout isn't asked about again: a later refund or reversal arrives by webhook. A new status is saved
-// after the response, so the console shows it too; an unchanged one isn't, since saving rereads the claim.
-async function livePayout(store: Store, claim: Claim): Promise<PayoutLive | undefined> {
+// after the response, so the console shows it too; an unchanged one isn't, since saving rereads the claim. A payout
+// sent in the last 10 minutes that hasn't settled stays live: the receipt keeps asking (ReceiptLive, payout-live.ts).
+async function livePayout(store: Store, claim: Claim, now: number): Promise<PayoutLive | undefined> {
   if (!claim.payout) return undefined;
   if (claim.payout.batchId.startsWith("SEED") || isTerminal(claim.payout.status)) return { status: claim.payout.status, fresh: true };
   const { batchId } = claim.payout;
+  const sentAt = claim.events.find((e) => e.type === "payout_sent")?.at ?? claim.payout.updatedAt;
+  const recent = now - Date.parse(sentAt) < RECEIPT_LIVE_MS;
+  markAsked(claim.id, now);
   try {
     const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000));
     const s = await Promise.race([getPayoutStatus(batchId), timeout]);
     const status = s.itemStatus ?? s.batchStatus;
     if (status !== claim.payout.status) after(() => savePayoutStatus(store, claim.id, batchId, { status, itemId: s.itemId, at: new Date() }).catch(() => undefined));
-    return { status, fresh: true };
+    return { status, fresh: true, live: recent && !isTerminal(status) };
   } catch {
-    return { status: claim.payout.status, fresh: false };
+    return { status: claim.payout.status, fresh: false, live: recent };
   }
+}
+
+// This browser's demo round (the cookie the proxy sets), from index.json: one read, only on a demo claim's result.
+async function demoRound(store: Store, recall: Recall, payerId: string): Promise<DemoRound> {
+  const round = await getDemoRound();
+  const rows = round ? roundClaims(await store.listClaims(), recall.id, round, payerId) : [];
+  return { runs: rows.filter((r) => r.photoHashes.length > 0 && r.sample).map((r) => ({ sample: r.sample!, decision: r.decision })) };
 }
 
 /** One claim, owner only: the open steps (code, camera, checking) in the browser, or the result. */
@@ -58,13 +72,23 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   const now = requestTime();
 
   if (claim.decision !== "pending") {
-    const photoUrls = claim.photos.map((_, i) => `/api/claims/${claim.id}/photos/${i + 1}`);
+    // A demo claim's photos are the sample's own public files: shown from there, they cost no Blob reads.
+    const photoUrls = claim.photos.map((_, i) => (sample ? (sample.photos[i] ?? sample.photos[0]) : `/api/claims/${claim.id}/photos/${i + 1}`));
+    const [payout, round] = await Promise.all([livePayout(store, claim, now), sample ? demoRound(store, recall, session.payerId) : null]);
     return (
       <FlowShell demo={demo} company={company}>
-        <div className="flex flex-col gap-6">
-          <StepMeter current={steps.length + 1} steps={steps} />
-          <Result claim={claim} recall={recall} rows={checkRows(claim, recall.spec)} photoUrls={photoUrls} payout={await livePayout(store, claim)} againHref={againHref} sample={sample} />
-        </div>
+        <Result
+          claim={claim}
+          recall={recall}
+          rows={checkRows(claim, recall.spec)}
+          photoUrls={photoUrls}
+          payout={payout}
+          againHref={againHref}
+          sample={sample}
+          round={round}
+          now={now}
+          meter={<StepMeter current={steps.length + 1} steps={steps} />}
+        />
       </FlowShell>
     );
   }
@@ -73,10 +97,12 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   if (!claim.photos.length && (!session10 || Date.parse(session10.expiresAt) <= now)) {
     return (
       <FlowShell demo={demo} company={company}>
-        <div className="flex flex-col gap-6">
-          <StepMeter current={demo ? 3 : 2} steps={steps} />
-          <ExpiredCard code={claim.code} againHref={againHref} demo={demo} />
-        </div>
+        <WithJudges demo={demo} step="code">
+          <div className="flex flex-col gap-6">
+            <StepMeter current={demo ? 3 : 2} steps={steps} className="mx-auto w-full max-w-claim" />
+            <ExpiredCard code={claim.code} againHref={againHref} demo={demo} />
+          </div>
+        </WithJudges>
       </FlowShell>
     );
   }
