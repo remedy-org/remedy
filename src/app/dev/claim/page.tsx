@@ -14,7 +14,7 @@ import { Result, type ResultProps } from "@/components/claim/Result";
 import { SamplePicker } from "@/components/claim/SamplePicker";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "@/components/claim/StepMeter";
 import { Button, ErrorState } from "@/components/ui";
-import { DEMO_SAMPLES, demoSample } from "@/lib/demo";
+import { DEMO_SAMPLES, demoSample, isSandboxBuild } from "@/lib/demo";
 import { nextUtcDay } from "@/lib/limits";
 import type { Claim } from "@/lib/types";
 import * as fx from "./fixtures";
@@ -29,7 +29,7 @@ type Render = () => ReactNode | Promise<ReactNode>;
 async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "preview">, claim: Claim = fx.open) {
   const phoneUrl = `http://127.0.0.1:3000/r/${fx.recall.slug}/claim/${claim.id}`;
   return (
-    <FlowShell demo={Boolean(over.sample)} company="Kikea Store">
+    <FlowShell demo={Boolean(over.sample)} sandbox={isSandboxBuild()} company="Kikea Store">
       <ClaimFlow
         claimId={claim.id}
         code={claim.code}
@@ -54,7 +54,7 @@ function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultPr
   // A demo claim shows its sample's own photo, as ClaimScreen does.
   const photoUrls = over.sample ? d.photoUrls.map(() => over.sample!.photos[0]) : d.photoUrls;
   return (
-    <FlowShell demo={demo} company="Kikea Store">
+    <FlowShell demo={demo} sandbox={isSandboxBuild()} company="Kikea Store">
       <Result
         claim={d.claim}
         recall={fx.recall}
@@ -63,6 +63,7 @@ function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultPr
         againHref="#"
         now={fx.NOW + 10 * 60_000}
         meter={<StepMeter current={steps.length + 1} steps={steps} />}
+        sandbox={isSandboxBuild()}
         {...over}
       />
     </FlowShell>
@@ -80,7 +81,7 @@ const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug">) => (
   </FlowShell>
 );
 
-const consent = (over: Partial<Parameters<typeof RecallView>[0]> = {}) => <RecallView recall={fx.recall} href="#" {...over} />;
+const consent = (over: Partial<Parameters<typeof RecallView>[0]> = {}) => <RecallView recall={fx.recall} href="#" sandbox={isSandboxBuild()} {...over} />;
 const genuine = demoSample("genuine")!;
 
 const run = (id: string, sample: string, decision: Claim["decision"]) => ({ id, href: "#", title: demoSample(sample)!.title, decision, sample });
@@ -167,7 +168,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     group: "Code",
     note: "Session ended before any photo",
     render: () => (
-      <FlowShell company="Kikea Store">
+      <FlowShell sandbox={isSandboxBuild()} company="Kikea Store">
         <div className="flex flex-col gap-6">
           <StepMeter current={2} className="mx-auto w-full max-w-claim" />
           <ExpiredCard code="M4T" againHref="#" />
@@ -196,16 +197,16 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   },
   "demo-capture": { group: "Camera", note: "Demo: the sample in the viewfinder", render: () => flow({ sample: genuine, preview: { phase: "capture" } }) },
   "demo-capture-ai": { group: "Camera", note: "Demo: the AI image, sent from outside", render: () => flow({ sample: demoSample("ai-no-session"), preview: { phase: "capture" } }, { ...fx.open, code: "H6W" }) },
-  checking: { group: "Checking", note: "Exhibit A read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrl: "/demo/c02-1.jpg" } }, fx.checkingModel) },
-  "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrl: "/demo/c02-1.jpg" } }, fx.checkingModel) },
-  "checking-slow": { group: "Checking", note: "Past 40 s: taking longer than usual", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 47 }, photoUrl: "/demo/c02-1.jpg" } }, fx.checkingModel) },
-  "checking-offline": { group: "Checking", note: "Polling lost the connection", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 21, offline: true }, photoUrl: "/demo/c02-1.jpg" } }, fx.checkingModel) },
+  checking: { group: "Checking", note: "Exhibit A read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
+  "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
+  "checking-slow": { group: "Checking", note: "Past 40 s: taking longer than usual", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 47 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
+  "checking-offline": { group: "Checking", note: "Polling lost the connection", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 21, offline: true }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
   "checking-done": { group: "Checking", note: "All checks resolved: quotes and green code cells", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 19 }, photoUrl: fx.paid.photoUrls[0] } }, fx.paid.claim) },
   "checking-blocked": { group: "Checking", note: "Stopped by a pre-check", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 1 }, photoUrl: fx.blocked.photoUrls[0] } }, fx.blocked.claim) },
   "demo-checking": {
     group: "Checking",
     note: "Demo: the sample being read",
-    render: () => flow({ sample: genuine, preview: { phase: "checking", checking: { elapsed: 12 }, photoUrl: genuine.photos[0] } }, { ...fx.checkingModel, demo: true }),
+    render: () => flow({ sample: genuine, preview: { phase: "checking", checking: { elapsed: 12 }, photoUrl: genuine.photos[0] } }, { ...fx.checkingModel, code: "M4T", demo: true }),
   },
   paid: { group: "Result", note: "Paid, payout processing", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true } }) },
   "paid-arrive": { group: "Result", note: "Paid just now: the receipt prints", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, now: fx.NOW + 24_000 }) },

@@ -58,13 +58,6 @@ function decided(prefix: string, model?: string, over: Partial<Claim> = {}) {
 
 export const open = base("M4T");
 
-// The model is reading the photo: received and pre-checked, 18 s in.
-export const checkingModel = base("M4T", { photos: photosOf(["c02-1.jpg"]) });
-checkingModel.events.push(
-  { at: at(0), type: "photos_received", detail: "1 photo from the live camera" },
-  { at: at(0.4), type: "prechecked", detail: "Live session, new photos, first claim for this account" },
-);
-
 export const paid = (() => {
   const d = decided("c01");
   d.claim.payout = { batchId: "5UXD2E8A7NQ6G", status: "PENDING", updatedAt: at(19) };
@@ -74,6 +67,14 @@ export const paid = (() => {
   );
   return d;
 })();
+
+// The model is reading the photo: received and pre-checked, 18 s in. The same claim, code and photo as `paid`, so the
+// checking states and checking-done show one claim.
+export const checkingModel = base(paid.claim.code, { photos: paid.claim.photos });
+checkingModel.events.push(
+  { at: at(0), type: "photos_received", detail: "1 photo from the live camera" },
+  { at: at(0.4), type: "prechecked", detail: "Live session, new photos, first claim for this account" },
+);
 
 // A repost: stopped by the duplicate-photo check alone.
 export const blockedDuplicate = (() => {

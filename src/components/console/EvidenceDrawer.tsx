@@ -294,7 +294,7 @@ function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
         {claim.seeded && <p className="text-ui text-muted">Sample photos from the eval set, shared by several seeded claims.</p>}
       </section>
 
-      <Section title="Before the model" aside="4 pre-checks">
+      <Section title="Before the model" aside="No AI">
         <CheckProgress
           label={`Pre-checks for ${claim.id}`}
           steps={claim.preChecks.map((p) => ({ id: p.id, label: p.label, state: PRE_STATE[p.state], detail: p.detail }))}

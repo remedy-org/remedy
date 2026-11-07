@@ -1,11 +1,14 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
 import { ThemeToggle, Wordmark } from "@/components/ui";
+import { JUDGES_DOCK_ID } from "./JudgesSheet";
 
 export interface FlowShellProps {
   children: ReactNode;
   /** Judges' demo: a SANDBOX DEMO chip in the header. The judges' rail (WithJudges) says the rest. */
   demo?: boolean;
+  /** Payouts go to PayPal's sandbox in this build (isSandboxBuild): a SANDBOX chip on every claim page. */
+  sandbox?: boolean;
   /** The company running the recall, for the footer. */
   company?: string;
   /** Kept for the loading skeleton: the recall screen is wide; every step sets its own width inside. */
@@ -16,22 +19,29 @@ export interface FlowShellProps {
  * The claim flow's frame: a quiet header, the steps on graphite with the film grain, a plain footer. Each step sets its
  * own width (480px for a card, 640px for the camera and the samples, 960px for the checks).
  */
-export function FlowShell({ children, demo, company, wide }: FlowShellProps) {
+export function FlowShell({ children, demo, sandbox, company, wide }: FlowShellProps) {
   return (
     <div className="grain flex min-h-dvh flex-col">
       <header className="border-b border-line">
         <div className="mx-auto flex h-16 max-w-content items-center justify-between gap-4 px-4 sm:px-8">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <Wordmark href="/" />
-            {demo && <span className="micro inline-flex h-6 items-center rounded-control border border-line-strong px-2 text-muted">Sandbox demo</span>}
+            {(demo || sandbox) && (
+              <span className="micro inline-flex h-6 shrink-0 items-center rounded-control border border-line-strong px-2 whitespace-nowrap text-muted">
+                Sandbox<span className={demo ? "max-[399px]:hidden" : "hidden"}>&nbsp;demo</span>
+              </span>
+            )}
+            {/* The judges' pill docks here below 1200px (JudgesSheet). */}
+            {demo && <div id={JUDGES_DOCK_ID} className="flex min-[1200px]:hidden" />}
           </div>
           <ThemeToggle />
         </div>
       </header>
 
-      <main className={clsx("mx-auto w-full max-w-content flex-1 px-4 pt-8 pb-16 sm:px-8 sm:pt-12", wide && "lg:pt-16")}>{children}</main>
+      <main className={clsx("mx-auto w-full max-w-content flex-1 px-4 pt-8 pb-16 sm:px-8 sm:pt-12 max-sm:[body:has([data-camera])_&]:pb-6", wide && "lg:pt-16")}>{children}</main>
 
-      <footer className="border-t border-line">
+      {/* A phone's camera step fills the screen; the footer would only sit under it. */}
+      <footer className="border-t border-line max-sm:[body:has([data-camera])_&]:hidden">
         <div className="mx-auto flex max-w-content flex-col gap-1 px-4 py-6 text-ui text-faint sm:flex-row sm:justify-between sm:px-8">
           <p>{company ? `Refunds for ${company}'s recall are sent through PayPal Payouts.` : "Refunds are sent through PayPal Payouts."}</p>
           <p>Photos are seen only by Remedy and the company running the recall.</p>

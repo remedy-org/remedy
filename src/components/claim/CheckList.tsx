@@ -11,15 +11,34 @@ const GROUPS: Record<CheckRow["group"], string> = {
   pay: "The refund",
 };
 
-/** The claim's checks in groups, each with its result and, for the model's answers, its own words in mono. */
-export function CheckList({ rows, label = "Checks", code }: { rows: CheckRow[]; label?: string; code?: string }) {
+/**
+ * The claim's checks in groups, each with its result and, for the model's answers, its own words in mono. `times` puts
+ * each group's time since the photos arrived in its header (the checking screen's timeline); `quoteClassName` lets that
+ * screen hide the inline quotes where it shows them under the photo instead.
+ */
+export function CheckList({
+  rows,
+  label = "Checks",
+  code,
+  times,
+  quoteClassName,
+}: {
+  rows: CheckRow[];
+  label?: string;
+  code?: string;
+  times?: Partial<Record<CheckRow["group"], string>>;
+  quoteClassName?: string;
+}) {
   const groups = (Object.keys(GROUPS) as CheckRow["group"][]).map((g) => ({ g, rows: rows.filter((r) => r.group === g) })).filter((x) => x.rows.length);
   return (
     <div className="flex flex-col gap-4">
       {groups.map(({ g, rows }) => (
         <section key={g} aria-label={`${label}: ${GROUPS[g]}`}>
-          <h3 className="micro border-b border-line pb-2 text-faint">{GROUPS[g]}</h3>
-          <CheckProgress label={GROUPS[g]} steps={rows.map((r) => toStep(r, code))} />
+          <h3 className="micro flex items-baseline justify-between gap-3 border-b border-line pb-2 text-faint">
+            <span>{GROUPS[g]}</span>
+            {times?.[g] && <span className="shrink-0 tabular-nums normal-case">{times[g]}</span>}
+          </h3>
+          <CheckProgress label={GROUPS[g]} steps={rows.map((r) => toStep(r, code, quoteClassName))} />
         </section>
       ))}
     </div>
@@ -47,7 +66,7 @@ export function CodeCells({ code, passed }: { code: string; passed: boolean }) {
   );
 }
 
-function toStep(r: CheckRow, code?: string): CheckStep {
+function toStep(r: CheckRow, code?: string, quoteClassName?: string): CheckStep {
   const cells = code && r.id === "code" && (r.state === "pass" || r.state === "running" || r.state === "waiting");
   const detail =
     r.detail || r.quote || cells ? (
@@ -58,7 +77,7 @@ function toStep(r: CheckRow, code?: string): CheckStep {
           </span>
         )}
         {r.detail && <EvidenceText>{r.detail}</EvidenceText>}
-        {r.quote && <span className={clsx("mt-1.5 block border-l border-line-strong pl-3 font-mono text-micro leading-relaxed text-muted", styles.rise)}>&ldquo;{r.quote}&rdquo;</span>}
+        {r.quote && <span className={clsx("mt-1.5 block border-l border-line-strong pl-3 font-mono text-micro leading-relaxed text-muted", styles.rise, quoteClassName)}>&ldquo;{r.quote}&rdquo;</span>}
       </>
     ) : undefined;
   return { id: r.id, label: r.label, state: r.state, detail };

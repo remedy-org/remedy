@@ -1,22 +1,40 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useRef, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { CrossIcon } from "@/components/ui";
 
-/** Below 1200px the judges' notes live behind a pill that opens them as a bottom sheet (a modal dialog). */
+/** FlowShell's header slot beside the SANDBOX DEMO chip, where the pill docks so it never floats over a step. */
+export const JUDGES_DOCK_ID = "judges-dock";
+
+const noop = () => () => {};
+
+/**
+ * Below 1200px the judges' notes live behind a 32px pill in the header that opens them as a bottom sheet (a modal
+ * dialog). The pill renders into the header's slot once the page has hydrated.
+ */
 export function JudgesSheet({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const dock = useSyncExternalStore(
+    noop,
+    () => document.getElementById(JUDGES_DOCK_ID),
+    () => null,
+  );
+  const pill = (
+    <button
+      type="button"
+      onClick={() => ref.current?.showModal()}
+      aria-haspopup="dialog"
+      className="micro inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 whitespace-nowrap text-text transition-colors duration-160 after:absolute after:-inset-y-1.5 after:inset-x-0 after:content-[''] hover:bg-surface-2 relative"
+    >
+      <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
+      <span className="max-[399px]:hidden">For judges</span>
+      <span className="min-[400px]:hidden">Judges</span>
+    </button>
+  );
   return (
     <>
-      <button
-        type="button"
-        onClick={() => ref.current?.showModal()}
-        aria-haspopup="dialog"
-        className="micro inline-flex h-10 items-center gap-2 rounded-full border border-line-strong bg-surface px-4 text-text shadow-float transition-colors duration-160 hover:bg-surface-2"
-      >
-        <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
-        For judges
-      </button>
+      {dock && createPortal(pill, dock)}
       <dialog
         ref={ref}
         aria-label="Notes for judges"

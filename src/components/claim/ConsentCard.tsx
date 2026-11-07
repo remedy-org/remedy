@@ -80,7 +80,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       </div>
 
       {demo ? (
-        <div className="flex flex-col gap-3 max-sm:order-last">
+        <div className="order-last flex flex-col gap-3 border-t border-line pt-6">
           <h3 className="micro text-faint">Four sample claims you&apos;ll run</h3>
           <ul className="grid gap-x-4 gap-y-3 sm:grid-cols-2 sm:gap-y-4">
             {DEMO_SAMPLES.map((s) => (
@@ -93,7 +93,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
               </li>
             ))}
           </ul>
-          <p className="text-ui text-faint">The photos are AI-made samples, labelled on every screen.</p>
+          <p className="text-ui text-faint">All four photos are AI-made samples, never a real owner&apos;s.</p>
         </div>
       ) : (
         <ol className="relative flex flex-col gap-3 before:absolute before:top-1.5 before:bottom-1.5 before:left-[7px] before:w-px before:bg-line max-sm:order-last">

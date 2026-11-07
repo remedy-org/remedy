@@ -4,7 +4,7 @@ import { Button, StatusPill, statusLabel } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
 import type { Refusal } from "@/lib/limits";
 import type { Decision } from "@/lib/types";
-import { SampleChip, StepTitle } from "./Exhibit";
+import { StepTitle } from "./Exhibit";
 import { LockIcon } from "./icons";
 import { LimitNotice } from "./LimitNotice";
 import { Scoreboard, type RoundRun } from "./Scoreboard";
@@ -78,32 +78,34 @@ export function SamplePicker({
                 key={sample.id}
                 aria-disabled={locked ? true : undefined}
                 className={clsx(
-                  "group relative flex cursor-pointer gap-4 rounded-card border border-line bg-surface p-2 transition-[border-color,box-shadow,background-color] duration-160 hover:bg-surface-2 sm:flex-col sm:gap-3 sm:p-3 sm:pb-4",
+                  "group relative flex cursor-pointer gap-4 rounded-card border border-line bg-surface p-2 sm:gap-3.5 transition-[border-color,box-shadow,background-color] duration-160 hover:bg-surface-2 sm:p-3",
                   "has-checked:border-accent has-checked:shadow-[0_0_0_2px_var(--bg),0_0_0_4px_var(--accent)] has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-accent",
                   locked && "cursor-not-allowed hover:bg-surface",
                 )}
               >
                 <input type="radio" name="sample" value={sample.id} defaultChecked={sample.id === selected} disabled={Boolean(locked)} className="peer sr-only" />
-                <span className="relative block aspect-[4/5] w-24 shrink-0 overflow-hidden rounded-control bg-surface-2 sm:w-auto">
+                {/* 96px on a phone, 112px beside the text from 640px, so all four cards and the button fit one laptop screen. */}
+                <span className="relative block aspect-[4/5] w-24 shrink-0 overflow-hidden rounded-control bg-surface-2 sm:w-28">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={sample.photos[0]} alt="" className={clsx("absolute inset-0 size-full object-cover", locked && "opacity-50 grayscale")} />
+                  <img src={sample.photos[0]} alt="" className={clsx("absolute inset-0 size-full object-cover object-[50%_65%]", locked && "opacity-50 grayscale")} />
                   <span
                     aria-hidden="true"
-                    className="absolute top-2 left-2 flex size-7 items-center justify-center rounded-control bg-paper font-mono text-ui font-semibold text-ink shadow-paper transition-colors duration-160 group-has-checked:bg-accent group-has-checked:text-accent-ink"
+                    className="absolute top-1.5 left-1.5 flex size-7 items-center justify-center rounded-control bg-paper font-mono text-ui font-semibold text-ink shadow-paper transition-colors duration-160 group-has-checked:bg-accent group-has-checked:text-accent-ink"
                   >
                     {letter}
                   </span>
-                  {locked ? (
-                    <span className="absolute inset-x-1.5 bottom-1.5 flex items-center gap-1.5 rounded-control sm:inset-x-2 sm:bottom-2 bg-[oklch(0.12_0.01_255/0.85)] px-2 py-1.5 text-ui text-[oklch(0.96_0.005_255)]">
+                  {locked && (
+                    <span className="absolute inset-x-1.5 top-1/2 flex -translate-y-1/2 items-center justify-center gap-1.5 rounded-control bg-[oklch(0.12_0.01_255/0.85)] px-2 py-1.5 text-ui text-[oklch(0.96_0.005_255)]">
                       <LockIcon className="shrink-0" />
-                      <span className="max-sm:hidden">Run the genuine claim first</span>
-                      <span className="sm:hidden">After A</span>
+                      After A
                     </span>
-                  ) : (
-                    <SampleChip className="absolute bottom-2 left-2 max-sm:hidden">AI-made sample</SampleChip>
                   )}
+                  {/* The honest label, on every sample photo at every size. */}
+                  <span className="absolute inset-x-0 bottom-0 bg-[oklch(0.12_0.01_255/0.8)] py-0.5 text-center font-mono text-[10px] leading-4 tracking-[0.06em] text-[oklch(0.96_0.005_255)] uppercase">
+                    AI-made
+                  </span>
                 </span>
-                <span className="flex min-w-0 flex-col gap-1.5 py-1 sm:px-1 sm:py-0">
+                <span className="flex min-w-0 flex-col gap-1.5 py-1 sm:py-0.5">
                   <span className="text-ui font-medium text-text">
                     <span className="sr-only">Sample {letter}: </span>
                     {sample.title}

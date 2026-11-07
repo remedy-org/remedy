@@ -71,9 +71,9 @@ export function ClaimFlow(props: ClaimFlowProps) {
   return (
     <WithJudges demo={demo} step={JUDGE[phase]}>
       <div className="flex flex-col gap-6">
-        <StepMeter current={current} steps={steps} compact={phase === "capture"} className={phase === "checking" ? "mx-auto w-full max-w-[60rem]" : phase === "capture" ? "mx-auto w-full max-w-[40rem]" : "mx-auto w-full max-w-claim"} />
+        <StepMeter current={current} steps={steps} compact={phase === "capture"} className={phase === "checking" ? "mx-auto w-full max-w-[60rem]" : phase === "capture" ? "mx-auto w-full max-w-[40rem]" : "mx-auto w-full max-w-claim lg:max-w-[55rem]"} />
         {phase === "code" && (
-          <div className="mx-auto w-full max-w-claim">
+          <div className="mx-auto w-full max-w-claim lg:max-w-[55rem]">
             <CodeStep
               code={code}
               spec={props.spec}

@@ -4,11 +4,12 @@ import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AlertIcon, Button, CrossIcon, ErrorState } from "@/components/ui";
 import styles from "./flow.module.css";
-import { CameraIcon } from "./icons";
+import { CameraIcon, InfoIcon } from "./icons";
 import type { ClaimStatus, ClaimView } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
+import { REAL_STEPS } from "./StepMeter";
 import { mmss, useCountdown } from "./useCountdown";
-import { Cutout, Dock, GlassChip, InstructionBar, Reminders } from "./Viewfinder";
+import { CAMERA_FRAME, CAMERA_VIEW, Cutout, Dock, GlassChip, InstructionBar, Reminders } from "./Viewfinder";
 
 export type CameraState = "starting" | "live" | "denied" | "nocamera" | "insecure" | "error";
 
@@ -76,6 +77,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const [sendError, setSendError] = useState<{ status: number; message: string } | null>(preview?.sendError ? { status: 500, message: preview.sendError } : null);
   const [flash, setFlash] = useState(false);
   const [phoneOpen, setPhoneOpen] = useState(preview?.showPhone ?? false);
+  const [help, setHelp] = useState(false);
   const coarse = useSyncExternalStore(subscribeCoarse, () => window.matchMedia("(pointer: coarse)").matches, () => false);
   const left = useCountdown(expiresAt, startNow, Boolean(preview));
   const expired = left <= 0;
@@ -248,12 +250,13 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const n = shots.length;
   const showPhone = !coarse && (phoneOpen || (!expired && (camera === "denied" || camera === "nocamera" || camera === "insecure")));
   const sendLabel = `Send ${n === 1 ? "photo" : `${n} photos`}`;
+  const helpText = n === 0 ? "Live camera only: there's no upload button. Up to 3 photos; one with all of it is fine." : `${n} of ${MAX_PHOTOS} taken. Send once the label, the cut and the code are all in.`;
 
   return (
     <section aria-labelledby="capture-title" className="mx-auto flex w-full max-w-[40rem] flex-col gap-5">
       {/* The camera is dark in both themes, like a camera's. Full bleed on a phone, a 4:3 frame on a laptop. */}
-      <div data-theme="dark" className="overflow-hidden bg-[oklch(0.12_0.01_255)] text-text max-sm:-mx-4 sm:rounded-card sm:shadow-ring">
-        <div className="relative overflow-hidden max-sm:h-[max(18rem,calc(100dvh-23.5rem))] sm:aspect-[4/3]">
+      <div data-theme="dark" data-camera="" className={CAMERA_FRAME}>
+        <div className={CAMERA_VIEW}>
           <video ref={videoRef} playsInline muted aria-label="Camera preview" className={clsx("absolute inset-0 size-full object-cover", !live && "invisible")} />
           {preview?.still && live && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -275,6 +278,10 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               />
             </Cutout>
           )}
+          {/* Phones: the step meter, as one chip (StepMeter hides itself here). */}
+          <GlassChip className="absolute top-3 left-3 sm:hidden">
+            3/{REAL_STEPS.length} · {REAL_STEPS[2]}
+          </GlassChip>
           <div className="absolute top-3 right-3">
             <GlassChip className={clsx(left < 60_000 && !expired && "text-accent-text")}>
               <span role="timer" aria-live="off" aria-label={expired ? "The camera session has ended" : `${mmss(left)} left on the camera session`} className={clsx(!expired && left < 10_000 && styles.urgent)}>
@@ -285,25 +292,45 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
         </div>
 
-        <InstructionBar>
-          <h2 id="capture-title" tabIndex={-1} className="text-ui font-medium text-balance text-[oklch(0.96_0.005_255)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
-            Fit the label, the destroyed product and the code <span className="font-mono">{code}</span> in the frame
-          </h2>
+        <InstructionBar className="max-sm:gap-1 max-sm:pr-1">
+          <div className="flex flex-col gap-1">
+            <h2 id="capture-title" tabIndex={-1} className="text-ui font-medium text-balance text-[oklch(0.96_0.005_255)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+              Fit the label, the destroyed product and the code <span className="font-mono">{code}</span> in the frame
+            </h2>
+            {help && (
+              <p id="capture-help" className="text-ui text-balance text-[oklch(0.72_0.012_255)] sm:hidden">
+                {helpText}
+              </p>
+            )}
+          </div>
+          {!expired && (
+            <button
+              type="button"
+              onClick={() => setHelp((h) => !h)}
+              aria-expanded={help}
+              aria-controls="capture-help"
+              aria-label="About the camera"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full text-[oklch(0.72_0.012_255)] hover:text-[oklch(0.96_0.005_255)] sm:hidden"
+            >
+              <InfoIcon />
+            </button>
+          )}
         </InstructionBar>
 
         <Dock
           className="border-t border-[oklch(1_0_0/0.08)]"
           left={
-            <ul className="flex gap-1.5 sm:gap-2" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
+            <ul className="flex gap-2.5" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
               {Array.from({ length: MAX_PHOTOS }, (_, i) => (
-                <li key={i} className="relative size-9 shrink-0 sm:size-14">
+                <li key={i} className="relative size-12 shrink-0 sm:size-14">
                   {shots[i] ? (
                     <>
                       <span className={clsx("block size-full rounded-control bg-paper p-[2px] shadow-paper", styles.drop)}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={shots[i].url} alt={`Photo ${i + 1}`} className="size-full rounded-[3px] object-cover" />
                       </span>
-                      <span aria-hidden="true" className="absolute -bottom-1.5 -left-1.5 flex size-5 items-center justify-center rounded-[3px] bg-accent font-mono text-micro font-semibold text-accent-ink">
+                      {/* The letter and the remove button sit inside the print's corners, so neighbours never collide. */}
+                      <span aria-hidden="true" className="absolute bottom-[3px] left-[3px] flex size-4 items-center justify-center rounded-[3px] bg-accent font-mono text-[10px] leading-none font-semibold text-accent-ink">
                         {String.fromCharCode(65 + i)}
                       </span>
                       <button
@@ -311,7 +338,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                         onClick={() => remove(i)}
                         disabled={sending}
                         aria-label={`Remove photo ${i + 1}`}
-                        className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-[oklch(0.3_0.01_255)] text-[oklch(0.96_0.005_255)] shadow-[0_0_0_2px_oklch(0.12_0.01_255)] after:absolute after:-inset-2 after:content-[''] disabled:opacity-40"
+                        className="absolute top-[3px] right-[3px] flex size-5 items-center justify-center rounded-full bg-[oklch(0.12_0.01_255/0.8)] text-[oklch(0.96_0.005_255)] after:absolute after:-inset-3 after:content-[''] disabled:opacity-40"
                       >
                         <CrossIcon size={12} />
                       </button>
@@ -374,9 +401,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           Get a new code
         </Button>
       ) : (
-        <p className="text-ui text-muted">
-          {n === 0 ? "Live camera only: there's no upload button. Up to 3 photos; one with all of it is fine." : `${n} of ${MAX_PHOTOS} taken. Send once the label, the cut and the code are all in.`}
-        </p>
+        // On a phone this lives behind the (i) in the instruction bar, so the camera keeps the whole screen.
+        <p className="text-ui text-muted max-sm:hidden">{helpText}</p>
       )}
 
       {/* Laptops only: on a phone this already is the phone. */}

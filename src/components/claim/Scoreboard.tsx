@@ -44,25 +44,32 @@ export function nextSample(runs: RoundRun[], except?: string): DemoSample | null
 }
 
 /**
- * Four 10px squares, one per sample in the guided order, each in the colour of the decision this round's run actually
- * reached, with a tick when it was the expected one; then the line in words.
+ * Four 10px squares, one per sample in the guided order and lettered A to D under it, each in the colour of the
+ * decision this round's run actually reached, with a tick when it was the expected one; then the line in words. Every
+ * slot is the same width, so a tick never shifts the next square.
  */
 export function Scoreboard({ runs, className }: { runs: RoundRun[]; className?: string }) {
   const latest = latestRuns(runs);
   const { text } = scoreLine(runs);
   return (
     <div className={clsx("flex flex-wrap items-center gap-x-3 gap-y-2", className)}>
-      <ol className="flex items-center gap-1.5" aria-label="This round's samples">
+      <ol className="flex items-start gap-1" aria-label="This round's samples">
         {DEMO_SAMPLES.map((s, i) => {
           const got = latest.get(s.id);
           const ok = got === s.expect;
+          const letter = String.fromCharCode(65 + i);
           return (
-            <li key={s.id} className="flex items-center gap-1" title={`${s.title}: ${got ? `${got}, expected ${s.expect}` : "not run yet"}`}>
+            <li key={s.id} className="grid w-6 grid-cols-[10px_12px] items-center gap-x-0.5 gap-y-1" title={`${s.title}: ${got ? `${got}, expected ${s.expect}` : "not run yet"}`}>
               <span className="sr-only">
-                {String.fromCharCode(65 + i)}, {s.title}: {got ? `${got}${ok ? ", as expected" : `, expected ${s.expect}`}` : "not run yet"}.
+                {letter}, {s.title}: {got ? `${got}${ok ? ", as expected" : `, expected ${s.expect}`}` : "not run yet"}.
               </span>
               <span aria-hidden="true" className={clsx("size-2.5 rounded-[2px] border", got ? FILL[got] : "border-line-strong")} />
-              {got && <span aria-hidden="true" className={ok ? "text-pay" : "text-stop"}>{ok ? <CheckIcon size={12} /> : <CrossIcon size={12} />}</span>}
+              <span aria-hidden="true" className={clsx("flex size-3 items-center", ok ? "text-pay" : "text-stop")}>
+                {got && (ok ? <CheckIcon size={12} /> : <CrossIcon size={12} />)}
+              </span>
+              <span aria-hidden="true" className="text-center font-mono text-[10px] leading-none text-faint">
+                {letter}
+              </span>
             </li>
           );
         })}

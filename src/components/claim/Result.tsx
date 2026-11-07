@@ -56,14 +56,29 @@ export interface ResultProps {
   now?: number;
   /** The step meter, above the result. */
   meter?: ReactNode;
+  /** Payouts go to PayPal's sandbox in this build: every amount is labelled sandbox money, sample or not. */
+  sandbox?: boolean;
 }
+
+// The judges' rail on a result, one note per outcome: what the rule did with this claim and whether money moved.
+const RESULT_NOTES: Partial<Record<Claim["decision"], string>> = {
+  paid: "Every check passed, so the rule paid it: PayPal Payouts sent the refund in sandbox money.",
+  held: "The rule held it for a person at the company. No payout is sent unless they approve it.",
+  rejected: "The rule refused it on the model's quoted reading. No payout was attempted.",
+  blocked: "A check with no AI stopped it before the model saw the photo. No payout was attempted.",
+};
 
 /** The end of a claim, as a paper object: a receipt when paid; a sheet with the evidence when held or refused. */
 export function Result(props: ResultProps) {
   const { sample } = props;
   const body = props.claim.decision === "paid" ? <Paid {...props} /> : props.claim.decision === "held" ? <Held {...props} /> : <Refused {...props} />;
   return (
-    <WithJudges demo={Boolean(sample)} step="result" extra={sample && <JudgeVerdict sample={sample} decision={props.claim.decision} round={props.round} claimId={props.claim.id} />}>
+    <WithJudges
+      demo={Boolean(sample)}
+      step="result"
+      note={RESULT_NOTES[props.claim.decision]}
+      extra={sample && <JudgeVerdict sample={sample} decision={props.claim.decision} round={props.round} claimId={props.claim.id} />}
+    >
       <FocusTitle id="result-title" />
       {props.meter && <div className="mx-auto mb-6 w-full max-w-claim">{props.meter}</div>}
       {body}
@@ -73,7 +88,8 @@ export function Result(props: ResultProps) {
 
 /* ------------------------------------------------------------------------------------------------ Paid */
 
-function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round, now }: ResultProps) {
+function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round, now, sandbox }: ResultProps) {
+  const sb = Boolean(sample) || Boolean(sandbox);
   const amount = claim.payout?.amount ?? recall.refund;
   const sentAt = claim.events.find((e) => e.type === "payout_sent")?.at ?? claim.payout?.updatedAt;
   const decidedAt = claim.events.find((e) => e.type === "decided")?.at;
@@ -84,7 +100,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
   return (
     <section aria-labelledby="result-title" className="mx-auto flex w-full max-w-claim flex-col gap-8">
       <h2 id="result-title" tabIndex={-1} className="sr-only">
-        Refund receipt: {money(amount)} paid{sample ? " in PayPal sandbox money" : ""}
+        Refund receipt: {money(amount)} paid{sb ? " in PayPal sandbox money" : ""}
       </h2>
       <Paper variant="receipt" perforated padding="lg" className={clsx(arrive && styles.print)}>
         <div className="flex items-baseline justify-between gap-4 font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">
@@ -110,7 +126,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
           <Money value={Number(amount.value)} currency={amount.currency} size="amount" className="text-ink" />
           <p className="text-body text-ink-muted">
             Refunded to your PayPal account through Remedy for {company}
-            {sample ? ", in PayPal sandbox money" : ""}.
+            {sb ? ", in PayPal sandbox money" : ""}.
           </p>
           {took !== null && (
             <span className="inline-flex h-7 items-center self-start rounded-control bg-paper-2 px-2.5 font-mono text-ui text-ink tabular-nums">
@@ -119,7 +135,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
           )}
           <span className="absolute top-1 right-0">
             <Stamp tone="pay" land={arrive ? 1060 : undefined}>
-              {sample ? "Paid · sandbox" : "Paid"}
+              {sb ? "Paid · sandbox" : "Paid"}
             </Stamp>
           </span>
         </div>
@@ -130,7 +146,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
             status={payout?.status ?? claim.payout?.status ?? null}
             live={Boolean(payout?.live)}
             amount={money(amount)}
-            sandbox={Boolean(sample)}
+            sandbox={sb}
           />
           {sentAt && <ReceiptRow label="Sent">{stamp(sentAt)}</ReceiptRow>}
           <ReceiptRow label="PayPal account" mono>
@@ -145,11 +161,11 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
           <ReceiptRow label="Recall">CPSC {recall.id}</ReceiptRow>
         </dl>
         {payout && !payout.fresh && <p className="mt-3 text-ui text-ink-muted">PayPal didn&apos;t answer just now, so this is the last status we saved.</p>}
-        {!sample && <p className="mt-3 text-ui text-ink-muted">PayPal emails you a receipt too.</p>}
+        {!sb && <p className="mt-3 text-ui text-ink-muted">PayPal emails you a receipt too.</p>}
       </Paper>
 
       {sample && <DemoActions sample={sample} againHref={againHref} round={round} />}
-      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={`All ${rows.length} checks passed`} open={false} code={claim.code} />
+      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={passedSummary(rows)} open={false} code={claim.code} />
     </section>
   );
 }
@@ -165,15 +181,16 @@ function ReceiptRow({ label, mono, children }: { label: string; mono?: boolean; 
 
 /* ------------------------------------------------------------------------------------------------ Held */
 
-function Held({ claim, recall, rows, photoUrls, againHref, sample, round }: ResultProps) {
+function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbox }: ResultProps) {
+  const sb = Boolean(sample) || Boolean(sandbox);
   const reasons = decidingReasons(claim);
   const submitted = claim.events.find((e) => e.type === "photos_received")?.at ?? claim.createdAt;
   const checked = claim.events.find((e) => e.type === "decided")?.at ?? claim.events.find((e) => e.type === "checked")?.at;
   const company = companyName(recall);
   return (
     <section aria-labelledby="result-title" className="mx-auto flex w-full max-w-claim flex-col gap-6">
-      <Top status={<StatusPill status="held" label={sample ? "Held · sandbox" : "Held"} />} id={claim.id} />
-      <StepTitle id="result-title">A person at {company} will look at this</StepTitle>
+      <Top status={<StatusPill status="held" label={sb ? "Held · sandbox" : "Held"} />} id={claim.id} />
+      <StepTitle id="result-title">A person at {company.replace(/ /g, "\u00a0")} will look at this</StepTitle>
 
       <Paper variant="sheet" padding="lg">
         <span className="absolute top-6 right-6">
@@ -184,7 +201,7 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round }: Resu
         <p className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Claim {claim.id}</p>
         <p className="mt-6 text-body font-semibold text-ink">Nothing is lost.</p>
         <p className="mt-1 max-w-[34ch] text-body text-ink-muted">
-          Your claim is saved. If {company} approves it, {money(recall.refund)} goes to your PayPal account{sample ? " in sandbox money" : " and PayPal emails you"}.
+          Your claim is saved. If {company} approves it, {money(recall.refund)} goes to your PayPal account{sb ? " in sandbox money" : " and PayPal emails you"}.
         </p>
 
         <ol aria-label="What happens next" className="relative mt-6 flex flex-col gap-3 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-paper-line">
@@ -197,12 +214,15 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round }: Resu
         {reasons.length > 0 && (
           <div className="mt-6 flex flex-col gap-3 border-t border-dashed border-paper-line pt-4">
             <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">What they&apos;ll look at</h3>
-            <Reasons reasons={reasons} rows={rows} />
+            <Reasons reasons={reasons} rows={rows} summary={claim.verdict?.summary} />
           </div>
         )}
 
         <dl className="mt-6 border-t border-dashed border-paper-line">
-          <ReceiptRow label="Refund if approved">{money(recall.refund)}</ReceiptRow>
+          <ReceiptRow label="Refund if approved">
+            {money(recall.refund)}
+            {sb ? " sandbox" : ""}
+          </ReceiptRow>
           <ReceiptRow label="Photos sent">{stamp(submitted)}</ReceiptRow>
           <ReceiptRow label="Your code" mono>
             {claim.code}
@@ -229,12 +249,18 @@ function TimelineRow({ state, label, time }: { state: "done" | "now" | "next"; l
   );
 }
 
-/** The reasons that decided it, numbered, each with the model's own words where it gave them. On paper. */
-function Reasons({ reasons, rows }: { reasons: Claim["reasons"]; rows: CheckRow[] }) {
+// Checks the model answers yes/no/unclear without its own evidence line: its one-line summary is the words it gave.
+const SUMMARY_CHECKS = new Set(["same_item", "screen"]);
+
+/**
+ * The reasons that decided it, numbered, each with the model's own words where it gave them (its summary for the checks
+ * it answers without evidence). On paper.
+ */
+function Reasons({ reasons, rows, summary }: { reasons: Claim["reasons"]; rows: CheckRow[]; summary?: string }) {
   return (
     <ol className="flex flex-col gap-3">
       {reasons.map((r, i) => {
-        const quote = rows.find((row) => row.id === r.check)?.quote;
+        const quote = rows.find((row) => row.id === r.check)?.quote ?? (summary && SUMMARY_CHECKS.has(r.check) ? summary : undefined);
         return (
           <li key={`${r.check}-${i}`} className="grid grid-cols-[2rem_minmax(0,1fr)] text-ui">
             <span className="font-mono text-micro leading-[1.45rem] text-ink-muted">{String(i + 1).padStart(2, "0")}</span>
@@ -330,8 +356,8 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
       )}
 
       {sample && <DemoActions sample={sample} againHref={againHref} round={round} />}
-      {/* Open for every refusal: the reason is only convincing next to the model's own reading. */}
-      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={`Every check, and the ${one ? "photo" : "photos"} you sent`} open code={claim.code} />
+      {/* The verdict sheet above already shows Exhibit A and the deciding quote; the rest of the checks wait folded. */}
+      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={otherSummary(rows)} open={false} code={claim.code} />
     </section>
   );
 }
@@ -429,6 +455,21 @@ function DuplicatePair({ src, sample }: { src: string; sample: boolean }) {
 
 /* ------------------------------------------------------------------------------------------ Shared parts */
 
+// The receipt counts decision checks only, by group, the way the checklist and the judges' rail name them: the refund
+// row is the outcome, not a check.
+const count = (rows: CheckRow[], group: CheckRow["group"]) => rows.filter((r) => r.group === group).length;
+
+function passedSummary(rows: CheckRow[]): string {
+  const pre = count(rows, "pre");
+  const model = count(rows, "model");
+  return `All checks passed · ${pre} with no AI · ${model} in the photo`;
+}
+
+function otherSummary(rows: CheckRow[]): string {
+  const passed = rows.filter((r) => r.group !== "pay" && r.state === "pass").length;
+  return passed ? `${passed} other ${passed === 1 ? "check" : "checks"} passed · every check` : "Every check";
+}
+
 function Top({ status, id }: { status: ReactNode; id: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
@@ -445,7 +486,7 @@ function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { ro
       <summary className="flex min-h-16 cursor-pointer list-none items-center gap-4 px-4 py-3 text-ui font-medium text-text sm:px-5 [&::-webkit-details-marker]:hidden">
         {photoUrls[0] && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={photoUrls[0]} alt="" className="size-10 shrink-0 rounded-[4px] bg-paper object-cover p-[2px]" />
+          <img src={photoUrls[0]} alt="" className="size-16 shrink-0 rounded-[4px] bg-paper object-cover p-[2px]" />
         )}
         <span className="flex-1">{summary}</span>
         <span className="micro text-faint group-open:hidden">Show evidence</span>
@@ -499,7 +540,7 @@ function JudgeVerdict({ sample, decision, round, claimId }: { sample: DemoSample
           <StatusPill status={sample.expect} label={statusLabel(sample.expect)} />
         </dd>
         <dt className="micro text-faint">Got</dt>
-        <dd className="flex flex-wrap items-center gap-2">
+        <dd className="flex items-center gap-2 whitespace-nowrap">
           <StatusPill status={decision} />
           <span className={clsx("inline-flex items-center gap-1 whitespace-nowrap", ok ? "text-pay" : "text-stop")}>
             {ok ? <CheckIcon size={14} /> : <CrossIcon size={14} />}

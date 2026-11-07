@@ -1,4 +1,5 @@
 import "server-only";
+import { isSandboxBuild } from "@/lib/demo";
 import { parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
 import type { Recall } from "@/lib/types";
@@ -27,17 +28,18 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
       authError={authError}
       unverified={unverified}
       refusal={parseRefusal(query, new Date())}
+      sandbox={isSandboxBuild()}
     />
   );
 }
 
 /** The recall screen's layout: the brief beside the consent card on a laptop, stacked on a phone. */
-export function RecallView(props: ConsentCardProps) {
+export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?: boolean }) {
   return (
-    <FlowShell wide demo={props.demo} company={companyName(props.recall)}>
+    <FlowShell wide demo={props.demo} sandbox={sandbox} company={companyName(props.recall)}>
       <WithJudges demo={Boolean(props.demo)} step="consent">
         <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
-          <RecallBrief recall={props.recall} />
+          <RecallBrief recall={props.recall} sandbox={sandbox || props.demo} />
           <div className="flex flex-col gap-4 sm:gap-6">
             <StepMeter current={1} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
             <ConsentCard {...props} />

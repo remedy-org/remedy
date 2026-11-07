@@ -55,13 +55,30 @@ export function InstructionBar({ children, className }: { children: ReactNode; c
   return <div className={clsx("flex min-h-12 items-center justify-center border-t border-[oklch(1_0_0/0.08)] px-4 py-2 text-center", className)}>{children}</div>;
 }
 
-/** The dock: the shots on the left, the shutter in the middle, Send on the right. 152px tall on phones. */
+/**
+ * The dock: the shots on the left, the shutter in the middle, Send on the right. On phones it is 152px tall in two rows,
+ * the three 48px shots over the shutter and Send, since three 48px slots don't fit beside a 72px shutter at 375px.
+ */
 export function Dock({ left, middle, right, short, className }: { left?: ReactNode; middle?: ReactNode; right?: ReactNode; short?: boolean; className?: string }) {
   return (
-    <div className={clsx("grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 max-sm:pb-[env(safe-area-inset-bottom)] sm:px-5 sm:py-4", short ? "max-sm:py-5" : "max-sm:h-[152px]", className)}>
-      <div className="flex min-w-0 items-center gap-2">{left}</div>
-      <div className="flex flex-col items-center gap-2">{middle}</div>
-      <div className="flex min-w-0 items-center justify-end">{right}</div>
+    <div
+      className={clsx(
+        "grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 max-sm:pb-[env(safe-area-inset-bottom)] sm:px-5 sm:py-4",
+        short ? "max-sm:py-5" : "max-sm:h-[152px] max-sm:grid-rows-[3rem_4.5rem] max-sm:content-center max-sm:gap-y-2.5",
+        className,
+      )}
+    >
+      <div className={clsx("flex min-w-0 items-center gap-2", !short && "max-sm:col-span-3 max-sm:justify-center")}>{left}</div>
+      <div className={clsx("flex flex-col items-center gap-2", !short && "max-sm:col-start-2 max-sm:row-start-2")}>{middle}</div>
+      <div className={clsx("flex min-w-0 items-center justify-end", !short && "max-sm:col-start-3 max-sm:row-start-2")}>{right}</div>
     </div>
   );
 }
+
+/**
+ * Phones: the camera fills the screen under the 64px header as a grid (viewfinder, instruction bar, dock), like a
+ * camera app. From 640px it is a 4:3 card. FlowShell drops its footer and bottom padding while [data-camera] is on screen.
+ */
+export const CAMERA_FRAME =
+  "overflow-hidden bg-[oklch(0.12_0.01_255)] text-text max-sm:-mx-4 max-sm:-mt-8 max-sm:grid max-sm:h-[calc(100dvh-4rem-1px)] max-sm:grid-rows-[minmax(0,1fr)_auto_auto] sm:rounded-card sm:shadow-ring";
+export const CAMERA_VIEW = "relative overflow-hidden max-sm:min-h-0 sm:aspect-[4/3]";

@@ -44,9 +44,10 @@ export interface CheckingStepProps {
 }
 
 /**
- * The trust screen: Exhibit A beside the checks. While the model reads the photo an amber line scans it; an honest
- * time line shows the elapsed seconds against the usual 15 to 40 (never a percentage); the stage timeline uses the
- * claim's own event times. Once decided, the checks reveal in order and the page re-renders as the result.
+ * The trust screen: Exhibit A beside the checks, held in view while they run, with the model's quotes numbered under it.
+ * While the model reads the photo an amber line scans it; an honest time line shows the elapsed seconds against the
+ * usual 15 to 40 (never a percentage); each check group's header carries its time from the claim's own events. Once
+ * decided, the checks reveal in order and the page re-renders as the result.
  */
 export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sample, sending, preview }: CheckingStepProps) {
   const router = useRouter();
@@ -130,6 +131,10 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
   const elapsed = preview?.elapsed ?? Math.max(0, (now - (received ? Date.parse(received) : mounted)) / 1000);
   const blocked = view.decision === "blocked";
   const src = photoUrl ?? (view.photos > 0 ? `/api/claims/${claimId}/photos/1` : undefined);
+  // The model's quotes for the annotations under Exhibit A: only the answers already revealed.
+  const notes = rows.filter((r) => r.group === "model" && r.quote && r.state !== "running" && r.state !== "waiting");
+  // A sample (or a preview's stand-in from /demo, which only holds AI-made samples) carries its label on the photo.
+  const aiMade = Boolean(sample) || Boolean(src?.startsWith("/demo/"));
 
   const title = sending ? "Sending your photos" : done ? "Checks finished" : `Checking your ${view.photos > 1 ? "photos" : "photo"}`;
   const lead = sending
@@ -142,9 +147,9 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
 
   return (
     <section aria-labelledby="checking-title" aria-busy={!done} className="mx-auto grid w-full max-w-[60rem] gap-8 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:items-start lg:gap-14">
-      <div className="flex flex-col gap-3 lg:sticky lg:top-8">
+      <div className="flex flex-col gap-3 lg:sticky lg:top-24">
         {src ? (
-          <ExhibitPhoto src={src} alt={`Exhibit A: the ${sample ? "sample" : "first"} photo of claim ${view.id}`} sample={sample} frame="h-60 lg:h-[27.5rem]">
+          <ExhibitPhoto src={src} alt={`Exhibit A: the ${sample ? "sample" : "first"} photo of claim ${view.id}`} sample={aiMade} frame="h-60 lg:h-[21rem]">
             {reading && !reduced && (
               <span aria-hidden="true" className={clsx("absolute inset-0", styles.scan)}>
                 <span className={styles.scanLine} />
@@ -162,6 +167,23 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
         <p className="font-mono text-micro text-faint">
           Exhibit A · claim {view.id} · code {view.code}
         </p>
+        {/* Laptops: what the model quoted from the photo, numbered under it as each answer arrives. Phones keep the quotes
+            in the checklist, under the photo already. */}
+        {notes.length > 0 && (
+          <ol aria-label="What the model read in Exhibit A" className="hidden flex-col gap-2.5 border-t border-line pt-3 lg:flex">
+            {notes.map((r, i) => (
+              <li key={r.id} className={clsx("grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-1 text-ui", styles.rise)}>
+                <span aria-hidden="true" className="mt-0.5 flex size-5 items-center justify-center rounded-full border border-line-strong font-mono text-[10px] leading-none text-muted">
+                  {i + 1}
+                </span>
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-text">{r.label}</span>
+                  <q className="line-clamp-2 font-mono text-micro leading-relaxed text-muted">{r.quote}</q>
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
 
       <div className="flex flex-col gap-6">
@@ -178,7 +200,6 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
         </div>
 
         {!sending && !blocked && <TimeLine elapsed={elapsed} done={decided} />}
-        {!sending && <Stages timeline={view.timeline} decision={view.decision} />}
 
         {offline && (
           <p role="status" className="rounded-control border border-line bg-surface-2 px-3 py-2.5 text-ui text-muted">
@@ -187,7 +208,7 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
         )}
 
         <Card padding="md">
-          <CheckList rows={rows} label={`Checks for claim ${view.id}`} code={view.code} />
+          <CheckList rows={rows} label={`Checks for claim ${view.id}`} code={view.code} times={sending ? undefined : groupTimes(view.timeline, rows)} quoteClassName="lg:hidden" />
         </Card>
 
         {blocked && shown >= view.rows.length && <p className="text-ui text-muted">The photos never reached the photo check: a claim that fails these first checks stops here.</p>}
@@ -222,51 +243,18 @@ function TimeLine({ elapsed, done }: { elapsed: number; done: boolean }) {
   );
 }
 
-const STAGES: { id: string; label: string; at: string[] }[] = [
-  { id: "received", label: "Photos received", at: ["photos_received"] },
-  { id: "pre", label: "Three checks with no AI", at: ["prechecked", "blocked"] },
-  { id: "model", label: "The photo check (GPT-6.1 Sol)", at: ["checked"] },
-  { id: "rule", label: "The rule decides", at: ["decided", "blocked"] },
-  { id: "paypal", label: "Sent through PayPal", at: ["payout_sent"] },
-];
-
-/** The claim's own stages with their times relative to the photos arriving (Wise's transfer tracker). */
-function Stages({ timeline, decision }: { timeline: TimelineEvent[]; decision: ClaimView["decision"] }) {
+/**
+ * Each check group's time since the photos arrived, from the claim's own events, for the group headers ("+0.4s"); "now"
+ * for the group being run. The pipeline saves "decided" after the payout it allowed, so the refund's time is the payout's.
+ */
+function groupTimes(timeline: TimelineEvent[], rows: CheckRow[]): Partial<Record<CheckRow["group"], string>> {
   const t0 = timeline.find((e) => e.type === "photos_received")?.at;
-  // The earliest matching event. The pipeline saves "decided" after the payout it allowed, so the rule's stage also
-  // counts the payout: the rule had decided by the time PayPal was asked.
-  const time = (types: string[]) =>
-    timeline
-      .filter((e) => types.includes(e.type) || (types.includes("decided") && e.type === "payout_sent"))
-      .map((e) => e.at)
-      .sort()[0];
-  const decided = decision !== "pending";
-  const current = STAGES.findIndex((s) => !time(s.at));
-  return (
-    <ol aria-label="Where your claim is" className="relative flex flex-col gap-2.5 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-line">
-      {STAGES.map((s, i) => {
-        const at = time(s.at);
-        const stop = decision === "blocked" && s.id === "pre";
-        const skipped = !at && decided;
-        const live = !at && !decided && i === current;
-        const rel = at && t0 ? `+${Math.max(0, (Date.parse(at) - Date.parse(t0)) / 1000).toFixed(1)}s` : null;
-        return (
-          <li key={s.id} className="relative grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center text-ui">
-            <span
-              aria-hidden="true"
-              className={clsx(
-                "relative size-2 rounded-full",
-                at ? (stop ? "bg-stop" : "bg-pay") : live ? clsx("bg-text text-text", styles.pulse) : "border border-line-strong bg-bg",
-              )}
-            />
-            <span className={clsx(at || live ? "text-text" : "text-faint")}>
-              {s.label}
-              <span className="sr-only">{at ? (stop ? ": stopped here" : ": done") : live ? ": now" : skipped ? ": not run" : ": next"}</span>
-            </span>
-            <span className="font-mono text-micro text-faint tabular-nums">{rel ?? (skipped ? "not run" : live ? "now" : "")}</span>
-          </li>
-        );
-      })}
-    </ol>
-  );
+  const at = (types: string[]) => timeline.filter((e) => types.includes(e.type)).map((e) => e.at).sort()[0];
+  const rel = (a: string | undefined) => (a && t0 ? `+${Math.max(0, (Date.parse(a) - Date.parse(t0)) / 1000).toFixed(1)}s` : undefined);
+  const now = (g: CheckRow["group"]) => (rows.some((r) => r.group === g && r.state === "running") ? "now" : undefined);
+  return {
+    pre: rel(at(["prechecked", "blocked"])) ?? now("pre"),
+    model: rel(at(["checked"])) ?? now("model"),
+    pay: rel(at(["payout_sent"])) ?? now("pay"),
+  };
 }

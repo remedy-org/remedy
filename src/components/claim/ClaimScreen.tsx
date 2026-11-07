@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import QRCode from "qrcode";
 import { roundClaims } from "@/app/api/claims/_lib/pipeline";
-import { demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
+import { demoSample, getAppStore, isDemoAllowed, isSandboxBuild } from "@/lib/demo";
 import { env } from "@/lib/env";
 import { getPayoutStatus } from "@/lib/paypal/payouts";
 import { isTerminal, savePayoutStatus } from "@/lib/paypal/status";
@@ -70,13 +70,14 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   const company = companyName(recall);
   const steps = demo ? DEMO_STEPS : REAL_STEPS;
   const now = requestTime();
+  const sandbox = isSandboxBuild();
 
   if (claim.decision !== "pending") {
     // A demo claim's photos are the sample's own public files: shown from there, they cost no Blob reads.
     const photoUrls = claim.photos.map((_, i) => (sample ? (sample.photos[i] ?? sample.photos[0]) : `/api/claims/${claim.id}/photos/${i + 1}`));
     const [payout, round] = await Promise.all([livePayout(store, claim, now), sample ? demoRound(store, recall, session.payerId) : null]);
     return (
-      <FlowShell demo={demo} company={company}>
+      <FlowShell demo={demo} sandbox={sandbox} company={company}>
         <Result
           claim={claim}
           recall={recall}
@@ -88,6 +89,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           round={round}
           now={now}
           meter={<StepMeter current={steps.length + 1} steps={steps} />}
+          sandbox={sandbox}
         />
       </FlowShell>
     );
@@ -96,7 +98,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   const session10 = claim.captureSession;
   if (!claim.photos.length && (!session10 || Date.parse(session10.expiresAt) <= now)) {
     return (
-      <FlowShell demo={demo} company={company}>
+      <FlowShell demo={demo} sandbox={sandbox} company={company}>
         <WithJudges demo={demo} step="code">
           <div className="flex flex-col gap-6">
             <StepMeter current={demo ? 3 : 2} steps={steps} className="mx-auto w-full max-w-claim" />
@@ -110,7 +112,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   const phoneUrl = new URL(here, env().APP_URL).toString();
   const qrSvg = demo ? "" : await QRCode.toString(phoneUrl, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: QR_COLORS });
   return (
-    <FlowShell demo={demo} company={company}>
+    <FlowShell demo={demo} sandbox={sandbox} company={company}>
       <ClaimFlow
         claimId={claim.id}
         code={claim.code}

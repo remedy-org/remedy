@@ -21,7 +21,7 @@ function Hazard({ text }: { text: string }) {
  * What was recalled and why: on a laptop the left column (notice line, product, hazard banner, the CPSC photo on a paper
  * plate, facts); on a phone one 64px row with the refund, then the hazard banner, so the action stays above the fold.
  */
-export function RecallBrief({ recall }: { recall: Recall }) {
+export function RecallBrief({ recall, sandbox }: { recall: Recall; sandbox?: boolean }) {
   const hazard = hazardLine(recall);
   const image = recall.images[0];
   const company = companyName(recall);
@@ -44,7 +44,10 @@ export function RecallBrief({ recall }: { recall: Recall }) {
             {recall.product}
           </p>
         </div>
-        <Money value={Number(recall.refund.value)} currency={recall.refund.currency} size="inline" className="shrink-0 text-body font-semibold text-text" />
+        <span className="flex shrink-0 flex-col items-end gap-0.5">
+          <Money value={Number(recall.refund.value)} currency={recall.refund.currency} size="inline" className="text-body font-semibold text-text" />
+          {sandbox && <span className="micro text-faint">Sandbox</span>}
+        </span>
       </div>
 
       {/* Tablets and laptops. */}

@@ -34,7 +34,7 @@ export function CodeTag({ code, label = "Your one-time code", foot, string, expi
         </p>
         {foot && <p className="mt-6 border-t border-dashed border-paper-line pt-3 text-ui text-ink-muted">{foot}</p>}
         {expired && (
-          <span className="absolute top-12 right-5">
+          <span className="absolute top-9 right-2">
             <Stamp tone="neutral">Expired</Stamp>
           </span>
         )}

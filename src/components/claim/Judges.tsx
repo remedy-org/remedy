@@ -32,11 +32,12 @@ const NOTES: Record<JudgeStep, { title: string; note: string }> = {
   },
 };
 
-const REAL = ["The PayPal sandbox login", "The five checks and the rule", "GPT-6.1 Sol reading the photo", "PayPal Payouts, in sandbox money"];
+const REAL = ["The PayPal sandbox login", "The 3 checks with no AI, the photo check and the rule", "GPT-6.1 Sol reading the photo", "PayPal Payouts, in sandbox money"];
 const STAGED = ["The photos: AI-made samples, not from a camera"];
 
-function Notes({ step, children }: { step: JudgeStep; children?: ReactNode }) {
-  const { title, note } = NOTES[step];
+function Notes({ step, note: own, children }: { step: JudgeStep; note?: string; children?: ReactNode }) {
+  const { title, note: base } = NOTES[step];
+  const note = own ?? base;
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
@@ -72,28 +73,35 @@ export interface WithJudgesProps {
   step: JudgeStep;
   /** Step-specific extras for the rail: the scoreboard, the expected outcome, the next sample. */
   extra?: ReactNode;
+  /** Replaces the step's note, e.g. one per outcome on a result. */
+  note?: string;
   children: ReactNode;
   className?: string;
 }
 
 /**
- * The judges' notes beside a demo step: a 280px rail at 1200px and up, a "For judges" pill that opens a sheet below.
+ * The judges' notes beside a demo step: a 280px rail at 1200px and up; below, a "For judges" pill in the header that
+ * opens a sheet.
  * The step itself sits centred in the space left of the rail.
  */
-export function WithJudges({ demo, step, extra, children, className }: WithJudgesProps) {
+export function WithJudges({ demo, step, extra, note, children, className }: WithJudgesProps) {
   if (!demo) return <div className={className}>{children}</div>;
   return (
     <div className={clsx("grid gap-6 min-[1200px]:grid-cols-[minmax(0,1fr)_280px] min-[1200px]:gap-12", className)}>
-      {/* Floats bottom right; it steps up over the consent screen's sticky action bar when that shows. */}
-      <div className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-20 transition-[bottom] duration-160 ease-snap min-[1200px]:hidden [body:has([data-cta-shown])_&]:bottom-24">
+      {/* Below 1200px: a pill docked in the header (never over a step's button) that opens the notes as a sheet. */}
+      <div className="contents min-[1200px]:hidden">
         <JudgesSheet>
-          <Notes step={step}>{extra}</Notes>
+          <Notes step={step} note={note}>
+            {extra}
+          </Notes>
         </JudgesSheet>
       </div>
       <div className="min-w-0">{children}</div>
       <aside aria-label="Notes for judges" className="hidden min-[1200px]:block">
         <div className="sticky top-8 border-l border-line pl-6">
-          <Notes step={step}>{extra}</Notes>
+          <Notes step={step} note={note}>
+            {extra}
+          </Notes>
         </div>
       </aside>
     </div>
