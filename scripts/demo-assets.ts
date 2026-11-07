@@ -1,7 +1,10 @@
 // Rebuilds the committed demo assets from the local eval (eval/ is git-ignored, so this only runs on a machine that has it):
 //   public/demo/<case>-<n>.jpg     our own AI-made sample photos, max 1200 px. Never the w- cases: those are third-party photos.
 //   src/lib/demo/verdicts.json     real model answers from eval/out/runs, copied verbatim, for the seeded claims.
+//   src/lib/review/replay.json     the app model's run-1 answer for each case, verbatim, keyed by photo SHA-256, for
+//                                  the local review replay (src/lib/review/replay.ts).
 // npm run demo:assets
+import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
@@ -74,8 +77,34 @@ async function verdicts() {
   console.log(`${file} (${out.length} verdicts)`);
 }
 
+const sha256 = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+
+// Each photo is keyed by its bytes as committed in public/demo (what the demo samples send) and as in eval/photos.
+async function replay() {
+  const file = "spike2-gpt-6.1-sol-r1.json";
+  const { rows } = JSON.parse(await readFile(join(RUNS, file), "utf8")) as { rows: Row[] };
+  const out: unknown[] = [];
+  for (const c of CASES) {
+    const row = rows.find((r) => r.case === c);
+    if (!row?.verdict) throw new Error(`${file} has no verdict for ${c}`);
+    const kase = JSON.parse(await readFile(join(PHOTOS, c, "case.json"), "utf8")) as { code: string };
+    const files = (await readdir(join(PHOTOS, c))).filter((f) => f.endsWith(".jpg")).sort();
+    const photos = await Promise.all(
+      files.map(async (f, i) => {
+        const name = `${short(c)}-${i + 1}.jpg`;
+        return { name, sha256: [sha256(await readFile(join(ROOT, "public/demo", name))), sha256(await readFile(join(PHOTOS, c, f)))] };
+      }),
+    );
+    out.push({ case: c, source: `eval/out/runs/${file}`, model: "gpt-6.1-sol", code: kase.code, photos, verdict: row.verdict });
+  }
+  const target = join(ROOT, "src/lib/review/replay.json");
+  await writeFile(target, JSON.stringify(out, null, 2) + "\n");
+  console.log(`${target} (${out.length} answers)`);
+}
+
 photos()
   .then(verdicts)
+  .then(replay)
   .catch((e) => {
     console.error(e instanceof Error ? e.message : e);
     process.exit(1);

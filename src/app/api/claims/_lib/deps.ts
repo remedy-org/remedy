@@ -7,14 +7,17 @@ import { env } from "@/lib/env";
 import { dHash } from "@/lib/fingerprint";
 import { limits } from "@/lib/limits";
 import { sendPayout } from "@/lib/paypal/payouts";
+import { replayVision, reviewReplay } from "@/lib/review/replay";
 import { runVisionCheck } from "@/lib/vision/check";
 import type { PipelineDeps } from "./pipeline";
 
-// The real outside world for the pipeline: the app store, the vision model, PayPal Payouts.
+// The real outside world for the pipeline: the app store, the vision model, PayPal Payouts. A local review server can
+// replay the model instead (src/lib/review/replay.ts); the eval calls runVisionCheck itself, so it never replays.
 export async function liveDeps(): Promise<PipelineDeps> {
   return {
     store: await getAppStore(),
     vision: async ({ images, spec, code }) => {
+      if (reviewReplay()) return replayVision({ images, spec, code });
       const r = await runVisionCheck({ images, spec, code });
       return { verdict: r.verdict, seconds: r.seconds, model: r.model };
     },

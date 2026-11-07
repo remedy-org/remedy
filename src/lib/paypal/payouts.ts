@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isReplayBatch, replayPayout, replayPayoutStatus, reviewReplay } from "../review/replay";
 import type { Money } from "../types";
 import { paypal } from "./client";
 
@@ -13,8 +14,10 @@ export interface PayoutStatus {
 const Created = z.object({ batch_header: z.object({ payout_batch_id: z.string(), batch_status: z.string() }) });
 
 // The claim's payoutKey is the request id and batch id, so a retried send can never pay twice. It is unique across
-// stores, unlike the claim id, which only goes in sender_item_id so webhooks can find the claim.
+// stores, unlike the claim id, which only goes in sender_item_id so webhooks can find the claim. A local review server
+// simulates the payout instead (src/lib/review/replay.ts).
 export async function sendPayout({ claimId, payoutKey, payerId, amount, note }: { claimId: string; payoutKey: string; payerId: string; amount: Money; note: string }): Promise<PayoutStatus> {
+  if (reviewReplay()) return replayPayout();
   const res = await paypal("POST", "/v1/payments/payouts", Created, {
     requestId: payoutKey,
     json: {
@@ -38,6 +41,7 @@ const Batch = z.object({
 
 // One item per batch, so the batch's first item is the claim's payout.
 export async function getPayoutStatus(batchId: string): Promise<PayoutStatus> {
+  if (reviewReplay() && isReplayBatch(batchId)) return replayPayoutStatus(batchId);
   const res = await paypal("GET", `/v1/payments/payouts/${encodeURIComponent(batchId)}`, Batch);
   const item = res.items?.[0];
   return { batchId: res.batch_header.payout_batch_id, batchStatus: res.batch_header.batch_status, itemId: item?.payout_item_id, itemStatus: item?.transaction_status };
