@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { beginLogin, callbackUrl, checkState, errorPath, STATE_MAX_AGE } from "./paypal-login";
+import { PayPalError } from "../paypal/client";
+import { beginLogin, callbackUrl, checkState, errorPath, loginFailure, STATE_MAX_AGE } from "./paypal-login";
 
 beforeEach(() => {
   vi.stubEnv("PAYPAL_CLIENT_ID", "id");
@@ -44,5 +45,17 @@ describe("Log in with PayPal state", () => {
     expect(errorPath(begun.state, "denied")).toBe("/signin?next=%2Fconsole%2Freport&auth_error=denied");
     expect(errorPath({ ...begun.state, as: "owner", next: "/r/kikea-x-vesolje" }, "paypal")).toBe("/r/kikea-x-vesolje?auth_error=paypal");
     expect(errorPath(null, "state")).toBe("/signin?auth_error=state");
+  });
+
+  it("tells a PayPal refusal from an outage", () => {
+    const paypalError = (status: number) => new PayPalError(`GET /v1/identity/openidconnect/userinfo?schema=openid -> ${status} :`, status, undefined, null, {});
+    expect(loginFailure(paypalError(401))).toBe("refused");
+    expect(loginFailure(paypalError(403))).toBe("refused");
+    expect(loginFailure(paypalError(400))).toBe("paypal");
+    expect(loginFailure(paypalError(500))).toBe("paypal");
+    expect(loginFailure(paypalError(503))).toBe("paypal");
+    expect(loginFailure(new TypeError("fetch failed"))).toBe("paypal");
+    expect(loginFailure(new DOMException("The operation timed out.", "TimeoutError"))).toBe("paypal");
+    expect(errorPath(null, "refused")).toBe("/signin?auth_error=refused");
   });
 });

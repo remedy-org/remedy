@@ -7,7 +7,7 @@ import { companyName, maskPayer } from "./model";
 import { RecallBrief } from "./RecallBrief";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
 
-const AUTH_ERRORS = new Set<AuthError>(["denied", "state", "paypal"]);
+const AUTH_ERRORS = new Set<AuthError>(["denied", "state", "paypal", "refused"]);
 
 /** Step 1: what was recalled and why, and the consent to log in with PayPal. Real and demo share it. */
 export async function RecallScreen({ recall, demo, query }: { recall: Recall; demo: boolean; query: Record<string, string | string[] | undefined> }) {

@@ -13,6 +13,10 @@ const ERRORS: Record<string, { title: string; description: string }> = {
   denied: { title: "PayPal login was cancelled", description: "Nothing was shared with Remedy. Log in again when you're ready." },
   state: { title: "That login link expired", description: "Logins time out after 10 minutes, or the page was opened in another browser. Start again here." },
   paypal: { title: "PayPal didn't confirm the login", description: "PayPal's login service didn't answer us. Try again in a minute." },
+  refused: {
+    title: "PayPal wouldn't share this account",
+    description: "Log in with a different PayPal account. The business account that owns the Remedy app can't sign in to it.",
+  },
 };
 
 const FACTS = [

@@ -49,6 +49,22 @@ describe("identify", () => {
     expect(calls[1].url).toMatch(/\/v1\/identity\/openidconnect\/userinfo\?schema=openid$/);
   });
 
+  it("reports both userinfo endpoints refusing the token as a refusal, not an outage", async () => {
+    mockPayPal({ body: { access_token: "USER-TOKEN" } }, { status: 401, body: {} }, { status: 401, body: {} });
+    const { identify } = await load();
+    const { loginFailure } = await import("../auth/paypal-login");
+    const failure = await identify("CODE").catch((e: unknown) => e);
+    expect(failure).toMatchObject({ name: "PayPalError", status: 401 });
+    expect(loginFailure(failure)).toBe("refused");
+  });
+
+  it("reports a PayPal 5xx as an outage", async () => {
+    mockPayPal({ status: 503, body: { name: "SERVICE_UNAVAILABLE" } });
+    const { identify } = await load();
+    const { loginFailure } = await import("../auth/paypal-login");
+    expect(loginFailure(await identify("CODE").catch((e: unknown) => e))).toBe("paypal");
+  });
+
   it("refuses an identity without a payer ID", async () => {
     mockPayPal({ body: { user_id: "u" } });
     const { userInfo } = await load();

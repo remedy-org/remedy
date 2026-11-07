@@ -4,12 +4,13 @@ import type { Recall } from "@/lib/types";
 import { CameraIcon, EyeIcon } from "./icons";
 import { companyName, money, SANDBOX_ACCOUNTS_URL } from "./model";
 
-export type AuthError = "denied" | "state" | "paypal";
+export type AuthError = "denied" | "state" | "paypal" | "refused";
 
 const AUTH_ERRORS: Record<AuthError, { title: string; description: string }> = {
   denied: { title: "The PayPal login was cancelled", description: "Remedy needs it to know which PayPal account to refund. Nothing was shared." },
   state: { title: "That login took too long", description: "The PayPal page was open for more than 10 minutes, or in another tab. Log in again." },
   paypal: { title: "PayPal didn't answer", description: "Nothing was shared and no claim was started. Try again in a minute." },
+  refused: { title: "PayPal wouldn't share this account", description: "Nothing was shared and no claim was started. Log in with a different PayPal account, such as a personal one." },
 };
 
 export interface ConsentCardProps {

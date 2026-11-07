@@ -28,23 +28,66 @@ export function ConsoleSkeleton() {
   );
 }
 
+/**
+ * The claims grid's footprint while it loads: its columns, a 40px header plus its 1px rule, and 44px rows (56px below
+ * 720px, where the grid stacks the filing time under the claim id). A container query on the same 720px the grid measures keeps the
+ * two layouts in step, so the grid replaces it without moving anything.
+ */
 export function SkeletonGrid({ rows }: { rows: number }) {
+  const wide = "hidden shrink-0 px-4 @min-[720px]:block";
   return (
-    <div className="overflow-hidden rounded-card border border-line bg-surface">
-      <div className="flex h-10 items-center gap-8 border-b border-line bg-surface-2 px-4">
-        <Skeleton className="h-3 w-12" />
-        <Skeleton className="h-3 w-12" />
-        <Skeleton className="hidden h-3 w-24 sm:block" />
-      </div>
-      {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex h-11 items-center gap-8 border-b border-line px-4 last:border-b-0">
-          <Skeleton className="h-3.5 w-20" />
-          <Skeleton className="hidden h-3.5 w-24 sm:block" />
-          <Skeleton className="h-6 w-16 rounded-full" />
-          <Skeleton className="hidden h-3.5 flex-1 md:block" />
-          <Skeleton className="ml-auto h-3.5 w-14" />
+    <div aria-hidden="true" className="@container">
+      <div className="overflow-hidden rounded-card border border-line bg-surface">
+        <div className="flex h-[41px] items-center border-b border-line bg-surface-2">
+          <span className="min-w-[116px] flex-1 px-4 @min-[720px]:w-[170px] @min-[720px]:flex-none">
+            <Skeleton className="h-3 w-10" />
+          </span>
+          <span className={`${wide} w-[140px]`}>
+            <Skeleton className="h-3 w-9" />
+          </span>
+          <span className={`${wide} w-[190px]`}>
+            <Skeleton className="h-3 w-24" />
+          </span>
+          <span className="w-[116px] shrink-0 px-4 @min-[720px]:w-[130px]">
+            <Skeleton className="h-3 w-14" />
+          </span>
+          <span className="hidden min-w-[220px] flex-1 px-4 @min-[720px]:block">
+            <Skeleton className="h-3 w-12" />
+          </span>
+          <span className={`${wide} w-[120px]`}>
+            <Skeleton className="h-3 w-12" />
+          </span>
+          <span className="flex w-[84px] shrink-0 justify-end px-4 @min-[720px]:w-[110px]">
+            <Skeleton className="h-3 w-12" />
+          </span>
         </div>
-      ))}
+        {Array.from({ length: rows }, (_, i) => (
+          <div key={i} className="flex h-14 items-center border-b border-line last:border-b-0 @min-[720px]:h-11">
+            <span className="flex min-w-[116px] flex-1 flex-col gap-1.5 px-4 @min-[720px]:w-[170px] @min-[720px]:flex-none">
+              <Skeleton className="h-3.5 w-20" />
+              <Skeleton className="h-3 w-24 @min-[720px]:hidden" />
+            </span>
+            <span className={`${wide} w-[140px]`}>
+              <Skeleton className="h-3.5 w-24" />
+            </span>
+            <span className={`${wide} w-[190px]`}>
+              <Skeleton className="h-3.5 w-32" />
+            </span>
+            <span className="w-[116px] shrink-0 px-4 @min-[720px]:w-[130px]">
+              <Skeleton className="h-6 w-16 rounded-full" />
+            </span>
+            <span className="hidden min-w-[220px] flex-1 px-4 @min-[720px]:block">
+              <Skeleton className={i % 3 === 1 ? "h-3.5 w-2/5" : "h-3.5 w-3/4"} />
+            </span>
+            <span className={`${wide} w-[120px]`}>
+              <Skeleton className="h-3.5 w-14" />
+            </span>
+            <span className="flex w-[84px] shrink-0 justify-end px-4 @min-[720px]:w-[110px]">
+              <Skeleton className="h-3.5 w-12" />
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
