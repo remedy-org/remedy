@@ -5,6 +5,10 @@
 // Options: --base (default http://127.0.0.1:3000), --cookie name=value (repeatable), --as owner|company (mints a dev
 // session; reads .env for SESSION_SECRET), --widths 1440,375, --themes dark,light, --out .shots, --wait 400 (ms after
 // load), --motion (keep animations; by default reduced motion shows every final state).
+// --scroll '<selector>:<fractions>' (repeatable) takes viewport frames instead of a full page: for each fraction p it
+// scrolls so the element's scroll progress is p, as Motion's useScroll({ target, offset: ["start start", "end end"] })
+// counts it (0 = its top at the viewport top, 1 = its bottom at the viewport bottom). Pair it with --motion:
+//   npm run shots -- / --widths 1440 --themes dark --motion --scroll '[data-runway]:0,0.25,0.5,0.75,0.95'
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -21,6 +25,7 @@ const { positionals, values } = parseArgs({
     out: { type: "string", default: ".shots" },
     wait: { type: "string", default: "400" },
     motion: { type: "boolean", default: false },
+    scroll: { type: "string", multiple: true, default: [] },
   },
 });
 
@@ -49,6 +54,16 @@ async function cookies(): Promise<Cookie[]> {
   }
   return pairs.map(([name, value]) => ({ name, value, domain: base.hostname, path: "/", expires: -1, httpOnly: true, secure: false, sameSite: "Lax" }));
 }
+
+// "[data-runway]:0,0.25" -> selector and fractions. The last colon splits, so selectors may contain colons.
+const scrolls = values.scroll.map((spec) => {
+  const i = spec.lastIndexOf(":");
+  const fractions = i < 1 ? [] : spec.slice(i + 1).split(",").map(Number);
+  if (!fractions.length || fractions.some((f) => !Number.isFinite(f) || f < 0 || f > 1)) {
+    throw new Error(`--scroll wants selector:fraction,fraction (each 0 to 1), got ${spec}`);
+  }
+  return { selector: spec.slice(0, i), fractions };
+});
 
 const slug = (path: string) => path.replace(/^\/+|\/+$/g, "").replace(/[^a-zA-Z0-9]+/g, "-") || "home";
 
@@ -83,9 +98,37 @@ async function main() {
           const response = await page.goto(new URL(path, base).toString(), { waitUntil: "networkidle" });
           await page.evaluate(() => document.fonts.ready);
           await page.waitForTimeout(Number(values.wait));
-          const file = join(out, `${slug(path)}-${width}-${theme}.png`);
-          await page.screenshot({ path: file, fullPage: true });
-          console.log(`${file}${response && !response.ok() ? `  (HTTP ${response.status()})` : ""}`);
+          const status = response && !response.ok() ? `  (HTTP ${response.status()})` : "";
+          if (!scrolls.length) {
+            const file = join(out, `${slug(path)}-${width}-${theme}.png`);
+            await page.screenshot({ path: file, fullPage: true });
+            console.log(`${file}${status}`);
+            continue;
+          }
+          for (const { selector, fractions } of scrolls) {
+            for (const f of fractions) {
+              const top = await page.evaluate(
+                ([sel, p]) => {
+                  const el = document.querySelector(sel);
+                  if (!el) return null;
+                  const start = el.getBoundingClientRect().top + window.scrollY;
+                  const y = start + p * Math.max(0, (el as HTMLElement).offsetHeight - window.innerHeight);
+                  window.scrollTo({ top: y, behavior: "instant" });
+                  return y;
+                },
+                [selector, f] as const,
+              );
+              if (top === null) {
+                console.warn(`${path}: no element matches ${selector}; skipped`);
+                break;
+              }
+              // Scroll-linked values update on the next frames; let them settle before the shot.
+              await page.waitForTimeout(Number(values.wait));
+              const file = join(out, `${slug(path)}-${width}-${theme}-${slug(selector).replace(/^-+|-+$/g, "")}-${f}.png`);
+              await page.screenshot({ path: file });
+              console.log(`${file}${status}`);
+            }
+          }
         }
         await context.close();
       }
