@@ -23,7 +23,11 @@ function apply(theme: Theme) {
   }
 }
 
-/** Switches the app between the dark brand theme and the light theme. Not for the homepage (dark only). */
+/**
+ * A 36px icon button (44px hit area) that switches the app between the dark brand theme and the light theme. The
+ * glyph is a half-lit disc that turns over with the theme; its angle follows <html data-theme> in CSS, so it is right
+ * from the first paint. Not for the homepage (dark only).
+ */
 export function ThemeToggle({ className }: { className?: string }) {
   const theme = useSyncExternalStore(subscribe, read, () => "dark" as Theme);
   const next: Theme = theme === "dark" ? "light" : "dark";
@@ -31,10 +35,23 @@ export function ThemeToggle({ className }: { className?: string }) {
     <button
       type="button"
       onClick={() => apply(next)}
-      className={clsx("inline-flex min-h-11 items-center rounded-control px-2 text-ui text-muted hover:text-text", className)}
       aria-label={`Switch to ${next} theme`}
+      title={`Switch to ${next} theme`}
+      className={clsx(
+        "relative inline-flex size-9 shrink-0 items-center justify-center rounded-control text-muted",
+        "transition-[background-color,color,transform] duration-160 ease-snap hover:bg-surface-2 hover:text-text active:translate-y-px",
+        "after:absolute after:-inset-1 after:content-['']",
+        className,
+      )}
     >
-      {theme === "dark" ? "Light" : "Dark"}
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+        <circle cx="9" cy="9" r="6.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <path
+          d="M9 2.75a6.25 6.25 0 0 1 0 12.5z"
+          fill="currentColor"
+          className="origin-center transition-[rotate] duration-[360ms] ease-out-expo in-data-[theme=light]:rotate-180"
+        />
+      </svg>
     </button>
   );
 }
