@@ -34,8 +34,8 @@ export interface CheckingStepProps {
   view: ClaimView;
   /** The server clock at render (ms). */
   startNow: number;
-  /** Photo 1: the first photo sent (a local copy, or the sample's), else the owner's photo route. */
-  photoUrl?: string;
+  /** The photos sent, in order (local copies, or the sample's); else the owner's photo route for each. */
+  photoUrls?: string[];
   /** A judges' sample: the photo carries its AI-made label. */
   sample?: boolean;
   /** The photos are still on their way up: nothing has resolved yet. */
@@ -50,7 +50,7 @@ export interface CheckingStepProps {
  * usual 15 to 40 (never a percentage); each check group's header carries its time from the claim's own events. Once
  * decided, the checks reveal in order and the page re-renders as the result.
  */
-export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sample, sending, preview }: CheckingStepProps) {
+export function CheckingStep({ claimId, view: initial, startNow, photoUrls, sample, sending, preview }: CheckingStepProps) {
   const router = useRouter();
   const [view, setView] = useState(initial);
   const [shown, setShown] = useState(preview ? firstWaiting(initial.rows) : 0);
@@ -133,13 +133,15 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
   const received = view.timeline.find((e) => e.type === "photos_received")?.at;
   const elapsed = preview?.elapsed ?? (received ? Math.max(0, (now - Date.parse(received)) / 1000) : null);
   const blocked = view.decision === "blocked";
-  const src = photoUrl ?? (view.photos > 0 ? `/api/claims/${claimId}/photos/1` : undefined);
+  const srcs = photoUrls?.length ? photoUrls : Array.from({ length: view.photos }, (_, i) => `/api/claims/${claimId}/photos/${i + 1}`);
+  const src = srcs[0];
+  const count = Math.max(view.photos, srcs.length);
   // The model's quotes for the annotations under photo 1: only the answers already revealed.
   const notes = rows.filter((r) => r.group === "model" && r.quote && r.state !== "running" && r.state !== "waiting");
   // A sample (or a preview's stand-in from /demo, which only holds AI-made samples) carries its label on the photo.
   const aiMade = Boolean(sample) || Boolean(src?.startsWith("/demo/"));
 
-  const title = sending ? "Sending your photos" : done ? "Checks finished" : `Checking your ${view.photos > 1 ? "photos" : "photo"}`;
+  const title = sending ? "Sending your photos" : done ? "Checks finished" : `Checking your ${count > 1 ? "photos" : "photo"}`;
   const lead = sending
     ? "Uploading over a secure connection."
     : done
@@ -152,7 +154,8 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
     <section aria-labelledby="checking-title" aria-busy={!done} className="mx-auto grid w-full max-w-[60rem] gap-8 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:items-start lg:gap-14">
       <div className="flex flex-col gap-3 lg:sticky lg:top-24">
         {src ? (
-          <ExhibitPhoto src={src} alt={`Photo 1: the ${sample ? "sample" : "first"} photo of claim ${view.id}`} sample={aiMade} frame="h-60 lg:h-[21rem]">
+          // Whole: the photo being checked shows all of it, so a tag near a tall photo's edge stays in view.
+          <ExhibitPhoto src={src} alt={`Photo 1: the ${sample ? "sample" : "first"} photo of claim ${view.id}`} sample={aiMade} fit="contain" frame="h-60 lg:h-[21rem]">
             {reading && !reduced && (
               <span aria-hidden="true" className={clsx("absolute inset-0", styles.scan)}>
                 <span className={styles.scanLine} />
@@ -173,8 +176,22 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
         ) : (
           <div className="flex h-60 items-center justify-center rounded-control border border-dashed border-line-strong text-ui text-faint lg:aspect-[3/4] lg:h-auto">Your photos are on their way</div>
         )}
+        {/* Every photo sent, numbered as the camera numbered them, so each one is seen to have arrived. */}
+        {srcs.length > 1 && (
+          <ul aria-label={`${srcs.length} photos received`} className="flex gap-2.5">
+            {srcs.map((s, i) => (
+              <li key={`${s}-${i}`} className="relative size-14 shrink-0 rounded-control bg-paper p-[2px] shadow-paper">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={s} alt={`Photo ${i + 1}`} className="size-full rounded-[3px] bg-surface-2 object-contain" />
+                <span aria-hidden="true" className="absolute bottom-[3px] left-[3px] flex size-4 items-center justify-center rounded-[3px] bg-paper font-mono text-[10px] leading-none font-medium text-ink">
+                  {i + 1}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
         <p className="font-mono text-micro text-faint">
-          Photo 1 · claim {view.id} · code {view.code}
+          {count > 1 ? `${count} photos` : "Photo 1"} · claim {view.id} · code {view.code}
         </p>
         {/* Laptops: what the model quoted from the photo, numbered under it as each answer arrives. Phones keep the quotes
             in the checklist, under the photo already. */}

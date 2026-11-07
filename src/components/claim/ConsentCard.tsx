@@ -105,6 +105,8 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
                 ? `Remedy sends it through PayPal for ${company} once your photo shows it's destroyed.`
                 : `Remedy sends it through PayPal for ${company} once your photo is checked and ${company} approves it.`}
           </p>
+          {/* The SANDBOX labels on this screen, said once in words. */}
+          {sandbox && !demo && <p className="text-ui text-muted">Sandbox means PayPal&apos;s test money: no real payment is made.</p>}
         </div>
         <Parties company={company} />
       </div>

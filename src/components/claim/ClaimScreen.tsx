@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { duplicateOf, roundClaims } from "@/app/api/claims/_lib/pipeline";
 import { demoSample, getAppStore, isDemoAllowed, isSandboxBuild } from "@/lib/demo";
 import { env } from "@/lib/env";
+import { activityUrl } from "@/lib/paypal/identity";
 import { getPayoutStatus } from "@/lib/paypal/payouts";
 import { isTerminal, savePayoutStatus } from "@/lib/paypal/status";
 import { getDemoRound, getSession, loginPath } from "@/lib/session";
@@ -125,6 +126,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           now={now}
           meter={<StepMeter {...resultMeter(claim.decision, steps)} steps={steps} width="max-w-claim" />}
           sandbox={sandbox}
+          activityUrl={sandbox && claim.decision === "paid" ? activityUrl() : undefined}
           account={session.email ? maskEmail(session.email) : null}
         />
       </FlowShell>

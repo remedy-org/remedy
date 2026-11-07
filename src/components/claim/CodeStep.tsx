@@ -125,10 +125,11 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
             <StepTitle id="code-title">Write this code on a paper tag</StepTitle>
             <TimerPill left={left} className="mt-1" />
           </div>
-          {/* Phones: the instruction above the button says it, and the tag's foot says how big, so the button stays on the first screen. */}
+          {/* Phones: the tag's foot says how big, so only the why stays here, short, and the button stays on the first screen. */}
           <p className="max-w-[60ch] text-body text-muted max-sm:hidden">
-            Write it big: letters at least 3 cm tall, in marker. It ties your photos to this claim, so a photo taken earlier, or for someone else, can&apos;t be used.
+            Write it big: letters about 1&nbsp;inch (3&nbsp;cm) tall, in marker. It ties your photos to this claim, so a photo taken earlier, or for someone else, can&apos;t be used.
           </p>
+          <p className="text-ui text-muted sm:hidden">It ties your photos to this claim, so an older photo can&apos;t be used.</p>
         </div>
 
         <div className="pt-6 pb-2 lg:[grid-area:tag]">
@@ -137,7 +138,7 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
             written={written}
             label={written ? "Write this on your tag" : undefined}
             string
-            foot={`Write ${written ? "the code" : "it"} big, 3 cm tall, in marker.${low || ended ? "" : " Valid for 10 minutes."}`}
+            foot={`Write ${written ? "the code" : "it"} big, about 1\u00a0inch (3\u00a0cm) tall, in marker.${low || ended ? "" : " Valid for 10 minutes."}`}
           />
         </div>
 

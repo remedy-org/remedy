@@ -36,7 +36,8 @@ export function Paper({ variant = "sheet", hole, perforated, tilt, padding = "md
     <Tag className={clsx("relative", lifted && "paper-lifted", className)} style={outerStyle} {...rest}>
       <div
         className={clsx(
-          "relative h-full rounded-control text-ink",
+          // On paper the focus ring is ink in both themes: amber on cream is 1.5:1.
+          "relative h-full rounded-control text-ink [--focus:var(--ink)]",
           variant === "notice" ? "bg-band-sheet shadow-[var(--paper-shadow-flat)]" : "bg-paper",
           !lifted && variant !== "notice" && "shadow-paper",
           cut && "paper-cut",

@@ -6,6 +6,7 @@ import { fiveSummary } from "@/lib/fiveChecks";
 import type { DemoSample } from "@/lib/demo";
 import type { Claim, Recall } from "@/lib/types";
 import { CheckList } from "./CheckList";
+import { CopyPageLink } from "./CopyPageLink";
 import { EvidenceText, ModelQuote } from "./EvidenceText";
 import { ExhibitPhoto, SampleChip, StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
@@ -23,6 +24,7 @@ import {
   maskPayer,
   money,
   noModelAnswer,
+  payoutHold,
   readableReasons,
   refusalHeadline,
   secondsBetween,
@@ -73,6 +75,8 @@ export interface ResultProps {
   meter?: ReactNode;
   /** Payouts go to PayPal's sandbox in this build: every amount is labelled sandbox money, sample or not. */
   sandbox?: boolean;
+  /** A sandbox build's paid receipt: PayPal's sandbox activity page, where the sandbox money shows. */
+  activityUrl?: string;
   /** The PayPal login the owner recognises, masked ("p••@owner.test"); the receipt falls back to the payer ID's tail. */
   account?: string | null;
 }
@@ -113,7 +117,7 @@ export function Result(props: ResultProps) {
 
 /* ------------------------------------------------------------------------------------------------ Paid */
 
-function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round, now, sandbox, account }: ResultProps) {
+function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round, now, sandbox, account, activityUrl }: ResultProps) {
   const sb = Boolean(sample) || Boolean(sandbox);
   const amount = claim.payout?.amount ?? recall.refund;
   const sentAt = claim.events.find((e) => e.type === "payout_sent")?.at ?? claim.payout?.updatedAt;
@@ -172,6 +176,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
             live={Boolean(payout?.live)}
             amount={money(amount)}
             sandbox={sb}
+            activityUrl={activityUrl}
           />
           {sentAt && (
             <ReceiptRow label="Sent">
@@ -238,45 +243,66 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
   const company = companyName(recall);
   // The owner asked a person to look at a claim the rule refused: this sheet is the confirmation.
   const asked = reviewAsked(claim) ? (claim.events.find((e) => e.type === "review_requested")?.at ?? submitted) : null;
+  // The photos passed and only the payout failed: nothing waits on the photos, a person sends the refund.
+  const payout = asked ? null : payoutHold(claim);
+  const by = businessDaysAfter(asked ?? submitted, 2);
+  const refund = `${money(recall.refund)}${sb ? " in sandbox money" : ""}`;
   return (
     <section aria-labelledby="result-title" className="mx-auto flex w-full max-w-claim flex-col gap-6">
       <Top status={<StatusPill status="held" label={sb ? "Held · sandbox" : "Held"} />} id={claim.id} />
-      <StepTitle id="result-title">A person at {company.replace(/ /g, "\u00a0")} will look at this</StepTitle>
+      <StepTitle id="result-title">
+        {payout ? `Your photos passed. ${company} will send your refund` : <>A person at {company.replace(/ /g, "\u00a0")} will look at this</>}
+      </StepTitle>
 
       <Paper variant="sheet" padding="lg">
         {/* The stamp in the header row with the ID, as on the refused sheet, so it never crowds the ID or the text under it. */}
         <div className="flex items-start justify-between gap-4">
           <p className="pt-1 font-mono text-micro tracking-[0.06em] whitespace-nowrap text-ink-muted uppercase">Claim {claim.id}</p>
           <Stamp tone="hold" land={0}>
-            Held for review
+            {payout ? "Payout held" : "Held for review"}
           </Stamp>
         </div>
-        <p className="mt-6 text-body font-medium text-ink">{asked ? "You asked for a review." : "Nothing is lost."}</p>
+        <p className="mt-6 text-body font-medium text-ink">{payout ? "Nothing has been paid yet." : asked ? "You asked for a review." : "Nothing is lost."}</p>
         <p className="mt-1 max-w-[34ch] text-body text-ink-muted">
-          {asked ? `A person at ${company} will look at your photos themselves. ` : "Your claim is saved. "}
-          If {company} approves it, {money(recall.refund)} goes to your PayPal account{sb ? " in sandbox money" : " and PayPal emails you"}.
-          {asked ? " If they refuse it, their reason shows here." : ""}
+          {payout ? (
+            <>
+              {payout === "network" ? "Remedy couldn't reach PayPal to send it" : "PayPal didn't accept the transfer"}, so a person at {company} will send {refund} by {by}.
+              {payout === "refused" ? " If your PayPal account shows a notice, sort it out there." : ""}
+            </>
+          ) : (
+            <>
+              {asked ? `A person at ${company} will look at your photos themselves. ` : "Your claim is saved. "}
+              If {company} approves it, {money(recall.refund)} goes to your PayPal account{sb ? " in sandbox money" : " and PayPal emails you"}.
+              {asked ? " If they refuse it, their reason shows here." : ""}
+            </>
+          )}
         </p>
-        <p className="mt-3 max-w-[34ch] text-ui text-ink-muted">The decision shows on this page, so keep its link or bookmark it to check back.</p>
+        {/* How to come back: this page is where the answer shows, so its link is one press away. No email is promised. */}
+        <div className="mt-3 flex flex-col">
+          <p className="max-w-[34ch] text-ui text-ink-muted">
+            {payout ? "The payout shows" : "The decision shows"} on this page. Check back here by {by}.
+          </p>
+          <CopyPageLink />
+        </div>
 
         <ol aria-label="What happens next" className="relative mt-6 flex flex-col gap-3 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-paper-line">
           <TimelineRow state="done" label="Photos received" time={submitted} />
-          {checked && <TimelineRow state="done" label={asked ? "Refused by the rule" : "Checks run"} time={checked} />}
+          {checked && <TimelineRow state="done" label={asked ? "Refused by the rule" : payout ? "Checks passed" : "Checks run"} time={checked} />}
           {asked && <TimelineRow state="done" label="You asked for a review" time={asked} />}
           <TimelineRow state="now" label="Waiting for a person" />
-          <TimelineRow state="next" label={`Decision by ${businessDaysAfter(asked ?? submitted, 2)}`} />
+          <TimelineRow state="next" label={`${payout ? "Refund sent" : "Decision"} by ${by}`} />
         </ol>
 
         {reasons.length > 0 && (
           <div className="mt-6 flex flex-col gap-3 border-t border-dashed border-paper-line pt-4">
-            <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">{asked ? "What the photo check said" : "What they'll look at"}</h3>
+            <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">{asked ? "What the photo check said" : payout ? "What happened" : "What they'll look at"}</h3>
             <Reasons reasons={reasons} rows={rows} summary={claim.verdict?.summary} />
             {asked && <p className="text-ui text-ink-muted">This answer stays on record. The person decides from your photos.</p>}
           </div>
         )}
 
         <dl className="mt-6 border-t border-dashed border-paper-line">
-          <ReceiptRow label="Refund if approved">
+          <ReceiptRow label={payout ? "Refund to send" : "Refund if approved"}>
             {money(recall.refund)}
             {sb ? " sandbox" : ""}
           </ReceiptRow>
@@ -403,7 +429,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
         </div>
         <div className="mt-6 grid gap-6 sm:grid-cols-[8.5rem_minmax(0,1fr)]">
           {photoUrls[0] && lead !== "duplicate_photo" && (
-            <ExhibitPhoto src={photoUrls[0]} alt={`Photo 1: the ${sample ? "sample" : "first"} photo of claim ${claim.id}`} sample={false} frame="aspect-[3/4]" className="w-32 self-start sm:w-auto" />
+            <ExhibitPhoto src={photoUrls[0]} alt={`Photo 1: the ${sample ? "sample" : "first"} photo of claim ${claim.id}`} sample={false} fit="contain" frame="aspect-[3/4]" className="w-32 self-start sm:w-auto" />
           )}
           <div className={clsx("flex min-w-0 flex-col gap-3", (lead === "duplicate_photo" || !photoUrls[0]) && "sm:col-span-2")}>
             <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">{reasons.length > 1 ? "The reasons" : "The reason"}</h3>
@@ -554,7 +580,7 @@ function DuplicatePair({ claimId, photoUrls, duplicate, sample }: { claimId: str
     <figure className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5 sm:p-6">
       <div className="flex items-start justify-center gap-6">
         <div className="flex flex-col items-center gap-2.5">
-          <ExhibitPhoto src={photoUrls[n - 1] ?? photoUrls[0]} alt={`Photo ${n} of this claim, ${claimId}`} n={n} frame="aspect-[3/4]" className="w-30" />
+          <ExhibitPhoto src={photoUrls[n - 1] ?? photoUrls[0]} alt={`Photo ${n} of this claim, ${claimId}`} n={n} fit="contain" frame="aspect-[3/4]" className="w-30" />
           <span className="flex flex-col items-center gap-0.5 text-center">
             <span className="micro text-faint">Your photo</span>
             <span className="font-mono text-micro whitespace-nowrap text-muted">{claimId}</span>
@@ -562,7 +588,7 @@ function DuplicatePair({ claimId, photoUrls, duplicate, sample }: { claimId: str
         </div>
         <div className="flex flex-col items-center gap-2.5">
           {earlier ? (
-            <ExhibitPhoto src={earlier.src} alt={`Photo ${earlier.n} of the earlier claim ${earlier.id}, the same picture`} n={earlier.n} frame="aspect-[3/4]" className="w-30" />
+            <ExhibitPhoto src={earlier.src} alt={`Photo ${earlier.n} of the earlier claim ${earlier.id}, the same picture`} n={earlier.n} fit="contain" frame="aspect-[3/4]" className="w-30" />
           ) : (
             <span className="flex aspect-[3/4] w-30 items-center justify-center rounded-control border border-dashed border-line-strong px-3 text-center text-ui text-muted">Another account&apos;s photo</span>
           )}
@@ -615,7 +641,7 @@ function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { ro
             {photoUrls.map((src, i) => (
               // /demo holds only AI-made samples (a dev preview's stand-ins too): any photo from there carries the label.
               // Numbered as the camera numbers them: letters are the judges' samples (A to D).
-              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} n={i + 1} sample={sample || src.startsWith("/demo/")} />
+              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} n={i + 1} sample={sample || src.startsWith("/demo/")} fit="contain" frame="aspect-[3/4]" />
             ))}
           </div>
         )}

@@ -43,8 +43,9 @@ export function PhoneHandoff({ qrSvg, url, code, primary, className }: PhoneHand
             </>
           )}
         </p>
-        {/* The whole link, wrapping, to type into a phone or send to it. */}
-        <a href={url} className="font-mono text-micro break-all text-faint underline decoration-line-2 underline-offset-4 hover:text-muted">
+        {/* The whole link, wrapping, to type into a phone or send to it. Named for what it is, so a screen reader doesn't
+            spell out the address. */}
+        <a href={url} aria-label="Open this claim on your phone" className="font-mono text-micro break-all text-faint underline decoration-line-2 underline-offset-4 hover:text-muted">
           {url.replace(/^https?:\/\//, "")}
         </a>
         <Button variant="tertiary" size="sm" onClick={() => navigator.clipboard?.writeText(url).then(() => setCopied(true), () => {})} className="self-start">

@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { sampleClaim } from "@/lib/__fixtures__/claim";
 import { DEMO_SPEC } from "@/lib/demo/kikea";
-import { acceptsStandIn, businessDaysAfter, codeDiff, coverCrop, handWrittenLabel, maskEmail, misreadOf, ownerLabel, productNoun, readableReasons, receiptPollDelay, refusalHeadline, taggedThing, timelineOf } from "./model";
+import { acceptsStandIn, businessDaysAfter, codeDiff, coverCrop, handWrittenLabel, maskEmail, misreadOf, ownerLabel, payoutHold, productNoun, readableReasons, receiptPollDelay, refusalHeadline, taggedThing, timelineOf } from "./model";
 import { nextSample, roundLine, scoreLine } from "./Scoreboard";
 
 describe("codeDiff", () => {
   it("marks the one character the model read differently, and says which", () => {
     const d = codeDiff("K7P", "K7Q");
     expect(d.cells.map((c) => c.same)).toEqual([true, true, false]);
-    expect(d.caption).toBe("The third character: P in your code, Q on the tag.");
+    expect(d.caption).toBe("The third character: the letter P in your code, the letter Q on the tag.");
   });
 
   it("says when nothing was readable", () => {
@@ -136,14 +136,33 @@ describe("the demo round", () => {
 describe("misreadOf", () => {
   it("names the one character read differently, in the owner's terms", () => {
     expect(misreadOf("K7Q", "K7O")).toEqual({
-      headline: "We read O where your code has Q",
-      ask: "If your tag says Q, ask a person to look. They decide from your photos, and you can ask once.",
+      headline: "We read the letter O where your code has the letter Q",
+      ask: "If your tag says K7Q, ask a person to look. They decide from your photos, and you can ask once.",
     });
+  });
+  it("names a digit in words, so a zero never reads as the letter O", () => {
+    expect(misreadOf("K7O", "K70")?.headline).toBe("We read a zero where your code has the letter O");
+    expect(codeDiff("B8K", "BBK").caption).toBe("The second character: an eight in your code, the letter B on the tag.");
   });
   it("names the whole code when several characters differ, and says nothing when nothing was read or it matches", () => {
     expect(misreadOf("K7P", "R8D")?.headline).toBe("We read R8D where your code is K7P");
     expect(misreadOf("K7P", null)).toBeNull();
     expect(misreadOf("K7P", "K7P")).toBeNull();
+  });
+});
+
+describe("payoutHold", () => {
+  const held = (detail: string) =>
+    sampleClaim({
+      decision: "held",
+      reasons: [{ check: "payout", outcome: "hold", text: "PayPal didn't accept the payout, so a person will send it" }],
+      events: [{ at: "2026-11-06T10:00:00Z", type: "payout_failed", detail }],
+    });
+  it("tells a refused payout from one that never reached PayPal, and is null for any other hold", () => {
+    expect(payoutHold(held("PayPal didn't take the payout: RECEIVER_UNREGISTERED"))).toBe("refused");
+    expect(payoutHold(held("Remedy couldn't reach PayPal: fetch failed"))).toBe("network");
+    expect(payoutHold(sampleClaim({ decision: "held", reasons: [{ check: "model", outcome: "hold", text: "x" }] }))).toBeNull();
+    expect(payoutHold(sampleClaim({ decision: "paid" }))).toBeNull();
   });
 });
 

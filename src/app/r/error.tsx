@@ -1,22 +1,15 @@
 "use client";
 
-import { Button, ErrorState } from "@/components/ui";
+import { useParams } from "next/navigation";
+import { ClaimErrorCard } from "@/components/claim/ClaimErrorCard";
 import { FlowShell } from "@/components/claim/FlowShell";
 
 // Anything that throws while a claim page renders: the store or PayPal down. The claim itself is saved.
-export default function ClaimError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function ClaimError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
+  const { recall, id } = useParams<{ recall?: string; id?: string }>();
   return (
     <FlowShell>
-      <ErrorState
-        title="This page didn't load"
-        description="Something on our side didn't answer. Any claim you started is saved, and photos already sent are still being checked. Try again in a moment."
-        action={
-          <Button variant="secondary" onClick={() => reset()}>
-            Try again
-          </Button>
-        }
-        className="bg-surface"
-      />
+      <ClaimErrorCard recall={recall} id={id} onRetry={() => retry()} />
     </FlowShell>
   );
 }

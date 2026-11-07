@@ -179,6 +179,16 @@ export function readableReasons(reasons: Reason[], photos: number): Reason[] {
  */
 export const noModelAnswer = (decision: Decision, reasons: (Reason | null | undefined)[]) => decision === "held" && reasons.some((r) => r?.check === "model");
 
+/**
+ * A claim the checks passed, held only because its payout failed (pipeline.ts): "network" when Remedy couldn't reach
+ * PayPal, "refused" when PayPal didn't take it. Null for any other hold.
+ */
+export function payoutHold(claim: Pick<Claim, "decision" | "reasons" | "events">): "network" | "refused" | null {
+  if (claim.decision !== "held" || !claim.reasons.some((r) => r.check === "payout" && r.outcome === "hold")) return null;
+  const failed = [...claim.events].reverse().find((e) => e.type === "payout_failed");
+  return failed?.detail.startsWith("Remedy couldn't reach PayPal") ? "network" : "refused";
+}
+
 // What to do next, per failed check. Keys are rule.ts check names (step_N share one).
 const ADVICE: Record<string, string> = {
   session: "Photos only count when they're taken on this page's camera within 10 minutes of getting the code. Start a new claim for a fresh code.",
@@ -402,6 +412,10 @@ export interface CodeCell {
 }
 
 const ORDINAL = ["first", "second", "third", "fourth", "fifth", "sixth"];
+const DIGITS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+
+/** One character of a code in words, so O and 0 (or I and 1, S and 5) can't be mistaken: "the letter O", "a zero". */
+export const charName = (c: string) => (/^[0-9]$/.test(c) ? `${c === "8" ? "an" : "a"} ${DIGITS[Number(c)]}` : `the letter ${c}`);
 
 /**
  * The claim's code beside what the model read on the tag, character by character, and a caption that says which
@@ -417,23 +431,23 @@ export function codeDiff(code: string, seen: string | null | undefined): { cells
   if (!off.length) return { cells, caption: `The tag reads ${read}, but the photo check couldn't confirm it's your code.`, readable: true };
   const [i] = off;
   if (off.length === 1 && cells[i].yours && cells[i].seen) {
-    return { cells, caption: `The ${ORDINAL[i] ?? `character ${i + 1}`} character: ${cells[i].yours} in your code, ${cells[i].seen} on the tag.`, readable: true };
+    return { cells, caption: `The ${ORDINAL[i] ?? `character ${i + 1}`} character: ${charName(cells[i].yours)} in your code, ${charName(cells[i].seen)} on the tag.`, readable: true };
   }
   return { cells, caption: `${off.length} of ${n} characters differ: ${yours} in your code, ${read} on the tag.`, readable: true };
 }
 
 /**
- * An uncertain code read, in the owner's terms: "We read O where your code has Q", and the way to contest it. Null when
- * nothing was readable or the read matches (nothing specific to say).
+ * An uncertain code read, in the owner's terms: "We read the letter O where your code has the letter Q", each character
+ * named in words, and the way to contest it. Null when nothing was readable or the read matches (nothing specific to say).
  */
 export function misreadOf(code: string, seen: string | null | undefined): { headline: string; ask: string } | null {
   const { cells, readable } = codeDiff(code, seen);
   const off = cells.filter((c) => !c.same);
   if (!readable || !off.length) return null;
   const one = off.length === 1 && off[0].yours && off[0].seen ? off[0] : null;
-  const wrote = one ? one.yours : code.toUpperCase();
+  const wrote = code.toUpperCase();
   return {
-    headline: one ? `We read ${one.seen} where your code has ${one.yours}` : `We read ${cells.map((c) => c.seen).join("")} where your code is ${wrote}`,
+    headline: one ? `We read ${charName(one.seen)} where your code has ${charName(one.yours)}` : `We read ${cells.map((c) => c.seen).join("")} where your code is ${wrote}`,
     ask: `If your tag says ${wrote}, ask a person to look. They decide from your photos, and you can ask once.`,
   };
 }

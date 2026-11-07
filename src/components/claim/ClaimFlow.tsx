@@ -31,7 +31,7 @@ export interface ClaimFlowProps {
   loginHref: string;
   sample?: DemoSample | null;
   /** Dev previews: start at a phase, with the camera or checks pinned. */
-  preview?: { phase: Phase; capture?: CapturePreview; checking?: { elapsed?: number; offline?: boolean }; sending?: boolean; photoUrl?: string };
+  preview?: { phase: Phase; capture?: CapturePreview; checking?: { elapsed?: number; offline?: boolean }; sending?: boolean; photoUrls?: string[] };
 }
 
 // Each phase's h2: focus moves there on arrival and on every step change, so a keyboard or screen reader lands on the new step.
@@ -49,8 +49,8 @@ export function ClaimFlow(props: ClaimFlowProps) {
   const { claimId, code, view: initial, sample, preview } = props;
   const [phase, setPhase] = useState<Phase>(preview?.phase ?? (initial.photos > 0 ? "checking" : sample ? "capture" : "code"));
   const [view, setView] = useState(initial);
-  // Photo 1 on the checking screen: the photo just sent (a local object URL, or the sample's public file).
-  const [photoUrl, setPhotoUrl] = useState<string | undefined>(preview?.photoUrl ?? (initial.photos > 0 && sample ? sample.photos[0] : undefined));
+  // The checking screen's photos: the ones just sent (local object URLs, or the sample's public files).
+  const [photoUrls, setPhotoUrls] = useState<string[] | undefined>(preview?.photoUrls ?? (initial.photos > 0 && sample ? sample.photos : undefined));
   const demo = Boolean(sample);
   const steps = demo ? DEMO_STEPS : REAL_STEPS;
   const current = phase === "checking" ? 4 : demo ? 3 : phase === "code" ? 2 : 3;
@@ -64,16 +64,16 @@ export function ClaimFlow(props: ClaimFlowProps) {
     focusInView(document.getElementById(phase === "capture" && demo ? "sample-title" : TITLE[phase]));
   }, [phase, demo]);
 
-  // A local photo URL is freed when the flow goes away (the result replaces it).
-  useEffect(() => () => void (photoUrl?.startsWith("blob:") && URL.revokeObjectURL(photoUrl)), [photoUrl]);
+  // Local photo URLs are freed when the flow goes away (the result replaces it).
+  useEffect(() => () => photoUrls?.forEach((u) => u.startsWith("blob:") && URL.revokeObjectURL(u)), [photoUrls]);
 
   const go = (next: Phase) => {
     setPhase(next);
     window.scrollTo({ top: 0 });
   };
-  const sent = (next: ClaimView | null, url?: string) => {
+  const sent = (next: ClaimView | null, urls?: string[]) => {
     if (next) setView(next);
-    if (url) setPhotoUrl(url);
+    if (urls?.length) setPhotoUrls(urls);
     go("checking");
   };
   // The code step on a laptop while the phone takes the photos (the QR handoff): on to checking once they arrive. The
@@ -125,7 +125,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
             claimId={claimId}
             view={view}
             startNow={props.startNow}
-            photoUrl={photoUrl}
+            photoUrls={photoUrls}
             sample={demo}
             sending={preview?.sending}
             preview={preview?.checking ?? (preview ? {} : undefined)}

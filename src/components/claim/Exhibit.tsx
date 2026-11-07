@@ -19,26 +19,28 @@ export interface ExhibitPhotoProps {
   sample?: boolean;
   /** Tailwind aspect and size classes for the photo well, e.g. "aspect-[4/3]". */
   frame?: string;
+  /** contain: the whole photo, on the print's well, for a photo shown as the thing being checked (a tall photo's tag stays in). */
+  fit?: "cover" | "contain";
   /** Over the photo: a scan line, a label. */
   children?: ReactNode;
   className?: string;
 }
 
 /**
- * A claim photo as an exhibit print: a 3px paper border, the photo number chip at its corner, and the AI-made label on a
+ * A claim photo as an exhibit print: a 3px paper border, the photo number chip in its corner, and the AI-made label on a
  * sample. The same object the homepage's Chain of Custody hands over (P1's ExhibitPrint), so the flow and the story
- * match.
+ * match. The chip sits inside the print, so nothing hangs off its edge.
  */
-export function ExhibitPhoto({ src, alt, n = 1, sample, frame = "aspect-[4/3]", children, className }: ExhibitPhotoProps) {
+export function ExhibitPhoto({ src, alt, n = 1, sample, frame = "aspect-[4/3]", fit = "cover", children, className }: ExhibitPhotoProps) {
   return (
     <figure className={clsx("relative rounded-control bg-paper p-[3px] shadow-paper", className)}>
       <div className={clsx("relative overflow-hidden rounded-[3px] bg-surface-2", frame)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={alt} className="absolute inset-0 size-full object-cover" />
+        <img src={src} alt={alt} className={clsx("absolute inset-0 size-full", fit === "contain" ? "object-contain" : "object-cover")} />
         {sample && <SampleChip className="absolute bottom-2 left-2" />}
         {children}
       </div>
-      <span aria-hidden="true" className="absolute -top-2.5 -left-2.5 flex size-6 items-center justify-center rounded-control bg-paper font-mono text-micro font-medium text-ink shadow-[0_0_0_2px_var(--bg)]">
+      <span aria-hidden="true" className="absolute top-1.5 left-1.5 flex size-6 items-center justify-center rounded-control bg-paper font-mono text-micro font-medium text-ink shadow-[0_0_0_1px_var(--paper-line)]">
         {n}
       </span>
     </figure>

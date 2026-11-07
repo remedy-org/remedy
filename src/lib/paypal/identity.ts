@@ -20,6 +20,9 @@ function webBase() {
   return url.origin;
 }
 
+/** The PayPal account's activity page, where a payout lands: the sandbox site in a sandbox build. */
+export const activityUrl = () => `${webBase()}/myaccount/activities/`;
+
 // redirectUri must match the Return URL saved in the dashboard exactly. `state` is echoed back for CSRF checks.
 export function loginUrl({ redirectUri, state }: { redirectUri: string; state: string }): string {
   const url = new URL(`${webBase()}/signin/authorize`);

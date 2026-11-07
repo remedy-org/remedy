@@ -6,14 +6,14 @@ import { Button, ErrorState, ExhibitLabel } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
 import styles from "./flow.module.css";
 import type { ClaimView } from "./model";
-import { CAMERA_FRAME, CAMERA_VIEW, Cutout, Dock, GlassChip, InstructionBar } from "./Viewfinder";
+import { CAMERA_FRAME, CAMERA_VIEW, Cutout, Dock, GlassChip, InstructionBar, Reminders } from "./Viewfinder";
 
 export interface DemoCaptureStepProps {
   claimId: string;
   code: string;
   sample: DemoSample;
   reminders?: string[];
-  onSent(view: ClaimView | null, photoUrl?: string): void;
+  onSent(view: ClaimView | null, photoUrls?: string[]): void;
   preview?: { sending?: boolean; sendError?: string };
 }
 
@@ -35,13 +35,13 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
     try {
       const res = await fetch(`/api/claims/${claimId}/photos`, { method: "POST", body: new FormData() });
       const body = await res.json().catch(() => null);
-      if (res.status === 409) return onSent(null, sample.photos[0]);
+      if (res.status === 409) return onSent(null, sample.photos);
       if (!res.ok) {
         setError(body?.error ?? "The sample didn't send. Try again.");
         setSending(false);
         return;
       }
-      onSent(body as ClaimView, sample.photos[0]);
+      onSent(body as ClaimView, sample.photos);
     } catch {
       setError("No connection. Try again when you're back online.");
       setSending(false);
@@ -70,20 +70,7 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
             {sample.title}. This claim&apos;s code is <span className="font-mono whitespace-nowrap">{code}</span>
           </h2>
           {/* What the photo needs, as requirements, under the frame rather than over the tag it points at. */}
-          {reminders.length > 0 && (
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
-              <span id="sample-must" className="font-mono text-micro tracking-[0.06em] text-[oklch(0.74_0.005_80)] uppercase">
-                Must show
-              </span>
-              <ul aria-labelledby="sample-must" className="flex flex-wrap justify-center gap-1.5">
-                {reminders.map((t) => (
-                  <li key={t} className="inline-flex h-6 items-center rounded-control border border-[oklch(1_0_0/0.18)] px-2 font-mono text-micro tracking-[0.06em] whitespace-nowrap text-[oklch(0.86_0.005_80)] uppercase">
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <Reminders items={reminders} id="sample-must" />
           <p className="text-ui text-[oklch(0.86_0.005_80)]">
             The tag in this photo reads <span className="font-mono whitespace-nowrap">{sample.tagReads}</span>
             {sample.tagReads === code ? ": this claim's code." : <>, not <span className="font-mono whitespace-nowrap">{code}</span>.</>}

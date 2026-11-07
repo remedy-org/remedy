@@ -17,6 +17,8 @@ export interface ReceiptLiveProps {
   amount: string;
   /** A judges' sample: sandbox money, which reaches no real inbox. */
   sandbox?: boolean;
+  /** PayPal's sandbox activity page, linked from the sandbox note (a quiet ink link: the receipt has no amber). */
+  activityUrl?: string;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface ReceiptLiveProps {
  * route: every 5 s for 30 s, then every 15 s, for 2 minutes at most, never while the tab is hidden, and stops on a
  * settled status. Each poll is one Blob read; the route asks PayPal at most once a minute.
  */
-export function ReceiptLive({ claimId, status: initial, live, amount, sandbox }: ReceiptLiveProps) {
+export function ReceiptLive({ claimId, status: initial, live, amount, sandbox, activityUrl }: ReceiptLiveProps) {
   const [status, setStatus] = useState(initial);
   const [changed, setChanged] = useState(false);
   const words = payoutWords(status);
@@ -78,7 +80,21 @@ export function ReceiptLive({ claimId, status: initial, live, amount, sandbox }:
       {/* A full-width line of its own, left-aligned under the status, so it reads as a sentence and never wraps ragged. */}
       <p className="mt-1 text-pretty text-ui text-ink-muted">
         {/* While it's processing, the note says why the PAID stamp sits above it: Remedy sent it, PayPal is finishing. */}
-        {sandbox ? `${settled ? "" : `${words.note} `}Sandbox money shows in your PayPal sandbox account's activity.` : words.note}
+        {sandbox ? (
+          <>
+            {settled ? "" : `${words.note} `}Sandbox money shows in your{" "}
+            {activityUrl ? (
+              <a href={activityUrl} target="_blank" rel="noreferrer" className="rounded-control text-ink underline decoration-paper-line underline-offset-4 hover:decoration-ink">
+                PayPal sandbox account&apos;s activity<span className="sr-only"> (opens PayPal&apos;s sandbox site in a new tab)</span>
+              </a>
+            ) : (
+              "PayPal sandbox account's activity"
+            )}
+            .
+          </>
+        ) : (
+          words.note
+        )}
       </p>
       <p className="sr-only" aria-live="polite">
         {changed && words.tone === "pay" ? `Received. ${amount} is in your PayPal ${sandbox ? "sandbox " : ""}account.` : changed ? `Payout status: ${words.label}.` : ""}

@@ -37,16 +37,25 @@ export function Cutout({ children, dashed, className }: { children?: ReactNode; 
   );
 }
 
-/** The reminders along the cutout's foot: what the photo needs. Reminders, never checks: the browser verifies nothing. */
-export function Reminders({ items }: { items: string[] }) {
+/**
+ * What the photo needs, in the instruction bar: under the frame, never over the tag it points at. Reminders, never
+ * checks: the browser verifies nothing.
+ */
+export function Reminders({ items, id }: { items: string[]; id: string }) {
+  if (!items.length) return null;
   return (
-    <ul aria-label="Fit these in the frame" className="absolute inset-x-2 bottom-2 flex flex-wrap justify-center gap-1.5">
-      {items.map((t) => (
-        <li key={t}>
-          <GlassChip>{t}</GlassChip>
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-wrap items-center justify-center gap-1.5">
+      <span id={id} className="font-mono text-micro tracking-[0.06em] text-[oklch(0.74_0.005_80)] uppercase">
+        Must show
+      </span>
+      <ul aria-labelledby={id} className="flex flex-wrap justify-center gap-1.5">
+        {items.map((t) => (
+          <li key={t} className="inline-flex h-6 items-center rounded-control border border-[oklch(1_0_0/0.18)] px-2 font-mono text-micro tracking-[0.06em] whitespace-nowrap text-[oklch(0.86_0.005_80)] uppercase">
+            {t}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

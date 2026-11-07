@@ -46,15 +46,15 @@ export interface CaptureStepProps {
   /** Starts over with a fresh code once this session has ended. */
   newClaimHref: string;
   loginHref: string;
-  /** The reminder chips along the cutout's foot, e.g. "Tag", "Cut in half", "Code M4T". */
+  /** The reminder chips in the instruction bar, under the frame, e.g. "Tag", "Cut in half", "Code M4T". */
   reminders?: string[];
   /** What the photo frames, in the code step's words: the "tag" (or "label") and the "cut pillow" (or "destroyed product"). */
   framing?: { thing: string; product: string };
   /**
-   * The pre-checks' answer; null when the photos had already arrived (another tab). photoUrl: an object URL of the first
-   * photo sent, for the checking screen's photo 1, which the caller frees.
+   * The pre-checks' answer; null when the photos had already arrived (another tab). photoUrls: object URLs of the photos
+   * sent, in order, for the checking screen, which the caller frees.
    */
-  onSent(view: ClaimView | null, photoUrl?: string): void;
+  onSent(view: ClaimView | null, photoUrls?: string[]): void;
   /** Dev previews and screenshots: no camera, a fixed state. */
   preview?: CapturePreview;
 }
@@ -143,9 +143,13 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     { off: Boolean(preview), paused: sending },
   );
 
+  // showModal() moves focus to the dialog's first control (Retake) and ignores React's autoFocus, so Keep, the primary
+  // action, takes focus after it: a reflexive Enter keeps the photo.
   useEffect(() => {
     const d = viewerRef.current;
-    if (viewing !== null && d && !d.open) d.showModal();
+    if (viewing === null || !d || d.open) return;
+    d.showModal();
+    d.querySelector<HTMLButtonElement>("[data-keep]")?.focus();
   }, [viewing]);
 
   // Object URLs for the thumbnails are freed when the step goes away.
@@ -244,8 +248,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
       }
       stop();
       sentAll();
-      // A fresh URL for the checking screen's photo 1: this step frees its own thumbnails' URLs when it goes away.
-      onSent(body as ClaimView, URL.createObjectURL(blobs[0]));
+      // Fresh URLs for the checking screen: this step frees its own thumbnails' URLs when it goes away.
+      onSent(body as ClaimView, blobs.map((b) => URL.createObjectURL(b)));
     } catch {
       setSendError({ status: 0, message: "No connection. Your photos are still here: send them again when you're back online." });
       setSending(false);
@@ -284,7 +288,6 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             <Cutout>
               {/* The photo the shutter takes next, numbered as the slots below are. */}
               {n < MAX_PHOTOS && <GlassChip className="absolute top-2 left-2">Photo {n + 1}</GlassChip>}
-              <Reminders items={reminders} />
             </Cutout>
           ) : (
             <Cutout dashed>
@@ -310,13 +313,20 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               </span>
             </GlassChip>
           </div>
-          {/* Phones: a one-line hint over the foot of the feed, under the cutout's chips, so the viewfinder never resizes as
-              it changes. The longer help opens in the instruction bar, where it can't cover the chips. */}
+          {/* Phones: a one-line hint, or the longer help from (i), over the foot of the feed, so the viewfinder never
+              resizes (and the guide never moves) as they come and go. */}
           {!sendError && !expired && !help && n > 0 && (
             <p className="absolute inset-x-3 bottom-3 z-10 rounded-control bg-[oklch(0.12_0.004_75/0.78)] px-3 py-2 text-center text-ui text-balance text-[oklch(0.86_0.005_80)] backdrop-blur-sm sm:hidden">
               Tap a photo to check it or retake it.
             </p>
           )}
+          <p
+            id="capture-help"
+            hidden={!help || Boolean(sendError) || expired}
+            className="absolute inset-x-3 bottom-3 z-10 rounded-control bg-[oklch(0.12_0.004_75/0.86)] px-3 py-2 text-ui text-pretty text-[oklch(0.86_0.005_80)] backdrop-blur-sm sm:hidden"
+          >
+            {helpText}
+          </p>
           <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
         </div>
 
@@ -333,9 +343,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                 </>
               )}
             </h2>
-            <p id="capture-help" hidden={!help || Boolean(sendError) || expired} className="text-ui text-pretty text-[oklch(0.74_0.005_80)] sm:hidden">
-              {helpText}
-            </p>
+            {!expired && !sendError && <Reminders items={reminders} id="capture-must" />}
             {/* A failed send says so here, on the first screen, where the Send button is. */}
             {sendError && (
               <div role="alert" className="flex items-start gap-2.5 text-left">
@@ -473,7 +481,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                 >
                   Retake
                 </Button>
-                <Button size="lg" autoFocus onClick={() => viewerRef.current?.close()}>
+                <Button size="lg" data-keep="" onClick={() => viewerRef.current?.close()}>
                   Keep
                 </Button>
               </div>

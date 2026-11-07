@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import type { ReactNode } from "react";
+import { ClaimErrorCard } from "@/components/claim/ClaimErrorCard";
 import { ClaimFlow, type ClaimFlowProps } from "@/components/claim/ClaimFlow";
 import { ContinueCard } from "@/components/claim/ContinueCard";
 import { ExpiredCard } from "@/components/claim/ExpiredCard";
@@ -14,9 +15,9 @@ import { RecallView } from "@/components/claim/RecallScreen";
 import { Result, type ResultProps } from "@/components/claim/Result";
 import { SamplePicker } from "@/components/claim/SamplePicker";
 import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter } from "@/components/claim/StepMeter";
-import { Button, ErrorState } from "@/components/ui";
 import { DEMO_SAMPLES, demoSample, isSandboxBuild } from "@/lib/demo";
 import { nextUtcDay } from "@/lib/limits";
+import { activityUrl } from "@/lib/paypal/identity";
 import type { Claim } from "@/lib/types";
 import * as fx from "./fixtures";
 
@@ -65,6 +66,7 @@ function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultPr
         now={fx.NOW + 10 * 60_000}
         meter={<StepMeter {...resultMeter(d.claim.decision, steps)} steps={steps} />}
         sandbox={isSandboxBuild()}
+        activityUrl={isSandboxBuild() && d.claim.decision === "paid" ? activityUrl() : undefined}
         {...over}
       />
     </FlowShell>
@@ -209,16 +211,16 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "demo-capture": { group: "Camera", note: "Demo: the sample in the viewfinder", render: () => flow({ sample: genuine, preview: { phase: "capture" } }) },
   "demo-capture-wrong-code": { group: "Camera", note: "Demo: the wrong code, its tag reading another", render: () => flow({ sample: wrongCode, preview: { phase: "capture" } }, { ...fx.open, code: "K7P" }) },
   "demo-capture-ai": { group: "Camera", note: "Demo: the uploaded photo, sent from outside", render: () => flow({ sample: demoSample("ai-no-session"), preview: { phase: "capture" } }, { ...fx.open, code: "H6W" }) },
-  checking: { group: "Checking", note: "Photo 1 read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
-  "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
-  "checking-slow": { group: "Checking", note: "Past 40 s: taking longer than usual", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 47 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
-  "checking-offline": { group: "Checking", note: "Polling lost the connection", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 21, offline: true }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
-  "checking-done": { group: "Checking", note: "All checks resolved: quotes and green code cells", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 19 }, photoUrl: fx.paid.photoUrls[0] } }, fx.paid.claim) },
-  "checking-blocked": { group: "Checking", note: "Stopped by a pre-check", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 1 }, photoUrl: fx.blocked.photoUrls[0] } }, fx.blocked.claim) },
+  checking: { group: "Checking", note: "Photo 1 read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
+  "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
+  "checking-slow": { group: "Checking", note: "Past 40 s: taking longer than usual", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 47 }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
+  "checking-offline": { group: "Checking", note: "Polling lost the connection", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 21, offline: true }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
+  "checking-done": { group: "Checking", note: "All checks resolved: quotes and green code cells", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 19 }, photoUrls: fx.paid.photoUrls } }, fx.paid.claim) },
+  "checking-blocked": { group: "Checking", note: "Stopped by a pre-check", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 1 }, photoUrls: fx.blocked.photoUrls } }, fx.blocked.claim) },
   "demo-checking": {
     group: "Checking",
     note: "Demo: the sample being read",
-    render: () => flow({ sample: genuine, preview: { phase: "checking", checking: { elapsed: 12 }, photoUrl: genuine.photos[0] } }, { ...fx.checkingModel, code: "M4T", demo: true }),
+    render: () => flow({ sample: genuine, preview: { phase: "checking", checking: { elapsed: 12 }, photoUrls: genuine.photos } }, { ...fx.checkingModel, code: "M4T", demo: true }),
   },
   paid: { group: "Result", note: "Paid, payout processing", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, account: "p••@owner.test" }) },
   "paid-arrive": { group: "Result", note: "Paid just now: the receipt prints", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, now: fx.NOW + 24_000 }) },
@@ -273,12 +275,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     note: "Page failed to render",
     render: () => (
       <FlowShell>
-        <ErrorState
-          title="This page didn't load"
-          description="Something on our side didn't answer. Any claim you started is saved, and photos already sent are still being checked. Try again in a moment."
-          action={<Button variant="secondary">Try again</Button>}
-          className="bg-surface"
-        />
+        <ClaimErrorCard recall="kikea-x-vesolje" id="RM-0412" />
       </FlowShell>
     ),
   },
