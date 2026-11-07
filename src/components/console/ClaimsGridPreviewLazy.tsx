@@ -1,18 +1,23 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ClaimsGridPreviewProps } from "./ClaimsGridPreview";
 
+// What shows until the grid's JS arrives: the caller's fallback (the homepage passes its static replica), or a
+// same-size placeholder. A context, because next/dynamic's loading component takes no props.
+const Fallback = createContext<ReactNode>(null);
+const Loading = () => <>{useContext(Fallback)}</>;
+
 // The grid's JS (AG Grid, about 240KB) loads only when the preview is a viewport away, never with the homepage.
-const Preview = dynamic(() => import("./ClaimsGridPreview").then((m) => m.ClaimsGridPreview), { ssr: false, loading: () => null });
+const Preview = dynamic(() => import("./ClaimsGridPreview").then((m) => m.ClaimsGridPreview), { ssr: false, loading: Loading });
 
 /**
- * ClaimsGridPreview for the homepage: a same-size placeholder until the section is one viewport away, then the real
- * grid. Mount it from a server component with previewProps() (components/console/preview.ts):
- *   <ClaimsGridPreviewLazy {...previewProps()} />
+ * ClaimsGridPreview for the homepage: the fallback until the section is one viewport away, then the real grid.
+ * Mount it from a server component with previewProps() (components/console/preview.ts):
+ *   <ClaimsGridPreviewLazy {...previewProps()} fallback={<StaticStill />} />
  */
-export function ClaimsGridPreviewLazy(props: ClaimsGridPreviewProps) {
+export function ClaimsGridPreviewLazy({ fallback, ...props }: ClaimsGridPreviewProps & { fallback?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
 
@@ -24,9 +29,10 @@ export function ClaimsGridPreviewLazy(props: ClaimsGridPreviewProps) {
     return () => io.disconnect();
   }, []);
 
+  const still = fallback ?? <Placeholder height={props.height} />;
   return (
     <div ref={ref} className="relative">
-      {near ? <Preview {...props} /> : <Placeholder height={props.height} />}
+      <Fallback.Provider value={still}>{near ? <Preview {...props} /> : still}</Fallback.Provider>
     </div>
   );
 }

@@ -6,7 +6,8 @@ import { Section } from "./Section";
 
 /**
  * An exhibit label pinned to the console frame: mono amber text and a hairline leader that runs into the frame to a
- * dot on what it names. Laptops only; the positions follow the replica's fixed column widths.
+ * dot on what it names. Laptops only; the positions follow the console preview's chrome and panel at 1440 (the
+ * static replica that stands in while it loads has the same chrome).
  */
 function FrameTag({ children, side, style, reach }: { children: string; side: "top" | "bottom"; style: CSSProperties; reach: number }) {
   return (
@@ -30,10 +31,10 @@ export function Companies() {
       className="bg-[image:var(--table-glow)] bg-[length:140%_100%] bg-top bg-no-repeat"
     >
       <figure className="relative m-0 lg:mt-8">
-        <FrameTag side="top" reach={10} style={{ left: 193, transform: "translateX(-50%)" }}>
+        <FrameTag side="top" reach={10} style={{ left: 265, transform: "translateX(-50%)" }}>
           CPSC report draft
         </FrameTag>
-        <FrameTag side="top" reach={144} style={{ right: 300, transform: "translateX(50%)" }}>
+        <FrameTag side="top" reach={216} style={{ right: 300, transform: "translateX(50%)" }}>
           Evidence panel
         </FrameTag>
         <CompaniesPreview />

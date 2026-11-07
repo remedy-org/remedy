@@ -40,10 +40,10 @@ ModuleRegistry.registerModules([
 // Below this width the grid shows one card per claim (phones, narrow windows).
 export const CARD_BELOW = 720;
 // Columns that come and go with the grid's width (the evidence panel takes 452px). The rest need 708px: claim 220,
-// verdict at least 260 (200 in the homepage's narrower still), checks 132, amount 96. Each optional column is added, in
+// verdict at least 260 (144 in the homepage's narrower still, which keeps columns down to 592px), checks 132, amount 96. Each optional column is added, in
 // order, while it fits: the queue keeps its timeline first; the still keeps the payout column, where sample claims say
 // "not sent".
-const VERDICT_MIN = { queue: 260, still: 200 };
+const VERDICT_MIN = { queue: 260, still: 144 };
 const BASE = 220 + 132 + 96;
 const OPTIONAL: Record<string, number> = { timeline: 168, payoutStatus: 112, payer: 132 };
 const ORDER = { queue: ["timeline", "payoutStatus", "payer"], still: ["payoutStatus", "timeline", "payer"] };
@@ -101,7 +101,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     return () => ro.disconnect();
   }, []);
 
-  const cards = width !== null && width < CARD_BELOW;
+  const cards = width !== null && width < (still ? BASE + VERDICT_MIN.still : CARD_BELOW);
   const hidden = useMemo(() => (width === null ? new Set<string>() : hiddenAt(width, still)), [width, still]);
 
   useImperativeHandle(ref, () => ({

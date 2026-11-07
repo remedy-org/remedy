@@ -22,6 +22,8 @@ export interface ClaimsGridPreviewProps {
   /** Totals over every sample claim, when rows are only the first few. */
   ledger?: LedgerData;
   counts?: Record<Tab, number>;
+  /** A class for the evidence panel's wrapper, so a page can animate it in. */
+  panelClassName?: string;
 }
 
 /**
@@ -39,7 +41,7 @@ const subscribe = (on: () => void) => {
 };
 const PHONE_SET: ClaimRow["decision"][] = ["paid", "held", "rejected", "blocked"];
 
-export function ClaimsGridPreview({ rows, openId, height, ledger, counts }: ClaimsGridPreviewProps) {
+export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelClassName }: ClaimsGridPreviewProps) {
   const [tab, setTab] = useState<Tab>("all");
   const wide = useSyncExternalStore(subscribe, () => window.matchMedia(WIDE).matches, () => true);
   const tally = useMemo(() => {
@@ -83,7 +85,7 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts }: Clai
       </div>
 
       <div className="flex gap-3 p-3 sm:px-5" style={wide ? { height } : undefined}>
-        <div id="preview-claims" className="min-w-0 flex-1">
+        <div id="preview-claims" className="min-w-0 flex-1 overflow-hidden">
           {shown.length ? (
             <ClaimsGrid rows={shown} openId={open ? (openId ?? null) : null} onOpen={() => {}} fill={wide} still />
           ) : (
@@ -91,7 +93,9 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts }: Clai
           )}
         </div>
         {open && (
-          <EvidenceStill claim={open} />
+          <div className={clsx("h-full shrink-0", panelClassName)}>
+            <EvidenceStill claim={open} />
+          </div>
         )}
       </div>
       <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">

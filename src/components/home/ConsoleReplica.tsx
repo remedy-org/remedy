@@ -5,9 +5,9 @@ import { Money, StatusPill, type Status } from "@/components/ui";
 
 /*
  * A still of Remedy's claims console in plain DOM (no AG Grid, so the homepage and /signin ship no grid JS), styled
- * like the queue: thumbnails, decision pills, an evidence barcode per claim, and the evidence panel. It is the static
- * stand-in for P4's <ClaimsGridPreview> (src/components/console/ClaimsGridPreview.tsx): Companies.tsx mounts it
- * through one seam, PREVIEW in CompaniesPreview.tsx, so the real grid swaps in with a one-line change.
+ * like the queue: thumbnails, decision pills, an evidence barcode per claim, and the evidence panel. On the homepage it
+ * is the loading and no-JS stand-in for the real <ClaimsGridPreview> (CompaniesPreview.tsx), so its chrome matches
+ * the grid's; /signin shows it as the page's backdrop.
  *
  * Every row is a real seeded claim: buildSeedClaims (src/lib/demo/seed.ts, seed 27071) gives the ids, codes, payer
  * ids, decisions and reasons below, and the open claim's quotes are the stored model answer
@@ -201,10 +201,10 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
         <span className="font-semibold">Remedy</span>
         <span className="hidden gap-5 text-ui font-medium sm:flex">
           <span className="relative text-text after:absolute after:inset-x-0 after:-bottom-[15px] after:h-px after:bg-text">Claims</span>
+          <span className="text-muted">Insights</span>
           <span className="text-muted" data-anchor="report">
             Report
           </span>
-          <span className="text-muted">New recall</span>
         </span>
         <span className="ml-auto text-ui text-muted">Kikea Store</span>
       </div>
