@@ -48,7 +48,7 @@ export type ClaimLike = Pick<Claim, "decision" | "reasons" | "photos" | "verdict
 const PRE = [
   { id: "session", label: "Live camera session", checks: ["session"], pass: "Taken on this page's camera before the code expired" },
   { id: "duplicate_photo", label: "Photo not seen before", checks: ["duplicate_photo"], pass: "No match among earlier claims' photos" },
-  { id: "account", label: "First claim for this PayPal account", checks: ["state", "payer_verified", "payer"], pass: "A verified PayPal account with no other claim for this recall" },
+  { id: "account", label: "One claim per verified PayPal account", checks: ["state", "payer_verified", "payer"], pass: "A verified PayPal account with no other claim for this recall" },
 ] as const;
 
 const OUTCOME: Record<Reason["outcome"], CheckState> = { pass: "pass", hold: "hold", reject: "reject" };

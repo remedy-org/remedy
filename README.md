@@ -31,15 +31,17 @@ The model is not the defence against AI images: in our tests, no model could rel
 | 1 | Live camera session: photos must arrive inside this claim's 10-minute session | No |
 | 2 | Never seen before: a perceptual fingerprint (dHash) compares every photo with every earlier claim | No |
 | 3 | One claim per verified PayPal account per recall | No |
-| 4 | The photo check: GPT-6.1 Sol reads the label, the cut and the handwritten code, character by character, with quoted evidence | Yes, it describes |
-| 5 | A fixed rule in code turns those answers into paid, held or rejected | No, code decides |
+| 4 | The code, character by character: GPT-6.1 Sol reads the handwritten code and the product label, with quoted evidence | Yes, it describes |
+| 5 | Really destroyed: the model describes each step of the cut, quoting what it sees | Yes, it describes |
+
+The model only describes. A fixed rule in code, not the model, turns those answers into paid, held or rejected.
 
 ## Try it (judges)
 
 1. Open **https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try**.
 2. Log in with a **PayPal sandbox personal account**. Use the test login in the Devpost testing notes, or make one at developer.paypal.com → Testing Tools → Sandbox Accounts.
 3. Run the four sample claims. They use the real pipeline on sample photos:
-   - **A genuine claim**: paid $29.99 in sandbox money, usually in under 30 seconds.
+   - **A genuine claim**: paid $29.99 in sandbox money within a minute of the photo.
    - **The wrong code**: rejected; the model reads the tag character by character.
    - **An AI image, sent in**: blocked before the model; it wasn't taken in this claim's camera session.
    - **A reposted photo**: blocked as a duplicate of an earlier claim's photo.

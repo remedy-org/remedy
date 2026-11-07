@@ -16,7 +16,7 @@ export function Checks() {
       <PipelineList />
       <div className="mt-10 flex flex-col items-start gap-2 border-t border-line pt-6 sm:flex-row sm:items-center sm:gap-8 lg:mt-0">
         <Button href="/r/kikea-x-vesolje/try" variant="tertiary" size="lg">
-          Run these four yourself
+          Try the four samples yourself
         </Button>
         <p className="font-mono text-micro text-faint">
           Needs a PayPal sandbox personal account ·{" "}

@@ -55,7 +55,7 @@ const WHY = [
 ];
 
 const NOTES = [
-  "Every photo with a code on it is AI-made: no web photo can carry a per-claim code. The first real one is our demo capture.",
+  "Every photo with a code on it is AI-made: no web photo can carry a per-claim code. The first real one will be a live-camera capture.",
   "Every model paid c14, an AI image with three cut ends on two pieces, at least once. That is why the model is not the defence against fakes.",
   "One person wrote the answer keys and checked every image by eye.",
 ];

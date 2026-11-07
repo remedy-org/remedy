@@ -462,12 +462,13 @@ const count = (rows: CheckRow[], group: CheckRow["group"]) => rows.filter((r) =>
 function passedSummary(rows: CheckRow[]): string {
   const pre = count(rows, "pre");
   const model = count(rows, "model");
-  return `All checks passed · ${pre} with no AI · ${model} in the photo`;
+  // "Five checks" on the homepage: the ones with no AI, then the photo check, whose answers are listed one per row.
+  return `All checks passed · ${pre} with no AI · the photo check: ${model} of ${model} answers`;
 }
 
 function otherSummary(rows: CheckRow[]): string {
-  const passed = rows.filter((r) => r.group !== "pay" && r.state === "pass").length;
-  return passed ? `${passed} other ${passed === 1 ? "check" : "checks"} passed · every check` : "Every check";
+  const passed = rows.some((r) => r.group !== "pay" && r.state === "pass");
+  return passed ? "Everything else passed · every check" : "Every check";
 }
 
 function Top({ status, id }: { status: ReactNode; id: string }) {
