@@ -14,6 +14,7 @@ const headers = new Headers({
 
 const event = {
   id: "WH-EVT-1",
+  create_time: "2026-11-07T10:01:00.000Z",
   event_type: "PAYMENT.PAYOUTS-ITEM.SUCCEEDED",
   resource: {
     payout_item_id: "I1",
@@ -47,7 +48,13 @@ describe("verifyWebhook", () => {
 describe("parsePayoutItemEvent", () => {
   it("reads a payout item event", async () => {
     const { parsePayoutItemEvent } = await load();
-    expect(parsePayoutItemEvent(event)).toEqual({ eventId: "WH-EVT-1", type: "PAYMENT.PAYOUTS-ITEM.SUCCEEDED", itemId: "I1", batchId: "B1", status: "SUCCESS", claimId: "RM-0412" });
+    expect(parsePayoutItemEvent(event)).toEqual({ eventId: "WH-EVT-1", type: "PAYMENT.PAYOUTS-ITEM.SUCCEEDED", itemId: "I1", batchId: "B1", status: "SUCCESS", claimId: "RM-0412", createdAt: new Date("2026-11-07T10:01:00.000Z") });
+  });
+
+  it("leaves createdAt out when create_time is missing or unreadable", async () => {
+    const { parsePayoutItemEvent } = await load();
+    expect(parsePayoutItemEvent({ ...event, create_time: undefined })).not.toHaveProperty("createdAt");
+    expect(parsePayoutItemEvent({ ...event, create_time: "yesterday" })).not.toHaveProperty("createdAt");
   });
 
   it("applies an event only to the claim whose payout has its batch id", async () => {

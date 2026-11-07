@@ -36,6 +36,7 @@ export async function verifyWebhook(headers: Headers, rawBody: string): Promise<
 
 const PayoutItemEvent = z.object({
   id: z.string(),
+  create_time: z.string().optional(),
   event_type: z.string().startsWith("PAYMENT.PAYOUTS-ITEM."),
   resource: z.object({
     payout_item_id: z.string(),
@@ -54,13 +55,16 @@ export interface PayoutItemUpdate {
   status: string;
   // sendPayout sets this to the claim id.
   claimId?: string;
+  // When PayPal created the event, to tell a late retry from news.
+  createdAt?: Date;
 }
 
 // Null for any event that isn't a PAYMENT.PAYOUTS-ITEM.* event.
 export function parsePayoutItemEvent(event: unknown): PayoutItemUpdate | null {
   const parsed = PayoutItemEvent.safeParse(event);
   if (!parsed.success) return null;
-  const { id, event_type, resource } = parsed.data;
+  const { id, create_time, event_type, resource } = parsed.data;
+  const createdAt = Date.parse(create_time ?? "");
   return {
     eventId: id,
     type: event_type,
@@ -68,6 +72,7 @@ export function parsePayoutItemEvent(event: unknown): PayoutItemUpdate | null {
     batchId: resource.payout_batch_id,
     status: resource.transaction_status,
     claimId: resource.payout_item?.sender_item_id,
+    ...(Number.isNaN(createdAt) ? {} : { createdAt: new Date(createdAt) }),
   };
 }
 
