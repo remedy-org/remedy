@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
-import { ClaimId, Decision, Money, Reason, RecallId, RecallSlug, type Claim, type Recall } from "../types";
+import { ClaimId, Decision, Money, Outcome, Reason, RecallId, RecallSlug, type Claim, type Recall } from "../types";
 
 // One row per claim in index.json: enough for the console's grid, stats and report, the demo picker and the
 // pre-checks without opening every claim. Each claim file read is a Blob operation, and those are capped.
@@ -25,11 +25,21 @@ export const ClaimSummary = z.object({
   demoRound: z.string().optional(),
   // The claim's event count. Every save adds an event, so a row with a higher count describes a newer claim.
   version: z.number().int().nonnegative().optional(),
+  // The console's evidence cells read these, so the grid never opens a claim file per row. summarize always writes
+  // them; rows written before them are filled once by completeRows.
+  // The one-time code the owner wrote on the tag.
+  code: z.string().optional(),
+  // Every check the rule recorded, in order: pre-check failures, the model's answers, a person's review.
+  checks: z.array(z.object({ check: z.string(), outcome: Outcome })).optional(),
+  // When each money step first happened: photos in, model answered, rule decided, PayPal sent, PayPal settled.
+  times: z.object({ photos: z.iso.datetime(), answered: z.iso.datetime(), decided: z.iso.datetime(), sent: z.iso.datetime(), settled: z.iso.datetime() }).partial().optional(),
+  // The photos' store keys, for the console's thumbnails. Never sent to a browser (console/_lib/photoToken.ts seals them).
+  photoKeys: z.array(z.string()).optional(),
 });
 export type ClaimSummary = z.infer<typeof ClaimSummary>;
 
-// Rows written before the index carried payerVerified, payoutAmount and reason. Writers pass them through as they
-// are; listClaims fills them in from their claim files once (completeRows).
+// Rows written before the index carried payerVerified, payoutAmount and reason (or the evidence fields above). Writers
+// pass them through as they are; listClaims fills them in from their claim files once (completeRows).
 export const IndexRow = ClaimSummary.partial({ payerVerified: true, payoutAmount: true, reason: true });
 export type IndexRow = z.infer<typeof IndexRow>;
 
@@ -111,6 +121,19 @@ export function decidingReason(c: Pick<Claim, "decision" | "reasons">): Reason |
   }
 }
 
+// The first time each money step happened, from the claim's events. Settled means PayPal said SUCCESS.
+function timesOf(c: Claim): NonNullable<ClaimSummary["times"]> {
+  const at = (match: (e: Claim["events"][number]) => boolean) => c.events.find(match)?.at;
+  const times = {
+    photos: at((e) => e.type === "photos_received"),
+    answered: at((e) => e.type === "checked"),
+    decided: at((e) => e.type === "decided" || e.type === "blocked" || e.type === "rejected"),
+    sent: at((e) => e.type === "payout_sent"),
+    settled: at((e) => e.type === "payout_updated" && e.detail.endsWith("SUCCESS")),
+  };
+  return Object.fromEntries(Object.entries(times).filter(([, v]) => v !== undefined));
+}
+
 export function summarize(c: Claim): ClaimSummary {
   const sample = c.demo ? c.events.find((e) => e.type === "demo_sample")?.detail : undefined;
   return {
@@ -129,12 +152,17 @@ export function summarize(c: Claim): ClaimSummary {
     ...(c.demo ? { demo: true } : {}),
     ...(c.demo && c.demoRound ? { demoRound: c.demoRound } : {}),
     version: c.events.length,
+    code: c.code,
+    checks: c.reasons.filter((r) => r.check !== "state").map((r) => ({ check: r.check, outcome: r.outcome })),
+    times: timesOf(c),
+    photoKeys: c.photos.map((p) => p.key),
   };
 }
 
-const isComplete = (r: IndexRow): r is ClaimSummary => r.payerVerified !== undefined && r.payoutAmount !== undefined && r.reason !== undefined;
+// checks stands for the evidence fields (code, checks, times, photoKeys), which summarize always writes together.
+const isComplete = (r: IndexRow): r is ClaimSummary => r.payerVerified !== undefined && r.payoutAmount !== undefined && r.reason !== undefined && r.checks !== undefined;
 // What an old row can say without its claim file.
-const asIs = (r: IndexRow): ClaimSummary => ({ payerVerified: false, payoutAmount: null, reason: null, ...r });
+const asIs = (r: IndexRow): ClaimSummary => ({ payerVerified: false, payoutAmount: null, reason: null, checks: [], times: {}, photoKeys: [], ...r });
 
 /** listClaims' rows, complete. Rows from before the index carried the grid's fields are read from their claim files
  * and saved back in one index write, so this happens once per store. A row whose file is gone is saved as it can be;

@@ -1,5 +1,5 @@
 import type { Claim, Outcome, Recall } from "@/lib/types";
-import { amountOf, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
+import { amountOf, checkLabel, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
 
 // Everything the evidence drawer shows for one claim, built on the server so the client never sees a full payer id.
 
@@ -43,14 +43,6 @@ export type ReviewedClaim = DrawerClaim & { sample?: string };
 // Pre-check reasons and a person's review aren't model answers: the drawer shows them elsewhere.
 const NOT_MODEL = new Set(["session", "duplicate_photo", "payer", "payer_verified", "state", "review"]);
 
-function checkLabel(check: string, code: string): string {
-  if (check === "label") return "Label";
-  if (check === "code") return `Code ${code}`;
-  if (check === "same_item") return "Same item";
-  if (check === "screen") return "Real photo";
-  const step = check.match(/^step_(\d+)$/);
-  return step ? `Step ${step[1]}` : check;
-}
 
 function evidenceFor(check: string, verdict: Claim["verdict"]): string | null {
   if (!verdict) return null;
