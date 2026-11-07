@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Card } from "@/components/ui";
 import { CheckList } from "./CheckList";
+import { ModelQuote } from "./EvidenceText";
 import { ExhibitPhoto, StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
 import { GlassChip } from "./Viewfinder";
@@ -55,7 +56,6 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
   const [shown, setShown] = useState(preview ? firstWaiting(initial.rows) : 0);
   const [offline, setOffline] = useState(preview?.offline ?? false);
   // The server clock at render first, so server and client paint the same seconds.
-  const [mounted] = useState(startNow);
   const [now, setNow] = useState(startNow);
   const reduced = useSyncExternalStore(subscribeMotion, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => false);
 
@@ -83,6 +83,8 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
     return () => clearInterval(t);
   }, [preview, done]);
 
+  // Photos sent from another device but not read yet (the arrival's read failed): ask at once rather than in 2 s.
+  const unseen = initial.photos === 0;
   useEffect(() => {
     if (preview || sending || decided) return;
     let delay = POLL_MS;
@@ -109,12 +111,12 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
       }
       t = setTimeout(tick, delay);
     };
-    t = setTimeout(tick, delay);
+    t = setTimeout(tick, unseen ? 0 : delay);
     return () => {
       stopped = true;
       clearTimeout(t);
     };
-  }, [claimId, decided, preview, sending]);
+  }, [claimId, decided, preview, sending, unseen]);
 
   useEffect(() => {
     if (!done || preview) return;
@@ -126,9 +128,10 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
     i < shown ? r : i === shown && !done ? { ...r, state: "running", detail: undefined, quote: undefined } : { ...r, state: "waiting", detail: undefined, quote: undefined },
   );
   const reading = !sending && !decided && view.photos > 0 && rows.some((r) => r.group === "model" && (r.state === "running" || r.state === "waiting"));
-  // Seconds since the photos arrived: from the claim's own event when there is one, so a reload keeps counting.
+  // Seconds since the photos arrived, from the claim's own event, so a reload keeps counting. Until that is known (the
+  // photos are still on their way from another device) there is no count, rather than one from when this page opened.
   const received = view.timeline.find((e) => e.type === "photos_received")?.at;
-  const elapsed = preview?.elapsed ?? Math.max(0, (now - (received ? Date.parse(received) : mounted)) / 1000);
+  const elapsed = preview?.elapsed ?? (received ? Math.max(0, (now - Date.parse(received)) / 1000) : null);
   const blocked = view.decision === "blocked";
   const src = photoUrl ?? (view.photos > 0 ? `/api/claims/${claimId}/photos/1` : undefined);
   // The model's quotes for the annotations under Exhibit A: only the answers already revealed.
@@ -141,7 +144,7 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
     ? "Uploading over a secure connection."
     : done
       ? "Opening your result."
-      : elapsed > USUAL[1] && !decided
+      : elapsed !== null && elapsed > USUAL[1] && !decided
         ? "Taking longer than usual. Nothing is lost: your claim is saved, and a person looks at it if the check doesn't answer."
         : "Usually 15 to 40 seconds. Your claim is saved, so you can close this page.";
 
@@ -157,7 +160,13 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
             )}
             {reading && (
               <GlassChip className="absolute top-2 right-2">
-                {reduced ? <>Reading the photo… <span className="normal-case">{Math.floor(elapsed)}s</span></> : "Reading the photo"}
+                {reduced && elapsed !== null ? (
+                  <>
+                    Reading the photo… <span className="normal-case">{Math.floor(elapsed)}s</span>
+                  </>
+                ) : (
+                  "Reading the photo"
+                )}
               </GlassChip>
             )}
           </ExhibitPhoto>
@@ -178,7 +187,9 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
                 </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className="text-text">{r.label}</span>
-                  <q className="line-clamp-2 text-ui leading-[1.55] text-muted">{r.quote}</q>
+                  <q className="line-clamp-2 text-ui leading-[1.55] text-muted">
+                    <ModelQuote>{r.quote ?? ""}</ModelQuote>
+                  </q>
                 </span>
               </li>
             ))}
@@ -190,16 +201,18 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
         <div className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-4">
             <StepTitle id="checking-title">{title}</StepTitle>
-            <span className="font-mono text-ui text-faint tabular-nums" aria-hidden="true">
-              {Math.floor(elapsed)}s
-            </span>
+            {elapsed !== null && (
+              <span className="font-mono text-ui text-faint tabular-nums" aria-hidden="true">
+                {Math.floor(elapsed)}s
+              </span>
+            )}
           </div>
           <p className="text-body text-muted" aria-live="polite">
             {lead}
           </p>
         </div>
 
-        {!sending && !blocked && <TimeLine elapsed={elapsed} done={decided} />}
+        {!sending && !blocked && elapsed !== null && <TimeLine elapsed={elapsed} done={decided} />}
 
         {offline && (
           <p role="status" className="rounded-control border border-line bg-surface-2 px-3 py-2.5 text-ui text-muted">

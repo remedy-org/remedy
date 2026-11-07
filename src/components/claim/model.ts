@@ -78,7 +78,7 @@ export function checkRows(claim: ClaimLike, spec: CheckSpec): CheckRow[] {
     if (!received) return { id: p.id, group: "pre", label: p.label, state: "waiting" };
     const fails = blocked ? claim.reasons.filter((r) => (p.checks as readonly string[]).includes(r.check) && r.outcome === "reject") : [];
     return fails.length
-      ? { id: p.id, group: "pre", label: p.label, state: "blocked", detail: fails.map((f) => f.text).join(". ") }
+      ? { id: p.id, group: "pre", label: p.label, state: "blocked", detail: readableReasons(fails, claim.photos.length).map((f) => f.text).join(". ") }
       : { id: p.id, group: "pre", label: p.label, state: "pass", detail: claim.demo && p.id === "session" ? "Sent inside this claim's 10-minute session" : p.pass };
   });
   if (blocked) return rows;
@@ -139,6 +139,24 @@ export const isDecided = (d: Decision) => d !== "pending";
 export function decidingReasons(claim: Pick<Claim, "decision" | "reasons">): Reason[] {
   const want = claim.decision === "held" ? "hold" : "reject";
   return claim.reasons.filter((r) => r.outcome === want);
+}
+
+/**
+ * The reasons as the owner reads them: one line per photo that was a repost ("Photo 1 was already used…", three times)
+ * becomes one ("All 3 photos were already used in another claim").
+ */
+export function readableReasons(reasons: Reason[], photos: number): Reason[] {
+  const dupes = reasons.filter((r) => r.check === "duplicate_photo");
+  if (dupes.length < 2) return reasons;
+  const which = dupes.map((r) => /^Photo (\d+)\b/.exec(r.text)?.[1]).filter((n): n is string => Boolean(n));
+  const text =
+    dupes.length === photos
+      ? `All ${photos} photos were already used in another claim`
+      : which.length === dupes.length
+        ? `Photos ${which.slice(0, -1).join(", ")} and ${which[which.length - 1]} were already used in another claim`
+        : `${dupes.length} photos were already used in another claim`;
+  const at = reasons.indexOf(dupes[0]);
+  return reasons.flatMap((r, i) => (i === at ? [{ ...r, text }] : r.check === "duplicate_photo" ? [] : [r]));
 }
 
 /**
@@ -298,7 +316,7 @@ export function refusalHeadline(claim: Pick<Claim, "decision" | "reasons" | "pho
     case "session":
       return "This photo wasn't taken on this page's camera";
     case "duplicate_photo":
-      return "This photo was already used in another claim";
+      return claim.photos.length > 1 ? "These photos were already used in another claim" : "This photo was already used in another claim";
     case "payer":
       return "This PayPal account already has a claim for this recall";
     case "payer_verified":

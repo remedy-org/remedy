@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import type { ReactNode } from "react";
 import { ClaimFlow, type ClaimFlowProps } from "@/components/claim/ClaimFlow";
+import { ContinueCard } from "@/components/claim/ContinueCard";
 import { ExpiredCard } from "@/components/claim/ExpiredCard";
 import { FlowShell } from "@/components/claim/FlowShell";
 import { FlowSkeleton } from "@/components/claim/FlowSkeleton";
@@ -12,7 +13,7 @@ import { NotFoundCard } from "@/components/claim/NotFoundCard";
 import { RecallView } from "@/components/claim/RecallScreen";
 import { Result, type ResultProps } from "@/components/claim/Result";
 import { SamplePicker } from "@/components/claim/SamplePicker";
-import { DEMO_STEPS, REAL_STEPS, StepMeter } from "@/components/claim/StepMeter";
+import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter } from "@/components/claim/StepMeter";
 import { Button, ErrorState } from "@/components/ui";
 import { DEMO_SAMPLES, demoSample, isSandboxBuild } from "@/lib/demo";
 import { nextUtcDay } from "@/lib/limits";
@@ -62,7 +63,7 @@ function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultPr
         photoUrls={photoUrls}
         againHref="#"
         now={fx.NOW + 10 * 60_000}
-        meter={<StepMeter current={steps.length + 1} steps={steps} />}
+        meter={<StepMeter {...resultMeter(d.claim.decision, steps)} steps={steps} />}
         sandbox={isSandboxBuild()}
         {...over}
       />
@@ -83,6 +84,11 @@ const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug">) => (
 
 const consent = (over: Partial<Parameters<typeof RecallView>[0]> = {}) => <RecallView recall={fx.recall} href="#" sandbox={isSandboxBuild()} {...over} />;
 const genuine = demoSample("genuine")!;
+const handoff = (signedInAs?: string) => (
+  <FlowShell sandbox={isSandboxBuild()} company="Kikea Store">
+    <ContinueCard id={fx.open.id} product="X-VESOLJE Nursing Pillow" company="Kikea Store" loginHref="#" expiresAt={new Date(Date.now() + 8 * 60_000 + 12_000).toISOString()} startNow={Date.now()} signedInAs={signedInAs} />
+  </FlowShell>
+);
 
 const run = (id: string, sample: string, decision: Claim["decision"]) => ({ id, href: "#", title: demoSample(sample)!.title, decision, sample });
 const locked = (sample: (typeof DEMO_SAMPLES)[number]) => (sample.after ? `Send "A genuine claim" first: this one reposts its photo.` : undefined);
@@ -95,6 +101,16 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "consent-denied": { group: "Recall", note: "PayPal login cancelled", render: () => consent({ authError: "denied" }) },
   "consent-unverified": { group: "Recall", note: "Unverified PayPal account", render: () => consent({ signedInAs: "Pat Doe", unverified: true }) },
   "consent-limit": { group: "Recall", note: "Claim start refused: account's daily limit", render: () => consent({ signedInAs: "Pat Doe", refusal: { kind: "account", limit: 5, until: nextUtcDay(new Date()) } }) },
+  "consent-returning": {
+    group: "Recall",
+    note: "Back from the notice with a held claim",
+    render: () => consent({ signedInAs: "Pat Doe", yourClaim: { id: "RM-0996", href: "#", decision: "held", photos: 1, decideBy: "Tue 10 Nov" } }),
+  },
+  "consent-returning-paid": {
+    group: "Recall",
+    note: "Back from the notice with a paid claim",
+    render: () => consent({ signedInAs: "Pat Doe", yourClaim: { id: "RM-0442", href: "#", decision: "paid", photos: 1, paidOn: "7 Nov 2026" } }),
+  },
   "demo-consent": { group: "Recall", note: "Demo mode", render: () => consent({ demo: true }) },
   "demo-consent-signed-in": { group: "Recall", note: "Demo mode, logged in", render: () => consent({ demo: true, signedInAs: "Pat Doe" }) },
   picker: {
@@ -151,6 +167,8 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     note: "Sample claim refused: today's photo checks used up",
     render: () => picker({ selected: "genuine", runs: [], roundDone: false, options: DEMO_SAMPLES.map((sample) => ({ sample })), refusal: { kind: "checks", limit: 100, until: nextUtcDay(new Date()) } }),
   },
+  handoff: { group: "Code", note: "Phone from the QR, logged out: time left", render: () => handoff() },
+  "handoff-other": { group: "Code", note: "Phone from the QR, another PayPal account", render: () => handoff("Sam Doe") },
   code: { group: "Code", note: "Code, timer and the phone's QR", render: () => flow({ preview: { phase: "code" } }) },
   "code-low": {
     group: "Code",

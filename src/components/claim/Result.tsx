@@ -4,7 +4,7 @@ import { Button, CheckIcon, CrossIcon, Money, NoBreakHyphens, Paper, Stamp, Stat
 import type { DemoSample } from "@/lib/demo";
 import type { Claim, Recall } from "@/lib/types";
 import { CheckList } from "./CheckList";
-import { EvidenceText } from "./EvidenceText";
+import { EvidenceText, ModelQuote } from "./EvidenceText";
 import { ExhibitPhoto, SampleChip, StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
 import { FocusTitle } from "./FocusTitle";
@@ -21,6 +21,7 @@ import {
   maskPayer,
   money,
   noModelAnswer,
+  readableReasons,
   refusalHeadline,
   secondsBetween,
   type CheckRow,
@@ -139,7 +140,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
           </p>
           {took !== null && (
             <span className="inline-flex h-7 items-center self-start rounded-control bg-paper-2 px-2.5 font-mono text-ui text-ink tabular-nums">
-              Paid {took} s after your photo
+              Paid {took}s after your photo
             </span>
           )}
           <span className="absolute top-1 right-0">
@@ -162,15 +163,9 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
               <LocalTime iso={sentAt} format="stamp" />
             </ReceiptRow>
           )}
-          <ReceiptRow label="PayPal account" mono>
+          {/* "Verified" in the label, so the masked ID never wraps on a narrow receipt. */}
+          <ReceiptRow label={claim.payerVerified ? "Verified PayPal account" : "PayPal account"} mono>
             {maskPayer(claim.payerId)}
-            {/* On a narrow receipt "· verified" takes a line of its own rather than being cut off. */}
-            {claim.payerVerified && (
-              <>
-                {" "}
-                <span className="whitespace-nowrap">· verified</span>
-              </>
-            )}
           </ReceiptRow>
           {claim.payout && (
             <ReceiptRow label="PayPal batch" mono>
@@ -296,7 +291,11 @@ function Reasons({ reasons, rows, summary }: { reasons: Claim["reasons"]; rows: 
               <span className="text-ink">
                 <EvidenceText>{r.text}</EvidenceText>
               </span>
-              {quote && <span className="border-l border-paper-line pl-3 text-ui leading-[1.55] text-ink-muted">&ldquo;{quote}&rdquo;</span>}
+              {quote && (
+                <span className="border-l border-paper-line pl-3 text-ui leading-[1.55] text-ink-muted">
+                  &ldquo;<ModelQuote>{quote}</ModelQuote>&rdquo;
+                </span>
+              )}
             </span>
           </li>
         );
@@ -309,7 +308,7 @@ function Reasons({ reasons, rows, summary }: { reasons: Claim["reasons"]; rows: 
 
 function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: ResultProps) {
   const blocked = claim.decision === "blocked";
-  const reasons = decidingReasons(claim);
+  const reasons = readableReasons(decidingReasons(claim), claim.photos.length);
   const retry = canRetry(reasons);
   const company = companyName(recall);
   const lead = reasons[0]?.check;
@@ -385,7 +384,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
 
       {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} />}
       {/* The verdict sheet above already shows Exhibit A and the deciding quote; the rest of the checks wait folded. */}
-      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={otherSummary(rows)} open={false} code={claim.code} />
+      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={otherSummary(rows, blocked)} open={false} code={claim.code} />
     </section>
   );
 }
@@ -494,9 +493,11 @@ function passedSummary(rows: CheckRow[]): string {
   return `All checks passed · ${pre} need no\u00a0AI · ${model} read from your photo`;
 }
 
-function otherSummary(rows: CheckRow[]): string {
-  const passed = rows.some((r) => r.group !== "pay" && r.state === "pass");
-  return passed ? "Everything else passed · every check" : "Every check";
+// The folded evidence under a refusal: blocked claims never reached the model, so nothing is said to have passed there.
+function otherSummary(rows: CheckRow[], blocked: boolean): string {
+  if (blocked || !rows.some((r) => r.group === "model" && r.state !== "waiting")) return "The photo check didn't run";
+  const others = rows.filter((r) => r.group !== "pay" && r.state !== "reject" && r.state !== "blocked");
+  return others.length && others.every((r) => r.state === "pass") ? "Every other check passed" : "Every check";
 }
 
 function Top({ status, id }: { status: ReactNode; id: string }) {
@@ -529,7 +530,8 @@ function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { ro
           <div className={clsx("grid gap-5", photoUrls.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
             {photoUrls.map((src, i) => (
               // /demo holds only AI-made samples (a dev preview's stand-ins too): any photo from there carries the label.
-              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} letter={String.fromCharCode(65 + i)} sample={sample || src.startsWith("/demo/")} />
+              // Numbered as the camera numbers them: letters are the judges' samples (A to D).
+              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} letter={String(i + 1)} sample={sample || src.startsWith("/demo/")} />
             ))}
           </div>
         )}

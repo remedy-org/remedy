@@ -19,6 +19,9 @@ export function limitCopy({ kind, limit, until }: Refusal, { demo, now }: { demo
   }
 }
 
+/** The refused start's button, muted until the limit resets: "Available after 00:00 UTC", "Available again in 3 days". */
+export const retryLabel = ({ kind, until }: Refusal, now = new Date()) => (kind === "monthly" ? `Available again ${retryIn(until, now)}` : "Available after 00:00 UTC");
+
 export function LimitNotice({ refusal, demo, now = new Date() }: { refusal: Refusal; demo: boolean; now?: Date }) {
   const { title, description } = limitCopy(refusal, { demo, now });
   return <ErrorState variant="inline" title={title} description={description} />;

@@ -3,11 +3,11 @@ import { Button, Card, ClockIcon, ErrorState, Money, NoBreakHyphens, Paper, Stat
 import { RemedyMark } from "@/components/ui/Wordmark";
 import { DEMO_SAMPLES } from "@/lib/demo";
 import type { Refusal } from "@/lib/limits";
-import type { Recall } from "@/lib/types";
+import type { Decision, Recall } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { InfoIcon, LockIcon } from "./icons";
-import { LimitNotice } from "./LimitNotice";
-import { companyName, cutInHalf, money, productNoun, SANDBOX_ACCOUNTS_URL } from "./model";
+import { LimitNotice, retryLabel } from "./LimitNotice";
+import { companyName, cutInHalf, handWrittenLabel, money, productNoun, SANDBOX_ACCOUNTS_URL } from "./model";
 
 export type AuthError = "denied" | "state" | "paypal" | "refused";
 
@@ -17,6 +17,18 @@ const AUTH_ERRORS: Record<AuthError, { title: string; description: string }> = {
   paypal: { title: "PayPal didn't answer", description: "Nothing was shared and no claim was started. Try again in a minute." },
   refused: { title: "PayPal wouldn't share this account", description: "Nothing was shared and no claim was started. Log in with a different PayPal account, such as a personal one." },
 };
+
+/** The owner's claim for this recall, already under way: the one Continue would lead back to. */
+export interface YourClaim {
+  id: string;
+  href: string;
+  decision: Decision;
+  photos: number;
+  /** Held: "Tue 10 Nov". */
+  decideBy?: string;
+  /** Paid: "7 Nov 2026". */
+  paidOn?: string;
+}
 
 export interface ConsentCardProps {
   recall: Recall;
@@ -29,10 +41,14 @@ export interface ConsentCardProps {
   unverified?: boolean;
   /** The last start was refused by a spending limit. */
   refusal?: Refusal | null;
+  /** Logged in with a claim for this recall already: the card leads with it. */
+  yourClaim?: YourClaim | null;
 }
 
 /** The primary button's words, shared with the phone's sticky bar. */
-export function consentAction({ signedInAs, demo, unverified }: Pick<ConsentCardProps, "signedInAs" | "demo" | "unverified">): string {
+export function consentAction({ signedInAs, demo, unverified, refusal, yourClaim }: Pick<ConsentCardProps, "signedInAs" | "demo" | "unverified" | "refusal" | "yourClaim">): string {
+  if (yourClaim) return yourClaim.decision === "pending" && !yourClaim.photos ? "Continue your claim" : "See your claim";
+  if (refusal) return retryLabel(refusal);
   if (unverified) return "Log in with a verified account";
   if (signedInAs) return demo ? "Choose a sample claim" : "Continue to your code";
   return demo ? "Log in with PayPal sandbox" : "Log in with PayPal";
@@ -42,8 +58,9 @@ export function consentAction({ signedInAs, demo, unverified }: Pick<ConsentCard
  * The consent card, after Stripe Identity and Plaid: the refund first, a two-tone promise, the two parties as
  * overlapping marks, three numbered steps (the four samples in the demo), one full-width action and a privacy line.
  */
-export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal }: ConsentCardProps) {
+export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim }: ConsentCardProps) {
   const company = companyName(recall);
+  const action = consentAction({ signedInAs, demo, unverified, refusal, yourClaim });
   const amount = money(recall.refund);
   const error = authError ? AUTH_ERRORS[authError] : null;
   const steps = [
@@ -53,6 +70,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   ];
   return (
     <Card padding="lg" as="section" aria-labelledby="consent-title" className="flex flex-col gap-7">
+      {yourClaim && <ClaimStatus claim={yourClaim} company={company} action={action} />}
       {/* On a phone the recall row above already shows the refund. */}
       <div className="flex flex-col gap-2 max-sm:hidden">
         <span className="micro text-faint">{demo ? "Refund · sandbox money" : "Your refund"}</span>
@@ -117,40 +135,50 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       {error && <ErrorState variant="inline" title={error.title} description={error.description} />}
       {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} />}
 
-      <div className="flex flex-col gap-4">
-        {demo && !signedInAs && (
-          // Information, so neutral: the held blue means "waiting for a person" and nothing else. Under the button on a
-          // phone, so the button clears the first screen.
-          <div className="flex gap-3 rounded-card bg-surface-2 p-4 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] max-sm:order-last">
-            <InfoIcon className="mt-0.5 shrink-0 text-muted" />
-            <div className="flex flex-col gap-1">
-              <p className="font-medium text-text">
-                Log in with a PayPal <strong className="font-medium">sandbox</strong> personal account.
-              </p>
-              <p className="text-muted">
-                The judges&apos; test login is in the submission notes. Your real PayPal login won&apos;t work here. No login?{" "}
-                <a href={SANDBOX_ACCOUNTS_URL} className="text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
-                  Make one at developer.paypal.com
-                </a>
-                .
-              </p>
+      {/* With a claim under way its own button leads, at the top, and nothing new starts here. */}
+      {!yourClaim && (
+        <div className="flex flex-col gap-4">
+          {demo && !signedInAs && (
+            // Information, so neutral: the held blue means "waiting for a person" and nothing else. Under the button on a
+            // phone, so the button clears the first screen.
+            <div className="flex gap-3 rounded-card bg-surface-2 p-4 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] max-sm:order-last">
+              <InfoIcon className="mt-0.5 shrink-0 text-muted" />
+              <div className="flex flex-col gap-1">
+                <p className="font-medium text-text">
+                  Log in with a PayPal <strong className="font-medium">sandbox</strong> personal account.
+                </p>
+                <p className="text-muted">
+                  The judges&apos; test login is in the submission notes. Your real PayPal login won&apos;t work here. No login?{" "}
+                  <a href={SANDBOX_ACCOUNTS_URL} className="text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
+                    Make one at developer.paypal.com
+                  </a>
+                  .
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-        {!demo && (
-          // The code's 10 minutes start on the next screen: say what to have at hand before they do.
-          <p className="flex gap-2.5 text-ui text-text">
-            <ClockIcon className="mt-0.5 shrink-0 text-muted" />
-            <span>
-              Have ready: your <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens>, already {cutInHalf(recall.spec) ? "cut in half" : "destroyed"}, a marker and a piece of paper. Your 10
-              minutes start when you see the code.
-            </span>
-          </p>
-        )}
-        <Button id="consent-cta" href={href} size="lg" block prefetch={false}>
-          {consentAction({ signedInAs, demo, unverified })}
-        </Button>
-      </div>
+          )}
+          {!demo && (
+            // The code's 10 minutes start on the next screen: say what to have at hand before they do.
+            <p className="flex gap-2.5 text-ui text-text">
+              <ClockIcon className="mt-0.5 shrink-0 text-muted" />
+              <span>
+                Have ready: your <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens>, already {cutInHalf(recall.spec) ? "cut in half" : "destroyed"},{" "}
+                {handWrittenLabel(recall.spec) ? "a marker, a paper tag and some string or tape" : "a marker and a piece of paper"}. Your 10 minutes start when you see the code.
+              </span>
+            </p>
+          )}
+          {/* Refused by a limit: nothing to tap until it resets. */}
+          {refusal ? (
+            <Button id="consent-cta" size="lg" block disabled>
+              {action}
+            </Button>
+          ) : (
+            <Button id="consent-cta" href={href} size="lg" block prefetch={false}>
+              {action}
+            </Button>
+          )}
+        </div>
+      )}
       {/* Under the button on a laptop; on a phone after the steps, which follow the button there. */}
       <p className="-mt-3 flex gap-2.5 text-ui text-faint max-sm:order-last max-sm:mt-0">
         <LockIcon className="mt-0.5 shrink-0" />
@@ -160,6 +188,45 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         </span>
       </p>
     </Card>
+  );
+}
+
+const CLAIM_STATUS: Record<Decision, { title: (company: string) => string }> = {
+  held: {
+    title: (company) => `Your claim is waiting for a person at ${company}`,
+  },
+  paid: { title: () => "Your refund was paid" },
+  pending: { title: () => "Your claim is open" },
+  rejected: { title: () => "Your claim was refused" },
+  blocked: { title: () => "Your claim was refused" },
+};
+
+/** A claim already under way, first: its status, number and date, and the way back to it. Nothing new starts here. */
+function ClaimStatus({ claim, company, action }: { claim: YourClaim; company: string; action: string }) {
+  const checking = claim.decision === "pending" && claim.photos > 0;
+  const title = checking ? "Your photos are being checked" : CLAIM_STATUS[claim.decision].title(company.replace(/ /g, "\u00a0"));
+  const line =
+    claim.decision === "held"
+      ? `Decision by ${claim.decideBy}. It's saved: there's nothing to redo, and no new claim to start.`
+      : claim.decision === "paid"
+        ? `Paid on ${claim.paidOn}. This PayPal account's claim for this recall is done.`
+        : checking
+          ? "Usually under a minute. Your claim is saved."
+          : "Your code is still running. Pick up where you left off.";
+  return (
+    <div className="flex flex-col gap-4 border-b border-line pb-7">
+      <div className="flex items-center justify-between gap-4">
+        <StatusPill status={claim.decision} label={checking ? "Checking" : undefined} />
+        <span className="font-mono text-ui font-medium whitespace-nowrap text-faint">Claim {claim.id}</span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <p className="text-head-sm font-medium text-pretty text-text">{title}</p>
+        <p className="text-ui text-muted">{line}</p>
+      </div>
+      <Button id="consent-cta" href={claim.href} size="lg" block prefetch={false}>
+        {action}
+      </Button>
+    </div>
   );
 }
 

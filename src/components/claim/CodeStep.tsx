@@ -52,7 +52,7 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, qrSvg, phone
     <p className="text-body text-pretty text-text">
       {written ? (
         <>
-          On one paper tag, write <NoBreakHyphens>{written}</NoBreakHyphens> and <span className="font-mono whitespace-nowrap">{code}</span>. Tie it to the {destroyed} product and get all of it in one photo.
+          On one paper tag, write <NoBreakHyphens>{written}</NoBreakHyphens> and <span className="font-mono whitespace-nowrap">{code}</span>. Tie or tape it to the {destroyed} product and get all of it in one photo.
         </>
       ) : (
         <>
@@ -101,7 +101,13 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, qrSvg, phone
       </div>
 
       <div className="pt-6 pb-2 lg:[grid-area:tag]">
-        <CodeTag code={code} string foot="Write it big, 3 cm tall, in marker. Valid for 10 minutes." />
+        <CodeTag
+          code={code}
+          written={written}
+          label={written ? "Write this on your tag" : undefined}
+          string
+          foot={`Write ${written ? "the code" : "it"} big, 3 cm tall, in marker. Valid for 10 minutes.`}
+        />
       </div>
 
       <div className="flex flex-col gap-4 lg:[grid-area:act] lg:self-start">

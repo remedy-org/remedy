@@ -1,15 +1,16 @@
 import "server-only";
-import { isSandboxBuild } from "@/lib/demo";
+import { claimPath, findOpenClaim } from "@/app/api/claims/_lib/pipeline";
+import { getAppStore, isSandboxBuild } from "@/lib/demo";
 import { parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
-import type { Recall } from "@/lib/types";
-import { consentAction, ConsentCard, type AuthError, type ConsentCardProps } from "./ConsentCard";
+import type { Claim, Recall } from "@/lib/types";
+import { consentAction, ConsentCard, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
 import { FlowShell } from "./FlowShell";
 import { WithJudges } from "./Judges";
 import { MobileCta } from "./MobileCta";
-import { companyName, maskPayer } from "./model";
+import { businessDaysAfter, companyName, day, maskPayer } from "./model";
 import { RecallBrief } from "./RecallBrief";
-import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
+import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter, type StepMeterProps } from "./StepMeter";
 
 const AUTH_ERRORS = new Set<AuthError>(["denied", "state", "paypal", "refused"]);
 
@@ -19,10 +20,14 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
   const next = demo ? `/r/${recall.slug}/try/samples` : `/api/claims/start?recall=${recall.slug}`;
   const unverified = !demo && (query.account === "unverified" || (session !== null && !session.verified));
   const authError = typeof query.auth_error === "string" && AUTH_ERRORS.has(query.auth_error as AuthError) ? (query.auth_error as AuthError) : null;
+  // Back from the recall notice with a claim already paid, held, being checked or holding a live code: the same one
+  // /api/claims/start would continue, so the screen leads with it instead of offering to start again.
+  const open = session && !demo ? await findOpenClaim({ store: await getAppStore(), now: () => new Date() }, recall, session.payerId) : null;
   return (
     <RecallView
       recall={recall}
       demo={demo}
+      yourClaim={open ? yourClaim(recall, open) : null}
       href={session && !unverified ? next : loginPath("owner", next)}
       signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : null}
       authError={authError}
@@ -33,6 +38,25 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
   );
 }
 
+function yourClaim(recall: Recall, claim: Claim): YourClaim {
+  const at = (type: string) => claim.events.find((e) => e.type === type)?.at;
+  return {
+    id: claim.id,
+    href: claimPath(recall.slug, claim),
+    decision: claim.decision,
+    photos: claim.photos.length,
+    // As the held result says it: two business days from the photos.
+    decideBy: claim.decision === "held" ? businessDaysAfter(at("photos_received") ?? claim.createdAt, 2) : undefined,
+    paidOn: claim.decision === "paid" ? day(at("payout_sent") ?? claim.payout?.updatedAt ?? claim.createdAt) : undefined,
+  };
+}
+
+/** Where the landing's meter stands for a claim already under way. */
+function claimMeter(c: YourClaim): Pick<StepMeterProps, "current" | "outcome"> {
+  if (c.decision !== "pending") return resultMeter(c.decision, REAL_STEPS);
+  return { current: c.photos > 0 ? 4 : 2 };
+}
+
 /**
  * The recall screen's layout: the step meter in the same place as on every step, then the brief beside the consent card
  * on a laptop, stacked on a phone. Logged in (and verified, for a real claim), the PayPal step is done and the judges'
@@ -40,18 +64,20 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
  */
 export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?: boolean }) {
   const ready = Boolean(props.signedInAs) && !props.unverified;
+  const claim = props.yourClaim;
   return (
     <FlowShell demo={props.demo} sandbox={sandbox} company={companyName(props.recall)}>
       <WithJudges demo={Boolean(props.demo)} step={ready ? "samples" : "consent"}>
         <div className="flex flex-col gap-6">
-          <StepMeter current={ready ? 2 : 1} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
+          <StepMeter {...(claim ? claimMeter(claim) : { current: ready ? 2 : 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
           <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
             <RecallBrief recall={props.recall} sandbox={sandbox || props.demo} demo={props.demo} />
             <ConsentCard {...props} />
           </div>
         </div>
       </WithJudges>
-      <MobileCta target="consent-cta" href={props.href} label={consentAction(props)} />
+      {/* Refused by a limit, there's nothing to tap until it resets: the notice in the card says when. */}
+      {!(props.refusal && !claim) && <MobileCta target="consent-cta" href={claim?.href ?? props.href} label={consentAction(props)} />}
     </FlowShell>
   );
 }

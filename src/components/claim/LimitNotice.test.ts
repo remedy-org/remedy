@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { limitCopy } from "./LimitNotice";
+import { limitCopy, retryLabel } from "./LimitNotice";
 
 const now = new Date("2026-11-07T18:30:00.000Z");
 const tomorrow = new Date("2026-11-08T00:00:00.000Z");
@@ -21,5 +21,12 @@ describe("limitCopy", () => {
 
   it("gives days, not a UTC time, for the 30-day limit", () => {
     expect(limitCopy({ kind: "monthly", limit: 150, until: new Date("2026-11-10T09:00:00.000Z") }, { demo: false, now }).description).toMatch(/in any 30 days .* Try again in 3 days\.$/);
+  });
+});
+
+describe("retryLabel", () => {
+  it("says when the refused button comes back", () => {
+    expect(retryLabel({ kind: "account", limit: 5, until: tomorrow }, now)).toBe("Available after 00:00 UTC");
+    expect(retryLabel({ kind: "monthly", limit: 150, until: new Date("2026-11-10T09:00:00.000Z") }, now)).toBe("Available again in 3 days");
   });
 });

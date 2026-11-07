@@ -15,10 +15,10 @@ import { ContinueCard } from "./ContinueCard";
 import { ExpiredCard } from "./ExpiredCard";
 import { FlowShell } from "./FlowShell";
 import { WithJudges } from "./Judges";
-import { checkRows, companyName, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
+import { checkRows, companyName, maskPayer, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
 import { markAsked } from "./payout-live";
 import { Result, type DemoRound, type PayoutLive } from "./Result";
-import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
+import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter } from "./StepMeter";
 
 const QR_COLORS = { dark: "#15181d", light: "#ffffff" };
 // Request time: this page is rendered per request (it reads the session cookie), never cached.
@@ -61,15 +61,28 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
 
   const here = `/r/${recall.slug}/${demo ? "try" : "claim"}/${id}`;
   const session = await getSession("owner");
-  // Logged out (a phone from the laptop's QR, or an expired login): say where the PayPal login leads before it opens.
-  if (!session) {
+  const claim = await store.getClaim(id);
+  const ours = claim && claim.recallId === recall.id ? claim : null;
+  // Logged out (a phone from the laptop's QR, or an expired login), or logged in with another PayPal account (a family's
+  // phone): say where the PayPal login leads before it opens. Only the code's time left is read from the claim, and
+  // only while no photos have arrived: nothing about its owner.
+  if (!session || (ours && ours.payerId !== session.payerId)) {
+    const expiresAt = ours && !demo && !ours.photos.length && ours.decision === "pending" ? ours.captureSession?.expiresAt : undefined;
     return (
       <FlowShell demo={demo} sandbox={isSandboxBuild()} company={companyName(recall)}>
-        <ContinueCard id={id} product={productNoun(recall)} company={companyName(recall)} loginHref={loginPath("owner", here)} demo={demo} />
+        <ContinueCard
+          id={id}
+          product={productNoun(recall)}
+          company={companyName(recall)}
+          loginHref={loginPath("owner", here)}
+          demo={demo}
+          expiresAt={expiresAt}
+          startNow={requestTime()}
+          signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : undefined}
+        />
       </FlowShell>
     );
   }
-  const claim = await store.getClaim(id);
   if (!claim || claim.payerId !== session.payerId || claim.recallId !== recall.id) notFound();
   if (Boolean(claim.demo) !== demo) redirect(`/r/${recall.slug}/${claim.demo ? "try" : "claim"}/${claim.id}`);
 
@@ -96,7 +109,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           sample={sample}
           round={round}
           now={now}
-          meter={<StepMeter current={steps.length + 1} steps={steps} />}
+          meter={<StepMeter {...resultMeter(claim.decision, steps)} steps={steps} />}
           sandbox={sandbox}
         />
       </FlowShell>

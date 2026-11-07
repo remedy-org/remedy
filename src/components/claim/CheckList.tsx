@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import type { CSSProperties } from "react";
 import { CheckProgress, type CheckStep } from "@/components/ui";
-import { EvidenceText } from "./EvidenceText";
+import { EvidenceText, ModelQuote } from "./EvidenceText";
 import styles from "./flow.module.css";
 import type { CheckRow } from "./model";
 
@@ -93,7 +93,11 @@ function toStep(r: CheckRow, code?: string, quoteClassName?: string): CheckStep 
           </span>
         )}
         {r.detail && <EvidenceText>{r.detail}</EvidenceText>}
-        {r.quote && <span className={clsx("mt-1.5 block border-l border-line-strong pl-3 text-ui leading-[1.55] text-muted", styles.rise, quoteClassName)}>&ldquo;{r.quote}&rdquo;</span>}
+        {r.quote && (
+          <span className={clsx("mt-1.5 block border-l border-line-strong pl-3 text-ui leading-[1.55] text-muted", styles.rise, quoteClassName)}>
+            &ldquo;<ModelQuote>{r.quote}</ModelQuote>&rdquo;
+          </span>
+        )}
       </>
     ) : undefined;
   return { id: r.id, label: r.label, state: r.state, detail };

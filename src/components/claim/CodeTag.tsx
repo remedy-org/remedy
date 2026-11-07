@@ -4,6 +4,8 @@ import { Paper, Stamp } from "@/components/ui";
 
 export interface CodeTagProps {
   code: string;
+  /** Written on the tag above the code, as the owner should write it, e.g. a hand-written label "X-VESOLJE". */
+  written?: string | null;
   /** The micro line along the top, e.g. "Your one-time code". */
   label?: string;
   /** The dashed foot, e.g. "Write it big, in marker." */
@@ -19,9 +21,10 @@ export interface CodeTagProps {
  * The paper evidence tag with the code on it: the object the owner should end up holding, and the same tag the homepage's
  * Chain of Custody writes. Paper and ink keep their colours in both themes, like the real thing.
  */
-export function CodeTag({ code, label = "Your one-time code", foot, string, expired, className }: CodeTagProps) {
+export function CodeTag({ code, written, label = "Your one-time code", foot, string, expired, className }: CodeTagProps) {
+  const spoken = `${expired ? "Expired code" : "Your code"}: ${code.split("").join(" ")}`;
   return (
-    <figure className={clsx("relative mx-auto w-full max-w-[22.5rem]", className)} aria-label={`${expired ? "Expired code" : "Your code"}: ${code.split("").join(" ")}`}>
+    <figure className={clsx("relative mx-auto w-full max-w-[22.5rem]", className)} aria-label={written ? `The tag reads ${written}, then ${spoken}` : spoken}>
       {string && (
         <svg aria-hidden="true" className="pointer-events-none absolute right-1/2 bottom-[calc(100%-19px)] h-16 w-[28rem] overflow-visible" viewBox="0 0 448 64" preserveAspectRatio="xMaxYMax meet">
           <path d="M448 64 C 420 30, 360 8, 0 2" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" />
@@ -29,6 +32,11 @@ export function CodeTag({ code, label = "Your one-time code", foot, string, expi
       )}
       <Paper variant="tag" hole padding="lg" tilt={-2} className={clsx(expired && "opacity-60")}>
         <p className="micro text-ink-muted">{label}</p>
+        {written && (
+          <p aria-hidden="true" className="mt-4 text-center font-mono text-[1.75rem] leading-none font-medium tracking-[0.08em] whitespace-nowrap text-ink">
+            {written}
+          </p>
+        )}
         <p aria-hidden="true" className="mt-4 text-center font-mono text-[4rem] leading-none font-medium tracking-[0.14em] text-ink">
           {code}
         </p>

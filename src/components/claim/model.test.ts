@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sampleClaim } from "@/lib/__fixtures__/claim";
 import { DEMO_SPEC } from "@/lib/demo/kikea";
-import { acceptsStandIn, businessDaysAfter, codeDiff, handWrittenLabel, ownerLabel, productNoun, receiptPollDelay, refusalHeadline, timelineOf } from "./model";
+import { acceptsStandIn, businessDaysAfter, codeDiff, handWrittenLabel, ownerLabel, productNoun, readableReasons, receiptPollDelay, refusalHeadline, timelineOf } from "./model";
 import { nextSample, scoreLine } from "./Scoreboard";
 
 describe("codeDiff", () => {
@@ -31,6 +31,23 @@ describe("refusalHeadline", () => {
   });
   it("falls back to the general sentence", () => {
     expect(refusalHeadline(refused("something_new"), DEMO_SPEC)).toBe("This photo doesn't prove the claim");
+  });
+  it("speaks of photos when several were reposted", () => {
+    const claim = { ...refused("duplicate_photo", "blocked"), photos: sampleClaim().photos.concat(sampleClaim().photos) };
+    expect(refusalHeadline(claim, DEMO_SPEC)).toBe("These photos were already used in another claim");
+  });
+});
+
+describe("readableReasons", () => {
+  const dupe = (n: number) => ({ check: "duplicate_photo", outcome: "reject" as const, text: `Photo ${n} was already used in another claim` });
+  it("folds one repost line per photo into one", () => {
+    expect(readableReasons([dupe(1), dupe(2), dupe(3)], 3).map((r) => r.text)).toEqual(["All 3 photos were already used in another claim"]);
+    expect(readableReasons([dupe(1), dupe(3)], 3).map((r) => r.text)).toEqual(["Photos 1 and 3 were already used in another claim"]);
+  });
+  it("leaves a single reason, and other checks, as they are", () => {
+    const session = { check: "session", outcome: "reject" as const, text: "Not taken in this session" };
+    expect(readableReasons([dupe(1)], 1)).toEqual([dupe(1)]);
+    expect(readableReasons([session, dupe(1), dupe(2)], 2).map((r) => r.text)).toEqual(["Not taken in this session", "All 2 photos were already used in another claim"]);
   });
 });
 

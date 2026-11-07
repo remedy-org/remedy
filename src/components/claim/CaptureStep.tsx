@@ -130,13 +130,13 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     };
   }, [attempt, expired, preview, stop]);
 
-  // Photos sent from the phone or another tab: on to the checking step, which fetches the checklist itself.
+  // Photos sent from the phone or another tab: on to the checking step, with the claim as it now stands.
   useClaimArrival(
     claimId,
     expiresAt,
-    () => {
+    (view) => {
       stop();
-      onSent(null);
+      onSent(view);
     },
     { off: Boolean(preview), paused: sending },
   );
@@ -284,6 +284,15 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               </span>
             </GlassChip>
           </div>
+          {/* Phones: the hint lies over the foot of the feed, under the cutout, so the viewfinder never resizes as it changes. */}
+          {!sendError && !expired && (help || n > 0) && (
+            <p
+              id="capture-help"
+              className="absolute inset-x-3 bottom-3 z-10 rounded-control bg-[oklch(0.12_0.004_75/0.78)] px-3 py-2 text-center text-ui text-balance text-[oklch(0.86_0.005_80)] backdrop-blur-sm sm:hidden"
+            >
+              {help ? helpText : "Tap a photo to check it or retake it."}
+            </p>
+          )}
           <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
         </div>
 
@@ -314,11 +323,6 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                   )}
                 </div>
               </div>
-            )}
-            {!sendError && !expired && (help || n > 0) && (
-              <p id="capture-help" className="text-ui text-balance text-[oklch(0.74_0.005_80)] sm:hidden">
-                {help ? helpText : "Tap a photo to check it or retake it."}
-              </p>
             )}
           </div>
           {!expired && !sendError && (
@@ -356,9 +360,10 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={shots[i].url} alt="" className="size-full rounded-[3px] object-cover" />
                           </span>
-                          {/* The letter sits inside the print's corner, so neighbours never collide. */}
+                          {/* The number sits inside the print's corner, so neighbours never collide. Numbers, as the empty
+                              slots have: letters are the judges' samples. */}
                           <span aria-hidden="true" className="absolute bottom-[3px] left-[3px] flex size-4 items-center justify-center rounded-[3px] bg-accent font-mono text-[10px] leading-none font-medium text-accent-ink">
-                            {String.fromCharCode(65 + i)}
+                            {i + 1}
                           </span>
                         </button>
                       ) : (
@@ -421,12 +426,9 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         >
           {shown && viewing !== null && (
             <div className="flex flex-col gap-4 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <GlassChip>Photo {String.fromCharCode(65 + viewing)}</GlassChip>
-                <span className="text-ui text-[oklch(0.74_0.005_80)]">
-                  {viewing + 1} of {n}
-                </span>
-              </div>
+              <GlassChip className="self-start">
+                Photo {viewing + 1} of {n}
+              </GlassChip>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={shown.url} alt={`Photo ${viewing + 1}, full size`} className="max-h-[60dvh] w-full rounded-control bg-[oklch(0.12_0.004_75)] object-contain" />
               <p className="text-ui text-pretty text-[oklch(0.74_0.005_80)]">

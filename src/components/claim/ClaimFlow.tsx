@@ -74,7 +74,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
   };
   // The code step on a laptop while the phone takes the photos (the QR handoff): on to checking once they arrive. The
   // camera step polls for itself, since it knows when this tab is sending.
-  useClaimArrival(claimId, props.expiresAt, () => sent(null), { off: demo || Boolean(preview) || phase !== "code" });
+  useClaimArrival(claimId, props.expiresAt, (next) => sent(next), { off: demo || Boolean(preview) || phase !== "code" });
 
   return (
     <WithJudges demo={demo} step={JUDGE[phase]}>
