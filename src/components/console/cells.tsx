@@ -204,7 +204,8 @@ export function TimelineCell({ data }: Cell) {
         <span className="inline-flex h-5 items-center rounded-control bg-surface-2 px-1.5 font-mono text-micro text-text tabular-nums" aria-hidden="true">
           {duration(data.toPay)}
         </span>
-      ) : data.seeded && data.modelSec !== null ? (
+      ) : data.modelSec !== null ? (
+        // No payout to time (held, refused, or a sample): the model's answer time, whenever it answered.
         <span className="font-mono text-micro text-faint tabular-nums" aria-hidden="true">
           {data.modelSec} s
         </span>

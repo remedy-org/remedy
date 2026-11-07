@@ -9,7 +9,9 @@ import type { ClaimsGridPreviewProps } from "./ClaimsGridPreview";
 const Fallback = createContext<ReactNode>(null);
 const Loading = () => <>{useContext(Fallback)}</>;
 
-// The grid's JS (AG Grid, about 240KB) loads only when the preview is a viewport away, never with the homepage.
+// The grid's JS (AG Grid, about 240KB) loads only when the preview is a viewport away, never with the homepage, and
+// never below 720px.
+const GRID_FROM = "(min-width: 720px)";
 const Preview = dynamic(() => import("./ClaimsGridPreview").then((m) => m.ClaimsGridPreview), { ssr: false, loading: Loading });
 
 /**
@@ -23,7 +25,9 @@ export function ClaimsGridPreviewLazy({ fallback, ...props }: ClaimsGridPreviewP
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    // Phones keep the static replica (its card form): the grid would only draw four still cards there, not worth
+    // AG Grid's 240KB.
+    if (!el || !window.matchMedia(GRID_FROM).matches) return;
     const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "100% 0px" });
     io.observe(el);
     return () => io.disconnect();

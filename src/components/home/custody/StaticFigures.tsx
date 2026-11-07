@@ -11,7 +11,7 @@ import { AiLabel, ChecksChapter, CodeTag, ConsentChapter, ExhibitPrint, PaidChap
 // full-page screenshot shows. The pinned sequence replaces it after hydration only when the viewport and the visitor's
 // motion setting allow (HeroRunway). Three chapters are shown as real screens at 1:1 (consent, the five checks, the
 // payout), so no text is ever smaller than it is in the product; the code tag, the photo and the console row sit
-// between them as small paper objects. Reading order runs down each column, then across. The screens are pictures
+// beside them as small paper objects. Reading order runs across two columns, row by row. The screens are pictures
 // (aria-hidden); each caption carries the chapter in words.
 
 function Caption({ n, title, text }: { n: string; title: string; text: string }) {
@@ -60,25 +60,25 @@ export function StaticFigures() {
           Claim {CLAIM.id} ran through the judges&rsquo; demo on 7 Nov and was paid {CLAIM.seconds} s after the photo.
         </span>
       </h2>
-      <div className="mt-6 grid gap-x-6 gap-y-12 lg:grid-cols-3 lg:gap-y-8">
+      {/* Two columns in reading order: 01 beside 02, 03 beside 04, then 05 across. The small paper objects sit centred
+          beside the tall screens, like things laid on the table next to them. */}
+      <div className="mt-6 grid gap-x-10 gap-y-12 lg:grid-cols-2 lg:gap-y-10">
         <Screen i={0}>
           <ConsentChapter />
         </Screen>
-        <div className="flex flex-col gap-12 lg:gap-10">
-          <PaperObject n={CHAPTERS[1].n} title={CHAPTERS[1].title} text={CHAPTERS[1].text}>
-            <CodeTag className="max-w-[17rem] -rotate-2" />
-          </PaperObject>
-          <PaperObject n={CHAPTERS[2].n} title={CHAPTERS[2].title} text={CHAPTERS[2].text}>
-            <ExhibitPrint sizes="272px" className="w-full max-w-[17rem] rotate-[1.5deg]">
-              <AiLabel className="bottom-2 left-2" />
-            </ExhibitPrint>
-          </PaperObject>
-        </div>
+        <PaperObject n={CHAPTERS[1].n} title={CHAPTERS[1].title} text={CHAPTERS[1].text} className="lg:self-center">
+          <CodeTag className="max-w-[17rem] -rotate-2" />
+        </PaperObject>
+        <PaperObject n={CHAPTERS[2].n} title={CHAPTERS[2].title} text={CHAPTERS[2].text} className="lg:self-center">
+          <ExhibitPrint sizes="272px" className="w-full max-w-[17rem] rotate-[1.5deg]">
+            <AiLabel className="bottom-2 left-2" />
+          </ExhibitPrint>
+        </PaperObject>
         <Screen i={3}>
           <ChecksChapter p={done} />
         </Screen>
         {/* The payout wide enough for the rule card and the numeral side by side; the console row beside it. */}
-        <div className="grid gap-x-6 gap-y-12 lg:col-span-3 lg:grid-cols-12">
+        <div className="grid gap-x-6 gap-y-12 lg:col-span-2 lg:grid-cols-12">
           <div className="lg:col-span-9">
             <Screen i={4}>
               <PaidChapter p={done} />
@@ -108,6 +108,7 @@ export function StaticFigures() {
                   <span className="font-mono text-ui">
                     <Money value={CLAIM.amount} size="grid" />
                   </span>
+                  <span className="micro text-[10px] text-faint">Sandbox</span>
                 </span>
               </div>
             </div>

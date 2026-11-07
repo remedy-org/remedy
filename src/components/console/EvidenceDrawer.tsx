@@ -267,11 +267,28 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
   );
 }
 
+/** Held or refused: what decided it, first, with the model's own words, before the photos and the full list. */
+function Deciding({ claim }: { claim: DrawerClaim }) {
+  if (claim.decision !== "held" && claim.decision !== "rejected" && claim.decision !== "blocked") return null;
+  const check = claim.checks.find((c) => c.outcome !== "pass");
+  const pre = claim.preChecks.find((p) => p.state === "reject" || p.state === "hold");
+  const label = check?.label ?? pre?.label ?? "The rule";
+  const text = check?.rule ?? pre?.detail ?? claim.sentence;
+  return (
+    <section aria-label="What decided it" className={clsx("rounded-control border-l-2 px-3.5 py-3", claim.decision === "held" ? "border-hold bg-hold-soft" : "border-stop bg-stop-soft")}>
+      <p className="micro text-muted">{claim.decision === "held" ? "Why it's held" : "Why it was refused"} · {label}</p>
+      <p className="mt-1.5 text-ui text-text">{text}</p>
+      {check?.evidence && <q className="mt-1.5 block font-mono text-micro leading-relaxed text-muted">{check.evidence}</q>}
+    </section>
+  );
+}
+
 function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
   const passed = claim.checks.filter((c) => c.outcome === "pass").length;
   const sample = claim.seeded || claim.demo;
   return (
     <div className={clsx("flex flex-col gap-7 py-5", pad)}>
+      <Deciding claim={claim} />
       <Section title="The money" aside={claim.payout && !claim.seeded ? (claim.payout.status === "SUCCESS" ? "Sent through PayPal" : "Settling at PayPal") : undefined}>
         <MoneyTimeline claim={claim} />
       </Section>

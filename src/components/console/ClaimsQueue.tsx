@@ -217,7 +217,14 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt }: ClaimsQueu
             </>
           )}
         </div>
-        {wide && open && <EvidencePanel claimId={open} version={openRow?.version} onClose={close} intent={intent} />}
+        {/* The panel is docked from just under the console header to the foot of the window, over the recall's heading
+            and ledger, so the evidence has the height; this keeps its width free beside the grid. */}
+        {wide && open && <div aria-hidden="true" className="w-[440px] shrink-0" />}
+        {wide && open && (
+          <div className="fixed top-[65px] right-8 bottom-3 z-20 flex">
+            <EvidencePanel claimId={open} version={openRow?.version} onClose={close} intent={intent} />
+          </div>
+        )}
       </div>
       {!wide && open && <EvidenceDrawer claimId={open} version={openRow?.version} onClose={() => setOpen(null)} />}
 

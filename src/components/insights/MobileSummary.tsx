@@ -8,17 +8,17 @@ import { captions, provenance } from "./report";
 // headline numbers and the funnel as plain HTML from the same facts, then the analyst's chat. Server-rendered.
 
 export function MobileSummary({ data }: { data: InsightsData }) {
-  const sum = (k: "remedied" | "refused" | "amountPaid") => data.claims.reduce((n, c) => n + c[k], 0);
-  const paidTimes = data.claims.map((c) => c.timeToPaySec).filter((t): t is number => t !== null);
-  const avg = paidTimes.length ? Math.round(paidTimes.reduce((a, b) => a + b, 0) / paidTimes.length) : null;
+  const sum = (k: "remedied" | "refused" | "amountSent") => data.claims.reduce((n, c) => n + c[k], 0);
+  const say = captions(provenance(data.claims));
+  const times = data.claims.map((c) => c[say.timeField]).filter((t): t is number => t !== null);
+  const avg = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null;
   const steps = funnel(data.claims);
   const filed = steps[0].reached || 1;
-  const say = captions(provenance(data.claims));
 
   const kpis = [
     { label: "Units remedied", value: <span className="tabular-nums">{sum("remedied")}</span>, note: say.remedied },
-    { label: "Paid out", value: <Money value={sum("amountPaid")} size="inline" />, note: say.paid },
-    { label: "Avg photo to PayPal", value: <span className="tabular-nums">{avg === null ? "—" : `${avg}s`}</span>, note: say.time },
+    { label: "Paid through PayPal", value: <Money value={sum("amountSent")} size="inline" />, note: say.paid },
+    { label: say.timeTitle, value: <span className="tabular-nums">{avg === null ? "—" : `${avg}s`}</span>, note: say.time },
     { label: "Refused", value: <span className="tabular-nums">{sum("refused")}</span>, note: "Rejected or blocked" },
   ];
 

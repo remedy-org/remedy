@@ -96,6 +96,13 @@ describe("the ledger and live updates", () => {
     // A demo claim filed in the last 10 minutes, then not.
     expect(isLive([row({ decision: "rejected", demo: true })], now)).toBe(true);
     expect(isLive([row({ decision: "rejected", demo: true })], now + 10 * 60_000)).toBe(false);
+    // An abandoned claim (a code, never any photos) and a payout parked at UNCLAIMED or ONHOLD never keep it polling.
+    const later = now + 60 * 60_000;
+    expect(isLive([row({ photos: [] })], later)).toBe(false);
+    expect(isLive([row({ decision: "paid", payout: { batchId: "B", status: "PENDING", updatedAt: "2026-11-07T10:00:00.000Z" } })], later)).toBe(false);
+    for (const status of ["UNCLAIMED", "ONHOLD"]) {
+      expect(isLive([row({ decision: "paid", payout: { batchId: "B", status, updatedAt: "2026-11-07T10:00:00.000Z" } })], now)).toBe(false);
+    }
   });
 
   it("say a sample claim's payout was never sent", () => {

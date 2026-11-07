@@ -69,7 +69,7 @@ export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; o
           )}
           <div className="flex flex-wrap gap-3">
             <Button onClick={() => (setSample(null), setMode("approve"))} className="flex-1 sm:flex-none">
-              {review.sample ? "Approve" : `Approve and pay ${claim.amount}`}
+              {review.sample ? "Approve" : `Approve and pay ${claim.amount}${claim.sandbox ? " sandbox" : ""}`}
             </Button>
             <Button variant="secondary" onClick={() => (setSample(null), setMode("reject"))} className="flex-1 sm:flex-none">
               Reject
@@ -88,7 +88,8 @@ export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; o
           ) : (
             <p className="text-ui text-muted">
               Remedy runs the duplicate and account checks again, then sends <span className="font-mono text-text">{claim.amount}</span> to{" "}
-              <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts, from Remedy&apos;s PayPal account in this build.
+              <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts, from Remedy&apos;s PayPal {claim.sandbox ? "sandbox " : ""}account in
+              this build{claim.sandbox ? ": sandbox money, not real" : ""}.
             </p>
           )}
           <div className="flex flex-wrap gap-3">
@@ -99,6 +100,7 @@ export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; o
             ) : (
               <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Paying through PayPal" className="flex-1 sm:flex-none">
                 Pay {claim.amount}
+                {claim.sandbox ? " sandbox" : ""}
               </Button>
             )}
             <Button variant="secondary" onClick={reset} disabled={busy} className="flex-1 sm:flex-none">

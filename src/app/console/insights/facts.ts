@@ -58,16 +58,20 @@ export interface ClaimFact {
   source: Source;
   payer: string;
   verified: boolean;
-  /** Dollars sent through PayPal; 0 unless paid. */
+  /** Dollars the rule paid; 0 unless paid. A sample claim's amount was decided, never sent. */
   amountPaid: number;
+  /** Dollars really sent through PayPal (sandbox in this build): 0 for a sample claim, whose payout never left. */
+  amountSent: number;
   /** 1 when paid: a unit taken out of use and refunded. */
   remedied: number;
   /** 1 when a sample claim was "paid": counted in remedied, but no money ever reached a real owner. */
   remediedSample: number;
   refused: number;
   held: number;
-  /** Seconds from the photos arriving to the payout being sent; null unless paid. */
+  /** Seconds from the photos arriving to the payout being sent; null unless paid. A sample claim's are made up. */
   timeToPaySec: number | null;
+  /** The same, for payouts really sent through PayPal only; null for a sample claim. */
+  timeToSendSec: number | null;
   /** Seconds from the photos arriving to the model's answer; null when the model never ran. */
   modelSec: number | null;
   photoCount: number;
@@ -158,11 +162,13 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     payer: `•••• ${c.payerId.slice(-4)}`,
     verified: c.payerVerified,
     amountPaid: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
+    amountSent: c.decision === "paid" && !c.seeded ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
     remedied: c.decision === "paid" ? 1 : 0,
     remediedSample: c.decision === "paid" && c.seeded ? 1 : 0,
     refused: refused ? 1 : 0,
     held: c.decision === "held" ? 1 : 0,
     timeToPaySec: c.decision === "paid" ? seconds(photosIn, at(c, "payout_sent")) : null,
+    timeToSendSec: c.decision === "paid" && !c.seeded ? seconds(photosIn, at(c, "payout_sent")) : null,
     modelSec: seconds(photosIn, at(c, "checked")),
     photoCount: c.photos.length,
     payoutStatus: c.payout?.status ?? null,

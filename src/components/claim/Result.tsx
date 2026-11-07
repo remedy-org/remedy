@@ -496,7 +496,8 @@ function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { ro
         {photoUrls.length > 0 && (
           <div className={clsx("grid gap-5", photoUrls.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
             {photoUrls.map((src, i) => (
-              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} letter={String.fromCharCode(65 + i)} sample={sample} />
+              // /demo holds only AI-made samples (a dev preview's stand-ins too): any photo from there carries the label.
+              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} letter={String.fromCharCode(65 + i)} sample={sample || src.startsWith("/demo/")} />
             ))}
           </div>
         )}

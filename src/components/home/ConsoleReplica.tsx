@@ -38,12 +38,10 @@ const one = (screen: Bar = P): Bar[] => [P, P, screen, P, P];
 const two = (same: Bar = P): Bar[] => [P, P, same, P, P, P];
 const waiting = (n: number): Bar[] => Array<Bar>(n).fill("waiting");
 
+// Decided claims first, the outcomes mixed (paid, the open held claim, rejected, then paid), and the one still waiting
+// for photos at the foot, as the live preview orders them (components/console/preview.ts).
 export const PREVIEW_ROWS: PreviewRow[] = [
-  { id: "RM-3789", code: "M3J", status: "pending", reason: "Waiting for photos", photos: [], checks: [waiting(3), waiting(5)], payer: "C4XB" },
   { id: "RM-0553", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payer: "WW2P" },
-  { id: "RM-7581", code: "K7Q", status: "paid", photos: ["/demo/c01-1.jpg"], checks: [pre, one()], payer: "AY3L" },
-  { id: "RM-6276", code: "K7Q", status: "paid", photos: ["/demo/c05-1.jpg"], checks: [pre, one()], payer: "KUNF" },
-  { id: "RM-2125", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payer: "Q559" },
   {
     id: "RM-9629",
     code: "R8D",
@@ -53,10 +51,14 @@ export const PREVIEW_ROWS: PreviewRow[] = [
     checks: [pre, two("hold")],
     payer: "DSFD",
   },
-  { id: "RM-8501", code: "K7Q", status: "paid", photos: ["/demo/c01-1.jpg"], checks: [pre, one()], payer: "QEB5" },
   { id: "RM-9545", code: "K7Q", status: "rejected", reason: "Looks like a photo of a screen or a print", photos: ["/demo/c10-1.jpg"], checks: [pre, one("reject")], payer: "UGER" },
+  { id: "RM-7581", code: "K7Q", status: "paid", photos: ["/demo/c01-1.jpg"], checks: [pre, one()], payer: "AY3L" },
+  { id: "RM-6276", code: "K7Q", status: "paid", photos: ["/demo/c05-1.jpg"], checks: [pre, one()], payer: "KUNF" },
+  { id: "RM-2125", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payer: "Q559" },
+  { id: "RM-8501", code: "K7Q", status: "paid", photos: ["/demo/c01-1.jpg"], checks: [pre, one()], payer: "QEB5" },
   { id: "RM-8466", code: "K7Q", status: "paid", photos: ["/demo/c05-1.jpg"], checks: [pre, one()], payer: "AUYQ" },
   { id: "RM-8121", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payer: "FKBF" },
+  { id: "RM-3789", code: "M3J", status: "pending", reason: "Waiting for photos", photos: [], checks: [waiting(3), waiting(5)], payer: "C4XB" },
 ];
 
 // The open claim's evidence: the stored GPT-6.1 Terra answer RM-9629 is seeded with.

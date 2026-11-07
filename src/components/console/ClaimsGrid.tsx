@@ -8,6 +8,7 @@ import {
   RowApiModule,
   RowSelectionModule,
   RowStyleModule,
+  ScrollApiModule,
   TooltipModule,
   ValidationModule,
   type CellFocusedEvent,
@@ -24,13 +25,16 @@ import { SkeletonGrid } from "./ConsoleSkeleton";
 import { gridTheme } from "./gridTheme";
 import "./claims-grid.css";
 
-// Community modules only (no Enterprise): photo tooltips and the payout cell flash on top of the core. The search
-// filters rows before they reach the grid (ClaimsQueue), which costs less JS than QuickFilterModule.
+// Community modules only (no Enterprise): photo tooltips and the payout cell flash on top of the core, and the scroll
+// API, which focusRow's ensureIndexVisible needs (without it a production build logs AG Grid error #200 when the
+// panel closes). The search filters rows before they reach the grid (ClaimsQueue), which costs less JS than
+// QuickFilterModule.
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   RowApiModule,
   RowSelectionModule,
   RowStyleModule,
+  ScrollApiModule,
   CellStyleModule,
   TooltipModule,
   HighlightChangesModule,
@@ -132,9 +136,10 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         width: 220,
         pinned: "left",
         lockPinned: true,
-        sortable: true,
-        sort: "desc",
-        tooltipValueGetter: (p) => (!still && p.data?.photos.length ? p.data.id : undefined),
+        sortable: !still,
+        // The queue is newest first; the homepage's still keeps the order its rows come in (curated in preview.ts).
+        sort: still ? undefined : "desc",
+        tooltip: (p) => (!still && p.data?.photos.length ? p.data.id : undefined),
         tooltipComponent: PhotoTooltip,
       },
       {
@@ -249,6 +254,10 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
               focusTimer.current = window.setTimeout(() => onFocusRow(id), 120);
             }}
             rowClass={still ? undefined : "cursor-pointer"}
+            // The homepage's still is a picture: no cell or header takes focus, so Tab goes past it in one step.
+            suppressCellFocus={still}
+            suppressHeaderFocus={still}
+            tabToNextCell={still ? () => false : undefined}
             overlayNoRowsTemplate="<span></span>"
             animateRows={animate}
             cellFlashDuration={600}

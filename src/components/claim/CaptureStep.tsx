@@ -259,8 +259,12 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         <div className={CAMERA_VIEW}>
           <video ref={videoRef} playsInline muted aria-label="Camera preview" className={clsx("absolute inset-0 size-full object-cover", !live && "invisible")} />
           {preview?.still && live && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview.still} alt="" className="absolute inset-0 size-full object-cover" />
+            <>
+              {/* Dev previews only: a stand-in from /demo, which holds AI-made samples, labelled as one. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={preview.still} alt="" className="absolute inset-0 size-full object-cover" />
+              <GlassChip className="absolute bottom-3 left-3 z-10">AI-made preview photo</GlassChip>
+            </>
           )}
           {live ? (
             <Cutout>

@@ -1,4 +1,5 @@
 import type { Claim, Outcome, Recall } from "@/lib/types";
+import { isSandboxBuild } from "@/lib/demo/allowed";
 import { amountOf, checkLabel, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
 
 // Everything the evidence drawer shows for one claim, built on the server so the client never sees a full payer id.
@@ -35,6 +36,8 @@ export interface DrawerClaim {
   // Approve and reject for held claims. A seeded one's review is a sample: answered, but never paid or saved.
   review: { sample: boolean; note: string | null } | null;
   recall: { id: string; autoPay: boolean };
+  // Payouts in this build go to PayPal's sandbox: the approve step says so beside the amount.
+  sandbox: boolean;
 }
 
 // What approve and reject answer: the claim, and for a seeded claim what the review would have done.
@@ -84,5 +87,6 @@ export function toDrawerClaim(c: Claim, recall: Recall): DrawerClaim {
           : { sample: false, note: null }
         : null,
     recall: { id: recall.id, autoPay: recall.autoPay },
+    sandbox: isSandboxBuild(),
   };
 }

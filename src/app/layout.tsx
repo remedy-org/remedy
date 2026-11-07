@@ -28,7 +28,7 @@ const serif = Instrument_Serif({
 });
 
 const description =
-  "Recall refunds in a minute for people who really destroyed the product, and never for a faked photo. Paid through PayPal.";
+  "Recall refunds paid within a minute of the photo, for people who really destroyed the product, and never for a faked photo. Paid through PayPal.";
 
 // Absolute URLs for the link card: APP_URL, else Vercel's production domain, else the local dev server.
 const siteUrl = process.env.APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://127.0.0.1:3000");

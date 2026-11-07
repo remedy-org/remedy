@@ -273,16 +273,38 @@ describe("the claims grid (P4)", () => {
     expect(counter.counts.reads).toBe(0);
   });
 
-  it("opens the evidence panel at a row's version: the claim once, then only its recall", async () => {
+  it("opens the evidence panel at a row's version: the claim once, its recall from the cache", async () => {
     await seed(50);
-    const open = () => openEvidence(new NextRequest("http://127.0.0.1:3000/api/console/claims/RM-0002?v=1"), params({ id: "RM-0002" }));
+    const open = (id = "RM-0002") => openEvidence(new NextRequest(`http://127.0.0.1:3000/api/console/claims/${id}?v=1`), params({ id }));
     const first = await (await open()).json();
     expect(first.photos[0]).toMatch(/^\/api\/console\/claims\/RM-0002\/photos\/0\?t=[\w-]+$/);
     expect(counter.counts.calls).toEqual({ getClaim: 1, getRecall: 1 });
 
     counter.reset();
     expect((await (await open()).json()).id).toBe("RM-0002");
-    expect(counter.counts.calls).toEqual({ getRecall: 1 });
+    expect(counter.counts.reads).toBe(0);
+
+    // Walking 10 rows with ↓: 1 read for each new claim, then none on the way back up.
+    const ids = ["RM-0003", "RM-0004", "RM-0005", "RM-0006", "RM-0008", "RM-0009", "RM-0010", "RM-0011", "RM-0012", "RM-0013"];
+    counter.reset();
+    for (const id of ids) await open(id);
+    expect(counter.counts.calls).toEqual({ getClaim: ids.length });
+    counter.reset();
+    for (const id of ids.toReversed()) await open(id);
+    expect(counter.counts.reads).toBe(0);
+  });
+
+  it("stops polling for an abandoned claim or a payout parked at UNCLAIMED: 0 polls", async () => {
+    const { isLive, PENDING_LIVE_MS } = await import("./console/_lib/view");
+    const { STALE_AFTER_MS } = await import("./api/claims/_lib/pipeline");
+    const { CAPTURE_SESSION_MINUTES } = await import("@/lib/ids");
+    expect(PENDING_LIVE_MS).toBe(CAPTURE_SESSION_MINUTES * 60_000 + STALE_AFTER_MS);
+    await inner.putClaim(sampleClaim({ id: "RM-0901", payerId: company.payerId, photos: [], createdAt: "2026-11-06T22:49:00.000Z" }));
+    await inner.putClaim(sampleClaim({ id: "RM-0902", payerId: company.payerId, decision: "paid", payout: { batchId: "LIVE0902", status: "UNCLAIMED", updatedAt: "2026-11-07T10:00:00.000Z" } }));
+    const res = await pollQueue(new NextRequest("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
+    const { rows } = await res.json();
+    expect(rows).toHaveLength(2);
+    expect(isLive(rows, Date.parse("2026-11-07T10:05:00.000Z"))).toBe(false);
   });
 });
 

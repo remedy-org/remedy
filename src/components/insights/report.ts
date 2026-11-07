@@ -28,27 +28,39 @@ const kpi = (text: string, value: { id: string; aggregation?: "sum" | "avg" | "c
   },
 });
 
-/** How many paid claims there are, and how many of them are samples that never sent money to a real owner. */
-export function provenance(claims: Pick<InsightsData["claims"][number], "decision" | "source">[]) {
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+/**
+ * How many paid claims there are, how many of them are samples that never sent money to a real owner, what those
+ * samples would have paid, and how many claims the model answered (for the timing tile when nothing was sent).
+ */
+export function provenance(claims: Pick<InsightsData["claims"][number], "decision" | "source" | "amountPaid" | "modelSec">[]) {
   const paid = claims.filter((c) => c.decision === "Paid");
+  const samples = paid.filter((c) => c.source === "Sample");
   return {
     paid: paid.length,
-    samples: paid.filter((c) => c.source === "Sample").length,
+    samples: samples.length,
+    sampleAmount: samples.reduce((n, c) => n + c.amountPaid, 0),
+    answered: claims.filter((c) => c.modelSec !== null).length,
   };
 }
 
 /**
- * The captions under the money and timing tiles say where their numbers come from: sample claims were decided "paid"
- * by the rule, but no payout ever reached a real owner, so their amounts and timings are samples too.
+ * The captions under the money and timing tiles say where their numbers come from, in the console ledger's words: the
+ * money tile counts only what was really sent through PayPal, with the samples' amount beside it as never sent; the
+ * timing tile times only payouts really sent, and with none it shows the model's own answer time instead.
  */
-export function captions({ paid, samples }: ReturnType<typeof provenance>) {
+export function captions({ paid, samples, sampleAmount, answered }: ReturnType<typeof provenance>) {
   const all = paid > 0 && samples === paid;
   const some = samples > 0 && !all;
   const share = `${samples} of ${paid} are samples`;
+  const sent = paid - samples;
   return {
     remedied: all ? "Sample claims · never sent" : some ? `Paid claims · ${share}` : "Paid claims",
-    paid: all ? "Sample claims · never sent" : some ? `Sandbox USD · ${share}` : "Sandbox USD through PayPal",
-    time: all ? `Average of ${paid} · sample timings` : some ? `Average of ${paid} · ${share}` : `Average of ${paid} paid ${paid === 1 ? "claim" : "claims"}`,
+    paid: samples ? `${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
+    timeTitle: sent ? "Avg photo to PayPal" : "Avg photo check",
+    timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
+    time: sent ? `Average of ${sent} sent ${sent === 1 ? "payout" : "payouts"}` : `No payouts sent yet · the model's time, ${answered} ${answered === 1 ? "claim" : "claims"}`,
     timeExhibit: samples ? "EXHIBIT E · AVERAGE SECONDS · SAMPLE TIMINGS" : "EXHIBIT E · AVERAGE SECONDS, PAID CLAIMS",
   };
 }
@@ -59,8 +71,8 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
     id: "overview",
     widgets: {
       "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), say.remedied),
-      "kpi-paid": kpi("Paid out", sum("claims.amountPaid"), say.paid),
-      "kpi-median": kpi("Avg photo to PayPal", { id: "claims.timeToPaySec", aggregation: "avg" }, say.time),
+      "kpi-paid": kpi("Paid through PayPal", sum("claims.amountSent"), say.paid),
+      "kpi-median": kpi(say.timeTitle, { id: `claims.${say.timeField}`, aggregation: "avg" }, say.time),
       "kpi-refused": kpi("Refused", sum("claims.refused"), "Rejected or blocked"),
       progress: {
         type: "recall-progress",

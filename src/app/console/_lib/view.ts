@@ -208,16 +208,35 @@ export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls): C
 
 // PayPal statuses it never moves on from (lib/paypal/status.ts), repeated here so client code can use them.
 const PAYPAL_FINAL = new Set(["SUCCESS", "FAILED", "RETURNED", "BLOCKED", "DENIED", "CANCELED", "REFUNDED", "REVERSED"]);
+// Statuses that can sit for weeks (a payee who hasn't claimed it, a PayPal review): not worth a poll.
+const PAYPAL_SLOW = new Set(["UNCLAIMED", "ONHOLD"]);
 
 /** A real payout PayPal hasn't settled yet. Sample claims never had one. */
 export const isSettling = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) => r.decision === "paid" && !r.seeded && r.payoutStatus !== null && !PAYPAL_FINAL.has(r.payoutStatus);
 
 export const LIVE_WINDOW_MS = 10 * 60_000;
+// A pending claim can only move inside its camera session plus the time the check gets before it's held for a person:
+// CAPTURE_SESSION_MINUTES (10) and STALE_AFTER_MS (150 s), pinned equal in blob-budget.test.ts. Past that it is
+// abandoned or stuck, and the page that shows it repairs it, not this poll.
+export const PENDING_LIVE_MS = 10 * 60_000 + 150_000;
+// A sent payout usually settles in seconds to minutes. A claim is sent within PENDING_LIVE_MS of being filed, so this
+// bounds polling to its first half hour after the payout.
+export const SETTLING_LIVE_MS = PENDING_LIVE_MS + 30 * 60_000;
 
-/** Whether the queue can still change by itself: a real or demo claim checking or settling, or a demo claim filed in
- * the last 10 minutes. Seeded samples never change, so they never count. */
+/**
+ * Whether the queue can still change by itself, which is what the grid polls for: a claim filed in the last 12.5
+ * minutes still pending (its photos or its check can still arrive), a payout settling within about half an hour of
+ * being sent (never one parked at UNCLAIMED or ONHOLD), or a demo claim filed in the last 10 minutes. Seeded samples
+ * never change, so they never count. An abandoned claim or a slow payout never keeps a console polling.
+ */
 export function isLive(rows: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "demo" | "createdAt">[], now = Date.now()): boolean {
-  return rows.some((r) => !r.seeded && (r.decision === "pending" || isSettling(r) || (r.demo && now - Date.parse(r.createdAt) < LIVE_WINDOW_MS)));
+  return rows.some((r) => {
+    if (r.seeded) return false;
+    const age = now - Date.parse(r.createdAt);
+    if (r.decision === "pending") return age < PENDING_LIVE_MS;
+    if (isSettling(r) && !PAYPAL_SLOW.has(r.payoutStatus ?? "")) return age < SETTLING_LIVE_MS;
+    return r.demo && age < LIVE_WINDOW_MS;
+  });
 }
 
 export interface Ledger {

@@ -34,7 +34,7 @@ function CtaTag() {
           <div>
             <p className="micro text-ink-muted">Exhibit E · Your recall</p>
             <h2 className="mt-4 text-title-lg font-semibold text-balance">Running a recall?</h2>
-            <p className="mt-4 max-w-[36ch] text-body text-pretty text-ink-muted sm:text-lead">Log in with PayPal and import it from CPSC in a minute.</p>
+            <p className="mt-4 max-w-[36ch] text-body text-pretty text-ink-muted sm:text-lead">Log in with PayPal and import your recall from CPSC.</p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-3">
             <Button href="/signin" size="lg" className="shadow-[0_0_0_1px_var(--paper-line)] focus-visible:outline-ink">
@@ -80,7 +80,7 @@ export function Footer() {
           <div>
             <Wordmark size="md" />
             <p className="mt-3 max-w-[36ch] text-ui text-muted">
-              Recall refunds in a minute for people who really destroyed the product, and never for a faked photo.
+              Recall refunds paid within a minute of the photo, for people who really destroyed the product, and never for a faked photo.
             </p>
           </div>
           <nav aria-label="Footer">

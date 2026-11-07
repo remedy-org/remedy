@@ -143,11 +143,8 @@ function EvidenceStill({ claim }: { claim: DrawerClaim }) {
       </div>
       <div className="border-t border-line px-4 py-3">
         <p className="text-ui">{claim.sentence}</p>
-        <div className="mt-3 flex items-center gap-2" aria-hidden="true">
-          <span className={clsx("inline-flex h-9 items-center rounded-control bg-accent px-3 text-ui font-medium text-accent-ink")}>Approve</span>
-          <span className="inline-flex h-9 items-center rounded-control border border-line-strong px-3 text-ui font-medium">Reject</span>
-          <span className="ml-auto font-mono text-micro text-faint">A / R</span>
-        </div>
+        {/* A caption, not buttons: the still has no actions to press. */}
+        {claim.review && <p className="mt-2 text-ui text-muted">A person approves or rejects it here. Approving sends {claim.amount} through PayPal.</p>}
       </div>
     </aside>
   );

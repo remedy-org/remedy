@@ -605,6 +605,8 @@ const M4T_ROW = {
   reason: "Every check passed",
   time: `0:${String(CLAIM.seconds).padStart(2, "0")}`,
   amount: CLAIM.amount,
+  // A judges' demo claim: its refund was sandbox money.
+  sandbox: true,
 };
 
 function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?: boolean }) {
@@ -634,7 +636,14 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
         <span className="@min-[720px]:hidden">
           <StatusPill status={row.status} />
         </span>
-        {row.amount ? <Money value={row.amount} size="grid" /> : <span className="text-faint">—</span>}
+        {row.amount ? (
+          <span className="flex flex-col items-end leading-tight">
+            <Money value={row.amount} size="grid" />
+            {"sandbox" in row && row.sandbox === true ? <span className="micro text-[10px] text-faint">Sandbox</span> : null}
+          </span>
+        ) : (
+          <span className="text-faint">—</span>
+        )}
       </span>
     </div>
   );

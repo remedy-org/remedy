@@ -11,9 +11,10 @@ import { ClaimId } from "@/lib/types";
 const Version = z.coerce.number().int().min(1).max(10_000);
 
 // GET /api/console/claims/RM-0412?v=12: the evidence panel's view of one claim. With the grid row's version, the claim
-// comes from the data cache after its first read at that version (console/_lib/photos.ts), so walking the queue with
-// ↑/↓ costs 1 Blob read a claim (its recall, read fresh for the refund it shows) and the second pass 1 too. Without
-// it, as before: the claim and its recall, 2. The photos come with sealed tickets, so they never read the claim again.
+// comes from the data cache after its first read at that version (console/_lib/photos.ts), and its recall from the
+// 60-second recall cache (it only shows the refund; approve and reject read the recall fresh in their own routes). So
+// walking the queue with ↑/↓ costs 1 Blob read a new claim and none on a second pass. Without it, as before: the claim
+// and its recall, 2. The photos come with sealed tickets, so they never read the claim again.
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/claims/[id]">) {
   const session = await company();
   if (isResponse(session)) return session;
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/
   if (v.success) {
     const claim = await claimAtVersion(id.data, v.data).catch(() => null);
     const store = await getAppStore();
-    const recall = claim ? await store.getRecall(claim.recallId, { fresh: true }) : null;
+    const recall = claim ? await store.getRecall(claim.recallId) : null;
     found = claim && recall && canSee(recall, session) && canSeeClaim(recall, session)(claim) ? { store, claim, recall } : null;
   } else {
     found = await loadClaimFor(session, id.data, { fresh: true });
