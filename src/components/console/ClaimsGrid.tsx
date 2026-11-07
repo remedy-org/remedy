@@ -20,7 +20,7 @@ import {
 import { AgGridReact } from "ag-grid-react";
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ClaimRow } from "@/app/console/_lib/view";
-import { AmountCell, CardRow, ChecksCell, ClaimCell, PayerCell, PayoutCell, PhotoTooltip, TimelineCell, VerdictCell } from "./cells";
+import { AmountCell, CardRow, ChecksCell, ChecksTooltip, ClaimCell, PayerCell, PayoutCell, PhotoTooltip, TimelineCell, TimelineTooltip, VerdictCell } from "./cells";
 import { SkeletonGrid } from "./ConsoleSkeleton";
 import { gridTheme } from "./gridTheme";
 import "./claims-grid.css";
@@ -46,18 +46,20 @@ export const CARD_BELOW = 720;
 // Columns that come and go with the grid's width (the evidence panel takes 452px). The rest need 708px: claim 220,
 // verdict at least 260 (144 in the homepage's narrower still, which keeps columns down to 592px), checks 132, amount 96. Each optional column is added, in
 // order, while it fits: the queue keeps its timeline first; the still keeps the payout column, where sample claims say
-// "not sent".
+// "not sent". In the queue they join strictly in that order, and only while the verdict keeps 360px, room for a reason
+// like "Couldn't tell if both photos show the same item" beside its pill: the reason is what a reviewer reads first.
 const VERDICT_MIN = { queue: 260, still: 144 };
+const VERDICT_WANT = { queue: 360, still: 144 };
 const BASE = 220 + 132 + 96;
 const OPTIONAL: Record<string, number> = { timeline: 168, payoutStatus: 112, payer: 132 };
 const ORDER = { queue: ["timeline", "payoutStatus", "payer"], still: ["payoutStatus", "timeline", "payer"] };
 
 function hiddenAt(width: number, still: boolean): Set<string> {
   const order = still ? ORDER.still : ORDER.queue;
-  let room = width - BASE - (still ? VERDICT_MIN.still : VERDICT_MIN.queue);
+  let room = width - BASE - (still ? VERDICT_WANT.still : VERDICT_WANT.queue);
   const hidden = new Set<string>();
   for (const id of order) {
-    if (room >= OPTIONAL[id]) room -= OPTIONAL[id];
+    if ((still || !hidden.size) && room >= OPTIONAL[id]) room -= OPTIONAL[id];
     else hidden.add(id);
   }
   return hidden;
@@ -66,6 +68,8 @@ function hiddenAt(width: number, still: boolean): Set<string> {
 export interface ClaimsGridHandle {
   /** Puts keyboard focus back on a claim's row (after the panel closes). */
   focusRow(id: string): void;
+  /** Puts keyboard focus on the first row (↓ or j from outside the grid). */
+  focusFirst(): void;
 }
 
 export interface ClaimsGridProps {
@@ -116,7 +120,20 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       grid.ensureIndexVisible(node.rowIndex);
       grid.setFocusedCell(node.rowIndex, cards ? "id" : "createdAt");
     },
+    focusFirst() {
+      const grid = api.current;
+      if (!grid?.getDisplayedRowCount()) return;
+      grid.ensureIndexVisible(0);
+      grid.setFocusedCell(0, cards ? "id" : "createdAt");
+    },
   }));
+
+  // Tab into the grid lands on a row (the open claim's, else the first), not on each column header in turn; ↑ from the
+  // first row still reaches the headers to sort.
+  const openRef = useRef(openId);
+  useEffect(() => {
+    openRef.current = openId;
+  }, [openId]);
 
   // The panel owns the selection: closing it clears the tint.
   useEffect(() => {
@@ -130,7 +147,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     const all: ColDef<ClaimRow>[] = [
       {
         colId: "createdAt",
-        headerName: "Claim",
+        // The second line's time is UTC (cells.tsx): said once here, so every row's line fits the column.
+        headerName: "Claim · UTC",
         field: "createdAt",
         cellRenderer: ClaimCell,
         width: 220,
@@ -154,14 +172,22 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       {
         colId: "checks",
         headerName: "Checks",
+        headerTooltip: still ? undefined : "One bar per check: the four before the model, then the model's. Solid passed, half-filled held, slashed failed, outline waiting, dotted not run.",
         cellRenderer: ChecksCell,
         width: 132,
+        tooltip: (p) => (!still && p.data?.bars ? p.data.id : undefined),
+        tooltipComponent: ChecksTooltip,
       },
       {
         colId: "timeline",
         headerName: "Timeline",
+        headerTooltip: still
+          ? undefined
+          : "From the photos arriving to PayPal settling, on a 2-minute scale: the model's answer, the rule's decision, PayPal sent and settled. The chip is photo to payout; a grey time is the model's answer alone.",
         cellRenderer: TimelineCell,
         width: 168,
+        tooltip: (p) => (!still && p.data?.timeline ? p.data.id : undefined),
+        tooltipComponent: TimelineTooltip,
         sortable: true,
         valueGetter: (p) => p.data?.toPay ?? null,
         // Unpaid claims last, whichever way.
@@ -236,7 +262,12 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
               api.current = e.api;
               if (openId) e.api.getRowNode(openId)?.setSelected(true, true);
             }}
-            onFirstDataRendered={() => setReady(true)}
+            onFirstDataRendered={(e) => {
+              setReady(true);
+              // A deep link (/console?claim=RM-1460) opens with its row in view.
+              const n = openId ? e.api.getRowNode(openId)?.rowIndex : null;
+              if (n != null) e.api.ensureIndexVisible(n, "middle");
+            }}
             onRowClicked={(e: RowClickedEvent<ClaimRow>) => !still && e.data && onOpen(e.data.id)}
             onCellKeyDown={(e: CellKeyDownEvent<ClaimRow>) => {
               const key = (e.event as KeyboardEvent | null)?.key;
@@ -259,6 +290,13 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
             suppressCellFocus={still}
             suppressHeaderFocus={still}
             tabToNextCell={() => false}
+            focusGridInnerElement={(p) => {
+              if (still || !p.api.getDisplayedRowCount()) return false;
+              const row = (openRef.current ? p.api.getRowNode(openRef.current)?.rowIndex : null) ?? 0;
+              p.api.ensureIndexVisible(row);
+              p.api.setFocusedCell(row, cards ? "id" : "createdAt");
+              return true;
+            }}
             overlayNoRowsTemplate="<span></span>"
             animateRows={animate}
             cellFlashDuration={600}

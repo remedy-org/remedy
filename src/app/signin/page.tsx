@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ConsoleReplica, PREVIEW_ROWS } from "@/components/home/ConsoleReplica";
-import { Button, Card, ErrorState, ExhibitLabel, Wordmark } from "@/components/ui";
+import { Button, Card, CheckIcon, ErrorState, ExhibitLabel, Wordmark } from "@/components/ui";
 import { DEFAULT_NEXT, getSession, safeNext } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -35,6 +35,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   if (await getSession("company")) redirect(next);
 
   const error = ERRORS[one(params.auth_error) ?? ""];
+  const signedOut = !error && one(params.signedout) === "1";
   const start = `/api/auth/paypal/start?${new URLSearchParams({ as: "company", next })}`;
 
   return (
@@ -54,6 +55,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
             <p className="mt-3 text-body text-muted">Log in with PayPal. Your claims, payouts and CPSC report are there.</p>
 
             {error && <ErrorState variant="inline" className="mt-6" title={error.title} description={error.description} />}
+            {signedOut && (
+              <p role="status" className="mt-6 flex items-center gap-2.5 rounded-control border border-line bg-surface-2 px-4 py-3 text-ui text-text-2">
+                <CheckIcon className="shrink-0 text-pay" />
+                You&apos;re signed out. Log in again to open your console.
+              </p>
+            )}
 
             <Button href={start} size="lg" block className="mt-8" prefetch={false}>
               Log in with PayPal

@@ -11,7 +11,8 @@ import { api } from "./api";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { formatClock, formatTime } from "./format";
 import { Keys } from "./Keys";
-import { ReviewActions, type ReviewIntent } from "./ReviewActions";
+import { PhotoViewer } from "./PhotoViewer";
+import { payoutFailure, ReviewActions, type ReviewIntent } from "./ReviewActions";
 
 // The evidence for one claim: on laptops a non-modal panel docked beside the grid (Mercury's detail card), so ↑/↓
 // keeps walking the queue; on phones and tablets a full-screen modal. Both show the same content: the money's
@@ -44,6 +45,9 @@ function useClaim(id: string, version: number | null | undefined) {
   const [last, setLast] = useState<DrawerClaim | null>(null);
   const hit = seen.get(key) ?? null;
   if (hit && hit !== last) setLast(hit);
+  // The same claim at an older version (a poll, or a refused payout, moved it on) stays on screen, footer and all, while
+  // the new version loads: a message under the buttons survives, and nothing flashes to a skeleton.
+  const current = hit ?? (last?.id === id ? last : null);
 
   useEffect(() => {
     if (seen.has(key)) return;
@@ -60,10 +64,10 @@ function useClaim(id: string, version: number | null | undefined) {
     };
   }, [id, version, key, attempt]);
 
-  const load: Load = hit ? { state: "ready" } : failure?.key === key ? { state: "error", error: failure.error } : { state: "loading" };
+  const load: Load = current ? { state: "ready" } : failure?.key === key ? { state: "error", error: failure.error } : { state: "loading" };
   return {
-    claim: hit,
-    stale: !hit && last && last.id !== id ? last : null,
+    claim: current,
+    stale: !current && last ? last : null,
     load,
     retry: () => {
       setFailure(null);
@@ -122,6 +126,14 @@ function EvidenceContent({ id, version, onClose, intent, variant }: { id: string
     replace(c);
     router.refresh();
   };
+  // A or R from the queue, or Approve and Reject in the photo viewer: both open the footer's confirm.
+  const [act, setAct] = useState(intent);
+  const [seenIntent, setSeenIntent] = useState(intent);
+  if (intent !== seenIntent) {
+    setSeenIntent(intent);
+    setAct(intent);
+  }
+  const review = claim?.review ? (mode: ReviewIntent["mode"]) => setAct((i) => ({ mode, n: (i?.n ?? 0) + 1 })) : undefined;
   const body = claim ?? stale;
   const pad = variant === "panel" ? "px-5" : "px-4 sm:px-6";
 
@@ -178,14 +190,14 @@ function EvidenceContent({ id, version, onClose, intent, variant }: { id: string
         {load.state !== "error" && !body && <DrawerSkeleton />}
         {load.state !== "error" && body && (
           <div className={clsx("transition-opacity duration-120", stale && "opacity-50")}>
-            <Evidence claim={body} pad={pad} />
+            <Evidence claim={body} pad={pad} onReview={stale ? undefined : review} />
           </div>
         )}
       </div>
 
       {claim?.review && (
         <footer className={clsx("border-t border-line bg-surface py-4", pad)}>
-          <ReviewActions key={claim.id} claim={claim} onDone={done} intent={intent} />
+          <ReviewActions key={claim.id} claim={claim} onDone={done} onFailed={() => router.refresh()} intent={act} />
         </footer>
       )}
       {variant === "panel" && (
@@ -214,7 +226,7 @@ function Section({ title, children, aside }: { title: ReactNode; children: React
 
 const PRE_STATE: Record<PreCheckState, CheckState> = { pass: "pass", hold: "hold", reject: "blocked", waiting: "waiting", skipped: "skipped" };
 
-type Step = { label: string; at: string | null; note?: string };
+type Step = { label: string; at: string | null; note?: string; failed?: boolean };
 
 /** The money's path for this claim, from its events: photos in, model answered, rule decided, PayPal sent, settled. */
 function moneySteps(claim: DrawerClaim): Step[] {
@@ -228,6 +240,14 @@ function moneySteps(claim: DrawerClaim): Step[] {
   ];
   if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "A sample claim: the rule decided to pay, and no money was sent." : undefined }];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
+  const failure = payoutFailure(claim);
+  if (failure) {
+    return [
+      ...steps,
+      { label: "Not sent", at: failure.at, failed: true, note: `PayPal didn't take the payout at ${formatClock(failure.at)} UTC: nothing was paid, and the claim is still held.` },
+      { label: "Settled", at: null },
+    ];
+  }
   return [
     ...steps,
     { label: "Sent", at: at((e) => e.type === "payout_sent"), note: claim.decision === "held" ? "Held: nothing is sent until a person at the company approves." : undefined },
@@ -251,41 +271,65 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
           return (
             <li key={s.label} className="relative flex min-w-0 flex-col gap-1.5 pr-2">
               <span aria-hidden="true" className="relative flex h-3 items-center">
-                <span className={clsx("relative z-10 size-2.5 shrink-0 rounded-full", done ? (i >= 3 ? "bg-pay" : "bg-text") : "border border-line-strong bg-surface")} />
-                {next && <span className={clsx("absolute inset-x-0 left-2.5 h-px", done && next.at ? "bg-muted/70" : "bg-line-strong/40")} />}
+                {/* A refused payout: a red ring, and its label says so, so it reads without colour too. */}
+                <span
+                  className={clsx(
+                    "relative z-10 size-2.5 shrink-0 rounded-full",
+                    s.failed ? "border-2 border-stop bg-surface" : done ? (i >= 3 ? "bg-pay" : "bg-text") : "border border-line-strong bg-surface",
+                  )}
+                />
+                {next && <span className={clsx("absolute inset-x-0 left-2.5 h-px", done && next.at && !s.failed ? "bg-muted/70" : "bg-line-strong/40")} />}
               </span>
-              <span className={clsx("truncate text-micro", done ? "text-text" : "text-faint")}>{s.label}</span>
+              <span className={clsx("truncate text-micro", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
               <span className="font-mono text-micro text-muted tabular-nums">
-                {!done ? <span className="text-faint">—</span> : i === 0 ? formatClock(s.at!) : `+${plus} s`}
+                {!done ? <span className="text-faint">—</span> : i === 0 || s.failed ? formatClock(s.at!) : `+${plus} s`}
               </span>
             </li>
           );
         })}
       </ol>
-      {note && <p className="mt-2 text-micro text-faint">{note}</p>}
+      {note && <p className={clsx("mt-2 text-micro", steps.some((s) => s.failed) ? "text-muted" : "text-faint")}>{note}</p>}
     </div>
   );
 }
 
-/** Held or refused: what decided it, first, with the model's own words, before the photos and the full list. */
-function Deciding({ claim }: { claim: DrawerClaim }) {
+/** What decided a held or refused claim: the first check that didn't pass (or pre-check), its sentence and the model's
+ * own words. Null for any other claim. */
+function deciding(claim: DrawerClaim) {
   if (claim.decision !== "held" && claim.decision !== "rejected" && claim.decision !== "blocked") return null;
   const check = claim.checks.find((c) => c.outcome !== "pass");
   const pre = claim.preChecks.find((p) => p.state === "reject" || p.state === "hold");
-  const label = check?.label ?? pre?.label ?? "The rule";
-  const text = check?.rule ?? pre?.detail ?? claim.sentence;
+  return {
+    lead: `${claim.decision === "held" ? "Why it's held" : "Why it was refused"} · ${check?.label ?? pre?.label ?? "The rule"}`,
+    text: check?.rule ?? pre?.detail ?? claim.sentence,
+    evidence: check?.evidence ?? null,
+  };
+}
+
+/** Held or refused: what decided it, first, with the model's own words, before the photos and the full list. */
+function Deciding({ claim }: { claim: DrawerClaim }) {
+  const d = deciding(claim);
+  if (!d) return null;
   return (
     <section aria-label="What decided it" className={clsx("rounded-control border-l-2 px-3.5 py-3", claim.decision === "held" ? "border-hold bg-hold-soft" : "border-stop bg-stop-soft")}>
-      <p className="micro text-muted">{claim.decision === "held" ? "Why it's held" : "Why it was refused"} · {label}</p>
-      <p className="mt-1.5 text-ui text-text">{text}</p>
-      {check?.evidence && <q className="mt-1.5 block font-sans text-ui leading-[1.55] text-muted">{check.evidence}</q>}
+      <p className="micro text-muted">{d.lead}</p>
+      <p className="mt-1.5 text-ui text-text">{d.text}</p>
+      {d.evidence && <q className="mt-1.5 block font-sans text-ui leading-[1.55] text-muted">{d.evidence}</q>}
     </section>
   );
 }
 
-function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
-  const passed = claim.checks.filter((c) => c.outcome === "pass").length;
+function Evidence({ claim, pad, onReview }: { claim: DrawerClaim; pad: string; onReview?: (mode: ReviewIntent["mode"]) => void }) {
+  // The "model" hold is the photo check not answering, not an answer: it isn't counted as a check that didn't pass.
+  const answers = claim.checks.filter((c) => c.id !== "model");
+  const passed = answers.filter((c) => c.outcome === "pass").length;
   const sample = claim.seeded || claim.demo;
+  // The photo viewer, open on a photo (0-based); keyed by claim, so ↑/↓ to another claim closes it.
+  const [viewing, setViewing] = useState<{ id: string; n: number } | null>(null);
+  const viewer = viewing?.id === claim.id ? viewing.n : null;
+  const d = deciding(claim);
+  // The summary is already quoted under the check it explains (Same item, Real photo): don't print it twice.
+  const summary = claim.summary && !claim.checks.some((c) => c.evidence === claim.summary) ? claim.summary : null;
   return (
     <div className={clsx("flex flex-col gap-7 py-5", pad)}>
       <Deciding claim={claim} />
@@ -300,7 +344,16 @@ function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
         {claim.photos.length ? (
           <div className={claim.photos.length === 1 ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
             {claim.photos.map((src, i) => (
-              <EvidencePhoto key={src} src={src} n={i + 1} of={claim.photos.length} sample={sample} className={claim.photos.length === 3 && i === 0 ? "col-span-2" : undefined} />
+              <EvidencePhoto
+                key={src}
+                src={src}
+                n={i + 1}
+                of={claim.photos.length}
+                sample={sample}
+                tall={claim.photos.length === 2}
+                onOpen={() => setViewing({ id: claim.id, n: i })}
+                className={claim.photos.length === 3 && i === 0 ? "col-span-2" : undefined}
+              />
             ))}
           </div>
         ) : (
@@ -309,6 +362,17 @@ function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
           </p>
         )}
         {claim.seeded && <p className="text-ui text-muted">Sample photos from the eval set, shared by several seeded claims.</p>}
+        {viewer !== null && (
+          <PhotoViewer
+            claimId={claim.id}
+            photos={claim.photos}
+            start={viewer}
+            sample={sample}
+            question={d && { lead: d.lead, text: d.text }}
+            onReview={onReview}
+            onClose={() => setViewing(null)}
+          />
+        )}
       </section>
 
       <Section title="Before the model" aside="No AI">
@@ -318,7 +382,7 @@ function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
         />
       </Section>
 
-      <Section title="The model's answers" aside={claim.checks.length ? `${passed} of ${claim.checks.length} passed` : undefined}>
+      <Section title="The model's answers" aside={answers.length ? `${passed} of ${answers.length} passed` : claim.checks.length ? "No answer" : undefined}>
         {claim.checks.length ? (
           <>
             <CheckProgress
@@ -335,10 +399,10 @@ function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
                 ),
               }))}
             />
-            {claim.summary && (
+            {summary && (
               <p className="rounded-control bg-surface-2 px-4 py-3 text-ui text-muted">
                 <span className="micro mb-1 block text-muted">Model summary</span>
-                <span className="font-sans text-ui leading-[1.55] text-text-2">{claim.summary}</span>
+                <span className="font-sans text-ui leading-[1.55] text-text-2">{summary}</span>
               </p>
             )}
           </>

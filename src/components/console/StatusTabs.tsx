@@ -26,11 +26,12 @@ export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; 
   };
   return (
     // On a phone the strip scrolls: an end spacer (a flex scroller drops its end padding) lets the last tab clear the
-    // faded right edge, and the fade shows there is more to scroll.
+    // faded right edge, and the fade shows there is more to scroll. A scroller clips what overflows it, so it carries 4px
+    // of padding (taken back by margins) for each tab's focus ring: 2px offset, 2px wide.
     <div
       role="tablist"
       aria-label="Filter claims by decision"
-      className="-mx-4 flex overflow-x-auto px-4 [scrollbar-width:none] after:w-8 after:shrink-0 after:content-[''] max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] sm:mx-0 sm:px-0 sm:after:hidden"
+      className="-mx-4 -my-1 flex overflow-x-auto px-4 py-1 [scrollbar-width:none] after:w-8 after:shrink-0 after:content-[''] max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] sm:-mx-1 sm:px-1 sm:after:hidden"
     >
       {TABS.map((t, i) => {
         const active = t.id === value;

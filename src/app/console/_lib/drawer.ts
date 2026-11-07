@@ -1,7 +1,7 @@
 import type { Claim, Outcome, Recall } from "@/lib/types";
 import { isSandboxBuild } from "@/lib/demo/allowed";
 import { SAMPLE_PRECHECKED, samplePayoutDetail, samplePhotosDetail } from "@/lib/demo/sampleCopy";
-import { amountOf, checkLabel, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
+import { amountOf, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
 
 // Everything the evidence drawer shows for one claim, built on the server so the client never sees a full payer id.
 
@@ -49,10 +49,13 @@ export type ReviewedClaim = DrawerClaim & { sample?: string };
 const NOT_MODEL = new Set(["session", "duplicate_photo", "payer", "payer_verified", "state", "review", "auto_pay", "payout"]);
 
 
-function evidenceFor(check: string, verdict: Claim["verdict"]): string | null {
+function evidenceFor(check: string, outcome: Outcome, verdict: Claim["verdict"]): string | null {
   if (!verdict) return null;
   if (check === "label") return verdict.label.evidence || null;
   if (check === "code") return verdict.challenge_code.evidence || null;
+  // The verdict has no quote of its own for these two answers: when one held or failed the claim, the model's summary
+  // is its reasoning.
+  if ((check === "same_item" || check === "screen") && outcome !== "pass") return verdict.summary || null;
   const step = check.match(/^step_(\d+)$/);
   return step ? (verdict.steps[Number(step[1]) - 1]?.evidence ?? null) : null;
 }
@@ -83,7 +86,7 @@ export function toDrawerClaim(c: Claim, recall: Recall): DrawerClaim {
   const amount = formatMoney(amountOf(c.payout?.amount, recall));
   const checks = c.reasons
     .filter((r) => !NOT_MODEL.has(r.check))
-    .map((r) => ({ id: r.check, label: checkLabel(r.check, c.code), outcome: r.outcome, rule: r.text, evidence: evidenceFor(r.check, c.verdict) }));
+    .map((r) => ({ id: r.check, label: checkLabel(r.check, c.code), outcome: r.outcome, rule: companyReasonText(r, c.decision), evidence: evidenceFor(r.check, r.outcome, c.verdict) }));
   return {
     id: c.id,
     createdAt: c.createdAt,

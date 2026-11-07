@@ -68,12 +68,12 @@ export function ClaimCell({ data }: Cell) {
           <span className="font-mono text-ui font-medium">{data.id}</span>
           <SampleMark row={data} />
         </span>
-        {/* The claim's one-time code, as the sign-in page's replica shows it, then the time it was filed (UTC; the full
-            date is in the tooltip), so the line fits the column. */}
-        <span className="mt-0.5 font-mono text-micro whitespace-nowrap text-faint" title={`Filed ${formatTime(data.createdAt)}`}>
+        {/* The claim's one-time code, as the sign-in page's replica shows it, then the time it was filed (UTC, as the
+            column header says; the full date is in the tooltip), so the line fits the column. */}
+        <span className="mt-0.5 truncate font-mono text-micro whitespace-nowrap text-faint" title={`Filed ${formatTime(data.createdAt)}`}>
           {data.code ? (
             <>
-              <span className="text-muted">Code {data.code}</span> · {formatClock(data.createdAt).slice(0, 5)} UTC
+              <span className="text-muted">Code {data.code}</span> · {formatClock(data.createdAt).slice(0, 5)}
             </>
           ) : (
             formatTime(data.createdAt)
@@ -114,10 +114,10 @@ export function VerdictCell({ data, context }: Cell & { context?: { stacked?: bo
 
 const BAR_WORD: Record<BarState, string> = { pass: "passed", hold: "unclear, held", reject: "failed", waiting: "waiting", skipped: "not run" };
 
-function Bar({ bar }: { bar: CheckBar }) {
+// One bar's shape by state; the grid's hover card (ChecksTooltip) uses the same shapes as its legend.
+function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
   return (
     <span
-      title={`${bar.label}: ${BAR_WORD[bar.state]}`}
       className={clsx(
         "relative h-4 w-2 shrink-0 overflow-hidden rounded-[1.5px]",
         bar.state === "pass" && "bg-pay/70",
@@ -207,7 +207,7 @@ export function TimelineCell({ data }: Cell) {
   if (!data) return null;
   if (!data.timeline) return <span className="font-mono text-micro text-faint">{data.photoCount ? "—" : "No photos yet"}</span>;
   return (
-    <span className="flex h-full items-center gap-2" title={timelineSentence(data)}>
+    <span className="flex h-full items-center gap-2">
       <TimelineTrack t={data.timeline} decision={data.decision} />
       <span className="sr-only">{timelineSentence(data)}</span>
       {data.toPay !== null ? (
@@ -303,6 +303,80 @@ export function CardRow({ data }: Cell) {
         </span>
       </span>
     </span>
+  );
+}
+
+const PRE_IDS = new Set(["session", "duplicate_photo", "payer", "payer_verified"]);
+// A seeded sample's fingerprint check (why it's dotted), and the photo check that never answered.
+function barNote(row: ClaimRow, b: CheckBar): string {
+  if (b.id === "duplicate_photo" && b.state === "skipped" && row.seeded) return "not run: shared sample photo";
+  if (b.id === "model" && b.state === "hold") return "no answer, held";
+  return BAR_WORD[b.state];
+}
+
+/** A column header's legend (headerTooltip): the column's tooltip component draws the header's too. */
+function HeaderTip({ text }: { text: unknown }) {
+  return <p className="w-[280px] rounded-card bg-surface px-3.5 py-3 text-ui text-muted shadow-float">{String(text ?? "")}</p>;
+}
+
+/** Hovering the barcode: each bar named, with its state, the pre-checks and the model's apart. */
+export function ChecksTooltip({ data, location, value }: CustomTooltipProps<ClaimRow>) {
+  if (location === "header") return <HeaderTip text={value} />;
+  if (!data?.bars) return null;
+  const groups = [
+    { title: "Before the model", bars: data.bars.filter((b) => PRE_IDS.has(b.id)) },
+    { title: "The model's answers", bars: data.bars.filter((b) => !PRE_IDS.has(b.id)) },
+  ].filter((g) => g.bars.length);
+  return (
+    <div className="w-[296px] rounded-card bg-surface px-3.5 py-3 shadow-float">
+      {groups.map((g) => (
+        <div key={g.title} className="mt-2.5 first:mt-0">
+          <p className="micro text-faint">{g.title}</p>
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {g.bars.map((b) => (
+              <li key={b.id} className="flex items-center gap-2.5 text-ui">
+                <Bar bar={b} />
+                <span className="min-w-0 flex-1 truncate text-text-2">{b.label}</span>
+                <span className="shrink-0 text-micro text-muted">{barNote(data, b)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Hovering the timeline: each step after the photos arrived, in words. */
+export function TimelineTooltip({ data, location, value }: CustomTooltipProps<ClaimRow>) {
+  if (location === "header") return <HeaderTip text={value} />;
+  const t = data?.timeline;
+  if (!data || !t) return null;
+  const steps: [string, number | null][] = [
+    ["Photos in", 0],
+    ["Model answered", t.answered],
+    ["Rule decided", t.decided],
+    ...(data.seeded
+      ? []
+      : ([
+          ["PayPal sent", t.sent],
+          ["PayPal settled", t.settled],
+        ] as [string, number | null][])),
+  ];
+  const tail = data.seeded && data.decision === "paid" ? "A sample claim: the rule decided to pay, and no money was sent." : t.end === "held" ? "Waiting for a person to approve or reject." : null;
+  return (
+    <div className="w-[240px] rounded-card bg-surface px-3.5 py-3 shadow-float">
+      <p className="micro text-faint">After the photos arrived</p>
+      <dl className="mt-1.5 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-ui">
+        {steps.map(([label, v]) => (
+          <div key={label} className="contents">
+            <dt className={v === null ? "text-faint" : "text-text-2"}>{label}</dt>
+            <dd className="text-right font-mono text-micro leading-5 text-muted tabular-nums">{v === null ? "—" : duration(v)}</dd>
+          </div>
+        ))}
+      </dl>
+      {tail && <p className="mt-2 text-micro text-muted">{tail}</p>}
+    </div>
   );
 }
 

@@ -191,6 +191,10 @@ describe("rejectClaim", () => {
     const result = await rejectClaim({ store, claim, recall: sampleRecall(), by: "x", reason: "The code isn't on the cut pillow" });
     expect(result).toMatchObject({ ok: true, claim: { decision: "held" }, sample: expect.stringContaining("Rejected on review: The code isn't on the cut pillow") });
     expect(await store.getClaim("RM-0412")).toEqual(claim);
+    // One closing stop, whether or not the reason brought its own.
+    const ended = await rejectClaim({ store, claim, recall: sampleRecall(), by: "x", reason: "Retake photo 2." });
+    expect(ended.ok && ended.sample).toMatch(/"Rejected on review: Retake photo 2\."$/);
+    expect(result.ok && result.sample).toMatch(/cut pillow\."$/);
   });
 
   it("leaves a claim decided since the drawer read it, and says how it was decided", async () => {

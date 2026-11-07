@@ -5,7 +5,7 @@ import type { Reason } from "@/lib/types";
 import { toDrawerClaim } from "./drawer";
 import { PublishInput, RefundValue, slugify, summarizeCpsc, uniqueSlug } from "./recalls";
 import { buildReport } from "./report";
-import { decisionSentence, formatCents, maskPayer, percent, preChecksOf, reasonOf, statsOf, toRow } from "./view";
+import { companyReasonText, decisionSentence, formatCents, maskPayer, percent, preChecksOf, reasonOf, statsOf, toRow } from "./view";
 import cpsc27071 from "@/lib/__fixtures__/cpsc-27071.json";
 import { CpscRecord } from "@/lib/cpsc";
 
@@ -96,6 +96,32 @@ describe("console view", () => {
     expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toMatchObject({ sample: true, note: expect.stringContaining("nothing is saved") });
     expect(toDrawerClaim(sampleClaim({ decision: "paid" }), recall).review).toBeNull();
     expect(toDrawerClaim(sampleClaim(), recall).photos).toEqual(["/api/console/claims/RM-0412/photos/0"]);
+  });
+
+  it("says a photo check that never answered in the company's words, not the owner's", () => {
+    const model = { check: "model", text: "The photo check didn't answer, so a person will look at your photos instead" };
+    expect(companyReasonText(model, "held")).toBe("The photo check didn't answer (a service error), so this claim needs your review. Nothing has been paid.");
+    expect(companyReasonText(model, "held", true)).toBe("The photo check didn't answer (a service error): needs your review");
+    expect(companyReasonText(model, "paid")).toBe("The photo check didn't answer (a service error), so a person at the company reviewed it.");
+    expect(companyReasonText({ check: "same_item", text: "Couldn't tell" }, "held")).toBe("Couldn't tell");
+    const claim = sampleClaim({ decision: "held", reasons: [{ ...model, outcome: "hold" }] });
+    expect(decisionSentence(claim, recall)).toBe("The photo check gave no answer, so the rule couldn't decide: a person approves or rejects the $29.99 refund.");
+    expect(toDrawerClaim(claim, recall).checks[0].rule).not.toContain("your photos");
+  });
+
+  it("quotes the model's summary under a held same-item check, which has no evidence of its own", () => {
+    const verdict = {
+      label: { text_seen: "X", matches_recalled_product: "yes" as const, evidence: "Label reads X" },
+      steps: [],
+      challenge_code: { text_seen: "R8D", matches: "yes" as const, evidence: "Tag reads R8D" },
+      same_item_in_all_photos: "unclear" as const,
+      looks_like_photo_of_screen_or_print: "no" as const,
+      summary: "Cannot be confirmed from the close-up alone.",
+    };
+    const claim = sampleClaim({ decision: "held", verdict, reasons: [{ check: "same_item", outcome: "hold", text: "Couldn't tell" }, { check: "screen", outcome: "pass", text: "A real photo" }] });
+    const checks = toDrawerClaim(claim, recall).checks;
+    expect(checks.find((c) => c.id === "same_item")?.evidence).toBe("Cannot be confirmed from the close-up alone.");
+    expect(checks.find((c) => c.id === "screen")?.evidence).toBeNull();
   });
 });
 

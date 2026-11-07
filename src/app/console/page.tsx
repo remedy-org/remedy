@@ -17,7 +17,9 @@ const VIEWPORT = "lg:h-[calc(100dvh-57px)] lg:min-h-[640px] lg:flex-none lg:over
 
 export default async function ConsolePage({ searchParams }: PageProps<"/console">) {
   const session = await requireSession("company", "/console");
-  const wanted = (await searchParams).recall;
+  const params = await searchParams;
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const wanted = params.recall;
   const { store, recalls, unreadable: lostRecalls } = await loadWorkspace(session, wanted);
   const recall = pickRecall(recalls, wanted);
 
@@ -59,7 +61,16 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
       <PartialNotice what="recalls" ids={lostRecalls} total={recalls.length + lostRecalls.length} />
       {rows.length ? (
         // Keyed by recall: switching recalls starts a fresh queue (tabs, search, live updates).
-        <ClaimsQueue key={recall.id} recall={{ id: recall.id, unitsSold: recall.unitsSold }} rows={rows} at={new Date().toISOString()} sandbox={isSandboxBuild()} />
+        <ClaimsQueue
+          key={recall.id}
+          recall={{ id: recall.id, unitsSold: recall.unitsSold }}
+          rows={rows}
+          at={new Date().toISOString()}
+          sandbox={isSandboxBuild()}
+          initialTab={one(params.tab)}
+          initialSearch={one(params.q)}
+          initialOpen={one(params.claim)}
+        />
       ) : (
         <EmptyState
           eyebrow={`Recall ${recall.id}`}

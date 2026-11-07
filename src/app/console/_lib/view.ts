@@ -166,13 +166,34 @@ export function reasonOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHas
     case "paid":
       return c.reason ? "Approved on review" : "Every check passed";
     case "held":
-      return c.reason?.text ?? (recall.autoPay ? "Every check passed; held for a person" : "Every check passed; auto-pay is off");
+      return c.reason ? companyReasonText(c.reason, "held", true) : recall.autoPay ? "Every check passed; held for a person" : "Every check passed; auto-pay is off";
     case "rejected":
     case "blocked":
       return c.reason?.text ?? "Refused";
     case "pending":
       return c.photoHashes.length ? "Checking the photos" : "Waiting for photos";
   }
+}
+
+// The "model" holds are the pipeline's own (pipeline.ts): the photo check errored, timed out, hit the daily limit or
+// had no settings. They're written for the owner ("a person will look at your photos"); the console says the cause in
+// the company's words, and that the claim is waiting for them.
+const MODEL_HOLD: [RegExp, string][] = [
+  [/^The photo check didn't answer/, "The photo check didn't answer (a service error)"],
+  [/^The photo check didn't finish/, "The photo check didn't finish in time"],
+  [/^The recall's check settings couldn't be loaded/, "The recall's check settings couldn't be loaded, so the photos weren't checked"],
+  [/^Remedy's daily photo-check limit/, "Remedy's daily photo-check limit was reached, so the photos weren't checked"],
+];
+const modelHoldCause = (text: string) =>
+  MODEL_HOLD.find(([re]) => re.test(text))?.[1] ?? text.replace(/[,;]\s*(?:so )?a person will (?:look at your photos|review this claim)(?: instead)?\.?$/, "");
+
+/** A reason as the company reads it: the "model" holds in the reviewer's words, every other reason as written. short:
+ * the grid's one line. */
+export function companyReasonText(r: Pick<Reason, "check" | "text">, decision: Decision, short = false): string {
+  if (r.check !== "model") return r.text;
+  const cause = modelHoldCause(r.text);
+  if (decision !== "held") return `${cause}, so a person at the company reviewed it.`;
+  return short ? `${cause}: needs your review` : `${cause}, so this claim needs your review. Nothing has been paid.`;
 }
 
 /** A grid row from an index row. photoUrls turns each photo's store key into the URLs the grid loads (the console
@@ -339,6 +360,7 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
       if (hold?.check === "auto_pay") return `Every check passed. Auto-pay is off, so a person approves the ${amount} refund.`;
       if (hold?.check === "payout") return "Every check passed, but PayPal didn't accept the payout, so a person will send it.";
       if (hold && PROCESS_HOLD.has(hold.check)) return `A check before the payout found a conflict, so a person decides: ${lower(hold.text)}.`;
+      if (hold?.check === "model") return `The photo check gave no answer, so the rule couldn't decide: a person approves or rejects the ${amount} refund.`;
       if (hold) return `One answer was unclear, so a person decides: ${lower(hold.text)}.`;
       return recall.autoPay ? "Every check passed, but the claim is held for a person." : `Every check passed. Auto-pay is off, so a person approves the ${amount} refund.`;
     }

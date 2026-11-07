@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button, ErrorState, Field, Textarea } from "@/components/ui";
+import { AlertIcon, Button, ErrorState, Field, Textarea } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
 import { api } from "./api";
+import { formatClock } from "./format";
 
 type Mode = "idle" | "approve" | "reject";
 
@@ -14,12 +15,32 @@ export interface ReviewIntent {
   n: number;
 }
 
+/** A held claim whose last payout attempt PayPal refused: when, and PayPal's answer. The panel keeps saying so (and
+ * offers to try again) until a payout goes through; the claim's history keeps it after. */
+export function payoutFailure(claim: Pick<DrawerClaim, "decision" | "events">): { at: string; detail: string } | null {
+  if (claim.decision !== "held") return null;
+  const last = [...claim.events].reverse().find((e) => e.type === "payout_failed" || e.type === "payout_sent");
+  if (last?.type !== "payout_failed") return null;
+  return { at: last.at, detail: last.detail.replace(/^PayPal didn't take the payout:\s*/, "") };
+}
+
 /**
  * Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit click. A seeded claim's
  * review is a sample: the server says what it would have done, and the claim stays held. The keyboard's A and R
  * (intent) open the same confirm or form as the buttons and move focus into it; paying still takes a second press.
  */
-export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; onDone: (c: DrawerClaim) => void; intent?: ReviewIntent | null }) {
+export function ReviewActions({
+  claim,
+  onDone,
+  onFailed,
+  intent,
+}: {
+  claim: DrawerClaim;
+  onDone: (c: DrawerClaim) => void;
+  // A refused approve still writes the claim's history (payout_failed, approve_refused): the panel reloads it.
+  onFailed?: () => void;
+  intent?: ReviewIntent | null;
+}) {
   // A or R pressed while the panel was still loading opens the confirm as soon as it mounts.
   const [mode, setMode] = useState<Mode>(intent?.mode ?? "idle");
   // After Esc or Cancel, focus goes back to the button that opened the confirm, so a second Esc closes the panel.
@@ -39,13 +60,17 @@ export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; o
   }
   const review = claim.review;
   if (!review) return null;
+  const failure = payoutFailure(claim);
 
   const run = async (url: string, json?: unknown) => {
     setBusy(true);
     setError(null);
     const result = await api<ReviewedClaim>(url, { method: "POST", json });
     setBusy(false);
-    if (!result.ok) return setError(result.error);
+    if (!result.ok) {
+      setError(result.error);
+      return onFailed?.();
+    }
     if (!result.data.sample) return onDone(result.data);
     setSample(result.data.sample);
     setMode("idle");
@@ -74,16 +99,29 @@ export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; o
 
       {mode === "idle" && (
         <>
+          {/* In the note's place and at its size, so the footer keeps its height and the evidence its room. */}
           {sample ? (
-            <p role="status" className="rounded-control border border-line bg-surface-2 px-4 py-3 text-ui text-muted">
+            <p role="status" className="text-ui text-muted">
+              <span className="micro mr-2 text-text-2">Sample result</span>
               {sample}
             </p>
+          ) : failure && !error ? (
+            <div className="flex gap-3 rounded-card border border-line bg-stop-soft px-4 py-3">
+              <AlertIcon className="mt-0.5 shrink-0 text-stop" />
+              <div className="min-w-0 text-ui text-muted">
+                <p className="font-medium text-text">
+                  PayPal didn&apos;t take the payout at <span className="font-mono">{formatClock(failure.at)}</span> UTC
+                </p>
+                <p className="mt-1">Nothing was paid and the claim is still held. Try again, or reject it.</p>
+                {failure.detail && <p className="mt-1.5 font-mono text-micro break-words text-faint">PayPal: {failure.detail}</p>}
+              </div>
+            </div>
           ) : (
             review.note && <p className="text-ui text-muted">{review.note}</p>
           )}
           <div className="flex flex-wrap gap-3">
             <Button onClick={() => (setSample(null), setMode("approve"))} autoFocus={back === "approve"} className="flex-1 sm:flex-none">
-              {review.sample ? "Approve" : `Approve and pay ${claim.amount}${claim.sandbox ? " sandbox" : ""}`}
+              {review.sample ? "Approve" : `${failure ? "Try again: pay" : "Approve and pay"} ${claim.amount}${claim.sandbox ? " sandbox" : ""}`}
             </Button>
             <Button variant="secondary" onClick={() => (setSample(null), setMode("reject"))} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
               Reject
