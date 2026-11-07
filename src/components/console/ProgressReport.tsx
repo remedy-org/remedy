@@ -17,6 +17,17 @@ function H({ n, children }: { n: number; children: ReactNode }) {
 const th = "py-2 pr-4 text-left font-mono text-micro font-medium uppercase tracking-[0.06em] text-muted last:pr-0";
 const td = "border-t border-line py-2.5 pr-4 align-top last:pr-0";
 
+// Every claim in the totals that is not a real owner's, in Insights' words: the seeded samples and the judges' demo claims.
+function provenance({ seeded, demo }: Pick<Report, "seeded" | "demo">) {
+  const parts = [];
+  if (seeded) parts.push(`${plural(seeded, "seeded sample claim")}, never paid to a real owner`);
+  if (demo) parts.push(`${plural(demo, "judges’ demo claim")} in sandbox money`);
+  return parts.join(", and ");
+}
+
+// CPSC's own wording of units sold, only when it says more than the figure above it (a range, several products).
+const cpscUnits = (recall: Recall, sold: number) => (recall.units && recall.units.replace(/[^\d]/g, "") !== String(sold) ? `CPSC: ${recall.units}` : undefined);
+
 /**
  * The CPSC progress-report draft as a paper sheet: always the light tokens, on screen and in print, so what the
  * company sees is what it files. Every number comes from the claim records.
@@ -54,16 +65,16 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
         </dl>
       </header>
 
-      {report.seeded > 0 && (
+      {(report.seeded > 0 || report.demo > 0) && (
         <p className="mt-8 rounded-control border border-line bg-surface-2 px-4 py-3 text-ui text-text">
-          Includes {plural(report.seeded, "seeded sample claim")} from the demo data, which were never paid. Do not file these numbers with CPSC.
+          Includes {provenance(report)}. Do not file these numbers with CPSC.
         </p>
       )}
 
       <section className="mt-8 flex flex-col gap-4 break-inside-avoid">
         <H n={1}>Units remedied</H>
         <div className="grid gap-6 sm:grid-cols-3">
-          <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={recall.units ? `CPSC: ${recall.units}` : undefined} />
+          <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={cpscUnits(recall, s.unitsSold)} />
           <Figure label="Units remedied" value={formatCount(s.remedied)} note={report.samplesPaid ? `Destroyed on camera; ${plural(report.samplesPaid, "sample")} never refunded` : "Destroyed on camera and refunded"} />
           <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} />
         </div>

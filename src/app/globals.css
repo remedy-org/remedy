@@ -444,6 +444,24 @@
   border-bottom-color: transparent;
 }
 
+/*
+ * Insights runs AG Studio in edit mode only for the analyst's rail; to a company the report is a set of read-only
+ * exhibits. So a hovered or selected widget gets no editor frame, no resize handles and no empty toolbar (the keyboard
+ * focus ring stays), and a widget's title, exhibit label and caption don't raise a tooltip over the content beneath.
+ */
+.insights-report .ag-studio-layout-widget {
+  --ag-studio-layout-widget-resize-border-color: transparent;
+}
+
+.insights-report .ag-studio-layout-widget-overlay-resize,
+.insights-report .ag-studio-widget-toolbar:not(:has(button)) {
+  display: none;
+}
+
+.insights-report :is(.ag-studio-layout-widget-title, .ag-studio-layout-widget-subtitle, .ag-studio-layout-widget-caption) {
+  pointer-events: none;
+}
+
 /* Skeleton shimmer: opacity only, stops under reduced motion. */
 @keyframes skeleton-pulse {
   0%,

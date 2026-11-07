@@ -136,8 +136,9 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
       decisions: at(16, 8, 8, 15),
       funnel: at(0, 23, 14, 22),
       refusals: at(14, 23, 10, 22),
-      "time-to-pay": at(0, 45, 10, 20),
-      claims: at(10, 45, 14, 20),
+      // The ledger closes the page across the full width, so a reason reads whole instead of stopping mid-word.
+      "time-to-pay": at(0, 45, 24, 16),
+      claims: at(0, 61, 24, 28),
     },
   };
 };

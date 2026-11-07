@@ -120,5 +120,6 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
   }, [theme]);
 
   // Studio sets its widget titles in 700, outside DESIGN.md's 400/500/600; the theme's title weight doesn't reach them.
-  return <div ref={host} className="h-full w-full [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!" />;
+  // insights-report (globals.css) takes Studio's editor chrome off the read-only exhibits.
+  return <div ref={host} className="insights-report h-full w-full [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!" />;
 }

@@ -1,4 +1,4 @@
-import type { AgDefaultRegistry, AgFormatShapeParams, AgWidgetData, AgWidgetDataFormat, AgWidgetsConfig, AgWidgetFormParams } from "ag-studio";
+import type { AgBaseWidgetDefinition, AgDefaultRegistry, AgFormatShapeParams, AgWidgetData, AgWidgetDataFormat, AgWidgetsConfig, AgWidgetFormParams } from "ag-studio";
 import { CheckFunnel } from "./CheckFunnel";
 import { DecisionMix } from "./DecisionMix";
 import type { CheckFunnelDef, DecisionMixDef, InsightsRegistry, RecallProgressDef, RefusalReasonsDef } from "./defs";
@@ -24,14 +24,23 @@ const formatShape = ({ api }: AgFormatShapeParams) =>
     };
   }).shape;
 
+// The report is read, not built: Studio runs in edit mode only because the analyst's rail lives there. So no widget
+// keeps Studio's duplicate and delete, which left out of a toolbar are off for the Delete key too; the grid's CSV and a
+// chart's image download stay, named for a screen reader (Studio reads a button's label out as-is, not as a locale key).
+const ACTIONS: Record<string, string> = { export: "Download CSV", download: "Download image" };
+const readOnly = <T extends Pick<AgBaseWidgetDefinition, "toolbar">>(def: T): T => ({
+  ...def,
+  toolbar: (def.toolbar ?? []).flatMap((item) => (typeof item === "string" ? [] : [{ ...item, label: ACTIONS[item.id] ?? item.label }])),
+});
+
 const titles = <T extends AgWidgetData<unknown, AgWidgetDataFormat<unknown>>>(params: AgWidgetFormParams<T>, items: { key: string; label: string }[]) =>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params.createDefaults({ dataMappingItems: items as any, supportsCrossHighlight: false });
 
 export const insightsWidgets =
   ({ createWidgets }: StudioLib) =>
-  (defaults: AgWidgetsConfig<AgDefaultRegistry>): AgWidgetsConfig<InsightsRegistry> =>
-  createWidgets<InsightsRegistry>({
+  (defaults: AgWidgetsConfig<AgDefaultRegistry>): AgWidgetsConfig<InsightsRegistry> => {
+  const config = createWidgets<InsightsRegistry>({
     additionalTypes: [
       {
         id: "recall-progress",
@@ -150,3 +159,5 @@ export const insightsWidgets =
     ],
     menu: [{ label: "Remedy", widgetIds: ["recall-progress", "decision-mix", "check-funnel", "refusal-reasons"] }, ...defaults.menu],
   });
+  return { ...config, widgets: config.widgets.map(readOnly) };
+};
