@@ -1,0 +1,77 @@
+"use client";
+
+import clsx from "clsx";
+import type { AgWidgetParams } from "ag-studio";
+import type { MouseEvent } from "react";
+import type { DecisionMixDef } from "./defs";
+import { num, useRows } from "./useRows";
+
+// Custom widget 4: what the rule decided, as one 100% bar in the state colours every pill and barcode in Remedy uses.
+// A built-in donut takes its colours from palette order, so a decision's colour would depend on the data; this can't.
+
+const ORDER = ["Paid", "Held", "Rejected", "Blocked", "In progress"];
+const FILL: Record<string, string> = {
+  Paid: "bg-pay",
+  Held: "bg-hold",
+  Rejected: "bg-stop",
+  Blocked: "bg-[color-mix(in_oklch,var(--stop)_55%,var(--surface))]",
+  "In progress": "bg-faint",
+};
+// Shape as well as colour: hollow for the states nothing decided yet or that never reached the model.
+const DOT: Record<string, string> = { Blocked: "border border-stop bg-transparent", "In progress": "border border-faint bg-transparent" };
+
+export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
+  const { dataMapping, widgetApi } = params;
+  const decision = dataMapping.decision?.[0];
+  const count = dataMapping.count?.[0];
+  const rows = useRows(widgetApi, () => (decision && count ? [{ fields: [decision, count] }] : null), [params]);
+  if (!rows || !decision || !count) return null;
+
+  const tally = new Map(rows[0].map((r) => [String(r[decision.key]), num(r[count.key])]));
+  const items = [...tally.keys()]
+    .sort((a, b) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99))
+    .map((label) => ({ label, n: tally.get(label)! }))
+    .filter((i) => i.n > 0);
+  const total = items.reduce((s, i) => s + i.n, 0) || 1;
+  const selected = new Set(widgetApi.getCrossFilterSelections()?.flatMap((s) => (s.type === "value" ? s.values.map(String) : [])) ?? []);
+  const share = (n: number) => `${Math.round((n / total) * 100)}%`;
+
+  const toggle = (value: string) => (e: MouseEvent) => {
+    e.stopPropagation();
+    widgetApi.toggleCrossFilter({ type: "value", field: decision, value, group: 0, reset: !(e.metaKey || e.ctrlKey) });
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3 px-1.5 pb-1" onClick={() => widgetApi.resetCrossFilter()}>
+      <div aria-hidden="true" className="flex h-3 gap-0.5 overflow-hidden rounded-[3px]">
+        {items.map((i) => (
+          <span key={i.label} className={clsx("h-full min-w-[3px]", FILL[i.label] ?? "bg-faint", selected.size > 0 && !selected.has(i.label) && "opacity-30")} style={{ flexGrow: i.n }} />
+        ))}
+      </div>
+      <ul className="flex min-h-0 flex-col">
+        {items.map((i) => (
+          <li key={i.label}>
+            <button
+              type="button"
+              aria-pressed={selected.has(i.label)}
+              onClick={toggle(i.label)}
+              className={clsx(
+                "grid w-full grid-cols-[1fr_auto_3rem] items-center gap-3 rounded-control px-2 py-0.5 text-left transition-colors hover:bg-surface-2",
+                "focus-visible:outline-2 focus-visible:outline-offset-0",
+                selected.has(i.label) && "bg-accent-soft ring-1 ring-accent",
+                selected.size > 0 && !selected.has(i.label) && "opacity-45",
+              )}
+            >
+              <span className="flex items-center gap-2 text-ui text-text">
+                <span aria-hidden="true" className={clsx("size-2 shrink-0 rounded-full", DOT[i.label] ?? FILL[i.label])} />
+                {i.label}
+              </span>
+              <span className="font-mono text-ui text-text tabular-nums">{i.n}</span>
+              <span className="text-right font-mono text-micro text-faint tabular-nums">{share(i.n)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

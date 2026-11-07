@@ -6,11 +6,12 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/console", label: "Claims", match: (p: string) => p === "/console" },
+  { href: "/console/insights", label: "Insights", match: (p: string) => p.startsWith("/console/insights") },
   { href: "/console/recalls/new", label: "New recall", match: (p: string) => p === "/console/recalls/new" },
   { href: "/console/report", label: "Report", match: (p: string) => p.startsWith("/console/report") },
 ] as const;
 
-/** The console's three places. The current one is full text colour with a hairline underline; the rest are muted. */
+/** The console's places. The current one is full text colour with a hairline underline; the rest are muted. */
 export function ConsoleNav({ className }: { className?: string }) {
   const path = usePathname();
   return (
