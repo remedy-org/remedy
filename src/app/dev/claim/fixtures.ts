@@ -1,4 +1,5 @@
 import { LIMIT_HOLD } from "@/app/api/claims/_lib/pipeline";
+import { appealReason } from "@/lib/appeal";
 import { demoRecall } from "@/lib/demo";
 import storedVerdicts from "@/lib/demo/verdicts.json";
 import { decide } from "@/lib/rule";
@@ -144,6 +145,14 @@ export const heldPayout = (() => {
 })();
 
 export const rejected = decided("c09");
+// c09 rejected on an uncertain read ("appears to read K7O"), then the owner asked a person to look (src/lib/appeal.ts).
+export const reviewAsked = (() => {
+  const d = decided("c09");
+  d.claim.decision = "held";
+  d.claim.reasons = [...d.claim.reasons, appealReason()];
+  d.claim.events.push({ at: at(4 * 60), type: "review_requested", detail: "The owner asked a person to look at the photos" });
+  return d;
+})();
 export const rejectedScreen = decided("c10");
 
 export const blocked = {

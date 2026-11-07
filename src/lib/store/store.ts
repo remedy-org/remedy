@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
+import { APPEAL_CHECK } from "../appeal";
 import { ClaimId, Decision, Money, Outcome, Reason, RecallId, RecallSlug, type Claim, type Recall } from "../types";
 
 // One row per claim in index.json: enough for the console's grid, stats and report, the demo picker and the
@@ -108,17 +109,17 @@ export interface Store {
 // The next count, or null at the limit (nothing to write).
 export const bump = (usage: Usage, kind: UsageKind, limit: number): Usage | null => (usage[kind] < limit ? { ...usage, [kind]: usage[kind] + 1 } : null);
 
-/** The reason behind a claim's decision: a person's review of a paid claim, the first hold of a held one, the first
- * reject of a refused one. Null otherwise. */
+/** The reason behind a claim's decision: a person's review of a paid claim, the owner's ask for a review or else the
+ * first hold of a held one, a person's review or else the first reject of a refused one. Null otherwise. */
 export function decidingReason(c: Pick<Claim, "decision" | "reasons">): Reason | null {
   switch (c.decision) {
     case "paid":
       return c.reasons.find((r) => r.check === "review") ?? null;
     case "held":
-      return c.reasons.find((r) => r.outcome === "hold") ?? null;
+      return c.reasons.find((r) => r.check === APPEAL_CHECK) ?? c.reasons.find((r) => r.outcome === "hold") ?? null;
     case "rejected":
     case "blocked":
-      return c.reasons.find((r) => r.outcome === "reject") ?? null;
+      return c.reasons.find((r) => r.check === "review" && r.outcome === "reject") ?? c.reasons.find((r) => r.outcome === "reject") ?? null;
     case "pending":
       return null;
   }

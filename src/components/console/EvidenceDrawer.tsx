@@ -304,6 +304,15 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
  * own words. Null for any other claim. */
 function deciding(claim: DrawerClaim) {
   if (claim.decision !== "held" && claim.decision !== "rejected" && claim.decision !== "blocked") return null;
+  // The rule refused it and the owner asked a person to look: their ask leads, then the check that refused it.
+  if (claim.decision === "held" && claim.appealedAt) {
+    const refused = claim.checks.find((c) => c.outcome === "reject");
+    return {
+      lead: "Why it's held · Owner asked for a review",
+      text: `The rule refused it${refused ? ` on ${refused.label}: ${refused.rule.charAt(0).toLowerCase()}${refused.rule.slice(1).replace(/[.\s]+$/, "")}` : ""}. The owner asked a person to look, so it needs your review. Nothing has been paid.`,
+      evidence: refused?.evidence ?? null,
+    };
+  }
   const check = claim.checks.find((c) => c.outcome !== "pass");
   const pre = claim.preChecks.find((p) => p.state === "reject" || p.state === "hold");
   return {

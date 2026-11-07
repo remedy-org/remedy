@@ -1,3 +1,4 @@
+import { APPEAL_CHECK } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
@@ -115,7 +116,7 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
     if (id === "duplicate_photo" && c.seeded) return { id, label, state: "skipped" };
     return { id, label, state: ran ? "pass" : "waiting" };
   });
-  const answered = c.checks.filter((r) => !PRE_IDS.has(r.check) && r.check !== "review");
+  const answered = c.checks.filter((r) => !PRE_IDS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK);
   if (answered.length) return [...pre, ...answered.map((r) => ({ id: r.check, label: checkLabel(r.check, code), state: r.outcome }))];
   const expected = ["label", "code", ...(c.photoHashes.length > 1 ? ["same_item"] : []), "screen", ...recall.spec.proof_steps.map((_, i) => `step_${i + 1}`)];
   const state: BarState = c.decision === "blocked" ? "skipped" : "waiting";
@@ -364,6 +365,11 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
       if (c.seeded) return `Every check passed, so the rule would pay ${amount}. This is a sample claim: no money was sent.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `Every check passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
+      // The rule refused it and the owner asked a person to look (src/lib/appeal.ts): the rule's reason stands beside it.
+      const refused = c.reasons.find((r) => r.outcome === "reject");
+      if (refused && c.reasons.some((r) => r.check === APPEAL_CHECK)) {
+        return `The rule refused it (${lower(refused.text)}), and the owner asked for a review, so a person decides: approve sends the ${amount} refund, reject keeps it refused.`;
+      }
       // A hold is the model's unclear answer, or a step of the process: auto-pay off, PayPal refusing the payout, or a
       // conflict the checks before the payout found. Each gets its own sentence.
       const holds = c.reasons.filter((r) => r.outcome === "hold");

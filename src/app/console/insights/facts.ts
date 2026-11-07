@@ -1,5 +1,6 @@
 import { toDrawerClaim } from "@/app/console/_lib/drawer";
 import { amountOf, cents, reasonOf } from "@/app/console/_lib/view";
+import { APPEAL_CHECK } from "@/lib/appeal";
 import { summarize } from "@/lib/store/store";
 import type { Claim, Decision, Recall } from "@/lib/types";
 import type { Stage } from "@/components/insights/funnel";
@@ -138,7 +139,7 @@ function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
     return { stage: "Photos sent", stopReason: refusedBy ? refusalLabel(refusedBy.check) : "Blocked by a pre-check" };
   }
   if (c.decision === "pending") return { stage: "Passed pre-checks", stopReason: "Photo check running" };
-  const model = c.reasons.filter((r) => !PRE_CHECKS.has(r.check) && r.check !== "review" && r.check !== "state");
+  const model = c.reasons.filter((r) => !PRE_CHECKS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK && r.check !== "state");
   const failed = model.find((r) => r.outcome === "reject") ?? model.find((r) => r.outcome === "hold");
   if (failed) return { stage: "Passed pre-checks", stopReason: failed.outcome === "reject" ? refusalLabel(failed.check) : failed.text };
   if (c.decision === "rejected") return { stage: "Passed photo check", stopReason: refusalLabel(refusedBy?.check ?? "review") };
@@ -185,7 +186,7 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
 
 export function checkFacts(c: Claim): CheckFact[] {
   return c.reasons
-    .filter((r) => r.check !== "review" && r.check !== "state")
+    .filter((r) => r.check !== "review" && r.check !== APPEAL_CHECK && r.check !== "state")
     .map((r) => ({
       id: `${c.id}:${r.check}`,
       claimId: c.id,

@@ -1,3 +1,4 @@
+import { appealReason, canAskForReview, reviewAsked } from "@/lib/appeal";
 import { newCode } from "@/lib/codes";
 import { checkableClaims, demoSample, demoSampleOf, oneClaimChecked } from "@/lib/demo";
 import type { DemoSample } from "@/lib/demo";
@@ -318,4 +319,29 @@ export async function recoverStale(deps: Pick<PipelineDeps, "store" | "now">, cl
   if (!received || deps.now().getTime() - Date.parse(received.at) < STALE_AFTER_MS) return claim;
   const reason: Reason = { check: "model", outcome: "hold", text: "The photo check didn't finish, so a person will look at your photos instead" };
   return (await commit(deps.store, claim.id, (c) => hold(c, deps.now(), [reason], reason.text))) ?? claim;
+}
+
+/**
+ * The owner asks a person to look at a claim the rule rejected on an uncertain read (src/lib/appeal.ts): it is held for
+ * the company's review, once. The verdict, the rule's reasons and its "decided" event stay as recorded. A second ask
+ * returns the claim as it is. Refused while another claim of this payer's for this recall is paid, held, checking or
+ * has a code still open, since only one claim per account counts.
+ */
+export async function requestReview(deps: Pick<PipelineDeps, "store" | "now">, { claimId, payerId }: { claimId: string; payerId: string }): Promise<Claim> {
+  const claim = await deps.store.getClaim(claimId);
+  if (!claim || claim.payerId !== payerId) throw new ClaimError(404, "No such claim for this PayPal account");
+  if (reviewAsked(claim)) return claim;
+  if (!canAskForReview(claim)) throw new ClaimError(409, "This claim can't be sent for a review");
+
+  const now = deps.now();
+  const open = (r: ClaimSummary) => live(r) || (r.decision === "pending" && now.getTime() - Date.parse(r.createdAt) < CAPTURE_SESSION_MINUTES * 60_000);
+  const other = (await deps.store.listClaims()).find((r) => r.id !== claim.id && r.recallId === claim.recallId && r.payerId === payerId && !r.demo && !r.seeded && open(r));
+  if (other) throw new ClaimError(409, `Your claim ${other.id} for this recall is the one that counts now`);
+
+  const saved = await deps.store.updateClaim(claim.id, (c) =>
+    canAskForReview(c)
+      ? { ...c, decision: "held", reasons: [...c.reasons, appealReason()], events: [...c.events, event(now, "review_requested", "The owner asked a person to look at the photos")] }
+      : null,
+  );
+  return saved ?? (await deps.store.getClaim(claim.id)) ?? claim;
 }

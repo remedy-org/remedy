@@ -20,6 +20,7 @@ import {
   othersFor,
   receivePhotos,
   recoverStale,
+  requestReview,
   roundClaims,
   STALE_AFTER_MS,
   type PipelineDeps,
@@ -506,6 +507,65 @@ describe("recoverStale", () => {
     // A late model answer can't overwrite it.
     expect((await checkClaim(deps, claim.id)).decision).toBe("held");
     expect(deps.pay).not.toHaveBeenCalled();
+  });
+});
+
+describe("requestReview", () => {
+  // The model hedged on the code it read (eval case c09), so the rule's reject rests on an uncertain read.
+  const unsure = (): Verdict => {
+    const v = verdict({ code: "K7O", matches: "no" });
+    return { ...v, challenge_code: { ...v.challenge_code, evidence: 'The tag appears to read "K7O"; the last character could also be "0".' } };
+  };
+  async function refused(v = unsure()) {
+    const claim = await send(await open("K7Q"));
+    deps.vision.mockResolvedValueOnce({ verdict: v, seconds: 9, model: "gpt-test" });
+    return checkClaim(deps, claim.id);
+  }
+
+  it("holds an uncertain-read rejection for a person, keeping the model's verdict and the rule's reasons", async () => {
+    const before = await refused();
+    expect(before.decision).toBe("rejected");
+    clock = new Date(T0.getTime() + 60_000);
+    const after = await requestReview(deps, { claimId: before.id, payerId: owner.payerId });
+    expect(after.decision).toBe("held");
+    expect(after.verdict).toEqual(before.verdict);
+    expect(after.reasons).toEqual([...before.reasons, { check: "appeal", outcome: "hold", text: "Owner asked for a review" }]);
+    expect(after.events.slice(0, -1)).toEqual(before.events);
+    expect(after.events.at(-1)).toMatchObject({ type: "review_requested", at: clock.toISOString() });
+    const row = (await store.listClaims()).find((r) => r.id === before.id)!;
+    expect(row.decision).toBe("held");
+    expect(row.reason?.text).toBe("Owner asked for a review");
+    expect(deps.pay).not.toHaveBeenCalled();
+  });
+
+  it("asks once: a second ask returns the claim as it is", async () => {
+    const claim = await refused();
+    const first = await requestReview(deps, { claimId: claim.id, payerId: owner.payerId });
+    const second = await requestReview(deps, { claimId: claim.id, payerId: owner.payerId });
+    expect(second).toEqual(first);
+    expect(second.events.filter((e) => e.type === "review_requested")).toHaveLength(1);
+  });
+
+  it("refuses a confident rejection, a claim that isn't rejected, and another account's claim", async () => {
+    const confident = await refused(verdict({ code: "K7P", matches: "no" }));
+    await expect(requestReview(deps, { claimId: confident.id, payerId: owner.payerId })).rejects.toMatchObject({ status: 409 });
+    expect((await store.getClaim(confident.id))?.decision).toBe("rejected");
+
+    const blocked = await send(await open(), [photo("00000000000000ff")], "cs_elsewhere");
+    expect(blocked.decision).toBe("blocked");
+    await expect(requestReview(deps, { claimId: blocked.id, payerId: owner.payerId })).rejects.toMatchObject({ status: 409 });
+
+    const unsureClaim = await refused();
+    await expect(requestReview(deps, { claimId: unsureClaim.id, payerId: "SOMEONEELSE01" })).rejects.toBeInstanceOf(ClaimError);
+  });
+
+  it("refuses while another claim of the owner's for this recall counts", async () => {
+    const claim = await refused();
+    const newer = await open();
+    await expect(requestReview(deps, { claimId: claim.id, payerId: owner.payerId })).rejects.toThrow(newer.id);
+    // Once the newer claim's code has expired unused, the ask goes through.
+    clock = new Date(T0.getTime() + 11 * 60_000);
+    expect((await requestReview(deps, { claimId: claim.id, payerId: owner.payerId })).decision).toBe("held");
   });
 });
 

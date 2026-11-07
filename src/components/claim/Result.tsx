@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import type { CSSProperties, ReactNode } from "react";
 import { Button, CheckIcon, CrossIcon, Money, NoBreakHyphens, Paper, Stamp, StatusPill, statusLabel } from "@/components/ui";
+import { canAskForReview, reviewAsked } from "@/lib/appeal";
 import type { DemoSample } from "@/lib/demo";
 import type { Claim, Recall } from "@/lib/types";
 import { CheckList } from "./CheckList";
@@ -43,7 +44,7 @@ export interface DemoRound {
 }
 
 export interface ResultProps {
-  claim: Pick<Claim, "id" | "decision" | "reasons" | "payout" | "events" | "payerId" | "payerVerified" | "createdAt" | "code" | "verdict" | "photos">;
+  claim: Pick<Claim, "id" | "decision" | "reasons" | "payout" | "events" | "payerId" | "payerVerified" | "createdAt" | "code" | "verdict" | "photos" | "demo" | "seeded">;
   recall: Recall;
   rows: CheckRow[];
   photoUrls: string[];
@@ -200,6 +201,8 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
   const submitted = claim.events.find((e) => e.type === "photos_received")?.at ?? claim.createdAt;
   const checked = claim.events.find((e) => e.type === "decided")?.at ?? claim.events.find((e) => e.type === "checked")?.at;
   const company = companyName(recall);
+  // The owner asked a person to look at a claim the rule refused: this sheet is the confirmation.
+  const asked = reviewAsked(claim) ? (claim.events.find((e) => e.type === "review_requested")?.at ?? submitted) : null;
   return (
     <section aria-labelledby="result-title" className="mx-auto flex w-full max-w-claim flex-col gap-6">
       <Top status={<StatusPill status="held" label={sb ? "Held · sandbox" : "Held"} />} id={claim.id} />
@@ -213,23 +216,27 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
             Held for review
           </Stamp>
         </div>
-        <p className="mt-6 text-body font-medium text-ink">Nothing is lost.</p>
+        <p className="mt-6 text-body font-medium text-ink">{asked ? "You asked for a review." : "Nothing is lost."}</p>
         <p className="mt-1 max-w-[34ch] text-body text-ink-muted">
-          Your claim is saved. If {company} approves it, {money(recall.refund)} goes to your PayPal account{sb ? " in sandbox money" : " and PayPal emails you"}.
+          {asked ? `A person at ${company} will look at your photos themselves. ` : "Your claim is saved. "}
+          If {company} approves it, {money(recall.refund)} goes to your PayPal account{sb ? " in sandbox money" : " and PayPal emails you"}.
+          {asked ? " If they refuse it, their reason shows here." : ""}
         </p>
         <p className="mt-3 max-w-[34ch] text-ui text-ink-muted">The decision shows on this page, so keep its link or bookmark it to check back.</p>
 
         <ol aria-label="What happens next" className="relative mt-6 flex flex-col gap-3 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-paper-line">
           <TimelineRow state="done" label="Photos received" time={submitted} />
-          {checked && <TimelineRow state="done" label="Checks run" time={checked} />}
+          {checked && <TimelineRow state="done" label={asked ? "Refused by the rule" : "Checks run"} time={checked} />}
+          {asked && <TimelineRow state="done" label="You asked for a review" time={asked} />}
           <TimelineRow state="now" label="Waiting for a person" />
-          <TimelineRow state="next" label={`Decision by ${businessDaysAfter(submitted, 2)}`} />
+          <TimelineRow state="next" label={`Decision by ${businessDaysAfter(asked ?? submitted, 2)}`} />
         </ol>
 
         {reasons.length > 0 && (
           <div className="mt-6 flex flex-col gap-3 border-t border-dashed border-paper-line pt-4">
-            <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">What they&apos;ll look at</h3>
+            <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">{asked ? "What the photo check said" : "What they'll look at"}</h3>
             <Reasons reasons={reasons} rows={rows} summary={claim.verdict?.summary} />
+            {asked && <p className="text-ui text-ink-muted">This answer stays on record. The person decides from your photos.</p>}
           </div>
         )}
 
@@ -265,7 +272,7 @@ function TimelineRow({ state, label, time }: { state: "done" | "now" | "next"; l
       />
       <span className={state === "next" ? "font-medium text-ink" : state === "now" ? "text-ink" : "text-ink-muted"}>{label}</span>
       {time && (
-        <span className="font-mono text-micro text-ink-muted tabular-nums">
+        <span className="pl-3 font-mono text-micro text-ink-muted tabular-nums">
           <LocalTime iso={time} format="clock" />
         </span>
       )}
@@ -314,6 +321,9 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
   const company = companyName(recall);
   const lead = reasons[0]?.check;
   const reviewed = lead === "review";
+  const asked = reviewAsked(claim);
+  // The model wasn't sure of what it read: the owner may ask a person to look, once (src/lib/appeal.ts).
+  const appeal = !sample && canAskForReview(claim);
   // When starting over can't help (a second claim from one account), only that reason's advice applies: advice to
   // start a new claim would lead to the same refusal.
   const advice = reviewed ? [] : [...new Set((retry ? reasons : reasons.filter((r) => !canRetry([r]))).map((r) => adviceFor(r.check)))];
@@ -328,7 +338,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
           {blocked
             ? "Some claims are refused before any photo reaches the model. No refund was sent."
             : reviewed
-              ? "Your claim was held for a person, who refused it for the reason below. No refund was sent."
+              ? `${asked ? "You asked for a review, and a person" : "Your claim was held for a person, who"} refused it for the reason below. No refund was sent.`
               : `The photo check read your ${one ? "photo" : "photos"} and one of its answers rules the claim out. No refund was sent.`}
         </p>
       </div>
@@ -358,7 +368,9 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
           <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">How this was decided</h3>
           <p className="text-ui text-ink">
             {reviewed
-              ? `The photo check held this claim for a person, and a person at ${company} refused it.`
+              ? asked
+                ? `The rule refused this claim, you asked for a review, and a person at ${company} refused it too.`
+                : `The photo check held this claim for a person, and a person at ${company} refused it.`
               : `${blocked ? "These checks need no AI and run before the model sees anything." : "The model only describes the photo."} A fixed rule, the same for every claim, made this call. Nobody at ${company} chose it.`}
           </p>
         </div>
@@ -381,6 +393,16 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
         <Button href={againHref} size="lg" block prefetch={false}>
           Start a new claim (new code)
         </Button>
+      )}
+      {appeal && (
+        <form action={`/api/claims/${claim.id}/review`} method="post" className="flex flex-col gap-2">
+          <Button type="submit" variant="secondary" size="md" block>
+            Ask a person to look
+          </Button>
+          <p className="text-ui text-muted">
+            The photo check wasn&apos;t sure what it read. A person at {company} can look at your photos instead. You can ask once, and their decision shows on this page.
+          </p>
+        </form>
       )}
 
       {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}

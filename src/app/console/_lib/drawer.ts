@@ -1,3 +1,4 @@
+import { APPEAL_CHECK, reviewAsked } from "@/lib/appeal";
 import type { Claim, Outcome, Recall } from "@/lib/types";
 import { isSandboxBuild } from "@/lib/demo/allowed";
 import { SAMPLE_PRECHECKED, samplePayoutDetail, samplePhotosDetail } from "@/lib/demo/sampleCopy";
@@ -34,6 +35,8 @@ export interface DrawerClaim {
   amount: string;
   payout: { batchId: string; status: string; updatedAt: string } | null;
   events: Claim["events"];
+  // The owner asked a person to look at a claim the rule refused (src/lib/appeal.ts): when, or null.
+  appealedAt: string | null;
   // Approve and reject for held claims. A seeded one's review is a sample: answered, but never paid or saved.
   review: { sample: boolean; note: string | null } | null;
   recall: { id: string; autoPay: boolean };
@@ -44,9 +47,9 @@ export interface DrawerClaim {
 // What approve and reject answer: the claim, and for a seeded claim what the review would have done.
 export type ReviewedClaim = DrawerClaim & { sample?: string };
 
-// Pre-check reasons, a person's review, auto-pay and the PayPal payout aren't model answers: the drawer shows them
-// elsewhere (the pre-checks, and the decision sentence).
-const NOT_MODEL = new Set(["session", "duplicate_photo", "payer", "payer_verified", "state", "review", "auto_pay", "payout"]);
+// Pre-check reasons, a person's review, the owner's ask for one, auto-pay and the PayPal payout aren't model answers:
+// the drawer shows them elsewhere (the pre-checks, what decided it, and the decision sentence).
+const NOT_MODEL = new Set(["session", "duplicate_photo", "payer", "payer_verified", "state", "review", APPEAL_CHECK, "auto_pay", "payout"]);
 
 
 function evidenceFor(check: string, outcome: Outcome, verdict: Claim["verdict"]): string | null {
@@ -101,6 +104,7 @@ export function toDrawerClaim(c: Claim, recall: Recall): DrawerClaim {
     checks,
     summary: c.verdict?.summary ?? null,
     sentence: decisionSentence(c, recall),
+    appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,
     // A seeded sample's PayPal batch and status are made up by the seed: nothing was sent, so there is none to show.
     payout: c.payout && !c.seeded ? { batchId: c.payout.batchId, status: c.payout.status, updatedAt: c.payout.updatedAt } : null,

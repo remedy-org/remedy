@@ -1,4 +1,5 @@
 import type { CheckState } from "@/components/ui";
+import { reviewAsked } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
 import type { CheckSpec, Claim, Decision, Reason, Recall } from "@/lib/types";
 
@@ -141,9 +142,15 @@ export function toView(claim: Claim, spec: CheckSpec): ClaimView {
 
 export const isDecided = (d: Decision) => d !== "pending";
 
-/** The reasons that decided a refused or held claim, most important first. */
+/**
+ * The reasons that decided a refused or held claim, most important first. A claim the owner asked a person to look at
+ * is held on the rule's refusal, so those reasons are what the person looks at; once a person has refused a claim,
+ * their reason is the one that stands.
+ */
 export function decidingReasons(claim: Pick<Claim, "decision" | "reasons">): Reason[] {
-  const want = claim.decision === "held" ? "hold" : "reject";
+  const reviewed = claim.reasons.find((r) => r.check === "review" && r.outcome === "reject");
+  if (claim.decision !== "held" && reviewed) return [reviewed];
+  const want = claim.decision === "held" && !reviewAsked(claim) ? "hold" : "reject";
   return claim.reasons.filter((r) => r.outcome === want);
 }
 
