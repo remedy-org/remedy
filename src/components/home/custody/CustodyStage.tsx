@@ -134,6 +134,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
   const frame = useTransform(p, [HANDOFF[1] - 0.01, HANDOFF[1]], [0, 1]);
   const thread = useTransform(p, [0.2, 0.9], [0, 1]);
   const railHead = useTransform(p, [0.1, 0.16], [0, 1]);
+  const railBack = useTransform(p, [0.16, 0.2], [0, 1]);
   const bar = useTransform(p, [0.16, 0.19], [0, 1]);
 
   return (
@@ -170,6 +171,9 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
       </motion.div>
 
       <div className={clsx(styles.rail, "pointer-events-none")}>
+        {/* Covers the page rails (P2's ruler at the 1200px content edge) behind the chapter list, from 0.16 when the
+            hero copy has faded out, so the backdrop's edge never crosses the h1. */}
+        <motion.span className="absolute -inset-y-4 inset-x-0 -z-10 bg-bg" style={{ opacity: railBack }} aria-hidden="true" />
         <motion.div className="flex min-h-0 flex-1 flex-col" style={{ opacity: railHead }} aria-hidden="true">
           <span className="micro text-faint">Exhibit · Claim {CLAIM.id}</span>
           <ol className="mt-5">
