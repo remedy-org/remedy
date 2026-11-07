@@ -35,7 +35,7 @@ const RULER = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 /** The device on the light table. `screen` renders inside the lid; `tilt` wraps the pointer-tilt layer. */
 export function Laptop({ screen, renderTilt }: { screen: ReactNode; renderTilt: (children: ReactNode) => ReactNode }) {
   return (
-    <div className={styles.scene}>
+    <div className={styles.scene} data-laptop>
       {renderTilt(
         <>
           <div className={styles.table} aria-hidden="true">
@@ -63,7 +63,9 @@ export function Laptop({ screen, renderTilt }: { screen: ReactNode; renderTilt: 
           </div>
           <div className={styles.lid}>
             <span className={styles.camera} aria-hidden="true" />
-            <div className={styles.screen}>{screen}</div>
+            <div className={styles.screen} data-laptop-screen>
+              {screen}
+            </div>
           </div>
         </>,
       )}

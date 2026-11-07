@@ -4,7 +4,6 @@
  * whole object scales as one piece from 1440px down to 375px.
  */
 
-/* The figure is a container too, so the checks card under the laptop switches at the same width as the screen. */
 .figure {
   container-type: inline-size;
 }
@@ -28,39 +27,6 @@
   --scene-top: 8%;
 }
 
-@container (max-width: 640px) {
-  .view {
-    font-size: calc(100cqw / 68);
-    --rx: -13deg;
-    --ry: 7deg;
-    --scene-top: 12%;
-  }
-}
-
-/*
- * Below 640px the screen's checks column would render at about 6px, so the lid shows the camera alone and the
- * checks and payout move to a full-size card under the laptop (.narrowOnly), driven by the same phase.
- */
-.narrowOnly {
-  display: none;
-}
-
-@container (max-width: 640px) {
-  .wideOnly {
-    display: none;
-  }
-
-  .cameraCol {
-    width: 100%;
-    max-width: 40em;
-    margin-inline: auto;
-  }
-
-  .narrowOnly {
-    display: block;
-  }
-}
-
 .scene {
   position: absolute;
   left: 50%;
@@ -69,7 +35,8 @@
   height: 40em;
   margin-left: -31em;
   transform-style: preserve-3d;
-  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  /* --tilt-k (0 to 1) takes the resting tilt out as the Chain of Custody dollies in. */
+  transform: rotateX(calc(var(--rx) * var(--tilt-k, 1))) rotateY(calc(var(--ry) * var(--tilt-k, 1)));
 }
 
 .tilt {
@@ -104,6 +71,40 @@
   background-position: 0 0, -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px;
   -webkit-mask-image: radial-gradient(ellipse 40% 42% at 50% 55%, #000 55%, transparent 100%);
   mask-image: radial-gradient(ellipse 40% 42% at 50% 55%, #000 55%, transparent 100%);
+  /* The table's front edge catches the light. */
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.06);
+}
+
+/* The lit light table: an amber pool under the device, flat (never inside the 3D tree). */
+.glow {
+  position: absolute;
+  inset: -12% -20% -18% -14%;
+  background: var(--table-glow);
+  pointer-events: none;
+}
+
+/* The refund receipt resting on the table, off the laptop's front-left corner. */
+.receipt {
+  position: absolute;
+  z-index: 2;
+  left: -19%;
+  top: 70%;
+  transform-origin: 0 0;
+}
+
+/* On a short laptop screen the device is smaller, so the receipt is too. */
+@media (max-height: 820px) {
+  .receipt {
+    scale: 0.78;
+  }
+}
+
+.receiptShadow {
+  position: absolute;
+  inset: 30% -6% -14% 6%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, oklch(0 0 0 / 0.55), transparent);
+  filter: blur(6px);
 }
 
 .ruler {
@@ -182,6 +183,7 @@
   border-radius: 0.6em 0.6em 2em 2em;
   background: linear-gradient(oklch(0.3 0.007 255), oklch(0.255 0.007 255));
   border: 1px solid oklch(1 0 0 / 0.12);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.06);
 }
 
 .hinge {

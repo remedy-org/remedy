@@ -2,10 +2,10 @@ import clsx from "clsx";
 import Image from "next/image";
 import { motion } from "motion/react";
 import { CheckIcon } from "@/components/ui";
-import styles from "./device.module.css";
+import { CLAIM } from "./custody/claim";
 
-// What the laptop in the hero shows: the judges' genuine demo claim (DEMO_SAMPLES "genuine": photo c02, code M4T)
-// on the Kikea X-VESOLJE recall, mid-check. Sizes are in em so the screen scales with the device.
+// What the laptop in the hero shows: claim RM-0442, the judges' genuine demo claim (DEMO_SAMPLES "genuine": photo c02,
+// code M4T) on the Kikea X-VESOLJE recall, mid-check. Sizes are in em so the screen scales with the device.
 
 // The five checks in the order "What stops a fake" lists them (Checks.tsx): three without AI, then the model's two.
 export const CHECKS = ["Live camera session", "Photo not seen before", "Verified PayPal account", "Label and code M4T", "Cut fully in half"] as const;
@@ -67,7 +67,7 @@ export function ClaimScreen({ phase }: { phase: number }) {
 
       <div className="flex min-h-0 flex-1">
         {/* Camera */}
-        <div className={clsx("flex min-w-0 flex-1 flex-col px-[1.6em] pt-[1.5em]", styles.cameraCol)}>
+        <div className="flex min-w-0 flex-1 flex-col px-[1.6em] pt-[1.5em]">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[0.5em] bg-surface-2">
             <Image
               src="/demo/c02-1.jpg"
@@ -84,6 +84,9 @@ export function ClaimScreen({ phase }: { phase: number }) {
             <Corner className="bottom-[1em] right-[1em] border-b border-r" />
             <span className="absolute left-[1.4em] top-[1.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] text-text uppercase">
               Code M4T
+            </span>
+            <span className="absolute bottom-[1.4em] left-[1.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] text-text uppercase">
+              AI-made test photo
             </span>
             {(Object.keys(ANCHORS) as AnchorId[]).map((id) => (
               <span
@@ -103,8 +106,8 @@ export function ClaimScreen({ phase }: { phase: number }) {
           </div>
         </div>
 
-        {/* Checks and result. On a narrow stage they leave the screen for the full-size card under the laptop. */}
-        <div className={clsx("flex w-[21.5em] shrink-0 flex-col border-l border-line px-[1.6em] pt-[1.3em] pb-[1.4em]", styles.wideOnly)}>
+        {/* Checks and result. */}
+        <div className="flex w-[21.5em] shrink-0 flex-col border-l border-line px-[1.6em] pt-[1.3em] pb-[1.4em]">
           <ChecksPanel phase={phase} />
         </div>
       </div>
@@ -112,7 +115,7 @@ export function ClaimScreen({ phase }: { phase: number }) {
   );
 }
 
-/** The checks ticking in, then the payout. Sized in em: inside the lid it scales with the device; under it, 1.2em = 14px. */
+/** The checks ticking in, then the payout. Sized in em, so it scales with the device. */
 export function ChecksPanel({ phase }: { phase: number }) {
   const paid = phase >= FINAL_PHASE;
   return (
@@ -137,13 +140,14 @@ export function ChecksPanel({ phase }: { phase: number }) {
         </span>
         <motion.span
           data-seq="show"
+          data-chip
           className="absolute inset-0 flex items-center gap-[0.5em] rounded-[0.5em] border border-pay/50 bg-pay-soft px-[1em] text-[1.2em] whitespace-nowrap text-pay"
           initial={false}
           animate={paid ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 8, scale: 0.96 }}
           transition={{ type: "spring", stiffness: 380, damping: 30 }}
         >
           <span className="font-mono font-semibold">$29.99</span>
-          <span>sent to PayPal · 41 s</span>
+          <span>sent to PayPal · {CLAIM.seconds} s</span>
         </motion.span>
       </div>
       <span className="mt-[0.9em] text-[1.05em] text-faint">PayPal Payouts · verified account</span>
