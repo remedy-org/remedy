@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { env } from "../env";
+import { PayPalError } from "../paypal/client";
 import { DEFAULT_NEXT, Role, safeNext, sign, unsign } from "../session-token";
 
 // The Log in with PayPal round trip: start sets a signed, short-lived state cookie; callback checks it.
@@ -17,7 +18,12 @@ const LoginState = z.object({ state: z.string().min(16), as: Role, next: z.strin
 export type LoginState = z.infer<typeof LoginState>;
 
 // Why a login came back without a session; the page at `next` (or /signin) shows the matching message.
-export type AuthError = "denied" | "state" | "paypal";
+// "refused": PayPal answered and turned this account down (seen for the business account that owns the app).
+// "paypal": PayPal didn't answer, or answered with something we couldn't use.
+export type AuthError = "denied" | "state" | "paypal" | "refused";
+
+// A failed token exchange or userinfo read: a 401 or 403 is PayPal refusing; 5xx, timeouts and fetch errors are an outage.
+export const loginFailure = (e: unknown): AuthError => (e instanceof PayPalError && (e.status === 401 || e.status === 403) ? "refused" : "paypal");
 
 export function beginLogin(params: URLSearchParams, now = new Date()): { state: LoginState; cookie: string } | { error: "role" } {
   const as = Role.safeParse(params.get("as"));

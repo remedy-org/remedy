@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { checkState, errorPath, STATE_COOKIE } from "@/lib/auth/paypal-login";
+import { checkState, errorPath, loginFailure, STATE_COOKIE } from "@/lib/auth/paypal-login";
 import { env } from "@/lib/env";
 import { identify } from "@/lib/paypal/identity";
 import { cookieOptions } from "@/lib/session";
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   } catch (e) {
     // The message names the failing call, never a token.
     console.error("PayPal login failed:", e instanceof Error ? e.message : e);
-    return to(errorPath(login, "paypal"));
+    return to(errorPath(login, loginFailure(e)));
   }
 
   const response = to(login.next);
