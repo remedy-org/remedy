@@ -6,7 +6,7 @@ import type { Refusal } from "@/lib/limits";
 import type { Decision } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { LockIcon } from "./icons";
-import { LimitNotice } from "./LimitNotice";
+import { LimitNotice, RetryLabel } from "./LimitNotice";
 import { latestRuns, RunResult, scoreLine, type RoundRun } from "./Scoreboard";
 
 export interface SampleOption {
@@ -61,6 +61,8 @@ export function SamplePicker({
   refusal?: Refusal | null;
 }) {
   const scored = roundRuns(runs);
+  // Refused by a limit: the cards stay as a record, and nothing can be run until it resets.
+  const off = Boolean(refusal);
   const latest = latestRuns(scored);
   return (
     <section aria-labelledby="picker-title" className="mx-auto flex w-full max-w-[40rem] flex-col gap-6">
@@ -76,7 +78,7 @@ export function SamplePicker({
           would only meet its own earlier claim. */}
       <form action={roundDone ? "/api/claims/round" : "/api/claims"} method="post" className="flex flex-col gap-6">
         <input type="hidden" name="recall" value={slug} />
-        <fieldset className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+        <fieldset disabled={off} className="grid gap-3 sm:grid-cols-2 sm:gap-4">
           <legend className="sr-only">Sample claims</legend>
           {options.map(({ sample, locked }, i) => {
             const letter = String.fromCharCode(65 + i);
@@ -84,12 +86,12 @@ export function SamplePicker({
             return (
               <label
                 key={sample.id}
-                aria-disabled={locked ? true : undefined}
+                aria-disabled={locked || off ? true : undefined}
                 className={clsx(
                   "group relative flex gap-4 rounded-card border border-line bg-surface p-2 sm:gap-3.5 transition-[border-color,box-shadow,background-color] duration-160 sm:p-3",
                   // Selected: a neutral ring in the text colour. The screen's one amber is "Run this sample".
                   "has-checked:border-text/70 has-checked:shadow-[0_0_0_2px_var(--bg),0_0_0_3px_var(--text)] has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-accent",
-                  !roundDone && "cursor-pointer hover:bg-surface-2",
+                  !roundDone && !off && "cursor-pointer hover:bg-surface-2",
                   locked && "cursor-not-allowed hover:bg-surface",
                 )}
               >
@@ -132,8 +134,8 @@ export function SamplePicker({
         <p className="text-ui text-faint">All four photos are AI-made samples, not from a camera.</p>
         {roundDone && <p className="text-ui text-muted">All four samples have run. A new round checks them only against each other, so they reach the same four outcomes.</p>}
         <div className="z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md">
-          <Button type="submit" size="lg" block>
-            {roundDone ? "Run the samples again" : "Run this sample"}
+          <Button type="submit" size="lg" block disabled={off}>
+            {refusal ? <RetryLabel refusal={refusal} /> : roundDone ? "Run the samples again" : "Run this sample"}
           </Button>
         </div>
       </form>

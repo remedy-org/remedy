@@ -8,7 +8,7 @@ import type { Decision, Recall } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { InfoIcon, LockIcon } from "./icons";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
-import { LimitNotice, retryLabel } from "./LimitNotice";
+import { LimitNotice, RetryLabel, retryLabel } from "./LimitNotice";
 import { companyName, cutInHalf, handWrittenLabel, money, productNoun, SANDBOX_ACCOUNTS_URL } from "./model";
 import { SAMPLE_TESTS } from "./SamplePicker";
 
@@ -48,6 +48,8 @@ export interface ConsentCardProps {
   yourClaim?: YourClaim | null;
   /** Demo: the judges' sandbox login to show before the login button. Null keeps the "in the submission notes" line. */
   judgeLogin?: JudgeLogin | null;
+  /** Payouts go to PayPal's sandbox in this build: a limit is this sandbox's. */
+  sandbox?: boolean;
 }
 
 /** The primary button's words, shared with the phone's sticky bar. */
@@ -63,7 +65,7 @@ export function consentAction({ signedInAs, demo, unverified, refusal, yourClaim
  * The consent card, after Stripe Identity and Plaid: the refund first, a two-tone promise, the two parties as
  * overlapping marks, three numbered steps (the four samples in the demo), one full-width action and a privacy line.
  */
-export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin }: ConsentCardProps) {
+export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin, sandbox }: ConsentCardProps) {
   const company = companyName(recall);
   const action = consentAction({ signedInAs, demo, unverified, refusal, yourClaim });
   const amount = money(recall.refund);
@@ -122,7 +124,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
           <p className="text-ui text-faint">All four photos are AI-made samples, never a real owner&apos;s.</p>
         </div>
       ) : (
-        <ol className="relative flex flex-col gap-3 before:absolute before:top-1.5 before:bottom-1.5 before:left-[7px] before:w-px before:bg-line max-sm:order-last">
+        <ol className="relative flex flex-col gap-3 before:absolute before:top-1.5 before:bottom-1.5 before:left-[7px] before:w-px before:bg-line">
           {steps.map((s, i) => (
             <li key={s} className="relative grid grid-cols-[2rem_minmax(0,1fr)] items-baseline text-ui font-medium text-text">
               <span className="relative bg-surface py-0.5 font-mono text-micro text-faint">{String(i + 1).padStart(2, "0")}</span>
@@ -140,7 +142,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         />
       )}
       {error && <ErrorState variant="inline" title={error.title} description={error.description} />}
-      {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} />}
+      {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} sandbox={sandbox} />}
 
       {/* With a claim under way its own button leads, at the top, and nothing new starts here. */}
       {!yourClaim && (
@@ -181,7 +183,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
           {/* Refused by a limit: nothing to tap until it resets. */}
           {refusal ? (
             <Button id="consent-cta" size="lg" block disabled>
-              {action}
+              <RetryLabel refusal={refusal} />
             </Button>
           ) : (
             <Button id="consent-cta" href={href} size="lg" block prefetch={false}>
@@ -190,8 +192,8 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
           )}
         </div>
       )}
-      {/* Under the button on a laptop; on a phone after the steps, which follow the button there. */}
-      <p className="-mt-3 flex gap-2.5 text-ui text-faint max-sm:order-last max-sm:mt-0">
+      {/* Under the button; on a phone after the demo's sandbox note, which follows the button there. */}
+      <p className="-mt-3 flex gap-2.5 text-ui text-faint max-sm:order-last">
         <LockIcon className="mt-0.5 shrink-0" />
         <span>
           {signedInAs ? `Logged in with PayPal as ${signedInAs}. ` : "You log in on PayPal's own page. "}

@@ -129,10 +129,10 @@ const live = (r: ClaimSummary) => r.decision === "paid" || r.decision === "held"
 
 /**
  * The real claim this payer should continue: one already in progress or decided as paid or held, or an open one
- * whose camera session is still running. Null means start a new one.
+ * whose camera session is still running. Null means start a new one. `rows`: index.json, when the caller has read it.
  */
-export async function findOpenClaim(deps: Pick<PipelineDeps, "store" | "now">, recall: Recall, payerId: string): Promise<Claim | null> {
-  const mine = (await deps.store.listClaims()).filter((r) => r.recallId === recall.id && r.payerId === payerId && !r.seeded && !r.demo);
+export async function findOpenClaim(deps: Pick<PipelineDeps, "store" | "now">, recall: Recall, payerId: string, rows?: ClaimSummary[]): Promise<Claim | null> {
+  const mine = (rows ?? (await deps.store.listClaims())).filter((r) => r.recallId === recall.id && r.payerId === payerId && !r.seeded && !r.demo);
   const decided = mine.find(live);
   if (decided) return deps.store.getClaim(decided.id);
   for (const row of mine.filter((r) => r.decision === "pending" && r.photoHashes.length === 0)) {

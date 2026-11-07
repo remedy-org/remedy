@@ -2,7 +2,7 @@ import "server-only";
 import { claimPath, findOpenClaim } from "@/app/api/claims/_lib/pipeline";
 import { getAppStore, isSandboxBuild } from "@/lib/demo";
 import { judgeLogin } from "@/lib/demo/judgeLogin";
-import { parseRefusal } from "@/lib/limits";
+import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
 import { consentAction, ConsentCard, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
@@ -24,7 +24,14 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
   const authError = typeof query.auth_error === "string" && AUTH_ERRORS.has(query.auth_error as AuthError) ? (query.auth_error as AuthError) : null;
   // Back from the recall notice with a claim already paid, held, being checked or holding a live code: the same one
   // /api/claims/start would continue, so the screen leads with it instead of offering to start again.
-  const open = session && !demo ? await findOpenClaim({ store: await getAppStore(), now: () => new Date() }, recall, session.payerId) : null;
+  const now = new Date();
+  const store = session && !demo ? await getAppStore() : null;
+  const rows = store ? await store.listClaims() : null;
+  const open = session && store && rows ? await findOpenClaim({ store, now: () => now }, recall, session.payerId, rows) : null;
+  // A start the claim limits would refuse is never offered: the notice and the muted button show before the tap, from
+  // the same index.json read. /api/claims/start still counts on its own write, and redirects here with ?limit= if a
+  // start in between filled the day.
+  const refused = session && rows && !open && !unverified ? claimRefusal(rows, { payerId: session.payerId, demo: false, now, limits: limits() }) : null;
   return (
     <RecallView
       recall={recall}
@@ -34,7 +41,7 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
       signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : null}
       authError={authError}
       unverified={unverified}
-      refusal={parseRefusal(query, new Date())}
+      refusal={parseRefusal(query, now) ?? refused}
       sandbox={isSandboxBuild()}
       judgeLogin={demo ? judgeLogin("personal") : null}
     />
@@ -73,10 +80,11 @@ export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?:
       {/* Logged out, the judges' sandbox login: in the rail from 1200px, in the card below (and in the notes' sheet). */}
       <WithJudges demo={Boolean(props.demo)} step={ready ? "samples" : "consent"} extra={!props.signedInAs && props.judgeLogin ? <JudgeLoginPanel login={props.judgeLogin} /> : undefined}>
         <div className="flex flex-col gap-6">
-          <StepMeter {...(claim ? claimMeter(claim) : { current: ready ? 2 : 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
+          {/* Refused by a limit, the code step isn't next: the meter stays on the first step. */}
+          <StepMeter {...(claim ? claimMeter(claim) : { current: ready && !props.refusal ? 2 : 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
           <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
             <RecallBrief recall={props.recall} sandbox={sandbox || props.demo} demo={props.demo} />
-            <ConsentCard {...props} />
+            <ConsentCard {...props} sandbox={sandbox} />
           </div>
         </div>
       </WithJudges>

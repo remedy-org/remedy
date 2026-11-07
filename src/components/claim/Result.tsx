@@ -16,6 +16,7 @@ import {
   businessDaysAfter,
   canRetry,
   codeDiff,
+  misreadOf,
   companyName,
   decidingReasons,
   maskPayer,
@@ -70,6 +71,8 @@ export interface ResultProps {
   meter?: ReactNode;
   /** Payouts go to PayPal's sandbox in this build: every amount is labelled sandbox money, sample or not. */
   sandbox?: boolean;
+  /** The PayPal login the owner recognises, masked ("p••@owner.test"); the receipt falls back to the payer ID's tail. */
+  account?: string | null;
 }
 
 // The judges' rail on a result, one note per outcome: what the rule did with this claim and whether money moved.
@@ -108,7 +111,7 @@ export function Result(props: ResultProps) {
 
 /* ------------------------------------------------------------------------------------------------ Paid */
 
-function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round, now, sandbox }: ResultProps) {
+function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round, now, sandbox, account }: ResultProps) {
   const sb = Boolean(sample) || Boolean(sandbox);
   const amount = claim.payout?.amount ?? recall.refund;
   const sentAt = claim.events.find((e) => e.type === "payout_sent")?.at ?? claim.payout?.updatedAt;
@@ -173,12 +176,17 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
               <LocalTime iso={sentAt} format="stamp" />
             </ReceiptRow>
           )}
-          {/* "Verified" in the label, so the masked ID never wraps on a narrow receipt. */}
-          <ReceiptRow label={claim.payerVerified ? "Verified PayPal account" : "PayPal account"} mono>
-            {maskPayer(claim.payerId)}
-          </ReceiptRow>
+          {/* The PayPal login the owner knows, masked; without one, the payer ID's tail, with "Verified" in the label so the
+              ID never wraps on a narrow receipt. */}
+          {account ? (
+            <ReceiptRow label="Paid to">{account}</ReceiptRow>
+          ) : (
+            <ReceiptRow label={claim.payerVerified ? "Verified PayPal account" : "PayPal account"} mono>
+              {maskPayer(claim.payerId)}
+            </ReceiptRow>
+          )}
           {claim.payout && (
-            <ReceiptRow label="PayPal batch" mono>
+            <ReceiptRow label="PayPal reference" mono>
               {claim.payout.batchId}
             </ReceiptRow>
           )}
@@ -272,7 +280,7 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
   );
 }
 
-/** `time`: an ISO time, shown to the second in the viewer's zone. */
+/** `time`: an ISO time, shown to the minute in the viewer's zone. */
 function TimelineRow({ state, label, time }: { state: "done" | "now" | "next"; label: string; time?: string }) {
   return (
     <li className="relative grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center text-ui">
@@ -338,7 +346,17 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
   // start a new claim would lead to the same refusal.
   const advice = reviewed ? [] : [...new Set((retry ? reasons : reasons.filter((r) => !canRetry([r]))).map((r) => adviceFor(r.check)))];
   const one = photoUrls.length === 1;
-  const headline = reviewed ? `A person at ${company} looked at this and refused it` : refusalHeadline(claim, recall.spec);
+  // A misread the owner can contest: say what was read against what they wrote, not that their code is wrong.
+  const misread = appeal && lead === "code" ? misreadOf(claim.code, claim.verdict?.challenge_code.text_seen) : null;
+  const headline = reviewed ? `A person at ${company} looked at this and refused it` : (misread?.headline ?? refusalHeadline(claim, recall.spec));
+  // Each PayPal account claims once per recall: the way forward is the claim that counts (same account, so it's theirs).
+  const earlier = !sample ? /\((RM-\d+)\)/.exec(reasons.find((r) => r.check === "payer")?.text ?? "")?.[1] : undefined;
+  const steps = appeal
+    ? [
+        misread?.ask ?? "If your photo does show what's asked, ask a person to look. They decide from your photos, and you can ask once.",
+        `Or start a new claim for a new code, and ${lead === "code" ? "write it large and clear, in marker" : "take new photos"}.`,
+      ]
+    : advice;
   return (
     <section aria-labelledby="result-title" className="mx-auto flex w-full max-w-claim flex-col gap-6">
       <Top status={<StatusPill status={blocked ? "blocked" : "rejected"} />} id={claim.id} />
@@ -347,7 +365,9 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
         <p className="text-body text-muted">
           {blocked
             ? "Some claims are refused before any photo reaches the model. No refund was sent."
-            : reviewed
+            : appeal
+              ? "The photo check wasn't sure of what it read, so this may be a misread. No refund was sent."
+              : reviewed
               ? `${asked ? "You asked for a review, and a person" : "Your claim was held for a person, who"} refused it for the reason below. No refund was sent.`
               : `The photo check read your ${one ? "photo" : "photos"} and one of its answers rules the claim out. No refund was sent.`}
         </p>
@@ -386,11 +406,11 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
         </div>
       </Paper>
 
-      {!sample && advice.length > 0 && (
+      {!sample && steps.length > 0 && (
         <div className="flex flex-col gap-3">
           <h3 className="micro text-faint">What to do</h3>
           <ol className="flex flex-col gap-2">
-            {advice.map((a, i) => (
+            {steps.map((a, i) => (
               <li key={a} className="grid grid-cols-[2rem_minmax(0,1fr)] text-body text-text">
                 <span className="font-mono text-micro leading-[1.6rem] text-faint">{String(i + 1).padStart(2, "0")}</span>
                 {a}
@@ -399,20 +419,24 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
           </ol>
         </div>
       )}
-      {!sample && retry && !reviewed && (
-        <Button href={againHref} size="lg" block prefetch={false}>
-          Start a new claim (new code)
+      {earlier && (
+        <Button href={`/r/${recall.slug}/claim/${earlier}`} size="lg" block prefetch={false}>
+          See your claim {earlier}
         </Button>
       )}
+      {/* An uncertain read: asking a person leads, since starting over means a new tag and new photos. */}
       {appeal && (
         <form action={`/api/claims/${claim.id}/review`} method="post" className="flex flex-col gap-2">
-          <Button type="submit" variant="secondary" size="md" block>
+          <Button type="submit" size="lg" block>
             Ask a person to look
           </Button>
-          <p className="text-ui text-muted">
-            The photo check wasn&apos;t sure what it read. A person at {company} can look at your photos instead. You can ask once, and their decision shows on this page.
-          </p>
+          <p className="text-ui text-muted">A person at {company} looks at your photos instead of the photo check. You can ask once, and their decision shows on this page.</p>
         </form>
+      )}
+      {!sample && retry && !reviewed && (
+        <Button href={againHref} variant={appeal ? "secondary" : "primary"} size={appeal ? "md" : "lg"} block prefetch={false}>
+          Start a new claim (new code)
+        </Button>
       )}
 
       {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
@@ -545,10 +569,8 @@ function DuplicatePair({ claimId, photoUrls, duplicate, sample }: { claimId: str
 const count = (rows: CheckRow[], group: CheckRow["group"]) => rows.filter((r) => r.group === group).length;
 
 function passedSummary(rows: CheckRow[]): string {
-  const pre = count(rows, "pre");
-  const model = count(rows, "model");
-  // "Five checks" on the homepage: the ones with no AI, then the photo check, whose answers are listed one per row.
-  return `All checks passed · ${pre} need no\u00a0AI · ${model} read from your photo`;
+  // One number for the owner; the split (no AI, then the photo check's answers, one per row) is in the evidence below.
+  return `All ${count(rows, "pre") + count(rows, "model")} checks passed`;
 }
 
 // The folded evidence under a refusal: blocked claims never reached the model, so nothing is said to have passed there.

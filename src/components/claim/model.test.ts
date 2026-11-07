@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sampleClaim } from "@/lib/__fixtures__/claim";
 import { DEMO_SPEC } from "@/lib/demo/kikea";
-import { acceptsStandIn, businessDaysAfter, codeDiff, handWrittenLabel, ownerLabel, productNoun, readableReasons, receiptPollDelay, refusalHeadline, timelineOf } from "./model";
+import { acceptsStandIn, businessDaysAfter, codeDiff, coverCrop, handWrittenLabel, maskEmail, misreadOf, ownerLabel, productNoun, readableReasons, receiptPollDelay, refusalHeadline, taggedThing, timelineOf } from "./model";
 import { nextSample, scoreLine } from "./Scoreboard";
 
 describe("codeDiff", () => {
@@ -127,5 +127,41 @@ describe("the demo round", () => {
     expect(nextSample([{ sample: "genuine", decision: "paid" }], "genuine")?.id).toBe("wrong-code");
     expect(nextSample([{ sample: "wrong-code", decision: "rejected" }], "wrong-code")?.id).toBe("genuine");
     expect(nextSample([{ sample: "genuine", decision: "paid" }, { sample: "wrong-code", decision: "rejected" }, { sample: "ai-no-session", decision: "blocked" }], "reposted")).toBeNull();
+  });
+});
+
+describe("misreadOf", () => {
+  it("names the one character read differently, in the owner's terms", () => {
+    expect(misreadOf("K7Q", "K7O")).toEqual({
+      headline: "We read O where your code has Q",
+      ask: "If your tag says Q, ask a person to look. They decide from your photos, and you can ask once.",
+    });
+  });
+  it("names the whole code when several characters differ, and says nothing when nothing was read or it matches", () => {
+    expect(misreadOf("K7P", "R8D")?.headline).toBe("We read R8D where your code is K7P");
+    expect(misreadOf("K7P", null)).toBeNull();
+    expect(misreadOf("K7P", "K7P")).toBeNull();
+  });
+});
+
+describe("coverCrop", () => {
+  it("crops a landscape feed to a portrait viewfinder's centre, as object-cover shows it", () => {
+    expect(coverCrop(1280, 720, 359, 534)).toEqual({ sx: 398, sy: 0, sw: 484, sh: 720 });
+  });
+  it("crops a portrait feed to a 4:3 frame's middle band", () => {
+    expect(coverCrop(1440, 1920, 640, 480)).toEqual({ sx: 0, sy: 420, sw: 1440, sh: 1080 });
+  });
+  it("keeps the whole feed before the box is laid out", () => {
+    expect(coverCrop(1280, 720, 0, 0)).toEqual({ sx: 0, sy: 0, sw: 1280, sh: 720 });
+  });
+});
+
+describe("the tag's words", () => {
+  it("finds what the hand-written tag is tied to", () => {
+    expect(taggedThing(DEMO_SPEC)).toBe("cut pillow");
+    expect(taggedThing({ proof_steps: ["Cut it in half"] })).toBeNull();
+  });
+  it("masks a login email so its owner recognises it", () => {
+    expect(maskEmail("pat@owner.test")).toBe("p••@owner.test");
   });
 });

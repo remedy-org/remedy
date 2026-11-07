@@ -18,7 +18,8 @@ export interface FlowShellProps {
  */
 export function FlowShell({ children, demo, sandbox, company }: FlowShellProps) {
   return (
-    <div className="grain flex min-h-dvh flex-col">
+    // A phone's pinned action bar (MobileCta) never covers the end of the page: room for it under the footer.
+    <div className="grain flex min-h-dvh flex-col max-sm:has-[[data-mobile-cta]]:pb-24">
       <header className="border-b border-line">
         <div className="page flex h-16 items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">

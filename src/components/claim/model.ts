@@ -113,7 +113,7 @@ export function checkRows(claim: ClaimLike, spec: CheckSpec): CheckRow[] {
 
   const payHolds = claim.reasons.filter((r) => !ids.has(r.check) && r.outcome === "hold");
   if (claim.decision === "paid") {
-    rows.push({ id: "payout", group: "pay", label: "Refund sent through PayPal", state: "pass", detail: claim.payout ? `PayPal batch ${claim.payout.batchId}` : undefined });
+    rows.push({ id: "payout", group: "pay", label: "Refund sent through PayPal", state: "pass", detail: claim.payout ? `PayPal reference ${claim.payout.batchId}` : undefined });
   } else if (claim.decision === "held" && payHolds.length) {
     rows.push({ id: "payout", group: "pay", label: "Refund sent through PayPal", state: "hold", detail: payHolds.map((r) => r.text).join(". ") });
   } else {
@@ -269,6 +269,27 @@ export function secondsBetween(events: Claim["events"], from: string, to: string
 /** "••••PUJ3Q": enough to recognise your own account, not enough to copy it. */
 export const maskPayer = (payerId: string) => `••••${payerId.slice(-5)}`;
 
+/** "p••@owner.test": the PayPal login's email, enough for its owner to recognise, not enough to copy. */
+export function maskEmail(email: string): string {
+  const at = email.lastIndexOf("@");
+  return at < 1 ? `${email[0] ?? ""}••` : `${email[0]}••${email.slice(at)}`;
+}
+
+/** The calendar day a time falls on in a zone (undefined: the device's), as "2026-11-08". */
+const dayIn = (d: Date, timeZone?: string) => d.toLocaleDateString("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+
+/**
+ * When a daily limit resets, in the viewer's own time: "05:30 tomorrow", "23:00 today", "10 Nov, 05:30". Client only
+ * (the server doesn't know the viewer's zone); `timeZone` pins it in tests.
+ */
+export function resetWords(until: Date, now: Date, timeZone?: string): string {
+  const time = until.toLocaleTimeString("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const day = dayIn(until, timeZone);
+  if (day === dayIn(now, timeZone)) return `${time} today`;
+  if (day === dayIn(new Date(now.getTime() + 86_400_000), timeZone)) return `${time} tomorrow`;
+  return `${until.toLocaleDateString("en-GB", { timeZone, day: "numeric", month: "short" })}, ${time}`;
+}
+
 /** "14:30:02": a UTC time to the second, the same on server and client. */
 export function clock(iso: string): string {
   const d = new Date(iso);
@@ -303,6 +324,39 @@ export function handWrittenLabel(spec: Pick<CheckSpec, "label_must_show">): stri
     if (m) return m[1].trim();
   }
   return null;
+}
+
+/**
+ * What the hand-written tag goes on, from the proof step that says so ("The X-VESOLJE tag is on the cut pillow" ->
+ * "cut pillow"), so the owner's shot list names the tag once.
+ */
+export function taggedThing(spec: Pick<CheckSpec, "proof_steps">): string | null {
+  for (const s of spec.proof_steps) {
+    const m = s.match(/\btag is on the (.+?)\.?$/i);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+/**
+ * sessionStorage: this tab took photos on this claim that weren't sent yet. A reload (or iOS reclaiming the tab) drops
+ * them, so the code step says so. Set and cleared by the camera; read by the code step.
+ */
+export const photosTakenKey = (claimId: string) => `remedy:unsent-photos:${claimId}`;
+
+/**
+ * The part of a `vw`×`vh` feed that object-cover shows in a `bw`×`bh` box: the centre, cropped to the box's shape. With
+ * no box size (not laid out yet), the whole feed.
+ */
+export function coverCrop(vw: number, vh: number, bw: number, bh: number): { sx: number; sy: number; sw: number; sh: number } {
+  if (!bw || !bh) return { sx: 0, sy: 0, sw: vw, sh: vh };
+  const box = bw / bh;
+  if (vw / vh > box) {
+    const sw = Math.round(vh * box);
+    return { sx: Math.round((vw - sw) / 2), sy: 0, sw, sh: vh };
+  }
+  const sh = Math.round(vw / box);
+  return { sx: 0, sy: Math.round((vh - sh) / 2), sw: vw, sh };
 }
 
 /** The demo recall accepts a stand-in product (CPSC's pillow has no label), which the code step says once, plainly. */
@@ -365,6 +419,22 @@ export function codeDiff(code: string, seen: string | null | undefined): { cells
     return { cells, caption: `The ${ORDINAL[i] ?? `character ${i + 1}`} character: ${cells[i].yours} in your code, ${cells[i].seen} on the tag.`, readable: true };
   }
   return { cells, caption: `${off.length} of ${n} characters differ: ${yours} in your code, ${read} on the tag.`, readable: true };
+}
+
+/**
+ * An uncertain code read, in the owner's terms: "We read O where your code has Q", and the way to contest it. Null when
+ * nothing was readable or the read matches (nothing specific to say).
+ */
+export function misreadOf(code: string, seen: string | null | undefined): { headline: string; ask: string } | null {
+  const { cells, readable } = codeDiff(code, seen);
+  const off = cells.filter((c) => !c.same);
+  if (!readable || !off.length) return null;
+  const one = off.length === 1 && off[0].yours && off[0].seen ? off[0] : null;
+  const wrote = one ? one.yours : code.toUpperCase();
+  return {
+    headline: one ? `We read ${one.seen} where your code has ${one.yours}` : `We read ${cells.map((c) => c.seen).join("")} where your code is ${wrote}`,
+    ask: `If your tag says ${wrote}, ask a person to look. They decide from your photos, and you can ask once.`,
+  };
 }
 
 /**

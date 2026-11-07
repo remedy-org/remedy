@@ -15,7 +15,7 @@ import { ContinueCard } from "./ContinueCard";
 import { ExpiredCard } from "./ExpiredCard";
 import { FlowShell } from "./FlowShell";
 import { WithJudges } from "./Judges";
-import { checkRows, companyName, maskPayer, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
+import { checkRows, companyName, maskEmail, maskPayer, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
 import { markAsked } from "./payout-live";
 import { Result, type DemoRound, type Duplicate, type PayoutLive } from "./Result";
 import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter } from "./StepMeter";
@@ -125,6 +125,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           now={now}
           meter={<StepMeter {...resultMeter(claim.decision, steps)} steps={steps} />}
           sandbox={sandbox}
+          account={session.email ? maskEmail(session.email) : null}
         />
       </FlowShell>
     );

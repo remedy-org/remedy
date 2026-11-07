@@ -7,7 +7,7 @@ import { companyName, noModelAnswer } from "@/components/claim/model";
 import { SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
 import { DEMO_STEPS, StepMeter } from "@/components/claim/StepMeter";
 import { DEMO_SAMPLES, demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
-import { parseRefusal } from "@/lib/limits";
+import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getDemoRound, requireSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
 
@@ -25,7 +25,8 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   // This round's demo claims for this PayPal account, newest first, with the sample each one used: all from
   // index.json's rows. The proxy started a round for this browser if it had none.
   const round = await getDemoRound();
-  const rows = round ? roundClaims(await store.listClaims(), recall.id, round, session.payerId) : [];
+  const all = await store.listClaims();
+  const rows = round ? roundClaims(all, recall.id, round, session.payerId) : [];
   const runs: DemoRun[] = rows
     .slice(0, 12)
     .map((r) => ({ id: r.id, href: `/r/${recall.slug}/try/${r.id}`, title: demoSample(r.sample ?? "")?.title ?? "Sample claim", decision: r.decision, sample: r.photoHashes.length ? r.sample : undefined, unanswered: noModelAnswer(r.decision, [r.reason]) }));
@@ -35,6 +36,11 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   const asked = typeof query.sample === "string" ? options.find((o) => o.sample.id === query.sample && !o.locked)?.sample.id : undefined;
   const selected = asked ?? options.find((o) => !o.locked && !ran.has(o.sample.id))?.sample.id ?? "genuine";
   const roundDone = DEMO_SAMPLES.every((s) => ran.has(s.id));
+  // A run the claim limits would refuse is never offered: the notice shows before "Run this sample", from the same
+  // index.json read. Today's photo checks aren't read here (another Blob read on every view); the start still refuses
+  // on them, and redirects back with ?limit=.
+  const now = new Date();
+  const refusal = parseRefusal(query, now) ?? claimRefusal(all, { payerId: session.payerId, demo: true, now, limits: limits() });
 
   return (
     <FlowShell demo company={companyName(recall)}>
@@ -42,7 +48,7 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
       <WithJudges demo step="samples">
         <div className="flex flex-col gap-6">
           <StepMeter current={2} steps={DEMO_STEPS} />
-          <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={parseRefusal(query, new Date())} />
+          <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={refusal} />
         </div>
       </WithJudges>
     </FlowShell>

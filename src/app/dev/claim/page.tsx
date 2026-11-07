@@ -220,7 +220,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     note: "Demo: the sample being read",
     render: () => flow({ sample: genuine, preview: { phase: "checking", checking: { elapsed: 12 }, photoUrl: genuine.photos[0] } }, { ...fx.checkingModel, code: "M4T", demo: true }),
   },
-  paid: { group: "Result", note: "Paid, payout processing", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true } }) },
+  paid: { group: "Result", note: "Paid, payout processing", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, account: "p••@owner.test" }) },
   "paid-arrive": { group: "Result", note: "Paid just now: the receipt prints", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, now: fx.NOW + 24_000 }) },
   "paid-settled": { group: "Result", note: "Paid, payout received", render: () => result(fx.paid, { payout: { status: "SUCCESS", fresh: true } }) },
   "paid-received": { group: "Result", note: "Paid, payout received (old name)", render: () => result(fx.paid, { payout: { status: "SUCCESS", fresh: true } }) },

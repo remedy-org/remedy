@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { AlertIcon, Button } from "@/components/ui";
 import styles from "./flow.module.css";
 import { CameraIcon, InfoIcon } from "./icons";
-import type { ClaimView } from "./model";
+import { coverCrop, photosTakenKey, type ClaimView } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
 import { REAL_STEPS } from "./StepMeter";
 import { useClaimArrival } from "./useClaimArrival";
@@ -46,8 +46,10 @@ export interface CaptureStepProps {
   /** Starts over with a fresh code once this session has ended. */
   newClaimHref: string;
   loginHref: string;
-  /** The reminder chips along the cutout's foot, e.g. "Label", "Cut in half", "Code M4T". */
+  /** The reminder chips along the cutout's foot, e.g. "Tag", "Cut in half", "Code M4T". */
   reminders?: string[];
+  /** What the photo frames, in the code step's words: the "tag" (or "label") and the "cut pillow" (or "destroyed product"). */
+  framing?: { thing: string; product: string };
   /**
    * The pre-checks' answer; null when the photos had already arrived (another tab). photoUrl: an object URL of the first
    * photo sent, for the checking screen's photo 1, which the caller frees.
@@ -73,7 +75,7 @@ const platformOf = (): Platform => {
 };
 
 /** Live camera only: no upload control. Up to 3 shots, downscaled in the browser, sent with the session id. */
-export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, reminders = [], onSent, preview }: CaptureStepProps) {
+export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, reminders = [], framing = { thing: "label", product: "destroyed product" }, onSent, preview }: CaptureStepProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [camera, setCamera] = useState<CameraState>(preview?.camera ?? "starting");
@@ -153,14 +155,35 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   }, [shots]);
   useEffect(() => () => shotsRef.current.forEach((s) => s.blob && URL.revokeObjectURL(s.url)), []);
 
+  // Unsent photos live only in this tab: a note for the code step, in case a reload (or iOS reclaiming the tab) drops them.
+  const taken = shots.some((s) => s.blob);
+  useEffect(() => {
+    if (preview) return;
+    try {
+      if (taken) sessionStorage.setItem(photosTakenKey(claimId), "1");
+      else sessionStorage.removeItem(photosTakenKey(claimId));
+    } catch {
+      // No storage (a private window, blocked site data): the note is a nicety.
+    }
+  }, [taken, claimId, preview]);
+  const sentAll = () => {
+    try {
+      sessionStorage.removeItem(photosTakenKey(claimId));
+    } catch {
+      // As above.
+    }
+  };
+
   async function capture() {
     const video = videoRef.current;
     if (!video || !video.videoWidth || shots.length >= MAX_PHOTOS) return;
-    const scale = Math.min(1, MAX_SIDE / Math.max(video.videoWidth, video.videoHeight));
+    // What the viewfinder shows (object-cover crops the feed to its box) is what's saved and checked: the same crop.
+    const { sx, sy, sw, sh } = coverCrop(video.videoWidth, video.videoHeight, video.clientWidth, video.clientHeight);
+    const scale = Math.min(1, MAX_SIDE / Math.max(sw, sh));
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(video.videoWidth * scale);
-    canvas.height = Math.round(video.videoHeight * scale);
-    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
+    canvas.getContext("2d")?.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", QUALITY));
     if (!blob) return;
     setShots((s) => [...s, { url: URL.createObjectURL(blob), blob }]);
@@ -211,6 +234,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
       const body = await res.json().catch(() => null);
       if (res.status === 409) {
         stop();
+        sentAll();
         return onSent(null);
       }
       if (!res.ok) {
@@ -219,6 +243,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         return;
       }
       stop();
+      sentAll();
       // A fresh URL for the checking screen's photo 1: this step frees its own thumbnails' URLs when it goes away.
       onSent(body as ClaimView, URL.createObjectURL(blobs[0]));
     } catch {
@@ -236,7 +261,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const helpText =
     n === 0
       ? "Live camera only: there's no upload button. Up to 3 photos; one with all of it is fine."
-      : `${n} of ${MAX_PHOTOS} taken. Open one to check it or retake it. Send once the label, the cut and the code are all in.`;
+      : `${n} of ${MAX_PHOTOS} taken. Open one to check it or retake it. Send once the ${framing.thing}, the ${framing.product} and the code are all in.`;
   const errorTitle = sendError?.status === 401 ? "Your PayPal login has expired" : "The photos didn't send";
   const errorText = sendError?.status === 401 ? "Log in again to send them. You'll need to retake them afterwards." : sendError?.message;
   const shown = viewing !== null ? shots[viewing] : undefined;
@@ -285,13 +310,11 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               </span>
             </GlassChip>
           </div>
-          {/* Phones: the hint lies over the foot of the feed, under the cutout, so the viewfinder never resizes as it changes. */}
-          {!sendError && !expired && (help || n > 0) && (
-            <p
-              id="capture-help"
-              className="absolute inset-x-3 bottom-3 z-10 rounded-control bg-[oklch(0.12_0.004_75/0.78)] px-3 py-2 text-center text-ui text-balance text-[oklch(0.86_0.005_80)] backdrop-blur-sm sm:hidden"
-            >
-              {help ? helpText : "Tap a photo to check it or retake it."}
+          {/* Phones: a one-line hint over the foot of the feed, under the cutout's chips, so the viewfinder never resizes as
+              it changes. The longer help opens in the instruction bar, where it can't cover the chips. */}
+          {!sendError && !expired && !help && n > 0 && (
+            <p className="absolute inset-x-3 bottom-3 z-10 rounded-control bg-[oklch(0.12_0.004_75/0.78)] px-3 py-2 text-center text-ui text-balance text-[oklch(0.86_0.005_80)] backdrop-blur-sm sm:hidden">
+              Tap a photo to check it or retake it.
             </p>
           )}
           <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
@@ -306,10 +329,13 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                 </>
               ) : (
                 <>
-                  Fit the label, the destroyed product and the code <span className="font-mono">{code}</span> in the frame
+                  Fit the {framing.thing}, the {framing.product} and the code <span className="font-mono">{code}</span> in the frame
                 </>
               )}
             </h2>
+            <p id="capture-help" hidden={!help || Boolean(sendError) || expired} className="text-ui text-pretty text-[oklch(0.74_0.005_80)] sm:hidden">
+              {helpText}
+            </p>
             {/* A failed send says so here, on the first screen, where the Send button is. */}
             {sendError && (
               <div role="alert" className="flex items-start gap-2.5 text-left">
@@ -433,7 +459,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={shown.url} alt={`Photo ${viewing + 1}, full size`} className="max-h-[60dvh] w-full rounded-control bg-[oklch(0.12_0.004_75)] object-contain" />
               <p className="text-ui text-pretty text-[oklch(0.74_0.005_80)]">
-                Check that the label, the cut and the code <span className="font-mono text-[oklch(0.96_0.006_85)]">{code}</span> are all in and sharp.
+                Check that the {framing.thing}, the {framing.product} and the code <span className="font-mono text-[oklch(0.96_0.006_85)]">{code}</span> are all in and sharp.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <Button

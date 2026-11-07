@@ -8,7 +8,7 @@ import { CheckingStep } from "./CheckingStep";
 import { CodeStep } from "./CodeStep";
 import { DemoCaptureStep } from "./DemoCaptureStep";
 import { WithJudges, type JudgeStep } from "./Judges";
-import { cutInHalf, type ClaimView } from "./model";
+import { cutInHalf, handWrittenLabel, taggedThing, type ClaimView } from "./model";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
 import { useClaimArrival } from "./useClaimArrival";
 
@@ -51,7 +51,10 @@ export function ClaimFlow(props: ClaimFlowProps) {
   const demo = Boolean(sample);
   const steps = demo ? DEMO_STEPS : REAL_STEPS;
   const current = phase === "checking" ? 4 : demo ? 3 : phase === "code" ? 2 : 3;
-  const reminders = ["Label", cutInHalf(props.spec) ? "Cut in half" : "Destroyed", `Code ${code}`];
+  // One word for the thing the code goes on, everywhere: a hand-written label is the paper tag itself.
+  const tag = handWrittenLabel(props.spec) !== null;
+  const reminders = [tag ? "Tag" : "Label", cutInHalf(props.spec) ? "Cut in half" : "Destroyed", `Code ${code}`];
+  const framing = { thing: tag ? "tag" : "label", product: (tag && taggedThing(props.spec)) || `${cutInHalf(props.spec) ? "cut" : "destroyed"} product` };
 
   const moved = useRef(false);
   useEffect(() => {
@@ -83,6 +86,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
         {phase === "code" && (
           <div className="mx-auto w-full max-w-claim lg:max-w-[55rem]">
             <CodeStep
+              claimId={claimId}
               code={code}
               spec={props.spec}
               expiresAt={props.expiresAt}
@@ -90,6 +94,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
               frozen={Boolean(preview)}
               qrSvg={props.qrSvg}
               phoneUrl={props.phoneUrl}
+              newClaimHref={props.newClaimHref}
               onContinue={() => go("capture")}
             />
           </div>
@@ -109,6 +114,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
               newClaimHref={props.newClaimHref}
               loginHref={props.loginHref}
               reminders={reminders}
+              framing={framing}
               onSent={sent}
               preview={preview?.capture}
             />
