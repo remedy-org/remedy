@@ -499,9 +499,9 @@ function JudgeVerdict({ sample, decision, round, claimId }: { sample: DemoSample
           <StatusPill status={sample.expect} label={statusLabel(sample.expect)} />
         </dd>
         <dt className="micro text-faint">Got</dt>
-        <dd className="flex items-center gap-2">
+        <dd className="flex flex-wrap items-center gap-2">
           <StatusPill status={decision} />
-          <span className={clsx("inline-flex items-center gap-1", ok ? "text-pay" : "text-stop")}>
+          <span className={clsx("inline-flex items-center gap-1 whitespace-nowrap", ok ? "text-pay" : "text-stop")}>
             {ok ? <CheckIcon size={14} /> : <CrossIcon size={14} />}
             {ok ? "As expected" : "Not as expected"}
           </span>

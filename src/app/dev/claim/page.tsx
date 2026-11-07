@@ -229,7 +229,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "demo-rejected": {
     group: "Result",
     note: "Demo: the wrong code, rejected",
-    render: () => result({ ...fx.rejected, claim: { ...fx.rejected.claim, code: wrongCode.code! } }, { sample: wrongCode, round: fx.roundAfter(["genuine", "wrong-code"]) }),
+    render: () => result(fx.demoWrongCode, { sample: wrongCode, round: fx.roundAfter(["genuine", "wrong-code"]) }),
   },
   "demo-blocked": { group: "Result", note: "Demo: AI image refused", render: () => result(fx.blocked, { sample: demoSample("ai-no-session"), round: fx.roundAfter(["genuine", "wrong-code", "ai-no-session"]) }) },
   "demo-done": {

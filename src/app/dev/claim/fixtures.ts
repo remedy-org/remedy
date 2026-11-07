@@ -86,6 +86,43 @@ export const blockedDuplicate = (() => {
   return { claim, photoUrls: ["/demo/c02-1.jpg"] };
 })();
 
+// The wrong-code sample as the live demo decided it: GPT-6.1 Sol's own answer on demo claim RM-5514 (7 Nov 2026, photo
+// c11-1.jpg, claim code K7P), decided here by the app's rule.
+const wrongCodeVerdict = Verdict.parse({
+  label: {
+    text_seen: "X-VESOLJE",
+    matches_recalled_product: "yes",
+    evidence: 'The plain grey pillow carries a paper tag tied to it with cord. The tag visibly reads "X-VESOLJE" in handwritten lettering, meeting the demo stand-in requirement.',
+  },
+  steps: [
+    {
+      step: "The pillow is cut fully in half, so it can no longer be used",
+      status: "done",
+      evidence: "Two separate pillow halves are visible, with gaps between them at both ends. The cut ends are open, with exposed stuffing spilling onto the floor.",
+    },
+    { step: "The X-VESOLJE tag is on the cut pillow", status: "done", evidence: 'The paper tag reading "X-VESOLJE" is tied by cord around the left cut half.' },
+  ],
+  challenge_code: {
+    text_seen: "K7Q",
+    matches: "no",
+    evidence: 'The handwritten code reads "K7Q". Compared character by character with "K7P", the first two characters match, but the final character is "Q", not "P".',
+  },
+  same_item_in_all_photos: "yes",
+  looks_like_photo_of_screen_or_print: "no",
+  summary: "The single photo shows the qualifying tagged stand-in pillow cut into two halves. Both proof steps are visibly completed, but the one-time code does not match, so the submission does not satisfy all requirements.",
+});
+export const demoWrongCode = (() => {
+  const { outcome, reasons } = decide(wrongCodeVerdict, { spec: recall.spec, code: "K7P", photos: 1 });
+  const claim = base("K7P", { demo: true, photos: photosOf(["c11-1.jpg"]), verdict: wrongCodeVerdict, reasons, decision: outcome === "reject" ? "rejected" : "held" });
+  claim.events.push(
+    { at: at(0), type: "photos_received", detail: "1 sample photo (demo mode)" },
+    { at: at(0.3), type: "prechecked", detail: "Live session, new photos, first claim for this account" },
+    { at: at(10.3), type: "checked", detail: "Photo check answered in 10.3 s (gpt-6.1-sol)" },
+    { at: at(10.4), type: "decided", detail: "Rejected by the rule" },
+  );
+  return { claim, photoUrls: ["/demo/c11-1.jpg"] };
+})();
+
 /** One demo round, as the index rows give it: which samples ran, and what each got. */
 export const roundAfter = (ids: string[]) => ({
   runs: ids.map((sample) => ({ sample, decision: ({ genuine: "paid", "wrong-code": "rejected", "ai-no-session": "blocked", reposted: "blocked" } as const)[sample as "genuine"] })),
