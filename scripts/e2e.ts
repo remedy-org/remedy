@@ -106,6 +106,26 @@ async function pageLoads(browser: Browser, path: string, heading?: RegExp) {
   }
 }
 
+// Signed out at 320px, the narrowest phone: the page never scrolls sideways, and the judges' pill and the theme toggle
+// sit side by side with at least 8px between them, the SANDBOX label still showing.
+async function narrowTry(browser: Browser) {
+  const context = await browser.newContext({ viewport: { width: 320, height: 640 } });
+  try {
+    const page = await context.newPage();
+    await page.goto(url(`/r/${SLUG}/try`), { waitUntil: "networkidle" });
+    const pill = page.getByRole("button", { name: /judges/i });
+    await pill.waitFor();
+    const width = await page.evaluate(() => document.documentElement.scrollWidth);
+    assert(width <= 320, `scrollWidth ${width}`);
+    const [p, t] = await Promise.all([pill.boundingBox(), page.getByRole("button", { name: /theme/i }).boundingBox()]);
+    assert(p && t && t.x >= p.x + p.width + 8, `pill ends at ${p && p.x + p.width}, toggle starts at ${t?.x}`);
+    assert(await page.locator("header").getByText(/^Sandbox/).first().isVisible(), "no SANDBOX label in the header");
+    return `toggle ${Math.round(t.x - p.x - p.width)}px after the pill`;
+  } finally {
+    await context.close();
+  }
+}
+
 // One demo round for the whole run, as one browser has: the repost meets this run's genuine claim, and no other's.
 const round = newDemoRound();
 
@@ -156,6 +176,7 @@ async function main() {
     await check("homepage loads with no console errors", () => pageLoads(browser, "/"));
     await check(`/r/${SLUG} loads`, () => pageLoads(browser, `/r/${SLUG}`));
     await check(`/r/${SLUG}/try loads`, () => pageLoads(browser, `/r/${SLUG}/try`));
+    await check(`/r/${SLUG}/try at 320px: no sideways scroll, header controls apart`, () => narrowTry(browser));
 
     await check("signed out, /console redirects to /signin", async () => {
       const { context, page } = await load(browser, "/console");

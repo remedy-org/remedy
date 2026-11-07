@@ -105,24 +105,10 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <Parties company={company} />
       </div>
 
-      {/* The demo's four samples come before the login, so the card shows what a judge is about to run, not a wall. */}
+      {/* The demo's four samples come before the login, so the card shows what a judge is about to run, not a wall. From
+          1200px they sit in the judges' rail beside it instead, so the login and its button stay on a laptop's first screen. */}
       {demo ? (
-        <div className="flex flex-col gap-3 border-t border-line pt-6">
-          <h3 className="micro text-faint">Four sample claims you&apos;ll run</h3>
-          <ul className="grid gap-x-4 gap-y-3 sm:grid-cols-2 sm:gap-y-4">
-            {DEMO_SAMPLES.map((s) => (
-              <li key={s.id} className="flex min-w-0 items-start gap-3">
-                <SampleTag src={s.photos[0]} />
-                <span className="flex min-w-0 flex-col items-start gap-1.5">
-                  <span className="text-ui leading-tight font-medium text-text">{s.title}</span>
-                  <span className="text-ui leading-tight text-muted">Tests {SAMPLE_TESTS[s.id] ?? s.decidedBy}</span>
-                  <StatusPill status={s.expect} label={`Should be ${statusLabel(s.expect).toLowerCase()}`} />
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-ui text-faint">All four photos are AI-made samples, never a real owner&apos;s.</p>
-        </div>
+        <SampleList className="border-t border-line pt-6 min-[1200px]:hidden" />
       ) : (
         <ol className="relative flex flex-col gap-3 before:absolute before:top-1.5 before:bottom-1.5 before:left-[7px] before:w-px before:bg-line">
           {steps.map((s, i) => (
@@ -147,10 +133,8 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       {/* With a claim under way its own button leads, at the top, and nothing new starts here. */}
       {!yourClaim && (
         <div className="flex flex-col gap-4">
-          {demo && !signedInAs && judgeLogin && (
-            // From 1200px the judges' rail beside the card shows it, so the card doesn't say it twice.
-            <JudgeLoginPanel login={judgeLogin} className="min-[1200px]:hidden" />
-          )}
+          {/* Before the button, so the copy buttons come first in reading and Tab order. */}
+          {demo && !signedInAs && judgeLogin && <JudgeLoginPanel login={judgeLogin} />}
           {demo && !signedInAs && !judgeLogin && (
             // Information, so neutral: the held blue means "waiting for a person" and nothing else. Under the button on a
             // phone, so the button clears the first screen.
@@ -186,7 +170,8 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
               <RetryLabel refusal={refusal} />
             </Button>
           ) : (
-            <Button id="consent-cta" href={href} size="lg" block prefetch={false}>
+            // Below 360px "Log in with PayPal sandbox" is wider than the card: it wraps rather than run off the card.
+            <Button id="consent-cta" href={href} size="lg" block prefetch={false} className="max-[359px]:h-auto max-[359px]:min-h-12 max-[359px]:py-3 max-[359px]:text-center max-[359px]:text-balance max-[359px]:whitespace-normal">
               {action}
             </Button>
           )}
@@ -201,6 +186,28 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         </span>
       </p>
     </Card>
+  );
+}
+
+/** The four samples a judge is about to run: in the demo's consent card, or in the judges' rail beside it from 1200px. */
+export function SampleList({ rail, className }: { rail?: boolean; className?: string }) {
+  return (
+    <div className={clsx("flex flex-col gap-3", className)}>
+      <h3 className="micro text-faint">Four sample claims you&apos;ll run</h3>
+      <ul className={clsx("grid gap-x-4 gap-y-3", !rail && "sm:grid-cols-2 sm:gap-y-4")}>
+        {DEMO_SAMPLES.map((s) => (
+          <li key={s.id} className="flex min-w-0 items-start gap-3">
+            <SampleTag src={s.photos[0]} />
+            <span className="flex min-w-0 flex-col items-start gap-1.5">
+              <span className="text-ui leading-tight font-medium text-text">{s.title}</span>
+              <span className="text-ui leading-tight text-muted">Tests {SAMPLE_TESTS[s.id] ?? s.decidedBy}</span>
+              <StatusPill status={s.expect} label={`Should be ${statusLabel(s.expect).toLowerCase()}`} />
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-ui text-faint">All four photos are AI-made samples, never a real owner&apos;s.</p>
+    </div>
   );
 }
 

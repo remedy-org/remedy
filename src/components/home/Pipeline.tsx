@@ -51,7 +51,7 @@ interface Sample {
 }
 
 const SAMPLES: Sample[] = [
-  { lane: "AI image", title: "An AI image, sent in", photo: "/demo/c08-1.jpg", stop: 0, status: "blocked", stamp: "Blocked", tone: "stop", reason: "This photo wasn't taken in this claim's camera session" },
+  { lane: "Upload", title: "An uploaded photo", photo: "/demo/c08-1.jpg", stop: 0, status: "blocked", stamp: "Blocked", tone: "stop", reason: "This photo wasn't taken in this claim's camera session" },
   { lane: "Repost", title: "The same photo, reposted", photo: "/demo/c02-1.jpg", stop: 1, status: "blocked", stamp: "Blocked", tone: "stop", reason: "Photo 1 was already used in another claim" },
   {
     lane: "Wrong code",

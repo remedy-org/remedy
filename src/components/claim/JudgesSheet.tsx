@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useSyncExternalStore, type ReactNode } from "react";
+import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CrossIcon } from "@/components/ui";
 
@@ -15,6 +15,8 @@ const noop = () => () => {};
  */
 export function JudgesSheet({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const id = useId();
+  const [open, setOpen] = useState(false);
   const dock = useSyncExternalStore(
     noop,
     () => document.getElementById(JUDGES_DOCK_ID),
@@ -23,8 +25,13 @@ export function JudgesSheet({ children }: { children: ReactNode }) {
   const pill = (
     <button
       type="button"
-      onClick={() => ref.current?.showModal()}
+      onClick={() => {
+        ref.current?.showModal();
+        setOpen(true);
+      }}
       aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-controls={id}
       className="micro inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 whitespace-nowrap text-text transition-colors duration-160 after:absolute after:-inset-y-1.5 after:inset-x-0 after:content-[''] hover:bg-surface-2 relative"
     >
       <span className="size-1.5 rounded-full bg-faint" aria-hidden="true" />
@@ -35,11 +42,15 @@ export function JudgesSheet({ children }: { children: ReactNode }) {
   return (
     <>
       {dock && createPortal(pill, dock)}
+      {/* tabIndex -1: a scrolling sheet is otherwise a Tab stop of its own in Chromium, ringed in amber. */}
       <dialog
         ref={ref}
+        id={id}
+        tabIndex={-1}
         aria-label="Notes for judges"
         onClick={(e) => e.target === ref.current && ref.current?.close()}
-        className="fixed inset-x-0 top-auto bottom-0 m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-[16px] bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0_0_0/0.5)]"
+        onClose={() => setOpen(false)}
+        className="fixed inset-x-0 top-auto bottom-0 m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-[16px] bg-surface p-0 text-text shadow-float outline-none backdrop:bg-[oklch(0_0_0/0.5)]"
       >
         <div className="mx-auto flex max-w-[30rem] flex-col gap-4 px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center justify-between">

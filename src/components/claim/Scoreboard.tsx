@@ -45,7 +45,15 @@ export function scoreLine(runs: RoundRun[]): { ran: number; expected: number; un
   return { ran: ran.length, expected, unanswered, text: parts.join(" · ") };
 }
 
-/** The first sample in the guided order (genuine, wrong code, AI image, repost) this round hasn't run, if any. */
+/** The round's end, in words: "Round complete: 4 of 4 as expected", the model's silences counted apart. */
+export function roundLine(runs: RoundRun[]): string {
+  const { ran, expected, unanswered } = scoreLine(runs);
+  const answered = ran - unanswered;
+  const parts = [answered ? `${expected} of ${answered} as expected` : "", unanswered ? `${unanswered} model unavailable` : ""].filter(Boolean);
+  return `Round complete: ${parts.join(" · ")}`;
+}
+
+/** The first sample in the guided order (genuine, wrong code, upload, repost) this round hasn't run, if any. */
 export function nextSample(runs: RoundRun[], except?: string): DemoSample | null {
   const ran = new Set(runs.map((r) => r.sample));
   return DEMO_SAMPLES.find((s) => s.id !== except && !ran.has(s.id)) ?? null;
@@ -68,9 +76,10 @@ export function RunResult({ sample, run, prefix, className }: { sample: DemoSamp
 
 /**
  * The round as a scorecard: one row per sample in the guided order, lettered A to D, with what its latest run got and
- * whether that was the expected outcome, in words beside its own row; then the line in words.
+ * whether that was the expected outcome, in words beside its own row; then the line in words, unless `complete`: the
+ * round-complete line above already says it.
  */
-export function Scoreboard({ runs, className }: { runs: RoundRun[]; className?: string }) {
+export function Scoreboard({ runs, complete, className }: { runs: RoundRun[]; complete?: boolean; className?: string }) {
   const latest = latestRuns(runs);
   const { text } = scoreLine(runs);
   return (
@@ -95,7 +104,7 @@ export function Scoreboard({ runs, className }: { runs: RoundRun[]; className?: 
           );
         })}
       </ol>
-      <span className="font-mono text-micro text-muted">{text}</span>
+      {!complete && <span className="font-mono text-micro text-muted">{text}</span>}
     </div>
   );
 }

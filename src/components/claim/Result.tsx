@@ -28,7 +28,8 @@ import {
   type CheckRow,
 } from "./model";
 import { ReceiptLive } from "./ReceiptLive";
-import { nextSample, runMark, Scoreboard, scoreLine, type RoundRun } from "./Scoreboard";
+import { RevealDetails } from "./RevealDetails";
+import { nextSample, roundLine, runMark, Scoreboard, type RoundRun } from "./Scoreboard";
 
 export interface PayoutLive {
   /** PayPal's status: live from getPayoutStatus, or the last one stored if PayPal couldn't be reached. */
@@ -391,7 +392,10 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
           <div className={clsx("flex min-w-0 flex-col gap-3", (lead === "duplicate_photo" || !photoUrls[0]) && "sm:col-span-2")}>
             <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">{reasons.length > 1 ? "The reasons" : "The reason"}</h3>
             <Reasons reasons={reasons} rows={rows} />
-            {sample && photoUrls[0] && lead !== "duplicate_photo" && <p className="text-ui text-ink-muted">Photo 1 is an AI-made sample photo.</p>}
+            {/* Every sample photo is AI-made, the paid one too: the live-camera refusal is about how it was sent. */}
+            {sample && photoUrls[0] && lead !== "duplicate_photo" && (
+              <p className="text-ui text-ink-muted">{lead === "session" ? "Photo 1 is an AI-made sample like all four; only this one was sent from outside the camera." : "Photo 1 is an AI-made sample photo."}</p>
+            )}
           </div>
         </div>
         <div className="mt-6 flex flex-col gap-1.5 border-t border-dashed border-paper-line pt-4">
@@ -592,7 +596,7 @@ function Top({ status, id }: { status: ReactNode; id: string }) {
 /** The photos and every check: open beside a refusal or a demo result, folded on a real owner's receipt. */
 function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { rows: CheckRow[]; photoUrls: string[]; sample: boolean; summary: string; open?: boolean; code: string }) {
   return (
-    <details className="group rounded-card border border-line bg-surface" open={open}>
+    <RevealDetails className="group rounded-card border border-line bg-surface" open={open}>
       <summary className="flex min-h-16 cursor-pointer list-none items-center gap-4 px-4 py-3 text-ui font-medium text-text sm:px-5 [&::-webkit-details-marker]:hidden">
         {photoUrls[0] && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -617,7 +621,7 @@ function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { ro
         )}
         <CheckList rows={rows} code={code} />
       </div>
-    </details>
+    </RevealDetails>
   );
 }
 
@@ -693,9 +697,19 @@ function DemoActions({ sample, slug, againHref, claimId, decision, round, unansw
     </RunSample>
   ) : (
     <Button href={consoleHref(claimId)} size={rail ? "md" : "lg"} block prefetch={false} className={clsx("h-auto! py-2.5 text-center whitespace-normal!", rail ? "min-h-11" : "min-h-12")}>
-      Sign in as Kikea Store to see this claim
+      {rail ? (
+        "Sign in as Kikea Store to see this claim"
+      ) : (
+        // One line in the phone's pinned bar.
+        <>
+          <span className="sm:hidden">See it in the console</span>
+          <span className="max-sm:hidden">Sign in as Kikea Store to see this claim</span>
+        </>
+      )}
     </Button>
   );
+  // The round's end, said once in plain words above its one action: no fanfare, just the score.
+  const done = over && <p className="text-ui font-medium text-text">{roundLine(runs)}</p>;
   // After an outage the next sample stays one click away, so a judge can carry on while the model is down.
   const secondary =
     unanswered && next ? (
@@ -710,26 +724,25 @@ function DemoActions({ sample, slug, againHref, claimId, decision, round, unansw
   if (rail) {
     return (
       <div className="flex flex-col gap-3">
+        {done}
         {primary}
         {secondary}
       </div>
     );
   }
   // Direct children of the result's column, so the sticky bar can travel the column's height on a phone. The rail's
-  // verdict and console link are repeated here, since below 1200px the rail is a sheet behind the header's pill.
+  // verdict and console link are repeated here, since below 1200px the rail is a sheet behind the header's pill. The
+  // round's end rides in the bar with its console link, so a phone sees both on the first screen.
   return (
     <>
       <div className="flex flex-col gap-3 min-[1200px]:hidden">
         <ExpectedGot sample={sample} run={{ sample: sample.id, decision, unanswered }} />
-        {over && <p className="font-mono text-micro text-muted">{scoreLine(runs).text}</p>}
       </div>
       <div
-        className={clsx(
-          "-mt-3 min-[1200px]:hidden",
-          (unanswered || next) &&
-            "z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md",
-        )}
+        data-action-bar=""
+        className="z-10 -mt-3 flex flex-col gap-2.5 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md min-[1200px]:hidden"
       >
+        {done}
         {primary}
       </div>
       <div className="-mt-3 flex flex-col gap-3 min-[1200px]:hidden">
@@ -746,6 +759,7 @@ function DemoActions({ sample, slug, againHref, claimId, decision, round, unansw
 
 /** The judges' rail on a demo result: what should have happened, what did, the next action, this round's score, the console. */
 function JudgeVerdict({ sample, run, round, claimId, slug, againHref }: { sample: DemoSample; run: RoundRun; round?: DemoRound | null; claimId: string; slug: string; againHref: string }) {
+  const over = roundOver(round?.runs ?? [], sample, run.unanswered);
   return (
     <div className="flex flex-col gap-4">
       <ExpectedGot sample={sample} run={run} />
@@ -753,9 +767,9 @@ function JudgeVerdict({ sample, run, round, claimId, slug, againHref }: { sample
       <p className="text-ui text-muted">
         <NoBreakHyphens>{sample.description}</NoBreakHyphens>
       </p>
-      {round && <Scoreboard runs={round.runs} />}
+      {round && <Scoreboard runs={round.runs} complete={over} />}
       {/* Once the round is over the console is the primary action above. */}
-      {!roundOver(round?.runs ?? [], sample, run.unanswered) && (
+      {!over && (
         <Button href={consoleHref(claimId)} variant="tertiary" size="sm" prefetch={false} className="self-start">
           Sign in as Kikea Store to see this claim
         </Button>

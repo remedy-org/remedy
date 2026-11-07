@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sampleClaim } from "@/lib/__fixtures__/claim";
 import { DEMO_SPEC } from "@/lib/demo/kikea";
 import { acceptsStandIn, businessDaysAfter, codeDiff, coverCrop, handWrittenLabel, maskEmail, misreadOf, ownerLabel, productNoun, readableReasons, receiptPollDelay, refusalHeadline, taggedThing, timelineOf } from "./model";
-import { nextSample, scoreLine } from "./Scoreboard";
+import { nextSample, roundLine, scoreLine } from "./Scoreboard";
 
 describe("codeDiff", () => {
   it("marks the one character the model read differently, and says which", () => {
@@ -110,6 +110,8 @@ describe("the demo round", () => {
       { sample: "genuine", decision: "paid" },
     ] as const;
     expect(scoreLine([...all]).text).toBe("All 4 run · 4 of 4 as expected");
+    expect(roundLine([...all])).toBe("Round complete: 4 of 4 as expected");
+    expect(roundLine([{ sample: "genuine", decision: "held" }, ...all.slice(0, 3)])).toBe("Round complete: 3 of 4 as expected");
   });
   it("counts a run the model never answered as model unavailable, not as a miss", () => {
     expect(scoreLine([{ sample: "genuine", decision: "held", unanswered: true }]).text).toBe("1 of 4 run · 1 model unavailable");
@@ -122,6 +124,7 @@ describe("the demo round", () => {
     expect(scoreLine([...round])).toMatchObject({ expected: 2, unanswered: 2, text: "All 4 run · 2 of 2 as expected · 2 model unavailable" });
     // A run again that the model answered replaces it.
     expect(scoreLine([{ sample: "genuine", decision: "paid" }, ...round]).text).toBe("All 4 run · 3 of 3 as expected · 1 model unavailable");
+    expect(roundLine([{ sample: "genuine", decision: "paid" }, ...round])).toBe("Round complete: 3 of 3 as expected · 1 model unavailable");
   });
   it("suggests the next unrun sample in the guided order", () => {
     expect(nextSample([{ sample: "genuine", decision: "paid" }], "genuine")?.id).toBe("wrong-code");

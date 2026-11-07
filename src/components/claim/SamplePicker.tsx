@@ -5,6 +5,7 @@ import type { DemoSample } from "@/lib/demo";
 import type { Refusal } from "@/lib/limits";
 import type { Decision } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
+import { FocusTitle } from "./FocusTitle";
 import { LockIcon } from "./icons";
 import { LimitNotice, RetryLabel } from "./LimitNotice";
 import { latestRuns, RunResult, scoreLine, type RoundRun } from "./Scoreboard";
@@ -66,6 +67,8 @@ export function SamplePicker({
   const latest = latestRuns(scored);
   return (
     <section aria-labelledby="picker-title" className="mx-auto flex w-full max-w-[40rem] flex-col gap-6">
+      {/* A limit's notice, rendered later, takes focus from the title. */}
+      <FocusTitle id="picker-title" />
       <div className="flex flex-col gap-3">
         <StepTitle id="picker-title">Pick a sample claim</StepTitle>
         <p className="text-body text-muted">Each one runs the real checks and the real rule. Only the genuine claim should be paid, and only once per round.</p>
@@ -133,7 +136,7 @@ export function SamplePicker({
         </fieldset>
         <p className="text-ui text-faint">All four photos are AI-made samples, not from a camera.</p>
         {roundDone && <p className="text-ui text-muted">All four samples have run. A new round checks them only against each other, so they reach the same four outcomes.</p>}
-        <div className="z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md">
+        <div data-action-bar="" className="z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md">
           <Button type="submit" size="lg" block disabled={off}>
             {refusal ? <RetryLabel refusal={refusal} /> : roundDone ? "Run the samples again" : "Run this sample"}
           </Button>

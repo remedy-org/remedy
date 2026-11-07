@@ -102,7 +102,15 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
           }
         />
       </div>
-      <p className="text-body text-muted max-sm:pt-1">{sample.description}</p>
+      <div className="flex flex-col gap-2 max-sm:pt-1">
+        <p className="text-body text-muted">{sample.description}</p>
+        {/* Every sample photo is AI-made: what sets this one apart for the live-camera check is how it's sent. */}
+        <p className="text-ui text-faint">
+          {sample.liveSession
+            ? "Sent as if taken on this claim's camera, inside its session. Only the uploaded photo is sent from outside."
+            : "Sent as an outside file, as an upload would be. The other samples are sent as if taken on this claim's camera."}
+        </p>
+      </div>
       {error && <ErrorState variant="inline" title="The sample didn't send" description={error} />}
     </section>
   );

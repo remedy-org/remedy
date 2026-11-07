@@ -5,9 +5,8 @@ import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
-import { consentAction, ConsentCard, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
+import { consentAction, ConsentCard, SampleList, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
 import { FlowShell } from "./FlowShell";
-import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { WithJudges } from "./Judges";
 import { MobileCta } from "./MobileCta";
 import { businessDaysAfter, companyName, day, maskPayer } from "./model";
@@ -77,12 +76,16 @@ export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?:
   const claim = props.yourClaim;
   return (
     <FlowShell demo={props.demo} sandbox={sandbox} company={companyName(props.recall)}>
-      {/* Logged out, the judges' sandbox login: in the rail from 1200px, in the card below (and in the notes' sheet). */}
-      <WithJudges demo={Boolean(props.demo)} step={ready ? "samples" : "consent"} extra={!props.signedInAs && props.judgeLogin ? <JudgeLoginPanel login={props.judgeLogin} /> : undefined}>
+      {/* The judges' sandbox login is in the card, just before its login button, at every width; from 1200px the four
+          samples move to the rail to keep that button on a laptop's first screen (below, the card has them, so the notes'
+          sheet doesn't repeat them). */}
+      <WithJudges demo={Boolean(props.demo)} step={ready ? "samples" : "consent"} extra={props.demo ? <SampleList rail className="border-t border-line pt-4 max-[1199px]:hidden" /> : undefined}>
         <div className="flex flex-col gap-6">
-          {/* Refused by a limit, the code step isn't next: the meter stays on the first step. */}
-          <StepMeter {...(claim ? claimMeter(claim) : { current: ready && !props.refusal ? 2 : 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
-          <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
+          {/* Refused by a limit, the code step isn't next: the meter stays on the first step. It spans both columns, so
+              its edges sit on theirs. */}
+          <StepMeter {...(claim ? claimMeter(claim) : { current: ready && !props.refusal ? 2 : 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} span />
+          {/* One bounded track on a phone, so the card's widest line can never widen the page. */}
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
             <RecallBrief recall={props.recall} sandbox={sandbox || props.demo} demo={props.demo} />
             <ConsentCard {...props} sandbox={sandbox} />
           </div>

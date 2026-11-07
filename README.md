@@ -43,7 +43,7 @@ The model only describes. A fixed rule in code, not the model, turns those answe
 3. Run the four sample claims. They use the real pipeline on sample photos:
    - **A genuine claim**: paid $29.99 in sandbox money within a minute of the photo.
    - **The wrong code**: rejected; the model reads the tag character by character.
-   - **An AI image, sent in**: blocked before the model; it wasn't taken in this claim's camera session.
+   - **An uploaded photo**: blocked before the model; it wasn't taken in this claim's camera session. (All four sample photos are AI-made; only this one is sent from outside the camera.)
    - **A reposted photo**: blocked as a duplicate of an earlier claim's photo.
 
    Your browser's run is one demo round: its samples are checked only against each other, so judges sharing one sandbox login each see these four outcomes. **Run the samples again** on the picker starts a new round.

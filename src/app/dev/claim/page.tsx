@@ -208,7 +208,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   },
   "demo-capture": { group: "Camera", note: "Demo: the sample in the viewfinder", render: () => flow({ sample: genuine, preview: { phase: "capture" } }) },
   "demo-capture-wrong-code": { group: "Camera", note: "Demo: the wrong code, its tag reading another", render: () => flow({ sample: wrongCode, preview: { phase: "capture" } }, { ...fx.open, code: "K7P" }) },
-  "demo-capture-ai": { group: "Camera", note: "Demo: the AI image, sent from outside", render: () => flow({ sample: demoSample("ai-no-session"), preview: { phase: "capture" } }, { ...fx.open, code: "H6W" }) },
+  "demo-capture-ai": { group: "Camera", note: "Demo: the uploaded photo, sent from outside", render: () => flow({ sample: demoSample("ai-no-session"), preview: { phase: "capture" } }, { ...fx.open, code: "H6W" }) },
   checking: { group: "Checking", note: "Photo 1 read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
   "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
   "checking-slow": { group: "Checking", note: "Past 40 s: taking longer than usual", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 47 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
@@ -254,7 +254,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     note: "Demo: the model didn't answer, run it again",
     render: () => result(fx.heldModel, { sample: genuine, round: { runs: [{ sample: "genuine", decision: "held", unanswered: true }] } }),
   },
-  "demo-blocked": { group: "Result", note: "Demo: AI image refused", render: () => result(fx.blocked, { sample: demoSample("ai-no-session"), round: fx.roundAfter(["genuine", "wrong-code", "ai-no-session"]) }) },
+  "demo-blocked": { group: "Result", note: "Demo: uploaded photo refused", render: () => result(fx.blocked, { sample: demoSample("ai-no-session"), round: fx.roundAfter(["genuine", "wrong-code", "ai-no-session"]) }) },
   "demo-done": {
     group: "Result",
     note: "Demo: the repost, all four run",

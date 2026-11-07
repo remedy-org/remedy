@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { DemoSample } from "@/lib/demo";
 import type { CheckSpec } from "@/lib/types";
 import { CaptureStep, type CapturePreview } from "./CaptureStep";
@@ -33,7 +33,7 @@ export interface ClaimFlowProps {
   preview?: { phase: Phase; capture?: CapturePreview; checking?: { elapsed?: number; offline?: boolean }; sending?: boolean; photoUrl?: string };
 }
 
-// Each phase's h2: focus moves there on every step change, so a keyboard or screen reader lands on the new step.
+// Each phase's h2: focus moves there on arrival and on every step change, so a keyboard or screen reader lands on the new step.
 const TITLE: Record<Phase, string> = { code: "code-title", capture: "capture-title", checking: "checking-title" };
 const JUDGE: Record<Phase, JudgeStep> = { code: "code", capture: "capture", checking: "checking" };
 
@@ -56,9 +56,8 @@ export function ClaimFlow(props: ClaimFlowProps) {
   const reminders = [tag ? "Tag" : "Label", cutInHalf(props.spec) ? "Cut in half" : "Destroyed", `Code ${code}`];
   const framing = { thing: tag ? "tag" : "label", product: (tag && taggedThing(props.spec)) || `${cutInHalf(props.spec) ? "cut" : "destroyed"} product` };
 
-  const moved = useRef(false);
+  // On arrival too: the first step loads by a full navigation (a form post, a redirect), which leaves focus on the body.
   useEffect(() => {
-    if (!moved.current) return;
     document.getElementById(phase === "capture" && demo ? "sample-title" : TITLE[phase])?.focus({ preventScroll: true });
   }, [phase, demo]);
 
@@ -66,7 +65,6 @@ export function ClaimFlow(props: ClaimFlowProps) {
   useEffect(() => () => void (photoUrl?.startsWith("blob:") && URL.revokeObjectURL(photoUrl)), [photoUrl]);
 
   const go = (next: Phase) => {
-    moved.current = true;
     setPhase(next);
     window.scrollTo({ top: 0 });
   };

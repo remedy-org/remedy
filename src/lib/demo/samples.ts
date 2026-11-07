@@ -57,7 +57,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
   },
   {
     id: "ai-no-session",
-    title: "An AI image, sent in",
+    title: "An uploaded photo",
     description: "An AI-made photo of the real Kikea pillow, cut, with someone else's code on the tag. It should never reach the model: it wasn't taken in this claim's live camera session.",
     photos: ["/demo/c08-1.jpg"],
     code: null,

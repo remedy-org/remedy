@@ -23,7 +23,8 @@ export function FlowShell({ children, demo, sandbox, company }: FlowShellProps) 
       <header className="border-b border-line">
         <div className="page flex h-16 items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <Wordmark href="/" />
+            {/* Below 360px the demo's header holds the mark, SANDBOX, the judges' pill and the theme toggle: the name gives way. */}
+            <Wordmark href="/" nameClassName={demo ? "max-[359px]:sr-only" : undefined} />
             {(demo || sandbox) && (
               <span className="micro inline-flex h-6 shrink-0 items-center rounded-control border border-line-strong px-2 whitespace-nowrap text-muted">
                 Sandbox<span className={demo ? "max-[399px]:hidden" : "hidden"}>&nbsp;demo</span>

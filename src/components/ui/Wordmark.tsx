@@ -8,6 +8,8 @@ export interface WordmarkProps {
   /** Wrap in a link, usually "/". */
   href?: string;
   className?: string;
+  /** On the name only, e.g. to hide it visually where a header has no room (the link keeps its label). */
+  nameClassName?: string;
 }
 
 /*
@@ -47,7 +49,7 @@ export function RemedyMark({ className }: { className?: string }) {
  * Lockup: Schibsted Grotesk (the site's sans) 600 at -0.025em. The mark is the cap height (0.703em) plus a 0.012em
  * overshoot above and below, so its top lines up with the R and its foot with the baseline; 0.3em from the name.
  */
-export function Wordmark({ size = "sm", href, className }: WordmarkProps) {
+export function Wordmark({ size = "sm", href, className, nameClassName }: WordmarkProps) {
   const body = (
     <span
       className={clsx(
@@ -57,12 +59,12 @@ export function Wordmark({ size = "sm", href, className }: WordmarkProps) {
       )}
     >
       <RemedyMark className="relative top-[0.012em] h-[0.727em] w-[1.09em]" />
-      Remedy
+      {nameClassName ? <span className={nameClassName}>Remedy</span> : "Remedy"}
     </span>
   );
   if (!href) return body;
   return (
-    <Link href={href} aria-label="Remedy, home" className="inline-flex min-h-11 items-center rounded-control">
+    <Link href={href} aria-label="Remedy, home" className="inline-flex min-h-11 min-w-11 items-center rounded-control">
       {body}
     </Link>
   );

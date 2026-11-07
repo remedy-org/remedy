@@ -16,6 +16,8 @@ export interface StepMeterProps {
   outcome?: StepOutcome;
   /** Phones on the camera step: hidden (still read out), so the camera gets the whole screen; it shows its own chip. */
   compact?: boolean;
+  /** The recall screen: the meter spans its two columns instead of the centred 640px frame. */
+  span?: boolean;
 }
 
 // The word the step takes in place of its name, so the outcome is never shown by colour alone.
@@ -30,14 +32,15 @@ export function resultMeter(decision: Decision, steps: readonly string[]): Pick<
 /**
  * The steps of a claim as hairline segments: done and current in text colour (the current one fills in), the rest
  * faint. From 640px a quiet mono counter, "2/4", leads them. One frame on every step (640px, centred), so the meter never
- * moves between steps; only the content under it changes width.
+ * moves between steps; only the content under it changes width. The recall screen's two columns are wider than that
+ * frame, so there it spans them.
  */
-export function StepMeter({ current, steps = REAL_STEPS, outcome, compact }: StepMeterProps) {
+export function StepMeter({ current, steps = REAL_STEPS, outcome, compact, span }: StepMeterProps) {
   const at = Math.min(current, steps.length);
   const label = `Step ${at} of ${steps.length}`;
   const end = outcome ? OUTCOME[outcome] : null;
   return (
-    <div className={clsx("mx-auto flex w-full max-w-[40rem] items-end gap-4", compact && "max-sm:sr-only")}>
+    <div className={clsx("mx-auto flex w-full items-end gap-4", !span && "max-w-[40rem]", compact && "max-sm:sr-only")}>
       <span aria-hidden="true" className="micro w-7 shrink-0 text-faint tabular-nums max-sm:hidden">
         <span className="text-text">{at}</span>/{steps.length}
       </span>

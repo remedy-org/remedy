@@ -288,6 +288,14 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /* A phone's pinned action bar (MobileCta, a step's sticky bar) is about 6rem tall: whatever focus or a scroll brings
+     into view stops above it, never under it. */
+  @media (width < 40rem) {
+    html:has([data-mobile-cta], [data-action-bar]) {
+      scroll-padding-bottom: 6rem;
+    }
+  }
+
   body {
     background: var(--bg);
     color: var(--text);
