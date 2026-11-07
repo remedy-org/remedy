@@ -5,7 +5,7 @@ import type { Reason } from "@/lib/types";
 import { duplicateFor, toDrawerClaim } from "./drawer";
 import { PublishInput, RefundValue, slugify, summarizeCpsc, uniqueSlug } from "./recalls";
 import { buildReport } from "./report";
-import { companyReasonText, decisionSentence, formatCents, maskPayer, percent, preChecksOf, reasonOf, statsOf, toRow } from "./view";
+import { companyReasonText, decisionSentence, duration, formatCents, maskPayer, median, percent, preChecksOf, reasonOf, statsOf, toRow } from "./view";
 import cpsc27071 from "@/lib/__fixtures__/cpsc-27071.json";
 import { CpscRecord } from "@/lib/cpsc";
 
@@ -208,6 +208,21 @@ describe("console view", () => {
     const checks = toDrawerClaim(claim, recall).checks;
     expect(checks.find((c) => c.id === "same_item")?.evidence).toBe("Cannot be confirmed from the close-up alone.");
     expect(checks.find((c) => c.id === "screen")?.evidence).toBeNull();
+  });
+});
+
+describe("timing", () => {
+  it("takes the middle time, the faster of the two middle ones for an even count, as Insights' median does", () => {
+    expect(median([])).toBeNull();
+    expect(median([4007, 3, 2])).toBe(3);
+    expect(median([2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4007])).toBe(3);
+    expect(median([4, 3, 2, 4007])).toBe(3);
+  });
+
+  it("prints a duration as a clock, and in hours and minutes past an hour", () => {
+    expect(duration(3)).toBe("0:03");
+    expect(duration(448)).toBe("7:28");
+    expect(duration(4007)).toBe("1h 06m");
   });
 });
 

@@ -1,7 +1,8 @@
 import type { AgBaseWidgetDefinition, AgDefaultRegistry, AgFormatShapeParams, AgWidgetData, AgWidgetDataFormat, AgWidgetsConfig, AgWidgetFormParams } from "ag-studio";
 import { CheckFunnel } from "./CheckFunnel";
 import { DecisionMix } from "./DecisionMix";
-import type { CheckFunnelDef, DecisionMixDef, InsightsRegistry, RecallProgressDef, RefusalReasonsDef } from "./defs";
+import type { CheckFunnelDef, DecisionMixDef, InsightsRegistry, MedianTimeDef, RecallProgressDef, RefusalReasonsDef } from "./defs";
+import { MedianTime } from "./MedianTime";
 import { RecallProgress } from "./RecallProgress";
 import { RefusalReasons } from "./RefusalReasons";
 import { reactComp } from "../reactComp";
@@ -156,8 +157,37 @@ export const insightsWidgets =
           configuration: "Map decision to claims.decision and count to countd(claims.id).",
         },
       },
+      {
+        id: "median-time",
+        label: "Median time",
+        dataMapping: {
+          per: { type: "field", supportedRoles: ["category"], requires: { cardinality: "many" }, required: true, aiDescription: "One row per claim: claims.id." },
+          seconds: {
+            type: "field",
+            supportedRoles: ["numeric"],
+            requires: { cardinality: "one" },
+            required: true,
+            aiDescription: "That claim's time in seconds: max(claims.timeToSendSec), max(claims.timeToPaySec) or max(claims.modelSec).",
+          },
+        },
+        formatShape,
+        form: (params: AgWidgetFormParams<MedianTimeDef>) =>
+          titles(params, [
+            { key: "per", label: "Per" },
+            { key: "seconds", label: "Seconds" },
+          ]),
+        comp: reactComp(MedianTime),
+        defaultSize: { width: 280, height: 120 },
+        minSize: { width: 200, height: 100 },
+        ai: {
+          label: "Median time",
+          description: "One median duration as a KPI tile (\"0:03\", \"1h 06m\"), computed the way the Claims page's ledger computes it.",
+          usage: "Use for a typical time, such as photo to PayPal. Prefer it to an average: one claim a person approved hours later drags an average far from what owners see.",
+          configuration: "Map per to claims.id and seconds to max(claims.timeToSendSec) (payouts really sent), max(claims.timeToPaySec) or max(claims.modelSec).",
+        },
+      },
     ],
-    menu: [{ label: "Remedy", widgetIds: ["recall-progress", "decision-mix", "check-funnel", "refusal-reasons"] }, ...defaults.menu],
+    menu: [{ label: "Remedy", widgetIds: ["recall-progress", "decision-mix", "check-funnel", "refusal-reasons", "median-time"] }, ...defaults.menu],
   });
   return { ...config, widgets: config.widgets.map((w) => (w.id === "grid" ? claimLinks(readOnly(w)) : readOnly(w))) };
 };

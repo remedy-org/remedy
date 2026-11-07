@@ -454,11 +454,48 @@
 
 /*
  * Insights runs AG Studio in edit mode only for the analyst's rail; to a company the report is a set of read-only
- * exhibits. So a hovered or selected widget gets no editor frame, no resize handles and no empty toolbar (the keyboard
- * focus ring stays), and a widget's title, exhibit label and caption don't raise a tooltip over the content beneath.
+ * exhibits. So a hovered or selected widget gets no editor frame, no resize handles and no empty toolbar, and a
+ * widget's title, exhibit label and caption don't raise a tooltip over the content beneath.
  */
 .insights-report .ag-studio-layout-widget {
   --ag-studio-layout-widget-resize-border-color: transparent;
+}
+
+/*
+ * The keyboard on the canvas (InsightsStudio names each panel's stop): Tab lands on a panel, which gets the app's amber
+ * ring on its card in place of Studio's grey box, and its header shows the key that goes in; inside, it shows the key
+ * that comes back out. A panel with nothing to operate (a KPI tile) is read, not visited: no stop.
+ */
+.insights-report .ag-studio-layout-widget[data-no-controls] > :is(.ag-tab-guard, .ag-studio-layout-widget-focus-container) {
+  visibility: hidden;
+}
+
+.insights-report .ag-studio-layout-widget.ag-studio-layout-widget-focus,
+.insights-report .ag-studio-layout-widget-focus.ag-studio-layout-widget-editing .ag-studio-layout-widget-overlay {
+  box-shadow: none;
+}
+
+.insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-container {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-header::after,
+.insights-report .ag-studio-layout-widget:has(.ag-studio-layout-widget-content :focus-visible) .ag-studio-layout-widget-header::after {
+  content: "Enter to explore";
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--muted);
+  font: 400 11px/18px var(--font-jetbrains), ui-monospace, monospace;
+}
+
+.insights-report .ag-studio-layout-widget:has(.ag-studio-layout-widget-content :focus-visible) .ag-studio-layout-widget-header::after {
+  content: "Esc back to panels";
 }
 
 .insights-report .ag-studio-layout-widget-overlay-resize,

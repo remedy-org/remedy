@@ -301,11 +301,17 @@ export interface Ledger {
   demos: number;
 }
 
+/** The middle value, or the lower of the two middle ones for an even count: the rule AG Studio's median measure uses,
+ * so the console's ledger and Insights always print the same median. Null for none. */
+export function median(values: number[]): number | null {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted.length ? sorted[(sorted.length - 1) >> 1] : null;
+}
+
 /** The ledger strip over the grid, from the rows the grid shows, so it updates with each poll. */
 export function ledgerOf(rows: ClaimRow[], recall: Pick<Recall, "unitsSold">): Ledger {
   const paid = rows.filter((r) => r.decision === "paid");
-  const times = paid.flatMap((r) => (r.toPay === null ? [] : [r.toPay])).sort((a, b) => a - b);
-  const mid = times.length >> 1;
+  const times = paid.flatMap((r) => (r.toPay === null ? [] : [r.toPay]));
   return {
     total: rows.length,
     remedied: paid.length,
@@ -313,7 +319,7 @@ export function ledgerOf(rows: ClaimRow[], recall: Pick<Recall, "unitsSold">): L
     sampleRemedied: paid.filter((r) => r.seeded).length,
     paidCents: paid.filter((r) => !r.seeded).reduce((s, r) => s + (r.cents ?? 0), 0),
     sampleCents: paid.filter((r) => r.seeded).reduce((s, r) => s + (r.cents ?? 0), 0),
-    medianToPay: times.length ? (times.length % 2 ? times[mid] : Math.round((times[mid - 1] + times[mid]) / 2)) : null,
+    medianToPay: median(times),
     timed: times.length,
     held: rows.filter((r) => r.decision === "held").length,
     refused: rows.filter((r) => r.decision === "rejected" || r.decision === "blocked").length,
@@ -325,6 +331,9 @@ export function ledgerOf(rows: ClaimRow[], recall: Pick<Recall, "unitsSold">): L
 
 /** "0:41", "1:05", "12:00": a duration as a clock. */
 export const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+
+/** "0:41"; "2h 05m" past an hour (a held claim a person approved later). */
+export const duration = (sec: number) => (sec >= 3600 ? `${Math.floor(sec / 3600)}h ${String(Math.floor((sec % 3600) / 60)).padStart(2, "0")}m` : clock(sec));
 
 export interface Stats {
   total: number;

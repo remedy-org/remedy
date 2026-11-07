@@ -56,6 +56,8 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   iconColor: token("muted"),
   rowHoverColor: token("surface-2"),
   invalidColor: token("stop"),
+  // The app's focus ring (DESIGN.md, 2px amber) on everything Studio focuses: grid cells, the analyst's rail, inputs.
+  focusShadow: `0 0 0 2px ${token("accent")}`,
   borderRadius: 6,
   tooltipBackgroundColor: token("surface-2"),
   tooltipTextColor: token("text"),

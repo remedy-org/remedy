@@ -5,6 +5,12 @@ import type { InsightsRegistry } from "./widgets";
 // The Insights report as Studio state: one page on the 24-column canvas (rows of 16px). Field ids refer to the data
 // sources in ./sources.ts. Subtitles are exhibit labels, lettered in reading order.
 
+/** A panel's name for the keyboard: its title and exhibit letter ("Decisions, Exhibit B"), or its title alone. */
+export function panelName(title: string, subtitle: string) {
+  const exhibit = subtitle.match(/^EXHIBIT (\w+)/)?.[1];
+  return exhibit ? `${title}, Exhibit ${exhibit}` : title;
+}
+
 const at = (xTrack: number, yTrack: number, xSpan: number, ySpan: number): AgWidgetLayoutState => ({ xTrack, yTrack, xSpan, ySpan });
 const titled = (text: string, exhibit?: string) => ({
   title: { enabled: true, text },
@@ -14,7 +20,7 @@ const count = { id: "claims.id", aggregation: "countd" as const };
 const sum = (id: string) => ({ id, aggregation: "sum" as const });
 
 // Plain value tiles: the claims span a few days, so a day sparkline says little, and its bars ran into the number.
-const kpi = (text: string, value: { id: string; aggregation?: "sum" | "avg" | "countd" }, caption: string) => ({
+const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }, caption: string) => ({
   type: "value" as const,
   dataMapping: { value: [value] },
   format: {
@@ -32,15 +38,17 @@ const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" 
 
 /**
  * How many paid claims there are, how many of them are samples that never sent money to a real owner, what those
- * samples would have paid, and how many claims the model answered (for the timing tile when nothing was sent).
+ * samples would have paid, how many sent payouts waited for a person's review, and how many claims the model answered
+ * (for the timing tile when nothing was sent).
  */
-export function provenance(claims: Pick<InsightsData["claims"][number], "decision" | "source" | "amountPaid" | "modelSec">[]) {
+export function provenance(claims: Pick<InsightsData["claims"][number], "decision" | "source" | "amountPaid" | "modelSec" | "paidOnReview">[]) {
   const paid = claims.filter((c) => c.decision === "Paid");
   const samples = paid.filter((c) => c.source === "Sample");
   return {
     paid: paid.length,
     samples: samples.length,
     sampleAmount: samples.reduce((n, c) => n + c.amountPaid, 0),
+    reviewed: paid.filter((c) => c.source !== "Sample" && c.paidOnReview).length,
     answered: claims.filter((c) => c.modelSec !== null).length,
   };
 }
@@ -48,9 +56,10 @@ export function provenance(claims: Pick<InsightsData["claims"][number], "decisio
 /**
  * The captions under the money and timing tiles say where their numbers come from, in the console ledger's words: the
  * money tile counts only what was really sent through PayPal, with the samples' amount beside it as never sent; the
- * timing tile times only payouts really sent, and with none it shows the model's own answer time instead.
+ * timing tile is the ledger's median over payouts really sent (a claim that waited hours for a person would drag an
+ * average to minutes), says how many of them waited, and with none sent it shows the model's own answer time instead.
  */
-export function captions({ paid, samples, sampleAmount, answered }: ReturnType<typeof provenance>) {
+export function captions({ paid, samples, sampleAmount, reviewed, answered }: ReturnType<typeof provenance>) {
   const all = paid > 0 && samples === paid;
   const some = samples > 0 && !all;
   const share = `${samples} of ${paid} are samples`;
@@ -59,21 +68,39 @@ export function captions({ paid, samples, sampleAmount, answered }: ReturnType<t
     remedied: all ? "Sample claims · never sent" : some ? `Paid claims · ${share}` : "Paid claims",
     // The tile title already says sandbox; the caption must fit one line of the tile at 1440 (about 200px).
     paid: samples ? `${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
-    timeTitle: sent ? "Avg photo to PayPal" : "Avg photo check",
+    timeTitle: sent ? "Median photo to PayPal" : "Median photo check",
     timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
-    time: sent ? `Average of ${sent} sent ${sent === 1 ? "payout" : "payouts"}` : `None sent yet · ${answered} ${answered === 1 ? "claim" : "claims"} checked`,
-    timeExhibit: samples ? "EXHIBIT E · AVERAGE SECONDS · SAMPLE TIMINGS" : "EXHIBIT E · AVERAGE SECONDS, PAID CLAIMS",
+    time: !sent
+      ? `None sent yet · ${answered} ${answered === 1 ? "claim" : "claims"} checked`
+      : reviewed
+        ? `${sent} sent · ${reviewed} after a person's review`
+        : `Median of ${sent} sent ${sent === 1 ? "payout" : "payouts"}`,
+    // The chart's axis counts plain seconds; its tooltip reads "0:12".
+    timeExhibit: samples ? "EXHIBIT E · MEDIAN SECONDS · SAMPLE TIMINGS" : "EXHIBIT E · MEDIAN SECONDS, PAID CLAIMS",
   };
 }
 
+/**
+ * Rows (16px each) for the row Exhibits C and D share, tall enough to list every refusal reason with none cut off at the
+ * card's foot: a reason takes about 39px, and the 22-row minimum leaves 224px for the list on a 1280px laptop, where
+ * the card's intro wraps.
+ */
+export const refusalRows = (reasons: number) => Math.max(22, 22 + Math.ceil((reasons * 39 - 224) / 16));
+
 const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
   const say = captions(provenance(data.claims));
+  const tall = refusalRows(new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size);
   return {
     id: "overview",
     widgets: {
       "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), say.remedied),
       "kpi-paid": kpi("Paid through PayPal (sandbox)", sum("claims.amountSent"), say.paid),
-      "kpi-median": kpi(say.timeTitle, { id: `claims.${say.timeField}`, aggregation: "avg" }, say.time),
+      // Studio's value tile can only average; the ledger's median comes from a widget of Remedy's own.
+      "kpi-median": {
+        type: "median-time",
+        dataMapping: { per: [{ id: "claims.id" }], seconds: [{ id: `claims.${say.timeField}`, aggregation: "max" }] },
+        format: { title: { enabled: true, text: say.timeTitle }, caption: { enabled: true, text: say.time } },
+      },
       "kpi-refused": kpi("Refused", sum("claims.refused"), "Rejected or blocked"),
       progress: {
         type: "recall-progress",
@@ -112,7 +139,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
         type: "column-chart-grouped",
         dataMapping: {
           categoryKey: [{ id: "calendar::day" }],
-          valueKey: [{ id: "claims.timeToPaySec", aggregation: "avg" }],
+          valueKey: [{ id: "medianToPaySec" }],
         },
         format: titled("Photo to PayPal, by day", say.timeExhibit),
       },
@@ -134,11 +161,11 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
       "kpi-refused": at(18, 0, 6, 8),
       progress: at(0, 8, 16, 15),
       decisions: at(16, 8, 8, 15),
-      funnel: at(0, 23, 14, 22),
-      refusals: at(14, 23, 10, 22),
+      funnel: at(0, 23, 14, tall),
+      refusals: at(14, 23, 10, tall),
       // The ledger closes the page across the full width, so a reason reads whole instead of stopping mid-word.
-      "time-to-pay": at(0, 45, 24, 16),
-      claims: at(0, 61, 24, 28),
+      "time-to-pay": at(0, 23 + tall, 24, 16),
+      claims: at(0, 39 + tall, 24, 28),
     },
   };
 };

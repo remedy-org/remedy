@@ -1,4 +1,5 @@
 import type { AgDataSourcesDefinition, AgFieldDefinition, AgFormat } from "ag-studio";
+import { duration } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
 import type { InsightsRegistry } from "./widgets/defs";
 
@@ -12,7 +13,8 @@ type Spec = [id: string, name: string, format: AgFormat, extra?: Partial<AgField
 const fields = (specs: Spec[]): AgFieldDefinition[] => specs.map(([id, name, format, extra]) => ({ id, name, format, ...extra }));
 
 const usd = { formatOptions: { format: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }) } };
-const secs = { formatOptions: { format: new Intl.NumberFormat("en-US", { style: "unit", unit: "second", unitDisplay: "narrow", maximumFractionDigits: 0 }) } };
+// Durations read as the console's do: "0:03", "1h 06m".
+const secs = { createValueFormatter: () => (v: number | null | undefined) => (typeof v === "number" && Number.isFinite(v) ? duration(Math.round(v)) : "") };
 const whole = { formatOptions: { format: new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }) } };
 
 const HONESTY =
@@ -52,6 +54,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["held", "Held", "integerFormat", { ...whole, description: "1 when the claim waits for a person." }],
           ["timeToPaySec", "Photo to PayPal", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the payout being sent. Paid claims only; a sample claim's are sample timings." }],
           ["timeToSendSec", "Photo to PayPal, sent", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to a payout really sent through PayPal. Blank for sample claims." }],
+          ["paidOnReview", "Paid on review", "integerFormat", { ...whole, description: "1 when the claim was paid only after a person approved it on review; its time to pay includes that wait." }],
           ["modelSec", "Photo check time", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the model's answer." }],
           ["photoCount", "Photos", "integerFormat"],
           ["payoutStatus", "PayPal status", "textFormat", { description: "PayPal's own payout status: SUCCESS, PENDING, UNCLAIMED and so on." }],
@@ -90,6 +93,20 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
     relationships: [
       { id: "check-claim", source: { tableId: "checks", fieldId: "claimId" }, target: { tableId: "claims", fieldId: "id" }, type: "many-to-one" },
       { id: "claims-filedAt-calendar", source: { tableId: "claims", fieldId: "filedAt" }, target: { calendarId: CALENDAR_ID }, truncate: "day" },
+    ],
+    // Studio's aggregations have no median, and an average of payouts that take seconds turns into minutes with one
+    // claim a person approved later. This measure works under a grouping (Exhibit E, by day); a value tile asks for it
+    // ungrouped and gets nothing, so the KPI tile uses the median-time widget instead.
+    expressions: [
+      {
+        id: "medianToPaySec",
+        name: "Median photo to PayPal",
+        description: "Median seconds from photos to payout sent, over paid claims (a sample claim's are sample timings). Use it grouped, by day or by source; for one overall figure use the Median time widget.",
+        isMeasure: true,
+        format: "decimalFormat",
+        expression: { operator: "median", inputs: [{ id: "claims.timeToPaySec" }] },
+        ...secs,
+      },
     ],
     calendars: [
       {

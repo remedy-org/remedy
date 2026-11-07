@@ -4,7 +4,7 @@ import type { AgStudioApi } from "ag-studio";
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { InsightsData } from "@/app/console/insights/facts";
 import { buildAnalyst } from "./analyst";
-import { insightsReport } from "./report";
+import { insightsReport, panelName } from "./report";
 import { buildSources } from "./sources";
 import lib from "./studio-lib";
 import { buildTheme } from "./theme";
@@ -59,6 +59,29 @@ function fonts() {
   return { sans: stack("--font-schibsted", "ui-sans-serif, system-ui, sans-serif"), mono: stack("--font-jetbrains", "ui-monospace, Menlo, monospace") };
 }
 
+// Studio's keyboard model for the canvas: Tab goes from panel to panel, Enter goes into a panel's controls and Esc comes
+// back out. Studio leaves those stops unnamed, so each is named for its panel ("Decisions, Exhibit B") and says the
+// keys (globals.css draws the amber ring and shows them); a panel with nothing to operate, a KPI tile, leaves the Tab
+// order. Re-run whenever Studio redraws a panel.
+const PANEL_KEYS = "insights-panel-keys";
+const CONTROLS = "a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex='-1'])";
+
+function namePanels(root: HTMLElement) {
+  const set = (el: HTMLElement, name: string, value: string) => el.getAttribute(name) !== value && el.setAttribute(name, value);
+  for (const panel of root.querySelectorAll<HTMLElement>(".ag-studio-layout-widget")) {
+    const stop = panel.querySelector<HTMLElement>(":scope > .ag-studio-layout-widget-focus-container");
+    const content = panel.querySelector(".ag-studio-layout-widget-content");
+    if (!stop || !content) continue;
+    const text = (cls: string) => panel.querySelector(`.ag-studio-layout-widget-${cls}`)?.textContent?.trim() ?? "";
+    set(stop, "role", "group");
+    set(stop, "aria-label", panelName(text("title"), text("subtitle")) || "Panel");
+    set(stop, "aria-describedby", PANEL_KEYS);
+    // Studio's tab guards hand focus to the stop, so globals.css takes both out of the Tab order.
+    const inert = !content.querySelector(CONTROLS);
+    if (panel.hasAttribute("data-no-controls") !== inert) panel.toggleAttribute("data-no-controls", inert);
+  }
+}
+
 // Below 1024px Studio's canvas doesn't reflow, so the page shows a summary instead and the rail takes the full width.
 const wide = {
   subscribe(onChange: () => void) {
@@ -109,7 +132,12 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
       { modules: [lib.AgStudioAiModule] },
     );
     api.current = studio;
+    const root = host.current;
+    namePanels(root);
+    const panels = new MutationObserver(() => namePanels(root));
+    panels.observe(root, { childList: true, subtree: true });
     return () => {
+      panels.disconnect();
       api.current = null;
       studio.destroy();
     };
@@ -121,5 +149,12 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
 
   // Studio sets its widget titles in 700, outside DESIGN.md's 400/500/600; the theme's title weight doesn't reach them.
   // insights-report (globals.css) takes Studio's editor chrome off the read-only exhibits.
-  return <div ref={host} className="insights-report h-full w-full [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!" />;
+  return (
+    <>
+      <div ref={host} className="insights-report h-full w-full [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!" />
+      <p id={PANEL_KEYS} hidden>
+        Press Enter to use this panel&apos;s controls, and Escape to come back out.
+      </p>
+    </>
+  );
 }

@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { duration, median } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
 import { Money } from "@/components/ui";
 import { funnel, KIND_LABEL } from "./funnel";
@@ -10,15 +11,14 @@ import { captions, provenance } from "./report";
 export function MobileSummary({ data }: { data: InsightsData }) {
   const sum = (k: "remedied" | "refused" | "amountSent") => data.claims.reduce((n, c) => n + c[k], 0);
   const say = captions(provenance(data.claims));
-  const times = data.claims.map((c) => c[say.timeField]).filter((t): t is number => t !== null);
-  const avg = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null;
+  const mid = median(data.claims.map((c) => c[say.timeField]).filter((t): t is number => t !== null));
   const steps = funnel(data.claims);
   const filed = steps[0].reached || 1;
 
   const kpis = [
     { label: "Units remedied", value: sum("remedied"), note: say.remedied },
     { label: "Paid through PayPal (sandbox)", value: <Money value={sum("amountSent")} size="inline" />, note: say.paid },
-    { label: say.timeTitle, value: avg === null ? "—" : `${avg}s`, note: say.time },
+    { label: say.timeTitle, value: mid === null ? "—" : duration(mid), note: say.time },
     { label: "Refused", value: sum("refused"), note: "Rejected or blocked" },
   ];
 

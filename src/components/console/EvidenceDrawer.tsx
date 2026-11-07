@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObjec
 import { Button, CheckProgress, CrossIcon, ErrorState, ExhibitLabel, Skeleton, SkeletonText, StatusPill, type CheckState } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
-import type { PreCheckState } from "@/app/console/_lib/view";
+import { duration, type PreCheckState } from "@/app/console/_lib/view";
 import { api } from "./api";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { formatClock, formatTime } from "./format";
@@ -357,7 +357,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
               </span>
               <span className={clsx("truncate text-micro", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
               <span className="font-mono text-micro text-muted tabular-nums">
-                {!done ? <span className="text-faint">—</span> : i === 0 || s.failed ? formatClock(s.at!) : `+${plus} s`}
+                {!done ? <span className="text-faint">—</span> : i === 0 || s.failed ? formatClock(s.at!) : `+${duration(plus!)}`}
               </span>
             </li>
           );

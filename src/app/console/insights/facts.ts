@@ -75,6 +75,8 @@ export interface ClaimFact {
   timeToPaySec: number | null;
   /** The same, for payouts really sent through PayPal only; null for a sample claim. */
   timeToSendSec: number | null;
+  /** 1 when it was paid only after a person approved it on review: its time to pay includes the wait for that person. */
+  paidOnReview: number;
   /** Seconds from the photos arriving to the model's answer; null when the model never ran. */
   modelSec: number | null;
   photoCount: number;
@@ -177,6 +179,7 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     held: c.decision === "held" ? 1 : 0,
     timeToPaySec: c.decision === "paid" ? seconds(photosIn, at(c, "payout_sent")) : null,
     timeToSendSec: c.decision === "paid" && !c.seeded ? seconds(photosIn, at(c, "payout_sent")) : null,
+    paidOnReview: c.decision === "paid" && c.reasons.some((r) => r.check === "review" && r.outcome === "pass") ? 1 : 0,
     modelSec: seconds(photosIn, at(c, "checked")),
     photoCount: c.photos.length,
     payoutStatus: c.payout?.status ?? null,

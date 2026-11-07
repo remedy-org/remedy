@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { StatusPill } from "@/components/ui";
-import { barsSentence, clock, type BarState, type CheckBar, type ClaimRow, type RowTimeline } from "@/app/console/_lib/view";
+import { barsSentence, duration, type BarState, type CheckBar, type ClaimRow, type RowTimeline } from "@/app/console/_lib/view";
 import { formatClock, formatTime } from "./format";
 
 // The claims grid's cells (DESIGN.md "AG Grid", UI-SPEC §3.3). Every cell renders from the index row alone; nothing
@@ -171,9 +171,6 @@ const SCALE = 120;
 // 92px wide, so the track and a "1:05" chip fit the 168px column (144px inside its padding).
 const W = 92;
 const x = (sec: number) => 4 + (Math.min(sec, SCALE) / SCALE) * (W - 8);
-
-/** "0:41"; "2h 05m" past an hour (a held claim a person approved later). */
-export const duration = (sec: number) => (sec >= 3600 ? `${Math.floor(sec / 3600)}h ${String(Math.floor((sec % 3600) / 60)).padStart(2, "0")}m` : clock(sec));
 
 /** A 92x12 track from the photos arriving: dots where the model answered, the rule decided, PayPal sent and PayPal
  * settled, on a 0 to 120 s scale. Held ends on a hollow blue dot (a person decides), refused on a red tick. */

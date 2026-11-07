@@ -104,6 +104,11 @@ describe("claimFact", () => {
     const blocked: Claim = { ...base, decision: "blocked", payout: null, reasons: [{ check: "session", outcome: "reject", text: "x" }] };
     expect(claimFact(blocked, recall)).toMatchObject({ stage: "Photos sent", stopReason: "Photos outside the live camera session", refused: 1, amountPaid: 0 });
   });
+  it("marks a claim paid only after a person approved it, so its wait is named and not hidden in a median", () => {
+    const approved: Claim = { ...base, seeded: false, reasons: [...base.reasons, { check: "review", outcome: "pass", text: "Approved on review by Kikea" }] };
+    expect(claimFact(approved, recall).paidOnReview).toBe(1);
+    expect(claimFact({ ...base, seeded: false }, recall).paidOnReview).toBe(0);
+  });
   it("stops a claim with no photos at Filed", () => {
     const pending: Claim = { ...base, decision: "pending", photos: [], payout: null, reasons: [], verdict: null };
     expect(claimFact(pending, recall)).toMatchObject({ stage: "Filed", stopReason: "No photos yet", decision: "In progress" });

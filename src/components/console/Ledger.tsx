@@ -1,7 +1,6 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { formatCents, percent, type Ledger as LedgerData } from "@/app/console/_lib/view";
-import { duration } from "./cells";
+import { duration, formatCents, percent, type Ledger as LedgerData } from "@/app/console/_lib/view";
 import { formatCount } from "./format";
 
 function Item({ value, label, title, className, children }: { value: ReactNode; label: ReactNode; title?: string; className?: string; children?: ReactNode }) {

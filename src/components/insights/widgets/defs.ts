@@ -1,6 +1,6 @@
 import type { AgDefaultWidgetDefinition, AgTypeScriptRegistry, AgTypeScriptWidgetDefinition, AgWidgetDataFormat, AgWidgetFieldReference } from "ag-studio";
 
-// The four custom widget types, as Studio's registry sees them.
+// The five custom widget types, as Studio's registry sees them.
 
 export interface RecallProgressDef {
   type: "recall-progress";
@@ -27,6 +27,13 @@ export interface DecisionMixDef {
   format?: AgWidgetDataFormat<Record<string, never>>;
 }
 
+export interface MedianTimeDef {
+  type: "median-time";
+  /** per: one row each (claims.id); seconds: that row's time, e.g. max(claims.timeToSendSec). */
+  dataMapping: { per: AgWidgetFieldReference[]; seconds: AgWidgetFieldReference[] };
+  format?: AgWidgetDataFormat<Record<string, never>>;
+}
+
 export interface InsightsRegistry extends AgTypeScriptRegistry {
   widgets: readonly (
     | AgDefaultWidgetDefinition
@@ -34,6 +41,7 @@ export interface InsightsRegistry extends AgTypeScriptRegistry {
     | AgTypeScriptWidgetDefinition<"check-funnel", CheckFunnelDef>
     | AgTypeScriptWidgetDefinition<"refusal-reasons", RefusalReasonsDef>
     | AgTypeScriptWidgetDefinition<"decision-mix", DecisionMixDef>
+    | AgTypeScriptWidgetDefinition<"median-time", MedianTimeDef>
   )[];
 }
 
