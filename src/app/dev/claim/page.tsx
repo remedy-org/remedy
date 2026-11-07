@@ -209,7 +209,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "demo-capture": { group: "Camera", note: "Demo: the sample in the viewfinder", render: () => flow({ sample: genuine, preview: { phase: "capture" } }) },
   "demo-capture-wrong-code": { group: "Camera", note: "Demo: the wrong code, its tag reading another", render: () => flow({ sample: wrongCode, preview: { phase: "capture" } }, { ...fx.open, code: "K7P" }) },
   "demo-capture-ai": { group: "Camera", note: "Demo: the AI image, sent from outside", render: () => flow({ sample: demoSample("ai-no-session"), preview: { phase: "capture" } }, { ...fx.open, code: "H6W" }) },
-  checking: { group: "Checking", note: "Exhibit A read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
+  checking: { group: "Checking", note: "Photo 1 read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
   "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
   "checking-slow": { group: "Checking", note: "Past 40 s: taking longer than usual", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 47 }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
   "checking-offline": { group: "Checking", note: "Polling lost the connection", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 21, offline: true }, photoUrl: fx.paid.photoUrls[0] } }, fx.checkingModel) },
@@ -233,8 +233,12 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "review-asked": { group: "Result", note: "Held: the owner asked a person to look", render: () => result(fx.reviewAsked) },
   "rejected-screen": { group: "Result", note: "Rejected: photo of a screen", render: () => result(fx.rejectedScreen) },
   blocked: { group: "Result", note: "Blocked: outside the camera session", render: () => result(fx.blocked) },
-  "blocked-duplicate": { group: "Result", note: "Blocked: a reposted photo", render: () => result(fx.blockedDuplicate) },
-  "blocked-account": { group: "Result", note: "Blocked: repost from a paid account", render: () => result(fx.blockedAccount) },
+  "blocked-duplicate": { group: "Result", note: "Blocked: another account's photo, reposted", render: () => result(fx.blockedDuplicate) },
+  "blocked-account": {
+    group: "Result",
+    note: "Blocked: repost from a paid account, its earlier claim beside it",
+    render: () => result(fx.blockedAccount, { duplicate: { photo: 1, earlier: { id: "RM-0412", n: 1, src: "/demo/c02-1.jpg" } } }),
+  },
   "demo-paid": {
     group: "Result",
     note: "Demo: genuine sample paid, next sample",
@@ -254,7 +258,12 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "demo-done": {
     group: "Result",
     note: "Demo: the repost, all four run",
-    render: () => result(fx.blockedDuplicate, { sample: reposted, round: fx.roundAfter(["genuine", "wrong-code", "ai-no-session", "reposted"]) }),
+    render: () =>
+      result(fx.blockedDuplicate, {
+        sample: reposted,
+        round: fx.roundAfter(["genuine", "wrong-code", "ai-no-session", "reposted"]),
+        duplicate: { photo: 1, earlier: { id: "RM-0412", n: 1, src: reposted.photos[0] } },
+      }),
   },
   loading: { group: "States", note: "Loading skeleton: a step", render: () => <FlowSkeleton /> },
   "loading-recall": { group: "States", note: "Loading skeleton: the recall screen", render: () => <FlowSkeleton wide /> },

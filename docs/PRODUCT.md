@@ -91,7 +91,7 @@ Empty, loading, error, partial and success. Examples: a console with no claims y
   | Evidence drawer with one photo | 4 | 3 |
   | Camera step poll | 2 every 3 s, up to 400 a session | 1 every 5 s while visible, up to 144 |
   | Checking step poll | 2 every 1.5 s, about 22 a check | 1 every 2 s, about 8 |
-  | Claim page, recall page | 3, 4 | 1 (+1 per result photo on its first view), 0 (an unknown slug: 1 at most every 10 s per instance) |
+  | Claim page, recall page | 3, 4 | 1 (+1 per result photo on its first view; +1 for a refused repost, to find the earlier claim), 0 (an unknown slug: 1 at most every 10 s per instance) |
   | Sample picker | 3 + up to 12 | 1 |
   | Start a demo claim | 5 (+1, +1 per sent sample, for the repost) | 3 (+1 for the repost) |
   | Photos upload and check | 15 | 13 (+1 photo read) |

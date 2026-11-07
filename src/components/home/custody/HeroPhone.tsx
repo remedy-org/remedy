@@ -43,7 +43,7 @@ export function HeroPhone() {
             </span>
             <span className="flex flex-col">
               <span className="text-ui">All checks passed</span>
-              <span className="font-mono text-micro text-faint uppercase">Exhibit A · AI-made test photo</span>
+              <span className="font-mono text-micro text-faint uppercase">Photo 1 · AI-made test photo</span>
             </span>
           </div>
         </div>

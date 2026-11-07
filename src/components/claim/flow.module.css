@@ -21,7 +21,7 @@
     animation: draw var(--draw-ms, 360ms) var(--ease-out-expo) var(--draw-delay, 0ms) both;
   }
 
-  /* The photo check reading Exhibit A: a 1px amber line with a 24px trail, top to bottom and back. */
+  /* The photo check reading photo 1: a 1px amber line with a 24px trail, top to bottom and back. */
   .scan {
     animation: scan 2.8s ease-in-out infinite alternate;
   }

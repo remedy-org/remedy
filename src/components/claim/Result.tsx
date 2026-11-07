@@ -38,6 +38,14 @@ export interface PayoutLive {
   live?: boolean;
 }
 
+/** A refused repost: which of this claim's photos it was, and the earlier claim that has it (null: another account's). */
+export interface Duplicate {
+  /** This claim's photo (1-based), as the camera numbered it. */
+  photo: number;
+  /** The earlier claim and its matching photo (n, 1-based, as its camera numbered it). */
+  earlier: { id: string; src: string; n: number } | null;
+}
+
 /** A demo claim's place in this browser's demo round: what ran, and what to run next. */
 export interface DemoRound {
   runs: RoundRun[];
@@ -54,6 +62,8 @@ export interface ResultProps {
   sample?: DemoSample | null;
   /** Demo: this round's runs, for the scoreboard and "Next sample". */
   round?: DemoRound | null;
+  /** A refused repost's earlier claim, for the side by side. */
+  duplicate?: Duplicate | null;
   /** The server's clock at render (ms): the receipt prints only for a claim decided under a minute ago. */
   now?: number;
   /** The step meter, above the result. */
@@ -314,7 +324,7 @@ function Reasons({ reasons, rows, summary }: { reasons: Claim["reasons"]; rows: 
 
 /* --------------------------------------------------------------------------------------------- Refused */
 
-function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: ResultProps) {
+function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, duplicate }: ResultProps) {
   const blocked = claim.decision === "blocked";
   const reasons = readableReasons(decidingReasons(claim), claim.photos.length);
   const retry = canRetry(reasons);
@@ -345,7 +355,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
 
       {lead === "code" && <CodeDiff code={claim.code} seen={claim.verdict?.challenge_code.text_seen} />}
       {lead === "session" && <Provenance claim={claim} />}
-      {lead === "duplicate_photo" && photoUrls[0] && <DuplicatePair src={photoUrls[0]} sample={Boolean(sample)} />}
+      {lead === "duplicate_photo" && photoUrls[0] && <DuplicatePair claimId={claim.id} photoUrls={photoUrls} duplicate={duplicate ?? null} sample={Boolean(sample)} />}
 
       <Paper variant="sheet" padding="lg">
         <div className="flex items-start justify-between gap-4">
@@ -356,12 +366,12 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
         </div>
         <div className="mt-6 grid gap-6 sm:grid-cols-[8.5rem_minmax(0,1fr)]">
           {photoUrls[0] && lead !== "duplicate_photo" && (
-            <ExhibitPhoto src={photoUrls[0]} alt={`Exhibit A: the ${sample ? "sample" : "first"} photo of claim ${claim.id}`} sample={false} frame="aspect-[3/4]" className="w-32 self-start sm:w-auto" />
+            <ExhibitPhoto src={photoUrls[0]} alt={`Photo 1: the ${sample ? "sample" : "first"} photo of claim ${claim.id}`} sample={false} frame="aspect-[3/4]" className="w-32 self-start sm:w-auto" />
           )}
           <div className={clsx("flex min-w-0 flex-col gap-3", (lead === "duplicate_photo" || !photoUrls[0]) && "sm:col-span-2")}>
             <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">{reasons.length > 1 ? "The reasons" : "The reason"}</h3>
             <Reasons reasons={reasons} rows={rows} />
-            {sample && photoUrls[0] && lead !== "duplicate_photo" && <p className="text-ui text-ink-muted">Exhibit A is an AI-made sample photo.</p>}
+            {sample && photoUrls[0] && lead !== "duplicate_photo" && <p className="text-ui text-ink-muted">Photo 1 is an AI-made sample photo.</p>}
           </div>
         </div>
         <div className="mt-6 flex flex-col gap-1.5 border-t border-dashed border-paper-line pt-4">
@@ -406,7 +416,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
       )}
 
       {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
-      {/* The verdict sheet above already shows Exhibit A and the deciding quote; the rest of the checks wait folded. */}
+      {/* The verdict sheet above already shows photo 1 and the deciding quote; the rest of the checks wait folded. */}
       <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={otherSummary(rows, blocked)} open={false} code={claim.code} />
     </section>
   );
@@ -489,20 +499,39 @@ function Provenance({ claim }: { claim: Pick<Claim, "code" | "events"> }) {
   );
 }
 
-/** A repost: the photo sent, beside the claim that already has it. Nothing about the other claim but that it exists. */
-function DuplicatePair({ src, sample }: { src: string; sample: boolean }) {
+/**
+ * A repost: this claim's photo beside the earlier claim's matching photo, each with its own claim id. Another
+ * account's claim shows neither its photo nor its id: only that it exists.
+ */
+function DuplicatePair({ claimId, photoUrls, duplicate, sample }: { claimId: string; photoUrls: string[]; duplicate: Duplicate | null; sample: boolean }) {
+  const n = duplicate?.photo ?? 1;
+  const earlier = duplicate?.earlier;
   return (
     <figure className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5 sm:p-6">
       <div className="flex items-start justify-center gap-6">
-        {["Your photo", "Already claimed"].map((label, i) => (
-          <div key={label} className="flex flex-col items-center gap-2.5">
-            <ExhibitPhoto src={src} alt={i ? "The same photo, in an earlier claim" : "The photo you sent"} letter={i ? "B" : "A"} frame="aspect-[3/4]" className="w-30" />
-            <span className="micro text-faint">{label}</span>
-          </div>
-        ))}
+        <div className="flex flex-col items-center gap-2.5">
+          <ExhibitPhoto src={photoUrls[n - 1] ?? photoUrls[0]} alt={`Photo ${n} of this claim, ${claimId}`} n={n} frame="aspect-[3/4]" className="w-30" />
+          <span className="flex flex-col items-center gap-0.5 text-center">
+            <span className="micro text-faint">Your photo</span>
+            <span className="font-mono text-micro whitespace-nowrap text-muted">{claimId}</span>
+          </span>
+        </div>
+        <div className="flex flex-col items-center gap-2.5">
+          {earlier ? (
+            <ExhibitPhoto src={earlier.src} alt={`Photo ${earlier.n} of the earlier claim ${earlier.id}, the same picture`} n={earlier.n} frame="aspect-[3/4]" className="w-30" />
+          ) : (
+            <span className="flex aspect-[3/4] w-30 items-center justify-center rounded-control border border-dashed border-line-strong px-3 text-center text-ui text-muted">Another account&apos;s photo</span>
+          )}
+          <span className="flex flex-col items-center gap-0.5 text-center">
+            <span className="micro text-faint">Already claimed</span>
+            <span className="font-mono text-micro whitespace-nowrap text-muted">{earlier ? earlier.id : "Not shown"}</span>
+          </span>
+        </div>
       </div>
       <figcaption className="flex flex-col gap-2 text-ui text-muted">
-        <span>The same picture is already in another claim, so a second refund can&apos;t be paid for it.</span>
+        <span>
+          {earlier ? `Photo ${n} is the same picture as one in claim ${earlier.id}` : `Photo ${n} is the same picture as one in another claim`}, so a second refund can&apos;t be paid for it.
+        </span>
         {sample && <SampleChip className="self-start" />}
       </figcaption>
     </figure>
@@ -560,7 +589,7 @@ function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { ro
             {photoUrls.map((src, i) => (
               // /demo holds only AI-made samples (a dev preview's stand-ins too): any photo from there carries the label.
               // Numbered as the camera numbers them: letters are the judges' samples (A to D).
-              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} letter={String(i + 1)} sample={sample || src.startsWith("/demo/")} />
+              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} n={i + 1} sample={sample || src.startsWith("/demo/")} />
             ))}
           </div>
         )}

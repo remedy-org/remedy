@@ -153,7 +153,7 @@ export default function DevUiPage() {
             <div className="flex max-w-[60ch] flex-col gap-3">
               <p className="text-body text-text">Usually 15 to 40 seconds. Your claim is saved, so you can close this page.</p>
               <p className="text-ui text-muted">Photos are seen only by Remedy and the company running the recall.</p>
-              <p className="micro text-faint">Exhibit A · Code M4T</p>
+              <p className="micro text-faint">Photo 1 · Code M4T</p>
             </div>
           </Spec>
         </Block>

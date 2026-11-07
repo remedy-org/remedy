@@ -352,7 +352,7 @@ function Evidence({ claim, pad, onReview }: { claim: DrawerClaim; pad: string; o
       <Deciding claim={claim} />
       <section className="flex flex-col gap-3" aria-label="Photos">
         <ExhibitLabel leader="right" leaderLength={24}>
-          Exhibit A · {claim.photos.length ? `${claim.photos.length} ${sample ? "sample" : "live"} ${claim.photos.length === 1 ? "photo" : "photos"}` : "No photos yet"}
+          {claim.photos.length ? `${claim.photos.length === 1 ? "Photo 1" : `Photos 1 to ${claim.photos.length}`} · ${sample ? "sample" : "live"}` : "No photos yet"}
         </ExhibitLabel>
         {claim.photos.length ? (
           <div className={claim.photos.length === 1 ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>

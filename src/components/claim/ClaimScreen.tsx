@@ -2,13 +2,13 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import QRCode from "qrcode";
-import { roundClaims } from "@/app/api/claims/_lib/pipeline";
+import { duplicateOf, roundClaims } from "@/app/api/claims/_lib/pipeline";
 import { demoSample, getAppStore, isDemoAllowed, isSandboxBuild } from "@/lib/demo";
 import { env } from "@/lib/env";
 import { getPayoutStatus } from "@/lib/paypal/payouts";
 import { isTerminal, savePayoutStatus } from "@/lib/paypal/status";
 import { getDemoRound, getSession, loginPath } from "@/lib/session";
-import { getRecallBySlug, type Store } from "@/lib/store";
+import { getRecallBySlug, type ClaimSummary, type Store } from "@/lib/store";
 import type { Claim, Recall } from "@/lib/types";
 import { ClaimFlow } from "./ClaimFlow";
 import { ContinueCard } from "./ContinueCard";
@@ -17,7 +17,7 @@ import { FlowShell } from "./FlowShell";
 import { WithJudges } from "./Judges";
 import { checkRows, companyName, maskPayer, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
 import { markAsked } from "./payout-live";
-import { Result, type DemoRound, type PayoutLive } from "./Result";
+import { Result, type DemoRound, type Duplicate, type PayoutLive } from "./Result";
 import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter } from "./StepMeter";
 
 const QR_COLORS = { dark: "#15181d", light: "#ffffff" };
@@ -46,10 +46,11 @@ async function livePayout(store: Store, claim: Claim, now: number): Promise<Payo
   }
 }
 
-// This browser's demo round (the cookie the proxy sets), from index.json: one read, only on a demo claim's result.
-async function demoRound(store: Store, recall: Recall, payerId: string): Promise<DemoRound> {
+// This browser's demo round (the cookie the proxy sets), from index.json (read once by the caller, only on a demo
+// claim's result).
+async function demoRound(all: ClaimSummary[], recall: Recall, payerId: string): Promise<DemoRound> {
   const round = await getDemoRound();
-  const rows = round ? roundClaims(await store.listClaims(), recall.id, round, payerId) : [];
+  const rows = round ? roundClaims(all, recall.id, round, payerId) : [];
   return { runs: rows.filter((r) => r.photoHashes.length > 0 && r.sample).map((r) => ({ sample: r.sample!, decision: r.decision, unanswered: noModelAnswer(r.decision, [r.reason]) })) };
 }
 
@@ -96,7 +97,19 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   if (claim.decision !== "pending") {
     // A demo claim's photos are the sample's own public files: shown from there, they cost no Blob reads.
     const photoUrls = claim.photos.map((_, i) => (sample ? (sample.photos[i] ?? sample.photos[0]) : `/api/claims/${claim.id}/photos/${i + 1}`));
-    const [payout, round] = await Promise.all([livePayout(store, claim, now), sample ? demoRound(store, recall, session.payerId) : null]);
+    // index.json, once: a demo result's round, and the earlier claim a refused repost matched.
+    const reposted = claim.reasons.some((r) => r.check === "duplicate_photo");
+    const [payout, rows] = await Promise.all([livePayout(store, claim, now), sample || reposted ? store.listClaims() : null]);
+    const round = sample && rows ? await demoRound(rows, recall, session.payerId) : null;
+    const match = reposted && rows ? duplicateOf(claim, rows) : null;
+    // Its photo only when it's this account's own claim: another owner's photo and claim id are theirs.
+    const duplicate: Duplicate | null = match && {
+      photo: match.photo,
+      earlier:
+        match.payerId === session.payerId
+          ? { id: match.id, n: match.theirs, src: (match.sample && demoSample(match.sample)?.photos[match.theirs - 1]) || `/api/claims/${match.id}/photos/${match.theirs}` }
+          : null,
+    };
     return (
       <FlowShell demo={demo} sandbox={sandbox} company={company}>
         <Result
@@ -108,6 +121,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           againHref={againHref}
           sample={sample}
           round={round}
+          duplicate={duplicate}
           now={now}
           meter={<StepMeter {...resultMeter(claim.decision, steps)} steps={steps} />}
           sandbox={sandbox}

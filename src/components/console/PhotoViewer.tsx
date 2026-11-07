@@ -20,7 +20,7 @@ export interface PhotoViewerProps {
 }
 
 /**
- * Exhibit A full size, over the console: every photo of the claim side by side, uncropped, with the claim id and the
+ * The photos full size, over the console: every photo of the claim side by side, uncropped, with the claim id and the
  * question that held it on top. ← and → move between the photos, Esc goes back to the panel (the dialog returns focus
  * to the thumbnail that opened it). On a phone it shows one photo at a time.
  */
@@ -66,7 +66,7 @@ export function PhotoViewer({ claimId, photos, start, sample, question, onReview
           <h2 id="viewer-title" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-body font-medium">{claimId}</span>
             <span className="micro text-faint">
-              Exhibit A · {photos.length === 1 ? "1 photo" : `${photos.length} photos`}
+              {photos.length === 1 ? "Photo 1" : `Photos 1 to ${photos.length}`}
               {sample ? " · AI-made test photos" : ""}
             </span>
           </h2>

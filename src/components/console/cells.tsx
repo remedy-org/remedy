@@ -407,7 +407,7 @@ export function PhotoTooltip({ data }: CustomTooltipProps<ClaimRow>) {
     <div className="w-[256px] overflow-hidden rounded-card bg-surface p-2 pb-2.5 shadow-float">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={photo.large} alt={`Photo 1 of ${data.photoCount} for ${data.id}`} width={240} height={180} className="block h-[180px] w-[240px] rounded-control bg-surface-2 object-cover" />
-      <p className="micro mt-2 px-0.5 text-accent-text">Exhibit A · Photo 1 of {data.photoCount}</p>
+      <p className="micro mt-2 px-0.5 text-accent-text">Photo 1 of {data.photoCount}</p>
       <p className="mt-0.5 px-0.5 font-mono text-micro text-faint">
         {data.code ? `Code ${data.code}` : ""}
         {data.code && sample ? " · " : ""}

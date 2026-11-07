@@ -46,7 +46,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
   const { claimId, code, view: initial, sample, preview } = props;
   const [phase, setPhase] = useState<Phase>(preview?.phase ?? (initial.photos > 0 ? "checking" : sample ? "capture" : "code"));
   const [view, setView] = useState(initial);
-  // Exhibit A on the checking screen: the photo just sent (a local object URL, or the sample's public file).
+  // Photo 1 on the checking screen: the photo just sent (a local object URL, or the sample's public file).
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(preview?.photoUrl ?? (initial.photos > 0 && sample ? sample.photos[0] : undefined));
   const demo = Boolean(sample);
   const steps = demo ? DEMO_STEPS : REAL_STEPS;

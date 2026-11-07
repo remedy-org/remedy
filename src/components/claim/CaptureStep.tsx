@@ -50,7 +50,7 @@ export interface CaptureStepProps {
   reminders?: string[];
   /**
    * The pre-checks' answer; null when the photos had already arrived (another tab). photoUrl: an object URL of the first
-   * photo sent, for the checking screen's Exhibit A, which the caller frees.
+   * photo sent, for the checking screen's photo 1, which the caller frees.
    */
   onSent(view: ClaimView | null, photoUrl?: string): void;
   /** Dev previews and screenshots: no camera, a fixed state. */
@@ -219,7 +219,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         return;
       }
       stop();
-      // A fresh URL for the checking screen's Exhibit A: this step frees its own thumbnails' URLs when it goes away.
+      // A fresh URL for the checking screen's photo 1: this step frees its own thumbnails' URLs when it goes away.
       onSent(body as ClaimView, URL.createObjectURL(blobs[0]));
     } catch {
       setSendError({ status: 0, message: "No connection. Your photos are still here: send them again when you're back online." });
@@ -257,7 +257,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           )}
           {live ? (
             <Cutout>
-              <GlassChip className="absolute top-2 left-2">Exhibit A</GlassChip>
+              {/* The photo the shutter takes next, numbered as the slots below are. */}
+              {n < MAX_PHOTOS && <GlassChip className="absolute top-2 left-2">Photo {n + 1}</GlassChip>}
               <Reminders items={reminders} />
             </Cutout>
           ) : (

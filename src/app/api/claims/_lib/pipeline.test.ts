@@ -13,6 +13,7 @@ import {
   checkClaim,
   ClaimError,
   createClaim,
+  duplicateOf,
   findOpenClaim,
   LIMIT_HOLD,
   LimitReached,
@@ -258,6 +259,46 @@ describe("demo claims without a round (filed before rounds)", () => {
     expect(repost.reasons.map((r) => r.check)).toEqual(["duplicate_photo"]);
     const wrong = await run("wrong-code", judge, "f0f0f0f0f0f0f0f0");
     expect(wrong.decision).toBe("pending");
+  });
+});
+
+describe("duplicateOf", () => {
+  const judge = { payerId: "JUDGE0000001", verified: true };
+  const R = "dr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const run = async (id: "genuine" | "reposted", photos: string[], round = R) => {
+    clock = new Date(clock.getTime() + 1000);
+    const claim = await createClaim(deps, { recall, payer: judge, sample: demoSample(id)!, round });
+    return receivePhotos(deps, { claimId: claim.id, payerId: judge.payerId, sessionId: claim.captureSession!.id, photos: photos.map(photo) });
+  };
+
+  it("finds the round's earlier claim with the photo, and which photo on each side", async () => {
+    const genuine = await run("genuine", ["f0f0f0f0f0f0f0f0", "00000000000000ff"]);
+    await checkClaim(deps, genuine.id);
+    const repost = await run("reposted", ["0f0f0f0f0f0f0f0f", "00000000000000ff"]);
+    expect(repost.decision).toBe("blocked");
+    expect(duplicateOf(repost, await store.listClaims())).toEqual({ photo: 2, id: genuine.id, theirs: 2, payerId: judge.payerId, sample: "genuine" });
+  });
+
+  it("names the original, not a later repost of it, and nothing from another round", async () => {
+    const genuine = await run("genuine", ["00000000000000ff"]);
+    await checkClaim(deps, genuine.id);
+    const first = await run("reposted", ["00000000000000ff"]);
+    const second = await run("reposted", ["00000000000000ff"]);
+    const rows = await store.listClaims();
+    expect(duplicateOf(second, rows)?.id).toBe(genuine.id);
+    expect(duplicateOf(first, rows)?.id).toBe(genuine.id);
+    const other = await run("reposted", ["00000000000000ff"], "dr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    expect(duplicateOf(other, await store.listClaims())).toBeNull();
+  });
+
+  it("finds another account's real claim, so the page can hide its photo and id", async () => {
+    const theirs = await open();
+    await send(theirs);
+    clock = new Date(clock.getTime() + 1000);
+    const mine = await createClaim(deps, { recall, payer: { payerId: "OWNER0000002", verified: true } });
+    const sent = await receivePhotos(deps, { claimId: mine.id, payerId: mine.payerId, sessionId: mine.captureSession!.id, photos: [photo("00000000000000ff")] });
+    expect(sent.reasons.map((r) => r.check)).toContain("duplicate_photo");
+    expect(duplicateOf(sent, await store.listClaims())).toMatchObject({ photo: 1, id: theirs.id, theirs: 1, payerId: owner.payerId });
   });
 });
 

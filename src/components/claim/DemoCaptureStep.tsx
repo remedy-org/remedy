@@ -56,7 +56,7 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={sample.photos[0]} alt={sample.description} className="absolute inset-0 size-full object-cover object-[50%_70%]" />
           <Cutout>
-            <GlassChip className="absolute top-2 left-2">Exhibit A</GlassChip>
+            <GlassChip className="absolute top-2 left-2">Photo 1</GlassChip>
           </Cutout>
           <figcaption className="absolute top-3 left-3">
             <GlassChip>AI-made sample · not from a camera</GlassChip>

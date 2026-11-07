@@ -13,8 +13,8 @@ export function SampleChip({ className, children = "AI-made sample photo" }: { c
 export interface ExhibitPhotoProps {
   src: string;
   alt: string;
-  /** The exhibit letter in the amber chip: A for the first photo. */
-  letter?: string;
+  /** The photo's number in the corner chip, as the camera numbers them (letters are the judges' samples, A to D). */
+  n?: number;
   /** A judges' sample: the AI-made label sits on the photo. */
   sample?: boolean;
   /** Tailwind aspect and size classes for the photo well, e.g. "aspect-[4/3]". */
@@ -25,11 +25,11 @@ export interface ExhibitPhotoProps {
 }
 
 /**
- * A claim photo as an exhibit print: a 3px paper border, the amber letter chip at its corner, and the AI-made label on a
+ * A claim photo as an exhibit print: a 3px paper border, the photo number chip at its corner, and the AI-made label on a
  * sample. The same object the homepage's Chain of Custody hands over (P1's ExhibitPrint), so the flow and the story
  * match.
  */
-export function ExhibitPhoto({ src, alt, letter = "A", sample, frame = "aspect-[4/3]", children, className }: ExhibitPhotoProps) {
+export function ExhibitPhoto({ src, alt, n = 1, sample, frame = "aspect-[4/3]", children, className }: ExhibitPhotoProps) {
   return (
     <figure className={clsx("relative rounded-control bg-paper p-[3px] shadow-paper", className)}>
       <div className={clsx("relative overflow-hidden rounded-[3px] bg-surface-2", frame)}>
@@ -39,7 +39,7 @@ export function ExhibitPhoto({ src, alt, letter = "A", sample, frame = "aspect-[
         {children}
       </div>
       <span aria-hidden="true" className="absolute -top-2.5 -left-2.5 flex size-6 items-center justify-center rounded-control bg-paper font-mono text-micro font-medium text-ink shadow-[0_0_0_2px_var(--bg)]">
-        {letter}
+        {n}
       </span>
     </figure>
   );

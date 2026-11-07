@@ -1,5 +1,6 @@
 import { appealReason, canAskForReview, reviewAsked } from "@/lib/appeal";
 import { newCode } from "@/lib/codes";
+import { isLikelySame } from "@/lib/fingerprint";
 import { checkableClaims, demoSample, demoSampleOf, oneClaimChecked } from "@/lib/demo";
 import type { DemoSample } from "@/lib/demo";
 import { CAPTURE_SESSION_MINUTES, newCaptureSession, newClaimId, newPayoutKey } from "@/lib/ids";
@@ -75,6 +76,33 @@ export function othersFor(claim: Pick<Claim, "demo" | "payerId" | "demoRound" | 
   return checkableClaims(rows)
     .filter((r) => (claim.demo ? inRound(claim, r) && (!genuine || r.sample === "genuine") && !unanswered(r) : !r.demo))
     .map(toOther);
+}
+
+export interface DuplicateMatch {
+  /** This claim's photo that was a repost (1-based). */
+  photo: number;
+  /** The earlier claim that has it, and which of its photos (1-based). */
+  id: string;
+  theirs: number;
+  payerId: string;
+  /** The earlier claim's demo sample, if it's a demo claim. */
+  sample?: string;
+}
+
+/**
+ * Where a refused repost's photo was claimed before, for the result's side by side: the oldest claim filed by the
+ * time this one was, among those it was checked against (othersFor), that has a matching photo. null if none matches now.
+ */
+export function duplicateOf(claim: Pick<Claim, "id" | "demo" | "payerId" | "demoRound" | "events" | "photos" | "createdAt">, rows: ClaimSummary[]): DuplicateMatch | null {
+  const checked = new Set(othersFor(claim, rows).map((o) => o.id));
+  const earlier = rows.filter((r) => checked.has(r.id) && r.id !== claim.id && r.createdAt <= claim.createdAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  for (const [i, { hash }] of claim.photos.entries()) {
+    for (const r of earlier) {
+      const j = r.photoHashes.findIndex((h) => isLikelySame(hash, h));
+      if (j >= 0) return { photo: i + 1, id: r.id, theirs: j + 1, payerId: r.payerId, sample: r.sample };
+    }
+  }
+  return null;
 }
 
 /** A round's demo claims on this recall for this PayPal account, newest first as the index keeps them. */

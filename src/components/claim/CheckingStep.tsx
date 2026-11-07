@@ -34,7 +34,7 @@ export interface CheckingStepProps {
   view: ClaimView;
   /** The server clock at render (ms). */
   startNow: number;
-  /** Exhibit A: the first photo sent (a local copy, or the sample's), else the owner's photo route. */
+  /** Photo 1: the first photo sent (a local copy, or the sample's), else the owner's photo route. */
   photoUrl?: string;
   /** A judges' sample: the photo carries its AI-made label. */
   sample?: boolean;
@@ -45,7 +45,7 @@ export interface CheckingStepProps {
 }
 
 /**
- * The trust screen: Exhibit A beside the checks, held in view while they run, with the model's quotes numbered under it.
+ * The trust screen: photo 1 beside the checks, held in view while they run, with the model's quotes numbered under it.
  * While the model reads the photo an amber line scans it; an honest time line shows the elapsed seconds against the
  * usual 15 to 40 (never a percentage); each check group's header carries its time from the claim's own events. Once
  * decided, the checks reveal in order and the page re-renders as the result.
@@ -134,7 +134,7 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
   const elapsed = preview?.elapsed ?? (received ? Math.max(0, (now - Date.parse(received)) / 1000) : null);
   const blocked = view.decision === "blocked";
   const src = photoUrl ?? (view.photos > 0 ? `/api/claims/${claimId}/photos/1` : undefined);
-  // The model's quotes for the annotations under Exhibit A: only the answers already revealed.
+  // The model's quotes for the annotations under photo 1: only the answers already revealed.
   const notes = rows.filter((r) => r.group === "model" && r.quote && r.state !== "running" && r.state !== "waiting");
   // A sample (or a preview's stand-in from /demo, which only holds AI-made samples) carries its label on the photo.
   const aiMade = Boolean(sample) || Boolean(src?.startsWith("/demo/"));
@@ -152,7 +152,7 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
     <section aria-labelledby="checking-title" aria-busy={!done} className="mx-auto grid w-full max-w-[60rem] gap-8 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:items-start lg:gap-14">
       <div className="flex flex-col gap-3 lg:sticky lg:top-24">
         {src ? (
-          <ExhibitPhoto src={src} alt={`Exhibit A: the ${sample ? "sample" : "first"} photo of claim ${view.id}`} sample={aiMade} frame="h-60 lg:h-[21rem]">
+          <ExhibitPhoto src={src} alt={`Photo 1: the ${sample ? "sample" : "first"} photo of claim ${view.id}`} sample={aiMade} frame="h-60 lg:h-[21rem]">
             {reading && !reduced && (
               <span aria-hidden="true" className={clsx("absolute inset-0", styles.scan)}>
                 <span className={styles.scanLine} />
@@ -174,12 +174,12 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrl, sampl
           <div className="flex h-60 items-center justify-center rounded-control border border-dashed border-line-strong text-ui text-faint lg:aspect-[3/4] lg:h-auto">Your photos are on their way</div>
         )}
         <p className="font-mono text-micro text-faint">
-          Exhibit A · claim {view.id} · code {view.code}
+          Photo 1 · claim {view.id} · code {view.code}
         </p>
         {/* Laptops: what the model quoted from the photo, numbered under it as each answer arrives. Phones keep the quotes
             in the checklist, under the photo already. */}
         {notes.length > 0 && (
-          <ol aria-label="What the model read in Exhibit A" className="hidden flex-col gap-2.5 border-t border-line pt-3 lg:flex">
+          <ol aria-label="What the model read in photo 1" className="hidden flex-col gap-2.5 border-t border-line pt-3 lg:flex">
             {notes.map((r, i) => (
               <li key={r.id} className={clsx("grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-1 text-ui", styles.rise)}>
                 <span aria-hidden="true" className="mt-0.5 flex size-5 items-center justify-center rounded-full border border-line-strong font-mono text-[10px] leading-none text-muted">
