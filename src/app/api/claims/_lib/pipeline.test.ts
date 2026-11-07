@@ -525,6 +525,11 @@ describe("checkRows", () => {
     const blocked = await send(await open(), undefined, "cs_nope");
     expect(checkRows(blocked, recall.spec).map((r) => `${r.id}:${r.state}`)).toEqual(["session:blocked", "duplicate_photo:pass", "account:pass"]);
 
+    // In the demo only the genuine sample meets the one-claim check, so the others say it didn't run.
+    const sampleRow = (id: string) => checkRows({ ...blocked, demo: true, events: [{ at: blocked.createdAt, type: "demo_sample", detail: id }] }, recall.spec).find((r) => r.id === "account");
+    expect(sampleRow("genuine")).toMatchObject({ state: "pass", detail: expect.stringContaining("Checked within this demo round") });
+    expect(sampleRow("ai-no-session")?.state).toBe("skipped");
+
     const claim = await send(await open("K7P"), [photo("aaaaaaaaaaaaaaaa")]);
     deps.vision.mockResolvedValueOnce({ verdict: verdict({ code: "K7Q", matches: "no" }), seconds: 9, model: "gpt-test" });
     const rows = checkRows(await checkClaim(deps, claim.id), recall.spec);

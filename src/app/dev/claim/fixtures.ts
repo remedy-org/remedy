@@ -49,7 +49,7 @@ function decided(prefix: string, model?: string, over: Partial<Claim> = {}) {
   const claim = base(s.code, { photos: photosOf(s.photos), verdict: s.verdict, reasons, decision: outcome === "pass" ? "paid" : outcome === "hold" ? "held" : "rejected", ...over });
   claim.events.push(
     { at: at(0), type: "photos_received", detail: `${s.photos.length} photos from the live camera` },
-    { at: at(0.4), type: "prechecked", detail: "Live session, new photos, first claim for this account" },
+    { at: at(0.4), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
     { at: at(16.8), type: "checked", detail: "Photo check answered in 16.4 s (gpt-6.1-sol)" },
   );
   if (outcome !== "pass") claim.events.push({ at: at(17.1), type: "decided", detail: "Decided by the rule" });
@@ -73,7 +73,7 @@ export const paid = (() => {
 export const checkingModel = base(paid.claim.code, { photos: paid.claim.photos });
 checkingModel.events.push(
   { at: at(0), type: "photos_received", detail: "1 photo from the live camera" },
-  { at: at(0.4), type: "prechecked", detail: "Live session, new photos, first claim for this account" },
+  { at: at(0.4), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
 );
 
 // A repost: stopped by the duplicate-photo check alone.
@@ -117,7 +117,7 @@ export const demoWrongCode = (() => {
   const claim = base("K7P", { demo: true, photos: photosOf(["c11-1.jpg"]), verdict: wrongCodeVerdict, reasons, decision: outcome === "reject" ? "rejected" : "held" });
   claim.events.push(
     { at: at(0), type: "photos_received", detail: "1 sample photo (demo mode)" },
-    { at: at(0.3), type: "prechecked", detail: "Live session, new photos, first claim for this account" },
+    { at: at(0.3), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
     { at: at(10.3), type: "checked", detail: "Photo check answered in 10.3 s (gpt-6.1-sol)" },
     { at: at(10.4), type: "decided", detail: "Rejected by the rule" },
   );

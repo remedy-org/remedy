@@ -8,7 +8,8 @@ export type JudgeStep = "consent" | "samples" | "code" | "capture" | "checking" 
 const NOTES: Record<JudgeStep, { title: string; note: string }> = {
   consent: {
     title: "Log in",
-    note: "Log in with a PayPal sandbox personal account: the test login is in the submission notes. Your real PayPal login won't work here.",
+    // The card beside it says how to log in; this says what the login does.
+    note: "The login is real PayPal OAuth, in the sandbox. The account's PayPal ID and verified status feed the checks, and the genuine sample's refund is paid to it.",
   },
   samples: {
     title: "Pick a sample",

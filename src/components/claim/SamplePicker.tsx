@@ -40,7 +40,8 @@ export const roundRuns = (runs: DemoRun[]): RoundRun[] => runs.flatMap((r) => (r
 /**
  * Demo mode's stand-in for the camera: four case files in a 2x2 grid, the photo the hero of each, with what it tests,
  * what should happen and what its latest run this round got. The next unrun sample is selected. A plain form, no script
- * needed; on a phone "Run this sample" waits in a bar at the bottom of the screen while the cards scroll.
+ * needed; on a phone "Run this sample" waits in a bar at the bottom of the screen while the cards scroll. Once the round
+ * is done the cards are its record, and the one button starts a new round.
  */
 export function SamplePicker({
   slug,
@@ -71,7 +72,9 @@ export function SamplePicker({
 
       {refusal && <LimitNotice refusal={refusal} demo />}
 
-      <form action="/api/claims" method="post" className="flex flex-col gap-6">
+      {/* Once every sample has run, the form starts a new round instead: running one sample again in a finished round
+          would only meet its own earlier claim. */}
+      <form action={roundDone ? "/api/claims/round" : "/api/claims"} method="post" className="flex flex-col gap-6">
         <input type="hidden" name="recall" value={slug} />
         <fieldset className="grid gap-3 sm:grid-cols-2 sm:gap-4">
           <legend className="sr-only">Sample claims</legend>
@@ -83,13 +86,14 @@ export function SamplePicker({
                 key={sample.id}
                 aria-disabled={locked ? true : undefined}
                 className={clsx(
-                  "group relative flex cursor-pointer gap-4 rounded-card border border-line bg-surface p-2 sm:gap-3.5 transition-[border-color,box-shadow,background-color] duration-160 hover:bg-surface-2 sm:p-3",
+                  "group relative flex gap-4 rounded-card border border-line bg-surface p-2 sm:gap-3.5 transition-[border-color,box-shadow,background-color] duration-160 sm:p-3",
                   // Selected: a neutral ring in the text colour. The screen's one amber is "Run this sample".
                   "has-checked:border-text/70 has-checked:shadow-[0_0_0_2px_var(--bg),0_0_0_3px_var(--text)] has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-accent",
+                  !roundDone && "cursor-pointer hover:bg-surface-2",
                   locked && "cursor-not-allowed hover:bg-surface",
                 )}
               >
-                <input type="radio" name="sample" value={sample.id} defaultChecked={sample.id === selected} disabled={Boolean(locked)} className="peer sr-only" />
+                {!roundDone && <input type="radio" name="sample" value={sample.id} defaultChecked={sample.id === selected} disabled={Boolean(locked)} className="peer sr-only" />}
                 {/* 96px on a phone, 112px beside the text from 640px, so all four cards and the button fit one laptop screen. */}
                 <span className="relative block aspect-[4/5] w-24 shrink-0 overflow-hidden rounded-control bg-surface-2 sm:w-28">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -126,9 +130,10 @@ export function SamplePicker({
           })}
         </fieldset>
         <p className="text-ui text-faint">All four photos are AI-made samples, not from a camera.</p>
+        {roundDone && <p className="text-ui text-muted">All four samples have run. A new round checks them only against each other, so they reach the same four outcomes.</p>}
         <div className="z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md">
           <Button type="submit" size="lg" block>
-            Run this sample
+            {roundDone ? "Run the samples again" : "Run this sample"}
           </Button>
         </div>
       </form>
@@ -139,23 +144,22 @@ export function SamplePicker({
           <ul className="flex flex-col">
             {runs.map((r) => (
               <li key={r.id} className="border-b border-line last:border-b-0">
-                <Link href={r.href} className="flex min-h-11 items-center justify-between gap-3 text-ui hover:text-text">
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span className="font-mono text-faint">{r.id}</span>
-                    <span className="truncate text-muted">{r.title}</span>
-                  </span>
-                  <StatusPill status={r.decision} />
+                {/* The outcome is on the sample's card above: this list is the way back to each claim. */}
+                <Link href={r.href} className="flex min-h-11 items-center gap-3 text-ui hover:text-text">
+                  <span className="font-mono text-faint">{r.id}</span>
+                  <span className="truncate text-muted">{r.title}</span>
                 </Link>
               </li>
             ))}
           </ul>
-          <form action="/api/claims/round" method="post" className="flex flex-col gap-3 pt-2">
-            <input type="hidden" name="recall" value={slug} />
-            {roundDone && <p className="text-ui text-muted">All four samples have run. Run them again to see the same four outcomes.</p>}
-            <Button type="submit" variant="secondary" block>
-              Run the samples again
-            </Button>
-          </form>
+          {!roundDone && (
+            <form action="/api/claims/round" method="post" className="flex flex-col gap-3 pt-2">
+              <input type="hidden" name="recall" value={slug} />
+              <Button type="submit" variant="secondary" block>
+                Start a new round
+              </Button>
+            </form>
+          )}
         </div>
       )}
     </section>

@@ -1,4 +1,5 @@
 import type { CheckState } from "@/components/ui";
+import { oneClaimChecked } from "@/lib/demo/samples";
 import type { CheckSpec, Claim, Decision, Reason, Recall } from "@/lib/types";
 
 // Pure view logic for the claim flow, shared by the pages, the API's JSON and the dev previews. No server imports.
@@ -43,12 +44,12 @@ export interface ClaimView {
  */
 export type ClaimStatus = Pick<ClaimView, "decision" | "photos"> & { payout?: string };
 
-export type ClaimLike = Pick<Claim, "decision" | "reasons" | "photos" | "verdict" | "payout" | "code" | "demo">;
+export type ClaimLike = Pick<Claim, "decision" | "reasons" | "photos" | "verdict" | "payout" | "code" | "demo" | "events">;
 
 const PRE = [
   { id: "session", label: "Live camera session", checks: ["session"], pass: "Taken on this page's camera before the code expired" },
   { id: "duplicate_photo", label: "Photo not seen before", checks: ["duplicate_photo"], pass: "No match among earlier claims' photos" },
-  { id: "account", label: "One claim per verified PayPal account", checks: ["state", "payer_verified", "payer"], pass: "A verified PayPal account with no other claim for this recall" },
+  { id: "account", label: "One claim per verified PayPal account", checks: ["state", "payer_verified", "payer"], pass: "A verified PayPal account with no other paid or open claim for this recall" },
 ] as const;
 
 const OUTCOME: Record<Reason["outcome"], CheckState> = { pass: "pass", hold: "hold", reject: "reject" };
@@ -77,9 +78,14 @@ export function checkRows(claim: ClaimLike, spec: CheckSpec): CheckRow[] {
   const rows: CheckRow[] = PRE.map((p) => {
     if (!received) return { id: p.id, group: "pre", label: p.label, state: "waiting" };
     const fails = blocked ? claim.reasons.filter((r) => (p.checks as readonly string[]).includes(r.check) && r.outcome === "reject") : [];
-    return fails.length
-      ? { id: p.id, group: "pre", label: p.label, state: "blocked", detail: readableReasons(fails, claim.photos.length).map((f) => f.text).join(". ") }
-      : { id: p.id, group: "pre", label: p.label, state: "pass", detail: claim.demo && p.id === "session" ? "Sent inside this claim's 10-minute session" : p.pass };
+    if (fails.length) return { id: p.id, group: "pre", label: p.label, state: "blocked", detail: readableReasons(fails, claim.photos.length).map((f) => f.text).join(". ") };
+    // A demo claim meets only its own round, and only the genuine sample is held to one claim (pipeline.ts): say so.
+    if (claim.demo && p.id === "account") {
+      return oneClaimChecked(claim)
+        ? { id: p.id, group: "pre", label: p.label, state: "pass", detail: "A verified PayPal account. Checked within this demo round: no other paid or open genuine claim" }
+        : { id: p.id, group: "pre", label: p.label, state: "skipped", detail: "A verified PayPal account. One claim per account isn't checked for this sample, so it can show its own check" };
+    }
+    return { id: p.id, group: "pre", label: p.label, state: "pass", detail: claim.demo && p.id === "session" ? "Sent inside this claim's 10-minute session" : p.pass };
   });
   if (blocked) return rows;
 

@@ -91,6 +91,15 @@ describe("console view", () => {
     expect(preChecksOf(sampleClaim({ seeded: true })).find((r) => r.id === "duplicate_photo")?.state).toBe("skipped");
   });
 
+  it("says what the one-claim check covered: paid or open claims, the round for the genuine sample, nothing for the others", () => {
+    const payer = (c: Parameters<typeof sampleClaim>[0]) => preChecksOf(sampleClaim(c)).find((r) => r.id === "payer")!;
+    const demo = (sample: string) => ({ demo: true, events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] });
+    expect(payer({})).toMatchObject({ state: "pass", detail: "No other paid or open claim for this recall from this PayPal account" });
+    expect(payer(demo("genuine"))).toMatchObject({ state: "pass", detail: expect.stringMatching(/^Checked within this demo round/) });
+    expect(payer(demo("wrong-code")).state).toBe("skipped");
+    expect(payer({ ...demo("wrong-code"), photos: [] }).state).toBe("waiting");
+  });
+
   it("offers review only on held claims, and only a sample review on a seeded one", () => {
     expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false, note: null });
     expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toMatchObject({ sample: true, note: expect.stringContaining("nothing is saved") });

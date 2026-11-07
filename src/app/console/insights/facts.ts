@@ -198,7 +198,7 @@ export function checkFacts(c: Claim): CheckFact[] {
 const CHECK_NAME: Record<string, string> = {
   session: "Live camera session",
   duplicate_photo: "Photo not seen before",
-  payer: "First claim for this account",
+  payer: "One claim per account",
   payer_verified: "Verified PayPal account",
   label: "Label",
   code: "One-time code",

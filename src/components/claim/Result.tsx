@@ -14,7 +14,6 @@ import {
   adviceFor,
   businessDaysAfter,
   canRetry,
-  clock,
   codeDiff,
   companyName,
   decidingReasons,
@@ -178,7 +177,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
         {!sb && <p className="mt-3 text-ui text-ink-muted">PayPal emails you a receipt too.</p>}
       </Paper>
 
-      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} />}
+      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
       <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={passedSummary(rows)} open={false} code={claim.code} />
     </section>
   );
@@ -248,7 +247,9 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
         </dl>
       </Paper>
 
-      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} unanswered={noModelAnswer(claim.decision, claim.reasons)} />}
+      {sample && (
+        <DemoActions sample={sample} slug={recall.slug} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} unanswered={noModelAnswer(claim.decision, claim.reasons)} />
+      )}
       <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={`Every check, and the ${photoUrls.length === 1 ? "photo" : "photos"} you sent`} open={Boolean(sample)} code={claim.code} />
     </section>
   );
@@ -382,7 +383,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round }: R
         </Button>
       )}
 
-      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} />}
+      {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
       {/* The verdict sheet above already shows Exhibit A and the deciding quote; the rest of the checks wait folded. */}
       <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={otherSummary(rows, blocked)} open={false} code={claim.code} />
     </section>
@@ -440,7 +441,13 @@ function Provenance({ claim }: { claim: Pick<Claim, "code" | "events"> }) {
         <span className="flex flex-col gap-1">
           <span className="micro text-faint">This page</span>
           <span className="text-text">
-            Code <span className="font-mono">{claim.code}</span> issued{issued ? <span className="font-mono"> {clock(issued)}</span> : null}
+            Code <span className="font-mono">{claim.code}</span> issued
+            {issued ? (
+              <span className="font-mono whitespace-nowrap">
+                {" "}
+                <LocalTime iso={issued} format="clock" />
+              </span>
+            ) : null}
           </span>
         </span>
         <span aria-hidden="true" className="flex items-center gap-1">
@@ -558,6 +565,8 @@ interface DemoActionsProps {
   sample: DemoSample;
   slug: string;
   againHref: string;
+  claimId: string;
+  decision: Claim["decision"];
   round?: DemoRound | null;
   /** The model never answered: running this sample again is the primary action. */
   unanswered?: boolean;
@@ -566,11 +575,41 @@ interface DemoActionsProps {
   rail?: boolean;
 }
 
-/** Demo results: the next sample in the guided order is the primary action, straight to its photo; after a model outage, running this one again. */
-function DemoActions({ sample, slug, againHref, round, unanswered, rail }: DemoActionsProps) {
+const consoleHref = (claimId: string) => `/console?claim=${claimId}`;
+
+/** The round is over: every sample has run and this one got the model's answer, so the console is what's left to see. */
+const roundOver = (runs: RoundRun[], sample: DemoSample, unanswered?: boolean) => !unanswered && !nextSample(runs, sample.id);
+
+/** What the sample should have done beside what it did: in the judges' rail, and under the result below 1200px. */
+function ExpectedGot({ sample, run }: { sample: DemoSample; run: RoundRun }) {
+  const mark = runMark(sample, run);
+  return (
+    <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-ui">
+      <dt className="micro text-faint">Expected</dt>
+      <dd>
+        <StatusPill status={sample.expect} label={statusLabel(sample.expect)} />
+      </dd>
+      <dt className="micro text-faint">Got</dt>
+      <dd className="flex items-center gap-2 whitespace-nowrap">
+        <StatusPill status={run.decision} />
+        {/* A model outage is the fallback working, so it's neutral: never the red of a wrong outcome. */}
+        <span className={clsx("inline-flex items-center gap-1 whitespace-nowrap", mark === "expected" ? "text-pay" : mark === "missed" ? "text-stop" : "text-muted")}>
+          {mark === "expected" ? <CheckIcon size={14} /> : mark === "missed" ? <CrossIcon size={14} /> : null}
+          {mark === "expected" ? "As expected" : mark === "missed" ? "Not as expected" : "Model unavailable"}
+        </span>
+      </dd>
+    </dl>
+  );
+}
+
+/**
+ * Demo results: the next sample in the guided order is the primary action, straight to its photo; after a model outage,
+ * running this one again; once the round is over, this claim in the company's console.
+ */
+function DemoActions({ sample, slug, againHref, claimId, decision, round, unanswered, rail }: DemoActionsProps) {
   const runs = round?.runs ?? [];
   const next = nextSample(runs, sample.id);
-  const { text } = scoreLine(runs);
+  const over = roundOver(runs, sample, unanswered);
   const primary = unanswered ? (
     <RunSample slug={slug} sample={sample.id} rail={rail}>
       Run this sample again
@@ -580,7 +619,9 @@ function DemoActions({ sample, slug, againHref, round, unanswered, rail }: DemoA
       Next sample: {next.title}
     </RunSample>
   ) : (
-    <p className="rounded-card border border-line bg-surface px-4 py-3 text-ui text-text">{text}. Run them again for the same outcomes.</p>
+    <Button href={consoleHref(claimId)} size={rail ? "md" : "lg"} block prefetch={false} className={clsx("h-auto! py-2.5 text-center whitespace-normal!", rail ? "min-h-11" : "min-h-12")}>
+      Open Kikea Store&apos;s console
+    </Button>
   );
   // After an outage the next sample stays one click away, so a judge can carry on while the model is down.
   const secondary =
@@ -601,51 +642,51 @@ function DemoActions({ sample, slug, againHref, round, unanswered, rail }: DemoA
       </div>
     );
   }
-  // Direct children of the result's column, so the sticky bar can travel the column's height on a phone.
+  // Direct children of the result's column, so the sticky bar can travel the column's height on a phone. The rail's
+  // verdict and console link are repeated here, since below 1200px the rail is a sheet behind the header's pill.
   return (
     <>
+      <div className="flex flex-col gap-3 min-[1200px]:hidden">
+        <ExpectedGot sample={sample} run={{ sample: sample.id, decision, unanswered }} />
+        {over && <p className="font-mono text-micro text-muted">{scoreLine(runs).text}</p>}
+      </div>
       <div
         className={clsx(
-          "min-[1200px]:hidden",
+          "-mt-3 min-[1200px]:hidden",
           (unanswered || next) &&
             "z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md",
         )}
       >
         {primary}
       </div>
-      <div className="-mt-3 min-[1200px]:hidden">{secondary}</div>
+      <div className="-mt-3 flex flex-col gap-3 min-[1200px]:hidden">
+        {secondary}
+        {!over && (
+          <Button href={consoleHref(claimId)} variant="tertiary" size="sm" prefetch={false} className="self-start">
+            See this claim in Kikea Store&apos;s console
+          </Button>
+        )}
+      </div>
     </>
   );
 }
 
 /** The judges' rail on a demo result: what should have happened, what did, the next action, this round's score, the console. */
 function JudgeVerdict({ sample, run, round, claimId, slug, againHref }: { sample: DemoSample; run: RoundRun; round?: DemoRound | null; claimId: string; slug: string; againHref: string }) {
-  const mark = runMark(sample, run);
   return (
     <div className="flex flex-col gap-4">
-      <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-ui">
-        <dt className="micro text-faint">Expected</dt>
-        <dd>
-          <StatusPill status={sample.expect} label={statusLabel(sample.expect)} />
-        </dd>
-        <dt className="micro text-faint">Got</dt>
-        <dd className="flex items-center gap-2 whitespace-nowrap">
-          <StatusPill status={run.decision} />
-          {/* A model outage is the fallback working, so it's neutral: never the red of a wrong outcome. */}
-          <span className={clsx("inline-flex items-center gap-1 whitespace-nowrap", mark === "expected" ? "text-pay" : mark === "missed" ? "text-stop" : "text-muted")}>
-            {mark === "expected" ? <CheckIcon size={14} /> : mark === "missed" ? <CrossIcon size={14} /> : null}
-            {mark === "expected" ? "As expected" : mark === "missed" ? "Not as expected" : "Model unavailable"}
-          </span>
-        </dd>
-      </dl>
-      <DemoActions sample={sample} slug={slug} againHref={againHref} round={round} unanswered={run.unanswered} rail />
+      <ExpectedGot sample={sample} run={run} />
+      <DemoActions sample={sample} slug={slug} againHref={againHref} claimId={claimId} decision={run.decision} round={round} unanswered={run.unanswered} rail />
       <p className="text-ui text-muted">
         <NoBreakHyphens>{sample.description}</NoBreakHyphens>
       </p>
       {round && <Scoreboard runs={round.runs} />}
-      <Button href={`/console?claim=${claimId}`} variant="tertiary" size="sm" prefetch={false} className="self-start">
-        See this claim in Kikea Store&apos;s console
-      </Button>
+      {/* Once the round is over the console is the primary action above. */}
+      {!roundOver(round?.runs ?? [], sample, run.unanswered) && (
+        <Button href={consoleHref(claimId)} variant="tertiary" size="sm" prefetch={false} className="self-start">
+          See this claim in Kikea Store&apos;s console
+        </Button>
+      )}
     </div>
   );
 }

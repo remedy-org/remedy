@@ -1,3 +1,4 @@
+import { oneClaimChecked } from "@/lib/demo/samples";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
@@ -81,7 +82,7 @@ export interface ClaimRow {
 const PRE_CHECKS: [string, string][] = [
   ["session", "Live camera session"],
   ["duplicate_photo", "Photo not seen before"],
-  ["payer", "First claim for this account"],
+  ["payer", "One claim per account"],
   ["payer_verified", "Verified PayPal account"],
 ];
 const PRE_IDS = new Set(PRE_CHECKS.map(([id]) => id));
@@ -400,7 +401,7 @@ export interface PreCheckRow {
 }
 
 // The four cheap checks that run before any photo reaches the model, rebuilt from the claim's reasons.
-export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified" | "seeded" | "demo">): PreCheckRow[] {
+export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified" | "seeded" | "demo" | "events">): PreCheckRow[] {
   const ran = c.photos.length > 0 || c.decision === "blocked";
   // preCheck rejects (the claim is blocked); sendCheck, run again right before a payout, holds.
   const failed = (check: string) => c.reasons.find((r) => r.check === check && r.outcome !== "pass");
@@ -420,7 +421,14 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
         c.demo
         ? row("duplicate_photo", "Photo not seen before", "No other claim in this demo round used these photos. Each judge's round is checked on its own, so other rounds' claims can share the sample photo")
         : row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
-    row("payer", "First claim for this account", c.demo ? "No other live claim from this PayPal account in this demo round" : "No other live claim from this PayPal account"),
+    // In the demo only the genuine sample is held to one claim, within its round (pipeline.ts receivePhotos).
+    !c.demo
+      ? row("payer", "One claim per account", "No other paid or open claim for this recall from this PayPal account")
+      : oneClaimChecked(c)
+        ? row("payer", "One claim per account", "Checked within this demo round: no other paid or open genuine claim from this PayPal account")
+        : ran
+          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "Not checked for this demo sample, so it can show its own check" }
+          : row("payer", "One claim per account", ""),
     row("payer_verified", "Verified PayPal account", "PayPal says the account is verified"),
   ];
 }

@@ -4,8 +4,7 @@ import { notYet, roundClaims } from "@/app/api/claims/_lib/pipeline";
 import { FlowShell } from "@/components/claim/FlowShell";
 import { WithJudges } from "@/components/claim/Judges";
 import { companyName, noModelAnswer } from "@/components/claim/model";
-import { roundRuns, SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
-import { Scoreboard } from "@/components/claim/Scoreboard";
+import { SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
 import { DEMO_STEPS, StepMeter } from "@/components/claim/StepMeter";
 import { DEMO_SAMPLES, demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
 import { parseRefusal } from "@/lib/limits";
@@ -36,11 +35,11 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   const asked = typeof query.sample === "string" ? options.find((o) => o.sample.id === query.sample && !o.locked)?.sample.id : undefined;
   const selected = asked ?? options.find((o) => !o.locked && !ran.has(o.sample.id))?.sample.id ?? "genuine";
   const roundDone = DEMO_SAMPLES.every((s) => ran.has(s.id));
-  const scored = roundRuns(runs);
 
   return (
     <FlowShell demo company={companyName(recall)}>
-      <WithJudges demo step="samples" extra={scored.length > 0 && <Scoreboard runs={scored} />}>
+      {/* The sample cards show each one's latest outcome, so the rail doesn't repeat them in a scoreboard. */}
+      <WithJudges demo step="samples">
         <div className="flex flex-col gap-6">
           <StepMeter current={2} steps={DEMO_STEPS} />
           <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={parseRefusal(query, new Date())} />

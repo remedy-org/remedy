@@ -1,5 +1,5 @@
 import { newCode } from "@/lib/codes";
-import { checkableClaims, demoSample } from "@/lib/demo";
+import { checkableClaims, demoSample, demoSampleOf, oneClaimChecked } from "@/lib/demo";
 import type { DemoSample } from "@/lib/demo";
 import { CAPTURE_SESSION_MINUTES, newCaptureSession, newClaimId, newPayoutKey } from "@/lib/ids";
 import { claimRefusal, utcDay, type Limits, type Refusal } from "@/lib/limits";
@@ -87,7 +87,7 @@ export function notYet(sample: DemoSample, round: ClaimSummary[]): string | null
 }
 
 /** The demo sample a demo claim was filed with, from its events. */
-export const demoSampleOf = (claim: Pick<Claim, "demo" | "events">) => (claim.demo ? (claim.events.find((e) => e.type === "demo_sample")?.detail ?? null) : null);
+export { demoSampleOf };
 
 /** The note the owner reads on the payout in PayPal, whether the rule or a person sent it. */
 export const payoutNote = (recall: Pick<Recall, "id" | "product">, claim: Pick<Claim, "id" | "demo">) =>
@@ -178,7 +178,7 @@ export async function receivePhotos(
   let reasons = preCheck({ claim, sessionId, photoHashes: hashes, others: othersFor(claim, rows), now });
   // Demo samples other than the genuine one each show a different check; the one-claim rule would hide them all
   // behind "already claimed" once the round's genuine claim is paid.
-  if (claim.demo && demoSampleOf(claim) !== "genuine") reasons = reasons.filter((r) => r.check !== "payer");
+  if (!oneClaimChecked(claim)) reasons = reasons.filter((r) => r.check !== "payer");
 
   // Kept for blocked claims too: the company sees what was sent, and a resend of the same photo is caught.
   const keys = photos.map((_, i) => `${claim.payoutKey}/${i + 1}.jpg`);
@@ -191,7 +191,7 @@ export async function receivePhotos(
     claim.reasons = reasons;
     claim.events.push(event(now, "blocked", `Blocked before the photo check: ${reasons.map((r) => r.text).join("; ")}`));
   } else {
-    claim.events.push(event(now, "prechecked", "Live session, new photos, first claim for this account"));
+    claim.events.push(event(now, "prechecked", oneClaimChecked(claim) ? "Live session, new photos, no other paid or open claim from this account" : "Live session, new photos; one-claim check not run on this sample"));
   }
   await deps.store.putClaim(claim);
   return claim;

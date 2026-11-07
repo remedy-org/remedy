@@ -1,4 +1,4 @@
-import type { Decision } from "../types";
+import type { Claim, Decision } from "../types";
 
 // The judges' demo (/r/kikea-x-vesolje/try): four sample claims that run the real pipeline on our own AI-made photos.
 // Photos are served from public/demo. Checked live against DEMO_SPEC on 7 Nov 2026 (GPT-6.1 Sol, high):
@@ -10,7 +10,7 @@ export interface DemoSample {
   id: DemoSampleId;
   /** Picker title. */
   title: string;
-  /** One or two sentences: what it is and what should happen. */
+  /** One or two sentences: what it is and what should happen, as intent (the result shows what did). */
   description: string;
   /** Public paths, in capture order. */
   photos: string[];
@@ -34,7 +34,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
   {
     id: "genuine",
     title: "A genuine claim",
-    description: "The pillow cut in half, with the X-VESOLJE tag and this claim's code, M4T, written on it. Every check passes and the refund is paid.",
+    description: "The pillow cut in half, with the X-VESOLJE tag and this claim's code, M4T, written on it. It should pass every check and be paid.",
     photos: ["/demo/c02-1.jpg"],
     code: "M4T",
     tagReads: "M4T",
@@ -46,7 +46,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
   {
     id: "wrong-code",
     title: "The wrong code",
-    description: "A real-looking cut pillow, but the tag reads K7Q and this claim's code is K7P. The model reads the tag character by character, and the claim is rejected.",
+    description: "A real-looking cut pillow, but the tag reads K7Q and this claim's code is K7P. The model should read the tag character by character and reject the claim.",
     photos: ["/demo/c11-1.jpg"],
     code: "K7P",
     tagReads: "K7Q",
@@ -58,7 +58,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
   {
     id: "ai-no-session",
     title: "An AI image, sent in",
-    description: "An AI-made photo of the real Kikea pillow, cut, with someone else's code on the tag. It never reaches the model: it wasn't taken in this claim's live camera session.",
+    description: "An AI-made photo of the real Kikea pillow, cut, with someone else's code on the tag. It should never reach the model: it wasn't taken in this claim's live camera session.",
     photos: ["/demo/c08-1.jpg"],
     code: null,
     tagReads: "K7Q",
@@ -70,7 +70,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
   {
     id: "reposted",
     title: "A reposted photo",
-    description: "The genuine claim's photo, sent again from another PayPal account. It matches a photo already claimed, so it's refused before the model.",
+    description: "The genuine claim's photo, sent again as a new claim. It matches a photo already claimed, so it should be refused before the model.",
     photos: ["/demo/c02-1.jpg"],
     code: null,
     tagReads: "M4T",
@@ -83,3 +83,12 @@ export const DEMO_SAMPLES: DemoSample[] = [
 ];
 
 export const demoSample = (id: string) => DEMO_SAMPLES.find((s) => s.id === id) ?? null;
+
+/** The sample a demo claim ran, from its history; null for a real claim. */
+export const demoSampleOf = (claim: Pick<Claim, "demo" | "events">) => (claim.demo ? (claim.events.find((e) => e.type === "demo_sample")?.detail ?? null) : null);
+
+/**
+ * Whether a claim met the one-claim-per-account check. Real claims always do; in the demo only the genuine sample does,
+ * checked within its round (pipeline.ts), so each other sample can show its own check.
+ */
+export const oneClaimChecked = (claim: Pick<Claim, "demo" | "events">) => !claim.demo || demoSampleOf(claim) === "genuine";
