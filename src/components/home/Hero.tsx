@@ -34,11 +34,12 @@ export function Hero() {
         <span className="block sm:inline">Remedy checks the photo and pays the refund through PayPal.</span>
       </p>
       <div className={clsx("mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 lg:mt-10", styles.focusIn)} style={line(2)}>
-        <Button href="/signin" size="lg">
-          Start a recall
-        </Button>
-        <Button href="/r/kikea-x-vesolje/try" variant="tertiary" size="lg">
+        {/* The owner's path is the screen's one amber action; companies get a labelled, quieter link. */}
+        <Button href="/r/kikea-x-vesolje/try" size="lg">
           Try a claim with sample photos
+        </Button>
+        <Button href="/signin" variant="tertiary" size="lg">
+          For companies: run a recall
         </Button>
       </div>
       <TryNote className={clsx("mt-4", styles.focusIn)} style={line(3)} />

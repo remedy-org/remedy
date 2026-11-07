@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button, Paper, Wordmark } from "@/components/ui";
+import { ArrowRightIcon, Button, Paper, Wordmark } from "@/components/ui";
 import styles from "./home.module.css";
 import { Enter } from "./Reveal";
 
@@ -11,7 +11,7 @@ const PRODUCT = [
   { href: "#proof", label: "Proof" },
   { href: "#companies", label: "For companies" },
   { href: "/r/kikea-x-vesolje/try", label: "Try a demo claim" },
-  { href: "/signin", label: "Sign in" },
+  { href: "/signin", label: "Company sign in" },
 ];
 
 const SOURCES = [
@@ -25,22 +25,33 @@ const SOURCES = [
 
 const linkClass = "inline-flex min-h-11 items-center text-ui text-muted transition-colors duration-160 hover:text-text";
 
-/** The closing call to action, as the brand's object: a large paper tag hanging on its string. */
+/**
+ * The closing call to action, as the brand's object: a large paper tag hanging on its string. As in the hero, the
+ * owner's path is the amber action and companies get a labelled, quieter link under it.
+ */
 function CtaTag() {
   return (
     <Enter className="relative pt-14" threshold={0.3}>
       <Paper variant="tag" hole padding="none" className="sm:-rotate-1">
         <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div>
-            <p className="micro text-ink-muted">Exhibit E · Your recall</p>
-            <h2 className="mt-4 text-title-lg font-medium text-balance">Running a recall?</h2>
-            <p className="mt-3 max-w-[40ch] text-body text-pretty text-ink-muted">Log in with PayPal and import your recall from CPSC.</p>
+            <p className="micro text-ink-muted">Exhibit E · Your turn</p>
+            <h2 className="mt-4 text-title-lg font-medium text-balance">Run a claim yourself.</h2>
+            <p className="mt-3 max-w-[40ch] text-body text-pretty text-ink-muted">
+              Four sample claims with AI-made test photos go through the same five checks. Refunds are sandbox money.
+            </p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-3">
-            <Button href="/signin" size="lg" className="shadow-[0_0_0_1px_var(--paper-line)] focus-visible:outline-ink">
-              Log in with PayPal
+            <Button href="/r/kikea-x-vesolje/try" size="lg" className="shadow-[0_0_0_1px_var(--paper-line)] focus-visible:outline-ink">
+              Try a claim with sample photos
             </Button>
-            <p className="font-mono text-micro text-ink-muted">Refunds in PayPal&rsquo;s sandbox until launch</p>
+            <Link
+              href="/signin"
+              className="group inline-flex min-h-11 items-center gap-2 rounded-control text-ui text-ink underline-offset-4 decoration-paper-line hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              For companies: run a recall
+              <ArrowRightIcon className="shrink-0 transition-transform duration-160 ease-snap group-hover:translate-x-[3px]" />
+            </Link>
           </div>
         </div>
       </Paper>

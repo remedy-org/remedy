@@ -12,7 +12,8 @@ const LINKS = [
 
 /**
  * The homepage nav on the page frame: the wordmark on the first grid line, the exhibits beside it, then the theme,
- * Sign in as quiet text and "Start a recall" as the quiet button (the hero's amber button is the screen's one action).
+ * the companies' sign-in as quiet text and "Try a claim" as the quiet button (the hero's amber button is the screen's one
+ * action, the same owner path).
  * No rule under it, and a solid page tone: a translucent bar turned grey-brown over the cream paper band.
  */
 export function Nav() {
@@ -37,10 +38,10 @@ export function Nav() {
         <div className="ml-auto flex items-center gap-3 sm:gap-5">
           <ThemeToggle />
           <Link href="/signin" className="hidden min-h-11 items-center rounded-control text-ui text-muted transition-colors duration-160 hover:text-text sm:inline-flex">
-            Sign in
+            Company sign in
           </Link>
-          <Button href="/signin" variant="secondary" size="sm">
-            Start a recall
+          <Button href="/r/kikea-x-vesolje/try" variant="secondary" size="sm">
+            Try a claim
           </Button>
         </div>
       </nav>
