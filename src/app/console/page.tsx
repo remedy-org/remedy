@@ -1,15 +1,18 @@
 import { Button, EmptyState } from "@/components/ui";
-import { ClaimsTable } from "@/components/console/ClaimsTable";
+import { ClaimsQueue } from "@/components/console/ClaimsQueue";
 import { CopyField } from "@/components/console/CopyField";
 import { PartialNotice } from "@/components/console/PartialNotice";
 import { RecallHeading } from "@/components/console/RecallHeading";
-import { StatsBand } from "@/components/console/StatsBand";
 import { requireSession } from "@/lib/session";
 import { claimUrl } from "./_lib/links";
-import { statsOf, toRow } from "./_lib/view";
+import { gridRows } from "./_lib/queue";
 import { loadClaims, loadWorkspace, pickRecall } from "./_lib/workspace";
 
 export const metadata = { title: "Claims" };
+
+// On laptops the queue fills the viewport under the 56px header (plus its hairline) and the page itself never
+// scrolls; the grid scrolls inside. Phones keep the page's own scroll.
+const VIEWPORT = "lg:h-[calc(100dvh-57px)] lg:min-h-[640px] lg:flex-none lg:overflow-hidden";
 
 export default async function ConsolePage({ searchParams }: PageProps<"/console">) {
   const session = await requireSession("company", "/console");
@@ -33,11 +36,10 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
   }
 
   const claims = await loadClaims(store, recall, session);
-  const rows = claims.map((c) => toRow(c, recall));
-  const stats = statsOf(claims, recall);
+  const rows = gridRows(claims, recall, session);
 
   return (
-    <main className="flex flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+    <main className={`flex flex-1 flex-col gap-4 px-4 pt-6 pb-3 sm:px-6 lg:px-8 ${rows.length ? VIEWPORT : ""}`}>
       <RecallHeading
         recall={recall}
         recalls={recalls}
@@ -54,9 +56,9 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
         }
       />
       <PartialNotice what="recalls" ids={lostRecalls} total={recalls.length + lostRecalls.length} />
-      <StatsBand stats={stats} />
       {rows.length ? (
-        <ClaimsTable rows={rows} />
+        // Keyed by recall: switching recalls starts a fresh queue (tabs, search, live updates).
+        <ClaimsQueue key={recall.id} recall={{ id: recall.id, unitsSold: recall.unitsSold }} rows={rows} at={new Date().toISOString()} />
       ) : (
         <EmptyState
           eyebrow={`Recall ${recall.id}`}

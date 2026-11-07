@@ -19,6 +19,30 @@ export const amountOf = (paid: Money | null | undefined, recall: Pick<Recall, "r
 // PayPal payer ids are 13 characters; the console shows the last four, enough to tell accounts apart.
 export const maskPayer = (payerId: string) => `•••• ${payerId.slice(-4)}`;
 
+/** One bar of the evidence barcode: a check and how it came out. */
+export type BarState = "pass" | "hold" | "reject" | "waiting" | "skipped";
+export interface CheckBar {
+  id: string;
+  label: string;
+  state: BarState;
+}
+
+/** Seconds after the photos arrived that each later money step happened, and where the claim stands. */
+export interface RowTimeline {
+  answered: number | null;
+  decided: number | null;
+  sent: number | null;
+  settled: number | null;
+  // paid: money sent (settled or settling); held: waiting for a person; stopped: refused; open: still checking.
+  end: "paid" | "held" | "stopped" | "open";
+}
+
+/** A photo as the grid shows it: a 96px thumbnail and a 240px hover view. */
+export interface RowPhoto {
+  thumb: string;
+  large: string;
+}
+
 export interface ClaimRow {
   id: string;
   createdAt: string;
@@ -30,9 +54,110 @@ export interface ClaimRow {
   payoutStatus: string | null;
   // Paid or waiting to be paid: the refund. Refused claims carry no amount.
   amount: string | null;
+  cents: number | null;
   seeded: boolean;
   demo: boolean;
+  // The code written on the tag; null on rows from before the index carried it.
+  code: string | null;
+  // The index row's version (event count): the drawer asks for the claim at this version.
+  version: number | null;
+  photoCount: number;
+  photos: RowPhoto[];
+  // The pre-checks, then the model's checks; null on rows from before the index carried them.
+  bars: CheckBar[] | null;
+  // The verdict's muted line, only when it says more than the pill.
+  note: string | null;
+  // Null until photos arrive (or on rows from before the index carried times).
+  timeline: RowTimeline | null;
+  // Photos to PayPal sending the money, in seconds. Null for sample claims: their payouts were never sent.
+  toPay: number | null;
+  // Photos to the model's answer, in seconds (the eval run's own time on a sample claim).
+  modelSec: number | null;
 }
+
+// The pre-checks every claim goes through before the model, in order, and their labels.
+const PRE_CHECKS: [string, string][] = [
+  ["session", "Live camera session"],
+  ["duplicate_photo", "Photo not seen before"],
+  ["payer", "First claim for this account"],
+  ["payer_verified", "Verified PayPal account"],
+];
+const PRE_IDS = new Set(PRE_CHECKS.map(([id]) => id));
+
+/** A model check's name: "Label", "Code K7Q", "Step 1". */
+export function checkLabel(check: string, code: string): string {
+  if (check === "label") return "Label";
+  if (check === "code") return `Code ${code}`;
+  if (check === "same_item") return "Same item";
+  if (check === "screen") return "Real photo";
+  // Holds that come from the process, not from reading the photo.
+  if (check === "model") return "Photo check";
+  if (check === "payout") return "PayPal payout";
+  if (check === "auto_pay") return "Auto-pay";
+  const step = check.match(/^step_(\d+)$/);
+  return step ? `Step ${step[1]}` : check;
+}
+
+/** The evidence barcode, from the index row alone: the four pre-checks, then each model check the rule recorded (or
+ * the ones it would run, waiting or skipped, when the model hasn't answered). */
+export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashes" | "seeded" | "code">, recall: Pick<Recall, "spec">): CheckBar[] | null {
+  if (!c.checks) return null;
+  const code = c.code ?? "";
+  const ran = c.photoHashes.length > 0 || c.decision === "blocked";
+  const failed = (id: string) => c.checks?.find((r) => r.check === id && r.outcome !== "pass");
+  const pre = PRE_CHECKS.map(([id, label]): CheckBar => {
+    const f = failed(id);
+    if (f) return { id, label, state: f.outcome };
+    // Seeded claims share a few sample photos, so their fingerprint check was never run (preChecksOf says so too).
+    if (id === "duplicate_photo" && c.seeded) return { id, label, state: "skipped" };
+    return { id, label, state: ran ? "pass" : "waiting" };
+  });
+  const answered = c.checks.filter((r) => !PRE_IDS.has(r.check) && r.check !== "review");
+  if (answered.length) return [...pre, ...answered.map((r) => ({ id: r.check, label: checkLabel(r.check, code), state: r.outcome }))];
+  const expected = ["label", "code", ...(c.photoHashes.length > 1 ? ["same_item"] : []), "screen", ...recall.spec.proof_steps.map((_, i) => `step_${i + 1}`)];
+  const state: BarState = c.decision === "blocked" ? "skipped" : "waiting";
+  return [...pre, ...expected.map((id) => ({ id, label: checkLabel(id, code), state }))];
+}
+
+/** "9 checks: 8 passed, 1 held (Same item)": the barcode as a sentence, for screen readers and the tooltip. */
+export function barsSentence(bars: CheckBar[]): string {
+  const words: Record<BarState, string> = { pass: "passed", hold: "held", reject: "failed", waiting: "waiting", skipped: "not run" };
+  const parts = (Object.keys(words) as BarState[]).flatMap((s) => {
+    const of = bars.filter((b) => b.state === s);
+    if (!of.length) return [];
+    const named = s === "hold" || s === "reject" ? ` (${of.map((b) => b.label).join(", ")})` : "";
+    return [`${of.length} ${words[s]}${named}`];
+  });
+  return `${bars.length} checks: ${parts.join(", ")}`;
+}
+
+const since = (from: string | undefined, to: string | undefined) => (from && to ? Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 1000)) : null);
+
+function timelineOf(c: Pick<ClaimSummary, "decision" | "times" | "seeded">): RowTimeline | null {
+  const t = c.times;
+  if (!t?.photos) return null;
+  // A seeded claim's payout was never sent: its sent and settled events are made up by the seed, so they don't show.
+  const sample = Boolean(c.seeded);
+  const end = c.decision === "paid" ? "paid" : c.decision === "held" ? "held" : c.decision === "pending" ? "open" : "stopped";
+  return {
+    answered: since(t.photos, t.answered),
+    decided: since(t.photos, t.decided),
+    sent: sample ? null : since(t.photos, t.sent),
+    settled: sample ? null : since(t.photos, t.settled),
+    end,
+  };
+}
+
+/** The verdict column's muted line: the reason, or how many checks a paid claim passed. */
+function noteOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes">, bars: CheckBar[] | null, recall: Pick<Recall, "autoPay">): string | null {
+  if (c.decision === "paid" && !c.reason) {
+    const passed = bars?.filter((b) => b.state === "pass").length;
+    return passed ? `All ${passed} checks passed` : null;
+  }
+  return reasonOf(c, recall);
+}
+
+export type PhotoUrls = (key: string, n: number) => RowPhoto;
 
 const first = (reasons: Reason[], outcome: Reason["outcome"]) => reasons.find((r) => r.outcome === outcome)?.text;
 
@@ -51,7 +176,12 @@ export function reasonOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHas
   }
 }
 
-export function toRow(c: ClaimSummary, recall: Recall): ClaimRow {
+/** A grid row from an index row. photoUrls turns each photo's store key into the URLs the grid loads (the console
+ * seals them per company; the homepage preview uses public sample photos); without it a row shows no thumbnails. */
+export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls): ClaimRow {
+  const owed = c.decision === "paid" || c.decision === "held" ? amountOf(c.payoutAmount, recall) : null;
+  const bars = barsOf(c, recall);
+  const timeline = timelineOf(c);
   return {
     id: c.id,
     createdAt: c.createdAt,
@@ -60,11 +190,80 @@ export function toRow(c: ClaimSummary, recall: Recall): ClaimRow {
     decision: c.decision,
     reason: reasonOf(c, recall),
     payoutStatus: c.payoutStatus,
-    amount: c.decision === "paid" || c.decision === "held" ? formatMoney(amountOf(c.payoutAmount, recall)) : null,
+    amount: owed ? formatMoney(owed) : null,
+    cents: owed ? cents(owed) : null,
     seeded: Boolean(c.seeded),
     demo: Boolean(c.demo),
+    code: c.code ?? null,
+    version: c.version ?? null,
+    photoCount: c.photoHashes.length,
+    photos: photoUrls ? (c.photoKeys ?? []).map(photoUrls) : [],
+    bars,
+    note: noteOf(c, bars, recall),
+    timeline,
+    toPay: timeline && c.decision === "paid" ? timeline.sent : null,
+    modelSec: timeline?.answered ?? null,
   };
 }
+
+// PayPal statuses it never moves on from (lib/paypal/status.ts), repeated here so client code can use them.
+const PAYPAL_FINAL = new Set(["SUCCESS", "FAILED", "RETURNED", "BLOCKED", "DENIED", "CANCELED", "REFUNDED", "REVERSED"]);
+
+/** A real payout PayPal hasn't settled yet. Sample claims never had one. */
+export const isSettling = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) => r.decision === "paid" && !r.seeded && r.payoutStatus !== null && !PAYPAL_FINAL.has(r.payoutStatus);
+
+export const LIVE_WINDOW_MS = 10 * 60_000;
+
+/** Whether the queue can still change by itself: a real or demo claim checking or settling, or a demo claim filed in
+ * the last 10 minutes. Seeded samples never change, so they never count. */
+export function isLive(rows: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "demo" | "createdAt">[], now = Date.now()): boolean {
+  return rows.some((r) => !r.seeded && (r.decision === "pending" || isSettling(r) || (r.demo && now - Date.parse(r.createdAt) < LIVE_WINDOW_MS)));
+}
+
+export interface Ledger {
+  total: number;
+  remedied: number;
+  unitsSold: number;
+  // Of the remedied, the sample claims: counted as the rule decided, but never paid.
+  sampleRemedied: number;
+  // Real (and demo, sandbox) money sent through PayPal.
+  paidCents: number;
+  // What the sample claims would have paid.
+  sampleCents: number;
+  // Median seconds from photos to PayPal over claims whose payout was sent, and how many that is.
+  medianToPay: number | null;
+  timed: number;
+  held: number;
+  refused: number;
+  settling: number;
+  samples: number;
+  demos: number;
+}
+
+/** The ledger strip over the grid, from the rows the grid shows, so it updates with each poll. */
+export function ledgerOf(rows: ClaimRow[], recall: Pick<Recall, "unitsSold">): Ledger {
+  const paid = rows.filter((r) => r.decision === "paid");
+  const times = paid.flatMap((r) => (r.toPay === null ? [] : [r.toPay])).sort((a, b) => a - b);
+  const mid = times.length >> 1;
+  return {
+    total: rows.length,
+    remedied: paid.length,
+    unitsSold: recall.unitsSold,
+    sampleRemedied: paid.filter((r) => r.seeded).length,
+    paidCents: paid.filter((r) => !r.seeded).reduce((s, r) => s + (r.cents ?? 0), 0),
+    sampleCents: paid.filter((r) => r.seeded).reduce((s, r) => s + (r.cents ?? 0), 0),
+    medianToPay: times.length ? (times.length % 2 ? times[mid] : Math.round((times[mid - 1] + times[mid]) / 2)) : null,
+    timed: times.length,
+    held: rows.filter((r) => r.decision === "held").length,
+    refused: rows.filter((r) => r.decision === "rejected" || r.decision === "blocked").length,
+    settling: rows.filter(isSettling).length,
+    samples: rows.filter((r) => r.seeded).length,
+    demos: rows.filter((r) => r.demo).length,
+  };
+}
+
+/** "0:41", "1:05", "12:00": a duration as a clock. */
+export const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 
 export interface Stats {
   total: number;
@@ -106,11 +305,13 @@ export function percent(value: number, of: number): string {
 }
 
 // The rule's decision in one sentence, for the evidence drawer.
-export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos" | "payout">, recall: Pick<Recall, "autoPay" | "refund">): string {
+export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos" | "payout" | "seeded">, recall: Pick<Recall, "autoPay" | "refund">): string {
   const amount = formatMoney(amountOf(c.payout?.amount, recall));
   const reviewed = c.reasons.find((r) => r.check === "review");
   switch (c.decision) {
     case "paid":
+      // A seeded sample was decided by the rule like any claim, but its PayPal account is made up and nothing was sent.
+      if (c.seeded) return `Every check passed, so the rule would pay ${amount}. This is a sample claim: no money was sent.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `Every check passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
       const hold = first(c.reasons, "hold");

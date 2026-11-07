@@ -41,6 +41,17 @@ vi.mock("next/server", async (original) => ({ ...(await original<typeof import("
 // The model passes every photo and PayPal takes every payout, without the network.
 let deps: PipelineDeps;
 vi.mock("./api/claims/_lib/deps", async (original) => ({ ...(await original<typeof import("./api/claims/_lib/deps")>()), liveDeps: async () => deps }));
+// Next's data cache (unstable_cache), in memory: what it keeps, it serves without the store. A throw isn't kept.
+vi.mock("next/cache", () => ({
+  unstable_cache: <A extends unknown[], R>(fn: (...args: A) => Promise<R>) => {
+    const kept = new Map<string, R>();
+    return async (...args: A) => {
+      const key = JSON.stringify(args);
+      if (!kept.has(key)) kept.set(key, await fn(...args));
+      return structuredClone(kept.get(key)!);
+    };
+  },
+}));
 
 const { loadClaimFor, loadClaims, loadWorkspace, pickRecall } = await import("./console/_lib/workspace");
 const { GET: pollStatus } = await import("./api/claims/[id]/status/route");
@@ -51,6 +62,10 @@ const { POST: startDemo } = await import("./api/claims/route");
 const { ClaimScreen } = await import("@/components/claim/ClaimScreen");
 const model = await import("@/components/claim/model");
 const { default: SamplesPage } = await import("./r/[recall]/try/samples/page");
+const { GET: pollQueue } = await import("./api/console/claims/route");
+const { GET: consolePhoto } = await import("./api/console/claims/[id]/photos/[n]/route");
+const { GET: openEvidence } = await import("./api/console/claims/[id]/route");
+const { sealedPhotoUrl } = await import("./console/_lib/photoToken");
 
 function pass(recall: Recall, code: string): Verdict {
   return {
@@ -213,6 +228,61 @@ describe("the evidence drawer", () => {
     await seed(50);
     expect(await loadClaimFor(company, "RM-0002", { fresh: true })).not.toBeNull();
     expect(counter.counts.calls).toEqual({ getClaim: 1, getRecall: 1 });
+  });
+});
+
+describe("the claims grid (P4)", () => {
+  const params = <T extends object>(p: T) => ({ params: Promise.resolve(p) });
+
+  it("polls index.json alone: 3 reads cold, 1 warm, whatever the number of claims", async () => {
+    await seed(200);
+    const res = await pollQueue(new NextRequest("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
+    expect((await res.json()).rows).toHaveLength(200);
+    expect(counter.counts.reads).toBeLessThanOrEqual(3);
+    expect(counter.counts.calls.getClaim).toBeUndefined();
+
+    counter.reset();
+    await pollQueue(new NextRequest("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
+    expect(counter.counts.calls).toEqual({ listClaims: 1 });
+  });
+
+  it("serves a thumbnail without opening its claim: 1 read per photo and width, ever", async () => {
+    const sharp = (await import("sharp")).default;
+    const jpeg = await sharp({ create: { width: 640, height: 480, channels: 3, background: "#7a8" } }).jpeg().toBuffer();
+    const key = "budget-thumb/1.jpg";
+    await inner.putPhoto(key, jpeg);
+    await inner.putClaim(sampleClaim({ id: "RM-0777", payerId: company.payerId, photos: [{ key, hash: "0123456789abcdef" }] }));
+    counter.reset();
+
+    const url = `http://127.0.0.1:3000${sealedPhotoUrl("RM-0777", 0, key, company.payerId)}&w=96`;
+    const thumb = () => consolePhoto(new NextRequest(url), params({ id: "RM-0777", n: "0" }));
+    const res = await thumb();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, max-age=86400, immutable");
+    expect((await sharp(Buffer.from(await res.arrayBuffer())).metadata()).width).toBe(96);
+    expect(counter.counts.calls).toEqual({ getPhoto: 1 });
+
+    counter.reset();
+    await thumb();
+    await thumb();
+    expect(counter.counts.reads).toBe(0);
+
+    // A ticket for another photo, or a width the console never asks for, is refused before any read.
+    expect((await consolePhoto(new NextRequest(url), params({ id: "RM-0777", n: "1" }))).status).toBe(404);
+    expect((await consolePhoto(new NextRequest(url.replace("w=96", "w=500")), params({ id: "RM-0777", n: "0" }))).status).toBe(400);
+    expect(counter.counts.reads).toBe(0);
+  });
+
+  it("opens the evidence panel at a row's version: the claim once, then only its recall", async () => {
+    await seed(50);
+    const open = () => openEvidence(new NextRequest("http://127.0.0.1:3000/api/console/claims/RM-0002?v=1"), params({ id: "RM-0002" }));
+    const first = await (await open()).json();
+    expect(first.photos[0]).toMatch(/^\/api\/console\/claims\/RM-0002\/photos\/0\?t=[\w-]+$/);
+    expect(counter.counts.calls).toEqual({ getClaim: 1, getRecall: 1 });
+
+    counter.reset();
+    expect((await (await open()).json()).id).toBe("RM-0002");
+    expect(counter.counts.calls).toEqual({ getRecall: 1 });
   });
 });
 

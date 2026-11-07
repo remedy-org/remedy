@@ -1,75 +1,266 @@
 "use client";
 
-import type { CustomCellRendererProps } from "ag-grid-react";
+import clsx from "clsx";
+import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { StatusPill } from "@/components/ui";
-import type { ClaimRow } from "@/app/console/_lib/view";
+import { barsSentence, clock, type BarState, type CheckBar, type ClaimRow, type RowTimeline } from "@/app/console/_lib/view";
 import { formatTime } from "./format";
+
+// The claims grid's cells (DESIGN.md "AG Grid", UI-SPEC §3.3). Every cell renders from the index row alone; nothing
+// here fetches except the thumbnails, which are sealed, cached, 96px and lazy (only rows AG Grid renders load them).
 
 type Cell = CustomCellRendererProps<ClaimRow>;
 
-export function SampleTag({ row }: { row: Pick<ClaimRow, "seeded" | "demo"> }) {
+const SAMPLE_TITLE = { seeded: "Sample claim from the eval set: never paid", demo: "Filed through the judges' demo with sandbox money" };
+
+/** A 6px hollow diamond after a sample or demo claim's id: the banner over the grid says what it means. */
+export function SampleMark({ row }: { row: Pick<ClaimRow, "seeded" | "demo"> }) {
   if (!row.seeded && !row.demo) return null;
+  const title = row.seeded ? SAMPLE_TITLE.seeded : SAMPLE_TITLE.demo;
   return (
-    <span className="micro text-faint" title={row.seeded ? "Sample claim from the eval: never paid" : "Filed through the judges' demo with sandbox money"}>
-      {row.seeded ? "Seeded" : "Demo"}
+    <span title={title} className="inline-flex size-3 shrink-0 items-center justify-center">
+      <span aria-hidden="true" className={clsx("size-1.5 rotate-45 border", row.seeded ? "border-faint" : "border-accent-text")} />
+      <span className="sr-only">{title}</span>
     </span>
   );
 }
 
-/** Claim id in mono with its sample tag. In the narrow layout the filing time sits under it. */
-export function ClaimCell({ data, context }: Cell & { context?: { narrow?: boolean } }) {
+/** Up to two photos, 32x24, overlapping by 8px; a dashed slot before any arrive. */
+export function Thumbs({ row, size = "md" }: { row: Pick<ClaimRow, "photos" | "photoCount">; size?: "md" | "lg" }) {
+  const box = size === "md" ? "h-6 w-8" : "h-[30px] w-10";
+  const shown = row.photos.slice(0, 2);
+  if (!shown.length) {
+    return (
+      <span aria-hidden="true" className={clsx("flex shrink-0", size === "md" ? "w-14" : "w-[70px]")}>
+        <span className={clsx(box, "rounded-[4px] border border-dashed border-line-strong", row.photoCount > 0 && "bg-surface-2")} />
+      </span>
+    );
+  }
+  // A fixed slot (room for two overlapping photos), so claim ids line up whether a claim has one photo or two.
+  return (
+    <span aria-hidden="true" className={clsx("relative flex shrink-0", size === "md" ? "w-14" : "w-[70px]")}>
+      {shown.map((p, i) => (
+        // A private, session-checked route: next/image's optimizer can't fetch it with the company's cookie.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={p.thumb}
+          src={p.thumb}
+          alt=""
+          width={size === "md" ? 32 : 40}
+          height={size === "md" ? 24 : 30}
+          loading="lazy"
+          decoding="async"
+          className={clsx(box, "rounded-[4px] bg-surface-2 object-cover ring-1 ring-line", i > 0 && (size === "md" ? "-ml-2" : "-ml-2.5"))}
+        />
+      ))}
+    </span>
+  );
+}
+
+/** Thumbnails, the claim id (mono 14/500) and when it was filed (mono 12, faint). */
+export function ClaimCell({ data }: Cell) {
   if (!data) return null;
   return (
-    <span className="flex h-full flex-col justify-center leading-tight">
-      <span className="flex items-center gap-2">
-        <span className="font-mono text-ui">{data.id}</span>
-        <SampleTag row={data} />
+    <span className="flex h-full items-center gap-3">
+      <Thumbs row={data} />
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="flex items-center gap-1.5">
+          <span className="font-mono text-ui font-medium">{data.id}</span>
+          <SampleMark row={data} />
+        </span>
+        <span className="mt-0.5 font-mono text-micro text-faint">{formatTime(data.createdAt)}</span>
       </span>
-      {context?.narrow && <span className="mt-0.5 font-mono text-micro text-faint">{formatTime(data.createdAt)}</span>}
     </span>
   );
 }
 
-export function FiledCell({ data }: Cell) {
-  return data ? <span className="font-mono text-ui text-muted">{formatTime(data.createdAt)}</span> : null;
+/** The pill, then the reason in one muted line when it says more than the pill: beside it in the queue, under it in
+ * the homepage's narrower still (context.stacked), where a truncated sentence beside the pill would say little. */
+export function VerdictCell({ data, context }: Cell & { context?: { stacked?: boolean } }) {
+  if (!data) return null;
+  if (context?.stacked) {
+    return (
+      <span className="flex h-full min-w-0 flex-col items-start justify-center gap-1">
+        <StatusPill status={data.decision} />
+        {data.note && data.decision !== "paid" && (
+          <span className="w-full truncate text-micro leading-tight text-muted" title={data.note}>
+            {data.note}
+          </span>
+        )}
+      </span>
+    );
+  }
+  return (
+    <span className="flex h-full min-w-0 items-center gap-3">
+      <StatusPill status={data.decision} />
+      {data.note && (
+        <span className="min-w-0 truncate text-ui text-muted" title={data.note}>
+          {data.note}
+        </span>
+      )}
+    </span>
+  );
 }
 
+const BAR_WORD: Record<BarState, string> = { pass: "passed", hold: "unclear, held", reject: "failed", waiting: "waiting", skipped: "not run" };
+
+function Bar({ bar }: { bar: CheckBar }) {
+  return (
+    <span
+      title={`${bar.label}: ${BAR_WORD[bar.state]}`}
+      className={clsx(
+        "relative h-4 w-2 shrink-0 overflow-hidden rounded-[1.5px]",
+        bar.state === "pass" && "bg-pay/70",
+        // Held: the top half filled, so it reads without colour.
+        bar.state === "hold" && "border border-hold bg-[linear-gradient(var(--hold)_50%,transparent_50%)]",
+        // Failed: filled, with a slash in the background colour.
+        bar.state === "reject" && "bg-stop after:absolute after:top-1/2 after:-left-1 after:h-px after:w-4 after:-rotate-60 after:bg-bg",
+        bar.state === "waiting" && "border border-line-strong",
+        bar.state === "skipped" && "border border-dotted border-line-strong",
+      )}
+    />
+  );
+}
+
+/** The evidence barcode: one 8x16 bar per check, the four pre-checks, a 6px gap, then the model's checks. Shape carries
+ * the outcome as well as colour (filled, half, slashed, outline, dotted). */
+export function Barcode({ bars }: { bars: CheckBar[] }) {
+  const split = bars.findIndex((b) => !["session", "duplicate_photo", "payer", "payer_verified"].includes(b.id));
+  const groups = split < 0 ? [bars] : [bars.slice(0, split), bars.slice(split)];
+  return (
+    <span role="img" aria-label={barsSentence(bars)} className="flex items-center gap-1.5">
+      {groups.map((g, i) => (
+        <span key={i} className="flex gap-0.5">
+          {g.map((b) => (
+            <Bar key={b.id} bar={b} />
+          ))}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function ChecksCell({ data }: Cell) {
+  if (!data) return null;
+  if (!data.bars) return <span className="text-faint" aria-label="Checks not recorded on this row">—</span>;
+  return (
+    <span className="flex h-full items-center">
+      <Barcode bars={data.bars} />
+    </span>
+  );
+}
+
+// The timeline's scale: 0 to 120 s after the photos arrive, clamped.
+const SCALE = 120;
+// 92px wide, so the track and a "1:05" chip fit the 168px column (144px inside its padding).
+const W = 92;
+const x = (sec: number) => 4 + (Math.min(sec, SCALE) / SCALE) * (W - 8);
+
+/** "0:41"; "2h 05m" past an hour (a held claim a person approved later). */
+export const duration = (sec: number) => (sec >= 3600 ? `${Math.floor(sec / 3600)}h ${String(Math.floor((sec % 3600) / 60)).padStart(2, "0")}m` : clock(sec));
+
+/** A 92x12 track from the photos arriving: dots where the model answered, the rule decided, PayPal sent and PayPal
+ * settled, on a 0 to 120 s scale. Held ends on a hollow blue dot (a person decides), refused on a red tick. */
+export function TimelineTrack({ t, decision }: { t: RowTimeline; decision: ClaimRow["decision"] }) {
+  const last = Math.max(0, ...[t.answered, t.decided, t.sent, t.settled].filter((v): v is number => v !== null));
+  const end = x(last);
+  const stop = decision === "rejected" || decision === "blocked";
+  return (
+    <svg width={W} height={12} viewBox={`0 0 ${W} 12`} aria-hidden="true" className="shrink-0 overflow-visible">
+      <line x1={4} x2={W - 4} y1={6} y2={6} stroke="var(--line-strong)" strokeOpacity={0.45} strokeDasharray="1 3" />
+      <line x1={4} x2={end} y1={6} y2={6} stroke="var(--muted)" strokeWidth={1} />
+      <circle cx={4} cy={6} r={2} fill="var(--muted)" />
+      {t.answered !== null && <circle cx={x(t.answered)} cy={6} r={2} fill="var(--muted)" />}
+      {t.decided !== null && !stop && t.end !== "held" && <circle cx={x(t.decided)} cy={6} r={2} fill="var(--text)" />}
+      {t.sent !== null && <circle cx={x(t.sent)} cy={6} r={2.5} fill="var(--pay)" />}
+      {t.settled !== null && <circle cx={x(t.settled)} cy={6} r={3.5} fill="var(--pay)" stroke="var(--surface)" strokeWidth={1} />}
+      {t.end === "held" && <circle cx={x(t.decided ?? last)} cy={6} r={3} fill="var(--surface)" stroke="var(--hold)" strokeWidth={1.5} />}
+      {stop && <line x1={x(t.decided ?? last)} x2={x(t.decided ?? last)} y1={1} y2={11} stroke="var(--stop)" strokeWidth={2} strokeLinecap="round" />}
+      {t.end === "open" && <circle cx={end} cy={6} r={3} fill="none" stroke="var(--text)" strokeWidth={1.5} className="pending-dot" />}
+    </svg>
+  );
+}
+
+/** What the timeline says in words, for screen readers and the tooltip. */
+function timelineSentence(d: ClaimRow): string {
+  const t = d.timeline;
+  if (!t) return d.photoCount ? "No times recorded on this row" : "Waiting for photos";
+  const at = (label: string, v: number | null) => (v === null ? [] : [`${label} at ${duration(v)}`]);
+  const steps = [...at("model answered", t.answered), ...at("rule decided", t.decided), ...at("PayPal sent", t.sent), ...at("PayPal settled", t.settled)];
+  const tail = d.seeded && d.decision === "paid" ? "; a sample claim, never paid" : t.end === "held" ? "; waiting for a person" : "";
+  return `From the photos: ${steps.join(", ") || "checking"}${tail}`;
+}
+
+/** The track, then the time to pay as a chip ("0:41"). A sample claim was never paid, so it shows the model's time
+ * from the eval run instead, unboxed. */
+export function TimelineCell({ data }: Cell) {
+  if (!data) return null;
+  if (!data.timeline) return <span className="font-mono text-micro text-faint">{data.photoCount ? "—" : "No photos yet"}</span>;
+  return (
+    <span className="flex h-full items-center gap-2" title={timelineSentence(data)}>
+      <TimelineTrack t={data.timeline} decision={data.decision} />
+      <span className="sr-only">{timelineSentence(data)}</span>
+      {data.toPay !== null ? (
+        <span className="inline-flex h-5 items-center rounded-control bg-surface-2 px-1.5 font-mono text-micro text-text tabular-nums" aria-hidden="true">
+          {duration(data.toPay)}
+        </span>
+      ) : data.seeded && data.modelSec !== null ? (
+        <span className="font-mono text-micro text-faint tabular-nums" aria-hidden="true">
+          {data.modelSec} s
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** The payer's last four; "Unverified" in red only when it's true. */
 export function PayerCell({ data }: Cell) {
   if (!data) return null;
   return (
-    <span className="flex items-center gap-2">
-      <span className="font-mono text-ui">{data.payer}</span>
-      <span className={data.verified ? "text-micro text-faint" : "text-micro text-stop"}>{data.verified ? "Verified" : "Unverified"}</span>
+    <span className="flex h-full items-center gap-2">
+      <span className="font-mono text-ui text-muted">{data.payer}</span>
+      {!data.verified && <span className="text-micro text-stop">Unverified</span>}
     </span>
   );
-}
-
-export function DecisionCell({ data }: Cell) {
-  return data ? <StatusPill status={data.decision} /> : null;
-}
-
-export function ReasonCell({ data }: Cell) {
-  return data ? (
-    <span className="min-w-0 truncate text-ui text-muted" title={data.reason}>
-      {data.reason}
-    </span>
-  ) : null;
 }
 
 const FAILED = new Set(["FAILED", "RETURNED", "BLOCKED", "DENIED", "REVERSED", "REFUNDED", "CANCELED"]);
 
-/** PayPal's status in a word: Sent, Settling or Failed. Never the held blue: a settling payout isn't held for a person.
- * The raw status stays in the drawer's PayPal block and in the tooltip. */
+/** PayPal's status in a word: Sent, Settling or Failed. A sample claim's payout was never sent, and says so. */
 export function PayoutCell({ data }: Cell) {
   if (!data) return null;
+  if (data.seeded && data.decision === "paid") {
+    return (
+      <span className="flex h-full flex-col justify-center leading-tight" title="A sample claim: the rule decided to pay, and no money moved">
+        <span className="inline-flex items-center gap-1.5 text-ui text-muted">
+          <span className="size-1.5 shrink-0 rounded-full border border-muted" aria-hidden="true" />
+          Sample
+        </span>
+        <span className="font-mono text-micro text-faint">not sent</span>
+      </span>
+    );
+  }
   if (!data.payoutStatus) return <span className="text-faint" aria-label="No payout">—</span>;
   const status = data.payoutStatus;
-  const [word, mark] =
-    status === "SUCCESS" ? ["Sent", "bg-muted"] : FAILED.has(status) ? ["Failed", "bg-stop"] : ["Settling", "border border-muted"];
+  const [word, mark] = status === "SUCCESS" ? ["Sent", "bg-pay"] : FAILED.has(status) ? ["Failed", "bg-stop"] : ["Settling", "border border-muted"];
   return (
-    <span className="inline-flex items-center gap-2 text-ui text-muted" title={`PayPal: ${status}`}>
+    <span className="inline-flex h-full items-center gap-2 text-ui text-muted" title={`PayPal: ${status}`}>
       <span className={`size-1.5 shrink-0 rounded-full ${mark}`} aria-hidden="true" />
       {word}
+    </span>
+  );
+}
+
+/** "$29.99" with the cents at 73%, raised (Mercury's table cents). Sample and unpaid amounts are muted. */
+export function AmountText({ amount, muted }: { amount: string; muted?: boolean }) {
+  const dot = amount.lastIndexOf(".");
+  return (
+    <span className={clsx("font-mono text-ui whitespace-nowrap tabular-nums", muted ? "text-muted" : "text-text")}>
+      <span className="sr-only">{amount}</span>
+      <span aria-hidden="true">
+        {amount.slice(0, dot)}
+        <span className="relative -top-[0.2em] text-[length:max(12px,0.73em)]">{amount.slice(dot)}</span>
+      </span>
     </span>
   );
 }
@@ -77,5 +268,48 @@ export function PayoutCell({ data }: Cell) {
 export function AmountCell({ data }: Cell) {
   if (!data) return null;
   if (!data.amount) return <span className="text-faint" aria-label="No amount">—</span>;
-  return <span className={data.decision === "paid" ? "font-mono text-ui" : "font-mono text-ui text-muted"}>{data.amount}</span>;
+  return <AmountText amount={data.amount} muted={data.decision !== "paid" || data.seeded} />;
+}
+
+/** Phones: one 72px card per claim. Photo, id and pill; then the barcode, the time to pay and the amount. */
+export function CardRow({ data }: Cell) {
+  if (!data) return null;
+  return (
+    <span className="flex h-full items-center gap-3 px-4">
+      <Thumbs row={data} size="lg" />
+      <span className="flex min-w-0 flex-1 flex-col gap-2">
+        <span className="flex items-center justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="font-mono text-ui font-medium">{data.id}</span>
+            <SampleMark row={data} />
+          </span>
+          <StatusPill status={data.decision} />
+        </span>
+        <span className="flex items-center gap-3">
+          {data.bars ? <Barcode bars={data.bars} /> : <span className="font-mono text-micro text-faint">{formatTime(data.createdAt)}</span>}
+          {data.toPay !== null && <span className="font-mono text-micro text-muted tabular-nums">{duration(data.toPay)}</span>}
+          <span className="ml-auto">{data.amount ? <AmountText amount={data.amount} muted={data.decision !== "paid" || data.seeded} /> : <span className="text-faint">—</span>}</span>
+        </span>
+      </span>
+    </span>
+  );
+}
+
+/** Hovering a claim: its first photo at 240px, with the exhibit label. */
+export function PhotoTooltip({ data }: CustomTooltipProps<ClaimRow>) {
+  const photo = data?.photos[0];
+  if (!data || !photo) return null;
+  const sample = data.seeded || data.demo;
+  return (
+    <div className="w-[256px] overflow-hidden rounded-card bg-surface p-2 pb-2.5 shadow-float">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={photo.large} alt={`Photo 1 of ${data.photoCount} for ${data.id}`} width={240} height={180} className="block h-[180px] w-[240px] rounded-control bg-surface-2 object-cover" />
+      <p className="micro mt-2 px-0.5 text-accent-text">Exhibit A · Photo 1 of {data.photoCount}</p>
+      <p className="mt-0.5 px-0.5 font-mono text-micro text-faint">
+        {data.code ? `Code ${data.code}` : ""}
+        {data.code && sample ? " · " : ""}
+        {sample ? "AI-made test photo" : ""}
+      </p>
+    </div>
+  );
 }

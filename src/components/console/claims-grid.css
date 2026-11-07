@@ -1,0 +1,66 @@
+/* The claims grid's finishing touches the theme params can't express (gridTheme.ts holds the rest). */
+
+/* Header labels: the micro token, mono uppercase with +0.06em tracking. */
+.claims-grid .ag-header-cell-text {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* The open claim: a 2px amber edge on the left, like the edge of an evidence tag. */
+.claims-grid .ag-row.ag-row-selected::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 2px;
+  background: var(--accent);
+  z-index: 5;
+}
+
+/* A clicked cell takes focus (so the arrow keys work next) but only the keyboard shows the ring: the open row's amber
+   edge already marks a click. */
+.claims-grid .ag-cell-focus:not(:focus-visible) {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Cells centre their content vertically; renderers own their own layout. */
+.claims-grid .ag-cell {
+  display: flex;
+  align-items: center;
+}
+
+.claims-grid .ag-cell-value,
+.claims-grid .ag-cell-wrapper {
+  min-width: 0;
+  width: 100%;
+}
+
+.claims-grid .ag-right-aligned-cell {
+  justify-content: flex-end;
+}
+
+/* AG Grid's tooltip popup carries our own card; drop its default chrome. */
+.claims-grid .ag-tooltip-custom {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* A claim still checking: its last timeline dot breathes (1.6s), static under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .claims-grid .pending-dot {
+    animation: pending-dot 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes pending-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
