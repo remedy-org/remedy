@@ -26,7 +26,7 @@ export interface SectionProps {
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
 
 /**
- * A homepage section: a hairline on top that runs to the rails, 96px of air on laptops (72px on phones), an exhibit eyebrow
+ * A homepage section: a hairline on top that runs to the rails, 72px of air on laptops (64px on phones), an exhibit eyebrow
  * and a heading that focuses in. Leads stop at 60ch.
  */
 export function Section({ id, exhibit, title, muted, head = "small", lead, tone = "dark", children, className }: SectionProps) {
@@ -38,7 +38,7 @@ export function Section({ id, exhibit, title, muted, head = "small", lead, tone 
       aria-labelledby={headingId}
       className={clsx("scroll-mt-16", paper ? "bg-paper text-ink" : "border-t border-line", className)}
     >
-      <div className="mx-auto max-w-content px-4 py-18 sm:px-8 lg:py-24">
+      <div className="mx-auto max-w-content px-4 py-16 sm:px-8 lg:py-18">
         <Reveal
           as="header"
           className={clsx(head === "small" && lead && "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end lg:gap-x-16")}
@@ -85,7 +85,7 @@ export function Section({ id, exhibit, title, muted, head = "small", lead, tone 
             </p>
           )}
         </Reveal>
-        <div className="mt-12 lg:mt-16">{children}</div>
+        <div className="mt-10 lg:mt-12">{children}</div>
       </div>
     </section>
   );

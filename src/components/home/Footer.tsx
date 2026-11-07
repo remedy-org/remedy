@@ -1,13 +1,15 @@
-import clsx from "clsx";
 import Link from "next/link";
 import { Button, Paper, Wordmark } from "@/components/ui";
 import styles from "./home.module.css";
 import { Enter } from "./Reveal";
 
+// In the nav's order.
 const PRODUCT = [
   { href: "#how", label: "How it works" },
+  { href: "#problem", label: "The problem" },
   { href: "#checks", label: "What stops a fake" },
   { href: "#proof", label: "Proof" },
+  { href: "#companies", label: "For companies" },
   { href: "/r/kikea-x-vesolje/try", label: "Try a demo claim" },
   { href: "/signin", label: "Sign in" },
 ];
@@ -26,9 +28,9 @@ const linkClass = "inline-flex min-h-11 items-center text-ui text-muted transiti
 /** The closing call to action, as the brand's object: a large paper tag hanging on its string. */
 function CtaTag() {
   return (
-    <Enter className="relative mx-auto max-w-[65rem] pt-24 sm:pt-28" threshold={0.3}>
+    <Enter className="relative mx-auto max-w-[65rem] pt-14" threshold={0.3}>
       <Paper variant="tag" hole padding="none" className="sm:-rotate-1">
-        <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-16 sm:pb-12 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
+        <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div>
             <p className="micro text-ink-muted">Exhibit E · Your recall</p>
             <h2 className="mt-4 text-title-lg font-semibold text-balance">Running a recall?</h2>
@@ -43,10 +45,10 @@ function CtaTag() {
         </div>
       </Paper>
       {/* The string hangs from the footer's top rule and runs down over the paper into the tag's hole (19px below the
-          tag's top edge). Drawn in on enter. */}
+          tag's top edge, so the padding above plus 19px). Drawn in on enter. */}
       <svg
         aria-hidden="true"
-        className="absolute top-0 left-1/2 z-10 h-[115px] w-24 -translate-x-1/2 overflow-visible sm:h-[131px]"
+        className="absolute top-0 left-1/2 z-10 h-[75px] w-24 -translate-x-1/2 overflow-visible"
         viewBox="0 0 96 136"
         preserveAspectRatio="none"
         fill="none"
@@ -71,34 +73,38 @@ export function Footer() {
       <div className="px-4 sm:px-8">
         <CtaTag />
       </div>
-      <div className="mx-auto mt-20 grid max-w-content grid-cols-2 gap-x-6 gap-y-12 px-4 pb-12 sm:mt-24 sm:px-8 md:grid-cols-[minmax(0,1fr)_auto_auto] md:gap-x-16">
-        <div className="col-span-2 md:col-span-1">
-          <Wordmark size="md" />
-          <p className="mt-4 max-w-[36ch] text-ui text-muted">
-            Recall refunds in a minute for people who really destroyed the product, and never for a faked photo.
-          </p>
+      {/* One row under the tag: the brand and its line, then the sitemap in the nav's order; the sources and the
+          colophon on a hairline under them; then the disclaimer. */}
+      <div className="mx-auto mt-12 max-w-content px-4 sm:px-8">
+        <div className="grid gap-x-16 gap-y-6 md:grid-cols-[minmax(0,1fr)_minmax(0,38rem)] md:items-start">
+          <div>
+            <Wordmark size="md" />
+            <p className="mt-3 max-w-[36ch] text-ui text-muted">
+              Recall refunds in a minute for people who really destroyed the product, and never for a faked photo.
+            </p>
+          </div>
+          <nav aria-label="Footer">
+            <h2 className="sr-only">Remedy</h2>
+            <ul className="flex flex-wrap gap-x-6 md:-mt-2.5">
+              {PRODUCT.map((l) => (
+                <li key={l.href}>
+                  {l.href.startsWith("#") ? (
+                    <a href={l.href} className={linkClass}>
+                      {l.label}
+                    </a>
+                  ) : (
+                    <Link href={l.href} className={linkClass}>
+                      {l.label}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
-        <nav aria-label="Footer">
-          <h2 className="micro text-faint">Remedy</h2>
-          <ul className="mt-3">
-            {PRODUCT.map((l) => (
-              <li key={l.href}>
-                {l.href.startsWith("#") ? (
-                  <a href={l.href} className={linkClass}>
-                    {l.label}
-                  </a>
-                ) : (
-                  <Link href={l.href} className={linkClass}>
-                    {l.label}
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div>
-          <h2 className="micro text-faint">Sources</h2>
-          <ul className="mt-3">
+        <div className="mt-6 flex flex-col gap-x-6 border-t border-line pt-3 md:flex-row md:flex-wrap md:items-center">
+          <h2 className="micro pt-3 text-faint md:pt-0">Sources</h2>
+          <ul className="flex flex-col md:flex-row md:flex-wrap md:gap-x-6">
             {SOURCES.map((s) => (
               <li key={s.href}>
                 <a href={s.href} className={linkClass}>
@@ -107,15 +113,11 @@ export function Footer() {
               </li>
             ))}
           </ul>
+          <p className="py-3 font-mono text-micro text-faint md:ml-auto md:py-0">Case file: Remedy · PayPal AI Hackathon · Filed 13 Nov 2026</p>
         </div>
-      </div>
-      <div className="mx-auto max-w-content px-4 sm:px-8">
-        <div className={clsx("flex flex-col gap-2 border-t border-line py-6 md:flex-row md:items-baseline md:justify-between md:gap-8")}>
-          <p className="text-ui text-faint">
-            Built for the PayPal AI Hackathon, November 2026. Remedy is not made by PayPal; PayPal is a trademark of PayPal, Inc.
-          </p>
-          <p className="shrink-0 font-mono text-micro text-faint">Case file: Remedy · PayPal AI Hackathon · Filed 13 Nov 2026</p>
-        </div>
+        <p className="border-t border-line py-6 text-ui text-faint">
+          Built for the PayPal AI Hackathon, November 2026. Remedy is not made by PayPal; PayPal is a trademark of PayPal, Inc.
+        </p>
       </div>
     </footer>
   );

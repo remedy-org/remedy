@@ -71,7 +71,7 @@ export function Problem() {
         {STATS.map((s) => (
           <div key={s.figure} className="border-t border-paper-line pt-6 sm:pt-8">
             <dt className="font-serif text-numeral font-normal whitespace-nowrap italic tabular-nums">{s.figure}</dt>
-            <dd className="mt-4 max-w-[40ch] text-body text-pretty text-ink-muted sm:mt-6">
+            <dd className="mt-4 max-w-[40ch] text-body text-pretty text-ink-muted">
               {s.text}
               <Note n={s.note} />
             </dd>
@@ -79,8 +79,8 @@ export function Problem() {
         ))}
       </dl>
 
-      <Enter className="mt-16 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-12" threshold={0.3}>
-        <div className="contents lg:flex lg:flex-col lg:gap-16">
+      <Enter className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-12" threshold={0.3}>
+        <div className="contents lg:flex lg:flex-col lg:gap-8">
           <Document meta="CPSC 27-071 · Kikea Store · 19,596 units" note={3} className="lg:-rotate-[0.6deg]">
             &ldquo;&hellip;cut the pillow in half after confirming the recalled pillow with the firm and send a photo of the destroyed pillow to{" "}
             <span className={clsx(styles.highlight, "font-mono whitespace-nowrap")}>z•••••929@gmail.com</span>.&rdquo;
@@ -93,7 +93,7 @@ export function Problem() {
         <Document
           meta="CPSC-2026-0067 · Request for information"
           note={4}
-          className="lg:mt-12 lg:rotate-[0.8deg]"
+          className="lg:mt-8 lg:rotate-[0.8deg]"
           stamp={
             <span className="pointer-events-none absolute right-6 -bottom-4 sm:right-8">
               <Stamp tone="stop" rotate={-6} className={clsx(styles.stamp, "bg-paper-2")}>
@@ -106,8 +106,7 @@ export function Problem() {
         </Document>
       </Enter>
 
-
-      <ol aria-label="Sources" className="mt-16 grid gap-x-12 gap-y-1 border-t border-paper-line pt-6 md:grid-cols-2">
+      <ol aria-label="Sources" className="mt-8 grid gap-x-8 gap-y-1 border-t border-paper-line pt-6 md:grid-cols-2 lg:grid-cols-4">
         {SOURCES.map((s) => (
           <li key={s.n} id={`source-${s.n}`} className="flex gap-3 font-mono text-micro text-ink-muted">
             <span className="w-4 shrink-0 tabular-nums">{s.n}</span>

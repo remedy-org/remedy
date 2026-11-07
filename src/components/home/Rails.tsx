@@ -20,7 +20,8 @@ export function Rails() {
         </span>
       ))}
       <span className="absolute bottom-10 left-[calc(50%-600px-12px)] h-px w-6 bg-line-strong" />
-      <span className={clsx(styles.railLabel, "bottom-10 uppercase")} style={{ right: "calc(50% + 600px + 16px)", translate: "0 50%" }}>
+      {/* Covers any centimetre label that lands on it, so the last tick reads cleanly. */}
+      <span className={clsx(styles.railLabel, "bottom-10 z-[1] bg-bg py-1 pl-2 uppercase")} style={{ right: "calc(50% + 600px + 16px)", translate: "0 50%" }}>
         End of exhibit
       </span>
     </div>

@@ -2,10 +2,9 @@
 
 import clsx from "clsx";
 import Image from "next/image";
-import type { CSSProperties, ReactNode } from "react";
-import { Money, Paper, Stamp, StatusPill, type StampTone, type Status } from "@/components/ui";
+import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { Money, Paper, Stamp, type StampTone, type Status } from "@/components/ui";
 import styles from "./home.module.css";
-import { Enter } from "./Reveal";
 
 // The checks in the order they run (src/lib/rule.ts): preCheck's three need no model; then the model describes and a
 // fixed rule decides.
@@ -88,7 +87,8 @@ const RULE = (
   </>
 );
 
-// Drop timing (DESIGN.md, move 4): tags fall 300ms apart and land in 460ms (SPRING.drop), then their stamps land.
+// Drop timing (DESIGN.md, move 4): each tag falls when its own gate is in view, at least 300ms after the one before,
+// lands in 460ms (SPRING.drop), then its stamp lands.
 const FALL_GAP = 300;
 const FALL_FOR = 460;
 const vars = (v: Record<string, string | number>) => v as CSSProperties;
@@ -98,7 +98,7 @@ const TILT = [-1.5, 1.2, -0.8, 1.5];
 function SampleTag({ sample, tilt }: { sample: Sample; tilt: number }) {
   return (
     <Paper variant="tag" hole padding="none" tilt={tilt} className="w-32 [--tag-cut:12px]">
-      <div className="flex items-end gap-2 px-2.5 pt-8">
+      <div className="flex items-end gap-2 px-2.5 pt-7">
         <Image src={sample.photo} alt="" width={56} height={56} className="size-14 shrink-0 rounded-[3px] object-cover" />
         <span className="font-mono text-micro leading-[1.15] tracking-[0.04em] text-ink-muted uppercase">
           Sample
@@ -106,7 +106,7 @@ function SampleTag({ sample, tilt }: { sample: Sample; tilt: number }) {
           photo
         </span>
       </div>
-      <div className="flex h-13 items-center justify-center">
+      <div className="flex h-12 items-center justify-center">
         <Stamp tone={sample.tone} className={styles.stamp}>
           {sample.stamp}
         </Stamp>
@@ -122,19 +122,53 @@ const COLS = "grid grid-cols-[3rem_minmax(0,1fr)_repeat(4,9.5rem)]";
  * labelled on the left rail, and the judges' four samples falling down their lanes on scroll until the gate that
  * stops them. Every resting state is in the markup; the drop only plays when motion is allowed.
  */
-export function Pipeline() {
-  // Each tag falls from the top of its lane: measure how far before arming.
-  const arm = (root: HTMLElement) => {
+/**
+ * Arms each lane separately: a lane's tag falls only once the gate that stops it is in view (its top above 70% of the
+ * viewport), so the reader sees every drop, including the wrong code at gate 4 and the payout at the foot. Nothing is
+ * armed without JS, under reduced motion, or when the pipeline is already on screen at load.
+ */
+function useLanes(ref: RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const root = ref.current;
+    if (!root || !root.offsetWidth || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (root.getBoundingClientRect().top < window.innerHeight * 0.9) return;
+    // Each tag falls from the top of its lane: measure how far before arming.
     const top = root.querySelector<HTMLElement>("[data-lanes-top]")?.getBoundingClientRect().bottom ?? 0;
     root.querySelectorAll<HTMLElement>("[data-tag]").forEach((tag) => {
       tag.style.setProperty("--fall", `${Math.round(top - tag.getBoundingClientRect().top - 24)}px`);
     });
-  };
+    const cells = (lane: string) => root.querySelectorAll<HTMLElement>(`[data-lane="${lane}"]`);
+    root.querySelectorAll<HTMLElement>("[data-lane]").forEach((el) => (el.dataset.go = "armed"));
+    let next = 0;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const lane = (e.target as HTMLElement).dataset.stop!;
+          io.unobserve(e.target);
+          // Lanes that come into view together still fall one after another.
+          const now = performance.now();
+          next = Math.max(now, next + FALL_GAP);
+          cells(lane).forEach((el) => {
+            el.style.setProperty("--go-at", `${Math.round(next - now)}ms`);
+            el.dataset.go = "play";
+          });
+        }
+      },
+      { rootMargin: "0px 0px -30% 0px" },
+    );
+    root.querySelectorAll("[data-stop]").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [ref]);
+}
 
+export function Pipeline() {
+  const ref = useRef<HTMLDivElement>(null);
+  useLanes(ref);
   const rows = [...GATES, null];
 
   return (
-    <Enter className="relative hidden lg:block" threshold={0.2} onArm={arm}>
+    <div ref={ref} className="relative hidden lg:block">
       <div className={COLS} data-lanes-top>
         <span className="micro col-span-2 pb-4 text-faint">Gate</span>
         {SAMPLES.map((s) => (
@@ -155,15 +189,15 @@ export function Pipeline() {
                 </span>
               )}
               {g === null ? (
-                <div className="col-span-4 py-6 pr-12">
+                <div className="col-span-4 py-5 pr-12">
                   <h3 className="text-head-sm font-medium">Then a fixed rule decides.</h3>
                   <p className="mt-1 max-w-[52ch] text-ui text-muted">The model only describes what it sees. The rule reads its answers:</p>
                   <p className="mt-4 inline-block rounded-control border border-line bg-surface px-3 py-2 font-mono text-micro leading-relaxed text-text">{RULE}</p>
                 </div>
               ) : (
                 <>
-                  <span className="pt-6 font-mono text-ui text-faint tabular-nums">{String(row + 1).padStart(2, "0")}</span>
-                  <div className="py-6 pr-12">
+                  <span className="pt-5 font-mono text-ui text-faint tabular-nums">{String(row + 1).padStart(2, "0")}</span>
+                  <div className="py-5 pr-12">
                     <h3 className="text-head-sm font-medium">
                       {g.title}
                       <span className="sr-only">{g.ai ? " (the model reads)" : " (no AI)"}</span>
@@ -175,25 +209,24 @@ export function Pipeline() {
               {SAMPLES.map((s, lane) => {
                 // In the last row the rule card spans the first two lanes, which are empty by then.
                 if (g === null && lane < 2) return null;
-                const at = lane * FALL_GAP;
                 const stopsHere = s.stop === row;
                 const through = s.stop > row;
                 return (
-                  <div key={s.lane} className="relative pl-3">
+                  <div key={s.lane} className={clsx(styles.lane, "relative pl-3")} data-lane={lane} data-stop={stopsHere ? lane : undefined}>
                     {(through || stopsHere) && (
                       <span
                         aria-hidden="true"
-                        className={clsx(styles.trail, "absolute top-0 left-[calc(0.75rem+4rem)] w-0 border-l border-dashed border-line-strong", through ? "bottom-0" : "h-6")}
-                        style={vars({ "--trail-at": `${at + (row / (s.stop + 1)) * FALL_FOR}ms`, "--trail-for": `${Math.round(FALL_FOR / (s.stop + 1))}ms` })}
+                        className={clsx(styles.trail, "absolute top-0 left-[calc(0.75rem+4rem)] w-0 border-l border-dashed border-line-strong", through ? "bottom-0" : "h-4")}
+                        style={vars({ "--trail-at": `${Math.round((row / (s.stop + 1)) * FALL_FOR)}ms`, "--trail-for": `${Math.round(FALL_FOR / (s.stop + 1))}ms` })}
                       />
                     )}
                     {stopsHere && (
-                      <div className="relative py-5" style={vars({ "--stamp-at": `${at + FALL_FOR}ms` })}>
-                        <div data-tag className={clsx(styles.fall, "relative w-32")} style={vars({ "--fall-at": `${at}ms` })}>
+                      <div className="relative py-3" style={vars({ "--stamp-at": `${FALL_FOR}ms` })}>
+                        <div data-tag className={clsx(styles.fall, "relative w-32")}>
                           <SampleTag sample={s} tilt={TILT[lane]} />
                         </div>
                         {s.note && (
-                          <p aria-hidden="true" className={clsx(styles.note, "absolute top-[7.75rem] right-full flex items-center gap-2 font-mono text-micro whitespace-nowrap text-stop")}>
+                          <p aria-hidden="true" className={clsx(styles.note, "absolute top-[6.9375rem] right-full flex items-center gap-2 font-mono text-micro whitespace-nowrap text-stop")}>
                             {s.note}
                             <span className="h-px w-6 bg-stop/60" />
                           </p>
@@ -211,8 +244,8 @@ export function Pipeline() {
         })}
       </ol>
       {/* The genuine claim, past every gate, becomes a payout tag beside it. */}
-      <div aria-hidden="true" className="pointer-events-none absolute right-[calc(9.5rem+0.75rem)] bottom-10">
-        <div className={styles.fall} style={vars({ "--fall-at": `${3 * FALL_GAP + FALL_FOR}ms`, "--fall": "-24px" })}>
+      <div aria-hidden="true" className={clsx(styles.lane, "pointer-events-none absolute right-[calc(9.5rem+0.75rem)] bottom-10")} data-lane={3}>
+        <div className={styles.fall} style={vars({ "--fall-at": `${FALL_FOR}ms`, "--fall": "-24px" })}>
           <Paper variant="tag" hole padding="none" tilt={-2} className="w-40 [--tag-cut:12px]">
             <div className="px-4 pt-9 pb-4">
               <p className="micro text-ink-muted">Refund · sandbox</p>
@@ -224,7 +257,7 @@ export function Pipeline() {
           </Paper>
         </div>
       </div>
-    </Enter>
+    </div>
   );
 }
 
@@ -233,19 +266,25 @@ export function PipelineList() {
   const stoppedAt = (row: number) => SAMPLES.filter((s) => s.stop === row);
   const rows = (row: number, label: string) =>
     stoppedAt(row).length > 0 && (
-      <ul className="mt-4 flex flex-col gap-2 sm:pl-12" aria-label={label}>
-        {stoppedAt(row).map((s) => (
-          <li key={s.lane} className="flex gap-3 rounded-card border border-line bg-surface p-3">
-            <Image src={s.photo} alt="" width={56} height={56} className="size-14 shrink-0 rounded-control border border-line object-cover" />
-            <span className="min-w-0 flex-1">
-              <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <span className="text-ui font-medium">{s.title}</span>
-                <StatusPill status={s.status} />
+      <ul className="mt-4 flex flex-col gap-3 sm:pl-12" aria-label={label}>
+        {/* The same paper tags and stamps as the laptop pipeline, laid flat: no drop on phones. */}
+        {stoppedAt(row).map((s, i) => (
+          <Paper key={s.lane} as="li" variant="tag" padding="none" tilt={i % 2 ? 0.6 : -0.6} className="[--tag-cut:10px]">
+            <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-3 p-3">
+              <span className="flex flex-col gap-1">
+                <Image src={s.photo} alt="" width={48} height={48} className="size-12 rounded-[3px] object-cover" />
+                <span className="font-mono text-micro leading-[1.15] tracking-[0.04em] text-ink-muted uppercase">Sample</span>
               </span>
-              <span className="mt-1 block text-ui text-muted">{s.reason}</span>
-              <span className="micro mt-1 block text-faint">Sample photo</span>
-            </span>
-          </li>
+              <span className="min-w-0">
+                <span className="block text-ui font-medium text-ink">{s.title}</span>
+                <span className="mt-1 block text-ui text-ink-muted">{s.reason}</span>
+                <span className="sr-only">Outcome: {s.stamp}.</span>
+                <Stamp tone={s.tone} rotate={-6} className="mt-3">
+                  {s.stamp}
+                </Stamp>
+              </span>
+            </div>
+          </Paper>
         ))}
       </ul>
     );

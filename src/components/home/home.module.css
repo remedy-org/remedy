@@ -85,6 +85,42 @@
     transition: scale var(--trail-for, 120ms) linear var(--trail-at, 0ms);
   }
 
+  /* The gate pipeline arms each lane on its own (Pipeline.tsx useLanes): data-go on every cell of the lane, and
+     --go-at staggers lanes that come into view together. */
+  .lane[data-go="armed"] .fall {
+    translate: 0 var(--fall, -120px);
+    rotate: 2deg;
+    opacity: 0;
+  }
+
+  .lane[data-go="play"] .fall {
+    transition:
+      translate 460ms var(--drop) calc(var(--go-at, 0ms) + var(--fall-at, 0ms)),
+      rotate 460ms var(--drop) calc(var(--go-at, 0ms) + var(--fall-at, 0ms)),
+      opacity 120ms linear calc(var(--go-at, 0ms) + var(--fall-at, 0ms));
+  }
+
+  .lane[data-go="armed"] .trail {
+    scale: 1 0;
+  }
+
+  .lane[data-go="play"] .trail {
+    transition: scale var(--trail-for, 120ms) linear calc(var(--go-at, 0ms) + var(--trail-at, 0ms));
+  }
+
+  .lane[data-go="armed"] .stamp,
+  .lane[data-go="armed"] .note {
+    opacity: 0;
+  }
+
+  .lane[data-go="play"] .stamp {
+    animation: stamp-land 200ms var(--ease-back) calc(var(--go-at, 0ms) + var(--stamp-at, 500ms)) both;
+  }
+
+  .lane[data-go="play"] .note {
+    transition: opacity 200ms ease-out calc(var(--go-at, 0ms) + var(--stamp-at, 500ms));
+  }
+
   /* The console's evidence panel slides in: x 40px to 0 and fade, 360ms --ease-snap. */
   .enter[data-enter="armed"] .panel {
     translate: 40px 0;
@@ -118,6 +154,10 @@
 
 .trail {
   transform-origin: top;
+}
+
+.lane {
+  --drop: linear(0, 0.058, 0.185, 0.342, 0.5, 0.643, 0.763, 0.858, 0.928, 0.977, 1.008, 1.026, 1.034, 1.035, 1.032, 1.028, 1.022, 1.016, 1.012, 1.008, 1.004, 1.002, 1.001, 1);
 }
 
 @keyframes stamp-land {

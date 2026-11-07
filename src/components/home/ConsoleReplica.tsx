@@ -10,8 +10,10 @@ import { Money, StatusPill, type Status } from "@/components/ui";
  * through one seam, PREVIEW in CompaniesPreview.tsx, so the real grid swaps in with a one-line change.
  *
  * Every row is a real seeded claim: buildSeedClaims (src/lib/demo/seed.ts, seed 27071) gives the ids, codes, payer
- * ids, decisions, reasons and photo-to-PayPal seconds below, and the open claim's quotes are the stored model answer
- * it uses (src/lib/demo/verdicts.json, GPT-6.1 Terra on c03). Seeded claims are eval samples and were never paid.
+ * ids, decisions and reasons below, and the open claim's quotes are the stored model answer
+ * it uses (src/lib/demo/verdicts.json, GPT-6.1 Terra on c03). Seeded claims are eval samples and were never paid, so
+ * every money figure here says "sample", no payout is shown as sent, and there are no photo-to-PayPal timings (the one
+ * real timing, RM-0442's 15 s, belongs to the Chain of Custody).
  */
 
 /** A check's outcome as one bar of the evidence barcode. */
@@ -26,9 +28,6 @@ export interface PreviewRow {
   photos: string[];
   /** Pre-checks (session, new photos, one claim per account), then the model's checks. */
   checks: [Bar[], Bar[]];
-  payout?: "Sent" | "Settling";
-  /** Photos in to PayPal sent, in seconds. */
-  seconds?: number;
   payer: string;
 }
 
@@ -41,10 +40,10 @@ const waiting = (n: number): Bar[] => Array<Bar>(n).fill("waiting");
 
 export const PREVIEW_ROWS: PreviewRow[] = [
   { id: "RM-3789", code: "M3J", status: "pending", reason: "Waiting for photos", photos: [], checks: [waiting(3), waiting(5)], payer: "C4XB" },
-  { id: "RM-0553", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payout: "Settling", seconds: 12, payer: "WW2P" },
-  { id: "RM-7581", code: "K7Q", status: "paid", photos: ["/demo/c01-1.jpg"], checks: [pre, one()], payout: "Sent", seconds: 12, payer: "AY3L" },
-  { id: "RM-6276", code: "K7Q", status: "paid", photos: ["/demo/c05-1.jpg"], checks: [pre, one()], payout: "Sent", seconds: 12, payer: "KUNF" },
-  { id: "RM-2125", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payout: "Sent", seconds: 12, payer: "Q559" },
+  { id: "RM-0553", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payer: "WW2P" },
+  { id: "RM-7581", code: "K7Q", status: "paid", photos: ["/demo/c01-1.jpg"], checks: [pre, one()], payer: "AY3L" },
+  { id: "RM-6276", code: "K7Q", status: "paid", photos: ["/demo/c05-1.jpg"], checks: [pre, one()], payer: "KUNF" },
+  { id: "RM-2125", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payer: "Q559" },
   {
     id: "RM-9629",
     code: "R8D",
@@ -54,10 +53,10 @@ export const PREVIEW_ROWS: PreviewRow[] = [
     checks: [pre, two("hold")],
     payer: "DSFD",
   },
-  { id: "RM-8501", code: "K7Q", status: "paid", photos: ["/demo/c01-1.jpg"], checks: [pre, one()], payout: "Sent", seconds: 16, payer: "QEB5" },
+  { id: "RM-8501", code: "K7Q", status: "paid", photos: ["/demo/c01-1.jpg"], checks: [pre, one()], payer: "QEB5" },
   { id: "RM-9545", code: "K7Q", status: "rejected", reason: "Looks like a photo of a screen or a print", photos: ["/demo/c10-1.jpg"], checks: [pre, one("reject")], payer: "UGER" },
-  { id: "RM-8466", code: "K7Q", status: "paid", photos: ["/demo/c05-1.jpg"], checks: [pre, one()], payout: "Sent", seconds: 12, payer: "AUYQ" },
-  { id: "RM-8121", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payout: "Sent", seconds: 14, payer: "FKBF" },
+  { id: "RM-8466", code: "K7Q", status: "paid", photos: ["/demo/c05-1.jpg"], checks: [pre, one()], payer: "AUYQ" },
+  { id: "RM-8121", code: "R8D", status: "paid", photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"], checks: [pre, two()], payer: "FKBF" },
 ];
 
 // The open claim's evidence: the stored GPT-6.1 Terra answer RM-9629 is seeded with.
@@ -118,20 +117,21 @@ function Thumbs({ photos, size = "md" }: { photos: string[]; size?: "md" | "sm" 
   );
 }
 
+/** A sample claim's payout: decided, never sent. */
 function PayoutCell({ row }: { row: PreviewRow }) {
-  if (!row.payout) return <span className="text-faint">&mdash;</span>;
+  if (row.status !== "paid") return <span className="text-faint">&mdash;</span>;
   return (
     <span className="flex flex-col leading-tight">
       <span className="inline-flex items-center gap-1.5 text-muted">
-        <span className={clsx("size-1.5 rounded-full", row.payout === "Sent" ? "bg-muted" : "border border-muted")} />
-        {row.payout}
+        <span className="size-1.5 rounded-full border border-muted" />
+        Sample
       </span>
-      <span className="font-mono text-micro text-faint">0:{String(row.seconds).padStart(2, "0")}</span>
+      <span className="font-mono text-micro text-faint">not sent</span>
     </span>
   );
 }
 
-const COLS = "grid grid-cols-[12rem_minmax(0,1fr)_6.5rem_5.5rem_5rem] items-center gap-x-4";
+const COLS = "grid grid-cols-[10.5rem_minmax(0,1fr)_6.5rem_5.5rem_5rem] items-center gap-x-4";
 
 /** The open claim's evidence panel (laptops). */
 function EvidencePanel({ row }: { row: PreviewRow }) {
@@ -184,15 +184,15 @@ export interface ConsoleReplicaProps {
   rows?: PreviewRow[];
   /** The claim whose evidence panel is open (laptops only). */
   openId?: string;
-  /** How many rows phones show, as card rows. */
-  phoneRows?: number;
+  /** The claims phones show, as card rows: one of each outcome, not four paid in a row. */
+  phoneIds?: string[];
   /** Wraps the panel, so a section can animate it in. */
   panelWrap?: (panel: ReactNode) => ReactNode;
   className?: string;
 }
 
 /** The console still: chrome, ledger, tabs and the queue, with the evidence panel open beside it on laptops. */
-export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, panelWrap = (p) => p, className }: ConsoleReplicaProps) {
+export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-0553", "RM-9629", "RM-9545", "RM-7581"], panelWrap = (p) => p, className }: ConsoleReplicaProps) {
   const open = rows.find((r) => r.id === openId);
   return (
     <div className={clsx("overflow-hidden rounded-frame bg-bg text-text shadow-float", className)}>
@@ -214,7 +214,10 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, pan
         <span className="text-ui font-medium">
           Kikea <span className="whitespace-nowrap">X-VESOLJE</span> nursing pillows
         </span>
-        <span className="micro text-faint">CPSC 27-071 · sample claims</span>
+        <span className="flex items-center gap-3">
+          <span className="micro text-faint">CPSC 27-071</span>
+          <span className="micro inline-flex h-5 items-center rounded-control border border-line-strong px-1.5 text-muted">Sample data</span>
+        </span>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 border-b border-line px-4 pb-4 text-ui sm:flex sm:flex-wrap sm:items-baseline sm:gap-x-8 sm:px-5">
         <div className="col-span-2 flex items-baseline gap-2">
@@ -225,12 +228,14 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, pan
           </span>
           <span className="text-muted">remedied</span>
         </div>
-        <div className="flex items-baseline gap-2">
+        <div className="col-span-2 flex items-baseline gap-2">
           <dt className="sr-only">Paid out</dt>
           <dd className="font-semibold">
             <Money value={779.74} />
           </dd>
-          <span className="text-muted">paid</span>
+          <span className="text-muted">
+            paid <span className="whitespace-nowrap text-faint">· sample</span>
+          </span>
         </div>
         <div className="flex items-baseline gap-2">
           <dd className="font-semibold tabular-nums">3</dd>
@@ -240,10 +245,6 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, pan
           <dd className="font-semibold tabular-nums">9</dd>
           <dt className="text-muted">refused</dt>
         </div>
-        <div className="hidden items-baseline gap-2 lg:flex">
-          <dd className="font-mono font-semibold tabular-nums">0:12</dd>
-          <dt className="text-muted">median photo&rarr;PayPal</dt>
-        </div>
       </dl>
 
       <div className={clsx("relative lg:flex", open && "lg:pr-3")}>
@@ -251,7 +252,15 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, pan
           {/* Tabs */}
           <div className="flex gap-5 overflow-hidden border-b border-line px-4 text-ui sm:px-5" aria-hidden="true">
             {TABS.map(([label, n], i) => (
-              <span key={label} className={clsx("relative flex h-11 shrink-0 items-center gap-1.5", i === 0 ? "text-text after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-text" : "text-muted")}>
+              <span
+                key={label}
+                className={clsx(
+                  "relative h-11 shrink-0 items-center gap-1.5",
+                  // Phones show the first three whole, never a tab cut mid-word.
+                  i > 2 ? "hidden sm:flex" : "flex",
+                  i === 0 ? "text-text after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-text" : "text-muted",
+                )}
+              >
                 {label} <span className="font-mono text-micro text-faint">{n}</span>
               </span>
             ))}
@@ -270,7 +279,7 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, pan
               <div
                 role="row"
                 key={r.id}
-                className={clsx(COLS, "relative h-13 border-b border-line px-5 last:border-b-0", r.id === openId && "bg-accent-soft before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent")}
+                className={clsx(COLS, "relative min-h-13 border-b border-line px-5 last:border-b-0", r.id === openId && "bg-accent-soft before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent")}
               >
                 <span role="cell" className="flex items-center gap-3">
                   <Thumbs photos={r.photos} />
@@ -281,7 +290,7 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, pan
                 </span>
                 <span role="cell" className="flex min-w-0 flex-col items-start gap-0.5">
                   <StatusPill status={r.status} />
-                  {r.reason && <span className="w-full truncate text-micro text-muted">{r.reason}</span>}
+                  {r.reason && <span className="line-clamp-2 w-full text-micro leading-snug text-muted">{r.reason}</span>}
                 </span>
                 <span role="cell">
                   <Barcode checks={r.checks} />
@@ -298,9 +307,9 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, pan
 
           {/* Card rows, phones and tablets */}
           <ul className="lg:hidden" aria-label="Claims">
-            {rows
-              .filter((r) => r.status !== "pending")
-              .slice(0, phoneRows)
+            {phoneIds
+              .map((id) => rows.find((r) => r.id === id))
+              .filter((r) => r !== undefined)
               .map((r) => (
                 <li key={r.id} className="flex min-h-18 items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
                   <Thumbs photos={r.photos} size="sm" />
@@ -311,7 +320,6 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, pan
                     </span>
                     <span className="flex items-center gap-3 text-micro">
                       <Barcode checks={r.checks} />
-                      {r.seconds && <span className="font-mono text-faint">0:{String(r.seconds).padStart(2, "0")}</span>}
                       <span className="ml-auto font-mono text-ui">{r.status === "paid" ? <Money value={29.99} size="grid" /> : <span className="text-faint">—</span>}</span>
                     </span>
                   </span>
@@ -322,7 +330,7 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneRows = 4, pan
         {open && <div className="hidden w-[25rem] shrink-0 py-3 lg:block">{panelWrap(<EvidencePanel row={open} />)}</div>}
       </div>
       {/* The console's sample marker: one line for the whole grid, not a tag per row. */}
-      <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">40 eval samples, never paid · AI-made test photos</p>
+      <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">40 sample claims from the eval set · no money moved · AI-made test photos</p>
     </div>
   );
 }

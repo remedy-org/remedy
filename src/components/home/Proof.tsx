@@ -40,10 +40,11 @@ const COLUMNS: { key: keyof Row; label: string; pair: boolean }[] = [
 // A model name never breaks at its hyphen.
 const Model = ({ children }: { children: ReactNode }) => <span className="whitespace-nowrap">{children}</span>;
 
-const FIGURES: { figure: string; text: ReactNode }[] = [
-  { figure: "21 of 21", text: <>genuine claims paid by <Model>GPT-6.1 Sol</Model> across 3 runs, and 6 of 6 held out</> },
-  { figure: "12 of 12", text: "wrong codes rejected by each of the four models: 4 codes, in all 3 runs" },
-  { figure: "1.1¢", text: <>and 16 seconds a claim with <Model>GPT-6.1 Sol</Model></> },
+// short: the same fact in fewer words, for a phone's three narrow columns.
+const FIGURES: { figure: string; text: ReactNode; short: string }[] = [
+  { figure: "21 of 21", text: <>genuine claims paid by <Model>GPT-6.1 Sol</Model> across 3 runs, and 6 of 6 held out</>, short: "genuine claims paid, Sol, 3 runs" },
+  { figure: "12 of 12", text: "wrong codes rejected by each of the four models: 4 codes, in all 3 runs", short: "wrong codes rejected, every model" },
+  { figure: "1.1¢", text: <>and 16 seconds a claim with <Model>GPT-6.1 Sol</Model></>, short: "and 16 s a claim, Sol" },
 ];
 
 const WHY = [
@@ -58,6 +59,16 @@ const NOTES = [
   "Every model paid c14, an AI image with three cut ends on two pieces, at least once. That is why the model is not the defence against fakes.",
   "One person wrote the answer keys and checked every image by eye.",
 ];
+
+const SUMMARY = "flex min-h-11 cursor-pointer list-none items-center justify-between text-ui font-medium [&::-webkit-details-marker]:hidden";
+
+function Plus() {
+  return (
+    <span aria-hidden="true" className="font-mono text-faint transition-transform duration-160 group-open:rotate-45">
+      +
+    </span>
+  );
+}
 
 function Cell({ value, pair }: { value: Row[keyof Row]; pair: boolean }) {
   if (!pair) return <span>{value as string}</span>;
@@ -89,11 +100,11 @@ function SideTable({ rows, caption }: { rows: Row[]; caption: string }) {
       <tbody>
         {COLUMNS.map((c) => (
           <tr key={c.key} className="border-b border-line align-top last:border-b-0">
-            <th scope="row" className="py-2.5 pr-3 font-normal text-muted">
+            <th scope="row" className="py-2 pr-3 font-normal text-muted">
               {c.label}
             </th>
             {rows.map((r) => (
-              <td key={r.model} className={clsx("py-2.5 pl-3 text-right font-mono whitespace-nowrap tabular-nums", r.chosen ? "text-text" : "text-muted")}>
+              <td key={r.model} className={clsx("py-2 pl-3 text-right font-mono whitespace-nowrap tabular-nums", r.chosen ? "text-text" : "text-muted")}>
                 <Cell value={r[c.key]} pair={c.pair} />
               </td>
             ))}
@@ -118,30 +129,36 @@ export function Proof() {
         </>
       }
     >
-      {/* The one number that matters, at monument size. */}
-      <Reveal className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-x-5 border-t border-line pt-8 sm:gap-x-10 sm:pt-10">
-        <p aria-hidden="true" className={clsx(styles.line, "font-serif text-numeral leading-[0.8] font-normal italic tabular-nums")}>
-          0
-        </p>
-        <p className={clsx(styles.line, "max-w-[26ch] pb-1 text-head-sm font-medium text-balance sm:pb-2")} style={{ "--line": 1 } as CSSProperties}>
-          <span className="sr-only">0 </span>web photos paid with the code check on, by any model, in any run.
-        </p>
-      </Reveal>
+      {/* The one number that matters, at monument size, and the only full-contrast figure: the three supporting figures
+          sit beside it, smaller and muted. */}
+      <div className="grid gap-y-8 border-t border-line pt-8 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-end lg:gap-x-16">
+        <Reveal className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-x-5 sm:gap-x-10">
+          <p aria-hidden="true" className={clsx(styles.line, "font-serif text-numeral leading-[0.8] font-normal italic tabular-nums")}>
+            0
+          </p>
+          <p className={clsx(styles.line, "max-w-[22ch] pb-1 text-head-sm font-medium text-balance sm:pb-2")} style={{ "--line": 1 } as CSSProperties}>
+            <span className="sr-only">0 </span>web photos paid with the code check on, by any model, in any run.
+          </p>
+        </Reveal>
 
-      <dl className="mt-8 grid sm:mt-10 sm:grid-cols-3 sm:gap-x-10 lg:mt-12">
-        {FIGURES.map((f) => (
-          <div key={f.figure} className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-baseline gap-x-4 border-t border-line py-4 sm:block sm:py-0 sm:pt-6">
-            <dt className="text-head-sm font-semibold whitespace-nowrap tabular-nums sm:text-title-lg">{f.figure}</dt>
-            <dd className="max-w-[32ch] text-ui text-pretty text-muted sm:mt-3">{f.text}</dd>
-          </div>
-        ))}
-      </dl>
+        <dl className="grid grid-cols-3 gap-x-4 sm:gap-x-8 lg:pb-2">
+          {FIGURES.map((f) => (
+            <div key={f.figure} className="flex flex-col border-t border-line pt-3 sm:pt-4">
+              <dt className="text-body font-medium whitespace-nowrap text-muted tabular-nums sm:text-head-sm">{f.figure}</dt>
+              <dd className="mt-1.5 max-w-[28ch] text-[0.75rem]/[1.4] text-pretty text-faint sm:mt-2 sm:text-ui sm:text-muted">
+                <span className="sm:hidden">{f.short}</span>
+                <span className="hidden sm:inline">{f.text}</span>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
 
       {/* The eval table: a real table from md up, one card per model on phones. */}
-      <div className="mt-16">
+      <div className="mt-8 sm:mt-12">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-          <h3 className="text-ui font-medium">Spike 2, 7 November 2026</h3>
-          <p className="text-ui text-muted">
+          <h3 className="hidden text-ui font-medium sm:block">Spike 2, 7 November 2026</h3>
+          <p className="hidden text-ui text-muted sm:block">
             Each cell: round 2 of 31 claims, then <span className="text-faint">the 5 held-out claims</span>. Paid counts add up all 3 runs.
           </p>
         </div>
@@ -163,14 +180,14 @@ export function Proof() {
           <tbody>
             {ROWS.map((r) => (
               <tr key={r.model} className="border-b border-line align-top">
-                <th scope="row" className={clsx("py-4 pr-4 text-left", r.chosen ? "border-l-2 border-l-accent pl-[calc(1rem-2px)] font-medium text-text" : "pl-4 font-normal text-muted")}>
+                <th scope="row" className={clsx("py-3.5 pr-4 text-left", r.chosen ? "border-l-2 border-l-accent pl-[calc(1rem-2px)] font-medium text-text" : "pl-4 font-normal text-muted")}>
                   <span className="flex flex-col">
                     <Model>{r.model}</Model>
                     {r.chosen && <span className="micro mt-1 text-accent-text">What we run</span>}
                   </span>
                 </th>
                 {COLUMNS.map((c) => (
-                  <td key={c.key} className={clsx("px-4 py-4 text-right font-mono tabular-nums last:pr-0", r.chosen ? "text-text" : "text-muted")}>
+                  <td key={c.key} className={clsx("px-4 py-3.5 text-right font-mono tabular-nums last:pr-0", r.chosen ? "text-text" : "text-muted")}>
                     <Cell value={r[c.key]} pair={c.pair} />
                   </td>
                 ))}
@@ -184,11 +201,9 @@ export function Proof() {
             <SideTable rows={ROWS.filter((r) => r.short)} caption="GPT-6.1 Sol, which we run, against GPT-6 Astra: round 2 of 31 claims, then 5 held-out claims." />
           </div>
           <details className="group border-b border-line">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-ui font-medium [&::-webkit-details-marker]:hidden">
+            <summary className={SUMMARY}>
               Compare all 4 models
-              <span aria-hidden="true" className="font-mono text-faint transition-transform duration-160 group-open:rotate-45">
-                +
-              </span>
+              <Plus />
             </summary>
             <div className="border-t border-line">
               <SideTable rows={ROWS.filter((r) => !r.short)} caption="GPT-6.1 Terra and GPT-6 Luna: round 2 of 31 claims, then 5 held-out claims." />
@@ -209,29 +224,45 @@ export function Proof() {
         </div>
       </div>
 
-      <div className="mt-12 grid gap-12 md:grid-cols-2 lg:gap-16">
-        <div className="hidden md:block">
-          <h3 className="text-ui font-medium">
-            Why <Model>GPT-6.1 Sol</Model>
-          </h3>
-          <ul className="mt-4 flex flex-col">
-            {WHY.map((w) => (
-              <li key={w.model} className="border-t border-line py-4 text-ui text-muted">
-                <span className="font-medium text-text">{w.model}</span> {w.text}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h3 className="text-ui font-medium">What this can&rsquo;t show</h3>
-          <ul className="mt-4 flex flex-col">
+      {/* The caveats stay open, three across on laptops; the reasons for Sol fold away under them. Phones fold both, so
+          the section stays short. The copy is the same either way. */}
+      <div className="md:mt-12">
+        <h3 className="hidden text-ui font-medium md:block">What this can&rsquo;t show</h3>
+        <ul className="mt-4 hidden gap-x-10 md:grid md:grid-cols-3">
+          {NOTES.map((n) => (
+            <li key={n} className="border-t border-line py-4 text-ui text-pretty text-muted">
+              {n}
+            </li>
+          ))}
+        </ul>
+        <details className="group border-b border-line md:hidden">
+          <summary className={SUMMARY}>
+            What this can&rsquo;t show
+            <Plus />
+          </summary>
+          <ul className="flex flex-col">
             {NOTES.map((n) => (
               <li key={n} className="border-t border-line py-4 text-ui text-muted">
                 {n}
               </li>
             ))}
           </ul>
-        </div>
+        </details>
+        <details className="group hidden border-y border-line md:block">
+          <summary className={SUMMARY}>
+            <span>
+              Why <Model>GPT-6.1 Sol</Model>
+            </span>
+            <Plus />
+          </summary>
+          <ul className="grid grid-cols-2 gap-x-10">
+            {WHY.map((w) => (
+              <li key={w.model} className="border-t border-line py-4 text-ui text-muted">
+                <span className="font-medium text-text">{w.model}</span> {w.text}
+              </li>
+            ))}
+          </ul>
+        </details>
       </div>
     </Section>
   );
