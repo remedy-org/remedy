@@ -20,7 +20,7 @@ When a product is recalled for safety, the company often refunds owners who dest
 3. **Cut it on camera.** A live camera with no upload button, on a laptop or a phone. Up to three photos: the label, the cut, the code.
 4. **Paid through PayPal.** Remedy runs five checks. If all pass, PayPal Payouts sends the refund to the PayPal account that logged in, usually within a minute.
 
-The company running the recall gets a console: every claim in an AG Grid, the evidence behind each decision, approve or reject for held claims, payouts, and a CPSC progress-report draft.
+The company running the recall gets a console: every claim in an AG Grid, the evidence behind each decision, approve or reject for held claims, payouts, and a CPSC progress-report draft. Its Insights page is an AG Studio report (recall progress against the 6–10% norm, a check funnel, refusals by reason) with a Recall analyst that answers questions about the claims. The analyst reads, charts and drafts; it has no tool that can approve, reject or pay.
 
 ## What stops a fake
 
@@ -45,7 +45,7 @@ The model is not the defence against AI images: in our tests, no model could rel
    - **A reposted photo**: blocked as a duplicate of an earlier claim's photo.
 
    Your browser's run is one demo round: its samples are checked only against each other, so judges sharing one sandbox login each see these four outcomes. **Run the samples again** on the picker starts a new round.
-4. Open **https://remedy-recalls.vercel.app/signin** and log in with PayPal to see the company console with the Kikea demo recall, 40 sample claims and your own demo claims.
+4. Open **https://remedy-recalls.vercel.app/signin** and log in with PayPal to see the company console with the Kikea demo recall, 40 sample claims and your own demo claims. **Insights** in the console nav opens the AG Studio report and the Recall analyst.
 
 ## PayPal and AI in the product
 
@@ -56,6 +56,8 @@ The model is not the defence against AI images: in our tests, no model could rel
 | **Payouts status + webhooks** (`PAYMENT.PAYOUTS-ITEM.*`, signature verified with `verify-webhook-signature`) | Keeps each claim's payout status current in the console |
 | **GPT-6.1 Sol** (OpenAI Responses API, structured output) | Describes each photo against checks drafted from the recall notice, quoting its evidence |
 | **AG Grid 36** | The company console's claims grid |
+| **AG Studio 3** | The Insights report: custom widgets for recall progress and the check funnel |
+| **Recall analyst** (a small OpenAI text model through a server proxy) | Answers questions about one recall's claims; read-only tools, company login required, rate-limited, output-capped |
 
 ## What is real and what is simulated
 
@@ -90,7 +92,7 @@ flowchart LR
   R -->|Payouts| PP
   PP -->|webhooks| API
   API <--> B[(Vercel Blob<br/>claims · photos · index)]
-  C[Company console<br/>AG Grid] --> API
+  C[Company console<br/>AG Grid · AG Studio] --> API
 ```
 
 One Next.js 16 app (React 19, TypeScript strict, Tailwind 4) on Vercel. No separate backend and no database: claims are JSON files in a private Vercel Blob store, written with conditional (ETag) updates.
@@ -114,6 +116,8 @@ You need a PayPal developer account with a US business sandbox account (sends re
 | `APP_URL` | Where the app runs; defaults to `http://127.0.0.1:3000` |
 | `SESSION_SECRET` | Signs session cookies; required in production (`openssl rand -base64 32`) |
 | `BLOB_READ_WRITE_TOKEN` | Optional: Vercel Blob; without it data lives in `data/` |
+| `NEXT_PUBLIC_AG_STUDIO_LICENSE` | Optional: AG Studio licence; without it Insights shows the trial watermark |
+| `ANALYST_MODEL` | Optional: the Recall analyst's model; defaults to `gpt-5.4-mini` |
 | `VISION_DAILY_LIMIT`, `DRAFT_DAILY_LIMIT`, `CLAIM_DAILY_LIMIT`, `CLAIM_MONTHLY_LIMIT`, `ACCOUNT_CLAIM_DAILY_LIMIT`, `ACCOUNT_DEMO_DAILY_LIMIT` | Optional: what the live demo may spend. Per UTC day: 100 photo checks, 20 check drafts, 60 new claims (150 in any 30 days), and per PayPal account 5 real and 60 demo claims. Past the photo-check limit a real claim is held for a person, never lost ([docs/PRODUCT.md](docs/PRODUCT.md)) |
 
 Checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
