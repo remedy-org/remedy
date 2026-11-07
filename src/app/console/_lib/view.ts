@@ -1,6 +1,8 @@
+import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
 // Pure view helpers for the console: grid rows, header numbers, the rule's sentence. No I/O, so they are unit-tested.
+// The grid, the stats and the report work from index.json's rows (ClaimSummary); only the drawer opens a claim.
 
 export const cents = (m: Pick<Money, "value">) => Math.round(Number(m.value) * 100);
 
@@ -10,9 +12,9 @@ export function formatCents(c: number): string {
 
 export const formatMoney = (m: Pick<Money, "value">) => formatCents(cents(m));
 
-/** What a claim pays or paid: the amount fixed at pay time, else the recall's current refund (held, or paid before
- * amounts were recorded). Changing the refund never reprices money already sent. */
-export const amountOf = (c: Pick<Claim, "payout">, recall: Pick<Recall, "refund">): Money => c.payout?.amount ?? recall.refund;
+/** What a claim pays or paid, given its payout's amount: the amount fixed at pay time, else the recall's current
+ * refund (held, or paid before amounts were recorded). Changing the refund never reprices money already sent. */
+export const amountOf = (paid: Money | null | undefined, recall: Pick<Recall, "refund">): Money => paid ?? recall.refund;
 
 // PayPal payer ids are 13 characters; the console shows the last four, enough to tell accounts apart.
 export const maskPayer = (payerId: string) => `•••• ${payerId.slice(-4)}`;
@@ -34,22 +36,22 @@ export interface ClaimRow {
 
 const first = (reasons: Reason[], outcome: Reason["outcome"]) => reasons.find((r) => r.outcome === outcome)?.text;
 
-// One line for the grid: why the claim is where it is.
-export function reasonOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "payout">, recall: Pick<Recall, "autoPay">): string {
+// One line for the grid: why the claim is where it is. reason is the row's decidingReason.
+export function reasonOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes">, recall: Pick<Recall, "autoPay">): string {
   switch (c.decision) {
     case "paid":
-      return c.reasons.some((r) => r.check === "review") ? "Approved on review" : "Every check passed";
+      return c.reason ? "Approved on review" : "Every check passed";
     case "held":
-      return first(c.reasons, "hold") ?? (recall.autoPay ? "Every check passed; held for a person" : "Every check passed; auto-pay is off");
+      return c.reason?.text ?? (recall.autoPay ? "Every check passed; held for a person" : "Every check passed; auto-pay is off");
     case "rejected":
     case "blocked":
-      return first(c.reasons, "reject") ?? "Refused";
+      return c.reason?.text ?? "Refused";
     case "pending":
-      return c.photos.length ? "Checking the photos" : "Waiting for photos";
+      return c.photoHashes.length ? "Checking the photos" : "Waiting for photos";
   }
 }
 
-export function toRow(c: Claim, recall: Recall): ClaimRow {
+export function toRow(c: ClaimSummary, recall: Recall): ClaimRow {
   return {
     id: c.id,
     createdAt: c.createdAt,
@@ -57,8 +59,8 @@ export function toRow(c: Claim, recall: Recall): ClaimRow {
     verified: c.payerVerified,
     decision: c.decision,
     reason: reasonOf(c, recall),
-    payoutStatus: c.payout?.status ?? null,
-    amount: c.decision === "paid" || c.decision === "held" ? formatMoney(amountOf(c, recall)) : null,
+    payoutStatus: c.payoutStatus,
+    amount: c.decision === "paid" || c.decision === "held" ? formatMoney(amountOf(c.payoutAmount, recall)) : null,
     seeded: Boolean(c.seeded),
     demo: Boolean(c.demo),
   };
@@ -79,15 +81,15 @@ export interface Stats {
 
 const SETTLED = new Set(["SUCCESS"]);
 
-export function statsOf(claims: Pick<Claim, "decision" | "payout">[], recall: Pick<Recall, "refund" | "unitsSold">): Stats {
+export function statsOf(claims: Pick<ClaimSummary, "decision" | "payoutStatus" | "payoutAmount">[], recall: Pick<Recall, "refund" | "unitsSold">): Stats {
   const count = (d: Decision) => claims.filter((c) => c.decision === d).length;
   const paid = claims.filter((c) => c.decision === "paid");
   return {
     total: claims.length,
     remedied: paid.length,
     unitsSold: recall.unitsSold,
-    paidCents: paid.reduce((sum, c) => sum + cents(amountOf(c, recall)), 0),
-    settling: paid.filter((c) => !SETTLED.has(c.payout?.status ?? "")).length,
+    paidCents: paid.reduce((sum, c) => sum + cents(amountOf(c.payoutAmount, recall)), 0),
+    settling: paid.filter((c) => !SETTLED.has(c.payoutStatus ?? "")).length,
     held: count("held"),
     rejected: count("rejected"),
     blocked: count("blocked"),
@@ -105,7 +107,7 @@ export function percent(value: number, of: number): string {
 
 // The rule's decision in one sentence, for the evidence drawer.
 export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos" | "payout">, recall: Pick<Recall, "autoPay" | "refund">): string {
-  const amount = formatMoney(amountOf(c, recall));
+  const amount = formatMoney(amountOf(c.payout?.amount, recall));
   const reviewed = c.reasons.find((r) => r.check === "review");
   switch (c.decision) {
     case "paid":

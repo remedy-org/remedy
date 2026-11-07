@@ -70,8 +70,11 @@ export async function refreshPayouts(store: Store, claims: Claim[], { check = ge
   for (const [i, result] of checked.entries()) {
     if (result.status !== "fulfilled") continue;
     const { itemId, itemStatus, batchStatus, at } = result.value;
+    const status = itemStatus ?? batchStatus;
+    // Unchanged: applyPayoutStatus would save nothing, so don't read the claim again to find that out.
+    if (status === due[i].payout!.status) continue;
     try {
-      const saved = await savePayoutStatus(store, due[i].id, due[i].payout!.batchId, { status: itemStatus ?? batchStatus, itemId, at });
+      const saved = await savePayoutStatus(store, due[i].id, due[i].payout!.batchId, { status, itemId, at });
       if (saved) fresh.set(saved.id, saved);
     } catch {
       // The stored status stands; the next load tries again.

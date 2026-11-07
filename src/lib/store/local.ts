@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { bump, ClaimIndex, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type ClaimSummary, type Store } from "./store";
+import { bump, ClaimIndex, completeRows, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type IndexRow, type Store } from "./store";
 
 // Dev store: the same layout as the blob store, as files under `dir` (data/, git-ignored).
 export function localStore(dir: string): Store {
@@ -44,6 +44,7 @@ export function localStore(dir: string): Store {
     return next;
   }
   const updateIndex = (change: (index: ClaimIndex) => ClaimIndex | null) => updateJson(paths.index, ClaimIndex, { claims: [] }, change);
+  const getClaim = async (id: string) => (isValidClaimId(id) ? readJson(paths.claim(id), Claim) : null);
 
   async function putClaim(claim: Claim) {
     await write(paths.claim(claim.id), JSON.stringify(Claim.parse(claim), null, 2));
@@ -51,7 +52,7 @@ export function localStore(dir: string): Store {
   }
 
   // Index first, as in the blob store: a refused start writes no claim file.
-  async function addClaim<R>(claim: Claim, refuse: (rows: ClaimSummary[]) => R | null) {
+  async function addClaim<R>(claim: Claim, refuse: (rows: IndexRow[]) => R | null) {
     const parsed = Claim.parse(claim);
     let refusal: R | null = null;
     await updateIndex((index) => ((refusal = refuse(index.claims)) === null ? insert(index, summarize(parsed)) : null));
@@ -63,7 +64,7 @@ export function localStore(dir: string): Store {
   let claimLock: Promise<unknown> = Promise.resolve();
   function updateClaim(id: string, change: (claim: Claim) => Claim | null) {
     const next = claimLock.then(async () => {
-      const claim = isValidClaimId(id) ? await readJson(paths.claim(id), Claim) : null;
+      const claim = await getClaim(id);
       const changed = claim && change(claim);
       if (changed) await putClaim(changed);
       return changed || null;
@@ -81,11 +82,11 @@ export function localStore(dir: string): Store {
       await write(paths.recall(parsed.id), JSON.stringify(parsed, null, 2));
     },
     listRecalls: async () => ((await readJson(paths.recallIndex, RecallIndex)) ?? { recalls: [] }).recalls,
-    getClaim: async (id) => (isValidClaimId(id) ? readJson(paths.claim(id), Claim) : null),
+    getClaim,
     putClaim,
     addClaim,
     updateClaim,
-    listClaims: async () => ((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims,
+    listClaims: async () => completeRows(((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims, getClaim, updateIndex),
     putPhoto: async (key, jpeg) => write(paths.photo(key), jpeg),
     getPhoto: async (key) => read(paths.photo(key)),
     getUsage: async (day) => (await readJson(paths.usage(day), Usage)) ?? NO_USAGE,

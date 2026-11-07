@@ -1,10 +1,11 @@
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { sampleClaim, sampleRecall } from "../__fixtures__/claim";
 import { getRecallBySlug } from "./index";
 import { localStore } from "./local";
+import { summarize } from "./store";
 
 let dir: string;
 beforeEach(async () => {
@@ -97,6 +98,40 @@ describe("localStore", () => {
     const rows = await store.listClaims();
     expect(rows.find((r) => r.id === "RM-0412")?.seeded).toBe(true);
     expect(rows.find((r) => r.id === "RM-0500")).not.toHaveProperty("seeded");
+  });
+
+  it("carries what the console grid and the demo picker show into the index", async () => {
+    const store = localStore(dir);
+    const amount = { value: "29.99", currency: "USD" as const };
+    await store.putClaim(
+      sampleClaim({
+        decision: "paid",
+        reasons: [{ check: "label", outcome: "pass", text: "ok" }, { check: "review", outcome: "pass", text: "Approved on review by Kikea" }],
+        payout: { batchId: "B1", status: "PENDING", updatedAt: "2026-11-07T10:01:00.000Z", amount },
+        demo: true,
+        events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: "genuine" }],
+      }),
+    );
+    expect((await store.listClaims())[0]).toMatchObject({ payerVerified: true, payoutAmount: amount, reason: { check: "review" }, sample: "genuine" });
+    await store.updateClaim("RM-0412", (c) => ({ ...c, decision: "held", reasons: [{ check: "code", outcome: "hold", text: "Code unclear" }], payout: null }));
+    expect((await store.listClaims())[0]).toMatchObject({ decision: "held", payoutAmount: null, reason: { text: "Code unclear" } });
+  });
+
+  it("fills in index rows written before they carried the grid's fields, once", async () => {
+    const store = localStore(dir);
+    const claim = sampleClaim({ decision: "rejected", reasons: [{ check: "code", outcome: "reject", text: "Written code reads K7O" }] });
+    await store.putClaim(claim);
+    await store.putClaim(sampleClaim({ id: "RM-0500" }));
+    const NEW = ["payerVerified", "payoutAmount", "reason", "sample"];
+    const old = (row: object) => Object.fromEntries(Object.entries(row).filter(([k]) => !NEW.includes(k)));
+    const legacy = { claims: [old(summarize(claim)), old(summarize(sampleClaim({ id: "RM-0999" }))), summarize(sampleClaim({ id: "RM-0500" }))] };
+    await writeFile(join(dir, "index.json"), JSON.stringify(legacy));
+
+    const rows = await store.listClaims();
+    expect(rows[0]).toEqual(summarize(claim));
+    // RM-0999's file is gone: saved with what the row knows.
+    expect(rows[1]).toMatchObject({ id: "RM-0999", payerVerified: false, payoutAmount: null, reason: null });
+    expect(JSON.parse(await readFile(join(dir, "index.json"), "utf8")).claims).toEqual(rows);
   });
 
   it("counts model calls per UTC day up to the limit, writing nothing at it", async () => {

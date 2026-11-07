@@ -196,7 +196,8 @@ export async function checkClaim(deps: PipelineDeps, claimId: string): Promise<C
   if (!start) throw new ClaimError(404, "No such claim");
   if (start.decision !== "pending" || !start.photos.length || start.verdict) return start;
 
-  const recall = await store.getRecall(start.recallId);
+  // Fresh, past the recall cache: the refund and auto-pay decide what is paid.
+  const recall = await store.getRecall(start.recallId, { fresh: true });
   if (!recall) {
     const reason: Reason = { check: "model", outcome: "hold", text: "The recall's check settings couldn't be loaded, so a person will look at your photos" };
     return (await commit(store, claimId, (c) => hold(c, deps.now(), [reason], reason.text))) ?? start;

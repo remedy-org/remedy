@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AlertIcon, Button, Card, CrossIcon, ErrorState } from "@/components/ui";
 import { CameraIcon } from "./icons";
-import type { ClaimView } from "./model";
+import type { ClaimStatus, ClaimView } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
 import { mmss, useCountdown } from "./useCountdown";
 
@@ -15,6 +15,8 @@ const MAX_SIDE = 1600;
 const QUALITY = 0.85;
 const MAX_PHOTOS = 3;
 const MAX_BYTES = 4.4 * 1024 * 1024;
+// Each poll is one read of the claim from the store, and those are capped per month.
+const POLL_MS = 5000;
 
 interface Shot {
   url: string;
@@ -107,8 +109,9 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     };
   }, [attempt, expired, preview, stop]);
 
-  // Photos can arrive from elsewhere: the phone from the QR handoff, or another tab. Poll the claim and move on to the
-  // checking step as soon as it has photos or a decision, instead of running the camera and countdown on regardless.
+  // Photos can arrive from elsewhere: the phone from the QR handoff, or another tab. Poll the claim's status and move
+  // on to the checking step as soon as it has photos or a decision, instead of running the camera and countdown on
+  // regardless. Not while the tab is hidden, and not once the session has ended.
   const onSentRef = useRef(onSent);
   const sendingRef = useRef(sending);
   useEffect(() => {
@@ -116,29 +119,34 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     sendingRef.current = sending;
   });
   useEffect(() => {
-    if (preview) return;
+    if (preview || expired) return;
     let done = false;
     const poll = async () => {
       if (done || sendingRef.current || document.hidden) return;
       try {
-        const res = await fetch(`/api/claims/${claimId}`, { cache: "no-store" });
+        const res = await fetch(`/api/claims/${claimId}/status`, { cache: "no-store" });
         if (!res.ok || done || sendingRef.current) return;
-        const view = (await res.json()) as ClaimView;
-        if (view.photos > 0 || view.decision !== "pending") {
+        const status = (await res.json()) as ClaimStatus;
+        if (status.photos > 0 || status.decision !== "pending") {
           done = true;
           stop();
-          onSentRef.current(view);
+          // The checking step fetches the checklist itself.
+          onSentRef.current(null);
         }
       } catch {
         // Offline for a moment: the next tick tries again.
       }
     };
-    const t = setInterval(poll, 3000);
+    const t = setInterval(poll, POLL_MS);
+    // Back on this tab after taking the photos on the phone: look now rather than at the next tick.
+    const onVisible = () => void poll();
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       done = true;
       clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [claimId, preview, stop]);
+  }, [claimId, expired, preview, stop]);
 
   // Object URLs for the thumbnails are freed when the step goes away.
   const shotsRef = useRef(shots);

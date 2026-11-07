@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
   const clash = await alreadyImported(store, record, session);
   if (clash) return clash;
 
+  // alreadyImported just read recalls.json fresh, so the cached copy is current.
   const recalls = await store.listRecalls();
   const slug = uniqueSlug(input.slug, recalls, "");
   // The source is always CPSC's own page, whatever the form sent.

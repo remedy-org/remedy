@@ -27,7 +27,7 @@ export async function readCpsc(ref: string): Promise<CpscRecord | NextResponse<A
 // A recall id is CPSC's number, so each recall exists once in Remedy.
 export async function alreadyImported(store: Store, record: CpscRecord, session: Session): Promise<NextResponse<ApiError> | null> {
   const id = recallId(record);
-  const row = (await store.listRecalls()).find((r) => r.id === id);
+  const row = (await store.listRecalls({ fresh: true })).find((r) => r.id === id);
   if (!row) return null;
   if (canSee(row, session)) return fail(409, `Recall ${id} is already in your workspace.`, { existing: id });
   return fail(409, `Recall ${id} is already run through Remedy by another company.`);

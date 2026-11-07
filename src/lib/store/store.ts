@@ -1,21 +1,34 @@
 import { z } from "zod";
-import { ClaimId, Decision, RecallId, RecallSlug, type Claim, type Recall } from "../types";
+import { ClaimId, Decision, Money, Reason, RecallId, RecallSlug, type Claim, type Recall } from "../types";
 
-// One row per claim in index.json: enough for the dashboard and the pre-checks without opening every claim.
+// One row per claim in index.json: enough for the console's grid, stats and report, the demo picker and the
+// pre-checks without opening every claim. Each claim file read is a Blob operation, and those are capped.
 export const ClaimSummary = z.object({
   id: ClaimId,
   recallId: RecallId,
   payerId: z.string(),
+  payerVerified: z.boolean(),
   decision: Decision,
   createdAt: z.iso.datetime(),
   photoHashes: z.array(z.string()),
   payoutStatus: z.string().nullable(),
+  // The amount fixed at pay time (Payout.amount), if any.
+  payoutAmount: Money.nullable(),
+  // The reason behind the decision (decidingReason).
+  reason: Reason.nullable(),
+  // A demo claim's sample id.
+  sample: z.string().optional(),
   seeded: z.boolean().optional(),
   demo: z.boolean().optional(),
 });
 export type ClaimSummary = z.infer<typeof ClaimSummary>;
 
-export const ClaimIndex = z.object({ claims: z.array(ClaimSummary) });
+// Rows written before the index carried payerVerified, payoutAmount and reason. Writers pass them through as they
+// are; listClaims fills them in from their claim files once (completeRows).
+export const IndexRow = ClaimSummary.partial({ payerVerified: true, payoutAmount: true, reason: true });
+export type IndexRow = z.infer<typeof IndexRow>;
+
+export const ClaimIndex = z.object({ claims: z.array(IndexRow) });
 export type ClaimIndex = z.infer<typeof ClaimIndex>;
 
 // One row per recall in recalls.json: finds a recall by slug and lists a company's recalls without a blob listing.
@@ -39,22 +52,28 @@ export type UsageKind = keyof Usage;
 export const NO_USAGE: Usage = { vision: 0, draft: 0 };
 export const UtcDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+// fresh: skip the recall cache (cache.ts) and read the store. The stores themselves always read the store.
+export interface ReadOptions {
+  fresh?: boolean;
+}
+
 export interface Store {
-  getRecall(id: string): Promise<Recall | null>;
+  getRecall(id: string, options?: ReadOptions): Promise<Recall | null>;
   // Writes the recall's file, then its row in recalls.json. Slugs must be unique: a clash throws.
   putRecall(recall: Recall): Promise<void>;
-  listRecalls(): Promise<RecallSummary[]>;
+  listRecalls(options?: ReadOptions): Promise<RecallSummary[]>;
   getClaim(id: string): Promise<Claim | null>;
   // Writes the claim's file, then its row in index.json.
   putClaim(claim: Claim): Promise<void>;
   // Adds a new claim: its row in index.json, with the index's conditional write, then its file. refuse sees the index
   // as it is when written, so limits counted from it hold when starts race. A refusal writes nothing and is returned;
   // null means the claim was added. An id already in the index throws.
-  addClaim<R>(claim: Claim, refuse: (rows: ClaimSummary[]) => R | null): Promise<R | null>;
+  addClaim<R>(claim: Claim, refuse: (rows: IndexRow[]) => R | null): Promise<R | null>;
   // Reads the claim and saves change's result only if the claim hasn't changed since; when it has, reads it again and
   // re-runs change. Returns the saved claim, or null when the claim is missing or change returns null.
   updateClaim(id: string, change: (claim: Claim) => Claim | null): Promise<Claim | null>;
-  // Reads index.json only: listing the blob store on every page load costs quota.
+  // Reads index.json only: listing the blob store on every page load costs quota. Old rows are completed once
+  // (completeRows).
   listClaims(): Promise<ClaimSummary[]>;
   putPhoto(key: string, jpeg: Buffer): Promise<void>;
   getPhoto(key: string): Promise<Buffer | null>;
@@ -68,18 +87,63 @@ export interface Store {
 // The next count, or null at the limit (nothing to write).
 export const bump = (usage: Usage, kind: UsageKind, limit: number): Usage | null => (usage[kind] < limit ? { ...usage, [kind]: usage[kind] + 1 } : null);
 
+/** The reason behind a claim's decision: a person's review of a paid claim, the first hold of a held one, the first
+ * reject of a refused one. Null otherwise. */
+export function decidingReason(c: Pick<Claim, "decision" | "reasons">): Reason | null {
+  switch (c.decision) {
+    case "paid":
+      return c.reasons.find((r) => r.check === "review") ?? null;
+    case "held":
+      return c.reasons.find((r) => r.outcome === "hold") ?? null;
+    case "rejected":
+    case "blocked":
+      return c.reasons.find((r) => r.outcome === "reject") ?? null;
+    case "pending":
+      return null;
+  }
+}
+
 export function summarize(c: Claim): ClaimSummary {
+  const sample = c.demo ? c.events.find((e) => e.type === "demo_sample")?.detail : undefined;
   return {
     id: c.id,
     recallId: c.recallId,
     payerId: c.payerId,
+    payerVerified: c.payerVerified,
     decision: c.decision,
     createdAt: c.createdAt,
     photoHashes: c.photos.map((p) => p.hash),
     payoutStatus: c.payout?.status ?? null,
+    payoutAmount: c.payout?.amount ?? null,
+    reason: decidingReason(c),
+    ...(sample ? { sample } : {}),
     ...(c.seeded ? { seeded: true } : {}),
     ...(c.demo ? { demo: true } : {}),
   };
+}
+
+const isComplete = (r: IndexRow): r is ClaimSummary => r.payerVerified !== undefined && r.payoutAmount !== undefined && r.reason !== undefined;
+// What an old row can say without its claim file.
+const asIs = (r: IndexRow): ClaimSummary => ({ payerVerified: false, payoutAmount: null, reason: null, ...r });
+
+/** listClaims' rows, complete. Rows from before the index carried the grid's fields are read from their claim files
+ * and saved back in one index write, so this happens once per store. A row whose file is gone is saved as it can be;
+ * one whose file couldn't be read is left for the next call. */
+export async function completeRows(
+  rows: IndexRow[],
+  getClaim: (id: string) => Promise<Claim | null>,
+  updateIndex: (change: (index: ClaimIndex) => ClaimIndex | null) => Promise<boolean>,
+): Promise<ClaimSummary[]> {
+  const old = rows.filter((r) => !isComplete(r));
+  if (!old.length) return rows.filter(isComplete);
+  const read = await Promise.allSettled(old.map((r) => getClaim(r.id)));
+  const filled = new Map<string, ClaimSummary>();
+  read.forEach((res, i) => {
+    if (res.status === "fulfilled") filled.set(old[i].id, res.value ? summarize(res.value) : asIs(old[i]));
+  });
+  // Only rows still old when written are replaced. A failed write is tried again by the next call.
+  if (filled.size) await updateIndex((index) => ({ claims: index.claims.map((r) => (isComplete(r) ? r : (filled.get(r.id) ?? r))) })).catch(() => false);
+  return rows.map((r) => (isComplete(r) ? r : (filled.get(r.id) ?? asIs(r))));
 }
 
 export function summarizeRecall(r: Recall): RecallSummary {

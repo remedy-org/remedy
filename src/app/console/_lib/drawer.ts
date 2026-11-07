@@ -82,7 +82,7 @@ export function toDrawerClaim(c: Claim, recall: Recall): DrawerClaim {
     checks,
     summary: c.verdict?.summary ?? null,
     sentence: decisionSentence(c, recall),
-    amount: formatMoney(amountOf(c, recall)),
+    amount: formatMoney(amountOf(c.payout?.amount, recall)),
     payout: c.payout ? { batchId: c.payout.batchId, status: c.payout.status, updatedAt: c.payout.updatedAt } : null,
     events: c.events,
     review:

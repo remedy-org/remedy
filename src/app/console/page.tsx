@@ -13,8 +13,9 @@ export const metadata = { title: "Claims" };
 
 export default async function ConsolePage({ searchParams }: PageProps<"/console">) {
   const session = await requireSession("company", "/console");
-  const { store, recalls, unreadable: lostRecalls } = await loadWorkspace(session);
-  const recall = pickRecall(recalls, (await searchParams).recall);
+  const wanted = (await searchParams).recall;
+  const { store, recalls, unreadable: lostRecalls } = await loadWorkspace(session, wanted);
+  const recall = pickRecall(recalls, wanted);
 
   if (!recall) {
     return (
@@ -31,7 +32,7 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
     );
   }
 
-  const { claims, unreadable } = await loadClaims(store, recall, session);
+  const claims = await loadClaims(store, recall, session);
   const rows = claims.map((c) => toRow(c, recall));
   const stats = statsOf(claims, recall);
 
@@ -53,7 +54,6 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
         }
       />
       <PartialNotice what="recalls" ids={lostRecalls} total={recalls.length + lostRecalls.length} />
-      <PartialNotice what="claims" ids={unreadable} total={claims.length + unreadable.length} />
       <StatsBand stats={stats} />
       {rows.length ? (
         <ClaimsTable rows={rows} />

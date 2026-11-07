@@ -8,7 +8,8 @@ import { isDecided, type CheckRow, type ClaimView } from "./model";
 
 // Each check appears as it resolves, one after another, rather than all at once.
 const STEP_MS = 420;
-const POLL_MS = 1500;
+// Each poll reads the claim from the store, and those reads are capped per month.
+const POLL_MS = 2000;
 
 const subscribeMotion = (cb: () => void) => {
   const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -68,6 +69,11 @@ export function CheckingStep({ claimId, view: initial, sending, preview }: Check
     let t: ReturnType<typeof setTimeout>;
     let stopped = false;
     const tick = async () => {
+      // A hidden tab waits; the result is fetched when it's looked at again.
+      if (document.hidden) {
+        t = setTimeout(tick, POLL_MS);
+        return;
+      }
       try {
         const res = await fetch(`/api/claims/${claimId}`, { cache: "no-store" });
         if (!res.ok) throw new Error(String(res.status));

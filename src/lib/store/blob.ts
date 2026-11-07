@@ -1,7 +1,7 @@
 import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { bump, ClaimIndex, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type ClaimSummary, type Store } from "./store";
+import { bump, ClaimIndex, completeRows, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type IndexRow, type Store } from "./store";
 
 // Production store: Vercel Blob, private access (the store itself must be created as private).
 export function blobStore(token: string): Store {
@@ -39,6 +39,7 @@ export function blobStore(token: string): Store {
     throw new Error(`${pathname} kept changing under us; gave up after 5 tries`);
   }
   const updateIndex = (change: (index: ClaimIndex) => ClaimIndex | null) => updateJson(paths.index, ClaimIndex, { claims: [] }, change);
+  const getClaim = async (id: string) => (isValidClaimId(id) ? readJson(paths.claim(id), Claim) : null);
 
   return {
     getRecall: async (id) => (isValidRecallId(id) ? readJson(paths.recall(id), Recall) : null),
@@ -49,12 +50,12 @@ export function blobStore(token: string): Store {
       await write(paths.recall(parsed.id), JSON.stringify(parsed), "application/json");
     },
     listRecalls: async () => ((await readJson(paths.recallIndex, RecallIndex)) ?? { recalls: [] }).recalls,
-    getClaim: async (id) => (isValidClaimId(id) ? readJson(paths.claim(id), Claim) : null),
+    getClaim,
     async putClaim(claim) {
       await write(paths.claim(claim.id), JSON.stringify(Claim.parse(claim)), "application/json");
       await updateIndex((index) => upsert(index, summarize(claim)));
     },
-    async addClaim<R>(claim: Claim, refuse: (rows: ClaimSummary[]) => R | null) {
+    async addClaim<R>(claim: Claim, refuse: (rows: IndexRow[]) => R | null) {
       const parsed = Claim.parse(claim);
       let refusal: R | null = null;
       // Index first: a start that's refused, or loses to contention, writes no claim file.
@@ -81,7 +82,7 @@ export function blobStore(token: string): Store {
       }
       throw new Error(`claim ${id} kept changing under us; gave up after 5 tries`);
     },
-    listClaims: async () => ((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims,
+    listClaims: async () => completeRows(((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims, getClaim, updateIndex),
     putPhoto: async (key, jpeg) => write(paths.photo(key), jpeg, "image/jpeg"),
     // Photos never change once written, so the CDN copy is fine.
     getPhoto: async (key) => (await read(paths.photo(key), true))?.data ?? null,

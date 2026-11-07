@@ -11,7 +11,7 @@ export async function POST(_request: NextRequest, ctx: RouteContext<"/api/consol
   if (isResponse(session)) return session;
   const id = ClaimId.safeParse((await ctx.params).id);
   if (!id.success) return fail(404, "No claim with that id.");
-  const found = await loadClaimFor(session, id.data);
+  const found = await loadClaimFor(session, id.data, { fresh: true });
   if (!found) return fail(404, "No claim with that id in this workspace.");
 
   const result = await approveClaim({ ...found, by: reviewer(session) });

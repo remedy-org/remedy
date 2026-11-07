@@ -18,7 +18,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/console
   if (!id.success) return fail(404, "No claim with that id.");
   const input = await body(request, RejectInput);
   if (isResponse(input)) return input;
-  const found = await loadClaimFor(session, id.data);
+  const found = await loadClaimFor(session, id.data, { fresh: true });
   if (!found) return fail(404, "No claim with that id in this workspace.");
 
   const result = await rejectClaim({ ...found, by: reviewer(session), reason: input.reason });

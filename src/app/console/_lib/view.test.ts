@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sampleClaim, sampleRecall } from "@/lib/__fixtures__/claim";
+import { summarize } from "@/lib/store/store";
 import type { Reason } from "@/lib/types";
 import { toDrawerClaim } from "./drawer";
 import { PublishInput, RefundValue, slugify, summarizeCpsc, uniqueSlug } from "./recalls";
@@ -34,22 +35,22 @@ describe("console view", () => {
       sampleClaim({ decision: "blocked" }),
       sampleClaim({ decision: "pending" }),
     ];
-    expect(statsOf(claims, recall)).toEqual({ total: 6, remedied: 2, unitsSold: 19_596, paidCents: 5998, settling: 1, held: 1, rejected: 1, blocked: 1, pending: 1 });
+    expect(statsOf(claims.map(summarize), recall)).toEqual({ total: 6, remedied: 2, unitsSold: 19_596, paidCents: 5998, settling: 1, held: 1, rejected: 1, blocked: 1, pending: 1 });
   });
 
   it("keeps a paid claim's recorded amount when the refund changes later", () => {
     const paid = sampleClaim({ decision: "paid", payout: { batchId: "B", status: "SUCCESS", updatedAt: "2026-11-07T10:00:00.000Z", amount: { value: "29.99", currency: "USD" } } });
     const repriced = { ...recall, refund: { value: "50.00", currency: "USD" as const } };
-    expect(statsOf([paid, sampleClaim({ decision: "paid" })], repriced).paidCents).toBe(2999 + 5000);
-    expect(toRow(paid, repriced).amount).toBe("$29.99");
-    expect(buildReport([paid], repriced)).toMatchObject({ settledCents: 2999, paidEachCents: 2999 });
+    expect(statsOf([paid, sampleClaim({ decision: "paid" })].map(summarize), repriced).paidCents).toBe(2999 + 5000);
+    expect(toRow(summarize(paid), repriced).amount).toBe("$29.99");
+    expect(buildReport([summarize(paid)], repriced)).toMatchObject({ settledCents: 2999, paidEachCents: 2999 });
   });
 
   it("gives each row its reason and amount", () => {
-    const row = toRow(sampleClaim({ decision: "rejected", reasons: [{ check: "label", outcome: "pass", text: "ok" }, reject("code", "Written code reads K7O")] }), recall);
+    const row = toRow(summarize(sampleClaim({ decision: "rejected", reasons: [{ check: "label", outcome: "pass", text: "ok" }, reject("code", "Written code reads K7O")] })), recall);
     expect(row).toMatchObject({ decision: "rejected", reason: "Written code reads K7O", amount: null, payer: "•••• UJ3Q" });
-    expect(toRow(sampleClaim({ decision: "held" }), { ...recall, autoPay: false }).reason).toBe("Every check passed; auto-pay is off");
-    expect(reasonOf(sampleClaim({ decision: "pending", photos: [] }), recall)).toBe("Waiting for photos");
+    expect(toRow(summarize(sampleClaim({ decision: "held" })), { ...recall, autoPay: false }).reason).toBe("Every check passed; auto-pay is off");
+    expect(reasonOf(summarize(sampleClaim({ decision: "pending", photos: [] })), recall)).toBe("Waiting for photos");
   });
 
   it("says the rule's decision in one sentence", () => {
@@ -90,7 +91,7 @@ describe("report", () => {
       sampleClaim({ decision: "rejected", reasons: [reject("step_2", "x")] }),
       sampleClaim({ decision: "blocked", reasons: [reject("code", "x")] }),
     ];
-    const r = buildReport(claims, recall);
+    const r = buildReport(claims.map(summarize), recall);
     expect(r.outcomes.find((o) => o.decision === "rejected")).toMatchObject({ count: 2, share: "50%" });
     expect(r.refusals).toEqual([
       { reason: "One-time code missing or wrong", count: 2 },

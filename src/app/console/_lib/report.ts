@@ -1,7 +1,8 @@
-import type { Claim, Decision, Recall } from "@/lib/types";
+import type { ClaimSummary } from "@/lib/store";
+import type { Decision, Recall } from "@/lib/types";
 import { amountOf, cents, statsOf, type Stats } from "./view";
 
-// The CPSC progress-report draft, computed from the claims. Pure, so the numbers are unit-tested.
+// The CPSC progress-report draft, computed from the claims' index rows. Pure, so the numbers are unit-tested.
 
 const REFUSAL: Record<string, string> = {
   code: "One-time code missing or wrong",
@@ -40,7 +41,7 @@ export interface Report {
 
 const share = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : "—");
 
-export function buildReport(claims: Claim[], recall: Recall): Report {
+export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const stats = statsOf(claims, recall);
   const refund = cents(recall.refund);
   const rows: [Decision, string, number, string][] = [
@@ -54,14 +55,14 @@ export function buildReport(claims: Claim[], recall: Recall): Report {
   const tally = new Map<string, number>();
   for (const c of claims) {
     if (c.decision !== "rejected" && c.decision !== "blocked") continue;
-    const check = c.reasons.find((r) => r.outcome === "reject")?.check ?? "";
+    const check = c.reason?.check ?? "";
     const reason = REFUSAL[check.startsWith("step_") ? "step" : check] ?? "Other";
     tally.set(reason, (tally.get(reason) ?? 0) + 1);
   }
 
   const times = claims.map((c) => c.createdAt).sort();
-  const paidAmounts = new Set(claims.filter((c) => c.decision === "paid").map((c) => cents(amountOf(c, recall))));
-  const settledCents = claims.filter((c) => c.decision === "paid" && c.payout?.status === "SUCCESS").reduce((sum, c) => sum + cents(amountOf(c, recall)), 0);
+  const paidAmounts = new Set(claims.filter((c) => c.decision === "paid").map((c) => cents(amountOf(c.payoutAmount, recall))));
+  const settledCents = claims.filter((c) => c.decision === "paid" && c.payoutStatus === "SUCCESS").reduce((sum, c) => sum + cents(amountOf(c.payoutAmount, recall)), 0);
   return {
     stats,
     outcomes: rows.map(([decision, label, count, note]) => ({ decision, label, count, share: share(count, stats.total), note })),

@@ -18,5 +18,6 @@ export async function POST(request: NextRequest) {
   if (clash) return clash;
 
   const summary = summarizeCpsc(record);
+  // alreadyImported just read recalls.json fresh, so the cached copy is current.
   return NextResponse.json({ ...summary, slug: uniqueSlug(summary.slug, await store.listRecalls(), summary.id) });
 }

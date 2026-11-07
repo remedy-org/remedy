@@ -62,6 +62,23 @@ describe("blobStore", () => {
     expect(calls.get.map((c) => c.pathname)).toEqual(["index.json"]);
   });
 
+  it("fills in index rows from before they carried the grid's fields in one write, then lists from index.json alone", async () => {
+    const store = blobStore("tok");
+    await store.putClaim(sampleClaim({ decision: "held", reasons: [{ check: "code", outcome: "hold", text: "Code unclear" }] }));
+    const row = JSON.parse(blobs.get("index.json")!.body.toString()).claims[0];
+    for (const k of ["payerVerified", "payoutAmount", "reason"]) delete row[k];
+    blobs.set("index.json", { ...blobs.get("index.json")!, body: Buffer.from(JSON.stringify({ claims: [row] })) });
+    calls.get.length = 0;
+    calls.put.length = 0;
+
+    expect((await store.listClaims())[0]).toMatchObject({ payerVerified: true, payoutAmount: null, reason: { text: "Code unclear" } });
+    expect(calls.get.map((c) => c.pathname)).toEqual(["index.json", "claims/RM-0412.json", "index.json"]);
+    expect(calls.put.map((c) => c.pathname)).toEqual(["index.json"]);
+    calls.get.length = 0;
+    await store.listClaims();
+    expect(calls.get.map((c) => c.pathname)).toEqual(["index.json"]);
+  });
+
   it("retries the index write when another instance changed it in between", async () => {
     const store = blobStore("tok");
     await store.putClaim(sampleClaim({ id: "RM-0001" }));

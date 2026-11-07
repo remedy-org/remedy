@@ -18,12 +18,10 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   if (!recall || !isDemoAllowed(recall)) notFound();
   const session = await requireSession("owner", `/r/${recall.slug}/try/samples`);
 
-  // This judge's own demo claims, newest first, with the sample each one used.
+  // This judge's own demo claims, newest first, with the sample each one used: all from index.json's rows.
   const rows = (await store.listClaims()).filter((r) => r.demo && r.payerId === session.payerId && r.recallId === recall.id);
-  const claims = (await Promise.all(rows.slice(0, 12).map((r) => store.getClaim(r.id)))).filter((c) => c !== null);
-  const sampleOf = (events: { type: string; detail: string }[]) => demoSample(events.find((e) => e.type === "demo_sample")?.detail ?? "");
-  const runs: DemoRun[] = claims.map((c) => ({ id: c.id, href: `/r/${recall.slug}/try/${c.id}`, title: sampleOf(c.events)?.title ?? "Sample claim", decision: c.decision }));
-  const ran = new Set(claims.filter((c) => c.photos.length > 0).map((c) => sampleOf(c.events)?.id));
+  const runs: DemoRun[] = rows.slice(0, 12).map((r) => ({ id: r.id, href: `/r/${recall.slug}/try/${r.id}`, title: demoSample(r.sample ?? "")?.title ?? "Sample claim", decision: r.decision }));
+  const ran = new Set(rows.filter((r) => r.photoHashes.length > 0).map((r) => r.sample));
 
   const options: SampleOption[] = DEMO_SAMPLES.map((sample) => ({
     sample,

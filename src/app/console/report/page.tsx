@@ -1,5 +1,4 @@
 import { formatDayET } from "@/components/console/format";
-import { PartialNotice } from "@/components/console/PartialNotice";
 import { PrintButton } from "@/components/console/PrintButton";
 import { ProgressReport } from "@/components/console/ProgressReport";
 import { RecallPicker } from "@/components/console/RecallPicker";
@@ -12,8 +11,9 @@ export const metadata = { title: "CPSC report" };
 
 export default async function ReportPage({ searchParams }: PageProps<"/console/report">) {
   const session = await requireSession("company", "/console/report");
-  const { store, recalls } = await loadWorkspace(session);
-  const recall = pickRecall(recalls, (await searchParams).recall);
+  const wanted = (await searchParams).recall;
+  const { store, recalls } = await loadWorkspace(session, wanted);
+  const recall = pickRecall(recalls, wanted);
 
   if (!recall) {
     return (
@@ -28,7 +28,7 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
     );
   }
 
-  const { claims, unreadable } = await loadClaims(store, recall, session);
+  const claims = await loadClaims(store, recall, session);
   const report = buildReport(claims, recall);
 
   return (
@@ -42,9 +42,6 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
           {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/report" />}
           <PrintButton />
         </div>
-      </div>
-      <div className="mx-auto w-full max-w-[52rem] print:hidden">
-        <PartialNotice what="claims" ids={unreadable} total={claims.length + unreadable.length} />
       </div>
       <ProgressReport recall={recall} report={report} generated={`${formatDayET(new Date().toISOString())} (ET)`} />
     </main>

@@ -29,6 +29,9 @@ export interface ClaimView {
   rows: CheckRow[];
 }
 
+/** What the camera step polls: whether photos arrived from elsewhere. */
+export type ClaimStatus = Pick<ClaimView, "decision" | "photos">;
+
 export type ClaimLike = Pick<Claim, "decision" | "reasons" | "photos" | "verdict" | "payout" | "code" | "demo">;
 
 const PRE = [

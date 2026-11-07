@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { countingStore } from "../__fixtures__/counting";
 import { sampleClaim } from "../__fixtures__/claim";
 import { localStore } from "../store/local";
 import type { Store } from "../store";
@@ -143,6 +144,15 @@ describe("refreshPayouts", () => {
 
     expect((await store.getClaim("RM-0001"))?.payout).toMatchObject({ status: "ONHOLD", updatedAt: "2026-11-07T10:03:00.000Z" });
     expect((await store.getClaim("RM-0002"))?.payout).toMatchObject({ status: "UNCLAIMED", updatedAt: "2026-11-07T10:04:00.000Z" });
+  });
+
+  it("doesn't read a claim again when PayPal's status hasn't moved", async () => {
+    const claims = [paid({ batchId: "B1" }, { id: "RM-0001" })];
+    for (const c of claims) await store.putClaim(c);
+    const counter = countingStore(store);
+    const out = await refreshPayouts(counter.store, claims, { check: async (batchId) => status(batchId, "PENDING") });
+    expect(out).toEqual(claims);
+    expect(counter.counts).toMatchObject({ reads: 0, writes: 0 });
   });
 
   it("checks at most `limit` claims", async () => {
