@@ -98,8 +98,6 @@ export async function createClaim(deps: Pick<PipelineDeps, "store" | "now" | "li
   const now = deps.now();
   const rows = await deps.store.listClaims();
   const visionUsed = sample ? (await deps.store.getUsage(utcDay(now))).vision : 0;
-  const refusal = claimRefusal(rows, { payerId: payer.payerId, demo: Boolean(sample), now, limits: deps.limits, visionUsed });
-  if (refusal) throw new LimitReached(refusal);
   const taken = new Set(rows.map((r) => r.id));
   const code = sample?.code ?? newCode();
   const claim: Claim = {
@@ -123,7 +121,9 @@ export async function createClaim(deps: Pick<PipelineDeps, "store" | "now" | "li
     createdAt: now.toISOString(),
     ...(sample ? { demo: true } : {}),
   };
-  await deps.store.putClaim(claim);
+  // Counted on the index as it's written, not on the read above, so parallel starts can't all pass on one snapshot.
+  const refusal = await deps.store.addClaim(claim, (fresh) => claimRefusal(fresh, { payerId: payer.payerId, demo: Boolean(sample), now, limits: deps.limits, visionUsed }));
+  if (refusal) throw new LimitReached(refusal);
   return claim;
 }
 

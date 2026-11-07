@@ -47,6 +47,10 @@ export interface Store {
   getClaim(id: string): Promise<Claim | null>;
   // Writes the claim's file, then its row in index.json.
   putClaim(claim: Claim): Promise<void>;
+  // Adds a new claim: its row in index.json, with the index's conditional write, then its file. refuse sees the index
+  // as it is when written, so limits counted from it hold when starts race. A refusal writes nothing and is returned;
+  // null means the claim was added. An id already in the index throws.
+  addClaim<R>(claim: Claim, refuse: (rows: ClaimSummary[]) => R | null): Promise<R | null>;
   // Reads the claim and saves change's result only if the claim hasn't changed since; when it has, reads it again and
   // re-runs change. Returns the saved claim, or null when the claim is missing or change returns null.
   updateClaim(id: string, change: (claim: Claim) => Claim | null): Promise<Claim | null>;
@@ -89,6 +93,12 @@ export function upsertRecall(index: RecallIndex, row: RecallSummary): RecallInde
   const recalls = [...index.recalls.filter((r) => r.id !== row.id), row];
   recalls.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   return { recalls };
+}
+
+// A new claim's row: an id already in the index throws, so a new claim never replaces another.
+export function insert(index: ClaimIndex, row: ClaimSummary): ClaimIndex {
+  if (index.claims.some((c) => c.id === row.id)) throw new Error(`Claim id ${row.id} is taken`);
+  return upsert(index, row);
 }
 
 // Newest first.

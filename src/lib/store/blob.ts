@@ -1,7 +1,7 @@
 import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { bump, ClaimIndex, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type Store } from "./store";
+import { bump, ClaimIndex, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type ClaimSummary, type Store } from "./store";
 
 // Production store: Vercel Blob, private access (the store itself must be created as private).
 export function blobStore(token: string): Store {
@@ -38,7 +38,7 @@ export function blobStore(token: string): Store {
     }
     throw new Error(`${pathname} kept changing under us; gave up after 5 tries`);
   }
-  const updateIndex = (change: (index: ClaimIndex) => ClaimIndex) => updateJson(paths.index, ClaimIndex, { claims: [] }, change);
+  const updateIndex = (change: (index: ClaimIndex) => ClaimIndex | null) => updateJson(paths.index, ClaimIndex, { claims: [] }, change);
 
   return {
     getRecall: async (id) => (isValidRecallId(id) ? readJson(paths.recall(id), Recall) : null),
@@ -53,6 +53,14 @@ export function blobStore(token: string): Store {
     async putClaim(claim) {
       await write(paths.claim(claim.id), JSON.stringify(Claim.parse(claim)), "application/json");
       await updateIndex((index) => upsert(index, summarize(claim)));
+    },
+    async addClaim<R>(claim: Claim, refuse: (rows: ClaimSummary[]) => R | null) {
+      const parsed = Claim.parse(claim);
+      let refusal: R | null = null;
+      // Index first: a start that's refused, or loses to contention, writes no claim file.
+      await updateIndex((index) => ((refusal = refuse(index.claims)) === null ? insert(index, summarize(parsed)) : null));
+      if (refusal === null) await write(paths.claim(parsed.id), JSON.stringify(parsed), "application/json");
+      return refusal;
     },
     // The webhook, the console and the claim page can save one claim at once: write only over the copy we read.
     async updateClaim(id, change) {

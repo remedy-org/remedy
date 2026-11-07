@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { bump, ClaimIndex, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type Store } from "./store";
+import { bump, ClaimIndex, insert, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type ClaimSummary, type Store } from "./store";
 
 // Dev store: the same layout as the blob store, as files under `dir` (data/, git-ignored).
 export function localStore(dir: string): Store {
@@ -43,11 +43,20 @@ export function localStore(dir: string): Store {
     indexLock = next.catch(() => {});
     return next;
   }
-  const updateIndex = (change: (index: ClaimIndex) => ClaimIndex) => updateJson(paths.index, ClaimIndex, { claims: [] }, change);
+  const updateIndex = (change: (index: ClaimIndex) => ClaimIndex | null) => updateJson(paths.index, ClaimIndex, { claims: [] }, change);
 
   async function putClaim(claim: Claim) {
     await write(paths.claim(claim.id), JSON.stringify(Claim.parse(claim), null, 2));
     await updateIndex((index) => upsert(index, summarize(claim)));
+  }
+
+  // Index first, as in the blob store: a refused start writes no claim file.
+  async function addClaim<R>(claim: Claim, refuse: (rows: ClaimSummary[]) => R | null) {
+    const parsed = Claim.parse(claim);
+    let refusal: R | null = null;
+    await updateIndex((index) => ((refusal = refuse(index.claims)) === null ? insert(index, summarize(parsed)) : null));
+    if (refusal === null) await write(paths.claim(parsed.id), JSON.stringify(parsed, null, 2));
+    return refusal;
   }
 
   // The same chain for claim updates: each one reads the claim only after the one before it has saved.
@@ -74,6 +83,7 @@ export function localStore(dir: string): Store {
     listRecalls: async () => ((await readJson(paths.recallIndex, RecallIndex)) ?? { recalls: [] }).recalls,
     getClaim: async (id) => (isValidClaimId(id) ? readJson(paths.claim(id), Claim) : null),
     putClaim,
+    addClaim,
     updateClaim,
     listClaims: async () => ((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims,
     putPhoto: async (key, jpeg) => write(paths.photo(key), jpeg),

@@ -11,6 +11,21 @@ import { localStore } from "@/lib/store/local";
 import type { Claim, Recall, Verdict } from "@/lib/types";
 import { checkClaim, ClaimError, createClaim, findOpenClaim, LIMIT_HOLD, LimitReached, othersFor, receivePhotos, recoverStale, STALE_AFTER_MS, type PipelineDeps } from "./pipeline";
 
+// Claim ids in order, so starts that race on one index snapshot never draw the same random id.
+vi.mock("@/lib/ids", async (importOriginal) => {
+  const ids = await importOriginal<typeof import("@/lib/ids")>();
+  let n = 0;
+  return {
+    ...ids,
+    newClaimId: (taken: ReadonlySet<string>) => {
+      let id;
+      do id = `RM-${String(++n).padStart(4, "0")}`;
+      while (taken.has(id));
+      return id;
+    },
+  };
+});
+
 const T0 = new Date("2026-11-07T10:00:00.000Z");
 
 function verdict(over: { label?: "yes" | "no" | "unclear"; code?: string | null; matches?: "yes" | "no" | "unclear"; steps?: ("done" | "not_done" | "unclear")[] } = {}): Verdict {
@@ -101,6 +116,14 @@ describe("createClaim limits", () => {
     await createClaim(deps, { recall, payer: owner, sample: demoSample("genuine")! });
     clock = new Date("2026-11-08T00:00:01.000Z");
     expect((await createClaim(deps, { recall, payer: owner })).decision).toBe("pending");
+  });
+
+  it("holds the limit when starts race, saving only the ones that fit", async () => {
+    deps.limits.accountDemosPerDay = 3;
+    const started = await Promise.allSettled(Array.from({ length: 8 }, () => createClaim(deps, { recall, payer: owner, sample: demoSample("genuine")! })));
+    expect(started.filter((s) => s.status === "fulfilled")).toHaveLength(3);
+    expect(started.filter((s) => s.status === "rejected").every((s) => s.reason instanceof LimitReached)).toBe(true);
+    expect(await store.listClaims()).toHaveLength(3);
   });
 
   it("refuses a demo start once today's photo checks are used up, but still starts a real claim", async () => {

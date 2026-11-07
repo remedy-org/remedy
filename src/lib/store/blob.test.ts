@@ -83,6 +83,32 @@ describe("blobStore", () => {
     expect((await store.listClaims()).map((r) => r.id).sort()).toEqual(["RM-0001", "RM-0002", "RM-0003"]);
   });
 
+  it("adds a claim's index row before its file, counting the limit again on the index another instance changed", async () => {
+    const store = blobStore("tok");
+    await store.addClaim(sampleClaim({ id: "RM-0001" }), () => null);
+    expect(calls.put.map((c) => c.pathname)).toEqual(["index.json", "claims/RM-0001.json"]);
+    // Another instance adds RM-0002 between our read of index.json and our write of it: the retry sees two rows.
+    const { put } = await import("@vercel/blob");
+    const real = vi.mocked(put).getMockImplementation()!;
+    let raced = false;
+    vi.mocked(put).mockImplementation(async (pathname, body, options) => {
+      if (pathname === "index.json" && !raced) {
+        raced = true;
+        const theirs = JSON.parse(blobs.get("index.json")!.body.toString());
+        theirs.claims.push({ ...theirs.claims[0], id: "RM-0002" });
+        await real("index.json", JSON.stringify(theirs), { access: "private", allowOverwrite: true });
+      }
+      return real(pathname, body, options);
+    });
+    const seen: number[] = [];
+    const refusal = await store.addClaim(sampleClaim({ id: "RM-0003" }), (rows) => (seen.push(rows.length), rows.length >= 2 ? "full" : null));
+    vi.mocked(put).mockImplementation(real);
+    expect(seen).toEqual([1, 2]);
+    expect(refusal).toBe("full");
+    expect((await store.listClaims()).map((r) => r.id).sort()).toEqual(["RM-0001", "RM-0002"]);
+    expect(blobs.has("claims/RM-0003.json")).toBe(false);
+  });
+
   it("updates a claim only over the copy it read, re-running the change when another instance wrote first", async () => {
     const store = blobStore("tok");
     await store.putClaim(sampleClaim({ decision: "held" }));

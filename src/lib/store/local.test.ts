@@ -63,6 +63,17 @@ describe("localStore", () => {
     expect(await store.listClaims()).toHaveLength(20);
   });
 
+  it("adds claims up to a limit counted on the index, even when the adds race, and writes no file for a refused one", async () => {
+    const store = localStore(dir);
+    const full = (rows: unknown[]) => (rows.length >= 3 ? "full" : null);
+    const results = await Promise.all(Array.from({ length: 10 }, (_, i) => store.addClaim(sampleClaim({ id: `RM-${String(i).padStart(4, "0")}` }), full)));
+    expect(results.filter((r) => r === null)).toHaveLength(3);
+    expect(results.filter((r) => r === "full")).toHaveLength(7);
+    expect(await store.listClaims()).toHaveLength(3);
+    expect(await readdir(join(dir, "claims"))).toHaveLength(3);
+    await expect(store.addClaim(sampleClaim({ id: "RM-0000" }), () => null)).rejects.toThrow(/taken/);
+  });
+
   it("indexes recalls by slug, oldest first, and refuses a taken slug", async () => {
     const store = localStore(dir);
     await store.putRecall(sampleRecall());
