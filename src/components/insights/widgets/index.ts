@@ -159,5 +159,26 @@ export const insightsWidgets =
     ],
     menu: [{ label: "Remedy", widgetIds: ["recall-progress", "decision-mix", "check-funnel", "refusal-reasons"] }, ...defaults.menu],
   });
-  return { ...config, widgets: config.widgets.map(readOnly) };
+  return { ...config, widgets: config.widgets.map((w) => (w.id === "grid" ? claimLinks(readOnly(w)) : readOnly(w))) };
 };
+
+// The grid's claim ids (sources.ts gives that field a claimOf context: the recall) are mono links to the claim in the
+// queue, as every claim id in the console is.
+const claimLinks = <T extends AgBaseWidgetDefinition>(def: T): T => ({
+  ...def,
+  options: {
+    ...(def.options as object | undefined),
+    createCellRenderer: (field: { context?: { claimOf?: string } }) => {
+      const recall = field.context?.claimOf;
+      if (!recall) return undefined;
+      return ({ value }: { value: unknown }) => {
+        if (typeof value !== "string" || !value) return "";
+        const a = document.createElement("a");
+        a.href = `/console?recall=${encodeURIComponent(recall)}&claim=${encodeURIComponent(value)}`;
+        a.textContent = value;
+        a.className = "font-mono font-medium whitespace-nowrap text-text underline decoration-line-strong underline-offset-2 hover:decoration-text";
+        return a;
+      };
+    },
+  },
+});

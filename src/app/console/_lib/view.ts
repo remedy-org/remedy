@@ -67,6 +67,8 @@ export interface ClaimRow {
   bars: CheckBar[] | null;
   // The verdict's muted line, only when it says more than the pill.
   note: string | null;
+  // A held claim whose last approve PayPal refused: when (ISO). Null otherwise.
+  payoutFailedAt: string | null;
   // Null until photos arrive (or on rows from before the index carried times).
   timeline: RowTimeline | null;
   // Photos to PayPal sending the money, in seconds. Null for sample claims: their payouts were never sent.
@@ -177,23 +179,28 @@ export function reasonOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHas
 
 // The "model" holds are the pipeline's own (pipeline.ts): the photo check errored, timed out, hit the daily limit or
 // had no settings. They're written for the owner ("a person will look at your photos"); the console says the cause in
-// the company's words, and that the claim is waiting for them.
-const MODEL_HOLD: [RegExp, string][] = [
-  [/^The photo check didn't answer/, "The photo check didn't answer (a service error)"],
-  [/^The photo check didn't finish/, "The photo check didn't finish in time"],
-  [/^The recall's check settings couldn't be loaded/, "The recall's check settings couldn't be loaded, so the photos weren't checked"],
-  [/^Remedy's daily photo-check limit/, "Remedy's daily photo-check limit was reached, so the photos weren't checked"],
+// the company's words, and that the claim is waiting for them: in full in the panel, and short enough for the grid's
+// verdict column (about 40 characters beside the pill at 1440 with the panel open), so each cause reads whole there.
+const MODEL_HOLD: [RegExp, string, string][] = [
+  [/^The photo check didn't answer/, "The photo check didn't answer (a service error)", "Photo check errored"],
+  [/^The photo check didn't finish/, "The photo check didn't finish in time", "Photo check timed out"],
+  [/^The recall's check settings couldn't be loaded/, "The recall's check settings couldn't be loaded, so the photos weren't checked", "Check settings didn't load"],
+  [/^Remedy's daily photo-check limit/, "Remedy's daily photo-check limit was reached, so the photos weren't checked", "Daily check limit reached"],
 ];
-const modelHoldCause = (text: string) =>
-  MODEL_HOLD.find(([re]) => re.test(text))?.[1] ?? text.replace(/[,;]\s*(?:so )?a person will (?:look at your photos|review this claim)(?: instead)?\.?$/, "");
+const modelHoldCause = (text: string, short = false) => {
+  const known = MODEL_HOLD.find(([re]) => re.test(text));
+  if (known) return short ? known[2] : known[1];
+  return text.replace(/[,;]\s*(?:so )?a person will (?:look at your photos|review this claim)(?: instead)?\.?$/, "");
+};
 
 /** A reason as the company reads it: the "model" holds in the reviewer's words, every other reason as written. short:
  * the grid's one line. */
 export function companyReasonText(r: Pick<Reason, "check" | "text">, decision: Decision, short = false): string {
   if (r.check !== "model") return r.text;
+  if (decision === "held" && short) return `${modelHoldCause(r.text, true)}: needs your review`;
   const cause = modelHoldCause(r.text);
   if (decision !== "held") return `${cause}, so a person at the company reviewed it.`;
-  return short ? `${cause}: needs your review` : `${cause}, so this claim needs your review. Nothing has been paid.`;
+  return `${cause}, so this claim needs your review. Nothing has been paid.`;
 }
 
 /** A grid row from an index row. photoUrls turns each photo's store key into the URLs the grid loads (the console
@@ -202,6 +209,7 @@ export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls): C
   const owed = c.decision === "paid" || c.decision === "held" ? amountOf(c.payoutAmount, recall) : null;
   const bars = barsOf(c, recall);
   const timeline = timelineOf(c);
+  const failedAt = c.decision === "held" ? (c.payoutFailedAt ?? null) : null;
   return {
     id: c.id,
     createdAt: c.createdAt,
@@ -219,7 +227,9 @@ export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls): C
     photoCount: c.photoHashes.length,
     photos: photoUrls ? (c.photoKeys ?? []).map(photoUrls) : [],
     bars,
-    note: noteOf(c, bars, recall),
+    // A refused payout is the newest thing about a held claim, and what the reviewer acts on: it leads the verdict.
+    note: failedAt ? "PayPal didn't take the payout: retry or reject" : noteOf(c, bars, recall),
+    payoutFailedAt: failedAt,
     timeline,
     toPay: timeline && c.decision === "paid" ? timeline.sent : null,
     modelSec: timeline?.answered ?? null,
@@ -390,7 +400,7 @@ export interface PreCheckRow {
 }
 
 // The four cheap checks that run before any photo reaches the model, rebuilt from the claim's reasons.
-export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified" | "seeded">): PreCheckRow[] {
+export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified" | "seeded" | "demo">): PreCheckRow[] {
   const ran = c.photos.length > 0 || c.decision === "blocked";
   // preCheck rejects (the claim is blocked); sendCheck, run again right before a payout, holds.
   const failed = (check: string) => c.reasons.find((r) => r.check === check && r.outcome !== "pass");
@@ -405,8 +415,12 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
     // than show a pass next to another claim with the same photo.
     c.seeded
       ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Sample photo shared by the seeded claims, so this check wasn't run" }
-      : row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
-    row("payer", "First claim for this account", "No other live claim from this PayPal account"),
+      : // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the
+        // same sample photo once: say that, next to the other rounds' claims with the same photo and code.
+        c.demo
+        ? row("duplicate_photo", "Photo not seen before", "No other claim in this demo round used these photos. Each judge's round is checked on its own, so other rounds' claims can share the sample photo")
+        : row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
+    row("payer", "First claim for this account", c.demo ? "No other live claim from this PayPal account in this demo round" : "No other live claim from this PayPal account"),
     row("payer_verified", "Verified PayPal account", "PayPal says the account is verified"),
   ];
 }

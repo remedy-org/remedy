@@ -139,10 +139,12 @@ function EvidenceContent({ id, version, onClose, intent, variant }: { id: string
 
   return (
     <div className="flex h-full min-h-0 flex-col" aria-busy={load.state === "loading" || undefined}>
-      <header className={clsx("flex items-start gap-3 border-b border-line py-3.5", pad)}>
+      <header className={clsx("flex items-start gap-3 border-b border-line py-3", pad)}>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h2 id={variant === "sheet" ? "drawer-title" : undefined} className="font-mono text-body font-medium" tabIndex={-1}>
+            {/* A programmatic focus target only (the sheet's showModal lands here): no ring, which on a phone read as a
+                stray keyboard selection. */}
+            <h2 id={variant === "sheet" ? "drawer-title" : undefined} className="font-mono text-body font-medium outline-none" tabIndex={-1}>
               {id}
             </h2>
             {claim ? <StatusPill status={claim.decision} /> : <Skeleton className="h-6 w-16 rounded-full" />}
@@ -150,10 +152,13 @@ function EvidenceContent({ id, version, onClose, intent, variant }: { id: string
             {claim?.demo && <span className="micro rounded-control border border-line px-1.5 py-px text-faint">Demo · sandbox</span>}
           </div>
           {claim ? (
-            <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-ui text-muted">
+            // One line in the 440px panel, so the evidence keeps the height: "Unverified" only when it's true, as in the
+            // grid (the pre-checks say verified).
+            <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-ui text-muted">
               <span>Filed {formatTime(claim.createdAt)}</span>
               <span>
-                <span className="font-mono">{claim.payer}</span> {claim.verified ? "verified" : <span className="text-stop">unverified</span>}
+                <span className="font-mono">{claim.payer}</span>
+                {!claim.verified && <span className="text-stop"> unverified</span>}
               </span>
               <span>
                 Code <span className="font-mono text-text">{claim.code}</span>
@@ -200,8 +205,10 @@ function EvidenceContent({ id, version, onClose, intent, variant }: { id: string
           <ReviewActions key={claim.id} claim={claim} onDone={done} onFailed={() => router.refresh()} intent={act} />
         </footer>
       )}
+      {/* The keys, while the window is tall enough to spare a line for them; on a laptop the evidence gets it, and the
+          footer's ? lists them. */}
       {variant === "panel" && (
-        <p className={clsx("flex h-9 shrink-0 items-center gap-4 border-t border-line font-mono text-[11px] text-faint", pad)} aria-hidden="true">
+        <p className={clsx("flex h-9 shrink-0 items-center gap-4 border-t border-line font-mono text-[11px] text-faint [@media(max-height:960px)]:hidden", pad)} aria-hidden="true">
           <Keys k={["↑", "↓"]}>Next claim</Keys>
           {claim?.review && <Keys k={["A"]}>Approve</Keys>}
           {claim?.review && <Keys k={["R"]}>Reject</Keys>}
@@ -332,11 +339,8 @@ function Evidence({ claim, pad, onReview }: { claim: DrawerClaim; pad: string; o
   const summary = claim.summary && !claim.checks.some((c) => c.evidence === claim.summary) ? claim.summary : null;
   return (
     <div className={clsx("flex flex-col gap-7 py-5", pad)}>
+      {/* What decided it, then the photos, so a laptop's first view of the panel holds both. */}
       <Deciding claim={claim} />
-      <Section title="The money" aside={claim.payout ? (claim.payout.status === "SUCCESS" ? "Sent through PayPal" : "Settling at PayPal") : undefined}>
-        <MoneyTimeline claim={claim} />
-      </Section>
-
       <section className="flex flex-col gap-3" aria-label="Photos">
         <ExhibitLabel leader="right" leaderLength={24}>
           Exhibit A · {claim.photos.length ? `${claim.photos.length} ${sample ? "sample" : "live"} ${claim.photos.length === 1 ? "photo" : "photos"}` : "No photos yet"}
@@ -374,6 +378,10 @@ function Evidence({ claim, pad, onReview }: { claim: DrawerClaim; pad: string; o
           />
         )}
       </section>
+
+      <Section title="The money" aside={claim.payout ? (claim.payout.status === "SUCCESS" ? "Sent through PayPal" : "Settling at PayPal") : undefined}>
+        <MoneyTimeline claim={claim} />
+      </Section>
 
       <Section title="Before the model" aside="No AI">
         <CheckProgress
@@ -419,6 +427,7 @@ function Evidence({ claim, pad, onReview }: { claim: DrawerClaim; pad: string; o
 
       <Section title="Decision">
         <p className="text-body text-text">{claim.sentence}</p>
+        {claim.review?.note && <p className="text-ui text-muted">{claim.review.note}</p>}
         {claim.payout && (
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-control border border-line px-4 py-3 text-ui">
             <dt className="text-muted">PayPal batch</dt>

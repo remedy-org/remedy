@@ -35,6 +35,9 @@ export const ClaimSummary = z.object({
   times: z.object({ photos: z.iso.datetime(), answered: z.iso.datetime(), decided: z.iso.datetime(), sent: z.iso.datetime(), settled: z.iso.datetime() }).partial().optional(),
   // The photos' store keys, for the console's thumbnails. Never sent to a browser (console/_lib/photoToken.ts seals them).
   photoKeys: z.array(z.string()).optional(),
+  // A held claim's refused payout: when PayPal last didn't take it, or null. Only real and demo held rows carry it, and
+  // older ones are filled once by completeRows, so the queue shows a failed approve without opening the claim.
+  payoutFailedAt: z.iso.datetime().nullable().optional(),
 });
 export type ClaimSummary = z.infer<typeof ClaimSummary>;
 
@@ -134,6 +137,15 @@ function timesOf(c: Claim): NonNullable<ClaimSummary["times"]> {
   return Object.fromEntries(Object.entries(times).filter(([, v]) => v !== undefined));
 }
 
+// When PayPal last refused this held claim's payout, if no payout went through after it.
+function payoutFailedAt(c: Claim): string | null {
+  const last = c.events.findLast((e) => e.type === "payout_failed" || e.type === "payout_sent");
+  return last?.type === "payout_failed" ? last.at : null;
+}
+
+// The rows that carry payoutFailedAt (a seeded claim's approve never reaches PayPal).
+const failable = (r: Pick<IndexRow, "decision" | "seeded">) => r.decision === "held" && !r.seeded;
+
 export function summarize(c: Claim): ClaimSummary {
   const sample = c.demo ? c.events.find((e) => e.type === "demo_sample")?.detail : undefined;
   return {
@@ -156,13 +168,15 @@ export function summarize(c: Claim): ClaimSummary {
     checks: c.reasons.filter((r) => r.check !== "state").map((r) => ({ check: r.check, outcome: r.outcome })),
     times: timesOf(c),
     photoKeys: c.photos.map((p) => p.key),
+    ...(failable(c) ? { payoutFailedAt: payoutFailedAt(c) } : {}),
   };
 }
 
 // checks stands for the evidence fields (code, checks, times, photoKeys), which summarize always writes together.
-const isComplete = (r: IndexRow): r is ClaimSummary => r.payerVerified !== undefined && r.payoutAmount !== undefined && r.reason !== undefined && r.checks !== undefined;
+const isComplete = (r: IndexRow): r is ClaimSummary =>
+  r.payerVerified !== undefined && r.payoutAmount !== undefined && r.reason !== undefined && r.checks !== undefined && (!failable(r) || r.payoutFailedAt !== undefined);
 // What an old row can say without its claim file.
-const asIs = (r: IndexRow): ClaimSummary => ({ payerVerified: false, payoutAmount: null, reason: null, checks: [], times: {}, photoKeys: [], ...r });
+const asIs = (r: IndexRow): ClaimSummary => ({ payerVerified: false, payoutAmount: null, reason: null, checks: [], times: {}, photoKeys: [], ...(failable(r) ? { payoutFailedAt: null } : {}), ...r });
 
 /** listClaims' rows, complete. Rows from before the index carried the grid's fields are read from their claim files
  * and saved back in one index write, so this happens once per store. A row whose file is gone is saved as it can be;

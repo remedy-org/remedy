@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { Button, CrossIcon, EmptyState } from "@/components/ui";
 import { ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
+import { SampleDiamond } from "./cells";
 import { ClaimsGrid, type ClaimsGridHandle } from "./ClaimsGrid";
 import { Keys } from "./Keys";
 import { formatCount, plural } from "./format";
@@ -100,6 +101,13 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
   const [search, setSearch] = useState(initialSearch);
   const [intent, setIntent] = useState<ReviewIntent | null>(null);
   const [help, setHelp] = useState(false);
+  // A or R on a claim they can't act on: said in the footer for a few seconds, so a key never seems to do something silently.
+  const [hint, setHint] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hint) return;
+    const t = window.setTimeout(() => setHint(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [hint]);
   const grid = useRef<ClaimsGridHandle>(null);
   const searchBox = useRef<HTMLInputElement>(null);
 
@@ -173,8 +181,21 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
         e.preventDefault();
         if (open) grid.current?.focusRow(open);
         else grid.current?.focusFirst();
-      } else if ((e.key === "a" || e.key === "r") && openRow?.decision === "held" && wide) {
+      } else if ((e.key === "a" || e.key === "r") && wide) {
+        // Never while the open claim's confirm or reason is up (or sending): a letter typed there, or after focus
+        // dropped to the page, must not swap the form for another.
+        if (document.querySelector(".evidence-panel [data-review-open]")) return;
+        // The open claim, else the grid row with focus: A and R open it and start the confirm.
+        const id = open ?? (e.target instanceof Element && e.target.closest(".claims-grid") ? grid.current?.focusedRowId() : null);
+        const row = rows.find((r) => r.id === id);
+        if (!row) return;
         e.preventDefault();
+        if (row.decision !== "held") {
+          setHint(`${row.id} isn't held: only held claims can be approved or rejected`);
+          return;
+        }
+        setHint(null);
+        if (row.id !== open) openClaim(row.id);
         setIntent((i) => ({
           mode: e.key === "a" ? "approve" : "reject",
           n: (i?.n ?? 0) + 1,
@@ -185,7 +206,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, wide, fill, close, openRow, help]);
+  }, [open, wide, fill, close, openClaim, rows, help]);
 
   const samples = ledger.samples;
   const demos = ledger.demos;
@@ -245,13 +266,30 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
             </div>
           </div>
 
+          {/* The legend for the marks after claim ids, on one line so opening a claim never moves the grid; the full
+              text is in its title when the panel narrows it. */}
           {(samples > 0 || demos > 0) && (
-            <p className="flex items-start gap-2 py-2.5 font-mono text-micro text-faint">
-              <span aria-hidden="true" className="mt-[5px] size-1.5 shrink-0 rotate-45 border border-faint" />
-              <span>
-                {samples > 0 && <>{plural(samples, "sample claim")} from the eval set: AI-made test photos, never paid. </>}
-                {demos > 0 && <>{formatCount(demos)} filed through the judges&apos; demo with sandbox money.</>}
-              </span>
+            <p
+              className="flex min-w-0 items-center gap-x-4 overflow-hidden py-2.5 font-mono text-micro whitespace-nowrap text-faint"
+              title={[
+                samples > 0 && `${plural(samples, "sample claim")} from the eval set: AI-made test photos, never paid.`,
+                demos > 0 && `${plural(demos, "judges' demo claim")}: sample photos and sandbox money. Each demo round's duplicate checks run on their own.`,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {samples > 0 && (
+                <span className="inline-flex shrink-0 items-center gap-2">
+                  <SampleDiamond />
+                  {plural(samples, "sample")}: AI-made photos, never paid
+                </span>
+              )}
+              {demos > 0 && (
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <SampleDiamond demo />
+                  <span className="truncate">{formatCount(demos)} judges&apos; demo: sandbox money, checked per round</span>
+                </span>
+              )}
             </p>
           )}
 
@@ -315,6 +353,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
               {ledger.settling > 0 && ` · ${formatCount(ledger.settling)} settling at PayPal`}
             </span>
             <Status state={state} at={at} failed={failed} onRefresh={refresh} />
+            {hint && <span className="text-muted">{hint}</span>}
             <button
               type="button"
               onClick={() => setHelp(true)}
@@ -382,8 +421,8 @@ const SHORTCUTS: [string[], string][] = [
   [["↑", "↓"], "Move between claims; the panel follows. ↓ from anywhere starts the list"],
   [["Enter"], "Open a claim's evidence"],
   [["Esc"], "Close the evidence"],
-  [["A"], "Approve a held claim (confirm with a second click)"],
-  [["R"], "Reject a held claim"],
+  [["A"], "Approve the open or focused held claim (pay takes a second press)"],
+  [["R"], "Reject the open or focused held claim"],
 ];
 
 function ShortcutSheet({ onClose }: { onClose: () => void }) {

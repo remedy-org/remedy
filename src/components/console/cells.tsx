@@ -13,13 +13,19 @@ type Cell = CustomCellRendererProps<ClaimRow>;
 
 const SAMPLE_TITLE = { seeded: "Sample claim from the eval set: never paid", demo: "Filed through the judges' demo with sandbox money" };
 
-/** A 6px hollow diamond after a sample or demo claim's id: the banner over the grid says what it means. */
+/** The 6px diamond itself, neutral (amber is the one action's): hollow for a sample claim, filled for a judges' demo
+ * claim. The note over the grid shows both, labelled. */
+export function SampleDiamond({ demo }: { demo?: boolean }) {
+  return <span aria-hidden="true" className={clsx("size-1.5 shrink-0 rotate-45 border", demo ? "border-muted bg-muted" : "border-faint")} />;
+}
+
+/** A diamond after a sample or demo claim's id. */
 export function SampleMark({ row }: { row: Pick<ClaimRow, "seeded" | "demo"> }) {
   if (!row.seeded && !row.demo) return null;
   const title = row.seeded ? SAMPLE_TITLE.seeded : SAMPLE_TITLE.demo;
   return (
     <span title={title} className="inline-flex size-3 shrink-0 items-center justify-center">
-      <span aria-hidden="true" className={clsx("size-1.5 rotate-45 border", row.seeded ? "border-faint" : "border-accent-text")} />
+      <SampleDiamond demo={!row.seeded} />
       <span className="sr-only">{title}</span>
     </span>
   );
@@ -237,9 +243,21 @@ export function PayerCell({ data }: Cell) {
 
 const FAILED = new Set(["FAILED", "RETURNED", "BLOCKED", "DENIED", "REVERSED", "REFUNDED", "CANCELED"]);
 
-/** PayPal's status in a word: Sent, Settling or Failed. A sample claim's payout was never sent, and says so. */
+/** PayPal's status in a word: Sent, Settling or Failed. A sample claim's payout was never sent, and says so; a held
+ * claim whose approve PayPal refused says Not sent, in red, and when. */
 export function PayoutCell({ data }: Cell) {
   if (!data) return null;
+  if (data.payoutFailedAt) {
+    return (
+      <span className="flex h-full flex-col justify-center leading-tight" title={`PayPal didn't take the payout at ${formatTime(data.payoutFailedAt)}: nothing was paid`}>
+        <span className="inline-flex items-center gap-1.5 text-ui text-stop">
+          <span className="size-1.5 shrink-0 rounded-full bg-stop" aria-hidden="true" />
+          Not sent
+        </span>
+        <span className="font-mono text-micro text-faint">PayPal {formatClock(data.payoutFailedAt).slice(0, 5)}</span>
+      </span>
+    );
+  }
   if (data.seeded && data.decision === "paid") {
     return (
       <span className="flex h-full flex-col justify-center leading-tight" title="A sample claim: the rule decided to pay, and no money moved">

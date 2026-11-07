@@ -70,6 +70,8 @@ export interface ClaimsGridHandle {
   focusRow(id: string): void;
   /** Puts keyboard focus on the first row (↓ or j from outside the grid). */
   focusFirst(): void;
+  /** The claim whose row has keyboard focus, if any (A and R act on it). */
+  focusedRowId(): string | null;
 }
 
 export interface ClaimsGridProps {
@@ -126,6 +128,11 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       grid.ensureIndexVisible(0);
       grid.setFocusedCell(0, cards ? "id" : "createdAt");
     },
+    focusedRowId() {
+      const cell = api.current?.getFocusedCell();
+      if (!cell || cell.rowPinned) return null;
+      return api.current?.getDisplayedRowAtIndex(cell.rowIndex)?.data?.id ?? null;
+    },
   }));
 
   // Tab into the grid lands on a row (the open claim's, else the first), not on each column header in turn; ↑ from the
@@ -163,7 +170,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       {
         colId: "decision",
         headerName: "Verdict",
-        field: "decision",
+        // The pill and its line: AG Grid redraws (and flashes) a cell only when its value changes, and a held claim's
+        // line changes on its own (a refused payout).
+        valueGetter: (p) => (p.data ? `${p.data.decision} ${p.data.note ?? ""}` : null),
         cellRenderer: VerdictCell,
         flex: 1,
         minWidth: still ? VERDICT_MIN.still : VERDICT_MIN.queue,
@@ -204,7 +213,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       {
         colId: "payoutStatus",
         headerName: "Payout",
-        field: "payoutStatus",
+        valueGetter: (p) => (p.data ? (p.data.payoutFailedAt ? `not sent ${p.data.payoutFailedAt}` : p.data.payoutStatus) : null),
         cellRenderer: PayoutCell,
         width: 112,
         enableCellChangeFlash: true,

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { href: "/console", label: "Claims", match: (p: string) => p === "/console" },
+  // A recall's settings page is reached from the claims queue's heading, and its Claims button goes back there.
+  { href: "/console", label: "Claims", match: (p: string) => p === "/console" || (p.startsWith("/console/recalls/") && p !== "/console/recalls/new") },
   { href: "/console/insights", label: "Insights", match: (p: string) => p.startsWith("/console/insights") },
   { href: "/console/recalls/new", label: "New recall", match: (p: string) => p === "/console/recalls/new" },
   { href: "/console/report", label: "Report", match: (p: string) => p.startsWith("/console/report") },

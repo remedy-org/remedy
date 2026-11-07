@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { AlertIcon, Button, ErrorState, Field, Textarea } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
@@ -9,15 +9,24 @@ import { formatClock } from "./format";
 
 type Mode = "idle" | "approve" | "reject";
 
+// The reject route's own minimum (reject/route.ts), checked here first so an empty reason never sends a request.
+const REASON_MIN = 8;
+const REASON_SHORT = "Say why in a few words, so the owner knows what to fix";
+// The confirm's Pay ignores presses this soon after it appears: the second click of a double-click on Approve, or a
+// Space or Enter that was meant as text, lands where Approve was and must not pay.
+const ARM_MS = 500;
+
 export interface ReviewIntent {
   mode: "approve" | "reject";
   // Changes on every key press, so pressing A twice re-opens the confirm.
   n: number;
 }
 
+type PayoutFailure = { at: string; detail: string };
+
 /** A held claim whose last payout attempt PayPal refused: when, and PayPal's answer. The panel keeps saying so (and
  * offers to try again) until a payout goes through; the claim's history keeps it after. */
-export function payoutFailure(claim: Pick<DrawerClaim, "decision" | "events">): { at: string; detail: string } | null {
+export function payoutFailure(claim: Pick<DrawerClaim, "decision" | "events">): PayoutFailure | null {
   if (claim.decision !== "held") return null;
   const last = [...claim.events].reverse().find((e) => e.type === "payout_failed" || e.type === "payout_sent");
   if (last?.type !== "payout_failed") return null;
@@ -27,7 +36,8 @@ export function payoutFailure(claim: Pick<DrawerClaim, "decision" | "events">): 
 /**
  * Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit click. A seeded claim's
  * review is a sample: the server says what it would have done, and the claim stays held. The keyboard's A and R
- * (intent) open the same confirm or form as the buttons and move focus into it; paying still takes a second press.
+ * (intent) open the same confirm or form as the buttons and move focus into it; paying still takes a second press. While
+ * the confirm or form is open (data-review-open), the queue's A and R do nothing.
  */
 export function ReviewActions({
   claim,
@@ -49,6 +59,20 @@ export function ReviewActions({
   const [error, setError] = useState<ApiError | null>(null);
   const [reason, setReason] = useState("");
   const [sample, setSample] = useState<string | null>(null);
+  // PayPal refused the payout just now: shown at once, as the reloaded claim will show it (payoutFailure), not as a
+  // second design of the same message.
+  const [refused, setRefused] = useState<PayoutFailure | null>(null);
+  const form = useRef<HTMLFormElement>(null);
+  const armedAt = useRef(0);
+  useEffect(() => {
+    if (mode === "approve") armedAt.current = Date.now();
+  }, [mode]);
+  // A reason the route or the check below refused: focus goes back into the reason, never to the page, where the next
+  // letter typed would be a shortcut.
+  const reasonError = error?.fields?.reason;
+  useEffect(() => {
+    if (reasonError) form.current?.querySelector("textarea")?.focus();
+  }, [reasonError]);
   const [seenIntent, setSeenIntent] = useState(intent);
   if (intent !== seenIntent) {
     setSeenIntent(intent);
@@ -60,7 +84,7 @@ export function ReviewActions({
   }
   const review = claim.review;
   if (!review) return null;
-  const failure = payoutFailure(claim);
+  const failure = payoutFailure(claim) ?? refused;
 
   const run = async (url: string, json?: unknown) => {
     setBusy(true);
@@ -68,15 +92,25 @@ export function ReviewActions({
     const result = await api<ReviewedClaim>(url, { method: "POST", json });
     setBusy(false);
     if (!result.ok) {
-      setError(result.error);
+      if (result.status === 502 && mode === "approve") {
+        // PayPal didn't take it: back to the held claim's buttons, under the titled alert the reload keeps showing.
+        setRefused({ at: new Date().toISOString(), detail: "" });
+        setBack("approve");
+        setMode("idle");
+      } else setError(result.error);
       return onFailed?.();
     }
+    setRefused(null);
     if (!result.data.sample) return onDone(result.data);
     setSample(result.data.sample);
     setMode("idle");
   };
 
   const base = `/api/console/claims/${claim.id}`;
+  const pay = (e: MouseEvent) => {
+    if (e.detail > 1 || Date.now() - armedAt.current < ARM_MS) return;
+    run(`${base}/approve`);
+  };
   const reset = () => {
     if (mode !== "idle") setBack(mode);
     setMode("idle");
@@ -86,6 +120,7 @@ export function ReviewActions({
   return (
     <div
       className="flex flex-col gap-4"
+      data-review-open={mode !== "idle" || busy || undefined}
       onKeyDown={(e) => {
         // Esc cancels the open confirm or reason first; the console's own Esc (close the panel) never sees this one.
         if (e.key === "Escape" && mode !== "idle" && !busy) {
@@ -99,7 +134,8 @@ export function ReviewActions({
 
       {mode === "idle" && (
         <>
-          {/* In the note's place and at its size, so the footer keeps its height and the evidence its room. */}
+          {/* The footer is the buttons alone, so the evidence keeps its room; a sample's result or a refused payout sits
+              above them. A seeded claim's note is in the evidence (EvidenceDrawer). */}
           {sample ? (
             <p role="status" className="text-ui text-muted">
               <span className="micro mr-2 text-text-2">Sample result</span>
@@ -116,9 +152,7 @@ export function ReviewActions({
                 {failure.detail && <p className="mt-1.5 font-mono text-micro break-words text-faint">PayPal: {failure.detail}</p>}
               </div>
             </div>
-          ) : (
-            review.note && <p className="text-ui text-muted">{review.note}</p>
-          )}
+          ) : null}
           <div className="flex flex-wrap gap-3">
             <Button onClick={() => (setSample(null), setMode("approve"))} autoFocus={back === "approve"} className="flex-1 sm:flex-none">
               {review.sample ? "Approve" : `${failure ? "Try again: pay" : "Approve and pay"} ${claim.amount}${claim.sandbox ? " sandbox" : ""}`}
@@ -146,11 +180,11 @@ export function ReviewActions({
           )}
           <div className="flex flex-wrap gap-3">
             {review.sample ? (
-              <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Approving the sample" autoFocus className="flex-1 sm:flex-none">
+              <Button onClick={pay} pending={busy} pendingLabel="Approving the sample" autoFocus className="flex-1 sm:flex-none">
                 Approve the sample
               </Button>
             ) : (
-              <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Paying through PayPal" autoFocus className="flex-1 sm:flex-none">
+              <Button onClick={pay} pending={busy} pendingLabel="Paying through PayPal" autoFocus className="flex-1 sm:flex-none">
                 Pay {claim.amount}
                 {claim.sandbox ? " sandbox" : ""}
               </Button>
@@ -164,10 +198,16 @@ export function ReviewActions({
 
       {mode === "reject" && (
         <form
+          ref={form}
           noValidate
           className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
+            if (reason.trim().length < REASON_MIN) {
+              setError({ error: REASON_SHORT, fields: { reason: REASON_SHORT } });
+              form.current?.querySelector("textarea")?.focus();
+              return;
+            }
             run(`${base}/reject`, { reason });
           }}
         >
@@ -176,7 +216,7 @@ export function ReviewActions({
             help="The owner sees this. Say what to fix, for example: the code isn't on the cut pillow."
             error={error?.fields?.reason}
           >
-            {(f) => <Textarea {...f} rows={3} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={8} />}
+            {(f) => <Textarea {...f} rows={3} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={REASON_MIN} />}
           </Field>
           <div className="flex flex-wrap gap-3">
             <Button type="submit" variant="secondary" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">

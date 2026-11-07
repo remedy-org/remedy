@@ -101,12 +101,36 @@ describe("console view", () => {
   it("says a photo check that never answered in the company's words, not the owner's", () => {
     const model = { check: "model", text: "The photo check didn't answer, so a person will look at your photos instead" };
     expect(companyReasonText(model, "held")).toBe("The photo check didn't answer (a service error), so this claim needs your review. Nothing has been paid.");
-    expect(companyReasonText(model, "held", true)).toBe("The photo check didn't answer (a service error): needs your review");
+    // The grid's line is short enough to read whole beside the pill; the panel keeps the full sentence.
+    expect(companyReasonText(model, "held", true)).toBe("Photo check errored: needs your review");
+    expect(companyReasonText({ check: "model", text: "Remedy's daily photo-check limit is reached; a person will review this claim" }, "held", true)).toBe("Daily check limit reached: needs your review");
     expect(companyReasonText(model, "paid")).toBe("The photo check didn't answer (a service error), so a person at the company reviewed it.");
     expect(companyReasonText({ check: "same_item", text: "Couldn't tell" }, "held")).toBe("Couldn't tell");
     const claim = sampleClaim({ decision: "held", reasons: [{ ...model, outcome: "hold" }] });
     expect(decisionSentence(claim, recall)).toBe("The photo check gave no answer, so the rule couldn't decide: a person approves or rejects the $29.99 refund.");
     expect(toDrawerClaim(claim, recall).checks[0].rule).not.toContain("your photos");
+  });
+
+  it("shows a held claim whose payout PayPal refused, until a payout goes through", () => {
+    const events = [
+      { at: "2026-11-07T10:00:20.000Z", type: "photos_received", detail: "" },
+      { at: "2026-11-07T10:05:00.000Z", type: "approved", detail: "" },
+      { at: "2026-11-07T10:05:01.000Z", type: "payout_failed", detail: "PayPal didn't take the payout: fetch failed" },
+    ];
+    const failed = toRow(summarize(sampleClaim({ decision: "held", events })), recall);
+    expect(failed.payoutFailedAt).toBe("2026-11-07T10:05:01.000Z");
+    expect(failed.note).toContain("PayPal didn't take the payout");
+    expect(toRow(summarize(sampleClaim({ decision: "held", events: events.slice(0, 2) })), recall).payoutFailedAt).toBeNull();
+    // Seeded claims never reach PayPal, and the index row of a refused claim doesn't carry it.
+    expect(summarize(sampleClaim({ decision: "held", seeded: true, events }))).not.toHaveProperty("payoutFailedAt");
+    expect(summarize(sampleClaim({ decision: "rejected", events }))).not.toHaveProperty("payoutFailedAt");
+  });
+
+  it("says a demo claim's duplicate check covers only its own demo round", () => {
+    const photos = [{ key: "a/1.jpg", hash: "0123456789abcdef" }];
+    const dup = (c: Parameters<typeof sampleClaim>[0]) => preChecksOf(sampleClaim({ decision: "held", photos, ...c })).find((p) => p.id === "duplicate_photo")!;
+    expect(dup({ demo: true }).detail).toContain("this demo round");
+    expect(dup({}).detail).toBe("No other claim used these photos");
   });
 
   it("quotes the model's summary under a held same-item check, which has no evidence of its own", () => {
