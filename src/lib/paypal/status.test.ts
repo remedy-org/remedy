@@ -88,6 +88,20 @@ describe("savePayoutStatus", () => {
     expect(await savePayoutStatus(store, "RM-0999", "E3VTQ6BPYAA6U", { status: "SUCCESS", at: later })).toBeNull();
     expect((await store.getClaim("RM-0412"))?.payout?.status).toBe("PENDING");
   });
+
+  it("keeps a terminal status another save wrote while this one was reading", async () => {
+    await store.putClaim(paid());
+    // The webhook's SUCCESS and a console check's UNCLAIMED, both read from the same PENDING claim.
+    const [webhook, refresh] = await Promise.all([
+      savePayoutStatus(store, "RM-0412", "E3VTQ6BPYAA6U", { status: "SUCCESS", at: later }),
+      savePayoutStatus(store, "RM-0412", "E3VTQ6BPYAA6U", { status: "UNCLAIMED", at: later }),
+    ]);
+    expect([webhook?.payout?.status, refresh]).toEqual(["SUCCESS", null]);
+    const claim = await store.getClaim("RM-0412");
+    expect(claim?.payout?.status).toBe("SUCCESS");
+    expect(claim?.events.filter((e) => e.type === "payout_updated").map((e) => e.detail)).toEqual(["PayPal: SUCCESS"]);
+    expect((await store.listClaims())[0].payoutStatus).toBe("SUCCESS");
+  });
 });
 
 describe("refreshPayouts", () => {
@@ -110,6 +124,25 @@ describe("refreshPayouts", () => {
     expect(out.map((c) => c.payout?.status ?? null)).toEqual(["SUCCESS", "SUCCESS", "PENDING", null, "UNCLAIMED"]);
     expect((await store.getClaim("RM-0001"))?.payout).toMatchObject({ status: "SUCCESS", itemId: "I-B1" });
     expect((await store.getClaim("RM-0005"))?.events.some((e) => e.type === "payout_updated")).toBe(false);
+  });
+
+  it("dates each check by when PayPal answered, so a webhook saved meanwhile isn't replaced", async () => {
+    const claims = [paid({ batchId: "B1" }, { id: "RM-0001" }), paid({ batchId: "B2" }, { id: "RM-0002" })];
+    for (const c of claims) await store.putClaim(c);
+    let clock = new Date("2026-11-07T10:02:00.000Z");
+    const check = vi.fn(async (batchId: string) => {
+      if (batchId === "B2") {
+        // While B2's check is out, a webhook for B1 lands at 10:03, and the save comes later still.
+        await savePayoutStatus(store, "RM-0001", "B1", { status: "ONHOLD", at: new Date("2026-11-07T10:03:00.000Z") });
+        clock = new Date("2026-11-07T10:04:00.000Z");
+      }
+      return status(batchId, "UNCLAIMED");
+    });
+
+    await refreshPayouts(store, claims, { check, now: () => clock });
+
+    expect((await store.getClaim("RM-0001"))?.payout).toMatchObject({ status: "ONHOLD", updatedAt: "2026-11-07T10:03:00.000Z" });
+    expect((await store.getClaim("RM-0002"))?.payout).toMatchObject({ status: "UNCLAIMED", updatedAt: "2026-11-07T10:04:00.000Z" });
   });
 
   it("checks at most `limit` claims", async () => {

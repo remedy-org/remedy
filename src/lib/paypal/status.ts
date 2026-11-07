@@ -37,14 +37,11 @@ export function applyPayoutStatus(claim: Claim, update: StatusUpdate): Claim | n
   };
 }
 
-/** Reads the claim fresh, applies the update and saves it. Claim ids repeat across stores, so the claim must still be
- * paid by this batch. Returns the saved claim, or null when nothing changed. */
+/** Reads the claim fresh, applies the update and saves it, re-applying if another save got there first. Claim ids
+ * repeat across stores, so the claim must still be paid by this batch. Returns the saved claim, or null when nothing
+ * changed. */
 export async function savePayoutStatus(store: Store, claimId: string, batchId: string, update: StatusUpdate): Promise<Claim | null> {
-  const claim = await store.getClaim(claimId);
-  if (!claim || claim.payout?.batchId !== batchId) return null;
-  const next = applyPayoutStatus(claim, update);
-  if (next) await store.putClaim(next);
-  return next;
+  return store.updateClaim(claimId, (claim) => (claim.payout?.batchId === batchId ? applyPayoutStatus(claim, update) : null));
 }
 
 function within<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -66,14 +63,15 @@ export interface RefreshOptions {
  * Changes are saved; a slow or failed check keeps the stored status. Returns the claims, updated where PayPal moved. */
 export async function refreshPayouts(store: Store, claims: Claim[], { check = getPayoutStatus, limit = 10, timeoutMs = 3000, now = () => new Date() }: RefreshOptions = {}): Promise<Claim[]> {
   const due = claims.filter((c) => wasSent(c) && !isTerminal(c.payout!.status)).slice(0, limit);
-  const checked = await Promise.allSettled(due.map((c) => within(check(c.payout!.batchId), timeoutMs)));
+  // Stamped when PayPal answered, not when saved, so a webhook that lands in between isn't replaced by an older status.
+  const checked = await Promise.allSettled(due.map((c) => within(check(c.payout!.batchId), timeoutMs).then((s) => ({ ...s, at: now() }))));
   const fresh = new Map<string, Claim>();
   // Saved one at a time: each save rewrites the shared index.
   for (const [i, result] of checked.entries()) {
     if (result.status !== "fulfilled") continue;
-    const { itemId, itemStatus, batchStatus } = result.value;
+    const { itemId, itemStatus, batchStatus, at } = result.value;
     try {
-      const saved = await savePayoutStatus(store, due[i].id, due[i].payout!.batchId, { status: itemStatus ?? batchStatus, itemId, at: now() });
+      const saved = await savePayoutStatus(store, due[i].id, due[i].payout!.batchId, { status: itemStatus ?? batchStatus, itemId, at });
       if (saved) fresh.set(saved.id, saved);
     } catch {
       // The stored status stands; the next load tries again.

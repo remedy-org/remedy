@@ -47,6 +47,16 @@ describe("Log in with PayPal state", () => {
     expect(errorPath(null, "state")).toBe("/signin?auth_error=state");
   });
 
+  it("sends an owner back to the recall screen, not to a step that would start another login", () => {
+    const owner = (next: string) => ({ state: "s".repeat(16), as: "owner" as const, next, iat: 0 });
+    expect(errorPath(owner("/api/claims/start?recall=kikea-x-vesolje"), "refused")).toBe("/r/kikea-x-vesolje?auth_error=refused");
+    expect(errorPath(owner("/r/kikea-x-vesolje/try/samples"), "refused")).toBe("/r/kikea-x-vesolje/try?auth_error=refused");
+    expect(errorPath(owner("/r/kikea-x-vesolje/try/RM-0412"), "paypal")).toBe("/r/kikea-x-vesolje/try?auth_error=paypal");
+    expect(errorPath(owner("/r/kikea-x-vesolje/claim/RM-0412"), "denied")).toBe("/r/kikea-x-vesolje?auth_error=denied");
+    expect(errorPath(owner("/api/claims/start?recall=../x"), "paypal")).toBe("/api/claims/start?recall=..%2Fx&auth_error=paypal");
+    expect(errorPath(owner("/"), "paypal")).toBe("/?auth_error=paypal");
+  });
+
   it("tells a PayPal refusal from an outage", () => {
     const paypalError = (status: number) => new PayPalError(`GET /v1/identity/openidconnect/userinfo?schema=openid -> ${status} :`, status, undefined, null, {});
     expect(loginFailure(paypalError(401))).toBe("refused");
@@ -55,6 +65,8 @@ describe("Log in with PayPal state", () => {
     expect(loginFailure(paypalError(500))).toBe("paypal");
     expect(loginFailure(paypalError(503))).toBe("paypal");
     expect(loginFailure(new TypeError("fetch failed"))).toBe("paypal");
+    // Our app's id or secret is wrong: no other account would get in.
+    expect(loginFailure(new PayPalError("POST /v1/oauth2/token -> 401 invalid_client: Client Authentication failed", 401, "invalid_client", null, {}))).toBe("paypal");
     expect(loginFailure(new DOMException("The operation timed out.", "TimeoutError"))).toBe("paypal");
     expect(errorPath(null, "refused")).toBe("/signin?auth_error=refused");
   });

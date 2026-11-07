@@ -58,6 +58,15 @@ describe("identify", () => {
     expect(loginFailure(failure)).toBe("refused");
   });
 
+  it("reports PayPal refusing the app's own credentials as an outage, not a refusal of the account", async () => {
+    mockPayPal({ status: 401, body: { error: "invalid_client", error_description: "Client Authentication failed" } });
+    const { identify } = await load();
+    const { loginFailure } = await import("../auth/paypal-login");
+    const failure = await identify("CODE").catch((e: unknown) => e);
+    expect(failure).toMatchObject({ name: "PayPalError", status: 401, issue: "invalid_client" });
+    expect(loginFailure(failure)).toBe("paypal");
+  });
+
   it("reports a PayPal 5xx as an outage", async () => {
     mockPayPal({ status: 503, body: { name: "SERVICE_UNAVAILABLE" } });
     const { identify } = await load();

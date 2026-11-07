@@ -83,6 +83,31 @@ describe("blobStore", () => {
     expect((await store.listClaims()).map((r) => r.id).sort()).toEqual(["RM-0001", "RM-0002", "RM-0003"]);
   });
 
+  it("updates a claim only over the copy it read, re-running the change when another instance wrote first", async () => {
+    const store = blobStore("tok");
+    await store.putClaim(sampleClaim({ decision: "held" }));
+    const { put } = await import("@vercel/blob");
+    const real = vi.mocked(put).getMockImplementation()!;
+    let raced = false;
+    vi.mocked(put).mockImplementation(async (pathname, body, options) => {
+      if (pathname === "claims/RM-0412.json" && !raced) {
+        raced = true;
+        await real(pathname, JSON.stringify(sampleClaim({ decision: "rejected" })), { access: "private", allowOverwrite: true });
+      }
+      return real(pathname, body, options);
+    });
+    const seen: string[] = [];
+    const saved = await store.updateClaim("RM-0412", (c) => {
+      seen.push(c.decision);
+      return c.decision === "held" ? { ...c, decision: "paid" } : null;
+    });
+    vi.mocked(put).mockImplementation(real);
+    expect(seen).toEqual(["held", "rejected"]);
+    expect(saved).toBeNull();
+    expect((await store.getClaim("RM-0412"))?.decision).toBe("rejected");
+    expect(await store.updateClaim("RM-9999", (c) => c)).toBeNull();
+  });
+
   it("returns null for missing or malformed ids", async () => {
     const store = blobStore("tok");
     expect(await store.getClaim("RM-9999")).toBeNull();

@@ -52,6 +52,25 @@ export function blobStore(token: string): Store {
       await write(paths.claim(claim.id), JSON.stringify(Claim.parse(claim)), "application/json");
       await updateIndex((index) => upsert(index, summarize(claim)));
     },
+    // The webhook, the console and the claim page can save one claim at once: write only over the copy we read.
+    async updateClaim(id, change) {
+      if (!isValidClaimId(id)) return null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const current = await read(paths.claim(id));
+        if (!current) return null;
+        const next = change(Claim.parse(JSON.parse(current.data.toString("utf8"))));
+        if (!next) return null;
+        try {
+          await write(paths.claim(id), JSON.stringify(Claim.parse(next)), "application/json", current.etag);
+        } catch (e) {
+          if (!(e instanceof BlobPreconditionFailedError)) throw e;
+          continue;
+        }
+        await updateIndex((index) => upsert(index, summarize(next)));
+        return next;
+      }
+      throw new Error(`claim ${id} kept changing under us; gave up after 5 tries`);
+    },
     listClaims: async () => ((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims,
     putPhoto: async (key, jpeg) => write(paths.photo(key), jpeg, "image/jpeg"),
     // Photos never change once written, so the CDN copy is fine.

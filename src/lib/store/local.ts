@@ -42,6 +42,24 @@ export function localStore(dir: string): Store {
   }
   const updateIndex = (change: (index: ClaimIndex) => ClaimIndex) => updateJson(paths.index, ClaimIndex, { claims: [] }, change);
 
+  async function putClaim(claim: Claim) {
+    await write(paths.claim(claim.id), JSON.stringify(Claim.parse(claim), null, 2));
+    await updateIndex((index) => upsert(index, summarize(claim)));
+  }
+
+  // The same chain for claim updates: each one reads the claim only after the one before it has saved.
+  let claimLock: Promise<unknown> = Promise.resolve();
+  function updateClaim(id: string, change: (claim: Claim) => Claim | null) {
+    const next = claimLock.then(async () => {
+      const claim = isValidClaimId(id) ? await readJson(paths.claim(id), Claim) : null;
+      const changed = claim && change(claim);
+      if (changed) await putClaim(changed);
+      return changed || null;
+    });
+    claimLock = next.catch(() => {});
+    return next;
+  }
+
   return {
     getRecall: async (id) => (isValidRecallId(id) ? readJson(paths.recall(id), Recall) : null),
     async putRecall(recall) {
@@ -52,10 +70,8 @@ export function localStore(dir: string): Store {
     },
     listRecalls: async () => ((await readJson(paths.recallIndex, RecallIndex)) ?? { recalls: [] }).recalls,
     getClaim: async (id) => (isValidClaimId(id) ? readJson(paths.claim(id), Claim) : null),
-    async putClaim(claim) {
-      await write(paths.claim(claim.id), JSON.stringify(Claim.parse(claim), null, 2));
-      await updateIndex((index) => upsert(index, summarize(claim)));
-    },
+    putClaim,
+    updateClaim,
     listClaims: async () => ((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims,
     putPhoto: async (key, jpeg) => write(paths.photo(key), jpeg),
     getPhoto: async (key) => read(paths.photo(key)),

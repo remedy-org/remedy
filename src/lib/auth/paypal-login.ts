@@ -3,6 +3,7 @@ import { z } from "zod";
 import { env } from "../env";
 import { PayPalError } from "../paypal/client";
 import { DEFAULT_NEXT, Role, safeNext, sign, unsign } from "../session-token";
+import { RecallSlug } from "../types";
 
 // The Log in with PayPal round trip: start sets a signed, short-lived state cookie; callback checks it.
 // Kept free of Next imports so it is unit-tested directly; the route handlers are thin.
@@ -23,7 +24,9 @@ export type LoginState = z.infer<typeof LoginState>;
 export type AuthError = "denied" | "state" | "paypal" | "refused";
 
 // A failed token exchange or userinfo read: a 401 or 403 is PayPal refusing; 5xx, timeouts and fetch errors are an outage.
-export const loginFailure = (e: unknown): AuthError => (e instanceof PayPalError && (e.status === 401 || e.status === 403) ? "refused" : "paypal");
+// invalid_client is PayPal refusing our app's id and secret, not the account, so another account wouldn't help.
+export const loginFailure = (e: unknown): AuthError =>
+  e instanceof PayPalError && (e.status === 401 || e.status === 403) && e.issue !== "invalid_client" ? "refused" : "paypal";
 
 export function beginLogin(params: URLSearchParams, now = new Date()): { state: LoginState; cookie: string } | { error: "role" } {
   const as = Role.safeParse(params.get("as"));
@@ -54,6 +57,15 @@ export function withAuthError(path: string, error: AuthError): string {
   return url.pathname + url.search + url.hash;
 }
 
-// Where a failed login lands: the page that asked for it, or the company sign-in page.
+// An owner's `next` is usually a step that needs the session (claims/start, the samples, a claim page), which would send
+// them straight back to PayPal. Their failed login lands on that recall's first screen instead, which shows the reason.
+function recallScreen(next: string): string {
+  const url = new URL(next, "http://x");
+  const slug = url.pathname === "/api/claims/start" ? url.searchParams.get("recall") : url.pathname.match(/^\/r\/([^/]+)/)?.[1];
+  if (!RecallSlug.safeParse(slug).success) return next;
+  return url.pathname.startsWith(`/r/${slug}/try`) ? `/r/${slug}/try` : `/r/${slug}`;
+}
+
+// Where a failed login lands: the owner's recall screen, or the company sign-in page.
 export const errorPath = (login: LoginState | null, error: AuthError) =>
-  withAuthError(login ? (login.as === "company" ? `/signin?next=${encodeURIComponent(login.next)}` : login.next) : "/signin", error);
+  withAuthError(login ? (login.as === "company" ? `/signin?next=${encodeURIComponent(login.next)}` : recallScreen(login.next)) : "/signin", error);

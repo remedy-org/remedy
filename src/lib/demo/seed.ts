@@ -12,6 +12,9 @@ import storedVerdicts from "./verdicts.json";
 // Every model answer is a real stored one from the eval (verdicts.json, from eval/out/runs); the decision and reasons
 // come from the app's own rule. Seeded claims are marked seeded: true, use fake payer ids, and were never paid:
 // their payout batch ids start with SEED.
+// A decided seeded claim keeps its eval case's code (K7Q or R8D), from before the issued alphabet dropped Q and 8
+// (src/lib/codes.ts): the code is hand-written in the photos, so a new one would change the decision. Pending ones,
+// with no photos yet, get issuable codes.
 
 export const SEED_PHOTO_PREFIX = "seed/";
 

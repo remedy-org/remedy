@@ -4,7 +4,8 @@ import { decide } from "@/lib/rule";
 import { Verdict, type Claim, type Reason, type Recall } from "@/lib/types";
 
 // Dev-only fixtures for /dev/claim: every step and result of the claim flow without PayPal, a camera or the model.
-// Model answers are real stored ones from the eval (src/lib/demo/verdicts.json), decided by the app's own rule.
+// Model answers are real stored ones from the eval (src/lib/demo/verdicts.json), decided by the app's own rule. Decided
+// fixtures keep the eval's codes (K7Q, R8D), which are written in their photos, though Remedy no longer issues Q or 8.
 
 export const NOW = Date.parse("2026-11-07T14:32:00.000Z");
 const at = (s: number) => new Date(NOW + s * 1000).toISOString();

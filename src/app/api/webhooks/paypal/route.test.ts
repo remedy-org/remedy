@@ -87,4 +87,15 @@ describe("POST /api/webhooks/paypal", () => {
     expect(claim?.payout?.status).toBe("SUCCESS");
     expect(claim?.events.filter((e) => e.type === "payout_updated")).toHaveLength(1);
   });
+
+  it("dates a settling event by its create_time, not by when it arrived", async () => {
+    await store.putClaim(sampleClaim({ decision: "paid", payout: { batchId: "E3VTQ6BPYAA6U", status: "UNCLAIMED", updatedAt: "2026-11-07T10:01:00.000Z" } }));
+    verifies("SUCCESS", 2);
+    const pending = (id: string, create_time: string) =>
+      event({ id, create_time, event_type: "PAYMENT.PAYOUTS-ITEM.HELD", resource: { payout_item_id: "ITEM1", payout_batch_id: "E3VTQ6BPYAA6U", transaction_status: "PENDING", payout_item: { sender_item_id: "RM-0412" } } });
+    expect(await (await post(pending("WH-EVT-0", "2026-11-07T10:00:00.000Z"))).json()).toEqual({ updated: false });
+    expect((await store.getClaim("RM-0412"))?.payout?.status).toBe("UNCLAIMED");
+    expect(await (await post(pending("WH-EVT-2", "2026-11-07T10:03:00.000Z"))).json()).toEqual({ updated: true });
+    expect((await store.getClaim("RM-0412"))?.payout).toMatchObject({ status: "PENDING", updatedAt: "2026-11-07T10:03:00.000Z" });
+  });
 });

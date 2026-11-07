@@ -11,6 +11,7 @@ import { Claim } from "../types";
 import { DEMO_SLUG, demoRecall } from "./kikea";
 import { DEMO_SAMPLES } from "./samples";
 import { buildSeedClaims, ensureDemoData, SEED_PHOTOS } from "./seed";
+import storedVerdicts from "./verdicts.json";
 
 const now = new Date("2026-11-07T12:00:00Z");
 const hashes = Object.fromEntries(SEED_PHOTOS.map((p, i) => [p, (i + 1).toString(16).padStart(16, "0")]));
@@ -28,6 +29,14 @@ describe("buildSeedClaims", () => {
     expect(times).toEqual([...times].sort((a, b) => b - a));
     expect(Math.min(...times)).toBeGreaterThan(now.getTime() - 72 * 3_600_000);
     expect(Math.max(...times)).toBeLessThan(now.getTime());
+  });
+
+  it("issues codes Remedy could issue, except where the photos already carry an eval case's code", () => {
+    const evalCodes = new Set(storedVerdicts.map((v) => v.code));
+    for (const c of claims) {
+      if (c.decision === "pending") expect(c.code).toMatch(CODE_PATTERN);
+      else expect(CODE_PATTERN.test(c.code) || evalCodes.has(c.code)).toBe(true);
+    }
   });
 
   it("is mostly paid, with some held, rejected, blocked and pending", () => {

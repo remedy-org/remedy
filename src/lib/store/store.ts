@@ -39,6 +39,9 @@ export interface Store {
   getClaim(id: string): Promise<Claim | null>;
   // Writes the claim's file, then its row in index.json.
   putClaim(claim: Claim): Promise<void>;
+  // Reads the claim and saves change's result only if the claim hasn't changed since; when it has, reads it again and
+  // re-runs change. Returns the saved claim, or null when the claim is missing or change returns null.
+  updateClaim(id: string, change: (claim: Claim) => Claim | null): Promise<Claim | null>;
   // Reads index.json only: listing the blob store on every page load costs quota.
   listClaims(): Promise<ClaimSummary[]>;
   putPhoto(key: string, jpeg: Buffer): Promise<void>;

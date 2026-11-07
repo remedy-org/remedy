@@ -23,7 +23,8 @@ const GETS = [
 
 // A still of the console on the demo recall: the header matches the seeded workspace (26 paid of 19,596 units, 3 held,
 // 9 refused) and the rows are four claims with the reasons as the console words them (src/lib/rule.ts). The codes come
-// from the issued alphabet (src/lib/codes.ts: no Q, no 8); K7Q is what the wrong-code photo has written on it.
+// from the issued alphabet (src/lib/codes.ts: no Q, no 8); K7Q is what the wrong-code photo has written on it. The
+// seeded claims themselves keep their eval photos' K7Q and R8D (src/lib/demo/seed.ts).
 const ROWS: { photo: string; code: string; status: Status; reason: string }[] = [
   { photo: "/demo/c02-1.jpg", code: "M4T", status: "paid", reason: "Every check passed" },
   { photo: "/demo/c11-1.jpg", code: "K7P", status: "rejected", reason: "Written code reads K7Q; this claim's code is K7P" },
