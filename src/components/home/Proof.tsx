@@ -93,7 +93,7 @@ function SideTable({ rows, caption }: { rows: Row[]; caption: string }) {
               {c.label}
             </th>
             {rows.map((r) => (
-              <td key={r.model} className={clsx("py-2.5 pl-3 text-right font-mono tabular-nums", r.chosen ? "text-text" : "text-muted")}>
+              <td key={r.model} className={clsx("py-2.5 pl-3 text-right font-mono whitespace-nowrap tabular-nums", r.chosen ? "text-text" : "text-muted")}>
                 <Cell value={r[c.key]} pair={c.pair} />
               </td>
             ))}
