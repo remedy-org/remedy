@@ -44,6 +44,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["verified", "PayPal verified", "booleanFormat"],
           ["amountPaid", "Paid out", "currencyFormat", { ...usd, description: "USD sent through PayPal for this claim; 0 unless paid." }],
           ["remedied", "Units remedied", "integerFormat", { ...whole, description: "1 when the claim was paid: a unit destroyed and refunded." }],
+          ["remediedSample", "Sample units remedied", "integerFormat", { ...whole, hide: true, description: "1 when a sample claim was decided paid. Its payout was never sent to a real owner." }],
           ["refused", "Refused", "integerFormat", { ...whole, description: "1 when the claim was rejected or blocked." }],
           ["held", "Held", "integerFormat", { ...whole, description: "1 when the claim waits for a person." }],
           ["timeToPaySec", "Photo to PayPal", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the payout being sent. Paid claims only." }],

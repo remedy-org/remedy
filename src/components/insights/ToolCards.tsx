@@ -13,6 +13,9 @@ import { reactComp } from "./reactComp";
 
 const STATUS: Record<string, Status> = { Paid: "paid", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
 const OUTCOME_DOT: Record<string, string> = { pass: "bg-pay", hold: "bg-hold", reject: "bg-stop" };
+// Never colour alone: each check's outcome is also a word.
+const OUTCOME_WORD: Record<string, string> = { pass: "Yes", hold: "Unclear", reject: "No" };
+const OUTCOME_TEXT: Record<string, string> = { pass: "text-faint", hold: "text-hold", reject: "text-stop" };
 
 const done = <T,>(p: AgAiToolDetailParams): T | undefined => (p.status === "done" && p.result?.success ? (p.result.data as T) : undefined);
 
@@ -39,7 +42,7 @@ function Explain(p: AgAiToolDetailParams) {
             <span className="flex items-center gap-2 text-ui text-text">
               <span aria-hidden="true" className={clsx("size-1.5 rounded-full", OUTCOME_DOT[k.outcome] ?? "bg-faint")} />
               {k.label}
-              <span className="sr-only">: {k.outcome}</span>
+              <span className={clsx("micro ml-auto", OUTCOME_TEXT[k.outcome] ?? "text-faint")}>{OUTCOME_WORD[k.outcome] ?? k.outcome}</span>
             </span>
             {k.evidence && <q className="border-l border-line pl-3 font-mono text-micro text-muted before:content-none after:content-none">{k.evidence}</q>}
           </li>
@@ -88,11 +91,11 @@ function Note(p: AgAiToolDetailParams) {
         <button
           type="button"
           onClick={() => navigator.clipboard?.writeText(data.note).then(() => setCopied(true), () => {})}
-          className="inline-flex min-h-9 items-center rounded-control border border-line-strong px-3 text-ui text-text transition-colors hover:bg-surface-2"
+          className="inline-flex min-h-11 items-center rounded-control border border-line-strong px-3 text-ui text-text transition-colors hover:bg-surface-2"
         >
           {copied ? "Copied" : "Copy note"}
         </button>
-        <a href={data.href} className="inline-flex min-h-9 items-center px-2 text-ui text-accent-text hover:text-text">
+        <a href={data.href} className="inline-flex min-h-11 items-center px-2 text-ui text-accent-text hover:text-text">
           Open {data.claimId} <span aria-hidden="true">&nbsp;→</span>
         </a>
       </div>

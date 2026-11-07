@@ -61,6 +61,8 @@ export interface ClaimFact {
   amountPaid: number;
   /** 1 when paid: a unit taken out of use and refunded. */
   remedied: number;
+  /** 1 when a sample claim was "paid": counted in remedied, but no money ever reached a real owner. */
+  remediedSample: number;
   refused: number;
   held: number;
   /** Seconds from the photos arriving to the payout being sent; null unless paid. */
@@ -156,6 +158,7 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     verified: c.payerVerified,
     amountPaid: c.decision === "paid" ? cents(amountOf(c, recall)) / 100 : 0,
     remedied: c.decision === "paid" ? 1 : 0,
+    remediedSample: c.decision === "paid" && c.seeded ? 1 : 0,
     refused: refused ? 1 : 0,
     held: c.decision === "held" ? 1 : 0,
     timeToPaySec: c.decision === "paid" ? seconds(photosIn, at(c, "payout_sent")) : null,

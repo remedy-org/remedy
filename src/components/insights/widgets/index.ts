@@ -39,12 +39,19 @@ export const insightsWidgets =
         dataMapping: {
           remedied: { type: "field", supportedRoles: ["numeric"], requires: { cardinality: "one" }, required: true, aiDescription: "Units remedied: sum of claims.remedied." },
           sold: { type: "field", supportedRoles: ["numeric"], requires: { cardinality: "one" }, required: true, aiDescription: "Units sold: max of recall.unitsSold." },
+          samples: {
+            type: "field",
+            supportedRoles: ["numeric"],
+            requires: { cardinality: "one" },
+            aiDescription: "Units remedied by sample claims, which never paid a real owner: sum of claims.remediedSample.",
+          },
         },
         formatShape,
         form: (params: AgWidgetFormParams<RecallProgressDef>) =>
           titles(params, [
             { key: "remedied", label: "Units remedied" },
             { key: "sold", label: "Units sold" },
+            { key: "samples", label: "Of which samples" },
           ]),
         comp: reactComp(RecallProgress),
         defaultSize: { width: 640, height: 200 },
@@ -53,7 +60,7 @@ export const insightsWidgets =
           label: "Recall progress",
           description: "A ruler of units remedied against units sold, with the 6-10% share recalls typically reach (PIRG) as an amber band.",
           usage: "Use for how far the recall has got. Not for counts over time.",
-          configuration: "Map remedied to sum(claims.remedied) and sold to max(recall.unitsSold).",
+          configuration: "Map remedied to sum(claims.remedied), sold to max(recall.unitsSold) and samples to sum(claims.remediedSample).",
         },
       },
       {
@@ -62,6 +69,12 @@ export const insightsWidgets =
         dataMapping: {
           stage: { type: "field", supportedRoles: ["category"], requires: { cardinality: "many" }, required: true, aiDescription: "The claim's furthest stage: claims.stage." },
           reason: { type: "field", supportedRoles: ["category"], requires: { cardinality: "many" }, required: true, aiDescription: "Why it stopped: claims.stopReason." },
+          decision: {
+            type: "field",
+            supportedRoles: ["category"],
+            requires: { cardinality: "many" },
+            aiDescription: "The rule's decision, claims.decision: splits each drop into refused (Rejected, Blocked), held for a person, and in progress.",
+          },
           count: { type: "field", supportedRoles: ["numeric"], requires: { cardinality: "one" }, required: true, aiDescription: "Claims: countd(claims.id)." },
         },
         formatShape,
@@ -69,6 +82,7 @@ export const insightsWidgets =
           titles(params, [
             { key: "stage", label: "Stage" },
             { key: "reason", label: "Stop reason" },
+            { key: "decision", label: "Decision" },
             { key: "count", label: "Claims" },
           ]),
         comp: reactComp(CheckFunnel),
@@ -77,9 +91,10 @@ export const insightsWidgets =
         featureConfig: { crossFilter: { supportsHighlight: true } },
         ai: {
           label: "Check funnel",
-          description: "Claims at each stage from filed to paid, with how many stopped at each stage and their commonest reason. Clicking a drop filters the page to those claims.",
+          description:
+            "Claims at each stage from filed to paid. Each drop is split into claims refused there and claims held for a person (waiting, not refused), with their reasons and counts. Clicking a drop filters the page to those claims.",
           usage: "Use to show where claims fall out of the process.",
-          configuration: "Map stage to claims.stage, reason to claims.stopReason, count to countd(claims.id).",
+          configuration: "Map stage to claims.stage, reason to claims.stopReason, decision to claims.decision, count to countd(claims.id).",
         },
       },
       {

@@ -3,22 +3,33 @@
 import clsx from "clsx";
 import type { AgWidgetParams } from "ag-studio";
 import type { MouseEvent } from "react";
-import { funnel } from "../funnel";
+import { funnel, KIND_LABEL, type StopKind } from "../funnel";
 import type { CheckFunnelDef } from "./defs";
 import { num, useRows } from "./useRows";
 
-// Custom widget 2: how far claims got, stage by stage, with each drop labelled by its commonest reason. Clicking a
-// drop cross-filters the page to the claims that stopped there.
+// Custom widget 2: how far claims got, stage by stage. Each drop is split into the claims refused there (red) and the
+// ones held for a person (blue, waiting, not refused), each with its reasons and their counts; tied reasons are never
+// passed off as the top one. Clicking a drop cross-filters the page to the claims that stopped there.
+
+const TONE: Record<StopKind, string> = { refused: "text-stop", held: "text-hold", waiting: "text-faint" };
 
 export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
   const { dataMapping, widgetApi } = params;
   const stage = dataMapping.stage?.[0];
   const reason = dataMapping.reason?.[0];
+  const decision = dataMapping.decision?.[0];
   const count = dataMapping.count?.[0];
-  const rows = useRows(widgetApi, () => (stage && reason && count ? [{ fields: [stage, reason, count] }] : null), [params]);
+  const rows = useRows(widgetApi, () => (stage && reason && count ? [{ fields: decision ? [stage, reason, decision, count] : [stage, reason, count] }] : null), [params]);
   if (!rows || !stage || !reason || !count) return null;
 
-  const steps = funnel(rows[0].map((r) => ({ stage: String(r[stage.key]), stopReason: (r[reason.key] as string | null) ?? null, count: num(r[count.key]) })));
+  const steps = funnel(
+    rows[0].map((r) => ({
+      stage: String(r[stage.key]),
+      stopReason: (r[reason.key] as string | null) ?? null,
+      decision: decision ? ((r[decision.key] as string | null) ?? null) : "Rejected",
+      count: num(r[count.key]),
+    })),
+  );
   const filed = steps[0].reached || 1;
   const selected = new Set(widgetApi.getCrossFilterSelections()?.flatMap((s) => (s.type === "value" ? s.values.map(String) : [])) ?? []);
 
@@ -50,18 +61,27 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
                 aria-pressed={selected.has(s.stage)}
                 onClick={toggle(s.stage)}
                 className={clsx(
-                  "group ml-[9.5rem] flex min-h-6 items-center gap-2 rounded-control px-2 text-left text-micro transition-colors",
+                  "group ml-[9.5rem] flex min-h-6 items-center gap-2 rounded-control px-2 py-0.5 text-left text-micro transition-colors",
                   "disabled:cursor-default enabled:hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
                   selected.has(s.stage) ? "bg-accent-soft ring-1 ring-accent" : "",
                 )}
                 title={s.stopped ? `Filter the page to the ${s.stopped} that stopped here` : undefined}
               >
-                <span aria-hidden="true" className="font-mono text-faint">↳</span>
-                <span className={clsx("font-mono tabular-nums", s.stopped ? "text-stop" : "text-faint")}>{s.stopped ? `−${s.stopped}` : "0"}</span>
-                <span className="truncate text-muted group-enabled:group-hover:text-text">{s.topReason ?? "none stopped here"}</span>
-                {s.reasons > 1 && (
-                  <span className="shrink-0 font-mono text-faint">
-                    +{s.reasons - 1} more {s.reasons === 2 ? "reason" : "reasons"}
+                <span aria-hidden="true" className="self-start font-mono text-faint">↳</span>
+                {s.stopped ? (
+                  <span className="flex min-w-0 flex-col">
+                    {s.groups.map((g) => (
+                      <span key={g.kind} className="flex min-w-0 items-baseline gap-2">
+                        <span className={clsx("shrink-0 font-mono tabular-nums", TONE[g.kind])}>−{g.count}</span>
+                        <span className={clsx("shrink-0", TONE[g.kind])}>{KIND_LABEL[g.kind]}</span>
+                        <span className="truncate text-muted group-enabled:group-hover:text-text">{g.summary}</span>
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  <span className="flex items-baseline gap-2">
+                    <span className="font-mono text-faint tabular-nums">0</span>
+                    <span className="text-muted">none stopped here</span>
                   </span>
                 )}
               </button>

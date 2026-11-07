@@ -98,7 +98,7 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
         theme: initialTheme.current,
         loadThemeGoogleFonts: false,
         data: buildSources(data),
-        initialState: insightsReport,
+        initialState: insightsReport(data),
         widgets: insightsWidgets(lib),
         panels: PANELS,
         localeText: LOCALE,

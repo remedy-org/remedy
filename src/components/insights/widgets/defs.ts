@@ -4,13 +4,14 @@ import type { AgDefaultWidgetDefinition, AgTypeScriptRegistry, AgTypeScriptWidge
 
 export interface RecallProgressDef {
   type: "recall-progress";
-  dataMapping: { remedied: AgWidgetFieldReference[]; sold: AgWidgetFieldReference[] };
+  /** samples: units remedied by sample claims, which were never paid to a real owner. */
+  dataMapping: { remedied: AgWidgetFieldReference[]; sold: AgWidgetFieldReference[]; samples?: AgWidgetFieldReference[] };
   format?: AgWidgetDataFormat<Record<string, never>>;
 }
 
 export interface CheckFunnelDef {
   type: "check-funnel";
-  dataMapping: { stage: AgWidgetFieldReference[]; reason: AgWidgetFieldReference[]; count: AgWidgetFieldReference[] };
+  dataMapping: { stage: AgWidgetFieldReference[]; reason: AgWidgetFieldReference[]; decision?: AgWidgetFieldReference[]; count: AgWidgetFieldReference[] };
   format?: AgWidgetDataFormat<Record<string, never>>;
 }
 

@@ -128,7 +128,7 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   gridHeaderBackgroundColor: token("surface"),
   gridHeaderTextColor: token("faint"),
   gridHeaderFontFamily: MONO,
-  gridHeaderFontSize: 11,
+  gridHeaderFontSize: 12,
   gridHeaderFontWeight: 400,
   gridRowHeight: 44,
   gridRowBorder: line("line"),

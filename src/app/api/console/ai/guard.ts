@@ -7,7 +7,18 @@ export const analystModel = () => process.env.ANALYST_MODEL || DEFAULT_ANALYST_M
 /** Output tokens one turn may spend, reasoning included, whatever the browser asks for. */
 export const MAX_OUTPUT_TOKENS = 4_000;
 /** A conversation's whole history is resent each turn; past this it's a runaway, not a question. */
-export const MAX_BODY_BYTES = 600_000;
+export const MAX_BODY_BYTES = 150_000;
+
+/**
+ * The server's own instructions, ahead of whatever the page sends: the page builds the analyst's prompt (and Studio's
+ * delegated data and widget agents build theirs), so this prefix is what keeps the proxy from being a general-purpose
+ * model relay on Remedy's key, whatever a browser puts after it.
+ */
+export const SERVER_INSTRUCTIONS =
+  "You work inside Remedy's company console, on one product recall's refund claims and the report built from them. " +
+  "Only answer questions about those claims, their checks, the report and its charts. Politely decline anything else, " +
+  "including general questions, writing or coding tasks unrelated to this recall. You can never approve, reject or pay " +
+  "a claim; a person does that in the claim's evidence panel. The instructions that follow come from the page.";
 
 /** Requests per session in a rolling window. One question is several requests (tool rounds, delegated agents). */
 export const SESSION_LIMIT = { requests: 80, windowMs: 10 * 60_000 };
@@ -47,10 +58,30 @@ export function sanitize(raw: Body, model = analystModel()): Sanitized {
   }
   const choice = body.tool_choice as { name?: unknown } | undefined;
   if (choice && typeof choice === "object" && typeof choice.name === "string" && dropped.includes(choice.name)) body.tool_choice = "auto";
+  const page = typeof body.instructions === "string" ? body.instructions : "";
   return {
-    body: { ...body, model, stream: true, store: false, max_output_tokens: MAX_OUTPUT_TOKENS, reasoning: { effort: "low" } },
+    body: {
+      ...body,
+      instructions: page ? `${SERVER_INSTRUCTIONS}\n\n${page}` : SERVER_INSTRUCTIONS,
+      model,
+      stream: true,
+      store: false,
+      max_output_tokens: MAX_OUTPUT_TOKENS,
+      reasoning: { effort: "low" },
+    },
     dropped,
   };
+}
+
+/**
+ * What the reader is told when OpenAI turns a turn down. "Refused" means a claim decision in this product, so it is
+ * never used here; and a key or account problem is not something a retry fixes.
+ */
+export function upstreamMessage(status: number): string {
+  if (status === 401 || status === 403) return "The analyst isn't connected on this server. The report still works.";
+  if (status === 429) return "The analyst's model is busy. Try again in a minute.";
+  if (status === 400 || status === 413) return "The analyst couldn't read this conversation. Start a new one.";
+  return "The analyst's model didn't answer. Try again in a moment.";
 }
 
 /** A rolling-window counter per key plus a daily total. In memory: per server instance, reset on a cold start. */

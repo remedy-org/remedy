@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_ANALYST_MODEL, MAX_OUTPUT_TOKENS, rateLimiter, sanitize, SESSION_LIMIT } from "../guard";
+import { DEFAULT_ANALYST_MODEL, MAX_OUTPUT_TOKENS, rateLimiter, sanitize, SERVER_INSTRUCTIONS, SESSION_LIMIT } from "../guard";
 
 const session = vi.hoisted(() => ({ current: null as null | { role: string; payerId: string; verified: boolean; iat: number } }));
 vi.mock("server-only", () => ({}));
@@ -58,7 +58,8 @@ describe("POST /api/console/ai/responses", () => {
     expect(sent.store).toBe(false);
     expect(sent.tools.map((t: { name: string }) => t.name)).toEqual(["explain_claim"]);
     expect(sent).not.toHaveProperty("previous_response_id");
-    expect(sent.instructions).toBe(turn.instructions);
+    // The server's own instructions come first, then the page's.
+    expect(sent.instructions).toBe(`${SERVER_INSTRUCTIONS}\n\n${turn.instructions}`);
   });
 
   it("uses ANALYST_MODEL when it is set", async () => {
@@ -73,6 +74,10 @@ describe("POST /api/console/ai/responses", () => {
     expect(limited.status).toBe(429);
     expect(Number(limited.headers.get("Retry-After"))).toBeGreaterThan(0);
     expect(upstream).toHaveBeenCalledTimes(SESSION_LIMIT.requests);
+
+    // Logging in again (a new session for the same PayPal account) doesn't refill the budget.
+    session.current = { ...session.current!, iat: 2 };
+    expect((await post(turn)).status).toBe(429);
 
     session.current = { ...session.current!, payerId: "ANOTHERCO" };
     expect((await post(turn)).status).toBe(200);
@@ -89,7 +94,11 @@ describe("POST /api/console/ai/responses", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await post(turn);
     expect(res.status).toBe(502);
-    expect(JSON.stringify(await res.json())).not.toContain("sk-test");
+    const body = JSON.stringify(await res.json());
+    expect(body).not.toContain("sk-test");
+    // A key problem says the analyst isn't connected, never that something was "refused".
+    expect(body).toContain("isn't connected");
+    expect(body).not.toMatch(/refused/i);
   });
 });
 

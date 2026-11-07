@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/session";
-import { MAX_BODY_BYTES, rateLimiter, sanitize, type Body } from "../guard";
+import { MAX_BODY_BYTES, rateLimiter, sanitize, upstreamMessage, type Body } from "../guard";
 
 // The Recall analyst's model runs through here. AG Studio's OpenAI adapter runs in the browser and POSTs each turn to
 // `${endpoint}/responses`; with its endpoint set to /api/console/ai it lands on this route, which checks the company
@@ -33,7 +33,8 @@ export async function POST(request: Request) {
   }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return error(400, "The request body isn't a JSON object.");
 
-  const taken = limiter.take(`${session.payerId}:${session.iat}`);
+  // One budget per PayPal account, not per login: logging in again doesn't refill it.
+  const taken = limiter.take(session.payerId);
   if (!taken.ok) {
     const wait = taken.retryAfter < 120 ? `${taken.retryAfter} seconds` : `${Math.ceil(taken.retryAfter / 60)} minutes`;
     const message =
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
   if (!upstream.ok) {
     // OpenAI's own message can name the key or the account: log it, and tell the reader something useful instead.
     console.error(`[analyst] OpenAI ${upstream.status}:`, (await upstream.text()).slice(0, 500));
-    return error(502, upstream.status === 429 ? "The analyst's model is busy. Try again in a minute." : "The analyst's model refused the request. Try again, or start a new conversation.");
+    return error(502, upstreamMessage(upstream.status));
   }
 
   return new Response(upstream.body, {

@@ -3,6 +3,7 @@ import { demoRecall } from "@/lib/demo/kikea";
 import { buildSeedClaims, SEED_PHOTOS } from "@/lib/demo/seed";
 import type { Claim } from "@/lib/types";
 import { buildReport } from "../_lib/report";
+import { reasonSummary } from "@/components/insights/funnel";
 import { buildInsights, claimFact, funnel, STAGES } from "./facts";
 
 const now = new Date("2026-11-07T12:00:00Z");
@@ -58,14 +59,41 @@ describe("funnel", () => {
     expect(f.at(-1)!.reached).toBe(data.claims.filter((c) => c.decision === "Paid").length);
   });
 
-  it("names the commonest reason claims stopped at a stage", () => {
+  it("names the commonest reason claims stopped at a stage, with its count", () => {
     const rows = [
-      { stage: "Passed pre-checks" as const, stopReason: "Photo of a screen or a print" },
-      { stage: "Passed pre-checks" as const, stopReason: "Photo of a screen or a print" },
-      { stage: "Passed pre-checks" as const, stopReason: "One-time code missing or wrong" },
-      { stage: "Paid" as const, stopReason: null },
+      { stage: "Passed pre-checks" as const, stopReason: "Photo of a screen or a print", decision: "Rejected" },
+      { stage: "Passed pre-checks" as const, stopReason: "Photo of a screen or a print", decision: "Rejected" },
+      { stage: "Passed pre-checks" as const, stopReason: "One-time code missing or wrong", decision: "Rejected" },
+      { stage: "Paid" as const, stopReason: null, decision: "Paid" },
     ];
-    expect(funnel(rows)[2]).toEqual({ stage: "Passed pre-checks", reached: 4, stopped: 3, topReason: "Photo of a screen or a print", reasons: 2 });
+    expect(funnel(rows)[2]).toEqual({
+      stage: "Passed pre-checks",
+      reached: 4,
+      stopped: 3,
+      groups: [{ kind: "refused", count: 3, summary: "Photo of a screen or a print · 2 of 3" }],
+    });
+  });
+
+  it("never presents a tied reason as the top one", () => {
+    const tally = (...counts: [string, number][]) => new Map(counts);
+    expect(reasonSummary(tally(["PayPal account not verified", 1], ["Photo already used in another claim", 1], ["Second claim from one PayPal account", 1], ["Photos outside the live camera session", 1]))).toBe(
+      "four reasons, 1 each",
+    );
+    expect(reasonSummary(tally(["b", 3], ["a", 3], ["c", 1]))).toBe("two reasons tied at 3, and 1 more");
+    expect(reasonSummary(tally(["Photos showed different items", 3]))).toBe("Photos showed different items");
+  });
+
+  it("counts held claims apart from refused ones", () => {
+    const rows = [
+      { stage: "Passed pre-checks", stopReason: "Couldn't tell if both photos show the same item", decision: "Held", count: 3 },
+      { stage: "Passed pre-checks", stopReason: "Photo of a screen or a print", decision: "Rejected", count: 6 },
+    ];
+    const step = funnel(rows)[2];
+    expect(step.stopped).toBe(9);
+    expect(step.groups.map((g) => [g.kind, g.count])).toEqual([
+      ["refused", 6],
+      ["held", 3],
+    ]);
   });
 });
 
