@@ -25,7 +25,9 @@ const Env = z.object({
   CLAIM_DAILY_LIMIT: Limit.default(60),
   CLAIM_MONTHLY_LIMIT: Limit.default(150),
   ACCOUNT_CLAIM_DAILY_LIMIT: Limit.default(5),
-  ACCOUNT_DEMO_DAILY_LIMIT: Limit.default(12),
+  // As high as the daily limit: judges share the sandbox login from the Devpost notes, so one account runs every
+  // judge's samples, and the daily and photo-check limits already bound what demo claims cost.
+  ACCOUNT_DEMO_DAILY_LIMIT: Limit.default(60),
 });
 
 export type Env = z.infer<typeof Env>;

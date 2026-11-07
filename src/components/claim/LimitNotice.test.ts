@@ -16,7 +16,7 @@ describe("limitCopy", () => {
     expect(limitCopy({ kind: "checks", limit: 100, until: tomorrow }, { demo: true, now }).description).toBe(
       "Remedy runs at most 100 photo checks a day so this live demo stays affordable. No sample claim was started. Try again in about 6 hours, after 00:00 UTC.",
     );
-    expect(limitCopy({ kind: "account", limit: 12, until: tomorrow }, { demo: true, now }).title).toBe("You've run today's sample claims");
+    expect(limitCopy({ kind: "account", limit: 60, until: tomorrow }, { demo: true, now }).title).toBe("This PayPal account has run today's sample claims");
   });
 
   it("gives days, not a UTC time, for the 30-day limit", () => {

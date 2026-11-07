@@ -8,7 +8,7 @@ export function limitCopy({ kind, limit, until }: Refusal, { demo, now }: { demo
   switch (kind) {
     case "account":
       return demo
-        ? { title: "You've run today's sample claims", description: `Each PayPal account can run ${plural(limit, "sample claim")} a day, which keeps this live demo affordable. ${nothing} Try again ${when}.` }
+        ? { title: "This PayPal account has run today's sample claims", description: `Each PayPal account can run ${plural(limit, "sample claim")} a day, which keeps this live demo affordable. ${nothing} Try again ${when}.` }
         : { title: "This PayPal account has started today's claims", description: `Each PayPal account can start ${plural(limit, "claim")} a day, which keeps this live demo affordable. ${nothing} Try again ${when}.` };
     case "daily":
       return { title: "Remedy has taken all the claims it can today", description: `This live demo starts at most ${plural(limit, "claim")} a day so it stays affordable. ${nothing} Try again ${when}.` };
