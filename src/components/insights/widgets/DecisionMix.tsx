@@ -4,6 +4,7 @@ import clsx from "clsx";
 import type { AgWidgetParams } from "ag-studio";
 import type { MouseEvent } from "react";
 import type { DecisionMixDef } from "./defs";
+import { moveBetweenItems } from "./listKeys";
 import { num, useRows } from "./useRows";
 
 // Custom widget 4: what the rule decided, as one 100% bar in the state colours every pill and barcode in Remedy uses.
@@ -48,7 +49,7 @@ export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
           <span key={i.label} className={clsx("h-full min-w-[3px]", FILL[i.label] ?? "bg-faint", selected.size > 0 && !selected.has(i.label) && "opacity-30")} style={{ flexGrow: i.n }} />
         ))}
       </div>
-      <ul className="flex min-h-0 flex-col">
+      <ul className="flex min-h-0 flex-col" onKeyDown={moveBetweenItems}>
         {items.map((i) => (
           <li key={i.label}>
             <button

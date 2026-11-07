@@ -75,8 +75,72 @@ export function captions({ paid, samples, sampleAmount, reviewed, answered }: Re
       : reviewed
         ? `${sent} sent · ${reviewed} after a person's review`
         : `Median of ${sent} sent ${sent === 1 ? "payout" : "payouts"}`,
-    // The chart's axis counts plain seconds; its tooltip reads "0:12".
-    timeExhibit: samples ? "EXHIBIT E · MEDIAN SECONDS · SAMPLE TIMINGS" : "EXHIBIT E · MEDIAN SECONDS, PAID CLAIMS",
+    // Exhibit E charts the tile's own number by day: the same claims and the same field, so the two always agree. Its
+    // axis counts plain seconds; its tooltip reads "0:03".
+    timeChart: sent ? "Photo to PayPal, by day" : "Photo check, by day",
+    timeExhibit: sent ? "EXHIBIT E · MEDIAN SECONDS · PAYOUTS SENT" : "EXHIBIT E · MEDIAN SECONDS · PHOTO CHECK",
+  };
+}
+
+type Claim = InsightsData["claims"][number];
+
+/** One cross-filter pick on the page: the field it filters on ("claims.decision") and the values picked; "" when it can't be read as one. */
+export interface FilterPick {
+  field: string;
+  values: string[];
+}
+
+/** The page's cross-filter picks, from Studio's page state. A range or multi-value pick (an analyst's chart) has no field. */
+export function filterPicks(page: Pick<AgPageState<InsightsRegistry>, "crossFilter"> | undefined): FilterPick[] {
+  return Object.values(page?.crossFilter?.values ?? {})
+    .flatMap((selections) => selections ?? [])
+    .flatMap((s) => (s.type !== "value" ? [{ field: "", values: [] }] : s.values.length ? [{ field: s.field.id, values: s.values.map(String) }] : []));
+}
+
+// A bar in Exhibit E picks a calendar day, keyed 20261107; a claim is on the UTC day it was filed, as the console says.
+const DAY = "calendar::day";
+const dayKey = (iso: string) => iso.slice(0, 10).replaceAll("-", "");
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** The claims the picks leave on the page, or null when a pick is on a field this can't read (the numbers can't be checked here). */
+export function filterClaims<T extends Partial<Claim>>(claims: T[], picks: FilterPick[]): T[] | null {
+  const reads = picks.map((p) => {
+    if (p.field === DAY) return (c: T) => dayKey(c.filedAt ?? "");
+    const key = p.field.match(/^claims\.(\w+)$/)?.[1] as keyof T | undefined;
+    return key && ((c: T) => String(c[key]));
+  });
+  if (reads.some((read) => !read)) return null;
+  return claims.filter((c) => picks.every((p, i) => p.values.includes(reads[i]!(c))));
+}
+
+// How the filter bar names a pick: a refusal reason reads as itself, a funnel drop by the furthest stage its claims
+// reached (the grid's "Furthest stage"), a day as filed.
+const or = (values: string[]) => values.join(" or ");
+const PICK_LABEL: Record<string, (values: string[]) => string> = {
+  "claims.stage": (v) => `Furthest stage: ${or(v)}`,
+  "claims.decision": (v) => `Decision: ${or(v)}`,
+  [DAY]: (v) => `Filed ${or(v.map((d) => `${Number(d.slice(6))} ${MONTHS[Number(d.slice(4, 6)) - 1] ?? ""}`.trim()))}`,
+};
+
+/** "Rejected by a person on review", "Furthest stage: Photos sent · Decision: Held"; a pick this can't name reads as a chart's. */
+export function filterLabel(picks: FilterPick[]) {
+  return picks.map((p) => (p.field ? (PICK_LABEL[p.field] ?? or)(p.values) : "A pick on a chart")).join(" · ");
+}
+
+/**
+ * The money and timing tiles' captions for the claims on the page: unfiltered, the captions above; under a cross-filter,
+ * the same captions for the picked claims, so "26 of 65 are samples" never sits under a filtered 0. When the picks
+ * can't be checked here, the captions only say the tiles are filtered.
+ */
+export function kpiCaptions(all: Parameters<typeof provenance>[0], shown: Parameters<typeof provenance>[0] | null) {
+  const base = captions(provenance(all));
+  if (!shown) return { remedied: "Picked claims only", paid: "Picked claims only", time: "Picked claims only" };
+  const say = captions(provenance(shown));
+  return {
+    remedied: say.remedied,
+    paid: say.paid,
+    // The tile keeps its field: with nothing sent among the picked claims, it has no median to show.
+    time: base.timeField !== say.timeField ? "None sent among these claims" : say.time,
   };
 }
 
@@ -141,7 +205,10 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
           categoryKey: [{ id: "calendar::day" }],
           valueKey: [{ id: "medianToPaySec" }],
         },
-        format: titled("Photo to PayPal, by day", say.timeExhibit),
+        format: {
+          ...titled(say.timeChart, say.timeExhibit),
+          style: { custom: { valueAxis: { title: { enabled: true, text: "Seconds" } } } },
+        },
       },
       claims: {
         type: "grid",

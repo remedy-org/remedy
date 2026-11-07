@@ -27,8 +27,9 @@ const formatShape = ({ api }: AgFormatShapeParams) =>
 
 // The report is read, not built: Studio runs in edit mode only because the analyst's rail lives there. So no widget
 // keeps Studio's duplicate and delete, which left out of a toolbar are off for the Delete key too; the grid's CSV and a
-// chart's image download stay, named for a screen reader (Studio reads a button's label out as-is, not as a locale key).
-const ACTIONS: Record<string, string> = { export: "Download CSV", download: "Download image" };
+// chart's image download stay, named in words (Studio reads a button's label out as-is, not as a locale key; globals.css
+// shows it as the button's text).
+const ACTIONS: Record<string, string> = { export: "Export CSV", download: "Save image" };
 const readOnly = <T extends Pick<AgBaseWidgetDefinition, "toolbar">>(def: T): T => ({
   ...def,
   toolbar: (def.toolbar ?? []).flatMap((item) => (typeof item === "string" ? [] : [{ ...item, label: ACTIONS[item.id] ?? item.label }])),

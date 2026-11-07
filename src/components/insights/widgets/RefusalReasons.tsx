@@ -4,6 +4,7 @@ import clsx from "clsx";
 import type { AgWidgetParams } from "ag-studio";
 import type { MouseEvent } from "react";
 import type { RefusalReasonsDef } from "./defs";
+import { moveBetweenItems } from "./listKeys";
 import { num, useRows } from "./useRows";
 
 // Custom widget 3: why claims were refused, each reason tagged with the kind of check that caught it (a pre-check
@@ -41,7 +42,7 @@ export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
       <p className="text-micro text-muted">
         <span className="font-mono text-text tabular-nums">{total}</span> refused. Each reason names the check that caught it.
       </p>
-      <ul className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <ul className="flex min-h-0 flex-1 flex-col overflow-y-auto" onKeyDown={moveBetweenItems}>
         {items.map((i) => (
           <li key={i.reason}>
             <button

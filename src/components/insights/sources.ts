@@ -1,6 +1,7 @@
 import type { AgDataSourcesDefinition, AgFieldDefinition, AgFormat } from "ag-studio";
 import { duration } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
+import { captions, provenance } from "./report";
 import type { InsightsRegistry } from "./widgets/defs";
 
 // AG Studio's data sources for one recall: its claims, their checks (many to one), the recall itself and a calendar on
@@ -24,6 +25,8 @@ const HONESTY =
 export function buildSources(data: InsightsData): AgDataSourcesDefinition<InsightsRegistry> {
   const days = data.claims.map((c) => c.filedAt.slice(0, 10)).sort();
   const today = data.asOf.slice(0, 10);
+  const { timeField } = captions(provenance(data.claims));
+  const sent = timeField === "timeToSendSec";
   return {
     description: `Claims filed against CPSC recall ${data.recall.id} (${data.recall.product}), and the checks that decided them. ${HONESTY} A fixed rule decides every claim from the checks: any "no" rejects, any "unclear" holds it for a person. The model only describes the photos.`,
     sources: [
@@ -96,15 +99,18 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
     ],
     // Studio's aggregations have no median, and an average of payouts that take seconds turns into minutes with one
     // claim a person approved later. This measure works under a grouping (Exhibit E, by day); a value tile asks for it
-    // ungrouped and gets nothing, so the KPI tile uses the median-time widget instead.
+    // ungrouped and gets nothing, so the KPI tile uses the median-time widget instead. It is the tile's own median, over
+    // the same field (payouts really sent, or the photo check's time while none was), so the chart and the tile agree.
     expressions: [
       {
         id: "medianToPaySec",
-        name: "Median photo to PayPal",
-        description: "Median seconds from photos to payout sent, over paid claims (a sample claim's are sample timings). Use it grouped, by day or by source; for one overall figure use the Median time widget.",
+        name: sent ? "Median photo to PayPal" : "Median photo check",
+        description: sent
+          ? "Median seconds from photos to a payout really sent through PayPal; sample claims, whose payouts never left, are not in it. Use it grouped, by day or by source; for one overall figure use the Median time widget."
+          : "No payout has been sent yet, so this is the median seconds from photos to the model's answer. Use it grouped, by day or by source; for one overall figure use the Median time widget.",
         isMeasure: true,
         format: "decimalFormat",
-        expression: { operator: "median", inputs: [{ id: "claims.timeToPaySec" }] },
+        expression: { operator: "median", inputs: [{ id: `claims.${timeField}` }] },
         ...secs,
       },
     ],

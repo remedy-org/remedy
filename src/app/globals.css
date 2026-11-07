@@ -459,8 +459,9 @@
 
 /*
  * Insights runs AG Studio in edit mode only for the analyst's rail; to a company the report is a set of read-only
- * exhibits. So a hovered or selected widget gets no editor frame, no resize handles and no empty toolbar, and a
- * widget's title, exhibit label and caption don't raise a tooltip over the content beneath.
+ * exhibits. So a hovered or selected widget gets no editor frame, no resize handles and no empty toolbar (Studio's or a
+ * chart's, which a screen reader would still announce), and a widget's title, exhibit label and caption don't raise a
+ * tooltip over the content beneath.
  */
 .insights-report .ag-studio-layout-widget {
   --ag-studio-layout-widget-resize-border-color: transparent;
@@ -500,12 +501,56 @@
 }
 
 .insights-report .ag-studio-layout-widget:has(.ag-studio-layout-widget-content :focus-visible) .ag-studio-layout-widget-header::after {
-  content: "Esc back to panels";
+  content: "↑ ↓ move · Esc back to panels";
 }
 
 .insights-report .ag-studio-layout-widget-overlay-resize,
-.insights-report .ag-studio-widget-toolbar:not(:has(button)) {
+.insights-report .ag-studio-widget-toolbar:not(:has(button)),
+.insights-report .ag-charts-toolbar:empty {
   display: none;
+}
+
+/*
+ * A panel's downloads (the grid's CSV, a chart's image) sit inside its card on the title's line, named in words: Studio
+ * draws them as unlabelled icons floating above the card, where they read as belonging to the panel before. While a
+ * panel with downloads has the keyboard, its key chip moves down to the exhibit label's line.
+ */
+.insights-report .ag-studio-widget-toolbar:is(.ag-studio-widget-toolbar-outside-top, .ag-studio-widget-toolbar-inside-top) {
+  top: 16px;
+  right: 24px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.insights-report .ag-studio-widget-toolbar-button {
+  padding: 0 8px;
+  color: var(--muted);
+  font: 400 12px/22px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.insights-report .ag-studio-widget-toolbar-button + .ag-studio-widget-toolbar-button {
+  box-shadow: inset 1px 0 0 var(--line);
+}
+
+.insights-report .ag-studio-widget-toolbar-button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.insights-report .ag-studio-widget-toolbar-button .ag-icon {
+  display: none;
+}
+
+.insights-report .ag-studio-widget-toolbar-button::after {
+  content: attr(aria-label);
+}
+
+.insights-report .ag-studio-layout-widget:has(.ag-studio-widget-toolbar-active > .ag-studio-widget-toolbar-items > button) .ag-studio-layout-widget-header::after {
+  top: 26px;
 }
 
 .insights-report :is(.ag-studio-layout-widget-title, .ag-studio-layout-widget-subtitle, .ag-studio-layout-widget-caption) {

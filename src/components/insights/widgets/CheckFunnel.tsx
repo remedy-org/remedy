@@ -5,6 +5,7 @@ import type { AgWidgetParams } from "ag-studio";
 import type { MouseEvent } from "react";
 import { funnel, KIND_LABEL, type StopKind } from "../funnel";
 import type { CheckFunnelDef } from "./defs";
+import { moveBetweenItems } from "./listKeys";
 import { num, useRows } from "./useRows";
 
 // Custom widget 2: how far claims got, stage by stage. Each drop is split into the claims refused there (red) and the
@@ -39,7 +40,7 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
   };
 
   return (
-    <ol className="flex h-full min-h-0 flex-col justify-between gap-0.5 px-1.5 pb-1" onClick={() => widgetApi.resetCrossFilter()}>
+    <ol className="flex h-full min-h-0 flex-col justify-between gap-0.5 px-1.5 pb-1" onClick={() => widgetApi.resetCrossFilter()} onKeyDown={moveBetweenItems}>
       {steps.map((s, i) => {
         const last = i === steps.length - 1;
         return (
@@ -65,7 +66,8 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
                   "disabled:cursor-default enabled:hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
                   selected.has(s.stage) ? "bg-accent-soft ring-1 ring-accent" : "",
                 )}
-                title={s.stopped ? `Filter the page to the ${s.stopped} that stopped here` : undefined}
+                // The reasons in full (a long one wraps to two lines here), then what a click does.
+                title={s.stopped ? [...s.groups.map((g) => `${g.count} ${KIND_LABEL[g.kind]}: ${g.summary}`), `Filter the page to these ${s.stopped}`].join("\n") : undefined}
               >
                 <span aria-hidden="true" className="self-start font-mono text-faint">↳</span>
                 {s.stopped ? (
@@ -74,7 +76,7 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
                       <span key={g.kind} className="flex min-w-0 items-baseline gap-2">
                         <span className={clsx("shrink-0 font-mono tabular-nums", TONE[g.kind])}>−{g.count}</span>
                         <span className={clsx("shrink-0", TONE[g.kind])}>{KIND_LABEL[g.kind]}</span>
-                        <span className="truncate text-muted group-enabled:group-hover:text-text">{g.summary}</span>
+                        <span className="line-clamp-2 text-muted group-enabled:group-hover:text-text">{g.summary}</span>
                       </span>
                     ))}
                   </span>
