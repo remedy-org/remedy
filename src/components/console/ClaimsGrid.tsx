@@ -120,13 +120,13 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       const node = grid?.getRowNode(id);
       if (!grid || node?.rowIndex == null) return;
       grid.ensureIndexVisible(node.rowIndex);
-      grid.setFocusedCell(node.rowIndex, cards ? "id" : "createdAt");
+      grid.setFocusedCell(node.rowIndex, "createdAt");
     },
     focusFirst() {
       const grid = api.current;
       if (!grid?.getDisplayedRowCount()) return;
       grid.ensureIndexVisible(0);
-      grid.setFocusedCell(0, cards ? "id" : "createdAt");
+      grid.setFocusedCell(0, "createdAt");
     },
     focusedRowId() {
       const cell = api.current?.getFocusedCell();
@@ -298,14 +298,16 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
             suppressRowHoverHighlight={still}
             // The homepage's still is a picture: no cell or header takes focus. In both, Tab leaves the grid in one step
             // (to the evidence panel and the footer); the arrow keys move between cells.
+            // Card rows have no header (0px tall): it must never be a tab stop. A full-width row is focused through its
+            // first column, the claim's, which every layout keeps.
             suppressCellFocus={still}
-            suppressHeaderFocus={still}
+            suppressHeaderFocus={still || cards}
             tabToNextCell={() => false}
             focusGridInnerElement={(p) => {
               if (still || !p.api.getDisplayedRowCount()) return false;
               const row = (openRef.current ? p.api.getRowNode(openRef.current)?.rowIndex : null) ?? 0;
               p.api.ensureIndexVisible(row);
-              p.api.setFocusedCell(row, cards ? "id" : "createdAt");
+              p.api.setFocusedCell(row, "createdAt");
               return true;
             }}
             overlayNoRowsTemplate="<span></span>"

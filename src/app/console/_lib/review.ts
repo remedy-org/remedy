@@ -57,7 +57,13 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
   const others = othersFor(claim, await store.listClaims());
   const conflicts = sendCheck({ claim: { ...claim, decision: "pending" }, others });
   if (conflicts.length) {
-    await store.updateClaim(claim.id, (c) => (c.decision === "held" ? append(c, now, "approve_refused", `Not paid on review: ${conflicts.map((r) => r.text).join("; ")}`) : null));
+    // The conflicts join the claim's reasons as holds, as the pipeline's own sendCheck does, so the queue and the
+    // pre-checks show what stopped the payout. Appended: the reason it was first held still leads (decidingReason).
+    await store.updateClaim(claim.id, (c) => {
+      if (c.decision !== "held") return null;
+      const fresh = conflicts.filter((r) => !c.reasons.some((o) => o.check === r.check && o.text === r.text));
+      return append({ ...c, reasons: [...c.reasons, ...fresh] }, now, "approve_refused", `Not paid on review: ${conflicts.map((r) => r.text).join("; ")}`);
+    });
     return { ok: false, status: 409, code: "send_check", message: "Remedy didn't send the payout: a check failed when it looked again.", reasons: conflicts };
   }
 

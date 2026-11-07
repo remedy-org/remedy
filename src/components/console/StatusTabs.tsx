@@ -14,13 +14,14 @@ export const TABS: { id: Tab; label: string }[] = [
   { id: "pending", label: "In progress" },
 ];
 
-/** AG Grid demo style status tabs: a word and its count, the current one underlined. Arrow keys move between them. */
+/** AG Grid demo style status tabs: a word and its count, the current one underlined. Arrow keys, Home and End move between them. */
 export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; counts: Record<Tab, number>; onChange: (t: Tab) => void; controls: string }) {
+  // ← and → move between the tabs, Home and End to the first and last (the ARIA tabs pattern).
   const move = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (!step) return;
+    const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[e.key];
+    if (to === undefined) return;
     e.preventDefault();
-    const next = TABS[(i + step + TABS.length) % TABS.length];
+    const next = TABS[(to + TABS.length) % TABS.length];
     onChange(next.id);
     document.getElementById(`tab-${next.id}`)?.focus();
   };

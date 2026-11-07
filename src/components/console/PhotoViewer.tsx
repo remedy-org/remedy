@@ -12,6 +12,8 @@ export interface PhotoViewerProps {
   /** The photo that was clicked (0-based). */
   start: number;
   sample: boolean;
+  /** The one-time code the tag must read: on top, beside the photos it is checked against. */
+  code?: string;
   /** What decided a held or refused claim, as the panel's callout says it: the question to look at the photos with. */
   question?: { lead: string; text: string } | null;
   /** Held: approve or reject from here. The viewer closes and the panel's footer opens the same confirm. */
@@ -24,7 +26,7 @@ export interface PhotoViewerProps {
  * question that held it on top. ← and → move between the photos, Esc goes back to the panel (the dialog returns focus
  * to the thumbnail that opened it). On a phone it shows one photo at a time.
  */
-export function PhotoViewer({ claimId, photos, start, sample, question, onReview, onClose }: PhotoViewerProps) {
+export function PhotoViewer({ claimId, photos, start, sample, code, question, onReview, onClose }: PhotoViewerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const figures = useRef<(HTMLElement | null)[]>([]);
   const [current, setCurrent] = useState(start);
@@ -76,6 +78,11 @@ export function PhotoViewer({ claimId, photos, start, sample, question, onReview
             </p>
           )}
         </div>
+        {code && (
+          <p className="flex shrink-0 items-baseline gap-2 self-center text-ui text-muted">
+            Tag must read <span className="font-mono text-head-sm font-medium tracking-wide text-text">{code}</span>
+          </p>
+        )}
         <button
           type="button"
           onClick={() => ref.current?.close()}

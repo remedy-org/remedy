@@ -6,8 +6,9 @@
   letter-spacing: 0.06em;
 }
 
-/* The open claim: a 2px amber edge on the left, like the edge of an evidence tag. */
-.claims-grid .ag-row.ag-row-selected::before {
+/* The open claim, and the row the keyboard is on: a 2px amber edge on the left, like the edge of an evidence tag. */
+.claims-grid .ag-row.ag-row-selected::before,
+.claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible)::before {
   content: "";
   position: absolute;
   inset-block: 0;
@@ -20,6 +21,18 @@
 /* A clicked cell takes focus (so the arrow keys work next) but only the keyboard shows the ring: the open row's amber
    edge already marks a click. */
 .claims-grid .ag-cell-focus:not(:focus-visible) {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* The keyboard marks the whole row, not the one cell it sits on: the open row's tint across every cell (pinned ones
+   included, which paint their own background), with the amber edge above, in place of the cell's ring. */
+.claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible) .ag-cell {
+  background-image: linear-gradient(var(--accent-soft), var(--accent-soft));
+}
+
+.claims-grid .ag-row.ag-row-focus .ag-cell.ag-cell-focus:focus-visible {
   border-color: transparent !important;
   box-shadow: none !important;
   outline: none !important;

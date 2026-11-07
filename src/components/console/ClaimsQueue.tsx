@@ -144,6 +144,46 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
     setOpen(id);
   }, []);
 
+  // A tab that doesn't list the open claim closes its panel: the evidence beside a list must be one of its rows.
+  const changeTab = useCallback(
+    (t: Tab) => {
+      setTab(t);
+      const row = open ? rows.find((r) => r.id === open) : null;
+      if (row && t !== "all" && row.decision !== t) {
+        setOpen(null);
+        setIntent(null);
+      }
+    },
+    [open, rows],
+  );
+
+  // A claim the panel links to (the claim a repost copied): its row, in the list that shows it.
+  const goTo = useCallback(
+    (id: string) => {
+      if (!found.some((r) => r.id === id)) {
+        setTab("all");
+        setSearch("");
+      }
+      openClaim(id);
+      // Beside the docked panel the row takes focus, so ↑, ↓, A and R go on from there; the sheet keeps it.
+      if (wide) requestAnimationFrame(() => grid.current?.focusRow(id));
+    },
+    [found, openClaim, wide],
+  );
+
+  // After a person pays or rejects a held claim, the next held claim in the list as it stood: the panel offers it, so
+  // working the queue never means hunting for the next row.
+  const [next, setNext] = useState<{ after: string; id: string | null } | null>(null);
+  const decided = useCallback(
+    (id: string) => {
+      const held = found.filter((r) => r.decision === "held" || r.id === id);
+      const i = held.findIndex((r) => r.id === id);
+      setNext({ after: id, id: (held[i + 1] ?? held[i - 1])?.id ?? null });
+    },
+    [found],
+  );
+  const nextHeld = next && next.after === open ? next.id : undefined;
+
   // The tab, search and open claim live in the URL (replaceState: no navigation, no server render), so a reload or a
   // shared link comes back to the same view.
   useEffect(() => {
@@ -175,9 +215,10 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
         e.preventDefault();
         searchBox.current?.focus();
       } else if (/^[1-6]$/.test(e.key)) {
-        setTab(TABS[Number(e.key) - 1].id);
-      } else if ((e.key === "ArrowDown" || e.key === "j") && fill && outsideList(e.target)) {
-        // Into the list from anywhere on the page: the open claim's row, else the first.
+        changeTab(TABS[Number(e.key) - 1].id);
+      } else if ((e.key === "j" || (e.key === "ArrowDown" && fill)) && outsideList(e.target)) {
+        // Into the list from anywhere on the page: the open claim's row, else the first. Below 1024px the page scrolls,
+        // so ↓ keeps scrolling it there, and j (or Tab) goes into the list.
         e.preventDefault();
         if (open) grid.current?.focusRow(open);
         else grid.current?.focusFirst();
@@ -206,7 +247,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, wide, fill, close, openClaim, rows, help]);
+  }, [open, wide, fill, close, openClaim, changeTab, rows, help]);
 
   const samples = ledger.samples;
   const demos = ledger.demos;
@@ -226,7 +267,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="mt-1 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-line">
-            <StatusTabs value={tab} counts={counts} onChange={setTab} controls="claims-panel" />
+            <StatusTabs value={tab} counts={counts} onChange={changeTab} controls="claims-panel" />
             <div className="relative mb-1.5 flex w-full items-center sm:w-64">
               <label className="w-full">
                 <span className="sr-only">Search claims by id, code, PayPal account or reason</span>
@@ -236,10 +277,12 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Escape") {
-                      setSearch("");
-                      e.currentTarget.blur();
-                    }
+                    // Esc clears the box and stays in it; on an empty box it goes on into the list.
+                    if (e.key !== "Escape") return;
+                    e.preventDefault();
+                    if (search) setSearch("");
+                    else if (open) grid.current?.focusRow(open);
+                    else grid.current?.focusFirst();
                   }}
                   placeholder="Search claims, codes…"
                   className="h-9 w-full rounded-control border border-line bg-surface pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0 [&::-webkit-search-cancel-button]:appearance-none"
@@ -366,11 +409,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
 
         {wide && open && (
           <div className="flex min-h-0 w-[440px] shrink-0 pt-2">
-            <EvidencePanel claimId={open} version={openRow?.version} onClose={close} intent={intent} />
+            <EvidencePanel claimId={open} version={openRow?.version} onClose={close} intent={intent} onOpen={goTo} onDecided={decided} nextHeld={nextHeld} />
           </div>
         )}
       </div>
-      {!wide && open && <EvidenceDrawer claimId={open} version={openRow?.version} onClose={() => setOpen(null)} />}
+      {!wide && open && <EvidenceDrawer claimId={open} version={openRow?.version} onClose={close} onOpen={goTo} onDecided={decided} nextHeld={nextHeld} />}
 
       {help && <ShortcutSheet onClose={() => setHelp(false)} />}
     </section>
@@ -418,10 +461,10 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
 const SHORTCUTS: [string[], string][] = [
   [["/"], "Search claims"],
   [["1", "6"], "Switch status tab"],
-  [["↑", "↓"], "Move between claims; the panel follows. ↓ from anywhere starts the list"],
+  [["↑", "↓"], "Move between claims; the panel follows. ↓ or j from anywhere starts the list"],
   [["Enter"], "Open a claim's evidence"],
   [["Esc"], "Close the evidence"],
-  [["A"], "Approve the open or focused held claim (pay takes a second press)"],
+  [["A"], "Approve the open or focused held claim; A again, or Enter on Pay, pays"],
   [["R"], "Reject the open or focused held claim"],
 ];
 
@@ -442,7 +485,12 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
         <h2 id="shortcuts-title" className="text-ui font-medium">
           Keyboard
         </h2>
-        <button type="button" onClick={() => ref.current?.close()} className="rounded-control px-2 py-1 font-mono text-micro text-faint hover:text-text">
+        <button
+          type="button"
+          onClick={() => ref.current?.close()}
+          aria-label="Close shortcuts (Esc)"
+          className="rounded-control px-2 py-1 font-mono text-micro text-faint hover:text-text"
+        >
           Esc
         </button>
       </div>

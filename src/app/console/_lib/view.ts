@@ -152,11 +152,21 @@ function timelineOf(c: Pick<ClaimSummary, "decision" | "times" | "seeded">): Row
   };
 }
 
+// A held claim a person approved, where the checks run again before the payout found a conflict (review.ts): the claim
+// keeps the reason it was held for, and the conflict is the newest thing about it, so the grid leads with it.
+const REFUSED_NOTE: Record<string, string> = {
+  payer: "Not paid on review: this account has another claim",
+  duplicate_photo: "Not paid on review: a photo is in another claim",
+  payer_verified: "Not paid on review: account not verified",
+};
+
 /** The verdict column's muted line: the reason, or that a paid claim passed every check (the bars beside it count them). */
-function noteOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes">, bars: CheckBar[] | null, recall: Pick<Recall, "autoPay">): string | null {
+function noteOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes" | "checks">, bars: CheckBar[] | null, recall: Pick<Recall, "autoPay">): string | null {
   if (c.decision === "paid" && !c.reason) {
     return bars?.some((b) => b.state === "pass") ? "All checks passed" : null;
   }
+  const refused = c.decision === "held" && c.reason && !(c.reason.check in REFUSED_NOTE) ? c.checks?.find((r) => r.outcome === "hold" && r.check in REFUSED_NOTE) : undefined;
+  if (refused) return REFUSED_NOTE[refused.check];
   return reasonOf(c, recall);
 }
 
@@ -425,15 +435,16 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
       : // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the
         // same sample photo once: say that, next to the other rounds' claims with the same photo and code.
         c.demo
-        ? row("duplicate_photo", "Photo not seen before", "No other claim in this demo round used these photos. Each judge's round is checked on its own, so other rounds' claims can share the sample photo")
+        ? row("duplicate_photo", "Photo not seen before", "No other claim in this demo round used these photos; other judges' rounds reuse the same samples")
         : row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
-    // In the demo only the genuine sample is held to one claim, within its round (pipeline.ts receivePhotos).
+    // In the demo only the genuine sample is held to one claim, within its round (pipeline.ts receivePhotos). A person's
+    // approve checks every sample (review.ts), and a conflict it found shows here.
     !c.demo
       ? row("payer", "One claim per account", "No other paid or open claim for this recall from this PayPal account")
-      : oneClaimChecked(c)
+      : oneClaimChecked(c) || failed("payer")
         ? row("payer", "One claim per account", "Checked within this demo round: no other paid or open genuine claim from this PayPal account")
         : ran
-          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "Not checked for this demo sample, so it can show its own check" }
+          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "Skipped for demo samples: one judge's account sends all four, so this check would stop the rest" }
           : row("payer", "One claim per account", ""),
     row("payer_verified", "Verified PayPal account", "PayPal says the account is verified"),
   ];

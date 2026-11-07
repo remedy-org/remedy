@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { company, fail, isResponse } from "@/app/console/_lib/api";
-import { toDrawerClaim } from "@/app/console/_lib/drawer";
+import { duplicateFor, toDrawerClaim } from "@/app/console/_lib/drawer";
 import { sealedPhotoUrl } from "@/app/console/_lib/photoToken";
 import { claimAtVersion } from "@/app/console/_lib/photos";
 import { canSee, canSeeClaim, loadClaimFor } from "@/app/console/_lib/workspace";
@@ -34,5 +34,12 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/
   if (!found) return fail(404, "No claim with that id in this workspace.");
   const view = toDrawerClaim(found.claim, found.recall);
   view.photos = found.claim.photos.map((p, n) => sealedPhotoUrl(found.claim.id, n, p.key, session.payerId));
+  // A blocked repost shows the earlier claim's matching photo beside its own: one index read, for these claims only.
+  if (view.decision === "blocked" && found.claim.reasons.some((r) => r.check === "duplicate_photo")) {
+    const rows = await found.store.listClaims();
+    const dup = duplicateFor(found.claim, rows);
+    const key = dup && rows.find((r) => r.id === dup.id)?.photoKeys?.[dup.theirs - 1];
+    view.duplicate = dup && { ...dup, src: key ? sealedPhotoUrl(dup.id, dup.theirs - 1, key, session.payerId) : null };
+  }
   return NextResponse.json(view, { headers: { "Cache-Control": "private, no-store" } });
 }

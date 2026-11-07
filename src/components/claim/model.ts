@@ -84,7 +84,7 @@ export function checkRows(claim: ClaimLike, spec: CheckSpec): CheckRow[] {
     if (claim.demo && p.id === "account") {
       return oneClaimChecked(claim)
         ? { id: p.id, group: "pre", label: p.label, state: "pass", detail: "A verified PayPal account. Checked within this demo round: no other paid or open genuine claim" }
-        : { id: p.id, group: "pre", label: p.label, state: "skipped", detail: "A verified PayPal account. One claim per account isn't checked for this sample, so it can show its own check" };
+        : { id: p.id, group: "pre", label: p.label, state: "skipped", detail: "A verified PayPal account. One claim per account is skipped for demo samples: one judge's account sends all four, so this check would stop the rest" };
     }
     return { id: p.id, group: "pre", label: p.label, state: "pass", detail: claim.demo && p.id === "session" ? "Sent inside this claim's 10-minute session" : p.pass };
   });

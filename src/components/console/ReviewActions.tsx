@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import clsx from "clsx";
 import { AlertIcon, Button, ErrorState, Field, Textarea } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
@@ -12,9 +13,13 @@ type Mode = "idle" | "approve" | "reject";
 // The reject route's own minimum (reject/route.ts), checked here first so an empty reason never sends a request.
 const REASON_MIN = 8;
 const REASON_SHORT = "Say why in a few words, so the owner knows what to fix";
-// The confirm's Pay ignores presses this soon after it appears: the second click of a double-click on Approve, or a
-// Space or Enter that was meant as text, lands where Approve was and must not pay.
-const ARM_MS = 500;
+// One-click reasons for the common refusals, in the words the owner reads; the reviewer can edit them.
+const QUICK: { label: string; text: (code: string) => string }[] = [
+  { label: "Wrong code", text: (code) => `The tag in the photo doesn't read ${code}, this claim's code.` },
+  { label: "No tag", text: (code) => `The tag with the code ${code} isn't in the photo.` },
+  { label: "Not destroyed", text: () => "The photos don't show the product destroyed as the recall asks." },
+  { label: "Wrong product", text: () => "The photos don't show the recalled product." },
+];
 
 export interface ReviewIntent {
   mode: "approve" | "reject";
@@ -24,28 +29,35 @@ export interface ReviewIntent {
 
 type PayoutFailure = { at: string; detail: string };
 
+const typingIn = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
+
 /** A held claim whose last payout attempt PayPal refused: when, and PayPal's answer. The panel keeps saying so (and
  * offers to try again) until a payout goes through; the claim's history keeps it after. */
 export function payoutFailure(claim: Pick<DrawerClaim, "decision" | "events">): PayoutFailure | null {
   if (claim.decision !== "held") return null;
   const last = [...claim.events].reverse().find((e) => e.type === "payout_failed" || e.type === "payout_sent");
   if (last?.type !== "payout_failed") return null;
-  return { at: last.at, detail: last.detail.replace(/^PayPal didn't take the payout:\s*/, "") };
+  // PayPal's own answer: kept apart from the plain line by the drawer (drawer.ts), or after it on older views.
+  const raw = last.raw ?? last.detail.replace(/^PayPal didn't take the payout[:;]\s*/, "");
+  return { at: last.at, detail: raw.startsWith("nothing was paid") ? "" : raw };
 }
 
 /**
- * Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit click. A seeded claim's
- * review is a sample: the server says what it would have done, and the claim stays held. The keyboard's A and R
- * (intent) open the same confirm or form as the buttons and move focus into it; paying still takes a second press. While
- * the confirm or form is open (data-review-open), the queue's A and R do nothing.
+ * Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit press: Pay, or A again.
+ * A seeded claim's review is a sample: the server says what it would have done, and the claim stays held. The
+ * keyboard's A and R (intent) open the same confirm or form as the buttons and move focus into it. While the confirm or
+ * form is open (data-review-open), the queue's A and R do nothing; the confirm takes A itself. onMode tells the panel
+ * which form opened (the reject form brings the photos into view).
  */
 export function ReviewActions({
   claim,
   onDone,
   onFailed,
   intent,
+  onMode,
 }: {
   claim: DrawerClaim;
+  onMode?: (mode: Mode) => void;
   onDone: (c: DrawerClaim) => void;
   // A refused approve still writes the claim's history (payout_failed, approve_refused): the panel reloads it.
   onFailed?: () => void;
@@ -62,11 +74,12 @@ export function ReviewActions({
   // PayPal refused the payout just now: shown at once, as the reloaded claim will show it (payoutFailure), not as a
   // second design of the same message.
   const [refused, setRefused] = useState<PayoutFailure | null>(null);
+  // A press on Pay that didn't send: the second click of a double-click on Approve. Said, never silent.
+  const [dropped, setDropped] = useState(false);
   const form = useRef<HTMLFormElement>(null);
-  const armedAt = useRef(0);
   useEffect(() => {
-    if (mode === "approve") armedAt.current = Date.now();
-  }, [mode]);
+    onMode?.(mode);
+  }, [mode, onMode]);
   // A reason the route or the check below refused: focus goes back into the reason, never to the page, where the next
   // letter typed would be a shortcut.
   const reasonError = error?.fields?.reason;
@@ -79,8 +92,15 @@ export function ReviewActions({
     if (intent && !busy) {
       setSample(null);
       setError(null);
+      setDropped(false);
       setMode(intent.mode);
     }
+  }
+  // The reloaded claim now says why the approve was refused (the panel's top box): the alert said it first, once.
+  const [seenRefusal, setSeenRefusal] = useState(claim.refused?.at);
+  if (claim.refused?.at !== seenRefusal) {
+    setSeenRefusal(claim.refused?.at);
+    if (claim.refused) setError(null);
   }
   const review = claim.review;
   if (!review) return null;
@@ -97,7 +117,15 @@ export function ReviewActions({
         setRefused({ at: new Date().toISOString(), detail: "" });
         setBack("approve");
         setMode("idle");
-      } else setError(result.error);
+      } else {
+        setError(result.error);
+        // The checks run again stopped the payout (or the claim was decided elsewhere): back to the buttons, where the
+        // panel's reload says why, with Reject in reach.
+        if (result.status === 409 && mode === "approve") {
+          setBack("reject");
+          setMode("idle");
+        }
+      }
       return onFailed?.();
     }
     setRefused(null);
@@ -107,15 +135,24 @@ export function ReviewActions({
   };
 
   const base = `/api/console/claims/${claim.id}`;
+  // The second click of a double-click on Approve lands where Approve was: it doesn't pay, and the confirm says so. A
+  // press from the keyboard (detail 0) always pays; a held key's repeats never reach it (payKeys).
   const pay = (e: MouseEvent) => {
-    if (e.detail > 1 || Date.now() - armedAt.current < ARM_MS) return;
+    if (e.detail > 1) return setDropped(true);
     run(`${base}/approve`);
+  };
+  const payKeys = (e: KeyboardEvent) => {
+    if (e.repeat && (e.key === "Enter" || e.key === " ")) e.preventDefault();
   };
   const reset = () => {
     if (mode !== "idle") setBack(mode);
     setMode("idle");
     setError(null);
+    setDropped(false);
   };
+  // The checks run again on approve stopped the payout, and nothing was approved since: approving again meets the same
+  // conflict, so Reject leads.
+  const stuck = Boolean(claim.refused) && !failure;
 
   return (
     <div
@@ -127,6 +164,11 @@ export function ReviewActions({
           e.preventDefault();
           e.stopPropagation();
           reset();
+        }
+        // A again pays, as the shortcuts say (A opened this confirm); a held A's repeats don't.
+        if ((e.key === "a" || e.key === "A") && mode === "approve" && !busy && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !typingIn(e.target)) {
+          e.preventDefault();
+          run(`${base}/approve`);
         }
       }}
     >
@@ -141,7 +183,8 @@ export function ReviewActions({
               <span className="micro mr-2 text-text-2">Sample result</span>
               {sample}
             </p>
-          ) : failure && !error ? (
+          ) : failure && !error && !payoutFailure(claim) ? (
+            // Just now, before the panel reloads the claim; after it, the panel's top box says it (EvidenceDrawer).
             <div className="flex gap-3 rounded-card border border-line bg-stop-soft px-4 py-3">
               <AlertIcon className="mt-0.5 shrink-0 text-stop" />
               <div className="min-w-0 text-ui text-muted">
@@ -149,15 +192,29 @@ export function ReviewActions({
                   PayPal didn&apos;t take the payout at <span className="font-mono">{formatClock(failure.at)}</span> UTC
                 </p>
                 <p className="mt-1">Nothing was paid and the claim is still held. Try again, or reject it.</p>
-                {failure.detail && <p className="mt-1.5 font-mono text-micro break-words text-faint">PayPal: {failure.detail}</p>}
               </div>
             </div>
+          ) : failure?.detail && !error ? (
+            <details className="text-micro text-faint">
+              <summary className="cursor-pointer hover:text-muted">PayPal&apos;s answer at {formatClock(failure.at)} UTC</summary>
+              <p className="mt-1 font-mono break-words">{failure.detail}</p>
+            </details>
           ) : null}
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => (setSample(null), setMode("approve"))} autoFocus={back === "approve"} className="flex-1 sm:flex-none">
-              {review.sample ? "Approve" : `${failure ? "Try again: pay" : "Approve and pay"} ${claim.amount}${claim.sandbox ? " sandbox" : ""}`}
+            <Button
+              variant={stuck ? "secondary" : "primary"}
+              onClick={() => (setSample(null), setMode("approve"))}
+              autoFocus={back === "approve"}
+              className="flex-1 sm:flex-none"
+            >
+              {review.sample ? "Approve" : `${failure || stuck ? "Try again: pay" : "Approve and pay"} ${claim.amount}${claim.sandbox ? " sandbox" : ""}`}
             </Button>
-            <Button variant="secondary" onClick={() => (setSample(null), setMode("reject"))} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
+            <Button
+              variant={stuck ? "primary" : "secondary"}
+              onClick={() => (setSample(null), setMode("reject"))}
+              autoFocus={back === "reject"}
+              className="flex-1 sm:flex-none"
+            >
               Reject
             </Button>
           </div>
@@ -178,13 +235,18 @@ export function ReviewActions({
               this build{claim.sandbox ? ": sandbox money, not real" : ""}.
             </p>
           )}
-          <div className="flex flex-wrap gap-3">
+          {dropped && (
+            <p role="status" className="text-ui text-text-2">
+              Not paid yet: that was the second click of a double-click. Press Pay once to send it.
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-3">
             {review.sample ? (
-              <Button onClick={pay} pending={busy} pendingLabel="Approving the sample" autoFocus className="flex-1 sm:flex-none">
+              <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Approving the sample" autoFocus className="flex-1 sm:flex-none">
                 Approve the sample
               </Button>
             ) : (
-              <Button onClick={pay} pending={busy} pendingLabel="Paying through PayPal" autoFocus className="flex-1 sm:flex-none">
+              <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Paying through PayPal" autoFocus className="flex-1 sm:flex-none">
                 Pay {claim.amount}
                 {claim.sandbox ? " sandbox" : ""}
               </Button>
@@ -213,11 +275,38 @@ export function ReviewActions({
         >
           <Field
             label="Why it's rejected"
-            help="The owner sees this. Say what to fix, for example: the code isn't on the cut pillow."
+            hint={
+              <>
+                Tag must read <span className="font-mono font-medium text-text">{claim.code}</span>
+              </>
+            }
+            help="The owner sees this on their claim page."
             error={error?.fields?.reason}
           >
-            {(f) => <Textarea {...f} rows={3} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={REASON_MIN} />}
+            {(f) => <Textarea {...f} rows={2} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={REASON_MIN} />}
           </Field>
+          <div className="-mt-1 flex flex-wrap gap-1.5" role="group" aria-label="Quick reasons">
+            {QUICK.map((q) => {
+              const text = q.text(claim.code);
+              return (
+                <button
+                  key={q.label}
+                  type="button"
+                  aria-pressed={reason === text}
+                  onClick={() => {
+                    setReason(text);
+                    setError(null);
+                  }}
+                  className={clsx(
+                    "inline-flex h-8 items-center rounded-control px-2 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] hover:bg-surface-3 hover:text-text",
+                    reason === text ? "bg-surface-3 text-text" : "bg-surface-2 text-muted",
+                  )}
+                >
+                  {q.label}
+                </button>
+              );
+            })}
+          </div>
           <div className="flex flex-wrap gap-3">
             <Button type="submit" variant="secondary" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
               {review.sample ? "Reject the sample" : "Reject claim"}

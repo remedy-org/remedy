@@ -126,6 +126,13 @@ describe("approveClaim", () => {
     const saved = await store.getClaim("RM-0412");
     expect(saved?.decision).toBe("held");
     expect(saved?.events.at(-1)?.type).toBe("approve_refused");
+    // The conflict is recorded as a hold after the reason it was first held for, which still leads; a second refused
+    // approve doesn't add it twice.
+    const payer = { check: "payer", outcome: "hold", text: "This PayPal account already has a claim for this recall (RM-0001)" };
+    expect(saved?.reasons.at(-1)).toEqual(payer);
+    expect(saved?.reasons[0]).toEqual(claim.reasons[0]);
+    await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
+    expect((await store.getClaim("RM-0412"))?.reasons.filter((r) => r.check === "payer")).toHaveLength(1);
   });
 
   it("ignores seeded claims in the re-check", async () => {

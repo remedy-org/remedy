@@ -59,8 +59,8 @@ export function buildReport(claims: ClaimSummary[], recall: Recall, { sandbox = 
   const paidNote = `Refund sent through PayPal${sandbox ? " sandbox" : ""}; the unit is destroyed${samples.length ? ". Sample claims were decided, never sent" : ""}`;
   const rows: [Decision, string, number, string][] = [
     ["paid", "Paid", stats.remedied, paidNote],
-    ["held", "Held for review", stats.held, "An answer was unclear, or auto-pay was off"],
-    ["rejected", "Rejected", stats.rejected, "A photo check failed"],
+    ["held", "Held for review", stats.held, "An answer was unclear, a check couldn't run, PayPal didn't take the payout, or auto-pay was off"],
+    ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
     ["pending", "In progress", stats.pending, "Code issued; photos not yet checked"],
   ];

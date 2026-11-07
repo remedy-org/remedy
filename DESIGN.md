@@ -158,15 +158,15 @@ Colours are OKLCH tokens in `src/app/globals.css`, exposed to Tailwind through `
 **Theme toggle:** a 36px icon button with a 44px hit area and an `aria-label`; the glyph is a half-lit disc that turns over with the theme. It stores "dark" or "light", so a choice outlasts the system preference. The homepage nav has one too.
 
 **Evidence panel** (the console's; one component, `EvidencePanel` in `EvidenceDrawer.tsx`):
-1. the photos, numbered Photo 1, 2, 3 as the camera's slots are, uncropped, which open in the photo viewer (every photo side by side at full size, the claim id and what held it on top, ← → between photos, Esc back, approve and reject in reach);
+1. the photos, numbered Photo 1, 2, 3 as the camera's slots are, uncropped, which open in the photo viewer (every photo side by side at full size, the claim id and what held it on top, ← → between photos, Esc back, approve and reject in reach); on a held claim "Tag must read K7P" in mono sits beside them and in the viewer's header; a blocked repost shows its photo beside the earlier claim's, whose id opens that row;
 2. each check with its outcome icon, the model's quoted evidence in mono, and the pre-checks;
 3. the rule's decision in one sentence;
-4. actions (Approve needs a second click to pay; A and R open the same confirm).
+4. actions (Approve needs a second press to pay: Pay, or A again; A and R open the same confirm; reject offers one-click reasons). The box on top always names the current blocker (PayPal not taking the payout, a conflict the checks found on approve, a reviewer's quoted reason). After a decision the footer says it was saved and offers the next held claim.
 
 It docks 440px wide beside the grid from 1280px, opens as a sheet over the grid from 1024px, and fills the screen on phones. Esc closes it and returns focus to the row; moving through the grid's rows with ↑ and ↓ moves it with them.
 
 **AG Grid:**
-- Theming API (`themeQuartz.withParams`) mapped to the tokens above: the window body `--surface`, the header `--surface-2` in 12px mono, the open row `--surface` + `--accent-soft` with a 2px amber edge.
+- Theming API (`themeQuartz.withParams`) mapped to the tokens above: the window body `--surface`, the header `--surface-2` in 12px mono, the open row `--surface` + `--accent-soft` with a 2px amber edge. The keyboard's row gets the same tint and edge across the row (never a ring on one cell); a card row gets the amber ring.
 - Header 36px, rows 52px (two-line cells), font `ui` and mono for IDs and amounts.
 - Evidence cells: photo thumbnails, the decision pill with its reason, an evidence barcode (one bar per check: pre-checks, then the model's), payout status, and a timeline chip.
 - No zebra stripes; hairline row borders.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sampleClaim, sampleRecall } from "@/lib/__fixtures__/claim";
 import { summarize } from "@/lib/store/store";
 import type { Reason } from "@/lib/types";
-import { toDrawerClaim } from "./drawer";
+import { duplicateFor, toDrawerClaim } from "./drawer";
 import { PublishInput, RefundValue, slugify, summarizeCpsc, uniqueSlug } from "./recalls";
 import { buildReport } from "./report";
 import { companyReasonText, decisionSentence, formatCents, maskPayer, percent, preChecksOf, reasonOf, statsOf, toRow } from "./view";
@@ -135,6 +135,59 @@ describe("console view", () => {
     expect(summarize(sampleClaim({ decision: "rejected", events }))).not.toHaveProperty("payoutFailedAt");
   });
 
+  it("shows what the checks found when a person's approve was refused, without changing why it was held", () => {
+    const model: Reason = { check: "model", outcome: "hold", text: "The photo check didn't answer, so a person will look at your photos instead" };
+    const conflict = "This PayPal account already has a claim for this recall (RM-3497)";
+    const demo = { demo: true, events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: "wrong-code" }] };
+    const refused = { at: "2026-11-07T10:05:00.000Z", type: "approve_refused", detail: `Not paid on review: ${conflict}` };
+    // As review.ts saves it now: the conflict a hold after the reason it was held for.
+    const claim = sampleClaim({ decision: "held", ...demo, reasons: [model, { check: "payer", outcome: "hold", text: conflict }], events: [...demo.events, refused] });
+    const row = toRow(summarize(claim), recall);
+    expect(summarize(claim).reason?.check).toBe("model");
+    expect(row.note).toBe("Not paid on review: this account has another claim");
+    expect(row.bars?.find((b) => b.id === "payer")?.state).toBe("hold");
+    const drawer = toDrawerClaim(claim, recall);
+    expect(drawer.refused).toEqual({ at: refused.at, text: conflict });
+    expect(drawer.preChecks.find((p) => p.id === "payer")).toMatchObject({ state: "hold", detail: conflict });
+    // A claim refused before the conflict was kept as a reason: the panel reads it from the refusal.
+    const older = toDrawerClaim(sampleClaim({ decision: "held", ...demo, reasons: [model], events: [...demo.events, refused] }), recall);
+    expect(older.preChecks.find((p) => p.id === "payer")).toMatchObject({ state: "hold", detail: conflict });
+    // An approve after it moves on.
+    const later = { at: "2026-11-07T10:06:00.000Z", type: "approved", detail: "Approved on review by x" };
+    expect(toDrawerClaim(sampleClaim({ decision: "held", reasons: [model], events: [refused, later] }), recall).refused).toBeNull();
+  });
+
+  it("says a person's reject with who and when, and keeps raw service answers and sample ids out of the history", () => {
+    const rejected = sampleClaim({
+      decision: "rejected",
+      reasons: [{ check: "review", outcome: "reject", text: "Rejected on review: The tag reads K7Q." }],
+      events: [
+        { at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: "wrong-code" },
+        { at: "2026-11-07T10:01:00.000Z", type: "decided", detail: "Held for a person: photo check failed (401 Incorrect API key provided: sk-****)" },
+        { at: "2026-11-07T10:02:00.000Z", type: "payout_failed", detail: "PayPal didn't take the payout: fetch failed" },
+        { at: "2026-11-07T10:03:00.000Z", type: "rejected", detail: "Rejected on review: The tag reads K7Q. (by Kikea Store)" },
+      ],
+    });
+    const d = toDrawerClaim(rejected, recall);
+    expect(d.rejected).toEqual({ at: "2026-11-07T10:03:00.000Z", by: "Kikea Store", reason: "The tag reads K7Q." });
+    expect(d.events.map((e) => e.detail)).toEqual([
+      'Filed with the judges\' sample "The wrong code"',
+      "Held for a person: the photo check service didn't answer",
+      "PayPal didn't take the payout; nothing was paid",
+      "Rejected on review: The tag reads K7Q. (by Kikea Store)",
+    ]);
+    expect(d.events.map((e) => e.raw)).toEqual([undefined, "401 Incorrect API key provided: sk-****", "fetch failed", undefined]);
+  });
+
+  it("finds a blocked repost's earlier claim on the same recall only", () => {
+    const photos = [{ key: "b/1.jpg", hash: "0123456789abcdef" }];
+    const earlier = sampleClaim({ id: "RM-0001", decision: "paid", createdAt: "2026-11-07T09:00:00.000Z", photos: [{ key: "a/1.jpg", hash: "0123456789abcdef" }] });
+    const repost = sampleClaim({ id: "RM-0002", payerId: "OTHERPAYER01", decision: "blocked", photos, reasons: [reject("duplicate_photo", "Photo 1 was already used in another claim")] });
+    expect(duplicateFor(repost, [summarize(earlier), summarize(repost)])).toEqual({ photo: 1, id: "RM-0001", theirs: 1, of: 1, src: null });
+    const elsewhere = summarize({ ...earlier, recallId: "another-recall" });
+    expect(duplicateFor(repost, [elsewhere, summarize(repost)])).toBeNull();
+  });
+
   it("says a demo claim's duplicate check covers only its own demo round", () => {
     const photos = [{ key: "a/1.jpg", hash: "0123456789abcdef" }];
     const dup = (c: Parameters<typeof sampleClaim>[0]) => preChecksOf(sampleClaim({ decision: "held", photos, ...c })).find((p) => p.id === "duplicate_photo")!;
@@ -167,7 +220,8 @@ describe("report", () => {
       sampleClaim({ decision: "blocked", reasons: [reject("code", "x")] }),
     ];
     const r = buildReport(claims.map(summarize), recall);
-    expect(r.outcomes.find((o) => o.decision === "rejected")).toMatchObject({ count: 2, share: "50%" });
+    expect(r.outcomes.find((o) => o.decision === "rejected")).toMatchObject({ count: 2, share: "50%", note: "A photo check failed, or a person rejected it on review" });
+    expect(r.outcomes.find((o) => o.decision === "held")?.note).toContain("PayPal didn't take the payout");
     expect(r.refusals).toEqual([
       { reason: "One-time code missing or wrong", count: 2 },
       { reason: "Destruction not shown", count: 1 },
