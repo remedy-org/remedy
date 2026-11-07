@@ -60,7 +60,7 @@ export function captions({ paid, samples, sampleAmount, answered }: ReturnType<t
     paid: samples ? `${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
     timeTitle: sent ? "Avg photo to PayPal" : "Avg photo check",
     timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
-    time: sent ? `Average of ${sent} sent ${sent === 1 ? "payout" : "payouts"}` : `No payouts sent yet · the model's time, ${answered} ${answered === 1 ? "claim" : "claims"}`,
+    time: sent ? `Average of ${sent} sent ${sent === 1 ? "payout" : "payouts"}` : `None sent yet · ${answered} ${answered === 1 ? "claim" : "claims"} checked`,
     timeExhibit: samples ? "EXHIBIT E · AVERAGE SECONDS · SAMPLE TIMINGS" : "EXHIBIT E · AVERAGE SECONDS, PAID CLAIMS",
   };
 }

@@ -231,12 +231,13 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
           <span className="text-muted">remedied</span>
         </div>
         <div className="col-span-2 flex items-baseline gap-2">
-          <dt className="sr-only">Paid out</dt>
+          <dt className="sr-only">Paid through PayPal</dt>
+          {/* The console ledger's words: nothing was sent; the samples' $779.74 was decided, never paid. */}
           <dd className="font-semibold">
-            <Money value={779.74} />
+            <Money value={0} />
           </dd>
           <span className="text-muted">
-            paid <span className="whitespace-nowrap text-faint">· sample</span>
+            paid <span className="whitespace-nowrap text-faint">· $779.74 sample, never sent</span>
           </span>
         </div>
         <div className="flex items-baseline gap-2">

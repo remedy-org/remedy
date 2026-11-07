@@ -35,7 +35,7 @@ export function Companies() {
           CPSC report draft
         </FrameTag>
         {/* These two hang below the frame and point up into the grid area's foot: short leaders, nothing crossed. */}
-        <FrameTag side="bottom" reach={46} style={{ left: 573, transform: "translateX(-50%)" }}>
+        <FrameTag side="bottom" reach={46} style={{ left: 612, transform: "translateX(-50%)" }}>
           PayPal Payouts batch
         </FrameTag>
         <FrameTag side="bottom" reach={46} style={{ right: 210, transform: "translateX(50%)" }}>
