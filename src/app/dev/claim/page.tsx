@@ -107,6 +107,12 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   },
   code: { group: "Code", note: "Code and session timer", render: () => flow({ preview: { phase: "code" } }) },
   "demo-code": { group: "Code", note: "Demo: the sample's code", render: () => flow({ sample: genuine, preview: { phase: "code" } }) },
+  ...Object.fromEntries(
+    DEMO_SAMPLES.filter((s) => s.id !== "genuine").map((sample) => [
+      `demo-code-${sample.id}`,
+      { group: "Code", note: `Demo: ${sample.title.toLowerCase()}`, render: () => flow({ sample, preview: { phase: "code" } }, { ...fx.open, code: sample.code ?? "H6W" }) },
+    ]),
+  ),
   expired: {
     group: "Code",
     note: "Session ended before any photo",

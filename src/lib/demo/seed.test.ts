@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { CODE_PATTERN } from "../codes";
 import { decide } from "../rule";
 import { getRecallBySlug } from "../store";
 import { localStore } from "../store/local";
@@ -92,5 +93,13 @@ describe("demo samples", () => {
       expect(s.source).toMatch(/^c\d\d-/);
       for (const p of s.photos) expect(existsSync(join(process.cwd(), "public", p))).toBe(true);
     }
+  });
+
+  it("issue only codes Remedy could issue, whatever the photo's tag says", () => {
+    for (const s of DEMO_SAMPLES) if (s.code !== null) expect(s.code).toMatch(CODE_PATTERN);
+  });
+
+  it("say the reposted photo's tag shows the code of the claim it reposts", () => {
+    for (const s of DEMO_SAMPLES.filter((s) => s.after)) expect(s.tag).toContain(DEMO_SAMPLES.find((o) => o.id === s.after)!.code!);
   });
 });

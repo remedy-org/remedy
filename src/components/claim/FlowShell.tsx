@@ -6,7 +6,7 @@ export interface FlowShellProps {
   children: ReactNode;
   /** Judges' demo: labelled in the header and above every step. */
   demo?: boolean;
-  /** Who pays the refunds, for the footer. */
+  /** The company running the recall, for the footer. */
   company?: string;
   /** Two columns on laptops (the recall screen); otherwise one 480px column. */
   wide?: boolean;

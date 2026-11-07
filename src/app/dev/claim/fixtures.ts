@@ -76,7 +76,7 @@ export const rejected = decided("c09");
 export const rejectedScreen = decided("c10");
 
 export const blocked = {
-  claim: base("K7Q", {
+  claim: base("H6W", {
     photos: photosOf(["c08-1.jpg"]),
     decision: "blocked",
     reasons: [{ check: "session", outcome: "reject", text: "This photo wasn't taken in this claim's camera session" }],
