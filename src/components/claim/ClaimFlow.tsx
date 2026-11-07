@@ -53,7 +53,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
     <div className="flex flex-col gap-6">
       <StepMeter current={current} steps={steps} />
       {phase === "code" && (
-        <CodeStep code={code} spec={props.spec} expiresAt={props.expiresAt} startNow={props.startNow} frozen={Boolean(preview)} demo={demo} onContinue={() => go("capture")} />
+        <CodeStep code={code} spec={props.spec} expiresAt={props.expiresAt} startNow={props.startNow} frozen={Boolean(preview)} sample={sample} onContinue={() => go("capture")} />
       )}
       {phase === "capture" &&
         (sample ? (

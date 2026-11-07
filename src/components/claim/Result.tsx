@@ -51,7 +51,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample }: Res
               {money(claim.payout?.amount ?? recall.refund)}
             </p>
             <p className="text-body text-muted">
-              Refunded to your PayPal account by {companyName(recall)}
+              Refunded to your PayPal account through Remedy for {companyName(recall)}
               {sample ? ", in sandbox money" : ""}.
             </p>
           </div>

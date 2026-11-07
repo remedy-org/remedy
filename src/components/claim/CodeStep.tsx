@@ -1,4 +1,5 @@
 import { Button, Card, ClockIcon } from "@/components/ui";
+import type { DemoSample } from "@/lib/demo";
 import type { CheckSpec } from "@/lib/types";
 import { CodeTag } from "./CodeTag";
 import { mmss, useCountdown } from "./useCountdown";
@@ -9,12 +10,14 @@ export interface CodeStepProps {
   expiresAt: string;
   startNow: number;
   frozen?: boolean;
-  demo?: boolean;
+  /** Demo: the sample whose photo is sent instead of the camera's. */
+  sample?: DemoSample | null;
   onContinue(): void;
 }
 
 /** The one-time code, how to write it, and what the photos must show. The 10-minute session is already running. */
-export function CodeStep({ code, spec, expiresAt, startNow, frozen, demo, onContinue }: CodeStepProps) {
+export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, onContinue }: CodeStepProps) {
+  const demo = Boolean(sample);
   const left = useCountdown(expiresAt, startNow, frozen);
   const must = [
     ...spec.label_must_show.map((l) => `The label: ${l}`),
@@ -28,8 +31,8 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, demo, onCont
           {demo ? `This sample's code is ${code}` : "Write this code on a paper tag"}
         </h2>
         <p className="text-body text-muted">
-          {demo
-            ? "A real claim gets a fresh code here, inside a 10-minute camera session. This sample's photo already has its code written on the tag."
+          {sample
+            ? `A real claim gets a fresh code here, inside a 10-minute camera session. ${sample.tag}`
             : "Large and clear, in marker. It ties your photos to this claim, so a photo taken earlier, or for someone else, can't be used."}
         </p>
       </div>
