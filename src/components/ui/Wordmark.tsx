@@ -14,8 +14,10 @@ export interface WordmarkProps {
  * The mark is a claim check: one tag torn in two. The tag (punched hole, 45deg chamfers) stays on the destroyed
  * product as the proof; the amber stub is the refund the owner keeps. Drawn 21 x 14 units: tag 12, a straight 1.5
  * tear, stub 7.5 (8 : 5, the same split as the 16px favicon), one r1.6 notch on each long edge biting both halves.
- * The hole is cut out, so the page shows through. src/app/icon.svg, apple-icon.png and opengraph-image.tsx draw the
- * same geometry.
+ * The hole is cut out, so the page shows through. apple-icon.png and opengraph-image.tsx draw the same geometry.
+ * src/app/icon.svg redraws it for 16px on whole pixels (it must stay comment-free: XML forbids a double hyphen in a
+ * comment, and a favicon that fails to parse shows nothing): tag x1 to 8 with 2px chamfers and a 3px hole, a 2px
+ * tear, and the stub x10 to 15 with a 1px zig-zag on its torn edge, on the dark bg tile in both browser themes.
  *
  * Colours follow the theme through light-dark(), which reads the color-scheme each [data-theme] block sets:
  * dark: the tag is --paper, the stub --accent. Light: the tag is --text and the stub a deeper amber, because
