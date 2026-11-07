@@ -4,6 +4,7 @@ import { motion, useMotionValueEvent, useTransform } from "motion/react";
 import { useState, type ReactNode } from "react";
 import { OpenedExhibit } from "@/components/home/teardown";
 import type { Progress } from "./chapters";
+import { CHAPTERS } from "./claim";
 import { EXHIBIT_RANGE, exhibitPage, exhibitShare } from "./timeline";
 
 /** The exhibit mounts (and three.js starts loading) once chapter 02 is on screen, so the hero never pays for it. */
@@ -28,7 +29,7 @@ export function ExhibitSlot({ p, skip, onSeek }: { p: Progress; skip: ReactNode;
     <motion.div data-exhibit-slot className="absolute inset-0 z-[5] bg-bg" style={{ opacity: page, visibility }}>
       <motion.div className="h-full w-full" style={{ opacity: content }}>
         {armed && (
-          <OpenedExhibit progress={progress} skip={skip} onSeek={(q) => onSeek(EXHIBIT_RANGE[0] + q * (EXHIBIT_RANGE[1] - EXHIBIT_RANGE[0]))} />
+          <OpenedExhibit progress={progress} skip={skip} chapters={CHAPTERS.length} onSeek={(q) => onSeek(EXHIBIT_RANGE[0] + q * (EXHIBIT_RANGE[1] - EXHIBIT_RANGE[0]))} />
         )}
       </motion.div>
     </motion.div>

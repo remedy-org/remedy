@@ -30,32 +30,30 @@ function Layer({ p, i, compact, children }: { p: Progress; i: number; compact: b
   const y = useTransform(p, (v) => (i === 0 ? 0 : Math.round(8 * (1 - clamp01((v - (i === 5 ? CONSOLE_AT : STARTS[i])) / IN)))));
   const visibility = useTransform(opacity, (o) => (o > 0 ? "visible" : "hidden"));
   return (
-    <motion.div data-layer={i} className={clsx("absolute inset-0 flex items-center justify-center px-8", compact ? "py-4" : "py-8")} style={{ opacity, y, visibility }}>
+    // Top-aligned under the app bar, as a page loads: centred, a tall frame left an empty band under the bar.
+    <motion.div data-layer={i} className={clsx("absolute inset-0 flex items-start justify-center px-8", compact ? "pt-6 pb-4" : "pt-12 pb-8")} style={{ opacity, y, visibility }}>
       <div className="w-full max-w-[66rem]">{children}</div>
     </motion.div>
   );
 }
 
-/** Where each rail item's entrance starts after RAIL_IN, and how long it takes: the last one has settled by 0.201, ahead
+/** Where each rail item's entrance starts after RAIL_IN, and how long it takes: the last one has settled by 0.205, ahead
  * of the #how anchor (0.215), so a jump there never lands mid-entrance. */
 const RAIL_STAGGER = 0.004;
 const RAIL_ENTER = 0.015;
 
 function RailItem({ p, i }: { p: Progress; i: number }) {
   const c = CHAPTERS[i];
-  // Enters 0.17 to 0.20, once the backdrop has covered the page rail behind it, then 100% while its chapter is on
-  // screen, else 35%.
+  // Enters 0.17 to 0.205, once the backdrop has covered the page rail behind it, then 100% while its chapter is on
+  // screen, else 35%. Item 06 is the console, the screen's layer 5.
   const enter = (v: number) => clamp01((v - RAIL_IN - i * RAIL_STAGGER) / RAIL_ENTER);
-  const opacity = useTransform(p, (v) => {
-    const on = Math.max(share(v, i), i === 4 ? share(v, 5) : 0);
-    return enter(v) * (0.35 + 0.65 * on);
-  });
+  const opacity = useTransform(p, (v) => enter(v) * (0.35 + 0.65 * share(v, i)));
   const x = useTransform(p, (v) => Math.round(-12 * (1 - enter(v))));
   // The amber edge marks the chapter on screen, and for 01 and 02 fills down from a quarter through the chapter's
   // beat (01 from the end of the dolly), so a long hold always shows progress. Chapters 03 to 05 are under the exhibit;
-  // 05's edge marks the console.
+  // 06's edge marks the console.
   const lead = useTransform(p, (v) => {
-    const on = Math.max(share(v, i), i === 4 ? share(v, 5) : 0);
+    const on = share(v, i);
     if (i >= 2) return on;
     const from = i === 0 ? HANDOFF[1] : STARTS[i];
     return on * (0.25 + 0.75 * clamp01((v - from) / (STARTS[i + 1] - OUT[0] - from)));
@@ -70,7 +68,7 @@ function RailItem({ p, i }: { p: Progress; i: number }) {
 }
 
 function RailCaption({ p, i }: { p: Progress; i: number }) {
-  const opacity = useTransform(p, (v) => Math.max(share(v, i), i === 4 ? share(v, 5) : 0) * clamp01((v - RAIL_IN) / 0.03));
+  const opacity = useTransform(p, (v) => share(v, i) * clamp01((v - RAIL_IN) / 0.03));
   return (
     <motion.p className="absolute inset-x-0 top-0 text-ui text-pretty text-text-2" style={{ opacity }}>
       {CHAPTERS[i].text}

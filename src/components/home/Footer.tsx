@@ -42,7 +42,12 @@ function CtaTag() {
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-3">
-            <Button href="/r/kikea-x-vesolje/try" size="lg" className="shadow-[0_0_0_1px_var(--paper-line)] focus-visible:outline-ink">
+            {/* Below sm the label wraps inside the card (at 320px it is wider than the tag), its ring kept in view. */}
+            <Button
+              href="/r/kikea-x-vesolje/try"
+              size="lg"
+              className="shadow-[0_0_0_1px_var(--paper-line)] focus-visible:outline-ink max-sm:h-auto max-sm:min-h-12 max-sm:w-full max-sm:py-3 max-sm:text-center max-sm:whitespace-normal"
+            >
               Try a claim with sample photos
             </Button>
             <Link

@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import Image from "next/image";
 import { motion } from "motion/react";
-import { CheckIcon } from "@/components/ui";
+import { CheckIcon, NoBreakHyphens } from "@/components/ui";
 import { CLAIM } from "./custody/claim";
 
 // What the laptop in the hero shows: claim RM-0442, the judges' genuine demo claim (DEMO_SAMPLES "genuine": photo c02,
@@ -59,7 +59,9 @@ export function ClaimScreen({ phase }: { phase: number }) {
           <span className="size-[0.6em] rounded-full bg-pay" />
           Live
         </span>
-        <span className="text-[1.15em] text-muted">Kikea X-VESOLJE nursing pillow</span>
+        <span className="text-[1.15em] text-muted">
+          <NoBreakHyphens>Kikea X-VESOLJE nursing pillow</NoBreakHyphens>
+        </span>
         <span className="ml-auto font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">CPSC 27-071</span>
       </div>
 

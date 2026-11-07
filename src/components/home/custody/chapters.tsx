@@ -4,7 +4,7 @@ import clsx from "clsx";
 import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { AlertIcon, ClockIcon, Money, Paper, SPRING, StatusPill } from "@/components/ui";
+import { AlertIcon, ClockIcon, Money, NoBreakHyphens, Paper, SPRING, StatusPill } from "@/components/ui";
 import { RemedyMark } from "@/components/ui/Wordmark";
 import { CLAIM, CODE_AT, CONSENT_AT, CONSOLE_ROWS, SHOT_AT, WRITE_AT } from "./claim";
 
@@ -112,7 +112,7 @@ export function ConsentChapter({ p }: { p?: Progress }) {
             <span className="text-ui text-muted">Kikea Store works with Remedy to pay this recall.</span>
           </div>
           <p className="text-title font-medium text-pretty">
-            Get $29.99 back for your X-VESOLJE pillow.{" "}
+            Get $29.99 back for your <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> pillow.{" "}
             <span className="text-muted">Remedy sends it through PayPal for Kikea Store once your photo shows it&rsquo;s destroyed.</span>
           </p>
           <ol
@@ -134,8 +134,9 @@ export function ConsentChapter({ p }: { p?: Progress }) {
               </li>
             ))}
           </ol>
-          {/* A picture of the claim page's button, so it is drawn quiet: the amber stays on the page's real actions. */}
-          <span className="flex h-12 items-center justify-center rounded-control bg-surface-2 text-body font-medium text-muted shadow-[inset_0_0_0_1px_var(--line-2)]">
+          {/* A picture of the claim page's button, drawn as a wireframe (a dashed hairline, no fill, faint text) so it never
+              reads as a button on this page: the amber and the real buttons stay on the page's own actions. */}
+          <span className="flex h-12 items-center justify-center rounded-control border border-dashed border-line-2 text-ui text-faint">
             Log in with PayPal
           </span>
         </div>
@@ -187,7 +188,7 @@ export function CodeChapter({ p }: { p: Progress }) {
               <CodeCell key={c} p={p} at={CODE_AT[i]} char={c} />
             ))}
           </div>
-          <p className={clsx("max-w-[44ch] text-body text-muted", compact && "@max-[719px]:hidden")}>Write it on a tag with X-VESOLJE, big, in marker. Then photograph the cut pillow with the tag on it, in this page&rsquo;s camera.</p>
+          <p className={clsx("max-w-[44ch] text-body text-muted", compact && "@max-[719px]:hidden")}>Write it on a tag with <NoBreakHyphens>X-VESOLJE</NoBreakHyphens>, big, in marker. Then photograph the cut pillow with the tag on it, in this page&rsquo;s camera.</p>
           <div className="hidden flex-col gap-2 @min-[720px]:flex">
             <span className="micro text-faint">Your photo must show</span>
             <ol className="flex flex-col gap-1.5">
@@ -296,6 +297,11 @@ const M4T_ROW = {
   sandbox: true,
 };
 
+/** Marks a sample claim (an eval case the demo workspace starts with), as the SAMPLE DATA badge does in the console. */
+function SampleBadge() {
+  return <span className="micro inline-flex h-[18px] items-center rounded-control border border-line-2 px-1 text-[10px] text-muted">Sample</span>;
+}
+
 function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?: boolean }) {
   const compact = useContext(Compact);
   return (
@@ -306,7 +312,7 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
           {/* The console's own convention: the claim id first, its one-time code under it. */}
           <span className="flex items-center gap-1.5 font-mono font-medium">
             {row.id}
-            {row.sample && <span className="size-1.5 rotate-45 border border-faint" title="Sample claim" />}
+            {row.sample && <SampleBadge />}
           </span>
           <span className="truncate font-mono text-micro text-faint">Code {row.code}</span>
         </span>
@@ -324,9 +330,11 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
           <StatusPill status={row.status} />
         </span>
         {row.amount ? (
-          <span className="flex flex-col items-end leading-tight">
+          // A sample's amount was decided, never sent: muted, and said so. RM-0442's went out in sandbox money.
+          <span className={clsx("flex flex-col items-end leading-tight", row.sample && "text-faint")}>
             <Money value={row.amount} size="grid" />
             {"sandbox" in row && row.sandbox === true ? <span className="micro text-[10px] text-faint">Sandbox</span> : null}
+            {row.sample && <span className="micro text-[10px] text-faint">Not sent</span>}
           </span>
         ) : (
           <span className="text-faint">—</span>
@@ -348,14 +356,16 @@ export function ConsoleChapter({ p }: { p: Progress }) {
           <p className="text-head-sm font-medium">
             And Kikea Store sees it here. <span className="text-muted">Every claim, with its evidence.</span>
           </p>
-          <span className="flex items-center gap-2 font-mono text-micro text-faint">
-            <span className="size-1.5 rotate-45 border border-faint" />
-            Sample claims, never paid
+          <span className="flex items-center gap-2 text-micro text-faint">
+            <SampleBadge />
+            eval claims, never paid
           </span>
         </div>
         <div className="overflow-hidden rounded-card bg-surface shadow-card">
           <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-3">
-            <span className="text-ui font-medium">Kikea X-VESOLJE nursing pillows</span>
+            <span className="text-ui font-medium">
+              <NoBreakHyphens>Kikea X-VESOLJE nursing pillows</NoBreakHyphens>
+            </span>
             <span className="micro text-faint">{CLAIM.recall}</span>
           </div>
           <div className="flex gap-6 border-b border-line px-4 text-ui">

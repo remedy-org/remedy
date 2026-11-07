@@ -4,8 +4,8 @@ import { RemedyMark } from "@/components/ui/Wordmark";
 import { CLAIM } from "./claim";
 
 /**
- * The claim page's own top bar, inside every screen the custody sequence shows: recall, then the step meter. The
- * counter names screens of the claim app, so it never reads as a rival to the five chapters beside it.
+ * The claim page's own top bar, inside every screen the custody sequence shows: recall, then the claim app's step meter.
+ * The meter has no number: the rail beside it is the sequence's one counter (01 to 06).
  */
 export function ScreenBar({ step, console: isConsole, compact }: { step: number; console?: boolean; compact?: boolean }) {
   return (
@@ -17,14 +17,11 @@ export function ScreenBar({ step, console: isConsole, compact }: { step: number;
       {!compact && <span className="truncate text-ui text-muted">{isConsole ? CLAIM.company : "Kikea X-VESOLJE nursing pillow"}</span>}
       <span className="ml-auto flex items-center gap-3">
         {!isConsole && (
-          <>
-            <span className="flex gap-1" aria-hidden="true">
-              {[1, 2, 3, 4].map((s) => (
-                <span key={s} className={clsx("h-0.5 rounded-full transition-colors duration-160", compact ? "w-3" : "w-5", s <= step ? "bg-accent" : "bg-line-strong/50")} />
-              ))}
-            </span>
-            <span className="font-mono text-micro whitespace-nowrap text-faint tabular-nums">Screen {step} of 4</span>
-          </>
+          <span className="flex gap-1" aria-hidden="true">
+            {[1, 2, 3, 4].map((s) => (
+              <span key={s} className={clsx("h-0.5 rounded-full transition-colors duration-160", compact ? "w-3" : "w-5", s <= step ? "bg-accent" : "bg-line-strong/50")} />
+            ))}
+          </span>
         )}
         {isConsole && <span className="micro text-faint">{CLAIM.recall}</span>}
       </span>

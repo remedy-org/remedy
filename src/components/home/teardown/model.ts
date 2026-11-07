@@ -190,6 +190,19 @@ export interface ExhibitState {
 
 const CHECK_IDS = CHECKS.map((c) => c.id);
 
+/**
+ * The side callout's opacity. The intro's opens with the cut; each check's then holds through the hand-off and the next
+ * one cuts in over the first 5% of its beat, so the outgoing words stay until the incoming ones replace them and the
+ * column is never blank between checks. The last check's closes before the payout, where the receipt takes the column.
+ */
+function calloutAt(beat: BeatId, p: number) {
+  const t = local(beat, p);
+  if (beat === "intro") return easeOut(inv(0, 0.22, t));
+  if (beat === "paid") return 0;
+  const fadeOut = beat === "torn" ? 1 - easeInOut(inv(0.88, 1, t)) : 1;
+  return easeOut(inv(0, 0.05, t)) * fadeOut;
+}
+
 /** Where in the intro each thing the photo must show comes into the frame: the tag, the cut, the code. */
 const FRAMED_AT = [0.3, 0.5, 0.7];
 
@@ -218,7 +231,7 @@ export function stateAt(pIn: number): ExhibitState {
     charNow,
     active,
     // The intro has a callout too (the photo being framed), so the side column is never empty while the pillow is cut.
-    callout: active >= 0 || beat === "intro" ? opened(beat, p) : 0,
+    callout: calloutAt(beat, p),
     framed: p > RANGES.intro[1] ? 3 : FRAMED_AT.filter((t) => local("intro", p) >= t).length,
     done,
     seconds: elapsed(p),

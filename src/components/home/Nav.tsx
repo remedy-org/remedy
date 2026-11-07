@@ -19,12 +19,12 @@ const LINKS = [
 export function Nav() {
   return (
     <header className="sticky top-0 z-30 bg-bg">
-      <nav aria-label="Main" className="page flex h-16 items-center gap-10">
+      <nav aria-label="Main" className="page flex h-16 items-center gap-4 sm:gap-6 xl:gap-10">
         <Wordmark size="md" href="/" />
-        <ul className="hidden items-center gap-7 lg:flex">
+        <ul className="hidden items-center gap-5 lg:flex xl:gap-7">
           {LINKS.map((l) => (
             <li key={l.href}>
-              <a href={l.href} className="inline-flex min-h-11 items-center gap-1.5 rounded-control text-ui text-muted transition-colors duration-160 hover:text-text">
+              <a href={l.href} className="inline-flex min-h-11 items-center gap-1.5 rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text">
                 {l.exhibit && (
                   <span aria-hidden="true" className="font-mono text-micro text-faint">
                     {l.exhibit}
@@ -35,9 +35,9 @@ export function Nav() {
             </li>
           ))}
         </ul>
-        <div className="ml-auto flex items-center gap-3 sm:gap-5">
+        <div className="ml-auto flex items-center gap-2 sm:gap-5">
           <ThemeToggle />
-          <Link href="/signin" className="hidden min-h-11 items-center rounded-control text-ui text-muted transition-colors duration-160 hover:text-text sm:inline-flex">
+          <Link href="/signin" className="hidden min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text sm:inline-flex">
             Company sign in
           </Link>
           <Button href="/r/kikea-x-vesolje/try" variant="secondary" size="sm">

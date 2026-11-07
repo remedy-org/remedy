@@ -69,14 +69,39 @@
 }
 
 /* The scene is clear of the header (it starts fading in only below the headline's last line, so a close-up never
-   shows through it), of the check row and the callout column, and fades out at the left edge rather than clipping. */
+   shows through it), of the check row and the callout column, and fades out at the left edge rather than clipping.
+   The top fade starts --m-in below the header and runs --m-len, eased. The tag macro (the code check) frames the tag
+   with the pillow's body running off the top of the shot: there the fade starts lower and runs shorter, so the body
+   is out of the picture (never a slab hanging under the headline) and the tag, further down, is whole. The two are
+   registered lengths, so the change eases with the camera instead of jumping. */
+@property --m-in {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 4px;
+}
+@property --m-len {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 128px;
+}
+.stage {
+  transition:
+    --m-in 360ms var(--ease-out-quart),
+    --m-len 360ms var(--ease-out-quart);
+}
+.stage[data-beat="code"] {
+  --m-in: 56px;
+  --m-len: 48px;
+}
 .stage:not(.small) .canvas,
 .stage:not(.small) .posters {
   mask-image:
     linear-gradient(
       to bottom,
-      transparent calc(var(--m-top, 160px) + 4px),
-      #000 calc(var(--m-top, 160px) + 64px),
+      transparent calc(var(--m-top, 160px) + var(--m-in)),
+      rgb(0 0 0 / 0.12) calc(var(--m-top, 160px) + var(--m-in) + var(--m-len) * 0.375),
+      rgb(0 0 0 / 0.5) calc(var(--m-top, 160px) + var(--m-in) + var(--m-len) * 0.6875),
+      #000 calc(var(--m-top, 160px) + var(--m-in) + var(--m-len)),
       #000 calc(var(--m-bot, 760px) - 56px),
       transparent calc(var(--m-bot, 760px) + 4px)
     ),

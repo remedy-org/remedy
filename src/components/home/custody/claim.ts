@@ -21,7 +21,7 @@ export const CLAIM = {
   recalled: "5 Nov 2026",
 } as const;
 
-/** The chapter rail, the static captions and the screen-reader list. */
+/** The chapter rail, the static captions and the screen-reader list: the claim's five chapters, then the console. */
 export const CHAPTERS = [
   {
     n: "01",
@@ -46,7 +46,12 @@ export const CHAPTERS = [
   {
     n: "05",
     title: "Paid",
-    text: "A fixed rule decides: any failed check rejects, any unclear one holds for a person. Every check passed, so $29.99 went to the owner's PayPal account 15 seconds after the photo, and Kikea Store sees the claim in its console.",
+    text: "A fixed rule decides: any failed check rejects, any unclear one holds for a person. Every check passed, so $29.99 went to the owner's PayPal account 15 seconds after the photo.",
+  },
+  {
+    n: "06",
+    title: "Kikea Store sees it",
+    text: "The paid claim lands in Kikea Store's console with its photo, its checks and the time from photo to PayPal.",
   },
 ] as const;
 

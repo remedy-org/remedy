@@ -43,8 +43,10 @@ export function Companies() {
           Evidence panel
         </FrameTag>
         <CompaniesPreview />
-        <figcaption className="sr-only">
-          Remedy&rsquo;s console on the Kikea demo recall. Sample claims from the eval: AI-made test photos, never paid.
+        {/* The ledger's $0.00 beside the hero's paid RM-0442: say which claim was paid, and where, without a new figure. */}
+        <figcaption className="mt-4 max-w-[68ch] text-ui text-pretty text-muted lg:mt-5">
+          <span className="sr-only">Remedy&rsquo;s console on the Kikea demo recall. </span>A sample workspace: its 40 claims are from the eval, with AI-made
+          test photos, and were decided but never paid, so it shows $0.00 paid. Claim RM-0442, above, was paid in PayPal sandbox.
         </figcaption>
       </figure>
 

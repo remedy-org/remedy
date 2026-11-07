@@ -85,13 +85,15 @@ export interface ClaimsGridProps {
   fill?: boolean;
   /** Read only (the homepage preview): no keyboard opening, no tooltips. */
   still?: boolean;
+  /** The first rows are drawn (the skeleton has gone). */
+  onReady?: () => void;
   className?: string;
 }
 
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function ClaimsGrid(
-  { rows, openId, onOpen, onFocusRow, fill = false, still = false, className },
+  { rows, openId, onOpen, onFocusRow, fill = false, still = false, onReady, className },
   ref,
 ) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -273,6 +275,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
             }}
             onFirstDataRendered={(e) => {
               setReady(true);
+              onReady?.();
               // A deep link (/console?claim=RM-1460) opens with its row in view.
               const n = openId ? e.api.getRowNode(openId)?.rowIndex : null;
               if (n != null) e.api.ensureIndexVisible(n, "middle");

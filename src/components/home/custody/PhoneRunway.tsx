@@ -11,6 +11,8 @@ import { PhoneFrame } from "./frames";
 import styles from "./custody.module.css";
 
 const STEP = [1, 2];
+/** The phone's sequence ends at 05, Paid: it has no console beat (06 is the laptop's). */
+const PHONE_CHAPTERS = 5;
 /** Scroll per claim-screen chapter (01 and 02), in vh. */
 const CHAPTER_VH = 72;
 /** Below this chapter-well height (an iPhone SE, or Safari with its toolbars) the chapters use their compact forms. */
@@ -54,7 +56,9 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
           <span key={c.n} className={`micro text-accent-text ${styles.chapterIn}`}>
             {c.n} · {c.title}
           </span>
-          <span className="font-mono text-micro text-faint tabular-nums">{c.n} / 05</span>
+          <span className="font-mono text-micro text-faint tabular-nums">
+            {c.n} / {String(PHONE_CHAPTERS).padStart(2, "0")}
+          </span>
         </div>
         <PhoneFrame step={STEP[Math.min(at, 1)]} className="flex min-h-0 flex-1 flex-col">
           <div ref={well} className="relative min-h-0 flex-1">
@@ -67,7 +71,7 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
         {/* Mounted from chapter 02 on, so the exhibit's stills are loading before it cuts in. */}
         {at >= 1 && (
           <div className="absolute inset-0 z-[5] bg-bg" style={{ visibility: at >= 2 ? "visible" : "hidden" }}>
-            <OpenedExhibit progress={exhibitP} onSeek={seek} skip={skip} />
+            <OpenedExhibit progress={exhibitP} onSeek={seek} skip={skip} chapters={PHONE_CHAPTERS} />
           </div>
         )}
       </div>

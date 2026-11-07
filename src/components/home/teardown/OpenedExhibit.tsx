@@ -172,11 +172,12 @@ function ScreenReaderSummary() {
   );
 }
 
-/** The Chain of Custody chapter a beat belongs to: 03 the photo, 04 the five checks, 05 the payout. */
-function chapterOf(beat: BeatId) {
-  if (beat === "intro") return "03 / 05 · Live photo";
-  if (beat === "paid") return "05 / 05 · Paid";
-  return "04 / 05 · Five checks";
+/** The Chain of Custody chapter a beat belongs to: 03 the photo, 04 the five checks, 05 the payout, of `total`. */
+function chapterOf(beat: BeatId, total: number) {
+  const of = ` / ${String(total).padStart(2, "0")} · `;
+  if (beat === "intro") return `03${of}Live photo`;
+  if (beat === "paid") return `05${of}Paid`;
+  return `04${of}Five checks`;
 }
 
 function Header({ compact, chapter }: { compact?: boolean; chapter?: string }) {
@@ -285,8 +286,8 @@ interface StageProps {
   mode: "live" | "poster";
   small: boolean;
   onSeek?: (i: number) => void;
-  /** Mounted in the Chain of Custody: the eyebrow names the chapter, the checks number under 04. */
-  chain?: boolean;
+  /** Mounted in the Chain of Custody: the eyebrow names the chapter (of this many), the checks number under 04. */
+  chain?: number;
   /** A skip link for the foot of the stage, so the pin is never without one. */
   skip?: ReactNode;
   /** Dev and capture only: draw at this p and keep the drawing buffer for screenshots. */
@@ -297,7 +298,7 @@ function discreteKey(s: ExhibitState) {
   return [s.beat, s.active, s.framed, s.done, s.chars, s.charNow, clock(s.seconds), s.decision, s.sent, s.stamped, s.receipt > 0].join("|");
 }
 
-function Stage({ p, mode, small, onSeek, chain = false, skip, capture }: StageProps) {
+function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const subject = useRef<HTMLDivElement>(null);
@@ -402,12 +403,13 @@ function Stage({ p, mode, small, onSeek, chain = false, skip, capture }: StagePr
       const t = Math.min(1, Math.max(0, (st.p - a) / (z - a)));
       f.style.transform = `scaleX(${st.p >= z ? 1 : t})`;
     });
-    // Posters: a short dissolve centred on each beat's start, where the callout, readouts and check row change, so
-    // the still and the callout always describe the same check.
+    // Posters: a short dissolve (3% of a beat) centred on each beat's start, where the callout, readouts and check row
+    // change, so the still and the callout always describe the same check, and a scroll that stops there never lands
+    // on two stills half-drawn for long.
     if (posters.current && (!live || !scene.current)) {
       posters.current.querySelectorAll<HTMLElement>("[data-poster]").forEach((img, k) => {
         const [a, z] = RANGES[POSTER_BEATS[k]];
-        const w = (z - a) * 0.08;
+        const w = (z - a) * 0.03;
         const fadeIn = k === 0 ? 1 : Math.min(1, Math.max(0, (st.p - (a - w / 2)) / w));
         const fadeOut = k === POSTER_BEATS.length - 1 ? 1 : 1 - Math.min(1, Math.max(0, (st.p - (z - w / 2)) / w));
         img.style.opacity = String(Math.min(fadeIn, fadeOut));
@@ -606,7 +608,7 @@ function Stage({ p, mode, small, onSeek, chain = false, skip, capture }: StagePr
 
       <div className={styles.layout}>
         <header className={styles.head}>
-          <Header compact={small} chapter={chain ? chapterOf(s.beat) : undefined} />
+          <Header compact={small} chapter={chain ? chapterOf(s.beat, chain) : undefined} />
           <Readouts s={s} />
         </header>
         <div className={styles.main}>
@@ -631,7 +633,7 @@ function Stage({ p, mode, small, onSeek, chain = false, skip, capture }: StagePr
           </div>
           <ol className={styles.row}>
             {CHECKS.map((c, i) => (
-              <CheckCell key={c.id} i={i} done={i < s.done} active={i === s.active} chain={chain} onSeek={onSeek} />
+              <CheckCell key={c.id} i={i} done={i < s.done} active={i === s.active} chain={!!chain} onSeek={onSeek} />
             ))}
           </ol>
         </footer>
@@ -643,10 +645,10 @@ function Stage({ p, mode, small, onSeek, chain = false, skip, capture }: StagePr
 
 // ---- The static form: reduced motion, no JS, and the server render.
 
-function StaticExhibit() {
+function StaticExhibit({ chain }: { chain: boolean }) {
   return (
     <section className={styles.static} aria-label={`Exhibit: claim ${EXHIBIT.id}`}>
-      <Header />
+      <Header chapter={chain ? "03–05 · Live photo, five checks, paid" : undefined} />
       <div className={styles.staticGrid}>
         <figure className={styles.staticFigure}>
           <div className={styles.pool} aria-hidden="true" />
@@ -698,6 +700,11 @@ export interface OpenedExhibitProps {
   onSeek?: (p: number) => void;
   /** With `progress`: the pin's skip link, shown in the exhibit's own foot (it covers the pin's rail). */
   skip?: ReactNode;
+  /**
+   * Mounted in a numbered sequence (the Chain of Custody): how many chapters it counts, for the eyebrow ("03 / 06").
+   * The static form, which the sequence's static figures number around, names its chapters 03 to 05.
+   */
+  chapters?: number;
   /** Dev and capture only (the /dev/teardown page). */
   capture?: boolean;
 }
@@ -736,7 +743,7 @@ function SelfPinned({ mode, small, capture }: { mode: "live" | "poster"; small: 
   );
 }
 
-export function OpenedExhibit({ progress, onSeek, skip, capture }: OpenedExhibitProps) {
+export function OpenedExhibit({ progress, onSeek, skip, chapters, capture }: OpenedExhibitProps) {
   const hydrated = useSyncExternalStore(
     noop,
     () => true,
@@ -748,7 +755,7 @@ export function OpenedExhibit({ progress, onSeek, skip, capture }: OpenedExhibit
   // The capture page always draws live, at any size: it renders the posters the other forms show.
   const mode: Mode = capture && hydrated ? "live" : !hydrated || reduce ? "static" : small || !gl ? "poster" : "live";
 
-  if (mode === "static") return <StaticExhibit />;
+  if (mode === "static") return <StaticExhibit chain={chapters !== undefined} />;
   if (progress)
     return (
       <div className="relative h-full w-full">
@@ -757,7 +764,7 @@ export function OpenedExhibit({ progress, onSeek, skip, capture }: OpenedExhibit
           mode={mode}
           small={small && !capture}
           capture={capture}
-          chain
+          chain={chapters ?? 5}
           skip={skip}
           onSeek={onSeek ? (i) => onSeek(holdOf(CHECKS[i].id)) : undefined}
         />

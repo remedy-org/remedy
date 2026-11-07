@@ -39,6 +39,18 @@ describe("Opened Exhibit model", () => {
     });
   });
 
+  it("never leaves the side column blank between checks: the outgoing callout holds until the next cuts in", () => {
+    const ids = ["intro", ...CHECKS.map((c) => c.id)] as const;
+    for (const id of ids.slice(1)) {
+      const [a, z] = RANGES[id];
+      // Right up to the hand-off, the outgoing callout is at full strength.
+      expect(stateAt(a - 0.0005).callout).toBe(1);
+      // The incoming one is in after 5% of its beat, and holds until the next hand-off (the last check closes before
+      // the payout).
+      for (let t = 0.05; t <= (id === "torn" ? 0.88 : 0.999); t += 0.01) expect(stateAt(a + t * (z - a)).callout).toBeCloseTo(1, 5);
+    }
+  });
+
   it("reads the code one character at a time, M then 4 then T", () => {
     const seen = new Set<number>();
     for (let p = RANGES.code[0]; p <= RANGES.code[1]; p += 0.001) seen.add(stateAt(p).chars);

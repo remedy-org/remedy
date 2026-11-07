@@ -4,7 +4,7 @@ import clsx from "clsx";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { OpenedExhibit } from "@/components/home/teardown";
-import { Money, StatusPill } from "@/components/ui";
+import { Money, NoBreakHyphens, StatusPill } from "@/components/ui";
 import { CHAPTERS, CLAIM } from "./claim";
 import { CodeTag, ConsentChapter } from "./chapters";
 
@@ -63,7 +63,7 @@ export function StaticFigures() {
             </h2>
           </div>
           <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8 lg:pb-1">
-            Claim {CLAIM.id} ran through the judges&rsquo; demo on 7 Nov, on the Kikea X-VESOLJE recall, in PayPal sandbox money.
+            Claim {CLAIM.id} ran through the judges&rsquo; demo on 7 Nov, on the Kikea <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> recall, in PayPal sandbox money.
           </p>
         </div>
         {/* 01 beside 02: the tall consent screen, and the code tag centred beside it like a thing laid on the table. */}
@@ -77,15 +77,10 @@ export function StaticFigures() {
         </div>
       </div>
       {/* 03 to 05: the photo, the five checks and the payout, as the exhibit. */}
-      <OpenedExhibit />
+      <OpenedExhibit chapters={CHAPTERS.length} />
       <div className="page pb-18 lg:pb-32">
         <div className="grid-12">
-          <PaperObject
-            n="→"
-            title="Kikea Store's console"
-            text="The paid claim lands in the company's queue with its photo, its checks and the time from photo to PayPal."
-            className="col-span-12 lg:col-span-4"
-          >
+          <PaperObject n={CHAPTERS[5].n} title={CHAPTERS[5].title} text={CHAPTERS[5].text} className="col-span-12 lg:col-span-4">
             <div className="w-full max-w-[20rem] overflow-hidden rounded-card bg-surface shadow-card">
               <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
                 <span className="text-ui font-medium">Console</span>

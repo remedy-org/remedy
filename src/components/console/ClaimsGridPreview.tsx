@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { CheckProgress, ExhibitLabel, StatusPill } from "@/components/ui";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { ledgerOf, type ClaimRow, type Ledger as LedgerData } from "@/app/console/_lib/view";
@@ -24,13 +24,16 @@ export interface ClaimsGridPreviewProps {
   counts?: Record<Tab, number>;
   /** A class for the evidence panel's wrapper, so a page can animate it in. */
   panelClassName?: string;
+  /** The grid has drawn its first rows. */
+  onReady?: () => void;
 }
 
 /**
  * The real claims grid, read only, for the homepage: the same AG Grid, cells and theme as /console, on the seeded
  * sample claims (components/console/preview.ts builds the props on the server). No network, no polling, no actions:
- * the tabs filter, the rows don't open anything, and the evidence panel is a still of the open claim. Load it with
- * next/dynamic (ClaimsGridPreviewLazy does, one viewport ahead), so the homepage's first load carries no grid JS.
+ * a product shot, so nothing in it responds (ClaimsGridPreviewLazy makes it inert: no clicks, no tab stops), and the
+ * evidence panel is a still of the open claim. Load it with next/dynamic (ClaimsGridPreviewLazy does, one viewport
+ * ahead), so the homepage's first load carries no grid JS. `onReady` fires once the grid has drawn its rows.
  */
 // Laptops show the grid with the panel open; phones show four cards, one of each outcome, and no panel.
 const WIDE = "(min-width: 1024px)";
@@ -41,8 +44,7 @@ const subscribe = (on: () => void) => {
 };
 const PHONE_SET: ClaimRow["decision"][] = ["paid", "held", "rejected", "blocked"];
 
-export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelClassName }: ClaimsGridPreviewProps) {
-  const [tab, setTab] = useState<Tab>("all");
+export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelClassName, onReady }: ClaimsGridPreviewProps) {
   const wide = useSyncExternalStore(subscribe, () => window.matchMedia(WIDE).matches, () => true);
   const tally = useMemo(() => {
     if (counts) return counts;
@@ -51,25 +53,22 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
     for (const r of rows) c[r.decision]++;
     return c;
   }, [counts, rows]);
-  const tabbed = tab === "all" ? rows : rows.filter((r) => r.decision === tab);
-  const shown = wide || tab !== "all" ? tabbed : PHONE_SET.flatMap((d) => rows.find((r) => r.decision === d) ?? []);
+  const shown = wide ? rows : PHONE_SET.flatMap((d) => rows.find((r) => r.decision === d) ?? []);
   const open = wide ? (rows.find((r) => r.id === openId)?.evidence ?? null) : null;
 
   return (
     <div className="overflow-hidden rounded-frame bg-bg text-text shadow-float">
-      {/* App chrome. Insights and Report are the console's other pages: faint, since this still can't open them. */}
-      <div className="flex h-12 items-center gap-6 border-b border-line px-4 sm:px-5" aria-hidden="true">
+      {/* App chrome. Insights and Report are the console's other pages: faint, since this still can't open them. The
+          whole frame is a picture (the caller makes it inert), and says so. */}
+      <div className="flex h-12 items-center gap-4 border-b border-line px-4 sm:gap-6 sm:px-5" aria-hidden="true">
         <span className="font-semibold">Remedy</span>
         <span className="hidden gap-5 text-ui font-medium sm:flex">
           <span className="relative text-text after:absolute after:inset-x-0 after:-bottom-[15px] after:h-px after:bg-text">Claims</span>
-          <span className="cursor-not-allowed text-faint" title="In your console, after you log in">
-            Insights
-          </span>
-          <span className="cursor-not-allowed text-faint" title="In your console, after you log in">
-            Report
-          </span>
+          <span className="text-faint">Insights</span>
+          <span className="text-faint">Report</span>
         </span>
-        <span className="ml-auto text-ui text-muted">Kikea Store</span>
+        <span className="micro ml-auto text-faint">Preview</span>
+        <span className="text-ui whitespace-nowrap text-muted">Kikea Store</span>
       </div>
 
       <div className="px-4 pt-4 sm:px-5">
@@ -84,17 +83,13 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
         </div>
         <Ledger ledger={ledger ?? ledgerOf(rows, { unitsSold: 19_596 })} className="mt-3" />
         <div className="mt-1 border-b border-line">
-          <StatusTabs value={tab} counts={tally} onChange={setTab} controls="preview-claims" />
+          <StatusTabs value="all" counts={tally} onChange={() => {}} controls="preview-claims" />
         </div>
       </div>
 
       <div className="flex gap-3 p-3 sm:px-5" style={wide ? { height } : undefined}>
         <div id="preview-claims" className="min-w-0 flex-1 overflow-hidden">
-          {shown.length ? (
-            <ClaimsGrid rows={shown} openId={open ? (openId ?? null) : null} onOpen={() => {}} fill={wide} still />
-          ) : (
-            <p className="px-2 py-8 text-center text-ui text-muted">None of the sample claims shown here is {TABS.find((t) => t.id === tab)?.label.toLowerCase()}.</p>
-          )}
+          <ClaimsGrid rows={shown} openId={open ? (openId ?? null) : null} onOpen={() => {}} onReady={onReady} fill={wide} still />
         </div>
         {open && (
           <div className={clsx("h-full shrink-0", panelClassName)}>
@@ -104,10 +99,8 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
       </div>
       {/* The tab counts cover every sample claim; the frame holds only the first few, so it says how many it shows. */}
       <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">
-        {tab === "all"
-          ? `${shown.length < tally.all ? `${shown.length} of ` : ""}${tally.all} sample claims from the eval set`
-          : `${shown.length} of ${tally[tab]} ${TABS.find((t) => t.id === tab)?.label.toLowerCase()} shown · ${tally.all} sample claims from the eval set`}{" "}
-        · AI-made test photos · no money moved
+        {shown.length < tally.all ? `${shown.length} of ` : ""}
+        {tally.all} sample claims from the eval set · AI-made test photos · no money moved
       </p>
     </div>
   );
