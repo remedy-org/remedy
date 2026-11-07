@@ -115,12 +115,13 @@ function SampleTag({ sample, tilt }: { sample: Sample; tilt: number }) {
   );
 }
 
-const COLS = "grid grid-cols-[3rem_minmax(0,1fr)_repeat(4,9.5rem)]";
+// On the page grid: the gate in columns 1 to 6 (its number hanging in the first 3rem), the four lanes in 7 to 12.
+const GATE = "col-span-6 grid grid-cols-[3rem_minmax(0,1fr)]";
+const LANES = "col-span-6 grid grid-cols-4";
 
 /**
- * "What stops a fake" as a pipeline (laptops): five gates as hairlines across the page, NO AI and MODEL READS bands
- * labelled on the left rail, and the judges' four samples falling down their lanes on scroll until the gate that
- * stops them. Every resting state is in the markup; the drop only plays when motion is allowed.
+ * "What stops a fake" as a pipeline (laptops): five gates as hairlines across the page, each marked No AI or Model
+ * reads, and the judges' four samples falling down their lanes on scroll until the gate that stops them. Every resting state is in the markup; the drop only plays when motion is allowed.
  */
 /**
  * Arms each lane separately: a lane's tag falls only once the gate that stops it is in view (its top above 70% of the
@@ -169,87 +170,87 @@ export function Pipeline() {
 
   return (
     <div ref={ref} className="relative hidden lg:block">
-      <div className={COLS} data-lanes-top>
-        <span className="micro col-span-2 pb-4 text-faint">Gate</span>
-        {SAMPLES.map((s) => (
-          <span key={s.lane} className="micro pb-4 pl-3 text-faint">
-            {s.lane}
-          </span>
-        ))}
+      <div className="grid-12" data-lanes-top>
+        <span className={clsx(GATE, "micro pb-4 text-faint")}>Gate</span>
+        <div className={LANES}>
+          {SAMPLES.map((s) => (
+            <span key={s.lane} className="micro pb-4 pl-3 text-faint">
+              {s.lane}
+            </span>
+          ))}
+        </div>
       </div>
       <ol className="relative">
         {rows.map((g, row) => {
-          const bandStart = g !== null && (row === 0 || g.ai !== GATES[row - 1].ai);
+          const bandStart = g !== null && row > 0 && g.ai !== GATES[row - 1].ai;
           return (
-            <li key={row} className={clsx("relative border-t", COLS, bandStart && row > 0 ? "border-line-strong" : "border-line")}>
-              {bandStart && (
-                // The band's name sits on the left rail, written up the page like a ruler's.
-                <span className="micro absolute top-6 -left-8 flex w-8 rotate-180 justify-center text-faint [writing-mode:vertical-rl]" aria-hidden="true">
-                  {g.ai ? "Model reads" : "No AI"}
-                </span>
-              )}
+            <li key={row} className={clsx("grid-12 relative border-t", bandStart ? "border-line-2" : "border-line")}>
               {g === null ? (
-                <div className="col-span-4 py-5 pr-12">
-                  <h3 className="text-head-sm font-medium">Then a fixed rule decides.</h3>
-                  <p className="mt-1 max-w-[52ch] text-ui text-muted">The model only describes what it sees. The rule reads its answers:</p>
-                  <p className="mt-4 inline-block rounded-control border border-line bg-surface px-3 py-2 font-mono text-micro leading-relaxed text-text">{RULE}</p>
+                <div className={GATE}>
+                  <div className="col-start-2 py-6 pr-12">
+                    <h3 className="text-head-sm font-medium">Then a fixed rule decides.</h3>
+                    <p className="mt-1 max-w-[52ch] text-ui text-muted">The model only describes what it sees. The rule reads its answers:</p>
+                    <p className="mt-4 inline-block rounded-control bg-surface px-3 py-2 font-mono text-micro leading-relaxed text-text shadow-ring">{RULE}</p>
+                  </div>
                 </div>
               ) : (
-                <>
-                  <span className="pt-5 font-mono text-ui text-faint tabular-nums">{String(row + 1).padStart(2, "0")}</span>
-                  <div className="py-5 pr-12">
-                    <h3 className="text-head-sm font-medium">
+                <div className={GATE}>
+                  <span className="pt-6 font-mono text-ui text-faint">{String(row + 1).padStart(2, "0")}</span>
+                  <div className="py-6 pr-12">
+                    <h3 className="flex items-center gap-3 text-head-sm font-medium">
                       {g.title}
-                      <span className="sr-only">{g.ai ? " (the model reads)" : " (no AI)"}</span>
+                      <span className="inline-flex h-6 items-center rounded-control px-2 font-mono text-micro tracking-[0.04em] whitespace-nowrap text-muted uppercase shadow-[inset_0_0_0_1px_var(--line-2)]">
+                        {g.ai ? "Model reads" : "No AI"}
+                      </span>
                     </h3>
-                    <p className="mt-1 max-w-[60ch] text-ui text-muted">{g.text}</p>
+                    <p className="mt-2 max-w-[56ch] text-ui text-muted">{g.text}</p>
                   </div>
-                </>
+                </div>
               )}
-              {SAMPLES.map((s, lane) => {
-                // In the last row the rule card spans the first two lanes, which are empty by then.
-                if (g === null && lane < 2) return null;
-                const stopsHere = s.stop === row;
-                const through = s.stop > row;
-                return (
-                  <div key={s.lane} className={clsx(styles.lane, "relative pl-3")} data-lane={lane} data-stop={stopsHere ? lane : undefined}>
-                    {(through || stopsHere) && (
-                      <span
-                        aria-hidden="true"
-                        className={clsx(styles.trail, "absolute top-0 left-[calc(0.75rem+4rem)] w-0 border-l border-dashed border-line-strong", through ? "bottom-0" : "h-4")}
-                        style={vars({ "--trail-at": `${Math.round((row / (s.stop + 1)) * FALL_FOR)}ms`, "--trail-for": `${Math.round(FALL_FOR / (s.stop + 1))}ms` })}
-                      />
-                    )}
-                    {stopsHere && (
-                      <div className="relative py-3" style={vars({ "--stamp-at": `${FALL_FOR}ms` })}>
-                        <div data-tag className={clsx(styles.fall, "relative w-32")}>
-                          <SampleTag sample={s} tilt={TILT[lane]} />
-                        </div>
-                        {s.note && (
-                          <p aria-hidden="true" className={clsx(styles.note, "absolute top-[6.9375rem] right-full flex items-center gap-2 font-mono text-micro whitespace-nowrap text-stop")}>
-                            {s.note}
-                            <span className="h-px w-6 bg-stop/60" />
+              <div className={LANES}>
+                {SAMPLES.map((s, lane) => {
+                  const stopsHere = s.stop === row;
+                  const through = s.stop > row;
+                  return (
+                    <div key={s.lane} className={clsx(styles.lane, "relative pl-3")} data-lane={lane} data-stop={stopsHere ? lane : undefined}>
+                      {(through || stopsHere) && (
+                        <span
+                          aria-hidden="true"
+                          className={clsx(styles.trail, "absolute top-0 left-[calc(0.75rem+4rem)] w-0 border-l border-dashed border-line-strong", through ? "bottom-0" : "h-4")}
+                          style={vars({ "--trail-at": `${Math.round((row / (s.stop + 1)) * FALL_FOR)}ms`, "--trail-for": `${Math.round(FALL_FOR / (s.stop + 1))}ms` })}
+                        />
+                      )}
+                      {stopsHere && (
+                        <div className="relative py-3" style={vars({ "--stamp-at": `${FALL_FOR}ms` })}>
+                          <div data-tag className={clsx(styles.fall, "relative w-32")}>
+                            <SampleTag sample={s} tilt={TILT[lane]} />
+                          </div>
+                          {s.note && (
+                            <p aria-hidden="true" className={clsx(styles.note, "absolute top-[6.9375rem] right-full flex items-center gap-2 font-mono text-micro whitespace-nowrap text-stop")}>
+                              {s.note}
+                              <span className="h-px w-6 bg-stop/60" />
+                            </p>
+                          )}
+                          <p className="sr-only">
+                            Sample: {s.title}. {s.stamp} here: {s.reason}.
                           </p>
-                        )}
-                        <p className="sr-only">
-                          Sample: {s.title}. {s.stamp} here: {s.reason}.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </li>
           );
         })}
       </ol>
-      {/* The genuine claim, past every gate, becomes a payout tag beside it. */}
-      <div aria-hidden="true" className={clsx(styles.lane, "pointer-events-none absolute right-[calc(9.5rem+0.75rem)] bottom-10")} data-lane={3}>
+      {/* The genuine claim, past every gate, becomes a payout tag beside it, in the lane to its left. */}
+      <div aria-hidden="true" className={clsx(styles.lane, "pointer-events-none absolute right-[calc((50%-var(--col-gap)/2)/4+0.75rem)] bottom-8")} data-lane={3}>
         <div className={styles.fall} style={vars({ "--fall-at": `${FALL_FOR}ms`, "--fall": "-24px" })}>
           <Paper variant="tag" hole padding="none" tilt={-2} className="w-40 [--tag-cut:12px]">
             <div className="px-4 pt-9 pb-4">
               <p className="micro text-ink-muted">Refund · sandbox</p>
-              <p className="mt-1 text-head-sm font-semibold text-ink">
+              <p className="mt-1 text-head-sm font-medium text-ink">
                 <Money value={29.99} />
               </p>
               <p className="mt-0.5 font-mono text-micro text-ink-muted">sent to PayPal</p>
@@ -294,12 +295,12 @@ export function PipelineList() {
       {GATES.map((g, i) => {
         const bandStart = i === 0 || g.ai !== GATES[i - 1].ai;
         return (
-          <li key={g.title} className={clsx("border-t py-6", bandStart && i > 0 ? "border-line-strong" : "border-line")}>
+          <li key={g.title} className={clsx("border-t py-6", bandStart && i > 0 ? "border-line-2" : "border-line")}>
             {bandStart && <p className="micro mb-4 text-faint">{g.ai ? "Model reads" : "No AI"}</p>}
             <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2">
               <span className="pt-0.5 font-mono text-ui text-faint tabular-nums">{String(i + 1).padStart(2, "0")}</span>
               <div>
-                <h3 className="text-body font-semibold">{g.title}</h3>
+                <h3 className="text-body font-medium">{g.title}</h3>
                 <p className="mt-1 text-ui text-muted">{g.text}</p>
               </div>
             </div>
@@ -308,9 +309,9 @@ export function PipelineList() {
         );
       })}
       <li className="border-t border-line py-6">
-        <h3 className="text-body font-semibold">Then a fixed rule decides.</h3>
+        <h3 className="text-body font-medium">Then a fixed rule decides.</h3>
         <p className="mt-1 text-ui text-muted">The model only describes what it sees.</p>
-        <p className="mt-3 rounded-control border border-line bg-surface px-3 py-2 font-mono text-micro leading-relaxed">{RULE}</p>
+        <p className="mt-3 rounded-control bg-surface px-3 py-2 font-mono text-micro leading-relaxed shadow-ring">{RULE}</p>
         {rows(5, "Passed every gate")}
       </li>
     </ol>

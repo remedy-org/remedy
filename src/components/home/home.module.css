@@ -172,45 +172,20 @@
 }
 
 /*
- * Page rails (lg and up): two 1px lines at the 1200px content edges, a 6px tick every 96px running outwards, and a
- * 10px mono label every fourth tick, like the ruler on the light table.
+ * Sections are separated by tone and space, never by rules: each one that follows another --bg section opens on
+ * --section-lift and fades into the page over 288px (Apple's section fade).
  */
-.rails {
+.fade {
+  background: linear-gradient(var(--section-lift), var(--bg) 288px);
+}
+
+/*
+ * The light table (DESIGN.md's signature): one warm pool of light under the paper object that leads the screen. It
+ * sits under every piece of content (its parent isolates), never moves, and stays inside its section's box.
+ */
+.pool {
   position: absolute;
-  inset: 0;
   z-index: -1;
-  overflow: hidden;
   pointer-events: none;
-}
-
-.rail {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 7px;
-  background:
-    linear-gradient(var(--rail), var(--rail)) var(--rail-x) 0 / 1px 100% no-repeat,
-    repeating-linear-gradient(to bottom, var(--rail) 0 1px, transparent 1px 96px) var(--tick-x) 95px / 6px 100% no-repeat;
-}
-
-.railLeft {
-  left: calc(50% - 600px - 6px);
-  --rail-x: 100%;
-  --tick-x: 0;
-}
-
-.railRight {
-  left: calc(50% + 600px - 1px);
-  --rail-x: 0;
-  --tick-x: 100%;
-}
-
-.railLabel {
-  position: absolute;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1;
-  color: var(--faint);
-  opacity: 0.7;
-  translate: 0 -50%;
+  background: var(--table-glow);
 }

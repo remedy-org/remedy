@@ -16,8 +16,8 @@ function apply(theme: Theme) {
   if (theme === "light") document.documentElement.dataset.theme = "light";
   else delete document.documentElement.dataset.theme;
   try {
-    if (theme === "light") localStorage.setItem(THEME_STORAGE_KEY, "light");
-    else localStorage.removeItem(THEME_STORAGE_KEY);
+    // Both choices are stored: "dark" must outlast a system that prefers light.
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
     // Private mode: the choice lasts for this page only.
   }
@@ -26,7 +26,7 @@ function apply(theme: Theme) {
 /**
  * A 36px icon button (44px hit area) that switches the app between the dark brand theme and the light theme. The
  * glyph is a half-lit disc that turns over with the theme; its angle follows <html data-theme> in CSS, so it is right
- * from the first paint. Not for the homepage (dark only).
+ * from the first paint.
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const theme = useSyncExternalStore(subscribe, read, () => "dark" as Theme);

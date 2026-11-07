@@ -10,7 +10,7 @@ export function GlassChip({ children, className, tone }: { children: ReactNode; 
     <span
       className={clsx(
         "inline-flex h-7 items-center gap-1.5 rounded-control px-2.5 font-mono text-micro tracking-[0.06em] whitespace-nowrap uppercase tabular-nums backdrop-blur-sm",
-        tone === "accent" ? "bg-accent text-accent-ink" : "bg-[oklch(0.12_0.01_255/0.72)] text-[oklch(0.96_0.005_255)]",
+        tone === "accent" ? "bg-accent text-accent-ink" : "bg-[oklch(0.12_0.004_75/0.72)] text-[oklch(0.96_0.006_85)]",
         className,
       )}
     >
@@ -80,5 +80,5 @@ export function Dock({ left, middle, right, short, className }: { left?: ReactNo
  * camera app. From 640px it is a 4:3 card. FlowShell drops its footer and bottom padding while [data-camera] is on screen.
  */
 export const CAMERA_FRAME =
-  "overflow-hidden bg-[oklch(0.12_0.01_255)] text-text max-sm:-mx-4 max-sm:-mt-8 max-sm:grid max-sm:h-[calc(100dvh-4rem-1px)] max-sm:grid-rows-[minmax(0,1fr)_auto_auto] sm:rounded-card sm:shadow-ring";
+  "overflow-hidden bg-[oklch(0.12_0.004_75)] text-text max-sm:-mx-4 max-sm:-mt-8 max-sm:grid max-sm:h-[calc(100dvh-4rem-1px)] max-sm:grid-rows-[minmax(0,1fr)_auto_auto] sm:rounded-card sm:shadow-ring";
 export const CAMERA_VIEW = "relative overflow-hidden max-sm:min-h-0 sm:aspect-[4/3]";

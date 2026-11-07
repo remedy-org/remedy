@@ -6,7 +6,8 @@ export type PaperVariant = "tag" | "sheet" | "receipt" | "notice";
 export interface PaperProps extends HTMLAttributes<HTMLElement> {
   /**
    * tag: top corners cut, like a luggage tag. sheet: a verdict or document page. receipt: the refund slip.
-   * notice: a document excerpt lying on paper (paper-2, a flat shadow), e.g. the recall notice on the Problem band.
+   * notice: a document excerpt lying on the paper band (--band-sheet, a flat shadow), e.g. the recall notice on the
+   * Problem band.
    */
   variant?: PaperVariant;
   /** A 10px punched hole, top centre, 14px from the top edge. The page shows through it. */
@@ -36,7 +37,7 @@ export function Paper({ variant = "sheet", hole, perforated, tilt, padding = "md
       <div
         className={clsx(
           "relative h-full rounded-control text-ink",
-          variant === "notice" ? "bg-paper-2 shadow-[0_0_0_1px_var(--paper-line),var(--paper-shadow-flat)]" : "bg-paper",
+          variant === "notice" ? "bg-band-sheet shadow-[var(--paper-shadow-flat)]" : "bg-paper",
           !lifted && variant !== "notice" && "shadow-paper",
           cut && "paper-cut",
           hole && "paper-hole",

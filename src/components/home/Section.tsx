@@ -1,6 +1,5 @@
 import clsx from "clsx";
 import type { CSSProperties, ReactNode } from "react";
-import { ExhibitLabel } from "@/components/ui";
 import styles from "./home.module.css";
 import { Reveal } from "./Reveal";
 
@@ -11,11 +10,7 @@ export interface SectionProps {
   /** Two-tone heading: the claim, then the explanation in muted. */
   title: ReactNode;
   muted?: ReactNode;
-  /**
-   * statement: a title-lg heading (64px), for at most two sections on the page. small: a 20px two-tone head with the
-   * lead set beside it on laptops (Raycast's small heads, so the big ones mean something).
-   */
-  head?: "statement" | "small";
+  /** The section's intro, set beside the heading on laptops and under it on phones. */
   lead?: ReactNode;
   /** paper: the page's one light band (paper and ink), used once, for the problem. */
   tone?: "dark" | "paper";
@@ -26,66 +21,45 @@ export interface SectionProps {
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
 
 /**
- * A homepage section: a hairline on top that runs to the rails, 72px of air on laptops (64px on phones), an exhibit eyebrow
- * and a heading that focuses in. Leads stop at 60ch.
+ * A homepage section on the one 12-column grid. No rules between sections: each one opens with a fade from
+ * --section-lift into the page over 288px (the paper band is its own boundary), then 128px of air on laptops (72px on
+ * phones). The heading takes columns 1 to 7 and the lead columns 8 to 12, bottom-aligned, so every section's text
+ * starts on the same two grid lines. The heading is 40px, two-tone, and focuses in.
  */
-export function Section({ id, exhibit, title, muted, head = "small", lead, tone = "dark", children, className }: SectionProps) {
+export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className }: SectionProps) {
   const headingId = `${id}-title`;
   const paper = tone === "paper";
+  const [letter, name] = exhibit.split(" · ");
   return (
-    <section
-      id={id}
-      aria-labelledby={headingId}
-      className={clsx("scroll-mt-16", paper ? "bg-paper text-ink" : "border-t border-line", className)}
-    >
-      <div className="mx-auto max-w-content px-4 py-16 sm:px-8 lg:py-18">
-        <Reveal
-          as="header"
-          className={clsx(head === "small" && lead && "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-end lg:gap-x-16")}
-        >
-          <div>
-            <ExhibitLabel leader="left" leaderLength={24} className={clsx(paper && "text-ink-muted [&>span:first-child]:bg-ink-muted/50")}>
-              Exhibit {exhibit}
-            </ExhibitLabel>
-            {head === "statement" ? (
-              <h2 id={headingId} className="mt-6 text-title-lg font-semibold text-balance">
-                <span className={clsx(styles.line, "block")} style={line(0)}>
-                  {title}
-                </span>{" "}
-                {muted && (
-                  <span className={clsx(styles.line, "block", paper ? "text-ink-muted" : "text-muted")} style={line(1)}>
-                    {muted}
-                  </span>
-                )}
-              </h2>
-            ) : (
-              <h2 id={headingId} className="mt-6 max-w-[34ch] text-head-sm font-medium text-balance">
-                <span className={clsx(styles.line, "inline-block")} style={line(0)}>
-                  {title}
-                </span>{" "}
-                {muted && (
-                  <span className={clsx(styles.line, "inline-block", paper ? "text-ink-muted" : "text-muted")} style={line(1)}>
-                    {muted}
-                  </span>
-                )}
-              </h2>
-            )}
+    <section id={id} aria-labelledby={headingId} className={clsx("scroll-mt-16", paper ? "bg-band text-ink" : styles.fade, className)}>
+      <div className="page py-18 lg:py-32">
+        <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
+          <div className="col-span-12 lg:col-span-7">
+            <p className={clsx(styles.line, "micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
+              Exhibit <span className={paper ? "text-ink" : "text-text-2"}>{letter}</span>
+              {name && <> · {name}</>}
+            </p>
+            <h2 id={headingId} className="mt-5 text-title-lg font-medium text-balance">
+              <span className={clsx(styles.line, "block")} style={line(1)}>
+                {title}
+              </span>{" "}
+              {muted && (
+                <span className={clsx(styles.line, "block", paper ? "text-ink-muted" : "text-muted")} style={line(2)}>
+                  {muted}
+                </span>
+              )}
+            </h2>
           </div>
           {lead && (
             <p
-              className={clsx(
-                styles.line,
-                "max-w-[60ch] text-pretty",
-                head === "statement" ? "mt-6 text-body sm:text-lead" : "mt-4 text-body lg:mt-0",
-                paper ? "text-ink-muted" : "text-muted",
-              )}
-              style={line(2)}
+              className={clsx(styles.line, "col-span-12 max-w-[60ch] text-body text-pretty lg:col-span-5 lg:col-start-8 lg:pb-1", paper ? "text-ink-muted" : "text-text-2")}
+              style={line(3)}
             >
               {lead}
             </p>
           )}
         </Reveal>
-        <div className="mt-10 lg:mt-12">{children}</div>
+        <div className="mt-12 lg:mt-16">{children}</div>
       </div>
     </section>
   );

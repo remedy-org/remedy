@@ -37,7 +37,7 @@ export function Stamp({ children, tone = "neutral", rotate = -8, land, className
       style={style}
       className={clsx(
         // The right padding gives back the tracking after the last letter, so the word sits centred in its border.
-        "inline-flex h-8 items-center rounded-control border-2 border-current pr-[calc(0.625rem-0.14em)] pl-2.5 font-mono text-ui leading-none font-semibold tracking-[0.14em] whitespace-nowrap uppercase select-none",
+        "inline-flex h-8 items-center rounded-control border-2 border-current pr-[calc(0.625rem-0.14em)] pl-2.5 font-mono text-ui leading-none font-medium tracking-[0.14em] whitespace-nowrap uppercase select-none",
         tones[tone],
         land !== undefined && land !== false && "stamp-land",
         className,

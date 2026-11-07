@@ -174,7 +174,7 @@ function ReceiptRow({ label, mono, children }: { label: string; mono?: boolean; 
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-dashed border-paper-line py-3 text-ui last:border-b-0">
       <dt className="shrink-0 text-ink-muted">{label}</dt>
-      <dd className={clsx("min-w-0 truncate text-right text-ink tabular-nums", mono && "font-mono")}>{children}</dd>
+      <dd className={clsx("min-w-0 truncate text-right text-ink", mono && "font-mono")}>{children}</dd>
     </div>
   );
 }

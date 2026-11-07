@@ -1,66 +1,92 @@
 @import "tailwindcss";
 
 /*
- * Evidence Room tokens (DESIGN.md). Dark is the brand and the default; light is opt-in with
- * data-theme="light" on <html> or on any subtree. The homepage pins data-theme="dark" on its wrapper.
+ * Evidence Room tokens, "Lamplight" (DESIGN.md): a warm graphite room, cream paper and one amber. Dark is the default;
+ * light is data-theme="light" on <html> (the pre-paint script in layout.tsx sets it from the saved choice, else from
+ * prefers-color-scheme) or on any subtree. Token NAMES are stable; every page follows them.
+ *
+ * Cascade: the shared block `:root, [data-theme]` comes after the two theme blocks with equal specificity, so any
+ * token that differs by theme lives only in the theme blocks, never in the shared one.
+ *
+ * Guards: dark neutrals stay at chroma 0.004, hue 75 (above 0.005 the room turns brown and amber stops popping), and
+ * dark surfaces step by exactly +0.035 L. Run `npx tsx scripts/contrast.ts` after changing any colour.
  */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: oklch(0.165 0.012 255);
-  --surface: oklch(0.205 0.013 255);
-  --surface-2: oklch(0.245 0.014 255);
-  --line: oklch(1 0 0 / 0.08);
-  /* Input borders: 3:1 against --bg and --surface. */
-  --line-strong: oklch(0.52 0.012 255);
-  --text: oklch(0.96 0.005 255);
-  --muted: oklch(0.72 0.012 255);
-  /* Reading text: 4.8:1 on --surface-2, 5.3:1 on --surface. */
-  --faint: oklch(0.64 0.012 255);
-  --accent: oklch(0.8 0.15 75);
-  --accent-hover: oklch(0.84 0.15 75);
-  --accent-ink: oklch(0.22 0.03 70);
-  --accent-text: oklch(0.82 0.13 78);
-  --pay: oklch(0.78 0.16 150);
-  --hold: oklch(0.76 0.1 240);
-  --stop: oklch(0.7 0.17 25);
+  --bg: oklch(0.155 0.004 75);
+  --surface: oklch(0.19 0.004 75);
+  --surface-2: oklch(0.225 0.004 75);
+  --surface-3: oklch(0.26 0.004 75);
+  /* Top colour of a section's fade into the page (Apple's lighter-to-page fade over 288px). */
+  --section-lift: oklch(0.175 0.004 75);
+  --line: oklch(0.96 0.02 85 / 0.08);
+  --line-2: oklch(0.96 0.02 85 / 0.15);
+  /* Input and search-field borders only: opaque, 3:1 on --bg, --surface and --surface-2. */
+  --line-strong: oklch(0.53 0.006 80);
+  --text: oklch(0.96 0.006 85);
+  --text-2: oklch(0.86 0.005 80);
+  --muted: oklch(0.74 0.005 80);
+  --faint: oklch(0.68 0.005 80);
+  --accent: oklch(0.79 0.145 72);
+  --accent-hover: oklch(0.83 0.135 72);
+  --accent-ink: oklch(0.22 0.03 65);
+  --accent-text: oklch(0.82 0.12 76);
+  --pay: oklch(0.79 0.15 150);
+  --hold: oklch(0.78 0.08 240);
+  --stop: oklch(0.72 0.16 28);
+  /* The light table: one warm pool of light under the paper that leads the screen. The only light on the site. */
+  --pool: oklch(0.8 0.1 75 / 0.085);
+  /* A machined 0.5px top edge on dark cards and controls, and a cream halo around dark cards. */
+  --bevel: inset 0 0.5px 0 oklch(1 0 0 / 0.08);
+  --halo: 0 0 20px 5px oklch(0.83 0.03 85 / 0.05);
   --float-shadow: 0 16px 40px -16px oklch(0 0 0 / 0.6);
+  /* Paper resting on the room: a 1px ink ring, an inner top highlight, a contact shadow and a long soft drop. */
+  --paper-shadow: 0 0 0 1px oklch(0.23 0.01 65 / 0.12), inset 0 1px 0 oklch(1 0 0 / 0.7), 0 2px 3px oklch(0 0 0 / 0.28), 0 22px 44px -14px oklch(0 0 0 / 0.6);
+  /* The same, for masked paper (a punched tag, a perforated receipt), as a filter on the wrapper. */
+  --paper-drop: drop-shadow(0 0 0.5px oklch(0.23 0.01 65 / 0.5)) drop-shadow(0 2px 2px oklch(0 0 0 / 0.28)) drop-shadow(0 18px 22px oklch(0 0 0 / 0.45));
+  /* The Problem band, and a notice lying on it. */
+  --band: var(--paper);
+  --band-sheet: var(--paper-2);
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg: oklch(0.985 0.003 255);
-  --surface: oklch(1 0 0);
-  --surface-2: oklch(0.962 0.004 255);
-  --line: oklch(0.2 0.02 255 / 0.1);
-  --line-strong: oklch(0.64 0.015 255);
-  --text: oklch(0.2 0.02 255);
-  --muted: oklch(0.46 0.02 255);
-  /* Reading text: 4.5:1 on --surface-2, 4.8:1 on --bg. */
-  --faint: oklch(0.54 0.015 255);
-  --accent: oklch(0.74 0.15 72);
-  --accent-hover: oklch(0.78 0.15 72);
-  --accent-ink: oklch(0.22 0.03 70);
-  --accent-text: oklch(0.52 0.12 62);
-  --pay: oklch(0.48 0.14 150);
-  --hold: oklch(0.5 0.12 250);
-  --stop: oklch(0.51 0.19 27);
-  --float-shadow: 0 16px 40px -20px oklch(0.2 0.02 255 / 0.25);
-}
-
-/*
- * The homepage's <html> stays dark even when a light theme is saved, so the scrollbar and the overscroll band match
- * the page. Its own rule: a browser without :has() drops only this, not the tokens above. Outranks [data-theme].
- */
-html:has([data-marketing]) {
-  color-scheme: dark;
-  --bg: oklch(0.165 0.012 255);
+  --bg: oklch(0.975 0.006 85);
+  --surface: oklch(0.995 0.003 85);
+  --surface-2: oklch(0.955 0.007 85);
+  --surface-3: oklch(0.93 0.008 85);
+  --section-lift: oklch(0.96 0.007 85);
+  --line: oklch(0.25 0.02 65 / 0.11);
+  --line-2: oklch(0.25 0.02 65 / 0.18);
+  --line-strong: oklch(0.62 0.008 70);
+  --text: oklch(0.21 0.008 65);
+  --text-2: oklch(0.33 0.008 65);
+  --muted: oklch(0.45 0.008 65);
+  --faint: oklch(0.51 0.008 65);
+  --accent: oklch(0.77 0.145 70);
+  --accent-hover: oklch(0.81 0.135 70);
+  --accent-ink: oklch(0.22 0.03 65);
+  --accent-text: oklch(0.5 0.12 60);
+  --pay: oklch(0.45 0.13 150);
+  --hold: oklch(0.44 0.11 250);
+  --stop: oklch(0.48 0.18 28);
+  --pool: oklch(0.86 0.09 78 / 0.4);
+  /* Clerk's soft ring layers in light; no halo. */
+  --bevel: 0 1px 1px oklch(0.23 0.01 65 / 0.024), 0 3px 3px oklch(0.23 0.01 65 / 0.024);
+  --halo: 0 0 #0000;
+  --float-shadow: 0 16px 40px -20px oklch(0.23 0.01 65 / 0.22);
+  --paper-shadow: 0 0 0 1px oklch(0.23 0.01 65 / 0.16), inset 0 1px 0 oklch(1 0 0 / 0.7), 0 1px 2px oklch(0.23 0.01 65 / 0.08), 0 3px 8px oklch(0.23 0.01 65 / 0.06), 0 18px 36px -12px oklch(0.23 0.01 65 / 0.22);
+  --paper-drop: drop-shadow(0 0 0.5px oklch(0.23 0.01 65 / 0.5)) drop-shadow(0 1px 2px oklch(0.23 0.01 65 / 0.1)) drop-shadow(0 14px 18px oklch(0.23 0.01 65 / 0.14));
+  /* In light the band is a step darker than the object paper, so it reads as card stock against the page. */
+  --band: var(--paper-2);
+  --band-sheet: var(--paper);
 }
 
 /*
  * Soft state backgrounds (the state colour at 14%), and the paper objects: the tag, the receipt, the notice. Paper
  * and its inks are fixed colours in both themes, like the real thing. Every ink clears 4.5:1 on --paper and --paper-2,
- * stamps included at 85%: run `npx tsx scripts/contrast.ts` after changing any of them.
+ * stamps included at 85%.
  */
 :root,
 [data-theme] {
@@ -69,23 +95,28 @@ html:has([data-marketing]) {
   --stop-soft: color-mix(in oklch, var(--stop) 14%, transparent);
   --accent-soft: color-mix(in oklch, var(--accent) 10%, transparent);
 
-  --paper: oklch(0.95 0.012 85);
-  --paper-2: oklch(0.91 0.014 85);
-  --paper-line: oklch(0.24 0.02 255 / 0.18);
-  --ink: oklch(0.24 0.02 255);
-  --ink-muted: oklch(0.42 0.02 255);
-  --pay-ink: oklch(0.44 0.14 150);
-  --hold-ink: oklch(0.46 0.12 250);
-  --stop-ink: oklch(0.5 0.18 27);
+  --paper: oklch(0.94 0.014 85);
+  --paper-2: oklch(0.9 0.016 85);
+  --paper-line: oklch(0.23 0.01 65 / 0.18);
+  /* The inner top highlight for masked paper (an inset shadow survives the mask). */
+  --paper-top: inset 0 1px 0 oklch(1 0 0 / 0.7);
+  --paper-shadow-flat: 0 0 0 1px var(--paper-line), inset 0 1px 0 oklch(1 0 0 / 0.5), 0 10px 24px -14px oklch(0.23 0.01 65 / 0.35);
+  --ink: oklch(0.23 0.01 65);
+  --ink-muted: oklch(0.42 0.012 65);
+  --pay-ink: oklch(0.42 0.13 150);
+  --hold-ink: oklch(0.44 0.11 250);
+  --stop-ink: oklch(0.47 0.17 28);
   /* Highlighter under ink, drawn left to right (.highlight). */
   --highlight: color-mix(in oklch, var(--accent) 55%, transparent);
-  /* A paper object resting on graphite, and one resting on paper. */
-  --paper-shadow: 0 1px 1px oklch(0 0 0 / 0.18), 0 18px 32px -14px oklch(0 0 0 / 0.55);
-  --paper-shadow-flat: 0 1px 2px oklch(0.24 0.02 255 / 0.08), 0 10px 24px -14px oklch(0.24 0.02 255 / 0.3);
+  /* The light table's pool, as a background: a radial falloff to nothing, no hard edge. */
+  --table-glow: radial-gradient(closest-side, var(--pool), transparent);
+  /* The backing for the "AI-made test photo" label on photos, and its text. */
+  --photo-scrim: oklch(0.155 0.004 75 / 0.78);
+  --photo-scrim-text: oklch(0.96 0.006 85);
 
-  /* The lit light table under the hero device, and the homepage's page rails. */
-  --table-glow: radial-gradient(ellipse 60% 45% at 60% 42%, oklch(0.32 0.04 75 / 0.55), transparent 62%);
-  --rail: oklch(1 0 0 / 0.06);
+  /* The page frame: content at most 82rem (1312px) inside fluid gutters, 1440px in all at 1440. */
+  --gutter: clamp(24px, 4.45vw, 64px);
+  --col-gap: clamp(16px, 1.67vw, 24px);
 
   /* Motion (DESIGN.md). Mirrored for Motion JS in src/components/ui/motion.ts. */
   --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -99,15 +130,14 @@ html:has([data-marketing]) {
   --dur-reveal: 900ms;
 
   /* Sizes that step down on phones (below 640px). */
-  --title-size: 1.625rem;
-  --amount-size: 3.25rem;
+  --title-size: 1.75rem;
+  --amount-size: 2.5rem;
 }
 
 @media (min-width: 640px) {
   :root,
   [data-theme] {
-    --title-size: 2rem;
-    --amount-size: 4rem;
+    --amount-size: 3.5rem;
   }
 }
 
@@ -122,9 +152,12 @@ html:has([data-marketing]) {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-line: var(--line);
+  --color-line-2: var(--line-2);
   --color-line-strong: var(--line-strong);
   --color-text: var(--text);
+  --color-text-2: var(--text-2);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
@@ -141,58 +174,64 @@ html:has([data-marketing]) {
   --color-paper: var(--paper);
   --color-paper-2: var(--paper-2);
   --color-paper-line: var(--paper-line);
+  --color-band: var(--band);
+  --color-band-sheet: var(--band-sheet);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
   --color-pay-ink: var(--pay-ink);
   --color-hold-ink: var(--hold-ink);
   --color-stop-ink: var(--stop-ink);
-  --color-rail: var(--rail);
+  --color-photo-scrim: var(--photo-scrim);
+  --color-photo-scrim-text: var(--photo-scrim-text);
 
-  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
-  /* Instrument Serif, 400 italic only: monumental numbers and the hero's second line. Homepage only. */
-  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  /* Schibsted Grotesk for every word; JetBrains Mono for evidence (codes, ids, grid amounts, timestamps, stamps). */
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
 
+  /* Six steps, one voice: 56 / 40 / 22 / 17 / 14 / 12 (28 is the 40 step's phone floor and the app's screen titles). */
   --text-*: initial;
-  /* Monumental numbers (use with font-serif italic): the custody payout, Problem stats, Proof's 0. */
-  --text-numeral: clamp(4.5rem, 11vw, 10rem);
-  --text-numeral--line-height: 0.9;
-  --text-numeral--letter-spacing: -0.02em;
-  /* Homepage hero h1 only: 112px at 1440, 44px at 375. */
-  --text-display: clamp(2.75rem, 7.8vw, 7.25rem);
-  --text-display--line-height: 0.94;
-  --text-display--letter-spacing: -0.04em;
-  /* Homepage statement titles; two two-tone uses at most. */
-  --text-title-lg: clamp(2.25rem, 4.4vw, 4rem);
-  --text-title-lg--line-height: 1;
-  --text-title-lg--letter-spacing: -0.035em;
-  /* Homepage small section heads, weight 500, two-tone. */
-  --text-head-sm: 1.25rem;
+  /*
+   * The homepage h1 and the one money figure per screen where the number is the point: 56px at 1440, 40px on phones
+   * (40, not 36: at 36 the hero lead's block outweighs the h1 and becomes the phone's LCP element).
+   */
+  --text-display: clamp(2.5rem, 3.9vw, 3.5rem);
+  --text-display--line-height: 1.03;
+  --text-display--letter-spacing: -0.03em;
+  /* Section headings (two-tone), the Problem stats, Proof's 0: 40px at 1440, 28px at 375. */
+  --text-title-lg: clamp(1.75rem, 2.8vw, 2.5rem);
+  --text-title-lg--line-height: 1.06;
+  --text-title-lg--letter-spacing: -0.028em;
+  /* Small heads, check names, hero fact figures. */
+  --text-head-sm: 1.375rem;
   --text-head-sm--line-height: 1.3;
   --text-head-sm--letter-spacing: -0.01em;
-  /* Claim-flow refund and receipt amount: 64px, 52px on phones. */
+  /* Claim-flow refund and receipt amount: 56px, 40px on phones. */
   --text-amount: var(--amount-size);
   --text-amount--line-height: 1;
   --text-amount--letter-spacing: -0.03em;
-  /* Claim-flow screen titles: 32px, 26px on phones. */
+  /* Claim-flow screen titles. */
   --text-title: var(--title-size);
   --text-title--line-height: 1.1;
   --text-title--letter-spacing: -0.02em;
-  --text-h1: 2.75rem;
-  --text-h1--line-height: 1.08;
-  --text-h1--letter-spacing: -0.02em;
+  /* App page titles. */
+  --text-h1: 2.5rem;
+  --text-h1--line-height: 1.06;
+  --text-h1--letter-spacing: -0.028em;
+  /* Console screen titles. */
   --text-h2: 1.75rem;
-  --text-h2--line-height: 1.15;
-  --text-h2--letter-spacing: -0.015em;
-  --text-lead: 1.25rem;
-  --text-lead--line-height: 1.5;
-  --text-body: 1rem;
-  --text-body--line-height: 1.6;
+  --text-h2--line-height: 1.1;
+  --text-h2--letter-spacing: -0.02em;
+  /* Leads, in --text-2. */
+  --text-lead: 1.375rem;
+  --text-lead--line-height: 1.45;
+  /* Running text, in --text-2, at most 68ch. */
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.55;
   --text-ui: 0.875rem;
   --text-ui--line-height: 1.45;
   --text-micro: 0.75rem;
   --text-micro--line-height: 1.4;
-  --text-micro--letter-spacing: 0.06em;
+  --text-micro--letter-spacing: 0.04em;
 
   --font-weight-*: initial;
   --font-weight-normal: 400;
@@ -205,11 +244,14 @@ html:has([data-marketing]) {
   --radius-frame: 16px;
 
   --shadow-*: initial;
-  --shadow-float: 0 0 0 1px var(--line), var(--float-shadow);
-  --shadow-ring: 0 0 0 1px var(--line);
-  --shadow-paper: 0 0 0 1px var(--paper-line), var(--paper-shadow);
+  /* Controls and insets: the hairline ring and the machined top edge. */
+  --shadow-ring: 0 0 0 1px var(--line), var(--bevel);
+  /* Cards, the console window, the rule table, the photo card, the evidence panel: ring, bevel and the cream halo. */
+  --shadow-card: 0 0 0 1px var(--line), var(--bevel), var(--halo);
+  --shadow-float: 0 0 0 1px var(--line), var(--bevel), var(--float-shadow);
+  --shadow-paper: var(--paper-shadow);
 
-  --container-content: 75rem;
+  --container-content: 82rem;
   --container-claim: 30rem;
   --container-read: 68ch;
 
@@ -220,6 +262,23 @@ html:has([data-marketing]) {
   --ease-back: var(--ease-back);
   --default-transition-duration: 160ms;
   --default-transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/*
+ * The page frame (one for the whole site): content at most 82rem inside the fluid gutters. Full-bleed backgrounds sit
+ * on the section; its content sits in .page. .grid-12 is the one 12-column grid every section aligns to.
+ */
+@utility page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: calc(var(--container-content) + 2 * var(--gutter));
+  padding-inline: var(--gutter);
+}
+
+@utility grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--col-gap);
 }
 
 @layer base {
@@ -256,6 +315,16 @@ html:has([data-marketing]) {
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  /* Lenis (SmoothScroll.tsx): the page keeps its natural height, and inner scrollers keep their own wheel. */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+
+  .lenis [data-lenis-prevent] {
+    overscroll-behavior: contain;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -333,7 +402,13 @@ html:has([data-marketing]) {
   }
 
   .paper-lifted {
-    filter: drop-shadow(0 0 0.5px oklch(0.24 0.02 255 / 0.35)) drop-shadow(0 14px 18px oklch(0 0 0 / 0.38));
+    filter: var(--paper-drop);
+  }
+
+  /* Masked paper keeps its inner top highlight (an inset shadow survives the mask). */
+  .paper-lifted > .paper-cut,
+  .paper-lifted > .paper-tag {
+    box-shadow: var(--paper-top);
   }
 }
 

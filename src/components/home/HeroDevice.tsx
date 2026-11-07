@@ -19,9 +19,8 @@ const TAG_AFTER = 380;
 const MAX_TILT = 4;
 
 const EXHIBITS: { id: AnchorId; n: string; text: string; className: string }[] = [
-  { id: "label", n: "01", text: "Label", className: "left-[22%] -top-[1%]" },
-  { id: "cut", n: "02", text: "Cut", className: "left-[1%] top-[63%]" },
-  { id: "code", n: "03", text: "Code", className: "left-[24%] top-[75%]" },
+  { id: "label", n: "01", text: "Label, code M4T", className: "left-[22%] -top-[1%]" },
+  { id: "cut", n: "02", text: "Cut", className: "right-[95%] top-[46%]" },
 ];
 
 const NOSCRIPT = `<style>[data-hero-device] [data-seq=show]{opacity:1!important;transform:none!important}[data-hero-device] [data-seq=hide]{opacity:0!important}</style>`;
@@ -205,7 +204,6 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
         role="img"
         aria-label={`A Remedy claim on a laptop: the recalled Kikea pillow cut in half with code M4T written on its tag. Five checks pass, then $29.99 is sent to PayPal, ${CLAIM.seconds} seconds after the photo.`}
       >
-        <div className={styles.glow} aria-hidden="true" />
         <div className={styles.view}>
           <Laptop screen={<ClaimScreen phase={shown} />} renderTilt={renderTilt} />
         </div>
@@ -220,7 +218,7 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
                 <span className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Refund · {CLAIM.id}</span>
                 {/* "Sandbox" sits beside the amount, as on every demo amount. */}
                 <span className="flex items-baseline gap-2">
-                  <span className="text-[1.75rem] leading-none font-semibold tracking-[-0.02em]">
+                  <span className="text-[1.75rem] leading-none font-medium tracking-[-0.02em]">
                     <Money value={CLAIM.amount} size="inline" />
                   </span>
                   <span className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Sandbox</span>
@@ -246,7 +244,7 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
           </svg>
           {EXHIBITS.map(({ id, n, text, className }) => (
             <div key={id} className={clsx(styles.label, "whitespace-nowrap", className)}>
-              <ExhibitLabel leader="right" leaderLength={28} className="bg-bg/70" as="span">
+              <ExhibitLabel leader="right" leaderLength={28} as="span">
                 Exhibit {n} · {text}
               </ExhibitLabel>
               <span data-exhibit={id} className="absolute top-1/2 right-0 size-px" />

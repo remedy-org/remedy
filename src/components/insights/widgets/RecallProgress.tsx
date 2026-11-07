@@ -41,7 +41,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
       </p>
       <div aria-hidden="true" className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
         <p className="flex items-baseline gap-2">
-          <span className="text-[2.25rem] leading-none font-semibold tracking-[-0.02em] tabular-nums">{done.toLocaleString("en-US")}</span>
+          <span className="text-[2.25rem] leading-none font-semibold tracking-[-0.02em]">{done.toLocaleString("en-US")}</span>
           <span className="text-ui text-muted">of {total.toLocaleString("en-US")} units remedied</span>
         </p>
         <p className="font-mono text-ui text-text tabular-nums">{pct(share)}</p>

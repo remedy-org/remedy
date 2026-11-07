@@ -7,7 +7,7 @@ export type ButtonVariant = "primary" | "secondary" | "tertiary";
 export type ButtonSize = "sm" | "md" | "lg";
 
 interface Common {
-  /** primary = amber fill (one per view), secondary = hairline outline, tertiary = text with an arrow. */
+  /** primary = amber fill (one per view), secondary = the quiet button (surface-2, a hairline ring), tertiary = text with an arrow. */
   variant?: ButtonVariant;
   /** sm 36px (hit area stays 44px), md 44px, lg 48px. Tertiary ignores height. */
   size?: ButtonSize;
@@ -33,9 +33,11 @@ const base =
   "aria-disabled:pointer-events-none aria-disabled:opacity-40 disabled:pointer-events-none disabled:opacity-40";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "rounded-control bg-accent text-accent-ink hover:bg-accent-hover active:translate-y-px",
-  secondary: "rounded-control border border-line-strong bg-transparent text-text hover:bg-surface-2 active:translate-y-px",
-  tertiary: "rounded-control text-text hover:text-accent-text underline-offset-4 hover:underline",
+  // A 0.5px white top edge: 8% would not show on amber.
+  primary: "rounded-control bg-accent text-accent-ink shadow-[inset_0_0.5px_0_oklch(1_0_0/0.35)] hover:bg-accent-hover active:translate-y-px",
+  secondary: "rounded-control bg-surface-2 text-text shadow-[inset_0_0_0_1px_var(--line-2),var(--bevel)] hover:bg-surface-3 active:translate-y-px",
+  // A text link: the arrow moves on hover, the colour does not change.
+  tertiary: "rounded-control text-text underline-offset-4 decoration-line-2 hover:underline",
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -58,7 +60,7 @@ export function Button(props: ButtonProps) {
   const content = (
     <>
       <span>{pending && pendingLabel ? pendingLabel : children}</span>
-      {showArrow && <ArrowRightIcon className="shrink-0 transition-transform duration-160 ease-snap group-hover:translate-x-0.5" />}
+      {showArrow && <ArrowRightIcon className="shrink-0 transition-transform duration-160 ease-snap group-hover:translate-x-[3px]" />}
     </>
   );
 

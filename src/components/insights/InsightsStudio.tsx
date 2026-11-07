@@ -56,7 +56,7 @@ function fonts() {
     const family = root.getPropertyValue(name).trim();
     return family ? `${family}, ${fallback}` : fallback;
   };
-  return { sans: stack("--font-instrument-sans", "ui-sans-serif, system-ui, sans-serif"), mono: stack("--font-plex-mono", "ui-monospace, Menlo, monospace") };
+  return { sans: stack("--font-schibsted", "ui-sans-serif, system-ui, sans-serif"), mono: stack("--font-jetbrains", "ui-monospace, Menlo, monospace") };
 }
 
 // Below 1024px Studio's canvas doesn't reflow, so the page shows a summary instead and the rail takes the full width.

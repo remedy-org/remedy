@@ -89,11 +89,11 @@ export default function DevUiPage() {
           real thing; switch the theme to check.
         </p>
 
-        <Block n="01" title="Money" note="Cents de-emphasised, tabular figures. Screen readers and copy-paste get the plain amount.">
-          <Spec name='size="numeral"' detail="Instrument Serif italic, 72–160px. Homepage only.">
+        <Block n="01" title="Money" note="Cents de-emphasised; tabular figures only in the mono grid size. Screen readers and copy-paste get the plain amount.">
+          <Spec name='size="numeral"' detail="Schibsted Grotesk 500 at the display size, 36–56px. One per screen, where the number is the point.">
             <Money value={29.99} size="numeral" />
           </Spec>
-          <Spec name='size="amount"' detail="Instrument Sans 600, 64px; 52px on phones. The claim flow's refund.">
+          <Spec name='size="amount"' detail="Schibsted Grotesk 500, 56px; 40px on phones. The claim flow's refund.">
             <Money value={29.99} size="amount" />
           </Spec>
           <Spec name='size="inline"' detail="The surrounding text's font and size; cents at 73%.">
@@ -101,7 +101,7 @@ export default function DevUiPage() {
               Refunded <Money value={29.99} /> to your PayPal account through Remedy for Kikea Store.
             </p>
           </Spec>
-          <Spec name='size="grid"' detail="14px Plex Mono, right-aligned in tables.">
+          <Spec name='size="grid"' detail="14px JetBrains Mono, tabular, right-aligned in tables.">
             <table className="w-full max-w-md text-ui">
               <caption className="sr-only">Sample payouts</caption>
               <thead>
@@ -128,16 +128,16 @@ export default function DevUiPage() {
           </Spec>
         </Block>
 
-        <Block n="02" title="Type" note="Homepage sizes: 160 / 112 / 64 / 20 / 16 / 14 / 12. App screens keep six.">
-          <Spec name="text-display" detail="Sans 600 over serif italic, 44–116px. Hero h1 only, at full content width." wide>
-            <p className="text-display font-semibold">
+        <Block n="02" title="Type" note="Six sizes everywhere: 56 / 40 / 22 / 17 / 14 / 12.">
+          <Spec name="text-display" detail="Sans 500, 36–56px, -0.03em, two-tone. Hero h1 only." wide>
+            <p className="text-display font-medium">
               Proof it&rsquo;s destroyed.
               <br />
-              <span className="font-serif font-normal tracking-[-0.02em] text-muted italic">Paid in a minute.</span>
+              <span className="text-muted">Paid in a minute.</span>
             </p>
           </Spec>
-          <Spec name="text-title-lg" detail="Sans 600, 36–64px. Two two-tone uses per page.">
-            <p className="text-title-lg font-semibold">
+          <Spec name="text-title-lg" detail="Sans 500, 28–40px, two-tone. Section headings.">
+            <p className="text-title-lg font-medium">
               Recall refunds run on an inbox. <span className="text-muted">AI broke the inbox.</span>
             </p>
           </Spec>

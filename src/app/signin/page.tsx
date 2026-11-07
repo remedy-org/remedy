@@ -47,7 +47,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <ExhibitLabel leader="right" leaderLength={24}>
             For companies running a recall
           </ExhibitLabel>
-          <h1 className="mt-4 text-h2 font-semibold">Sign in to your recall console</h1>
+          <h1 className="mt-4 text-h2 font-medium">Sign in to your recall console</h1>
           <p className="mt-3 text-body text-muted">Log in with PayPal. Your claims, payouts and CPSC report are there.</p>
 
           {error && <ErrorState variant="inline" className="mt-6" title={error.title} description={error.description} />}
@@ -82,7 +82,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
       </main>
 
       {/* What you're signing in to: the console on the demo recall, as a still. Decorative; the card says it in words. */}
-      <aside aria-hidden="true" inert className="relative hidden overflow-hidden border-l border-line bg-surface-2/40 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block">
+      <aside aria-hidden="true" inert className="relative hidden overflow-hidden bg-surface lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block">
         <div className="absolute top-1/2 left-12 w-[min(44rem,calc(100%-6rem))] -translate-y-1/2 rotate-3">
           <ExhibitLabel leader="right" leaderLength={48} className="mb-5 ml-8">
             40 sample claims waiting

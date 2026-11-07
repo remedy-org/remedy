@@ -63,14 +63,14 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
           <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
         </figure>
         <InstructionBar className="flex-col gap-2">
-          <h2 id="sample-title" tabIndex={-1} className="text-ui font-medium text-[oklch(0.96_0.005_255)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+          <h2 id="sample-title" tabIndex={-1} className="text-ui font-medium text-[oklch(0.96_0.006_85)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
             {sample.title}, with the code <span className="font-mono">{code}</span>
           </h2>
           {/* What the photo needs, under the frame rather than over the tag it points at. */}
           {reminders.length > 0 && (
             <ul aria-label="What the photo shows" className="flex flex-wrap justify-center gap-1.5">
               {reminders.map((t) => (
-                <li key={t} className="inline-flex h-6 items-center rounded-control border border-[oklch(1_0_0/0.18)] px-2 font-mono text-micro tracking-[0.06em] whitespace-nowrap text-[oklch(0.86_0.008_255)] uppercase">
+                <li key={t} className="inline-flex h-6 items-center rounded-control border border-[oklch(1_0_0/0.18)] px-2 font-mono text-micro tracking-[0.06em] whitespace-nowrap text-[oklch(0.86_0.005_80)] uppercase">
                   {t}
                 </li>
               ))}

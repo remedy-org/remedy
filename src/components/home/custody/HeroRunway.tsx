@@ -1,13 +1,14 @@
 "use client";
 
 import { motion, useScroll, useTransform, type MotionValue } from "motion/react";
-import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { HeroDevice, useMedia } from "../HeroDevice";
 import { CHAPTERS } from "./claim";
 import { CustodyStage } from "./CustodyStage";
 import { HeroPhone } from "./HeroPhone";
 import { PhoneRunway } from "./PhoneRunway";
 import { StaticFigures } from "./StaticFigures";
+import { PACE, SCROLL_VH, scrollAt } from "./pace";
 import styles from "./custody.module.css";
 
 // Which form the Chain of Custody takes (spec H2). The server always renders the static figures; after hydration a
@@ -23,7 +24,7 @@ const easeInOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 /
 
 function SkipLink() {
   return (
-    <a href="#checks" className="inline-flex min-h-11 items-center rounded-control text-ui text-muted underline decoration-line-strong underline-offset-4 transition-colors duration-160 hover:text-text">
+    <a href="#checks" className="inline-flex min-h-11 items-center rounded-control text-ui text-muted underline decoration-line-2 underline-offset-4 transition-colors duration-160 hover:text-text">
       Skip to what stops a fake&nbsp;&darr;
     </a>
   );
@@ -96,7 +97,7 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
   };
 }
 
-export function HeroRunway({ copy }: { copy: ReactNode }) {
+export function HeroRunway({ copy, facts }: { copy: ReactNode; facts: ReactNode }) {
   const wide = useMedia("(min-width: 1024px) and (min-height: 700px)");
   const motionOk = useMedia("(prefers-reduced-motion: no-preference)");
   const mode: Mode = !motionOk ? "static" : wide ? "pinned" : "phone";
@@ -105,24 +106,37 @@ export function HeroRunway({ copy }: { copy: ReactNode }) {
   const runway = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const device = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: p } = useScroll({ target: runway, offset: ["start start", "end end"] });
+  // s is the raw scroll through the runway; p is the sequence's own timeline, paced so every beat gets its share of
+  // the scroll (pace.ts). Everything on the stage reads p.
+  const { scrollYProgress: s } = useScroll({ target: runway, offset: ["start start", "end end"] });
+  const p = useTransform(s, PACE.scroll, PACE.p);
   const dolly = useDolly(p, stage, device);
 
   return (
-    <section ref={runway} aria-labelledby="hero-title" data-runway={mode === "phone" ? undefined : ""} className={pinned ? styles.runway : "relative"}>
-      {/* The nav's "How it works" lands on the first chapter, not on the hero. */}
-      {pinned && <span id="how" className="absolute left-0" style={{ top: "calc(0.22 * 220vh)" }} aria-hidden="true" />}
+    <section
+      ref={runway}
+      aria-labelledby="hero-title"
+      data-runway={mode === "phone" ? undefined : ""}
+      className={pinned ? styles.runway : "relative"}
+      style={pinned ? ({ "--scroll": `${SCROLL_VH}vh` } as CSSProperties) : undefined}
+    >
+      {/* The nav's "How it works" lands on the first chapter, once the screen has taken over from the laptop. */}
+      {pinned && <span id="how" className="absolute left-0" style={{ top: `${(scrollAt(0.215) * SCROLL_VH).toFixed(1)}vh` }} aria-hidden="true" />}
       <div ref={stage} className={pinned ? styles.stage : "relative"}>
-        <div className="relative mx-auto max-w-content px-4 pt-10 pb-14 sm:px-8 lg:h-[calc(100svh-4rem)] lg:min-h-[39rem] lg:pt-12 lg:pb-0">
-          <motion.div className="relative z-[1]" style={pinned ? dolly.text : undefined}>
+        <div className={styles.hero}>
+          <motion.div className={styles.copy} style={pinned ? dolly.text : undefined}>
             {copy}
           </motion.div>
           <motion.div ref={device} className={styles.device} style={pinned ? dolly.device : undefined}>
             <HeroDevice labels={pinned ? dolly.labels : undefined} />
           </motion.div>
-          <div className="mt-14 lg:hidden">
+          <div className="mt-12 lg:hidden">
             <HeroPhone />
           </div>
+          {/* After the phone on small screens, so the product is above the fold there. */}
+          <motion.div className={styles.facts} style={pinned ? { opacity: dolly.text.opacity } : undefined}>
+            {facts}
+          </motion.div>
         </div>
         {pinned && <CustodyStage p={p} stage={stage} skip={<SkipLink />} />}
       </div>

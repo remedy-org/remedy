@@ -146,7 +146,7 @@ export function ChecksPanel({ phase }: { phase: number }) {
           animate={paid ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 8, scale: 0.96 }}
           transition={{ type: "spring", stiffness: 380, damping: 30 }}
         >
-          <span className="font-mono font-semibold">$29.99</span>
+          <span className="font-mono font-medium">$29.99</span>
           <span>sent to PayPal · {CLAIM.seconds} s</span>
         </motion.span>
       </div>

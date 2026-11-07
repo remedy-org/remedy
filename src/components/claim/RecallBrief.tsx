@@ -89,7 +89,7 @@ function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1 border-b border-line py-3 pr-4">
       <dt className="text-faint">{label}</dt>
-      <dd className="text-text tabular-nums">{value}</dd>
+      <dd className="text-text">{value}</dd>
     </div>
   );
 }

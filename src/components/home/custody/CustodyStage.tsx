@@ -5,13 +5,14 @@ import { frame as motionFrame, motion, useMotionValueEvent, useTransform } from 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { CHAPTERS, CLAIM } from "./claim";
 import { CodeChapter, ChecksChapter, Compact, ConsentChapter, ConsoleChapter, PaidChapter, PhotoChapter, type Progress } from "./chapters";
+import { ExhibitSlot } from "./ExhibitSlot";
 import { ScreenBar } from "./frames";
 import styles from "./custody.module.css";
 
-// The pinned Chain of Custody on laptops (spec H2). Everything here is drawn from one scroll progress p. The laptop's
-// screen hands over to a flat, unscaled screen layer: between 0.12 and 0.20 its clip-path grows from the laptop
-// screen's measured rect to the stage, so no text is ever scaled, up or down. The rail and the screen sit on the
-// page's 1200px content grid (the page rails), like every other section.
+// The pinned Chain of Custody on laptops (spec H2). Everything here is drawn from one timeline p (paced against the
+// scroll in pace.ts). The laptop's screen hands over to a flat, unscaled screen layer: between 0.12 and 0.20 its
+// clip-path grows from the laptop screen's measured rect to the screen's place on the grid, so no text is ever scaled,
+// up or down. The rail takes columns 1 to 3 and the screen columns 4 to 12 of the page grid, like every section.
 
 const HANDOFF = [0.12, 0.2] as const;
 /** The consent screen wipes down over the laptop's own screen, top to bottom, like a page loading: no blank frame
@@ -23,16 +24,13 @@ const STARTS = [0, 0.34, 0.48, 0.6, 0.8, 0.9];
  * the incoming one fades in over IN after it, so two chapters are never both above 0. */
 const OUT = [0.012, 0.002] as const;
 const IN = 0.01;
-const RAIL_W = 296; // the rail (280) plus the 16px gutter: the screen's left inset from the content edge
-/** The rail's chapter list comes in once its backdrop has covered the page rail (0.15 to 0.17). */
+/** The rail's chapter list comes in once the hero copy has gone (it fades out by 0.16). */
 const RAIL_IN = 0.17;
-/** The 1200px content column's edge inside the stage, where the page rails run (Rails.tsx). */
-const edgeOf = (stageWidth: number) => Math.max(0, (stageWidth - 1200) / 2);
 
 const inOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
-function share(p: number, i: number) {
+export function share(p: number, i: number) {
   const a = STARTS[i];
   const b = STARTS[i + 1] ?? 2;
   // The first chapter is on the screen layer from the moment it takes over from the laptop's own screen, so the
@@ -66,8 +64,8 @@ function RailItem({ p, i }: { p: Progress; i: number }) {
   const lead = useTransform(p, (v) => Math.max(share(v, i), i === 4 ? share(v, 5) : 0));
   return (
     <motion.li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] items-baseline py-2.5" style={{ opacity, x }}>
-      <motion.span className="absolute top-1/2 -left-8 h-px w-6 bg-accent" style={{ scaleX: lead, originX: 0 }} />
-      <span className="font-mono text-micro text-accent-text">{c.n}</span>
+      <motion.span className="absolute inset-y-1.5 -left-4 w-0.5 rounded-full bg-accent" style={{ scaleY: lead, originY: 0.5 }} />
+      <span className="font-mono text-micro text-faint">{c.n}</span>
       <span className="text-body font-medium">{c.title}</span>
     </motion.li>
   );
@@ -76,15 +74,16 @@ function RailItem({ p, i }: { p: Progress; i: number }) {
 function RailCaption({ p, i }: { p: Progress; i: number }) {
   const opacity = useTransform(p, (v) => Math.max(share(v, i), i === 4 ? share(v, 5) : 0) * clamp01((v - RAIL_IN) / 0.03));
   return (
-    <motion.p className="absolute inset-x-0 top-0 text-ui text-pretty text-muted" style={{ opacity }}>
+    <motion.p className="absolute inset-x-0 top-0 text-ui text-pretty text-text-2" style={{ opacity }}>
       {CHAPTERS[i].text}
     </motion.p>
   );
 }
 
 /**
- * The screen's clip: the laptop screen's live rect at 0.12, the stage minus the rail at 0.20, with the first WIPE of it
- * opening from the top down. Written straight to the element, so scrolling never re-renders React.
+ * The screen's clip: the laptop screen's live rect at 0.12, the screen's place on the grid (columns 4 to 12) at 0.20,
+ * with the first WIPE of it opening from the top down. Written straight to the element, so scrolling never re-renders
+ * React.
  */
 function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
   if (!el || !st) return;
@@ -97,8 +96,10 @@ function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
   el.style.visibility = "visible";
   el.style.opacity = "1";
   const S = st.getBoundingClientRect();
-  const edge = edgeOf(S.width);
-  const end = { t: 16, r: edge + 16, b: 16, l: edge + RAIL_W, round: 16 };
+  const inner = el.querySelector("[data-screen-inner]")?.getBoundingClientRect();
+  const end = inner
+    ? { t: inner.top - S.top, r: S.right - inner.right, b: S.bottom - inner.bottom, l: inner.left - S.left, round: 16 }
+    : { t: 16, r: 16, b: 16, l: 16, round: 16 };
   let box = end;
   if (v < HANDOFF[1]) {
     const lap = st.querySelector("[data-laptop-screen]")?.getBoundingClientRect();
@@ -150,16 +151,14 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
   }, [stage, p]);
 
   const frame = useTransform(p, [HANDOFF[1] - 0.01, HANDOFF[1]], [0, 1]);
-  const thread = useTransform(p, [0.2, 0.9], [0, 1]);
   const railHead = useTransform(p, [RAIL_IN, RAIL_IN + 0.03], [0, 1]);
-  const railBack = useTransform(p, [0.15, RAIL_IN], [0, 1]);
   const bar = useTransform(p, [0.16, 0.19], [0, 1]);
 
   return (
     <>
       <div ref={screen} className={clsx(styles.screen, "invisible opacity-0")} aria-hidden="true">
-        <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-ring")} style={{ opacity: frame }} />
-        <div className={styles.screenInner}>
+        <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-card")} style={{ opacity: frame }} />
+        <div className={styles.screenInner} data-screen-inner>
           <motion.div style={{ opacity: bar }}>
             <ScreenBar step={[1, 2, 3, 4, 4, 4][chapter]} console={chapter === 5} />
           </motion.div>
@@ -171,15 +170,18 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
               <Layer p={p} i={1} compact={compact}>
                 <CodeChapter p={p} />
               </Layer>
-              <Layer p={p} i={2} compact={compact}>
-                <PhotoChapter p={p} />
-              </Layer>
-              <Layer p={p} i={3} compact={compact}>
-                <ChecksChapter p={p} />
-              </Layer>
-              <Layer p={p} i={4} compact={compact}>
-                <PaidChapter p={p} />
-              </Layer>
+              {/* Chapters 03 to 05: the exhibit slot, where the 3D "Opened Exhibit" mounts (ExhibitSlot.tsx). */}
+              <ExhibitSlot p={p} compact={compact} share={share}>
+                <Layer p={p} i={2} compact={compact}>
+                  <PhotoChapter p={p} />
+                </Layer>
+                <Layer p={p} i={3} compact={compact}>
+                  <ChecksChapter p={p} />
+                </Layer>
+                <Layer p={p} i={4} compact={compact}>
+                  <PaidChapter p={p} />
+                </Layer>
+              </ExhibitSlot>
               <Layer p={p} i={5} compact={compact}>
                 <ConsoleChapter p={p} />
               </Layer>
@@ -189,9 +191,6 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
       </div>
 
       <div className={clsx(styles.rail, "pointer-events-none")}>
-        {/* Covers the page rails (P2's ruler at the 1200px content edge) behind the chapter list, from 0.16 when the
-            hero copy has faded out, so the backdrop's edge never crosses the h1. */}
-        <motion.span className="absolute -inset-y-4 inset-x-0 -z-10 bg-bg" style={{ opacity: railBack }} aria-hidden="true" />
         <motion.div className="flex min-h-0 flex-1 flex-col" style={{ opacity: railHead }} aria-hidden="true">
           <span className="micro text-faint">Exhibit · Claim {CLAIM.id}</span>
           <ol className="mt-5">
@@ -199,7 +198,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
               <RailItem key={c.n} p={p} i={i} />
             ))}
           </ol>
-          <div className="relative mt-6 flex-1 border-t border-line pt-5">
+          <div className="relative mt-8 flex-1">
             <div className="relative">
               {CHAPTERS.map((c, i) => (
                 <RailCaption key={c.n} p={p} i={i} />
@@ -211,10 +210,6 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
           {skip}
         </motion.div>
       </div>
-
-      <motion.div className={styles.thread} style={{ opacity: railHead }} aria-hidden="true">
-        <motion.span className={styles.threadFill} style={{ scaleY: thread }} />
-      </motion.div>
     </>
   );
 }

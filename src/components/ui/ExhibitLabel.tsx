@@ -12,11 +12,11 @@ export interface ExhibitLabelProps {
   className?: string;
 }
 
-/** Mono micro amber annotation, e.g. "Exhibit A · Code K7M", with a hairline leader. */
+/** Mono micro annotation in --faint (amber is only for what is happening now), e.g. "Exhibit A · Code K7M", with a hairline leader. */
 export function ExhibitLabel({ children, leader = "left", leaderLength = 32, as: Tag = "span", className }: ExhibitLabelProps) {
-  const line = <span className="h-px shrink-0 bg-accent-text/60" style={{ width: leaderLength }} aria-hidden="true" />;
+  const line = <span className="h-px shrink-0 bg-line-2" style={{ width: leaderLength }} aria-hidden="true" />;
   return (
-    <Tag className={clsx("micro inline-flex items-center gap-2 text-accent-text", className)}>
+    <Tag className={clsx("micro inline-flex items-center gap-2 text-faint", className)}>
       {leader === "left" && line}
       <span>{children}</span>
       {leader === "right" && line}

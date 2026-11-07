@@ -8,8 +8,9 @@ export interface MoneyProps {
   /** ISO currency code (default USD). */
   currency?: string;
   /**
-   * numeral: Instrument Serif italic, the monumental homepage figure. amount: 64px sans (52px on phones), the claim
-   * flow's refund. inline: the surrounding text's font and size. grid: 14px mono, for tables.
+   * numeral: the display size (56px at 1440), for the one figure per screen where the number is the point. amount:
+   * 56px (40px on phones), the claim flow's refund. inline: the surrounding text's font and size. grid: 14px mono with
+   * tabular figures, for tables.
    */
   size?: MoneySize;
   className?: string;
@@ -27,11 +28,11 @@ export function splitMoney(value: number, currency = "USD") {
 
 const sizes: Record<MoneySize, { root: string; cents: string }> = {
   // Mercury's hero cents: 55%, top-aligned near the cap height.
-  numeral: { root: "font-serif text-numeral font-normal italic", cents: "text-[0.55em] align-[0.62em] tracking-normal" },
-  amount: { root: "font-sans text-amount font-semibold", cents: "text-[0.55em] align-[0.62em] tracking-normal" },
+  numeral: { root: "font-sans text-display font-medium", cents: "text-[0.55em] align-[0.62em] tracking-normal" },
+  amount: { root: "font-sans text-amount font-medium", cents: "text-[0.55em] align-[0.62em] tracking-normal" },
   // Mercury's table cents: 73%, raised about 0.2em, and never under the 12px floor (73% of 14px would be 10.2px).
   inline: { root: "", cents: "relative -top-[0.2em] text-[length:max(12px,0.73em)]" },
-  grid: { root: "font-mono text-ui", cents: "relative -top-[0.2em] text-[length:max(12px,0.73em)]" },
+  grid: { root: "font-mono text-ui tabular-nums", cents: "relative -top-[0.2em] text-[length:max(12px,0.73em)]" },
 };
 
 /**
@@ -42,7 +43,8 @@ export function Money({ value, currency = "USD", size = "inline", className }: M
   const { whole, cents, full } = splitMoney(value, currency);
   const s = sizes[size];
   return (
-    <span className={clsx("whitespace-nowrap tabular-nums", s.root, className)}>
+    // No tabular-nums on the sans: Schibsted's tnum also makes the point tabular ("$29 .99"). Only grid (mono) has it.
+    <span className={clsx("whitespace-nowrap", s.root, className)}>
       <span className="sr-only select-none">{full}</span>
       <span aria-hidden="true">
         {whole}

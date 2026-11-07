@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 /** The honest label every rendering of a judges' sample photo carries: they're AI-made, never a real owner's. */
 export function SampleChip({ className, children = "AI-made sample photo" }: { className?: string; children?: ReactNode }) {
   return (
-    <span className={clsx("inline-flex h-6 items-center rounded-control bg-[oklch(0.12_0.01_255/0.78)] px-2 font-mono text-micro tracking-[0.06em] text-[oklch(0.96_0.005_255)] uppercase backdrop-blur-sm", className)}>
+    <span className={clsx("inline-flex h-6 items-center rounded-control bg-[oklch(0.12_0.004_75/0.78)] px-2 font-mono text-micro tracking-[0.06em] text-[oklch(0.96_0.006_85)] uppercase backdrop-blur-sm", className)}>
       {children}
     </span>
   );

@@ -6,7 +6,7 @@ import { CLAIM } from "./claim";
 export function ScreenBar({ step, console: isConsole, compact }: { step: number; console?: boolean; compact?: boolean }) {
   return (
     <div className={clsx("flex h-12 shrink-0 items-center gap-4 border-b border-line", compact ? "px-4" : "px-6")}>
-      <span className="flex items-center gap-2 text-ui font-semibold">
+      <span className="flex items-center gap-2 text-ui font-medium">
         <svg width="14" height="14" viewBox="5 7 14 18" aria-hidden="true">
           <path
             fillRule="evenodd"

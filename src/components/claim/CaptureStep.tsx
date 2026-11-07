@@ -298,11 +298,11 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
 
         <InstructionBar className="max-sm:gap-1 max-sm:pr-1">
           <div className="flex flex-col gap-1">
-            <h2 id="capture-title" tabIndex={-1} className="text-ui font-medium text-balance text-[oklch(0.96_0.005_255)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+            <h2 id="capture-title" tabIndex={-1} className="text-ui font-medium text-balance text-[oklch(0.96_0.006_85)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
               Fit the label, the destroyed product and the code <span className="font-mono">{code}</span> in the frame
             </h2>
             {help && (
-              <p id="capture-help" className="text-ui text-balance text-[oklch(0.72_0.012_255)] sm:hidden">
+              <p id="capture-help" className="text-ui text-balance text-[oklch(0.74_0.005_80)] sm:hidden">
                 {helpText}
               </p>
             )}
@@ -314,7 +314,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               aria-expanded={help}
               aria-controls="capture-help"
               aria-label="About the camera"
-              className="flex size-11 shrink-0 items-center justify-center rounded-full text-[oklch(0.72_0.012_255)] hover:text-[oklch(0.96_0.005_255)] sm:hidden"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full text-[oklch(0.74_0.005_80)] hover:text-[oklch(0.96_0.006_85)] sm:hidden"
             >
               <InfoIcon />
             </button>
@@ -342,13 +342,13 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                         onClick={() => remove(i)}
                         disabled={sending}
                         aria-label={`Remove photo ${i + 1}`}
-                        className="absolute top-[3px] right-[3px] flex size-5 items-center justify-center rounded-full bg-[oklch(0.12_0.01_255/0.8)] text-[oklch(0.96_0.005_255)] after:absolute after:-inset-3 after:content-[''] disabled:opacity-40"
+                        className="absolute top-[3px] right-[3px] flex size-5 items-center justify-center rounded-full bg-[oklch(0.12_0.004_75/0.8)] text-[oklch(0.96_0.006_85)] after:absolute after:-inset-3 after:content-[''] disabled:opacity-40"
                       >
                         <CrossIcon size={12} />
                       </button>
                     </>
                   ) : (
-                    <span className="flex size-full items-center justify-center rounded-control border border-dashed border-[oklch(1_0_0/0.25)] font-mono text-micro text-[oklch(0.72_0.012_255)]">{i + 1}</span>
+                    <span className="flex size-full items-center justify-center rounded-control border border-dashed border-[oklch(1_0_0/0.25)] font-mono text-micro text-[oklch(0.74_0.005_80)]">{i + 1}</span>
                   )}
                 </li>
               ))}
@@ -370,7 +370,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                 >
                   <span className="size-[3.625rem] rounded-full bg-[oklch(1_0_0)]" />
                 </button>
-                <span aria-hidden="true" className="hidden font-mono text-micro text-[oklch(0.72_0.012_255)] sm:pointer-fine:inline-flex">
+                <span aria-hidden="true" className="hidden font-mono text-micro text-[oklch(0.74_0.005_80)] sm:pointer-fine:inline-flex">
                   <kbd className="rounded-[4px] border border-[oklch(1_0_0/0.25)] px-1.5 py-px">Space</kbd>
                 </span>
               </>

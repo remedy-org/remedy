@@ -1,12 +1,11 @@
-import { Rails } from "@/components/home/Rails";
+import { SmoothScroll } from "@/components/home/SmoothScroll";
 
-// The homepage is dark only, by choice (DESIGN.md): pin the dark tokens whatever the app theme is. data-marketing
-// lets globals.css pin <html> dark as well, for the scrollbar and overscroll. The root is its own stacking context so
-// the page rails sit above its background and under every section; grain lies over everything.
+// The homepage follows the theme like every other page (dark by default). The root is its own stacking context so
+// each section's light and fade stay under its content; grain lies over everything.
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
-    <div data-theme="dark" data-marketing className="grain relative isolate min-h-dvh bg-bg text-text">
-      <Rails />
+    <div className="grain relative isolate min-h-dvh bg-bg text-text">
+      <SmoothScroll />
       {children}
     </div>
   );

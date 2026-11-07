@@ -1,28 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Instrument_Sans, Instrument_Serif } from "next/font/google";
+import { JetBrains_Mono, Schibsted_Grotesk } from "next/font/google";
 import { THEME_STORAGE_KEY } from "@/components/ui/theme";
 import "./globals.css";
 
-const sans = Instrument_Sans({
-  variable: "--font-instrument-sans",
+// One voice (DESIGN.md): Schibsted Grotesk for display, headings, body and UI. One variable file (this Next version's
+// Google loader takes "variable" or single weights, not a range); only 400 to 600 are used. It carries the h1 (the
+// LCP element) and the body, so it is the one file preloaded.
+const sans = Schibsted_Grotesk({
+  variable: "--font-schibsted",
   subsets: ["latin"],
   display: "swap",
 });
 
-const mono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
+// Evidence: codes, ids, grid amounts, timestamps, micro labels, stamps. One variable file; only 400 and 500 are used.
+// Swaps in.
+const mono = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
-
-// Monumental numbers and the hero's second line, homepage only (DESIGN.md). Not preloaded: a browser fetches the file
-// only for a page that sets text in it, so the claim flow and the console never download it.
-const serif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  subsets: ["latin"],
-  weight: "400",
-  style: "italic",
   display: "swap",
   preload: false,
 });
@@ -43,16 +37,20 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#15181d",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f9f6f2" },
+    { color: "#0d0c0a" },
+  ],
   colorScheme: "dark light",
 };
 
-// Runs before paint so a saved light theme never flashes dark. Dark is the default; only "light" is stored.
-const themeScript = `try{if(localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})==="light")document.documentElement.dataset.theme="light"}catch(e){}`;
+// Runs before paint, so the page never flashes the wrong theme. A saved choice wins; with none, a visitor whose system
+// asks for light gets light; everyone else gets dark, the default.
+const themeScript = `try{var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(t==="light"||(t!=="dark"&&matchMedia("(prefers-color-scheme: light)").matches))document.documentElement.dataset.theme="light"}catch(e){}`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable} ${serif.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

@@ -1,5 +1,6 @@
 /*
- * The hero device: a laptop built in HTML/CSS, tilted in CSS 3D on a graphite light table.
+ * The hero device: a laptop built in HTML/CSS, tilted in CSS 3D on the light table. The laptop is the same space-grey
+ * object in both themes; the table and its pool of light follow the theme.
  * Every length inside the stage is in em, and 1em is a fixed share of the stage width, so the
  * whole object scales as one piece from 1440px down to 375px.
  */
@@ -25,6 +26,34 @@
   --rx: -15deg;
   --ry: 16deg;
   --scene-top: 8%;
+  /* The laptop: warm space grey (hue 75, chroma 0.004, like the room). */
+  --lid: oklch(0.13 0.004 75);
+  --lid-edge: oklch(1 0 0 / 0.14);
+  --deck-top: oklch(0.3 0.004 75);
+  --deck-bottom: oklch(0.255 0.004 75);
+  --hinge-a: oklch(0.15 0.004 75);
+  --hinge-b: oklch(0.22 0.004 75);
+  --key: oklch(0.17 0.004 75);
+  --pad: oklch(0.285 0.004 75);
+  --lip: oklch(0.2 0.004 75);
+  /* The table: one surface step above the page, a centimetre grid in the hairline colour. */
+  --table: var(--surface);
+  --grid-major: color-mix(in oklch, var(--text) 7%, transparent);
+  --grid-minor: color-mix(in oklch, var(--text) 3.5%, transparent);
+}
+
+/* In light the laptop is silver: the same object a step lighter, so it sits on a light table, not as a hole in it. */
+:global([data-theme="light"]) .view {
+  --lid: oklch(0.2 0.004 75);
+  --lid-edge: oklch(0.23 0.01 65 / 0.3);
+  --deck-top: oklch(0.86 0.004 75);
+  --deck-bottom: oklch(0.8 0.004 75);
+  --hinge-a: oklch(0.55 0.004 75);
+  --hinge-b: oklch(0.72 0.004 75);
+  --key: oklch(0.32 0.004 75);
+  --pad: oklch(0.83 0.004 75);
+  --lip: oklch(0.7 0.004 75);
+  --table: var(--surface-2);
 }
 
 .scene {
@@ -55,40 +84,37 @@
   margin-left: -110em;
   transform-origin: 50% 0;
   transform: rotateX(90deg) translateY(-62em);
-  background-color: oklch(0.205 0.01 255);
+  background-color: var(--table);
   background-image:
-    radial-gradient(ellipse 45% 40% at 50% 55%, oklch(0.27 0.012 255 / 0.9), transparent 70%),
-    linear-gradient(oklch(1 0 0 / 0.075) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(1 0 0 / 0.075) 1px, transparent 1px),
-    linear-gradient(oklch(1 0 0 / 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(1 0 0 / 0.035) 1px, transparent 1px);
+    radial-gradient(closest-side, var(--pool), transparent),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
   background-size:
-    100% 100%,
+    112em 80em,
     12em 12em,
     12em 12em,
     2.4em 2.4em,
     2.4em 2.4em;
-  background-position: 0 0, -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px;
+  background-position: var(--pool-at, 36% 76%), -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px;
+  background-repeat: no-repeat, repeat, repeat, repeat, repeat;
   -webkit-mask-image: radial-gradient(ellipse 40% 42% at 50% 55%, #000 55%, transparent 100%);
   mask-image: radial-gradient(ellipse 40% 42% at 50% 55%, #000 55%, transparent 100%);
-  /* The table's front edge catches the light. */
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.06);
 }
 
-/* The lit light table: an amber pool under the device, flat (never inside the 3D tree). */
-.glow {
-  position: absolute;
-  inset: -12% -20% -18% -14%;
-  background: var(--table-glow);
-  pointer-events: none;
-}
+/*
+ * The light table's pool (DESIGN.md's signature, the hero's one light) is painted on the table itself (the first layer
+ * above), so it lies in the table's perspective under the laptop and the receipt and the laptop casts onto it. It fades
+ * out at its own edge (closest-side): no seam, no motion.
+ */
 
 /* The refund receipt resting on the table, off the laptop's front-left corner. */
 .receipt {
   position: absolute;
   z-index: 2;
-  left: -19%;
-  top: 70%;
+  left: -12%;
+  top: 74%;
   transform-origin: 0 0;
 }
 
@@ -103,7 +129,7 @@
   position: absolute;
   inset: 30% -6% -14% 6%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, oklch(0 0 0 / 0.55), transparent);
+  background: radial-gradient(closest-side, oklch(0.12 0.004 75 / 0.5), transparent);
   filter: blur(6px);
 }
 
@@ -112,7 +138,7 @@
   font-family: var(--font-mono);
   font-size: 1.5em;
   letter-spacing: 0.06em;
-  color: oklch(1 0 0 / 0.28);
+  color: color-mix(in oklch, var(--text) 30%, transparent);
   transform: translate(-50%, 0);
   white-space: nowrap;
 }
@@ -121,9 +147,9 @@
 .tag {
   position: absolute;
   padding: 1em 1.4em;
-  border: 1px solid color-mix(in oklch, var(--accent-text) 55%, transparent);
+  border: 1px solid var(--line-2);
   border-radius: 0.4em;
-  color: var(--accent-text);
+  color: color-mix(in oklch, var(--text) 45%, transparent);
   font-family: var(--font-mono);
   font-size: 1.15em;
   line-height: 1.5;
@@ -134,7 +160,7 @@
 
 .tag hr {
   border: 0;
-  border-top: 1px solid color-mix(in oklch, var(--accent-text) 40%, transparent);
+  border-top: 1px solid var(--line-2);
   margin: 0.5em 0;
 }
 
@@ -145,8 +171,8 @@
   transform-origin: 50% 100%;
   transform: rotateX(5deg);
   border-radius: 1.6em;
-  background: oklch(0.13 0.008 255);
-  border: 1px solid oklch(1 0 0 / 0.14);
+  background: var(--lid);
+  border: 1px solid var(--lid-edge);
   padding: 1.15em 1.15em 1.6em;
 }
 
@@ -158,7 +184,7 @@
   height: 0.45em;
   margin-left: -0.225em;
   border-radius: 50%;
-  background: oklch(0.3 0.01 255);
+  background: oklch(0.3 0.004 75);
 }
 
 .screen {
@@ -181,8 +207,8 @@
   transform: rotateX(90deg);
   transform-style: preserve-3d;
   border-radius: 0.6em 0.6em 2em 2em;
-  background: linear-gradient(oklch(0.3 0.007 255), oklch(0.255 0.007 255));
-  border: 1px solid oklch(1 0 0 / 0.12);
+  background: linear-gradient(var(--deck-top), var(--deck-bottom));
+  border: 1px solid var(--lid-edge);
   box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.06);
 }
 
@@ -192,7 +218,7 @@
   right: 3em;
   top: 0;
   height: 1.4em;
-  background: linear-gradient(oklch(0.15 0.008 255), oklch(0.22 0.008 255));
+  background: linear-gradient(var(--hinge-a), var(--hinge-b));
 }
 
 .keys {
@@ -211,8 +237,8 @@
   top: 26em;
   height: 14.5em;
   border-radius: 1em;
-  background: oklch(0.285 0.007 255);
-  border: 1px solid oklch(1 0 0 / 0.08);
+  background: var(--pad);
+  border: 1px solid var(--line);
 }
 
 /* The deck's front edge: its thickness, facing the viewer. */
@@ -225,7 +251,7 @@
   transform-origin: 50% 100%;
   transform: rotateX(90deg);
   border-radius: 0 0 1em 1em;
-  background: oklch(0.2 0.007 255);
+  background: var(--lip);
 }
 
 /* Exhibit labels and their leader lines sit flat over the scene. */
@@ -245,7 +271,7 @@
 }
 
 .leaders line {
-  stroke: color-mix(in oklch, var(--accent-text) 70%, transparent);
+  stroke: var(--faint);
   stroke-width: 1;
 }
 
@@ -257,10 +283,10 @@
 }
 
 .leaders circle {
-  fill: var(--accent);
+  fill: var(--text);
 }
 
 .leaders .ring {
   fill: none;
-  stroke: color-mix(in oklch, var(--accent) 50%, transparent);
+  stroke: color-mix(in oklch, var(--text) 50%, transparent);
 }

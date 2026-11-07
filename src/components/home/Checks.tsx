@@ -14,13 +14,13 @@ export function Checks() {
     >
       <Pipeline />
       <PipelineList />
-      <div className="mt-10 flex flex-col items-start gap-2 border-t border-line pt-6 sm:flex-row sm:items-center sm:gap-8 lg:mt-0">
+      <div className="mt-10 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-8 lg:mt-6">
         <Button href="/r/kikea-x-vesolje/try" variant="tertiary" size="lg">
           Try the four samples yourself
         </Button>
         <p className="font-mono text-micro text-faint">
           Needs a PayPal sandbox personal account ·{" "}
-          <a href={SANDBOX_ACCOUNTS_URL} className="underline underline-offset-4 transition-colors duration-160 hover:text-text">
+          <a href={SANDBOX_ACCOUNTS_URL} className="underline decoration-line-2 underline-offset-4 transition-colors duration-160 hover:text-text">
             How to make one
           </a>
         </p>

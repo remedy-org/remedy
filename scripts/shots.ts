@@ -85,13 +85,12 @@ async function main() {
         });
         await context.addCookies(jar);
         await context.addInitScript(
-          ([key, light]) => {
+          ([key, value]) => {
             try {
-              if (light) localStorage.setItem(key, "light");
-              else localStorage.removeItem(key);
+              localStorage.setItem(key, value);
             } catch {}
           },
-          [THEME_STORAGE_KEY, theme === "light"] as const,
+          [THEME_STORAGE_KEY, theme] as const,
         );
         const page = await context.newPage();
         for (const path of paths) {

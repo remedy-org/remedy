@@ -7,7 +7,7 @@ import { formatCount } from "./format";
 function Item({ value, label, title, className, children }: { value: ReactNode; label: ReactNode; title?: string; className?: string; children?: ReactNode }) {
   return (
     <div className={clsx("flex min-w-0 flex-wrap items-baseline gap-x-2 sm:flex-nowrap sm:whitespace-nowrap", className)} title={title}>
-      <dd className="order-1 text-[20px] leading-7 font-semibold tabular-nums">{value}</dd>
+      <dd className="order-1 text-[20px] leading-7 font-semibold">{value}</dd>
       {children}
       <dt className="order-3 text-micro text-muted">{label}</dt>
     </div>
