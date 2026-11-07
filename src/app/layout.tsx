@@ -22,7 +22,7 @@ const mono = JetBrains_Mono({
 });
 
 const description =
-  "Recall refunds paid within a minute of the photo, for people who really destroyed the product, and never for a faked photo. Paid through PayPal.";
+  "Recall refunds paid through PayPal within a minute of a live photo. A fake has to beat a live camera, a photo fingerprint and a verified PayPal account before the model even looks.";
 
 // Absolute URLs for the link card: APP_URL, else Vercel's production domain, else the local dev server.
 const siteUrl = process.env.APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://127.0.0.1:3000");

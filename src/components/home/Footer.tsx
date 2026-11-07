@@ -82,8 +82,8 @@ export function Footer() {
         <div className="grid-12 gap-y-6 md:items-start">
           <div className="col-span-12 md:col-span-6 lg:col-span-7">
             <Wordmark size="md" />
-            <p className="mt-3 max-w-[36ch] text-ui text-muted">
-              Recall refunds paid within a minute of the photo, for people who really destroyed the product, and never for a faked photo.
+            <p className="mt-3 max-w-[44ch] text-ui text-muted">
+              Recall refunds paid within a minute of a live photo. A fake has to beat a live camera, a photo fingerprint and a verified PayPal account before the model even looks.
             </p>
           </div>
           <nav aria-label="Footer" className="col-span-12 md:col-span-6 lg:col-span-5 lg:col-start-8">

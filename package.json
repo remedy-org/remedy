@@ -2,7 +2,7 @@
   "name": "remedy",
   "version": "0.1.0",
   "private": true,
-  "description": "Recall refunds that reach real owners in a minute through PayPal, never a faked photo.",
+  "description": "Recall refunds paid through PayPal within a minute of a live photo, after fixed checks.",
   "license": "MIT",
   "scripts": {
     "dev": "next dev",

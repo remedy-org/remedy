@@ -15,9 +15,7 @@ export const FINAL_PHASE = CHECKS.length + 1;
 // Where each exhibit points, as a share of the 4:3 camera frame. The photo is 2:3 portrait, cropped to 4:3 at
 // object-position 50% 75%, so the frame shows image heights 37.5%-87.5%.
 export const ANCHORS = {
-  label: { x: 0.8, y: 0.6 },
   cut: { x: 0.29, y: 0.5 },
-  code: { x: 0.74, y: 0.77 },
 } as const;
 export type AnchorId = keyof typeof ANCHORS;
 
@@ -82,8 +80,11 @@ export function ClaimScreen({ phase }: { phase: number }) {
             <Corner className="right-[1em] top-[1em] border-r border-t" />
             <Corner className="bottom-[1em] left-[1em] border-b border-l" />
             <Corner className="bottom-[1em] right-[1em] border-b border-r" />
-            <span className="absolute left-[1.4em] top-[1.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] text-text uppercase">
-              Code M4T
+            {/* The marked code region (DESIGN.md: an amber active state): a 1.5px box on the tag's code, labelled on it. */}
+            <span className="absolute top-[53%] left-[69%] h-[25%] w-[24.5%] rounded-[0.35em] border-[1.5px] border-accent" aria-hidden="true">
+              <span className="absolute bottom-full left-[-1.5px] mb-[0.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] whitespace-nowrap text-text uppercase">
+                Code M4T
+              </span>
             </span>
             <span className="absolute bottom-[1.4em] left-[1.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] text-text uppercase">
               AI-made test photo
@@ -132,7 +133,8 @@ export function ChecksPanel({ phase }: { phase: number }) {
         <span
           data-seq="hide"
           className={clsx(
-            "absolute inset-0 flex items-center rounded-[0.5em] border border-dashed border-line-strong px-[1em] text-[1.15em] text-faint transition-opacity duration-160",
+            // Out over 120ms before the chip comes in (its delay below): the two messages never overprint.
+            "absolute inset-0 flex items-center rounded-[0.5em] border border-dashed border-line-strong px-[1em] text-[1.15em] text-faint transition-opacity duration-[120ms]",
             paid && "opacity-0",
           )}
         >
@@ -144,7 +146,7 @@ export function ChecksPanel({ phase }: { phase: number }) {
           className="absolute inset-0 flex items-center gap-[0.5em] rounded-[0.5em] border border-pay/50 bg-pay-soft px-[1em] text-[1.2em] whitespace-nowrap text-pay"
           initial={false}
           animate={paid ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 8, scale: 0.96 }}
-          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+          transition={{ type: "spring", stiffness: 380, damping: 30, delay: paid ? 0.14 : 0 }}
         >
           <span className="font-mono font-medium">$29.99</span>
           <span>sent to PayPal · {CLAIM.seconds} s</span>

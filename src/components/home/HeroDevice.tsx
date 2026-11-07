@@ -18,10 +18,8 @@ const PHASE_AT = [700, 1150, 1600, 2050, 2500, 3000];
 const TAG_AFTER = 380;
 const MAX_TILT = 4;
 
-const EXHIBITS: { id: AnchorId; n: string; text: string; className: string }[] = [
-  { id: "label", n: "01", text: "Label, code M4T", className: "left-[22%] -top-[1%]" },
-  { id: "cut", n: "02", text: "Cut", className: "right-[95%] top-[46%]" },
-];
+// The code is marked on the photo itself (ClaimScreen); the cut gets the one leader, from the left, across nothing.
+const EXHIBITS: { id: AnchorId; text: string; className: string }[] = [{ id: "cut", text: "Cut", className: "right-[95%] top-[46%]" }];
 
 const NOSCRIPT = `<style>[data-hero-device] [data-seq=show]{opacity:1!important;transform:none!important}[data-hero-device] [data-seq=hide]{opacity:0!important}</style>`;
 
@@ -242,10 +240,10 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
               </g>
             ))}
           </svg>
-          {EXHIBITS.map(({ id, n, text, className }) => (
+          {EXHIBITS.map(({ id, text, className }) => (
             <div key={id} className={clsx(styles.label, "whitespace-nowrap", className)}>
               <ExhibitLabel leader="right" leaderLength={28} as="span">
-                Exhibit {n} · {text}
+                {text}
               </ExhibitLabel>
               <span data-exhibit={id} className="absolute top-1/2 right-0 size-px" />
             </div>
