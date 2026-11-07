@@ -17,6 +17,7 @@
     "seed": "tsx --env-file=.env scripts/seed.ts",
     "dev-session": "tsx --env-file=.env scripts/dev-session.ts",
     "shots": "tsx scripts/shots.ts",
+    "e2e": "tsx scripts/e2e.ts",
     "demo:assets": "tsx scripts/demo-assets.ts"
   },
   "dependencies": {
