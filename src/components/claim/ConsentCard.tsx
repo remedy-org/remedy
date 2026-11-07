@@ -3,11 +3,14 @@ import { Button, Card, ClockIcon, ErrorState, Money, NoBreakHyphens, Paper, Stat
 import { RemedyMark } from "@/components/ui/Wordmark";
 import { DEMO_SAMPLES } from "@/lib/demo";
 import type { Refusal } from "@/lib/limits";
+import type { JudgeLogin } from "@/lib/demo/judgeLogin";
 import type { Decision, Recall } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { InfoIcon, LockIcon } from "./icons";
+import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { LimitNotice, retryLabel } from "./LimitNotice";
 import { companyName, cutInHalf, handWrittenLabel, money, productNoun, SANDBOX_ACCOUNTS_URL } from "./model";
+import { SAMPLE_TESTS } from "./SamplePicker";
 
 export type AuthError = "denied" | "state" | "paypal" | "refused";
 
@@ -43,6 +46,8 @@ export interface ConsentCardProps {
   refusal?: Refusal | null;
   /** Logged in with a claim for this recall already: the card leads with it. */
   yourClaim?: YourClaim | null;
+  /** Demo: the judges' sandbox login to show before the login button. Null keeps the "in the submission notes" line. */
+  judgeLogin?: JudgeLogin | null;
 }
 
 /** The primary button's words, shared with the phone's sticky bar. */
@@ -58,7 +63,7 @@ export function consentAction({ signedInAs, demo, unverified, refusal, yourClaim
  * The consent card, after Stripe Identity and Plaid: the refund first, a two-tone promise, the two parties as
  * overlapping marks, three numbered steps (the four samples in the demo), one full-width action and a privacy line.
  */
-export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim }: ConsentCardProps) {
+export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin }: ConsentCardProps) {
   const company = companyName(recall);
   const action = consentAction({ signedInAs, demo, unverified, refusal, yourClaim });
   const amount = money(recall.refund);
@@ -98,8 +103,9 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <Parties company={company} />
       </div>
 
+      {/* The demo's four samples come before the login, so the card shows what a judge is about to run, not a wall. */}
       {demo ? (
-        <div className="order-last flex flex-col gap-3 border-t border-line pt-6">
+        <div className="flex flex-col gap-3 border-t border-line pt-6">
           <h3 className="micro text-faint">Four sample claims you&apos;ll run</h3>
           <ul className="grid gap-x-4 gap-y-3 sm:grid-cols-2 sm:gap-y-4">
             {DEMO_SAMPLES.map((s) => (
@@ -107,6 +113,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
                 <SampleTag src={s.photos[0]} />
                 <span className="flex min-w-0 flex-col items-start gap-1.5">
                   <span className="text-ui leading-tight font-medium text-text">{s.title}</span>
+                  <span className="text-ui leading-tight text-muted">Tests {SAMPLE_TESTS[s.id] ?? s.decidedBy}</span>
                   <StatusPill status={s.expect} label={`Should be ${statusLabel(s.expect).toLowerCase()}`} />
                 </span>
               </li>
@@ -138,7 +145,11 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       {/* With a claim under way its own button leads, at the top, and nothing new starts here. */}
       {!yourClaim && (
         <div className="flex flex-col gap-4">
-          {demo && !signedInAs && (
+          {demo && !signedInAs && judgeLogin && (
+            // From 1200px the judges' rail beside the card shows it, so the card doesn't say it twice.
+            <JudgeLoginPanel login={judgeLogin} className="min-[1200px]:hidden" />
+          )}
+          {demo && !signedInAs && !judgeLogin && (
             // Information, so neutral: the held blue means "waiting for a person" and nothing else. Under the button on a
             // phone, so the button clears the first screen.
             <div className="flex gap-3 rounded-card bg-surface-2 p-4 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] max-sm:order-last">

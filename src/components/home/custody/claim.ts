@@ -21,8 +21,6 @@ export const CLAIM = {
   recalled: "5 Nov 2026",
 } as const;
 
-export const SANDBOX_ACCOUNTS_URL = "https://developer.paypal.com/tools/sandbox/accounts/";
-
 /** The chapter rail, the static captions and the screen-reader list. */
 export const CHAPTERS = [
   {

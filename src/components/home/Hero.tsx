@@ -1,9 +1,10 @@
 import clsx from "clsx";
 import type { CSSProperties } from "react";
 import { Button } from "@/components/ui";
-import { CLAIM, SANDBOX_ACCOUNTS_URL } from "./custody/claim";
+import { CLAIM } from "./custody/claim";
 import { HeroRunway } from "./custody/HeroRunway";
 import styles from "./custody/custody.module.css";
+import { TryNote } from "./TryNote";
 
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
 
@@ -40,19 +41,7 @@ export function Hero() {
           Try a claim with sample photos
         </Button>
       </div>
-      <p className={clsx("mt-4 font-mono text-micro text-faint", styles.focusIn)} style={line(3)}>
-        Needs a PayPal sandbox personal account ·{" "}
-        <a
-          href={SANDBOX_ACCOUNTS_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="relative underline decoration-line-2 underline-offset-4 transition-colors duration-160 after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] hover:text-text"
-        >
-          How to make one
-          <span aria-hidden="true">&nbsp;↗</span>
-          <span className="sr-only"> (opens in a new tab)</span>
-        </a>
-      </p>
+      <TryNote className={clsx("mt-4", styles.focusIn)} style={line(3)} />
     </>
   );
   const facts = (

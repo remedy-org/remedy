@@ -620,7 +620,7 @@ function DemoActions({ sample, slug, againHref, claimId, decision, round, unansw
     </RunSample>
   ) : (
     <Button href={consoleHref(claimId)} size={rail ? "md" : "lg"} block prefetch={false} className={clsx("h-auto! py-2.5 text-center whitespace-normal!", rail ? "min-h-11" : "min-h-12")}>
-      Open Kikea Store&apos;s console
+      Sign in as Kikea Store to see this claim
     </Button>
   );
   // After an outage the next sample stays one click away, so a judge can carry on while the model is down.
@@ -663,7 +663,7 @@ function DemoActions({ sample, slug, againHref, claimId, decision, round, unansw
         {secondary}
         {!over && (
           <Button href={consoleHref(claimId)} variant="tertiary" size="sm" prefetch={false} className="self-start">
-            See this claim in Kikea Store&apos;s console
+            Sign in as Kikea Store to see this claim
           </Button>
         )}
       </div>
@@ -684,7 +684,7 @@ function JudgeVerdict({ sample, run, round, claimId, slug, againHref }: { sample
       {/* Once the round is over the console is the primary action above. */}
       {!roundOver(round?.runs ?? [], sample, run.unanswered) && (
         <Button href={consoleHref(claimId)} variant="tertiary" size="sm" prefetch={false} className="self-start">
-          See this claim in Kikea Store&apos;s console
+          Sign in as Kikea Store to see this claim
         </Button>
       )}
     </div>

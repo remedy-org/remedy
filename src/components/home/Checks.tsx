@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui";
-import { SANDBOX_ACCOUNTS_URL } from "@/components/claim/model";
 import { Pipeline, PipelineList } from "./Pipeline";
 import { Section } from "./Section";
+import { TryNote } from "./TryNote";
 
 export function Checks() {
   return (
@@ -18,19 +18,7 @@ export function Checks() {
         <Button href="/r/kikea-x-vesolje/try" variant="tertiary" size="lg">
           Try the four samples yourself
         </Button>
-        <p className="font-mono text-micro text-faint">
-          Needs a PayPal sandbox personal account ·{" "}
-          <a
-            href={SANDBOX_ACCOUNTS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative underline decoration-line-2 underline-offset-4 transition-colors duration-160 after:absolute after:inset-x-0 after:-inset-y-1 after:content-[''] hover:text-text"
-          >
-            How to make one
-            <span aria-hidden="true">&nbsp;↗</span>
-            <span className="sr-only"> (opens in a new tab)</span>
-          </a>
-        </p>
+        <TryNote />
       </div>
     </Section>
   );

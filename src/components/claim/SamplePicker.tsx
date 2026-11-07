@@ -26,8 +26,8 @@ export interface DemoRun {
   unanswered?: boolean;
 }
 
-// What each sample proves, in one line under its title.
-const TESTS: Record<string, string> = {
+// What each sample proves, in one line under its title (here and on the try page's preview).
+export const SAMPLE_TESTS: Record<string, string> = {
   genuine: "the happy path",
   "wrong-code": "the model reading the code",
   "ai-no-session": "the live-camera rule",
@@ -120,7 +120,7 @@ export function SamplePicker({
                     <span className="sr-only">Sample {letter}: </span>
                     {sample.title}
                   </span>
-                  <span className="font-mono text-micro text-faint">Tests: {TESTS[sample.id] ?? sample.decidedBy}</span>
+                  <span className="font-mono text-micro text-faint">Tests: {SAMPLE_TESTS[sample.id] ?? sample.decidedBy}</span>
                   <StatusPill status={sample.expect} label={`Should be ${statusLabel(sample.expect).toLowerCase()}`} className="mt-1 self-start" />
                   {run && <RunResult sample={sample} run={run} prefix={<span className="text-ui text-faint">Got</span>} className="flex-wrap gap-y-1" />}
                   {locked && <span className="sr-only">{locked}</span>}

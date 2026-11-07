@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { JudgeLoginPanel } from "@/components/claim/JudgeLoginPanel";
 import { ConsoleReplica, PREVIEW_ROWS } from "@/components/home/ConsoleReplica";
 import { Button, Card, CheckIcon, ErrorState, ExhibitLabel, Wordmark } from "@/components/ui";
+import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { DEFAULT_NEXT, getSession, safeNext } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -37,6 +39,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   const error = ERRORS[one(params.auth_error) ?? ""];
   const signedOut = !error && one(params.signedout) === "1";
   const start = `/api/auth/paypal/start?${new URLSearchParams({ as: "company", next })}`;
+  // The judges' business sandbox login. From a try result's "see this claim" link, it says why the console needs it.
+  const login = judgeLogin("business");
+  const fromClaim = new URL(next, "http://n").searchParams.has("claim");
 
   return (
     // On the homepage's page frame and 12-column grid: the wordmark on the gutter, the card in columns 1 to 5, and the
@@ -60,6 +65,14 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
                 <CheckIcon className="shrink-0 text-pay" />
                 You&apos;re signed out. Log in again to open your console.
               </p>
+            )}
+
+            {login && (
+              <JudgeLoginPanel
+                login={login}
+                className="mt-6"
+                why={fromClaim ? "The console is the company's side. Log in with the business sandbox account to see this claim." : undefined}
+              />
             )}
 
             <Button href={start} size="lg" block className="mt-8" prefetch={false}>

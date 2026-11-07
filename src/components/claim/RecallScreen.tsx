@@ -1,11 +1,13 @@
 import "server-only";
 import { claimPath, findOpenClaim } from "@/app/api/claims/_lib/pipeline";
 import { getAppStore, isSandboxBuild } from "@/lib/demo";
+import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
 import { consentAction, ConsentCard, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
 import { FlowShell } from "./FlowShell";
+import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { WithJudges } from "./Judges";
 import { MobileCta } from "./MobileCta";
 import { businessDaysAfter, companyName, day, maskPayer } from "./model";
@@ -34,6 +36,7 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
       unverified={unverified}
       refusal={parseRefusal(query, new Date())}
       sandbox={isSandboxBuild()}
+      judgeLogin={demo ? judgeLogin("personal") : null}
     />
   );
 }
@@ -67,7 +70,8 @@ export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?:
   const claim = props.yourClaim;
   return (
     <FlowShell demo={props.demo} sandbox={sandbox} company={companyName(props.recall)}>
-      <WithJudges demo={Boolean(props.demo)} step={ready ? "samples" : "consent"}>
+      {/* Logged out, the judges' sandbox login: in the rail from 1200px, in the card below (and in the notes' sheet). */}
+      <WithJudges demo={Boolean(props.demo)} step={ready ? "samples" : "consent"} extra={!props.signedInAs && props.judgeLogin ? <JudgeLoginPanel login={props.judgeLogin} /> : undefined}>
         <div className="flex flex-col gap-6">
           <StepMeter {...(claim ? claimMeter(claim) : { current: ready ? 2 : 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
           <div className="grid gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
