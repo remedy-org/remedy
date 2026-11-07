@@ -3,7 +3,10 @@ import type { ReactNode } from "react";
 import { RemedyMark } from "@/components/ui/Wordmark";
 import { CLAIM } from "./claim";
 
-/** The claim page's own top bar, inside every screen the custody sequence shows: recall, then the step meter. */
+/**
+ * The claim page's own top bar, inside every screen the custody sequence shows: recall, then the step meter. The
+ * counter names screens of the claim app, so it never reads as a rival to the five chapters beside it.
+ */
 export function ScreenBar({ step, console: isConsole, compact }: { step: number; console?: boolean; compact?: boolean }) {
   return (
     <div className={clsx("flex h-12 shrink-0 items-center gap-4 border-b border-line", compact ? "px-4" : "px-6")}>
@@ -17,10 +20,10 @@ export function ScreenBar({ step, console: isConsole, compact }: { step: number;
           <>
             <span className="flex gap-1" aria-hidden="true">
               {[1, 2, 3, 4].map((s) => (
-                <span key={s} className={clsx("h-0.5 w-5 rounded-full transition-colors duration-160", s <= step ? "bg-accent" : "bg-line-strong/50")} />
+                <span key={s} className={clsx("h-0.5 rounded-full transition-colors duration-160", compact ? "w-3" : "w-5", s <= step ? "bg-accent" : "bg-line-strong/50")} />
               ))}
             </span>
-            <span className="font-mono text-micro text-faint tabular-nums">{step}/4</span>
+            <span className="font-mono text-micro whitespace-nowrap text-faint tabular-nums">Screen {step} of 4</span>
           </>
         )}
         {isConsole && <span className="micro text-faint">{CLAIM.recall}</span>}

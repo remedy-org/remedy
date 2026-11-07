@@ -198,13 +198,15 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
   const open = rows.find((r) => r.id === openId);
   return (
     <div className={clsx("overflow-hidden rounded-frame bg-bg text-text shadow-float", className)}>
-      {/* App chrome */}
+      {/* App chrome. Insights and Report are the console's other pages: faint, since this still can't open them. */}
       <div className="flex h-12 items-center gap-6 border-b border-line px-4 sm:px-5">
         <span className="font-semibold">Remedy</span>
         <span className="hidden gap-5 text-ui font-medium sm:flex">
           <span className="relative text-text after:absolute after:inset-x-0 after:-bottom-[15px] after:h-px after:bg-text">Claims</span>
-          <span className="text-muted">Insights</span>
-          <span className="text-muted" data-anchor="report">
+          <span className="cursor-not-allowed text-faint" title="In your console, after you log in">
+            Insights
+          </span>
+          <span className="cursor-not-allowed text-faint" title="In your console, after you log in" data-anchor="report">
             Report
           </span>
         </span>

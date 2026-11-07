@@ -30,7 +30,7 @@ export function Companies() {
     >
       <figure className="relative m-0 lg:mt-8">
         <FrameTag side="top" reach={10} style={{ left: 265, transform: "translateX(-50%)" }}>
-          CPSC report draft
+          CPSC report draft · in your console
         </FrameTag>
         {/* These two hang below the frame and point up into the grid area's foot: short leaders, nothing crossed. */}
         <FrameTag side="bottom" reach={46} style={{ left: 612, transform: "translateX(-50%)" }}>

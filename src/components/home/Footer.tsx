@@ -110,8 +110,12 @@ export function Footer() {
           <ul className="flex flex-col md:flex-row md:flex-wrap md:gap-x-6">
             {SOURCES.map((s) => (
               <li key={s.href}>
-                <a href={s.href} className={linkClass}>
-                  {s.label}
+                <a href={s.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+                  <span>
+                    {s.label}
+                    <span aria-hidden="true">&nbsp;↗</span>
+                  </span>
+                  <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </li>
             ))}

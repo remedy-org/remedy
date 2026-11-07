@@ -33,7 +33,8 @@ const link = "underline decoration-paper-line underline-offset-4 transition-colo
 function Note({ n }: { n: number }) {
   return (
     <sup className="ml-0.5 font-mono text-micro">
-      <a href={`#source-${n}`} aria-label={`Source ${n}`} className={clsx(link, "px-0.5 no-underline")}>
+      {/* A 24px hit area around the 12px figure, without moving the line. */}
+      <a href={`#source-${n}`} aria-label={`Source ${n}`} className={clsx(link, "relative px-0.5 no-underline before:absolute before:-inset-x-1.5 before:-inset-y-1 before:content-['']")}>
         {n}
       </a>
     </sup>
@@ -110,8 +111,13 @@ export function Problem() {
         {SOURCES.map((s) => (
           <li key={s.n} id={`source-${s.n}`} className="col-span-12 flex gap-3 font-mono text-micro text-ink-muted md:col-span-6 lg:col-span-3">
             <span className="w-4 shrink-0">{s.n}</span>
-            <a href={s.href} className={clsx(link, "inline-flex min-h-6 items-center")}>
-              {s.label}
+            <a href={s.href} target="_blank" rel="noopener noreferrer" className={clsx(link, "inline-flex min-h-6 items-center")}>
+              {/* One flex item, so a wrapped label keeps the arrow at its end. */}
+              <span>
+                {s.label}
+                <span aria-hidden="true">&nbsp;↗</span>
+              </span>
+              <span className="sr-only"> (opens in a new tab)</span>
             </a>
           </li>
         ))}

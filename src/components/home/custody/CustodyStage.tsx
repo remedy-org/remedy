@@ -72,14 +72,17 @@ function RailCaption({ p, i }: { p: Progress; i: number }) {
  */
 function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
   if (!el || !st) return;
-  // Opacity as well as visibility: a chapter layer sets its own visibility, which would show through a hidden parent.
+  // Opacity and pointer events as well as visibility: a chapter layer sets its own visibility, which would show through
+  // a hidden parent and catch the hero's clicks and pointer (its Replay and the laptop's tilt) while invisible.
   if (v < HANDOFF[0]) {
     el.style.visibility = "hidden";
     el.style.opacity = "0";
+    el.style.pointerEvents = "none";
     return;
   }
   el.style.visibility = "visible";
   el.style.opacity = "1";
+  el.style.pointerEvents = "auto";
   const S = st.getBoundingClientRect();
   const inner = el.querySelector("[data-screen-inner]")?.getBoundingClientRect();
   const end = inner
@@ -151,7 +154,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
 
   return (
     <>
-      <div ref={screen} className={clsx(styles.screen, "invisible opacity-0")} aria-hidden="true">
+      <div ref={screen} className={clsx(styles.screen, "pointer-events-none invisible opacity-0")} aria-hidden="true">
         <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-card")} style={{ opacity: frame }} />
         <div className={styles.screenInner} data-screen-inner>
           <motion.div style={{ opacity: bar }}>

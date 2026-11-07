@@ -59,7 +59,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Money value={Number(recall.refund.value)} currency={recall.refund.currency} size="amount" className="text-text" />
           <span className="inline-flex h-6 items-center rounded-full border border-line px-2.5 font-mono text-micro whitespace-nowrap text-muted">
-            {demo ? "About 2 min" : "About 5 min"}
+            {demo ? "About 2 min start to finish" : "About 5 min start to finish"}
           </span>
         </div>
       </div>

@@ -68,17 +68,25 @@
   height: 100%;
 }
 
+/* The scene is clear of the header (it starts fading in only below the headline's last line, so a close-up never
+   shows through it), of the check row and the callout column, and fades out at the left edge rather than clipping. */
 .stage:not(.small) .canvas,
 .stage:not(.small) .posters {
   mask-image:
     linear-gradient(
       to bottom,
-      transparent calc(var(--m-top, 160px) - 16px),
-      #000 calc(var(--m-top, 160px) + 56px),
+      transparent calc(var(--m-top, 160px) + 4px),
+      #000 calc(var(--m-top, 160px) + 64px),
       #000 calc(var(--m-bot, 760px) - 56px),
       transparent calc(var(--m-bot, 760px) + 4px)
     ),
-    linear-gradient(to right, #000 calc(var(--m-side, 1000px) - 72px), transparent calc(var(--m-side, 1000px) + 24px));
+    linear-gradient(
+      to right,
+      transparent,
+      #000 var(--gutter, clamp(24px, 4.45vw, 64px)),
+      #000 calc(var(--m-side, 1000px) - 72px),
+      transparent calc(var(--m-side, 1000px) + 24px)
+    );
   mask-composite: intersect;
 }
 

@@ -57,13 +57,17 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
 
   return (
     <div className="overflow-hidden rounded-frame bg-bg text-text shadow-float">
-      {/* App chrome */}
+      {/* App chrome. Insights and Report are the console's other pages: faint, since this still can't open them. */}
       <div className="flex h-12 items-center gap-6 border-b border-line px-4 sm:px-5" aria-hidden="true">
         <span className="font-semibold">Remedy</span>
         <span className="hidden gap-5 text-ui font-medium sm:flex">
           <span className="relative text-text after:absolute after:inset-x-0 after:-bottom-[15px] after:h-px after:bg-text">Claims</span>
-          <span className="text-muted">Insights</span>
-          <span className="text-muted">Report</span>
+          <span className="cursor-not-allowed text-faint" title="In your console, after you log in">
+            Insights
+          </span>
+          <span className="cursor-not-allowed text-faint" title="In your console, after you log in">
+            Report
+          </span>
         </span>
         <span className="ml-auto text-ui text-muted">Kikea Store</span>
       </div>

@@ -45,7 +45,7 @@ function RefundLine() {
       <span className="micro text-faint">Your refund</span>
       <div className="flex items-center gap-4">
         <Money value={CLAIM.amount} size="amount" />
-        <span className="inline-flex h-6 items-center rounded-full border border-line px-2.5 font-mono text-micro whitespace-nowrap text-muted">About 5 min</span>
+        <span className="inline-flex h-6 items-center rounded-full border border-line px-2.5 font-mono text-micro whitespace-nowrap text-muted">About 5 min start to finish</span>
       </div>
     </div>
   );

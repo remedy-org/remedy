@@ -22,10 +22,10 @@ interface Row {
 }
 
 const ROWS: Row[] = [
-  { model: "GPT-6.1 Sol", chosen: true, short: true, decisions: ["29–30 of 31", "5 of 5"], genuinePaid: ["21 of 21", "6 of 6"], fakesPaid: ["3, all c14", "0"], answers: ["91%", "96%"], seconds: "16 (max 40)", cost: "$0.011" },
-  { model: "GPT-6 Astra", short: true, decisions: ["29–30 of 31", "5 of 5"], genuinePaid: ["21 of 21", "6 of 6"], fakesPaid: ["1, c14", "0"], answers: ["90%", "96%"], seconds: "26 (max 67)", cost: "$0.064" },
-  { model: "GPT-6.1 Terra", decisions: ["29–30 of 31", "5 of 5"], genuinePaid: ["18 of 21", "6 of 6"], fakesPaid: ["2, c14", "0"], answers: ["93%", "96%"], seconds: "10 (max 19)", cost: "$0.005" },
-  { model: "GPT-6 Luna", decisions: ["28–29 of 31", "4–5 of 5"], genuinePaid: ["16 of 21", "6 of 6"], fakesPaid: ["3, c14", "2, h03"], answers: ["93%", "96%"], seconds: "10 (max 27)", cost: "$0.0006" },
+  { model: "GPT-6.1 Sol", chosen: true, short: true, decisions: ["29–30 of 31", "5 of 5"], genuinePaid: ["21 of 21", "6 of 6"], fakesPaid: ["3, c14 fake", "0"], answers: ["91%", "96%"], seconds: "16 (max 40)", cost: "$0.011" },
+  { model: "GPT-6 Astra", short: true, decisions: ["29–30 of 31", "5 of 5"], genuinePaid: ["21 of 21", "6 of 6"], fakesPaid: ["1, c14 fake", "0"], answers: ["90%", "96%"], seconds: "26 (max 67)", cost: "$0.064" },
+  { model: "GPT-6.1 Terra", decisions: ["29–30 of 31", "5 of 5"], genuinePaid: ["18 of 21", "6 of 6"], fakesPaid: ["2, c14 fake", "0"], answers: ["93%", "96%"], seconds: "10 (max 19)", cost: "$0.005" },
+  { model: "GPT-6 Luna", decisions: ["28–29 of 31", "4–5 of 5"], genuinePaid: ["16 of 21", "6 of 6"], fakesPaid: ["3, c14 fake", "2, h03 fake"], answers: ["93%", "96%"], seconds: "10 (max 27)", cost: "$0.0006" },
 ];
 
 const COLUMNS: { key: keyof Row; label: string; pair: boolean }[] = [
@@ -56,9 +56,17 @@ const WHY = [
 
 const NOTES = [
   "Every photo with a code on it is AI-made: no web photo can carry a per-claim code. The first real one will be a live-camera capture.",
-  "Every model paid c14, an AI image with three cut ends on two pieces, at least once. That is why the model is not the defence against fakes.",
   "One person wrote the answer keys and checked every image by eye.",
 ];
+
+// The two fakes the table names, said in words right under it, where the cells cite them.
+const FAKES = (
+  <>
+    <span className="font-mono text-text-2">c14</span> is one AI-made fake with three cut ends on two pieces. Every model paid it at least once, which is
+    why the model is not the defence against fakes. <span className="font-mono text-text-2">h03</span> is a held-out fake whose tag is misspelt
+    X-VESOLIE.
+  </>
+);
 
 const SUMMARY = "flex min-h-11 cursor-pointer list-none items-center justify-between text-ui font-medium [&::-webkit-details-marker]:hidden";
 
@@ -157,9 +165,9 @@ export function Proof() {
       {/* The eval table: a real table from md up, one card per model on phones. */}
       <div className="mt-12 sm:mt-16">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-          <h3 className="hidden text-ui font-medium sm:block">Spike 2, 7 November 2026</h3>
-          <p className="hidden text-ui text-muted sm:block">
-            Each cell: round 2 of 31 claims, then <span className="text-faint">the 5 held-out claims</span>. Paid counts add up all 3 runs.
+          <h3 className="hidden text-ui font-medium sm:block">Test run, 7 November 2026</h3>
+          <p className="text-ui text-text-2">
+            Each cell: the 31 test claims on top, <span className="text-faint">the 5 held-out claims under it</span>. Paid counts add up all 3 runs.
           </p>
         </div>
 
@@ -222,13 +230,14 @@ export function Proof() {
             </div>
           </details>
         </div>
+        <p className="mt-4 max-w-[68ch] text-ui text-pretty text-muted">{FAKES}</p>
       </div>
 
-      {/* The caveats stay open, three across on laptops; the reasons for Sol fold away under them. Phones fold both, so
+      {/* The caveats stay open, two across on laptops; the reasons for Sol fold away under them. Phones fold both, so
           the section stays short. The copy is the same either way. */}
       <div className="md:mt-12">
         <h3 className="hidden text-ui font-medium md:block">What this can&rsquo;t show</h3>
-        <ul className="mt-4 hidden gap-x-10 md:grid md:grid-cols-3">
+        <ul className="mt-4 hidden gap-x-10 md:grid md:grid-cols-2">
           {NOTES.map((n) => (
             <li key={n} className="border-t border-line py-4 text-ui text-pretty text-muted">
               {n}

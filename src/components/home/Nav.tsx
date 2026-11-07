@@ -13,11 +13,11 @@ const LINKS = [
 /**
  * The homepage nav on the page frame: the wordmark on the first grid line, the exhibits beside it, then the theme,
  * Sign in as quiet text and "Start a recall" as the quiet button (the hero's amber button is the screen's one action).
- * No rule under it: the page shows through a blur.
+ * No rule under it, and a solid page tone: a translucent bar turned grey-brown over the cream paper band.
  */
 export function Nav() {
   return (
-    <header className="sticky top-0 z-30 bg-bg/80 backdrop-blur-md backdrop-saturate-150">
+    <header className="sticky top-0 z-30 bg-bg">
       <nav aria-label="Main" className="page flex h-16 items-center gap-10">
         <Wordmark size="md" href="/" />
         <ul className="hidden items-center gap-7 lg:flex">

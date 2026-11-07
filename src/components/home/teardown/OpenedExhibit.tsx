@@ -530,6 +530,9 @@ function Stage({ p, mode, small, onSeek, chain = false, skip, capture }: StagePr
       schedule();
     });
     ro.observe(el);
+    // The header too: it can rewrap (the font swapping in) without the stage changing size.
+    const headEl = el.querySelector(`.${styles.head}`);
+    if (headEl) ro.observe(headEl);
     return () => ro.disconnect();
   }, [schedule]);
 
