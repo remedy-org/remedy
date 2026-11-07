@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { Button, Card, ErrorState, Money, NoBreakHyphens, Paper, StatusPill, statusLabel } from "@/components/ui";
+import { RemedyMark } from "@/components/ui/Wordmark";
 import { DEMO_SAMPLES } from "@/lib/demo";
 import type { Refusal } from "@/lib/limits";
 import type { Recall } from "@/lib/types";
@@ -163,27 +164,11 @@ function Parties({ company }: { company: string }) {
       <span className="flex shrink-0" aria-hidden="true">
         <span className="flex size-11 items-center justify-center rounded-card border border-line bg-surface-2 text-ui font-semibold text-text">{initials}</span>
         <span className="-ml-2.5 flex size-11 items-center justify-center rounded-card bg-bg ring-2 ring-surface">
-          <TagGlyph />
+          <RemedyMark className="h-4 w-6" />
         </span>
       </span>
       <span className="text-ui text-muted">{company} works with Remedy to pay this recall.</span>
     </div>
-  );
-}
-
-/** Remedy's tag mark (the Wordmark glyph without its string), for the overlapping marks. */
-function TagGlyph() {
-  return (
-    <svg width="22" height="22" viewBox="5 7 14 18" aria-hidden="true">
-      <g transform="rotate(-8 12 15)">
-        <path
-          fillRule="evenodd"
-          fill="var(--accent)"
-          d="M9.5 8.5h5l3.5 3.5v9.25c0 .97-.78 1.75-1.75 1.75h-8.5c-.97 0-1.75-.78-1.75-1.75V12zM13.5 12a1.5 1.5 0 1 0-3 0a1.5 1.5 0 1 0 3 0z"
-        />
-        <path d="M9 16.25h6M9 19.25h3.5" stroke="var(--accent-ink)" strokeWidth="1.5" strokeLinecap="round" />
-      </g>
-    </svg>
   );
 }
 

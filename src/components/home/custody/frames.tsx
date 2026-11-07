@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
+import { RemedyMark } from "@/components/ui/Wordmark";
 import { CLAIM } from "./claim";
 
 /** The claim page's own top bar, inside every screen the custody sequence shows: recall, then the step meter. */
@@ -7,14 +8,7 @@ export function ScreenBar({ step, console: isConsole, compact }: { step: number;
   return (
     <div className={clsx("flex h-12 shrink-0 items-center gap-4 border-b border-line", compact ? "px-4" : "px-6")}>
       <span className="flex items-center gap-2 text-ui font-medium">
-        <svg width="14" height="14" viewBox="5 7 14 18" aria-hidden="true">
-          <path
-            fillRule="evenodd"
-            fill="var(--accent)"
-            transform="rotate(-8 12 15)"
-            d="M9.5 8.5h5l3.5 3.5v9.25c0 .97-.78 1.75-1.75 1.75h-8.5c-.97 0-1.75-.78-1.75-1.75V12zM13.5 12a1.5 1.5 0 1 0-3 0a1.5 1.5 0 1 0 3 0z"
-          />
-        </svg>
+        <RemedyMark className="h-3 w-[1.125rem]" />
         {isConsole ? "Console" : "Remedy"}
       </span>
       {!compact && <span className="truncate text-ui text-muted">{isConsole ? CLAIM.company : "Kikea X-VESOLJE nursing pillow"}</span>}

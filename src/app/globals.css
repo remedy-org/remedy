@@ -418,12 +418,6 @@
   .stamp-land {
     animation: stamp-land 200ms var(--ease-back) var(--stamp-delay, 0ms) both;
   }
-
-  /* The wordmark's string draws in once on load. */
-  .mark-string {
-    stroke-dasharray: 1;
-    animation: string-draw 600ms var(--ease-in-out-quart) 120ms both;
-  }
 }
 
 @keyframes stamp-land {
@@ -434,15 +428,6 @@
   to {
     opacity: 1;
     scale: 1;
-  }
-}
-
-@keyframes string-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
   }
 }
 
