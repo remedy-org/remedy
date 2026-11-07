@@ -26,7 +26,7 @@ These patterns come from measured reference sites (Stripe, Linear, Mercury, Pers
 - **Navigation (Linear, Mercury):** "Sign in" as quiet text, one filled primary button.
 - **Grid (AG Grid's own demo):** status tabs, dot pills, two-line cells.
 
-**Never:** more than one pinned sequence per page; a pin longer than 320vh; a pinned frame that is ever empty; a pin without a skip link; a fade-in from black, gradient or acid brand colours, illustration carousels, walls of logos and video tiles, emoji, lorem ipsum, or PayPal's logo (we name PayPal in plain text only).
+**Never:** more than one pinned sequence per page; a pin longer than 320vh (one exception, wave 3: the Opened Exhibit's stretch of the Chain of Custody, chapters 03 to 05, runs about 500vh, 8 beats at 30 to 95vh each, because the owner found the pin too fast; see `src/components/home/teardown/README.md`); a pinned frame that is ever empty; a pin without a skip link; a fade-in from black, gradient or acid brand colours, illustration carousels, walls of logos and video tiles, emoji, lorem ipsum, or PayPal's logo (we name PayPal in plain text only).
 
 ## Type
 
