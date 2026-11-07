@@ -3,6 +3,7 @@ import { PrintButton } from "@/components/console/PrintButton";
 import { ProgressReport } from "@/components/console/ProgressReport";
 import { RecallPicker } from "@/components/console/RecallPicker";
 import { Button, EmptyState } from "@/components/ui";
+import { isSandboxBuild } from "@/lib/demo";
 import { requireSession } from "@/lib/session";
 import { buildReport } from "../_lib/report";
 import { loadClaims, loadWorkspace, pickRecall } from "../_lib/workspace";
@@ -29,7 +30,8 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
   }
 
   const claims = await loadClaims(store, recall, session);
-  const report = buildReport(claims, recall);
+  const sandbox = isSandboxBuild();
+  const report = buildReport(claims, recall, { sandbox });
 
   return (
     <main className="flex flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 print:p-0">
@@ -43,7 +45,7 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
           <PrintButton />
         </div>
       </div>
-      <ProgressReport recall={recall} report={report} generated={`${formatDayET(new Date().toISOString())} (ET)`} />
+      <ProgressReport recall={recall} report={report} sandbox={sandbox} generated={`${formatDayET(new Date().toISOString())} (ET)`} />
     </main>
   );
 }

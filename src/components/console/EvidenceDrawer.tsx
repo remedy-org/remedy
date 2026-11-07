@@ -289,7 +289,7 @@ function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
   return (
     <div className={clsx("flex flex-col gap-7 py-5", pad)}>
       <Deciding claim={claim} />
-      <Section title="The money" aside={claim.payout && !claim.seeded ? (claim.payout.status === "SUCCESS" ? "Sent through PayPal" : "Settling at PayPal") : undefined}>
+      <Section title="The money" aside={claim.payout ? (claim.payout.status === "SUCCESS" ? "Sent through PayPal" : "Settling at PayPal") : undefined}>
         <MoneyTimeline claim={claim} />
       </Section>
 
@@ -361,7 +361,7 @@ function Evidence({ claim, pad }: { claim: DrawerClaim; pad: string }) {
             <dd className="truncate font-mono">{claim.payout.batchId}</dd>
             <dt className="text-muted">Status</dt>
             <dd className="text-muted">
-              {claim.seeded ? "Sample, never sent" : claim.payout.status === "SUCCESS" ? "Sent" : "Settling at PayPal"} <span className="font-mono">· {claim.payout.status}</span>
+              {claim.payout.status === "SUCCESS" ? "Sent" : "Settling at PayPal"} <span className="font-mono">· {claim.payout.status}</span>
             </dd>
             <dt className="text-muted">Updated</dt>
             <dd className="font-mono">{formatTime(claim.payout.updatedAt)}</dd>

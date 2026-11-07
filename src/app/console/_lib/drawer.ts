@@ -1,5 +1,6 @@
 import type { Claim, Outcome, Recall } from "@/lib/types";
 import { isSandboxBuild } from "@/lib/demo/allowed";
+import { SAMPLE_PRECHECKED, samplePayoutDetail, samplePhotosDetail } from "@/lib/demo/sampleCopy";
 import { amountOf, checkLabel, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
 
 // Everything the evidence drawer shows for one claim, built on the server so the client never sees a full payer id.
@@ -43,8 +44,9 @@ export interface DrawerClaim {
 // What approve and reject answer: the claim, and for a seeded claim what the review would have done.
 export type ReviewedClaim = DrawerClaim & { sample?: string };
 
-// Pre-check reasons and a person's review aren't model answers: the drawer shows them elsewhere.
-const NOT_MODEL = new Set(["session", "duplicate_photo", "payer", "payer_verified", "state", "review"]);
+// Pre-check reasons, a person's review, auto-pay and the PayPal payout aren't model answers: the drawer shows them
+// elsewhere (the pre-checks, and the decision sentence).
+const NOT_MODEL = new Set(["session", "duplicate_photo", "payer", "payer_verified", "state", "review", "auto_pay", "payout"]);
 
 
 function evidenceFor(check: string, verdict: Claim["verdict"]): string | null {
@@ -59,7 +61,26 @@ export function photoUrl(claimId: string, n: number) {
   return `/api/console/claims/${claimId}/photos/${n}`;
 }
 
+/**
+ * A seeded sample's history in the words of a sample: claims seeded before the wording changed still say "live camera"
+ * and "sent through PayPal", which never happened. Their made-up PayPal status is left out.
+ */
+function sampleEvents(c: Claim, amount: string): Claim["events"] {
+  return c.events
+    .filter((e) => e.type !== "payout_updated")
+    .map((e) =>
+      e.type === "photos_received"
+        ? { ...e, detail: samplePhotosDetail(c.photos.length) }
+        : e.type === "prechecked"
+          ? { ...e, detail: SAMPLE_PRECHECKED }
+          : e.type === "payout_sent"
+            ? { ...e, detail: samplePayoutDetail(amount) }
+            : e,
+    );
+}
+
 export function toDrawerClaim(c: Claim, recall: Recall): DrawerClaim {
+  const amount = formatMoney(amountOf(c.payout?.amount, recall));
   const checks = c.reasons
     .filter((r) => !NOT_MODEL.has(r.check))
     .map((r) => ({ id: r.check, label: checkLabel(r.check, c.code), outcome: r.outcome, rule: r.text, evidence: evidenceFor(r.check, c.verdict) }));
@@ -77,9 +98,10 @@ export function toDrawerClaim(c: Claim, recall: Recall): DrawerClaim {
     checks,
     summary: c.verdict?.summary ?? null,
     sentence: decisionSentence(c, recall),
-    amount: formatMoney(amountOf(c.payout?.amount, recall)),
-    payout: c.payout ? { batchId: c.payout.batchId, status: c.payout.status, updatedAt: c.payout.updatedAt } : null,
-    events: c.events,
+    amount,
+    // A seeded sample's PayPal batch and status are made up by the seed: nothing was sent, so there is none to show.
+    payout: c.payout && !c.seeded ? { batchId: c.payout.batchId, status: c.payout.status, updatedAt: c.payout.updatedAt } : null,
+    events: c.seeded ? sampleEvents(c, amount) : c.events,
     review:
       c.decision === "held"
         ? c.seeded

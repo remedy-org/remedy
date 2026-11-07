@@ -332,8 +332,14 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
       if (c.seeded) return `Every check passed, so the rule would pay ${amount}. This is a sample claim: no money was sent.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `Every check passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
-      const hold = first(c.reasons, "hold");
-      if (hold) return `One answer was unclear, so a person decides: ${lower(hold)}.`;
+      // A hold is the model's unclear answer, or a step of the process: auto-pay off, PayPal refusing the payout, or a
+      // conflict the checks before the payout found. Each gets its own sentence.
+      const holds = c.reasons.filter((r) => r.outcome === "hold");
+      const hold = holds.find((r) => !PROCESS_HOLD.has(r.check)) ?? holds[0];
+      if (hold?.check === "auto_pay") return `Every check passed. Auto-pay is off, so a person approves the ${amount} refund.`;
+      if (hold?.check === "payout") return "Every check passed, but PayPal didn't accept the payout, so a person will send it.";
+      if (hold && PROCESS_HOLD.has(hold.check)) return `A check before the payout found a conflict, so a person decides: ${lower(hold.text)}.`;
+      if (hold) return `One answer was unclear, so a person decides: ${lower(hold.text)}.`;
       return recall.autoPay ? "Every check passed, but the claim is held for a person." : `Every check passed. Auto-pay is off, so a person approves the ${amount} refund.`;
     }
     case "rejected":
@@ -348,7 +354,10 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
 const REVIEW_PREFIX = "Rejected on review: ";
 export const reviewReasonText = (reason: string) => `${REVIEW_PREFIX}${reason}`;
 const stripPrefix = (t: string) => (t.startsWith(REVIEW_PREFIX) ? t.slice(REVIEW_PREFIX.length) : t);
-const lower = (t: string) => (t ? t[0].toLowerCase() + t.slice(1) : t).replace(/[.\s]+$/, "");
+// Holds that come from the process, not from the model's answers.
+const PROCESS_HOLD = new Set(["auto_pay", "payout", "payer", "duplicate_photo"]);
+// Lowercases the first letter to run on in a sentence, but never a name like "PayPal" or "CPSC".
+const lower = (t: string) => (t && !/^(?:[A-Z]{2}|[A-Z][a-z]+[A-Z])/.test(t) ? t[0].toLowerCase() + t.slice(1) : t).replace(/[.\s]+$/, "");
 
 export type PreCheckState = "pass" | "hold" | "reject" | "waiting" | "skipped";
 export interface PreCheckRow {

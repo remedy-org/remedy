@@ -63,6 +63,22 @@ describe("console view", () => {
     );
   });
 
+  it("says why a claim is held: the model, auto-pay, PayPal or a conflict before the payout", () => {
+    const held = (check: string, text: string) => sampleClaim({ decision: "held", reasons: [{ check: "label", outcome: "pass", text: "ok" }, { check, outcome: "hold", text }] });
+    expect(decisionSentence(held("payout", "PayPal didn't accept the payout, so a person will send it"), recall)).toBe(
+      "Every check passed, but PayPal didn't accept the payout, so a person will send it.",
+    );
+    expect(decisionSentence(held("auto_pay", "Auto-pay is off for this recall, so a person approves each refund"), recall)).toBe(
+      "Every check passed. Auto-pay is off, so a person approves the $29.99 refund.",
+    );
+    expect(decisionSentence(held("payer", "PayPal account already has a claim"), recall)).toBe(
+      "A check before the payout found a conflict, so a person decides: PayPal account already has a claim.",
+    );
+    expect(decisionSentence(held("same_item", "Couldn't tell if both photos show the same item"), recall)).toBe(
+      "One answer was unclear, so a person decides: couldn't tell if both photos show the same item.",
+    );
+  });
+
   it("rebuilds the pre-checks: a blocked claim fails the one that stopped it", () => {
     const rows = preChecksOf(sampleClaim({ decision: "blocked", reasons: [reject("duplicate_photo", "Photo 1 was already used in another claim")] }));
     expect(rows.map((r) => [r.id, r.state])).toEqual([
@@ -97,7 +113,8 @@ describe("report", () => {
       { reason: "One-time code missing or wrong", count: 2 },
       { reason: "Destruction not shown", count: 1 },
     ]);
-    expect(r.settledCents).toBe(2999);
+    // A seeded sample is counted as remedied, but its payout never left: it is not money paid or confirmed.
+    expect(r).toMatchObject({ sentCents: 0, settledCents: 0, settling: 0, sampleCents: 2999, samplesPaid: 1 });
     expect(r.seeded).toBe(1);
   });
 });

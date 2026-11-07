@@ -32,7 +32,15 @@ export interface Report {
   refundCents: number;
   // The one amount every paid claim got, or null when the refund changed between payouts.
   paidEachCents: number | null;
+  // Money really sent through PayPal: paid claims other than the seeded samples, whose payouts never left.
+  sentCents: number;
+  sent: number;
+  // Of that, what PayPal has confirmed, and how many payouts are still settling.
   settledCents: number;
+  settling: number;
+  // Seeded samples the rule "paid": decided, never sent.
+  sampleCents: number;
+  samplesPaid: number;
   seeded: number;
   demo: number;
   firstClaim: string | null;
@@ -41,11 +49,16 @@ export interface Report {
 
 const share = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : "—");
 
-export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
+export function buildReport(claims: ClaimSummary[], recall: Recall, { sandbox = false } = {}): Report {
   const stats = statsOf(claims, recall);
   const refund = cents(recall.refund);
+  const paid = claims.filter((c) => c.decision === "paid");
+  const sent = paid.filter((c) => !c.seeded);
+  const samples = paid.filter((c) => c.seeded);
+  const sum = (list: ClaimSummary[]) => list.reduce((s, c) => s + cents(amountOf(c.payoutAmount, recall)), 0);
+  const paidNote = `Refund sent through PayPal${sandbox ? " sandbox" : ""}; the unit is destroyed${samples.length ? ". Sample claims were decided, never sent" : ""}`;
   const rows: [Decision, string, number, string][] = [
-    ["paid", "Paid", stats.remedied, "Refund sent through PayPal; the unit is destroyed"],
+    ["paid", "Paid", stats.remedied, paidNote],
     ["held", "Held for review", stats.held, "An answer was unclear, or auto-pay was off"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
@@ -61,15 +74,20 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   }
 
   const times = claims.map((c) => c.createdAt).sort();
-  const paidAmounts = new Set(claims.filter((c) => c.decision === "paid").map((c) => cents(amountOf(c.payoutAmount, recall))));
-  const settledCents = claims.filter((c) => c.decision === "paid" && c.payoutStatus === "SUCCESS").reduce((sum, c) => sum + cents(amountOf(c.payoutAmount, recall)), 0);
+  const paidAmounts = new Set(paid.map((c) => cents(amountOf(c.payoutAmount, recall))));
+  const settled = sent.filter((c) => c.payoutStatus === "SUCCESS");
   return {
     stats,
     outcomes: rows.map(([decision, label, count, note]) => ({ decision, label, count, share: share(count, stats.total), note })),
     refusals: [...tally].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason)),
     refundCents: refund,
     paidEachCents: paidAmounts.size === 1 ? [...paidAmounts][0] : null,
-    settledCents,
+    sentCents: sum(sent),
+    sent: sent.length,
+    settledCents: sum(settled),
+    settling: sent.length - settled.length,
+    sampleCents: sum(samples),
+    samplesPaid: samples.length,
     seeded: claims.filter((c) => c.seeded).length,
     demo: claims.filter((c) => c.demo).length,
     firstClaim: times[0] ?? null,

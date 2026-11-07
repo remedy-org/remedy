@@ -6,6 +6,7 @@ import { decide, preCheck, type OtherClaim } from "../rule";
 import type { Store } from "../store";
 import { Verdict, type Claim, type Decision, type Reason, type Recall } from "../types";
 import { DEMO_RECALL_ID, demoRecall } from "./kikea";
+import { SAMPLE_PAYOUT_UPDATED, SAMPLE_PRECHECKED, samplePayoutDetail, samplePhotosDetail } from "./sampleCopy";
 import storedVerdicts from "./verdicts.json";
 
 // ~40 sample claims for the Kikea demo recall, spread over the last 3 days, so a new console isn't empty.
@@ -151,7 +152,7 @@ export function buildSeedClaims({ recall, now, hashes, taken = new Set(), reuse 
 
     const photosAt = t + (120 + int(300)) * 1000;
     const n = sample.photos.length;
-    claim.events.push({ at: at(photosAt), type: "photos_received", detail: `${n} ${n === 1 ? "photo" : "photos"} from the live camera` });
+    claim.events.push({ at: at(photosAt), type: "photos_received", detail: samplePhotosDetail(n) });
 
     if (kind === "blocked") {
       const other = passed[int(passed.length)];
@@ -188,7 +189,7 @@ export function buildSeedClaims({ recall, now, hashes, taken = new Set(), reuse 
     if (outcome !== expected) throw new Error(`Seed verdict ${sample.case} (${sample.source}) decides ${outcome}, expected ${expected}`);
     claim.reasons = reasons;
     claim.decision = decision;
-    claim.events.push({ at: at(photosAt + 300), type: "prechecked", detail: "Live session, new photos, first claim for this account" });
+    claim.events.push({ at: at(photosAt + 300), type: "prechecked", detail: SAMPLE_PRECHECKED });
     claim.events.push({ at: at(checkedAt), type: "checked", detail: `Photo check answered in ${sample.seconds.toFixed(1)} s` });
     const first = (o: Reason["outcome"]) => reasons.find((r) => r.outcome === o)?.text ?? "";
     const said =
@@ -207,8 +208,8 @@ export function buildSeedClaims({ recall, now, hashes, taken = new Set(), reuse 
       const status = settling ? "PENDING" : "SUCCESS";
       const batchId = `SEED${pick("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 9)}`;
       claim.payout = { batchId, itemId: `SEED${pick("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 9)}`, status, updatedAt: at(checkedAt + (settling ? 1_000 : 41_000)) };
-      claim.events.push({ at: at(checkedAt + 1_000), type: "payout_sent", detail: `Payout of ${refund} sent through PayPal` });
-      if (!settling) claim.events.push({ at: at(checkedAt + 41_000), type: "payout_updated", detail: "PayPal: SUCCESS" });
+      claim.events.push({ at: at(checkedAt + 1_000), type: "payout_sent", detail: samplePayoutDetail(refund) });
+      if (!settling) claim.events.push({ at: at(checkedAt + 41_000), type: "payout_updated", detail: SAMPLE_PAYOUT_UPDATED });
     }
     claims.push(claim);
   }

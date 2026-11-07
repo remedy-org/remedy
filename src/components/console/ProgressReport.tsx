@@ -21,9 +21,11 @@ const td = "border-t border-line py-2.5 pr-4 align-top last:pr-0";
  * The CPSC progress-report draft as a paper sheet: always the light tokens, on screen and in print, so what the
  * company sees is what it files. Every number comes from the claim records.
  */
-export function ProgressReport({ recall, report, generated }: { recall: Recall; report: Report; generated: string }) {
+export function ProgressReport({ recall, report, generated, sandbox = false }: { recall: Recall; report: Report; generated: string; sandbox?: boolean }) {
   const s = report.stats;
   const refused = s.rejected + s.blocked;
+  const each = report.paidEachCents === null ? "" : ` at ${formatCents(report.paidEachCents)}`;
+  const sampleNote = report.samplesPaid ? ` · ${formatCents(report.sampleCents)} sample, never sent` : "";
   return (
     <article data-theme="light" className="mx-auto w-full max-w-[52rem] rounded-card border border-line bg-surface px-6 py-8 text-text sm:px-12 sm:py-12 print:max-w-none print:rounded-none print:border-0 print:p-0">
       <header className="flex flex-col gap-3 border-b border-line pb-8">
@@ -60,7 +62,7 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
         <H n={1}>Units remedied</H>
         <div className="grid gap-6 sm:grid-cols-3">
           <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={recall.units ? `CPSC: ${recall.units}` : undefined} />
-          <Figure label="Units remedied" value={formatCount(s.remedied)} note="Destroyed on camera and refunded" />
+          <Figure label="Units remedied" value={formatCount(s.remedied)} note={report.samplesPaid ? `Destroyed on camera; ${plural(report.samplesPaid, "sample")} never refunded` : "Destroyed on camera and refunded"} />
           <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} />
         </div>
         {s.unitsSold > 0 && <Meter value={s.remedied} max={s.unitsSold} label="Units remedied of units sold" />}
@@ -103,9 +105,13 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
         <H n={3}>Refunds paid</H>
         <div className="grid gap-6 sm:grid-cols-3">
-          <Figure label="Paid out" value={formatCents(s.paidCents)} note={report.paidEachCents === null ? plural(s.remedied, "payout") : `${plural(s.remedied, "payout")} at ${formatCents(report.paidEachCents)}`} />
-          <Figure label="Confirmed by PayPal" value={formatCents(report.settledCents)} note={s.settling ? `${formatCount(s.settling)} still settling` : "Every payout settled"} />
-          <Figure label="Method" value="PayPal" note="Payouts to each owner's verified PayPal account" />
+          <Figure label={sandbox ? "Paid out (sandbox)" : "Paid out"} value={formatCents(report.sentCents)} note={`${plural(report.sent, "payout")}${report.sent ? each : ""}${sampleNote}`} />
+          <Figure
+            label={sandbox ? "Confirmed by PayPal (sandbox)" : "Confirmed by PayPal"}
+            value={formatCents(report.settledCents)}
+            note={report.settling ? `${formatCount(report.settling)} still settling` : report.sent ? "Every payout settled" : "No payouts sent yet"}
+          />
+          <Figure label="Method" value={sandbox ? "PayPal sandbox" : "PayPal"} note="Payouts to each owner's verified PayPal account" />
         </div>
       </section>
 
