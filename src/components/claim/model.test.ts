@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sampleClaim } from "@/lib/__fixtures__/claim";
 import { DEMO_SPEC } from "@/lib/demo/kikea";
-import { businessDaysAfter, codeDiff, productNoun, receiptPollDelay, refusalHeadline, timelineOf } from "./model";
+import { acceptsStandIn, businessDaysAfter, codeDiff, handWrittenLabel, ownerLabel, productNoun, receiptPollDelay, refusalHeadline, timelineOf } from "./model";
 import { nextSample, scoreLine } from "./Scoreboard";
 
 describe("codeDiff", () => {
@@ -64,6 +64,20 @@ describe("copy helpers", () => {
     expect(receiptPollDelay(0)).toBe(5_000);
     expect(receiptPollDelay(30_000)).toBe(15_000);
     expect(receiptPollDelay(110_000)).toBeNull();
+  });
+});
+
+describe("the code step's instruction", () => {
+  it("reads the demo's hand-written label, without the note meant for the check", () => {
+    expect(handWrittenLabel(DEMO_SPEC)).toBe("X-VESOLJE");
+    expect(ownerLabel(DEMO_SPEC.label_must_show[0])).toBe("X-VESOLJE, hand-written on a paper tag tied to the pillow");
+    expect(acceptsStandIn(DEMO_SPEC)).toBe(true);
+  });
+  it("leaves a printed label alone", () => {
+    const spec = { label_must_show: ["Model number HB-200, on the sewn-in label"], product: "a high chair" };
+    expect(handWrittenLabel(spec)).toBeNull();
+    expect(ownerLabel(spec.label_must_show[0])).toBe("Model number HB-200, on the sewn-in label");
+    expect(acceptsStandIn(spec)).toBe(false);
   });
 });
 

@@ -35,13 +35,29 @@ export function CheckList({
       {groups.map(({ g, rows }) => (
         <section key={g} aria-label={`${label}: ${GROUPS[g]}`}>
           <h3 className="micro flex items-baseline justify-between gap-3 border-b border-line pb-2 text-faint">
-            <span>{GROUPS[g]}</span>
+            <GroupName name={GROUPS[g]} />
             {times?.[g] && <span className="shrink-0 normal-case">{times[g]}</span>}
           </h3>
           <CheckProgress label={GROUPS[g]} steps={rows.map((r) => toStep(r, code, quoteClassName))} />
         </section>
       ))}
     </div>
+  );
+}
+
+/** "Before the photo check · no AI": the tag after the dot never splits from itself ("no" / "AI") when the header wraps. */
+function GroupName({ name }: { name: string }) {
+  const [head, tag] = name.split(" · ");
+  return (
+    <span>
+      {head}
+      {tag && (
+        <>
+          {" "}
+          <span className="whitespace-nowrap">· {tag}</span>
+        </>
+      )}
+    </span>
   );
 }
 

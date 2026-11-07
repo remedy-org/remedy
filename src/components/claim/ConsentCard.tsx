@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { Button, Card, ErrorState, Money, NoBreakHyphens, Paper, StatusPill, statusLabel } from "@/components/ui";
+import { Button, Card, ClockIcon, ErrorState, Money, NoBreakHyphens, Paper, StatusPill, statusLabel } from "@/components/ui";
 import { RemedyMark } from "@/components/ui/Wordmark";
 import { DEMO_SAMPLES } from "@/lib/demo";
 import type { Refusal } from "@/lib/limits";
@@ -136,6 +136,16 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
               </p>
             </div>
           </div>
+        )}
+        {!demo && (
+          // The code's 10 minutes start on the next screen: say what to have at hand before they do.
+          <p className="flex gap-2.5 text-ui text-text">
+            <ClockIcon className="mt-0.5 shrink-0 text-muted" />
+            <span>
+              Have ready: your <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens>, already {cutInHalf(recall.spec) ? "cut in half" : "destroyed"}, a marker and a piece of paper. Your 10
+              minutes start when you see the code.
+            </span>
+          </p>
         )}
         <Button id="consent-cta" href={href} size="lg" block prefetch={false}>
           {consentAction({ signedInAs, demo, unverified })}

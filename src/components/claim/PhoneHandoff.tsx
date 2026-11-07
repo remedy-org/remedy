@@ -1,4 +1,8 @@
+"use client";
+
 import clsx from "clsx";
+import { useState } from "react";
+import { Button } from "@/components/ui";
 import { PhoneIcon } from "./icons";
 
 export interface PhoneHandoffProps {
@@ -13,6 +17,7 @@ export interface PhoneHandoffProps {
 
 /** Continue the same claim on a phone: same code, same timer, same PayPal account. */
 export function PhoneHandoff({ qrSvg, url, code, primary, className }: PhoneHandoffProps) {
+  const [copied, setCopied] = useState(false);
   return (
     <div className={clsx("flex flex-col gap-4 rounded-card border border-line p-4", primary ? "bg-surface-2/60 sm:flex-row sm:items-center sm:gap-6 sm:p-5 lg:flex-col lg:items-stretch lg:gap-4" : "sm:flex-row sm:items-center", className)}>
       {/* A white plate so any phone camera reads it, in either theme. */}
@@ -38,7 +43,16 @@ export function PhoneHandoff({ qrSvg, url, code, primary, className }: PhoneHand
             </>
           )}
         </p>
-        <p className="truncate font-mono text-micro text-faint">{url.replace(/^https?:\/\//, "")}</p>
+        {/* The whole link, wrapping, to type into a phone or send to it. */}
+        <a href={url} className="font-mono text-micro break-all text-faint underline decoration-line-2 underline-offset-4 hover:text-muted">
+          {url.replace(/^https?:\/\//, "")}
+        </a>
+        <Button variant="tertiary" size="sm" onClick={() => navigator.clipboard?.writeText(url).then(() => setCopied(true), () => {})} className="self-start">
+          {copied ? "Link copied" : "Copy link"}
+        </Button>
+        <span className="sr-only" aria-live="polite">
+          {copied ? "Link copied" : ""}
+        </span>
       </div>
     </div>
   );

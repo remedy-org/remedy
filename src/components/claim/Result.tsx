@@ -9,6 +9,7 @@ import { ExhibitPhoto, SampleChip, StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
 import { FocusTitle } from "./FocusTitle";
 import { WithJudges } from "./Judges";
+import { LocalTime } from "./LocalTime";
 import {
   adviceFor,
   businessDaysAfter,
@@ -21,7 +22,6 @@ import {
   money,
   refusalHeadline,
   secondsBetween,
-  stamp,
   type CheckRow,
 } from "./model";
 import { ReceiptLive } from "./ReceiptLive";
@@ -148,10 +148,20 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
             amount={money(amount)}
             sandbox={sb}
           />
-          {sentAt && <ReceiptRow label="Sent">{stamp(sentAt)}</ReceiptRow>}
+          {sentAt && (
+            <ReceiptRow label="Sent">
+              <LocalTime iso={sentAt} format="stamp" />
+            </ReceiptRow>
+          )}
           <ReceiptRow label="PayPal account" mono>
             {maskPayer(claim.payerId)}
-            {claim.payerVerified ? " · verified" : ""}
+            {/* On a narrow receipt "· verified" takes a line of its own rather than being cut off. */}
+            {claim.payerVerified && (
+              <>
+                {" "}
+                <span className="whitespace-nowrap">· verified</span>
+              </>
+            )}
           </ReceiptRow>
           {claim.payout && (
             <ReceiptRow label="PayPal batch" mono>
@@ -174,7 +184,7 @@ function ReceiptRow({ label, mono, children }: { label: string; mono?: boolean; 
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-dashed border-paper-line py-3 text-ui last:border-b-0">
       <dt className="shrink-0 text-ink-muted">{label}</dt>
-      <dd className={clsx("min-w-0 truncate text-right text-ink", mono && "font-mono")}>{children}</dd>
+      <dd className={clsx("min-w-0 text-right text-ink [overflow-wrap:anywhere]", mono && "font-mono")}>{children}</dd>
     </div>
   );
 }
@@ -193,20 +203,22 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
       <StepTitle id="result-title">A person at {company.replace(/ /g, "\u00a0")} will look at this</StepTitle>
 
       <Paper variant="sheet" padding="lg">
-        <span className="absolute top-6 right-6">
+        {/* The stamp in the header row with the ID, as on the refused sheet, so it never crowds the ID or the text under it. */}
+        <div className="flex items-start justify-between gap-4">
+          <p className="pt-1 font-mono text-micro tracking-[0.06em] whitespace-nowrap text-ink-muted uppercase">Claim {claim.id}</p>
           <Stamp tone="hold" land={0}>
             Held for review
           </Stamp>
-        </span>
-        <p className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Claim {claim.id}</p>
+        </div>
         <p className="mt-6 text-body font-medium text-ink">Nothing is lost.</p>
         <p className="mt-1 max-w-[34ch] text-body text-ink-muted">
           Your claim is saved. If {company} approves it, {money(recall.refund)} goes to your PayPal account{sb ? " in sandbox money" : " and PayPal emails you"}.
         </p>
+        <p className="mt-3 max-w-[34ch] text-ui text-ink-muted">The decision shows on this page, so keep its link or bookmark it to check back.</p>
 
         <ol aria-label="What happens next" className="relative mt-6 flex flex-col gap-3 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-paper-line">
-          <TimelineRow state="done" label="Photos received" time={clock(submitted)} />
-          {checked && <TimelineRow state="done" label="Checks run" time={clock(checked)} />}
+          <TimelineRow state="done" label="Photos received" time={submitted} />
+          {checked && <TimelineRow state="done" label="Checks run" time={checked} />}
           <TimelineRow state="now" label="Waiting for a person" />
           <TimelineRow state="next" label={`Decision by ${businessDaysAfter(submitted, 2)}`} />
         </ol>
@@ -223,7 +235,9 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
             {money(recall.refund)}
             {sb ? " sandbox" : ""}
           </ReceiptRow>
-          <ReceiptRow label="Photos sent">{stamp(submitted)}</ReceiptRow>
+          <ReceiptRow label="Photos sent">
+            <LocalTime iso={submitted} format="stamp" />
+          </ReceiptRow>
           <ReceiptRow label="Your code" mono>
             {claim.code}
           </ReceiptRow>
@@ -236,6 +250,7 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
   );
 }
 
+/** `time`: an ISO time, shown to the second in the viewer's zone. */
 function TimelineRow({ state, label, time }: { state: "done" | "now" | "next"; label: string; time?: string }) {
   return (
     <li className="relative grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center text-ui">
@@ -244,7 +259,11 @@ function TimelineRow({ state, label, time }: { state: "done" | "now" | "next"; l
         className={clsx("relative size-2 rounded-full", state === "done" ? "bg-pay-ink" : state === "now" ? clsx("bg-hold-ink text-hold-ink", styles.pulse) : "border border-ink-muted bg-paper")}
       />
       <span className={state === "next" ? "font-medium text-ink" : state === "now" ? "text-ink" : "text-ink-muted"}>{label}</span>
-      {time && <span className="font-mono text-micro text-ink-muted tabular-nums">{time} UTC</span>}
+      {time && (
+        <span className="font-mono text-micro text-ink-muted tabular-nums">
+          <LocalTime iso={time} format="clock" />
+        </span>
+      )}
     </li>
   );
 }
@@ -463,7 +482,7 @@ function passedSummary(rows: CheckRow[]): string {
   const pre = count(rows, "pre");
   const model = count(rows, "model");
   // "Five checks" on the homepage: the ones with no AI, then the photo check, whose answers are listed one per row.
-  return `All checks passed · ${pre} with no AI · the photo check: ${model} of ${model} answers`;
+  return `All checks passed · ${pre} need no\u00a0AI · ${model} read from your photo`;
 }
 
 function otherSummary(rows: CheckRow[]): string {

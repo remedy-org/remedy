@@ -1,10 +1,11 @@
 import clsx from "clsx";
-import { Button, Card, ClockIcon } from "@/components/ui";
+import { Button, Card, ClockIcon, NoBreakHyphens } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
 import type { CheckSpec } from "@/lib/types";
 import { CodeTag } from "./CodeTag";
 import { StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
+import { acceptsStandIn, cutInHalf, handWrittenLabel, ownerLabel } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
 import { mmss, useCountdown } from "./useCountdown";
 
@@ -45,8 +46,25 @@ export function TimerPill({ left, className }: { left: number; className?: strin
 export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, qrSvg, phoneUrl, onContinue }: CodeStepProps) {
   const demo = Boolean(sample);
   const left = useCountdown(expiresAt, startNow, frozen);
-  const must = [...spec.label_must_show.map((l) => `The label: ${l}`), ...spec.proof_steps, `The code ${code}, hand-written in marker`];
+  // A recall whose label is itself hand-written on the tag (the demo's stand-in) gets one tag with both on it.
+  const written = handWrittenLabel(spec);
+  const destroyed = cutInHalf(spec) ? "cut" : "destroyed";
+  const must = [...spec.label_must_show.map((l) => `The label: ${ownerLabel(l)}`), ...spec.proof_steps, written ? `The code ${code}, on the same tag` : `The code ${code}, hand-written in marker`];
   const handoff = !demo && qrSvg && phoneUrl;
+  // The whole job in one sentence, above the button: the list below is the detail.
+  const instruction = !demo && (
+    <p className="text-body text-pretty text-text">
+      {written ? (
+        <>
+          On one paper tag, write <NoBreakHyphens>{written}</NoBreakHyphens> and <span className="font-mono whitespace-nowrap">{code}</span>. Tie it to the {destroyed} product and get all of it in one photo.
+        </>
+      ) : (
+        <>
+          Write <span className="font-mono whitespace-nowrap">{code}</span> on a paper tag and lay it on the {destroyed} product, next to its label, so all of it is in one photo.
+        </>
+      )}
+    </p>
+  );
   const list = (
     <div className="flex flex-col gap-3 lg:[grid-area:list]">
       <h3 className="micro text-faint">Your photo must show</h3>
@@ -59,6 +77,7 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, qrSv
         ))}
       </ol>
       {!demo && <p className="text-ui text-muted">One photo with all of it is fine, or up to three.</p>}
+      {acceptsStandIn(spec) && <p className="text-ui text-muted">This is a demo recall: the real product has no label, so a stand-in with the hand-written {written ?? "label"} tag counts.</p>}
     </div>
   );
   return (
@@ -79,7 +98,8 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, qrSv
           <StepTitle id="code-title">{demo ? `This sample's code is ${code}` : "Write this code on a paper tag"}</StepTitle>
           <TimerPill left={left} className="mt-1" />
         </div>
-        <p className="max-w-[60ch] text-body text-muted">
+        {/* Phones: the instruction above the button says it, and the tag's foot says how big, so the button stays on the first screen. */}
+        <p className={clsx("max-w-[60ch] text-body text-muted", !demo && "max-sm:hidden")}>
           {sample
             ? `A real claim gets a fresh code here, inside a 10-minute camera session. ${sample.tag}`
             : "Write it big: letters at least 3 cm tall, in marker. It ties your photos to this claim, so a photo taken earlier, or for someone else, can't be used."}
@@ -87,10 +107,11 @@ export function CodeStep({ code, spec, expiresAt, startNow, frozen, sample, qrSv
       </div>
 
       <div className="pt-6 pb-2 lg:[grid-area:tag]">
-        <CodeTag code={code} string foot={demo ? "This sample's tag is already written." : "Valid for 10 minutes."} />
+        <CodeTag code={code} string foot={demo ? "This sample's tag is already written." : "Write it big, 3 cm tall, in marker. Valid for 10 minutes."} />
       </div>
 
       <div className="flex flex-col gap-4 lg:[grid-area:act] lg:self-start">
+        {instruction}
         {handoff ? (
           <>
             {/* A laptop (a fine pointer, 640px and up): the phone leads. A phone or tablet: its own camera, the primary action. */}

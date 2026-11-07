@@ -63,8 +63,11 @@ export function Dock({ left, middle, right, short, className }: { left?: ReactNo
   return (
     <div
       className={clsx(
-        "grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 max-sm:pb-[env(safe-area-inset-bottom)] sm:px-5 sm:py-4",
-        short ? "max-sm:py-5" : "max-sm:h-[152px] max-sm:grid-rows-[3rem_4.5rem] max-sm:content-center max-sm:gap-y-2.5",
+        "grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 sm:px-5 sm:py-4",
+        // The short dock's 20px foot also clears the home indicator (a lone pb would override py and drop it to 0).
+        short
+          ? "max-sm:pt-5 max-sm:pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+          : "max-sm:h-[152px] max-sm:grid-rows-[3rem_4.5rem] max-sm:content-center max-sm:gap-y-2.5 max-sm:pb-[env(safe-area-inset-bottom)]",
         className,
       )}
     >

@@ -11,10 +11,11 @@ import { getDemoRound, getSession, loginPath } from "@/lib/session";
 import { getRecallBySlug, type Store } from "@/lib/store";
 import type { Claim, Recall } from "@/lib/types";
 import { ClaimFlow } from "./ClaimFlow";
+import { ContinueCard } from "./ContinueCard";
 import { ExpiredCard } from "./ExpiredCard";
 import { FlowShell } from "./FlowShell";
 import { WithJudges } from "./Judges";
-import { checkRows, companyName, RECEIPT_LIVE_MS, toView } from "./model";
+import { checkRows, companyName, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
 import { markAsked } from "./payout-live";
 import { Result, type DemoRound, type PayoutLive } from "./Result";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
@@ -60,7 +61,14 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
 
   const here = `/r/${recall.slug}/${demo ? "try" : "claim"}/${id}`;
   const session = await getSession("owner");
-  if (!session) redirect(loginPath("owner", here));
+  // Logged out (a phone from the laptop's QR, or an expired login): say where the PayPal login leads before it opens.
+  if (!session) {
+    return (
+      <FlowShell demo={demo} sandbox={isSandboxBuild()} company={companyName(recall)}>
+        <ContinueCard id={id} product={productNoun(recall)} company={companyName(recall)} loginHref={loginPath("owner", here)} demo={demo} />
+      </FlowShell>
+    );
+  }
   const claim = await store.getClaim(id);
   if (!claim || claim.payerId !== session.payerId || claim.recallId !== recall.id) notFound();
   if (Boolean(claim.demo) !== demo) redirect(`/r/${recall.slug}/${claim.demo ? "try" : "claim"}/${claim.id}`);

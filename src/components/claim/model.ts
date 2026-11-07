@@ -184,7 +184,7 @@ export function payoutWords(status: string | null | undefined): { label: string;
     case "":
       return { label: "Unknown", tone: "muted", note: "" };
     default:
-      return { label: "Processing at PayPal", tone: "muted", note: "Most payouts land within a few minutes." };
+      return { label: "Processing at PayPal", tone: "muted", note: "Remedy has sent it. PayPal is finishing the transfer, which usually takes a few minutes." };
   }
 }
 
@@ -255,6 +255,21 @@ export const productNoun = (recall: Pick<Recall, "product">) => recall.product.t
 
 /** Whether the notice's way to destroy it is cutting it in half (the Kikea pillow), for the short reminders. */
 export const cutInHalf = (spec: Pick<CheckSpec, "proof_steps">) => spec.proof_steps.some((s) => /\bcut\b/i.test(s) && /\bhalf\b/i.test(s));
+
+/** A label line as the owner reads it: a closing "(…)" is a note for the photo check, not something to photograph. */
+export const ownerLabel = (line: string) => line.replace(/\s*\([^)]*\)\s*$/, "");
+
+/** The label the owner writes by hand on the tag ("X-VESOLJE, hand-written on a paper tag …" -> "X-VESOLJE"), if any. */
+export function handWrittenLabel(spec: Pick<CheckSpec, "label_must_show">): string | null {
+  for (const line of spec.label_must_show) {
+    const m = line.match(/^(.+?),\s*hand-written\b/i);
+    if (m) return m[1].trim();
+  }
+  return null;
+}
+
+/** The demo recall accepts a stand-in product (CPSC's pillow has no label), which the code step says once, plainly. */
+export const acceptsStandIn = (spec: Pick<CheckSpec, "product">) => /\bstand-in\b/i.test(spec.product);
 
 /** A refusal's headline, from the check that decided it: specific where it can be, the general sentence otherwise. */
 export function refusalHeadline(claim: Pick<Claim, "decision" | "reasons" | "photos">, spec: Pick<CheckSpec, "proof_steps">): string {
