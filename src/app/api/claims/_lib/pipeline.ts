@@ -1,5 +1,5 @@
 import { newCode } from "@/lib/codes";
-import { checkableClaims } from "@/lib/demo";
+import { checkableClaims, demoSample } from "@/lib/demo";
 import type { DemoSample } from "@/lib/demo";
 import { CAPTURE_SESSION_MINUTES, newCaptureSession, newClaimId, newPayoutKey } from "@/lib/ids";
 import { claimRefusal, utcDay, type Limits, type Refusal } from "@/lib/limits";
@@ -55,12 +55,26 @@ const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 
 const toOther = (r: ClaimSummary): OtherClaim => ({ id: r.id, recallId: r.recallId, payerId: r.payerId, decision: r.decision, photoHashes: r.photoHashes });
 
+// Whether a row is a demo claim of this demo claim's round (src/lib/demo/round.ts). Claims filed before rounds
+// existed have none: they make one legacy round per PayPal account, as they were checked then.
+const inRound = (claim: Pick<Claim, "payerId" | "demoRound">, r: ClaimSummary) =>
+  r.demo === true && (claim.demoRound ? r.demoRound === claim.demoRound : !r.demoRound && r.payerId === claim.payerId);
+
 // Who a claim is checked against. Seeded claims never count. Real claims never meet demo claims, and a demo claim
-// only meets the same judge's demo claims, so each judge sees the genuine sample pass once.
-export function othersFor(claim: Pick<Claim, "demo" | "payerId">, rows: ClaimSummary[]): OtherClaim[] {
+// only meets its own round's, so every round sees the genuine sample pass once, however many judges share a login.
+export function othersFor(claim: Pick<Claim, "demo" | "payerId" | "demoRound">, rows: ClaimSummary[]): OtherClaim[] {
   return checkableClaims(rows)
-    .filter((r) => (claim.demo ? r.demo === true && r.payerId === claim.payerId : !r.demo))
+    .filter((r) => (claim.demo ? inRound(claim, r) : !r.demo))
     .map(toOther);
+}
+
+/** A round's demo claims on this recall, newest first as the index keeps them. */
+export const roundClaims = (rows: ClaimSummary[], recallId: string, round: string) => rows.filter((r) => r.demo === true && r.recallId === recallId && r.demoRound === round);
+
+/** Why this sample can't be filed in the round yet, or null: the repost needs the round's genuine photo already sent. */
+export function notYet(sample: DemoSample, round: ClaimSummary[]): string | null {
+  if (!sample.after || round.some((r) => r.sample === sample.after && r.photoHashes.length > 0)) return null;
+  return `Send "${demoSample(sample.after)?.title}" first: this one reposts its photo.`;
 }
 
 /** The demo sample a demo claim was filed with, from its events. */
@@ -91,10 +105,13 @@ export async function findOpenClaim(deps: Pick<PipelineDeps, "store" | "now">, r
 }
 
 /**
- * Issues the code and opens the 10-minute camera session. A demo claim takes its code from the sample. Throws
- * LimitReached, saving nothing, when a claim limit is hit.
+ * Issues the code and opens the 10-minute camera session. A demo claim takes its code from the sample and joins the
+ * browser's round. Throws LimitReached, saving nothing, when a claim limit is hit.
  */
-export async function createClaim(deps: Pick<PipelineDeps, "store" | "now" | "limits">, { recall, payer, sample }: { recall: Recall; payer: Payer; sample?: DemoSample }): Promise<Claim> {
+export async function createClaim(
+  deps: Pick<PipelineDeps, "store" | "now" | "limits">,
+  { recall, payer, sample, round }: { recall: Recall; payer: Payer; sample?: DemoSample; round?: string },
+): Promise<Claim> {
   const now = deps.now();
   const rows = await deps.store.listClaims();
   const visionUsed = sample ? (await deps.store.getUsage(utcDay(now))).vision : 0;
@@ -119,7 +136,7 @@ export async function createClaim(deps: Pick<PipelineDeps, "store" | "now" | "li
       ...(sample ? [event(now, "demo_sample", sample.id)] : []),
     ],
     createdAt: now.toISOString(),
-    ...(sample ? { demo: true } : {}),
+    ...(sample ? { demo: true, ...(round ? { demoRound: round } : {}) } : {}),
   };
   // Counted on the index as it's written, not on the read above, so parallel starts can't all pass on one snapshot.
   const refusal = await deps.store.addClaim(claim, (fresh) => claimRefusal(fresh, { payerId: payer.payerId, demo: Boolean(sample), now, limits: deps.limits, visionUsed }));
@@ -151,7 +168,7 @@ export async function receivePhotos(
   const rows = await deps.store.listClaims();
   let reasons = preCheck({ claim, sessionId, photoHashes: hashes, others: othersFor(claim, rows), now });
   // Demo samples other than the genuine one each show a different check; the one-claim rule would hide them all
-  // behind "already claimed" once the judge's genuine claim is paid.
+  // behind "already claimed" once the round's genuine claim is paid.
   if (claim.demo && demoSampleOf(claim) !== "genuine") reasons = reasons.filter((r) => r.check !== "payer");
 
   // Kept for blocked claims too: the company sees what was sent, and a resend of the same photo is caught.

@@ -3,6 +3,7 @@ import { ensureDemoData } from "./seed";
 
 export { isDemoAllowed } from "./allowed";
 export { DEMO_RECALL_ID, DEMO_SLUG, DEMO_SPEC, demoRecall } from "./kikea";
+export { DEMO_ROUND_COOKIE, demoRoundCookie, newDemoRound, parseDemoRound } from "./round";
 export { DEMO_SAMPLES, demoSample, type DemoSample, type DemoSampleId } from "./samples";
 export { buildSeedClaims, ensureDemoData, SEED_PHOTO_PREFIX } from "./seed";
 

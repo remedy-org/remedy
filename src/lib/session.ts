@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { DEMO_ROUND_COOKIE, parseDemoRound } from "./demo/round";
 import { mintSession, readSession, SESSION_COOKIE, SESSION_MAX_AGE, type Role, type Session } from "./session-token";
 
 export { DEFAULT_NEXT, Role, safeNext, Session, SESSION_COOKIE } from "./session-token";
@@ -16,6 +17,11 @@ export const cookieOptions = (maxAge: number) => ({
 // The signed-in owner or company, or null. Works in server components, route handlers and server functions.
 export async function getSession(role: Role): Promise<Session | null> {
   return readSession((await cookies()).get(SESSION_COOKIE[role])?.value, role);
+}
+
+// This browser's demo round (src/lib/demo/round.ts), or null. The proxy starts one on the samples page.
+export async function getDemoRound(): Promise<string | null> {
+  return parseDemoRound((await cookies()).get(DEMO_ROUND_COOKIE)?.value);
 }
 
 // Where to send someone who needs to log in first: a company goes to /signin, an owner straight to PayPal.

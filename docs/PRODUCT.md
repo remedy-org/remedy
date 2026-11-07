@@ -64,6 +64,8 @@ Remedy is its own website built on PayPal's public APIs. Companies running a rec
 
 Each run states that it is demo mode, and all money is sandbox money.
 
+Demo claims are grouped in rounds, one per browser (an httpOnly cookie the samples page sets): the duplicate-photo, one-claim-per-account and repost-after-genuine checks compare a demo claim only with its own round's, never with real claims, so many judges on one sandbox login each get the four outcomes, and "Run the samples again" starts a new round. The per-account and global daily limits still count every demo claim.
+
 ## States every data view must handle
 
 Empty, loading, error, partial and success. Examples: a console with no claims yet; a claim whose payout is still pending; PayPal or the model being down (the claim is held, never lost).

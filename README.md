@@ -43,6 +43,8 @@ The model is not the defence against AI images: in our tests, no model could rel
    - **The wrong code**: rejected; the model reads the tag character by character.
    - **An AI image, sent in**: blocked before the model; it wasn't taken in this claim's camera session.
    - **A reposted photo**: blocked as a duplicate of an earlier claim's photo.
+
+   Your browser's run is one demo round: its samples are checked only against each other, so judges sharing one sandbox login each see these four outcomes. **Run the samples again** on the picker starts a new round.
 4. Open **https://remedy-recalls.vercel.app/signin** and log in with PayPal to see the company console with the Kikea demo recall, 40 sample claims and your own demo claims.
 
 ## PayPal and AI in the product

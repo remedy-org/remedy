@@ -9,7 +9,21 @@ import { PayPalError } from "@/lib/paypal/client";
 import type { Store } from "@/lib/store";
 import { localStore } from "@/lib/store/local";
 import type { Claim, Recall, Verdict } from "@/lib/types";
-import { checkClaim, ClaimError, createClaim, findOpenClaim, LIMIT_HOLD, LimitReached, othersFor, receivePhotos, recoverStale, STALE_AFTER_MS, type PipelineDeps } from "./pipeline";
+import {
+  checkClaim,
+  ClaimError,
+  createClaim,
+  findOpenClaim,
+  LIMIT_HOLD,
+  LimitReached,
+  notYet,
+  othersFor,
+  receivePhotos,
+  recoverStale,
+  roundClaims,
+  STALE_AFTER_MS,
+  type PipelineDeps,
+} from "./pipeline";
 
 // Claim ids in order, so starts that race on one index snapshot never draw the same random id.
 vi.mock("@/lib/ids", async (importOriginal) => {
@@ -207,7 +221,7 @@ describe("receivePhotos", () => {
   });
 });
 
-describe("demo claims", () => {
+describe("demo claims without a round (filed before rounds)", () => {
   const judge = { payerId: "JUDGE0000001", verified: true };
   const run = async (id: "genuine" | "wrong-code" | "reposted", payer = judge, hex = "00000000000000ff") => {
     const claim = await createClaim(deps, { recall, payer, sample: demoSample(id)! });
@@ -243,6 +257,76 @@ describe("demo claims", () => {
     expect(repost.reasons.map((r) => r.check)).toEqual(["duplicate_photo"]);
     const wrong = await run("wrong-code", judge, "f0f0f0f0f0f0f0f0");
     expect(wrong.decision).toBe("pending");
+  });
+});
+
+describe("demo rounds", () => {
+  const judge = { payerId: "JUDGE0000001", verified: true };
+  const A = "dr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const B = "dr_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const run = async (id: "genuine" | "wrong-code" | "reposted", round: string | undefined, payer = judge, hex = "00000000000000ff") => {
+    const claim = await createClaim(deps, { recall, payer, sample: demoSample(id)!, round });
+    return receivePhotos(deps, { claimId: claim.id, payerId: payer.payerId, sessionId: claim.captureSession!.id, photos: [photo(hex)] });
+  };
+
+  it("records the round on the claim and its index row, and never on a real claim", async () => {
+    const demo = await createClaim(deps, { recall, payer: judge, sample: demoSample("genuine")!, round: A });
+    const real = await createClaim(deps, { recall, payer: owner, round: A });
+    expect(demo.demoRound).toBe(A);
+    expect(real.demoRound).toBeUndefined();
+    const rows = await store.listClaims();
+    expect(rows.find((r) => r.id === demo.id)?.demoRound).toBe(A);
+    expect(rows.find((r) => r.id === real.id)?.demoRound).toBeUndefined();
+  });
+
+  it("checks a demo claim only against its own round: not other rounds, legacy claims or real claims", async () => {
+    const real = await open();
+    await send(real);
+    const legacy = await run("genuine", undefined);
+    const a1 = await run("genuine", A);
+    const b1 = await run("genuine", B);
+    // Another account in round A: the round is the browser's, whoever is logged in.
+    const a2 = await run("wrong-code", A, { payerId: "JUDGE0000002", verified: true }, "f0f0f0f0f0f0f0f0");
+    const rows = await store.listClaims();
+    const ids = (claim: Parameters<typeof othersFor>[0]) => othersFor(claim, rows).map((o) => o.id).sort();
+    expect(ids({ demo: true, payerId: judge.payerId, demoRound: A })).toEqual([a1.id, a2.id].sort());
+    expect(ids({ demo: true, payerId: judge.payerId, demoRound: B })).toEqual([b1.id]);
+    // A claim from before rounds meets only that account's claims from before rounds.
+    expect(ids({ demo: true, payerId: judge.payerId })).toEqual([legacy.id]);
+    expect(ids({ demo: true, payerId: "JUDGE0000002" })).toEqual([]);
+    expect(ids({ payerId: owner.payerId })).toEqual([real.id]);
+    expect(roundClaims(rows, recall.id, A).map((r) => r.id).sort()).toEqual([a1.id, a2.id].sort());
+    expect(roundClaims(rows, "other-recall", A)).toEqual([]);
+  });
+
+  it("pays the genuine sample once in every round on one account, and still blocks it twice in one round", async () => {
+    for (const round of [A, B]) {
+      const genuine = await run("genuine", round);
+      expect(genuine.decision).toBe("pending");
+      expect((await checkClaim(deps, genuine.id)).decision).toBe("paid");
+      const repost = await run("reposted", round);
+      expect(repost.decision).toBe("blocked");
+      expect(repost.reasons.map((r) => r.check)).toEqual(["duplicate_photo"]);
+      const wrong = await run("wrong-code", round, judge, "f0f0f0f0f0f0f0f0");
+      expect(wrong.decision).toBe("pending");
+    }
+    expect(deps.pay).toHaveBeenCalledTimes(2);
+    const again = await run("genuine", B);
+    expect(again.decision).toBe("blocked");
+    expect(again.reasons.map((r) => r.check)).toEqual(["duplicate_photo", "payer"]);
+  });
+
+  it("files the repost only once this round's genuine photo was sent", async () => {
+    const repost = demoSample("reposted")!;
+    expect(notYet(repost, roundClaims(await store.listClaims(), recall.id, A))).toMatch(/^Send "A genuine claim" first/);
+    // Filed but no photo yet, or sent in another round: still not yet.
+    await createClaim(deps, { recall, payer: judge, sample: demoSample("genuine")!, round: A });
+    await run("genuine", B);
+    expect(notYet(repost, roundClaims(await store.listClaims(), recall.id, A))).not.toBeNull();
+    await run("genuine", A);
+    expect(notYet(repost, roundClaims(await store.listClaims(), recall.id, A))).toBeNull();
+    // Samples with nothing to wait for are never held back.
+    expect(notYet(demoSample("wrong-code")!, [])).toBeNull();
   });
 });
 

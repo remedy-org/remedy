@@ -5,17 +5,18 @@
 //   npm run e2e -- --mint --live                             -> also the samples that need the photo check (2 model calls)
 // Options: --base (default http://127.0.0.1:3000), --company / --owner (session cookie VALUES, e.g. from
 // `npm run -s dev-session -- company`), --mint (sign both with .env's SESSION_SECRET; the owner gets a new payer id each
-// run, so the one-claim rule never trips), --live.
+// run), --live. Each run is its own demo round, so the same --owner can run it again and see the same outcomes.
 // Checks: the homepage loads with no console errors; the demo recall and /try load; signed out, /console goes to
 // /signin; with a company session the console grid has rows; with an owner session each demo sample reaches its
 // expected decision through the API. Without --live, only the samples decided before the model run: the AI image
-// (blocked, no session) always, and the repost once this owner's genuine claim was sent. The genuine sample only pays
+// (blocked, no session) always, and the repost once this round's genuine claim was sent. The genuine sample only pays
 // for an owner who logged in with a real sandbox PayPal account; with a minted owner it passes once every check passed
 // and only the payout was refused.
 // Every sample filed is a real demo claim in the target's store. Exits 1 if any check fails.
 import { parseArgs } from "node:util";
 import { chromium, type Browser, type Cookie } from "@playwright/test";
 import type { ClaimView } from "../src/components/claim/model";
+import { DEMO_ROUND_COOKIE, newDemoRound } from "../src/lib/demo/round";
 import { DEMO_SAMPLES, type DemoSample } from "../src/lib/demo/samples";
 
 const { values } = parseArgs({
@@ -105,9 +106,12 @@ async function pageLoads(browser: Browser, path: string, heading?: RegExp) {
   }
 }
 
-// API calls with the owner's cookie. Redirects are not followed: a 303's Location is the answer.
+// One demo round for the whole run, as one browser has: the repost meets this run's genuine claim, and no other's.
+const round = newDemoRound();
+
+// API calls with the owner's cookie and the run's round. Redirects are not followed: a 303's Location is the answer.
 const api = (owner: string, path: string, init: RequestInit = {}) =>
-  fetch(url(path), { ...init, redirect: "manual", headers: { ...init.headers, Cookie: `remedy_owner=${owner}` } });
+  fetch(url(path), { ...init, redirect: "manual", headers: { ...init.headers, Cookie: `remedy_owner=${owner}; ${DEMO_ROUND_COOKIE}=${round}` } });
 
 function form(fields: Record<string, string>) {
   const f = new FormData();
@@ -186,7 +190,7 @@ async function main() {
         }
         await check(name, async () => {
           const { status, view } = await runSample(owner, sample);
-          // The repost needs this owner's genuine photo already sent, which costs a photo check.
+          // The repost needs this round's genuine photo already sent, which costs a photo check.
           if (status === 409 && sample.after && !values.live) throw new Skip(`needs "${sample.after}" sent first; pass --live`);
           assert(view, `filing the claim: HTTP ${status}`);
           return expectOutcome(sample, view, values.mint && !values.owner);

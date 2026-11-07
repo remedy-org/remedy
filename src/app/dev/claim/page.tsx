@@ -81,6 +81,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
             slug={fx.recall.slug}
             selected="genuine"
             runs={[]}
+            roundDone={false}
             options={DEMO_SAMPLES.map((sample) => ({ sample, locked: sample.after ? `Send "A genuine claim" first: this one reposts its photo.` : undefined }))}
           />
         </div>
@@ -101,6 +102,30 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
               { id: "RM-5307", href: "#", title: "The wrong code", decision: "rejected" },
               { id: "RM-4127", href: "#", title: "A genuine claim", decision: "paid" },
             ]}
+            roundDone={false}
+            options={DEMO_SAMPLES.map((sample) => ({ sample }))}
+          />
+        </div>
+      </FlowShell>
+    ),
+  },
+  "picker-done": {
+    group: "Demo",
+    note: "Sample picker after all four samples ran",
+    render: () => (
+      <FlowShell demo company="Kikea Store">
+        <div className="flex flex-col gap-6">
+          <StepMeter current={2} steps={DEMO_STEPS} />
+          <SamplePicker
+            slug={fx.recall.slug}
+            selected="genuine"
+            runs={[
+              { id: "RM-5310", href: "#", title: "A reposted photo", decision: "blocked" },
+              { id: "RM-5309", href: "#", title: "An AI image, sent in", decision: "blocked" },
+              { id: "RM-5307", href: "#", title: "The wrong code", decision: "rejected" },
+              { id: "RM-4127", href: "#", title: "A genuine claim", decision: "paid" },
+            ]}
+            roundDone
             options={DEMO_SAMPLES.map((sample) => ({ sample }))}
           />
         </div>
@@ -118,6 +143,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
             slug={fx.recall.slug}
             selected="genuine"
             runs={[]}
+            roundDone={false}
             options={DEMO_SAMPLES.map((sample) => ({ sample }))}
             refusal={{ kind: "checks", limit: 100, until: nextUtcDay(new Date()) }}
           />

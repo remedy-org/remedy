@@ -106,5 +106,7 @@ export const Claim = z.object({
   seeded: z.boolean().optional(),
   // Filed through the judges' demo mode (/r/<slug>/try): sample photos, sandbox money.
   demo: z.boolean().optional(),
+  // A demo claim's round (src/lib/demo/round.ts). Absent on demo claims filed before rounds existed.
+  demoRound: z.string().optional(),
 });
 export type Claim = z.infer<typeof Claim>;

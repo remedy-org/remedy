@@ -25,7 +25,12 @@ const owner: Session = { role: "owner", payerId: "47KT8H23PUJ3Q", verified: true
 const company: Session = { role: "company", payerId: "COMPANY00001", verified: true, name: null, email: null, iat: 0 };
 vi.mock("@/lib/session", async (original) => {
   const session = (role: string) => (role === "owner" ? owner : company);
-  return { ...(await original<typeof import("@/lib/session")>()), getSession: async (role: string) => session(role), requireSession: async (role: string) => session(role) };
+  return {
+    ...(await original<typeof import("@/lib/session")>()),
+    getSession: async (role: string) => session(role),
+    requireSession: async (role: string) => session(role),
+    getDemoRound: async () => "dr_0123456789abcdef0123456789abcdef",
+  };
 });
 // PayPal still says PENDING for an unsettled payout: no network, and nothing to save.
 const getPayoutStatus = vi.hoisted(() => vi.fn(async (batchId: string) => ({ batchId, batchStatus: "PENDING", itemStatus: "PENDING" })));

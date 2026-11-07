@@ -21,6 +21,8 @@ export const ClaimSummary = z.object({
   sample: z.string().optional(),
   seeded: z.boolean().optional(),
   demo: z.boolean().optional(),
+  // A demo claim's round, if it has one.
+  demoRound: z.string().optional(),
   // The claim's event count. Every save adds an event, so a row with a higher count describes a newer claim.
   version: z.number().int().nonnegative().optional(),
 });
@@ -125,6 +127,7 @@ export function summarize(c: Claim): ClaimSummary {
     ...(sample ? { sample } : {}),
     ...(c.seeded ? { seeded: true } : {}),
     ...(c.demo ? { demo: true } : {}),
+    ...(c.demo && c.demoRound ? { demoRound: c.demoRound } : {}),
     version: c.events.length,
   };
 }

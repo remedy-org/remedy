@@ -53,7 +53,7 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
   }
 
   // sendCheck treats any decision but pending as "already decided"; a held claim is exactly what a person may send.
-  // The same set the owner's pipeline checked against: demo claims meet only the same judge's demo claims.
+  // The same set the owner's pipeline checked against: demo claims meet only their own round's.
   const others = othersFor(claim, await store.listClaims());
   const conflicts = sendCheck({ claim: { ...claim, decision: "pending" }, others });
   if (conflicts.length) {

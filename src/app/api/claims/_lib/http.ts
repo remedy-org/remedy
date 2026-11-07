@@ -7,7 +7,7 @@ export const json = (status: number, error: string) => NextResponse.json({ error
 
 // 303 so a form POST lands on a GET. A relative Location keeps the browser on the host it used: the dev server
 // reports localhost in request.url even when the page (and its cookies) are on 127.0.0.1.
-export const seeOther = (path: string) => new Response(null, { status: 303, headers: { Location: path } });
+export const seeOther = (path: string) => new NextResponse(null, { status: 303, headers: { Location: path } });
 
 export const toLogin = (next: string) => seeOther(loginPath("owner", next));
 

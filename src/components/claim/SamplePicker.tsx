@@ -19,14 +19,30 @@ export interface DemoRun {
 }
 
 /** Demo mode's stand-in for the camera: pick one of the four sample claims. A plain form, no script needed. */
-export function SamplePicker({ slug, options, selected, runs, refusal }: { slug: string; options: SampleOption[]; selected: string; runs: DemoRun[]; refusal?: Refusal | null }) {
+export function SamplePicker({
+  slug,
+  options,
+  selected,
+  runs,
+  roundDone,
+  refusal,
+}: {
+  slug: string;
+  options: SampleOption[];
+  selected: string;
+  /** This round's demo claims. */
+  runs: DemoRun[];
+  /** Every sample has run in this round. */
+  roundDone: boolean;
+  refusal?: Refusal | null;
+}) {
   return (
     <Card padding="lg" as="section" aria-labelledby="picker-title" className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
         <h2 id="picker-title" className="text-h2 font-semibold">
           Pick a sample claim
         </h2>
-        <p className="text-body text-muted">Each one runs the real checks. Only the genuine claim should be paid, and only once per PayPal account.</p>
+        <p className="text-body text-muted">Each one runs the real checks. Only the genuine claim should be paid, and only once per round.</p>
       </div>
 
       {refusal && <LimitNotice refusal={refusal} demo />}
@@ -74,6 +90,13 @@ export function SamplePicker({ slug, options, selected, runs, refusal }: { slug:
               </li>
             ))}
           </ul>
+          <form action="/api/claims/round" method="post" className="flex flex-col gap-3 pt-2">
+            <input type="hidden" name="recall" value={slug} />
+            {roundDone && <p className="text-ui text-muted">All four samples have run. Run them again to see the same four outcomes.</p>}
+            <Button type="submit" variant="secondary" block>
+              Run the samples again
+            </Button>
+          </form>
         </div>
       )}
     </Card>
