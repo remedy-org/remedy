@@ -249,7 +249,8 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
         </div>
       </dl>
 
-      <div className={clsx("relative lg:flex", open && "lg:pr-3")}>
+      {/* The evidence panel from 1280px: beside it, a narrower table's five columns ran into each other. */}
+      <div className={clsx("relative lg:flex", open && "xl:pr-3")}>
         <div className="min-w-0 flex-1">
           {/* Tabs */}
           <div className="flex gap-5 overflow-hidden border-b border-line px-4 text-ui sm:px-5" aria-hidden="true">
@@ -329,7 +330,7 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
               ))}
           </ul>
         </div>
-        {open && <div className="hidden w-[25rem] shrink-0 py-3 lg:block">{panelWrap(<EvidencePanel row={open} />)}</div>}
+        {open && <div className="hidden w-[25rem] shrink-0 py-3 xl:block">{panelWrap(<EvidencePanel row={open} />)}</div>}
       </div>
       {/* The console's sample marker: one line for the whole grid, not a tag per row. */}
       <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">40 sample claims from the eval set · no money moved · AI-made test photos</p>

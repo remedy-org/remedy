@@ -1,0 +1,32 @@
+import { describe, expect, it } from "vitest";
+import { BEATS as EXHIBIT_BEATS } from "../teardown/model";
+import { nextStop } from "./paging";
+import { SCROLL_VH } from "./pace";
+
+const STOPS = [0, 0.2, 0.35, 0.6, 0.9];
+
+describe("keyboard paging through the pin", () => {
+  it("goes to the next stop, never past one", () => {
+    expect(nextStop(STOPS, 0, 1)).toBe(0.2);
+    expect(nextStop(STOPS, 0.2, 1)).toBe(0.35);
+    expect(nextStop(STOPS, 0.25, 1)).toBe(0.35);
+    expect(nextStop(STOPS, 0.5, -1)).toBe(0.35);
+    expect(nextStop(STOPS, 0.35, -1)).toBe(0.2);
+  });
+
+  it("treats a position a hair off a stop as on it", () => {
+    expect(nextStop(STOPS, 0.199, 1)).toBe(0.35);
+    expect(nextStop(STOPS, 0.351, -1)).toBe(0.2);
+  });
+
+  it("hands back to the browser before the first stop and after the last", () => {
+    expect(nextStop(STOPS, 0.9, 1)).toBeNull();
+    expect(nextStop(STOPS, 0.95, 1)).toBeNull();
+    expect(nextStop(STOPS, 0, -1)).toBeNull();
+  });
+
+  it("is needed: every exhibit beat is shorter than one browser page (about 95vh)", () => {
+    for (const b of EXHIBIT_BEATS) expect(b.vh).toBeLessThan(95);
+    expect(SCROLL_VH).toBeGreaterThan(95);
+  });
+});

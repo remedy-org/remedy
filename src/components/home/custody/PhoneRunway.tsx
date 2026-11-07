@@ -3,11 +3,12 @@
 import { useMotionValueEvent, useScroll, useTransform } from "motion/react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { OpenedExhibit } from "@/components/home/teardown";
-import { TOTAL_VH as EXHIBIT_VH } from "@/components/home/teardown/model";
+import { BEATS as EXHIBIT_BEATS, TOTAL_VH as EXHIBIT_VH, holdOf } from "@/components/home/teardown/model";
 import { useMedia } from "../HeroDevice";
 import { CHAPTERS } from "./claim";
 import { CodeChapter, Compact, ConsentChapter, useDone } from "./chapters";
 import { PhoneFrame } from "./frames";
+import { useBeatPaging } from "./paging";
 import styles from "./custody.module.css";
 
 const STEP = [1, 2];
@@ -34,6 +35,8 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
   const [compact, setCompact] = useState(false);
   useMotionValueEvent(scrollYProgress, "change", (v) => setAt(v < split ? Math.min(1, Math.floor((v / split) * 2)) : 2));
   const exhibitP = useTransform(scrollYProgress, [split, 1], [0, 1], { clamp: true });
+  // Space and Page Down: chapter 01, chapter 02, then each of the exhibit's beats at its hold.
+  useBeatPaging(() => ref.current, [split * 0.25, split * 0.75, ...EXHIBIT_BEATS.map((b) => split + holdOf(b.id) * (1 - split))]);
   useEffect(() => {
     const el = well.current;
     if (!el) return;

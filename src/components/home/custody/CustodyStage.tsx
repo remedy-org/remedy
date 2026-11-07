@@ -3,12 +3,14 @@
 import clsx from "clsx";
 import { frame as motionFrame, motion, useMotionValueEvent, useTransform } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { CHAPTERS, CLAIM } from "./claim";
+import { BEATS as EXHIBIT_BEATS, holdOf } from "../teardown/model";
+import { CHAPTERS, CLAIM, CONSENT_AT, SHOT_AT } from "./claim";
 import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, type Progress } from "./chapters";
 import { ExhibitSlot } from "./ExhibitSlot";
+import { useBeatPaging } from "./paging";
 import { scrollAt } from "./pace";
 import { ScreenBar } from "./frames";
-import { CONSOLE_AT, IN, OUT, STARTS, clamp01, exhibitPage, share } from "./timeline";
+import { CONSOLE_AT, EXHIBIT_RANGE, IN, OUT, STARTS, clamp01, exhibitPage, share } from "./timeline";
 import styles from "./custody.module.css";
 
 // The pinned Chain of Custody on laptops (spec H2). Everything here is drawn from one timeline p (paced against the
@@ -113,6 +115,18 @@ function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
   el.style.clipPath = `inset(${box.t.toFixed(1)}px ${box.r.toFixed(1)}px ${box.b.toFixed(1)}px ${box.l.toFixed(1)}px round ${box.round.toFixed(1)}px)`;
 }
 
+/**
+ * Where Space and Page Down stop on the timeline: the hero, chapter 01 and 02 once every line is lit, each of the
+ * exhibit's seven beats (its live photo, the five checks, the paid receipt) at its hold, and the console.
+ */
+const PAGE_STOPS = [
+  0,
+  CONSENT_AT[2] + 0.014,
+  SHOT_AT[2] + 0.012,
+  ...EXHIBIT_BEATS.map((b) => EXHIBIT_RANGE[0] + holdOf(b.id) * (EXHIBIT_RANGE[1] - EXHIBIT_RANGE[0])),
+  0.96,
+].map(scrollAt);
+
 /** Scrolls the runway (the stage's parent) so the timeline reads t: for the exhibit's check buttons. */
 function seekTo(st: HTMLElement | null, t: number) {
   const runway = st?.parentElement;
@@ -131,6 +145,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
   const screen = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const [chapter, setChapter] = useState(0);
+  useBeatPaging(() => stage.current?.parentElement, PAGE_STOPS);
 
   useMotionValueEvent(p, "change", (v) => {
     // After Motion has written this frame's styles, so the laptop is measured where it is now, not a frame ago.

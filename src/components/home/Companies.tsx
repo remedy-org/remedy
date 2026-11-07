@@ -32,10 +32,11 @@ export function Companies() {
         <FrameTag side="top" reach={10} style={{ left: 265, transform: "translateX(-50%)" }}>
           CPSC report draft · in your console
         </FrameTag>
-        {/* Down past the empty end of the chrome and title rows onto the ledger's "paid through PayPal" figure. The
-            ledger sizes to its text from the frame's left padding, so one place holds at every laptop width, and x 520
-            is inside that figure in both the grid and the narrower static replica that stands in while it loads. */}
-        <FrameTag side="top" reach={98} style={{ left: 520, transform: "translateX(-50%)" }}>
+        {/* Down past the empty end of the chrome and title rows, ending just above the ledger's "paid through PayPal"
+            figure, never on its text. The ledger sizes to its text from the frame's left padding, so one place holds
+            at every laptop width, and x 520 is over that figure in both the grid and the narrower static replica that
+            stands in while it loads. */}
+        <FrameTag side="top" reach={88} style={{ left: 520, transform: "translateX(-50%)" }}>
           PayPal Payouts batch
         </FrameTag>
         {/* This one hangs below the frame and points up into the grid area's foot: a short leader, nothing crossed. */}

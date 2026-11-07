@@ -8,7 +8,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { EXHIBIT } from "../claim";
 import type { ExhibitState, Shot } from "../model";
 import { buildHalf, pillowMaterials, R, SPAN, YC, RH, RW } from "./pillow";
-import { buildPhone, buildPrints, buildTag } from "./parts";
+import { TAG_H, TAG_W, buildPhone, buildPrints, buildTag } from "./parts";
 import { yieldToMain } from "./textures";
 
 export interface Colors {
@@ -269,13 +269,13 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     let anchor: Frame["anchor"] = null;
     // The phone and the tag: the leader ends 8px outside the part's right side (toward the callout), level with the
     // lens or the code, so it never crosses the phone or strikes through M4T.
-    const beside = (o: THREE.Object3D, at: { x: number; y: number }) => {
-      const b = screenBox(o);
-      return b ? { x: b.x1 + 8, y: Math.min(b.y1 - 4, Math.max(b.y0 + 4, at.y)) } : at;
-    };
-    if (s.active === 0) anchor = beside(phone.group, project(phone.lens(P.clone())));
+    const beside = (b: ReturnType<typeof screenBox>, at: { x: number; y: number }) =>
+      b ? { x: b.x1 + 8, y: Math.min(b.y1 - 4, Math.max(b.y0 + 4, at.y)) } : at;
+    if (s.active === 0) anchor = beside(screenBox(phone.group), project(phone.lens(P.clone())));
     else if (s.active === 1) anchor = project(prints.corner(new THREE.Vector3()));
-    else if (s.active === 3) anchor = beside(tag.mesh, project(tag.codePoint(new THREE.Vector3())));
+    // The tag by its card's own four corners: the box round its tilted group (and its wider contact shadow), projected
+    // this close, ends far to the right of the paper.
+    else if (s.active === 3) anchor = beside(cardBox(), project(tag.codePoint(new THREE.Vector3())));
     else if (s.active === 4) anchor = project(right.rimTop(new THREE.Vector3()));
     return { anchor };
   }
@@ -292,6 +292,22 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     let y1 = -Infinity;
     for (let i = 0; i < 8; i++) {
       const q = project(corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z));
+      x0 = Math.min(x0, q.x);
+      y0 = Math.min(y0, q.y);
+      x1 = Math.max(x1, q.x);
+      y1 = Math.max(y1, q.y);
+    }
+    return { x0, y0, x1, y1 };
+  }
+  /** The tag card's projected bounds on the canvas, CSS px, from its four corners. */
+  function cardBox() {
+    tag.mesh.updateMatrixWorld(true);
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (let i = 0; i < 4; i++) {
+      const q = project(tag.mesh.localToWorld(corner.set(((i & 1) - 0.5) * TAG_W, ((i >> 1) - 0.5) * TAG_H, 0)));
       x0 = Math.min(x0, q.x);
       y0 = Math.min(y0, q.y);
       x1 = Math.max(x1, q.x);

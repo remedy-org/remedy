@@ -71,13 +71,16 @@ The server always renders the static form.
 - Tier 1 drops to a pixel ratio of 1, 512 shadows and one shell. The drop happens:
   - after a start-up benchmark of over 12 ms a frame. The benchmark ends on a 1px `readPixels`, which blocks until the
     GPU has drawn every frame (`gl.finish()` does not block in Chrome, so it timed only the JS);
-  - or when the median of 8 gaps between scroll frames is over 28 ms, so a weak GPU falls back within one beat.
+  - or when, over 8 drawn frames, the median time from a draw to the browser's next frame is over 28 ms, so a weak
+    GPU falls back within one beat (`watch.ts`). The gap between two draws is not a measure: draws follow `p`, and a
+    wheel easing to a stop moves it a pixel every 30 to 80 ms, which once sent fast GPUs to the posters.
 
   Software renderers (SwiftShader, llvmpipe, Microsoft Basic Render) go straight to the posters. The scene is built in
   slices with the main thread given back between them (the fabric textures in 32-row slices, then each half, the
   parts and the shader compile), because it arms mid-scroll, during chapter 02.
 
-  A slow tier 1 falls back to the posters.
+  A slow tier 1 falls back to the posters, and the canvas is removed with the scene, so its last frame never sits over
+  the current beat's still.
 - Each frame has 42 draw calls and about 220k triangles, shadow pass included.
 - **Measured** on an Apple M5 Pro through ANGLE Metal, scrolling the pin one step per frame for 240 frames:
 

@@ -35,7 +35,12 @@ export function Hero() {
       </p>
       <div className={clsx("mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 lg:mt-10", styles.focusIn)} style={line(2)}>
         {/* The owner's path is the screen's one amber action; companies get a labelled, quieter link. */}
-        <Button href="/r/kikea-x-vesolje/try" size="lg">
+        {/* Full width inside the gutters on phones; at 320px it fits on one line with tighter padding, or wraps. */}
+        <Button
+          href="/r/kikea-x-vesolje/try"
+          size="lg"
+          className="max-sm:h-auto max-sm:min-h-12 max-sm:w-full max-sm:px-3 max-sm:py-2.5 max-sm:text-center max-sm:text-balance max-sm:whitespace-normal"
+        >
           Try a claim with sample photos
         </Button>
         <Button href="/signin" variant="tertiary" size="lg">

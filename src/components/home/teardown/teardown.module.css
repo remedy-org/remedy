@@ -72,8 +72,9 @@
    shows through it), of the check row and the callout column, and fades out at the left edge rather than clipping.
    The top fade starts --m-in below the header and runs --m-len, eased. The tag macro (the code check) frames the tag
    with the pillow's body running off the top of the shot: there the fade starts lower and runs shorter, so the body
-   is out of the picture (never a slab hanging under the headline) and the tag, further down, is whole. The two are
-   registered lengths, so the change eases with the camera instead of jumping. */
+   is out of the picture (never a slab hanging under the headline) and the tag, further down, is whole. The left edge
+   fades later there too (--m-edge), so the left half's stuffing, at the frame's edge in that shot, is gone rather
+   than cut off. They are registered lengths, so the change eases with the camera instead of jumping. */
 @property --m-in {
   syntax: "<length>";
   inherits: true;
@@ -84,14 +85,21 @@
   inherits: true;
   initial-value: 128px;
 }
+@property --m-edge {
+  syntax: "<length-percentage>";
+  inherits: true;
+  initial-value: 0px;
+}
 .stage {
   transition:
     --m-in 360ms var(--ease-out-quart),
-    --m-len 360ms var(--ease-out-quart);
+    --m-len 360ms var(--ease-out-quart),
+    --m-edge 360ms var(--ease-out-quart);
 }
 .stage[data-beat="code"] {
   --m-in: 56px;
   --m-len: 48px;
+  --m-edge: 10%;
 }
 .stage:not(.small) .canvas,
 .stage:not(.small) .posters {
@@ -107,8 +115,8 @@
     ),
     linear-gradient(
       to right,
-      transparent,
-      #000 var(--gutter, clamp(24px, 4.45vw, 64px)),
+      transparent var(--m-edge),
+      #000 calc(var(--m-edge) + var(--gutter, clamp(24px, 4.45vw, 64px))),
       #000 calc(var(--m-side, 1000px) - 72px),
       transparent calc(var(--m-side, 1000px) + 24px)
     );

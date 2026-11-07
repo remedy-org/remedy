@@ -7,6 +7,7 @@ import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
 import { CHECKS, EXHIBIT, RECEIPT_ROWS } from "./claim";
 import { BEATS, RANGES, TOTAL_VH, clock, holdOf, stateAt, type BeatId, type ExhibitState, type Shot } from "./model";
 import type { Colors, Exhibit, Rect, Tier } from "./scene";
+import { createFrameWatch, stageLayers } from "./watch";
 import styles from "./teardown.module.css";
 
 // The Opened Exhibit (wave 3, concept 1): claim RM-0442's evidence in 3D, each of the five checks opening the part it
@@ -316,32 +317,26 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
   const shotOverride = useRef<Shot | null>(null);
   const live = mode === "live" && !failed;
 
-  // Tier drop on long frames, measured where it matters: while scrolling, consecutive draws more than 28 ms apart
-  // (median of 8, so a weak GPU falls back within one beat) step down to tier 1, then to the posters. The start-up
-  // benchmark can't see compositing costs.
-  const frames = useRef<{ last: number; gaps: number[] }>({
-    last: 0,
-    gaps: [],
-  });
+  // Tier drop on long frames, measured where it matters: while scrolling, a drawn frame whose next frame comes more
+  // than 28 ms later (median of 8, so a weak GPU falls back within one beat) steps down to tier 1, then to the posters.
+  // The start-up benchmark can't see compositing costs. Each draw is timed to the next frame, not to the next draw:
+  // draws only happen when p changes, and a wheel easing to a stop moves p a pixel at a time, 30 to 80 ms apart.
+  const watch = useRef(createFrameWatch());
+  const probe = useRef(0);
   const watchFrames = useCallback(
     (ex: Exhibit) => {
-      if (capture) return;
-      const f = frames.current;
-      const now = performance.now();
-      const gap = now - f.last;
-      f.last = now;
-      if (gap > 120) return;
-      f.gaps.push(gap);
-      if (f.gaps.length < 8) return;
-      const median = [...f.gaps].sort((a, b) => a - b)[4];
-      f.gaps = [];
-      if (median <= 28) return;
-      if (ex.info().tier === 2) {
-        ex.setTier(1);
-        const r = root.current?.getBoundingClientRect();
-        if (r) ex.resize(r.width, r.height, devicePixelRatio);
-        if (root.current) root.current.dataset.tier = "1";
-      } else setFailed(true);
+      if (capture || probe.current) return;
+      const drawn = performance.now();
+      probe.current = requestAnimationFrame(() => {
+        probe.current = 0;
+        if (scene.current !== ex || !watch.current(performance.now() - drawn)) return;
+        if (ex.info().tier === 2) {
+          ex.setTier(1);
+          const r = root.current?.getBoundingClientRect();
+          if (r) ex.resize(r.width, r.height, devicePixelRatio);
+          if (root.current) root.current.dataset.tier = "1";
+        } else setFailed(true);
+      });
     },
     [capture],
   );
@@ -357,7 +352,6 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
     const stage = el.getBoundingClientRect();
     let anchor: { x: number; y: number } | null = null;
     const ex = scene.current;
-    if (ex && live) watchFrames(ex);
     if (ex && live) {
       const r = subject.current?.getBoundingClientRect();
       const rect: Rect =
@@ -371,6 +365,7 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
             }
           : { x0: 0.05, y0: 0.2, x1: 0.65, y1: 0.8 });
       anchor = ex.render(st, rect).anchor;
+      watchFrames(ex);
     }
     // Leader: from the part to the callout's first line, drawn on like ink as the part opens.
     const box = calloutBox.current?.getBoundingClientRect();
@@ -431,7 +426,8 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
   useEffect(
     () => () => {
       cancelAnimationFrame(raf.current);
-      raf.current = 0;
+      cancelAnimationFrame(probe.current);
+      raf.current = probe.current = 0;
     },
     [],
   );
@@ -578,7 +574,9 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
     };
   }, [capture, p, draw]);
 
-  const showPosters = !live || !warm;
+  // The canvas only while live: once fallen back to the posters it is gone, never a frozen frame over them.
+  const layers = stageLayers({ mode, failed, warm });
+  const showPosters = layers.posters;
   const beatIndex = POSTER_BEATS.indexOf(s.beat);
   const postersEl = showPosters && (
     <div ref={posters} className={styles.posters} aria-hidden="true">
@@ -600,7 +598,7 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
     <div ref={root} className={clsx(styles.stage, small && styles.small)} data-mode={live ? "live" : "poster"} data-beat={s.beat} data-warm={warm || undefined}>
       <div className={styles.pool} aria-hidden="true" />
       {!small && postersEl}
-      {mode === "live" && <canvas ref={canvas} className={clsx(styles.canvas, warm && styles.canvasOn)} aria-hidden="true" />}
+      {layers.canvas && <canvas ref={canvas} className={clsx(styles.canvas, layers.canvasOn && styles.canvasOn)} aria-hidden="true" />}
       <svg className={styles.leaders} aria-hidden="true">
         <path ref={leader} pathLength={1} />
         <circle ref={dot} r={2.5} />
