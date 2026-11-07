@@ -1,0 +1,189 @@
+/*
+ * The claim flow's motion (DESIGN.md: state changes, plus one arrival moment, the receipt). Transform, opacity and
+ * clip-path only. Every move runs only under prefers-reduced-motion: no-preference; the resting state is the final one.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The current step's segment fills from the left on arrival. */
+  .fill {
+    transform-origin: left center;
+    animation: fill 360ms var(--ease-snap) both;
+  }
+
+  /* The receipt prints: it slides down 16px as its clip opens from the top. */
+  .print {
+    animation: print 560ms var(--ease-out-expo) backwards;
+  }
+
+  /* A check mark drawing itself (pathLength 1 on the path). */
+  .draw {
+    stroke-dasharray: 1;
+    animation: draw var(--draw-ms, 360ms) var(--ease-out-expo) var(--draw-delay, 0ms) both;
+  }
+
+  /* The photo check reading Exhibit A: a 1px amber line with a 24px trail, top to bottom and back. */
+  .scan {
+    animation: scan 2.8s ease-in-out infinite alternate;
+  }
+
+  /* The current stage of the timeline: a ring breathing out. */
+  .pulse::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    animation: pulse 1.2s ease-out infinite;
+  }
+
+  /* A captured photo settling into its slot, with the 2deg rotation settle. */
+  .drop {
+    animation: drop 420ms var(--ease-snap) both;
+  }
+
+  /* A row of the checking screen's evidence fading in. */
+  .rise {
+    animation: rise 200ms var(--ease-snap) both;
+  }
+
+  /* The payout status word changing. */
+  .swap {
+    animation: swap 160ms var(--ease-snap) both;
+  }
+
+  /* A code cell turning to the paid colour, one after another. */
+  .flip {
+    transition:
+      background-color 160ms ease-out,
+      border-color 160ms ease-out,
+      color 160ms ease-out;
+    transition-delay: var(--flip-delay, 0ms);
+  }
+
+  /* The capture flash: 40ms in, 200ms out. */
+  .flashOn {
+    transition: opacity 40ms linear;
+  }
+  .flashOff {
+    transition: opacity 200ms ease-out;
+  }
+
+  /* Under 10 seconds the timer pulses once a second. */
+  .urgent {
+    animation: urgent 1s ease-in-out infinite;
+  }
+
+  /* The shutter's press. */
+  .shutter:active:not(:disabled) > span {
+    scale: 0.92;
+  }
+  .shutter > span {
+    transition: scale 100ms ease-out;
+  }
+}
+
+/* The scan line's resting place, and the trail above it. */
+.scanLine {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+.scanLine::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 1px;
+  height: 24px;
+  background: linear-gradient(to top, color-mix(in oklch, var(--accent) 20%, transparent), transparent);
+}
+
+/* The countdown's depletion line: state, so it moves even under reduced motion; it just doesn't ease. */
+.deplete {
+  transform-origin: left center;
+  transition: transform 1s linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .deplete {
+    transition: none;
+  }
+}
+
+/* The checking screen's elapsed tick slides with the clock. */
+.tick {
+  transition: left 250ms linear;
+}
+
+@keyframes fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes print {
+  from {
+    transform: translateY(16px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    transform: none;
+    clip-path: inset(-40px -40px -40px -40px);
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes scan {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.5;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 1.8;
+  }
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(1.4) rotate(-2deg);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes swap {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes urgent {
+  50% {
+    opacity: 0.6;
+  }
+}

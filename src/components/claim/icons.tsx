@@ -57,3 +57,17 @@ export const LinkIcon = (p: IconProps) => (
     <path d="M2.5 8h11" strokeDasharray="1.5 2" />
   </Icon>
 );
+
+export const LockIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3.25" y="7" width="9.5" height="6.75" rx="1.25" />
+    <path d="M5.5 7V5.25a2.5 2.5 0 0 1 5 0V7" />
+  </Icon>
+);
+
+export const InfoIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="8" cy="8" r="6.25" />
+    <path d="M8 7.25v3.75M8 5h.01" />
+  </Icon>
+);

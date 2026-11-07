@@ -6,6 +6,7 @@ import { ClaimFlow, type ClaimFlowProps } from "@/components/claim/ClaimFlow";
 import { ExpiredCard } from "@/components/claim/ExpiredCard";
 import { FlowShell } from "@/components/claim/FlowShell";
 import { FlowSkeleton } from "@/components/claim/FlowSkeleton";
+import { WithJudges } from "@/components/claim/Judges";
 import { checkRows, toView } from "@/components/claim/model";
 import { NotFoundCard } from "@/components/claim/NotFoundCard";
 import { RecallView } from "@/components/claim/RecallScreen";
@@ -50,18 +51,42 @@ async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "previe
 function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultProps> = {}) {
   const demo = Boolean(over.sample);
   const steps = demo ? DEMO_STEPS : REAL_STEPS;
+  // A demo claim shows its sample's own photo, as ClaimScreen does.
+  const photoUrls = over.sample ? d.photoUrls.map(() => over.sample!.photos[0]) : d.photoUrls;
   return (
     <FlowShell demo={demo} company="Kikea Store">
-      <div className="flex flex-col gap-6">
-        <StepMeter current={steps.length + 1} steps={steps} />
-        <Result claim={d.claim} recall={fx.recall} rows={checkRows(d.claim, fx.recall.spec)} photoUrls={d.photoUrls} againHref="#" {...over} />
-      </div>
+      <Result
+        claim={d.claim}
+        recall={fx.recall}
+        rows={checkRows(d.claim, fx.recall.spec)}
+        photoUrls={photoUrls}
+        againHref="#"
+        now={fx.NOW + 10 * 60_000}
+        meter={<StepMeter current={steps.length + 1} steps={steps} />}
+        {...over}
+      />
     </FlowShell>
   );
 }
 
+const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug">) => (
+  <FlowShell demo company="Kikea Store">
+    <WithJudges demo step="samples">
+      <div className="flex flex-col gap-6">
+        <StepMeter current={2} steps={DEMO_STEPS} className="mx-auto w-full max-w-[40rem]" />
+        <SamplePicker slug={fx.recall.slug} {...props} />
+      </div>
+    </WithJudges>
+  </FlowShell>
+);
+
 const consent = (over: Partial<Parameters<typeof RecallView>[0]> = {}) => <RecallView recall={fx.recall} href="#" {...over} />;
 const genuine = demoSample("genuine")!;
+
+const run = (id: string, sample: string, decision: Claim["decision"]) => ({ id, href: "#", title: demoSample(sample)!.title, decision, sample });
+const locked = (sample: (typeof DEMO_SAMPLES)[number]) => (sample.after ? `Send "A genuine claim" first: this one reposts its photo.` : undefined);
+const wrongCode = demoSample("wrong-code")!;
+const reposted = demoSample("reposted")!;
 
 const STATES: Record<string, { group: string; note: string; render: Render }> = {
   consent: { group: "Recall", note: "Logged out", render: () => consent() },
@@ -70,88 +95,67 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "consent-unverified": { group: "Recall", note: "Unverified PayPal account", render: () => consent({ signedInAs: "Pat Doe", unverified: true }) },
   "consent-limit": { group: "Recall", note: "Claim start refused: account's daily limit", render: () => consent({ signedInAs: "Pat Doe", refusal: { kind: "account", limit: 5, until: nextUtcDay(new Date()) } }) },
   "demo-consent": { group: "Recall", note: "Demo mode", render: () => consent({ demo: true }) },
+  "demo-consent-signed-in": { group: "Recall", note: "Demo mode, logged in", render: () => consent({ demo: true, signedInAs: "Pat Doe" }) },
   picker: {
     group: "Demo",
-    note: "Sample picker, first visit",
-    render: () => (
-      <FlowShell demo company="Kikea Store">
-        <div className="flex flex-col gap-6">
-          <StepMeter current={2} steps={DEMO_STEPS} />
-          <SamplePicker
-            slug={fx.recall.slug}
-            selected="genuine"
-            runs={[]}
-            roundDone={false}
-            options={DEMO_SAMPLES.map((sample) => ({ sample, locked: sample.after ? `Send "A genuine claim" first: this one reposts its photo.` : undefined }))}
-          />
-        </div>
-      </FlowShell>
-    ),
+    note: "Sample picker, first visit (repost locked)",
+    render: () => picker({ selected: "genuine", runs: [], roundDone: false, options: DEMO_SAMPLES.map((sample) => ({ sample, locked: locked(sample) })) }),
   },
   "picker-runs": {
     group: "Demo",
-    note: "Sample picker after two runs",
-    render: () => (
-      <FlowShell demo company="Kikea Store">
-        <div className="flex flex-col gap-6">
-          <StepMeter current={2} steps={DEMO_STEPS} />
-          <SamplePicker
-            slug={fx.recall.slug}
-            selected="ai-no-session"
-            runs={[
-              { id: "RM-5307", href: "#", title: "The wrong code", decision: "rejected" },
-              { id: "RM-4127", href: "#", title: "A genuine claim", decision: "paid" },
-            ]}
-            roundDone={false}
-            options={DEMO_SAMPLES.map((sample) => ({ sample }))}
-          />
-        </div>
-      </FlowShell>
-    ),
+    note: "Sample picker after two runs: scoreboard",
+    render: () =>
+      picker({
+        selected: "ai-no-session",
+        runs: [run("RM-5307", "wrong-code", "rejected"), run("RM-4127", "genuine", "paid")],
+        roundDone: false,
+        options: DEMO_SAMPLES.map((sample) => ({ sample })),
+      }),
+  },
+  "picker-locked-runs": {
+    group: "Demo",
+    note: "The AC state: a run scored, the repost locked",
+    render: () =>
+      picker({
+        selected: "genuine",
+        runs: [run("RM-5309", "ai-no-session", "blocked"), run("RM-5307", "wrong-code", "rejected")],
+        roundDone: false,
+        options: DEMO_SAMPLES.map((sample) => ({ sample, locked: locked(sample) })),
+      }),
+  },
+  "picker-unexpected": {
+    group: "Demo",
+    note: "Scoreboard with one outcome not as expected",
+    render: () =>
+      picker({
+        selected: "wrong-code",
+        runs: [run("RM-4127", "genuine", "held")],
+        roundDone: false,
+        options: DEMO_SAMPLES.map((sample) => ({ sample })),
+      }),
   },
   "picker-done": {
     group: "Demo",
     note: "Sample picker after all four samples ran",
-    render: () => (
-      <FlowShell demo company="Kikea Store">
-        <div className="flex flex-col gap-6">
-          <StepMeter current={2} steps={DEMO_STEPS} />
-          <SamplePicker
-            slug={fx.recall.slug}
-            selected="genuine"
-            runs={[
-              { id: "RM-5310", href: "#", title: "A reposted photo", decision: "blocked" },
-              { id: "RM-5309", href: "#", title: "An AI image, sent in", decision: "blocked" },
-              { id: "RM-5307", href: "#", title: "The wrong code", decision: "rejected" },
-              { id: "RM-4127", href: "#", title: "A genuine claim", decision: "paid" },
-            ]}
-            roundDone
-            options={DEMO_SAMPLES.map((sample) => ({ sample }))}
-          />
-        </div>
-      </FlowShell>
-    ),
+    render: () =>
+      picker({
+        selected: "genuine",
+        runs: [run("RM-5310", "reposted", "blocked"), run("RM-5309", "ai-no-session", "blocked"), run("RM-5307", "wrong-code", "rejected"), run("RM-4127", "genuine", "paid")],
+        roundDone: true,
+        options: DEMO_SAMPLES.map((sample) => ({ sample })),
+      }),
   },
   "picker-limit": {
     group: "Demo",
     note: "Sample claim refused: today's photo checks used up",
-    render: () => (
-      <FlowShell demo company="Kikea Store">
-        <div className="flex flex-col gap-6">
-          <StepMeter current={2} steps={DEMO_STEPS} />
-          <SamplePicker
-            slug={fx.recall.slug}
-            selected="genuine"
-            runs={[]}
-            roundDone={false}
-            options={DEMO_SAMPLES.map((sample) => ({ sample }))}
-            refusal={{ kind: "checks", limit: 100, until: nextUtcDay(new Date()) }}
-          />
-        </div>
-      </FlowShell>
-    ),
+    render: () => picker({ selected: "genuine", runs: [], roundDone: false, options: DEMO_SAMPLES.map((sample) => ({ sample })), refusal: { kind: "checks", limit: 100, until: nextUtcDay(new Date()) } }),
   },
-  code: { group: "Code", note: "Code and session timer", render: () => flow({ preview: { phase: "code" } }) },
+  code: { group: "Code", note: "Code, timer and the phone's QR", render: () => flow({ preview: { phase: "code" } }) },
+  "code-low": {
+    group: "Code",
+    note: "Under a minute left",
+    render: () => flow({ preview: { phase: "code" } }, { ...fx.open, captureSession: { id: "cs_preview", expiresAt: new Date(fx.NOW + 42_000).toISOString() } }),
+  },
   "demo-code": { group: "Code", note: "Demo: the sample's code", render: () => flow({ sample: genuine, preview: { phase: "code" } }) },
   ...Object.fromEntries(
     DEMO_SAMPLES.filter((s) => s.id !== "genuine").map((sample) => [
@@ -165,12 +169,13 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     render: () => (
       <FlowShell company="Kikea Store">
         <div className="flex flex-col gap-6">
-          <StepMeter current={2} />
+          <StepMeter current={2} className="mx-auto w-full max-w-claim" />
           <ExpiredCard code="M4T" againHref="#" />
         </div>
       </FlowShell>
     ),
   },
+  capture: { group: "Camera", note: "Live, no shots yet (the AC state)", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/c02-1.jpg" } } }) },
   "camera-starting": { group: "Camera", note: "Asking for permission", render: () => flow({ preview: { phase: "capture", capture: { camera: "starting" } } }) },
   "camera-live": { group: "Camera", note: "Live, no shots yet", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/c02-1.jpg" } } }) },
   "camera-shots": { group: "Camera", note: "Two shots taken", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/c02-1.jpg", shots: SHOTS } } }) },
@@ -190,23 +195,48 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     render: () => flow({ preview: { phase: "capture", capture: { camera: "live" } } }, { ...fx.open, captureSession: { id: "cs_preview", expiresAt: new Date(fx.NOW - 1000).toISOString() } }),
   },
   "demo-capture": { group: "Camera", note: "Demo: the sample in the viewfinder", render: () => flow({ sample: genuine, preview: { phase: "capture" } }) },
-  "checking-model": { group: "Checking", note: "Pre-checks passed, model running", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 } } }, fx.checkingModel) },
-  "checking-offline": { group: "Checking", note: "Polling lost the connection", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 21, offline: true } } }, fx.checkingModel) },
-  "checking-done": { group: "Checking", note: "All checks resolved", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 19 } } }, fx.paid.claim) },
-  "checking-blocked": { group: "Checking", note: "Stopped by a pre-check", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 1 } } }, fx.blocked.claim) },
+  "demo-capture-ai": { group: "Camera", note: "Demo: the AI image, sent from outside", render: () => flow({ sample: demoSample("ai-no-session"), preview: { phase: "capture" } }, { ...fx.open, code: "H6W" }) },
+  checking: { group: "Checking", note: "Exhibit A read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrl: "/demo/c02-1.jpg" } }, fx.checkingModel) },
+  "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrl: "/demo/c02-1.jpg" } }, fx.checkingModel) },
+  "checking-slow": { group: "Checking", note: "Past 40 s: taking longer than usual", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 47 }, photoUrl: "/demo/c02-1.jpg" } }, fx.checkingModel) },
+  "checking-offline": { group: "Checking", note: "Polling lost the connection", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 21, offline: true }, photoUrl: "/demo/c02-1.jpg" } }, fx.checkingModel) },
+  "checking-done": { group: "Checking", note: "All checks resolved: quotes and green code cells", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 19 }, photoUrl: fx.paid.photoUrls[0] } }, fx.paid.claim) },
+  "checking-blocked": { group: "Checking", note: "Stopped by a pre-check", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 1 }, photoUrl: fx.blocked.photoUrls[0] } }, fx.blocked.claim) },
+  "demo-checking": {
+    group: "Checking",
+    note: "Demo: the sample being read",
+    render: () => flow({ sample: genuine, preview: { phase: "checking", checking: { elapsed: 12 }, photoUrl: genuine.photos[0] } }, { ...fx.checkingModel, demo: true }),
+  },
   paid: { group: "Result", note: "Paid, payout processing", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true } }) },
-  "paid-received": { group: "Result", note: "Paid, payout received", render: () => result(fx.paid, { payout: { status: "SUCCESS", fresh: true } }) },
+  "paid-arrive": { group: "Result", note: "Paid just now: the receipt prints", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, now: fx.NOW + 24_000 }) },
+  "paid-settled": { group: "Result", note: "Paid, payout received", render: () => result(fx.paid, { payout: { status: "SUCCESS", fresh: true } }) },
+  "paid-received": { group: "Result", note: "Paid, payout received (old name)", render: () => result(fx.paid, { payout: { status: "SUCCESS", fresh: true } }) },
   "paid-partial": { group: "Result", note: "Paid, PayPal status unreachable", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: false } }) },
   held: { group: "Result", note: "Held: unclear answers", render: () => result(fx.held) },
   "held-model": { group: "Result", note: "Held: the model was down", render: () => result(fx.heldModel) },
   "held-limit": { group: "Result", note: "Held: the daily photo-check limit was reached", render: () => result(fx.heldLimit) },
   "held-payout": { group: "Result", note: "Held: PayPal refused the payout", render: () => result(fx.heldPayout) },
-  rejected: { group: "Result", note: "Rejected: wrong code", render: () => result(fx.rejected) },
+  rejected: { group: "Result", note: "Rejected: wrong code (the code diff)", render: () => result(fx.rejected) },
   "rejected-screen": { group: "Result", note: "Rejected: photo of a screen", render: () => result(fx.rejectedScreen) },
   blocked: { group: "Result", note: "Blocked: outside the camera session", render: () => result(fx.blocked) },
+  "blocked-duplicate": { group: "Result", note: "Blocked: a reposted photo", render: () => result(fx.blockedDuplicate) },
   "blocked-account": { group: "Result", note: "Blocked: repost from a paid account", render: () => result(fx.blockedAccount) },
-  "demo-paid": { group: "Result", note: "Demo: genuine sample paid", render: () => result(fx.paid, { sample: genuine, payout: { status: "SUCCESS", fresh: true } }) },
-  "demo-blocked": { group: "Result", note: "Demo: AI image refused", render: () => result(fx.blocked, { sample: demoSample("ai-no-session") }) },
+  "demo-paid": {
+    group: "Result",
+    note: "Demo: genuine sample paid, next sample",
+    render: () => result(fx.paid, { sample: genuine, payout: { status: "PENDING", fresh: true }, round: fx.roundAfter(["genuine"]) }),
+  },
+  "demo-rejected": {
+    group: "Result",
+    note: "Demo: the wrong code, rejected",
+    render: () => result(fx.demoWrongCode, { sample: wrongCode, round: fx.roundAfter(["genuine", "wrong-code"]) }),
+  },
+  "demo-blocked": { group: "Result", note: "Demo: AI image refused", render: () => result(fx.blocked, { sample: demoSample("ai-no-session"), round: fx.roundAfter(["genuine", "wrong-code", "ai-no-session"]) }) },
+  "demo-done": {
+    group: "Result",
+    note: "Demo: the repost, all four run",
+    render: () => result(fx.blockedDuplicate, { sample: reposted, round: fx.roundAfter(["genuine", "wrong-code", "ai-no-session", "reposted"]) }),
+  },
   loading: { group: "States", note: "Loading skeleton: a step", render: () => <FlowSkeleton /> },
   "loading-recall": { group: "States", note: "Loading skeleton: the recall screen", render: () => <FlowSkeleton wide /> },
   "not-found": { group: "States", note: "Unknown link", render: () => <FlowShell><NotFoundCard /></FlowShell> },

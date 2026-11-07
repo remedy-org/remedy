@@ -1,12 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { AlertIcon, Button, Card, CrossIcon, ErrorState } from "@/components/ui";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { AlertIcon, Button, CrossIcon, ErrorState } from "@/components/ui";
+import styles from "./flow.module.css";
 import { CameraIcon } from "./icons";
 import type { ClaimStatus, ClaimView } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
 import { mmss, useCountdown } from "./useCountdown";
+import { Cutout, Dock, GlassChip, InstructionBar, Reminders } from "./Viewfinder";
 
 export type CameraState = "starting" | "live" | "denied" | "nocamera" | "insecure" | "error";
 
@@ -46,8 +48,13 @@ export interface CaptureStepProps {
   /** Starts over with a fresh code once this session has ended. */
   newClaimHref: string;
   loginHref: string;
-  /** The pre-checks' answer; null when the photos had already arrived (another tab). */
-  onSent(view: ClaimView | null): void;
+  /** The reminder chips along the cutout's foot, e.g. "Label", "Cut in half", "Code M4T". */
+  reminders?: string[];
+  /**
+   * The pre-checks' answer; null when the photos had already arrived (another tab). photoUrl: an object URL of the first
+   * photo sent, for the checking screen's Exhibit A, which the caller frees.
+   */
+  onSent(view: ClaimView | null, photoUrl?: string): void;
   /** Dev previews and screenshots: no camera, a fixed state. */
   preview?: CapturePreview;
 }
@@ -59,7 +66,7 @@ const subscribeCoarse = (cb: () => void) => {
 };
 
 /** Live camera only: no upload control. Up to 3 shots, downscaled in the browser, sent with the session id. */
-export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, onSent, preview }: CaptureStepProps) {
+export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, reminders = [], onSent, preview }: CaptureStepProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [camera, setCamera] = useState<CameraState>(preview?.camera ?? "starting");
@@ -174,9 +181,27 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", QUALITY));
     if (!blob) return;
     setShots((s) => [...s, { url: URL.createObjectURL(blob), blob }]);
+    // The flash: white at 50%, 40ms in and 200ms out (flow.module.css).
     setFlash(true);
-    setTimeout(() => setFlash(false), 160);
+    setTimeout(() => setFlash(false), 40);
   }
+
+  // Laptops: the space bar is the shutter, unless focus is on something space already presses or types into.
+  const captureRef = useRef(capture);
+  useEffect(() => {
+    captureRef.current = capture;
+  });
+  useEffect(() => {
+    if (preview) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat || e.defaultPrevented) return;
+      if (e.target instanceof Element && e.target.closest("button, a, input, textarea, select, summary, [contenteditable]")) return;
+      e.preventDefault();
+      void captureRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [preview]);
 
   function remove(i: number) {
     setShots((s) => {
@@ -211,7 +236,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         return;
       }
       stop();
-      onSent(body as ClaimView);
+      // A fresh URL for the checking screen's Exhibit A: this step frees its own thumbnails' URLs when it goes away.
+      onSent(body as ClaimView, URL.createObjectURL(blobs[0]));
     } catch {
       setSendError({ status: 0, message: "No connection. Your photos are still here: send them again when you're back online." });
       setSending(false);
@@ -221,135 +247,151 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const live = camera === "live" && !expired;
   const n = shots.length;
   const showPhone = !coarse && (phoneOpen || (!expired && (camera === "denied" || camera === "nocamera" || camera === "insecure")));
+  const sendLabel = `Send ${n === 1 ? "photo" : `${n} photos`}`;
 
   return (
-    <Card padding="none" as="section" aria-labelledby="capture-title" className="overflow-hidden">
-      {/* The viewfinder is dark in both themes, like a camera's. */}
-      <div data-theme="dark" className="relative aspect-[3/4] bg-[oklch(0.12_0.01_255)] text-text sm:aspect-[4/3]">
-        <video ref={videoRef} playsInline muted aria-label="Camera preview" className={clsx("absolute inset-0 size-full object-cover", !live && "invisible")} />
-        {preview?.still && live && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview.still} alt="" className="absolute inset-0 size-full object-cover" />
-        )}
-        {live && <Guides />}
-
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3">
-          <Chip>
-            Code <span className="text-text">{code}</span>
-          </Chip>
-          <Chip>
-            <span role="timer" aria-live="off" className={clsx(left < 60_000 && !expired && "text-accent-text")}>
-              {expired ? "Ended" : mmss(left)}
-            </span>
-          </Chip>
+    <section aria-labelledby="capture-title" className="mx-auto flex w-full max-w-[40rem] flex-col gap-5">
+      {/* The camera is dark in both themes, like a camera's. Full bleed on a phone, a 4:3 frame on a laptop. */}
+      <div data-theme="dark" className="overflow-hidden bg-[oklch(0.12_0.01_255)] text-text max-sm:-mx-4 sm:rounded-card sm:shadow-ring">
+        <div className="relative overflow-hidden max-sm:h-[max(18rem,calc(100dvh-23.5rem))] sm:aspect-[4/3]">
+          <video ref={videoRef} playsInline muted aria-label="Camera preview" className={clsx("absolute inset-0 size-full object-cover", !live && "invisible")} />
+          {preview?.still && live && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview.still} alt="" className="absolute inset-0 size-full object-cover" />
+          )}
+          {live ? (
+            <Cutout>
+              <GlassChip className="absolute top-2 left-2">Exhibit A</GlassChip>
+              <Reminders items={reminders} />
+            </Cutout>
+          ) : (
+            <Cutout dashed>
+              <FrameMessage
+                camera={expired || camera === "live" ? "expired" : camera}
+                onRetry={() => {
+                  setCamera("starting");
+                  setAttempt((a) => a + 1);
+                }}
+              />
+            </Cutout>
+          )}
+          <div className="absolute top-3 right-3">
+            <GlassChip className={clsx(left < 60_000 && !expired && "text-accent-text")}>
+              <span role="timer" aria-live="off" aria-label={expired ? "The camera session has ended" : `${mmss(left)} left on the camera session`} className={clsx(!expired && left < 10_000 && styles.urgent)}>
+                {expired ? "Ended" : mmss(left)}
+              </span>
+            </GlassChip>
+          </div>
+          <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
         </div>
 
-        {!live && (
-          <FrameMessage
-            camera={expired || camera === "live" ? "expired" : camera}
-            onRetry={() => {
-              setCamera("starting");
-              setAttempt((a) => a + 1);
-            }}
-          />
-        )}
-        <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)] transition-opacity duration-160", flash ? "opacity-60" : "opacity-0")} />
-      </div>
+        <InstructionBar>
+          <h2 id="capture-title" tabIndex={-1} className="text-ui font-medium text-balance text-[oklch(0.96_0.005_255)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+            Fit the label, the destroyed product and the code <span className="font-mono">{code}</span> in the frame
+          </h2>
+        </InstructionBar>
 
-      <div className="flex flex-col gap-5 p-6">
-        <h2 id="capture-title" className="text-body font-medium text-text">
-          Fit the label, the destroyed product and the code <span className="font-mono">{code}</span> in the frame
-        </h2>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <ul className="flex gap-2" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
-            {Array.from({ length: MAX_PHOTOS }, (_, i) => (
-              <li key={i} className="relative size-16 shrink-0">
-                {shots[i] ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={shots[i].url} alt={`Photo ${i + 1}`} className="size-full rounded-control border border-line object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => remove(i)}
-                      disabled={sending}
-                      aria-label={`Remove photo ${i + 1}`}
-                      className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-[oklch(0.12_0.01_255/0.8)] text-[oklch(0.96_0.005_255)] after:absolute after:-inset-2 after:content-[''] disabled:opacity-40"
-                    >
-                      <CrossIcon size={12} />
-                    </button>
-                  </>
-                ) : (
-                  <span className="flex size-full items-center justify-center rounded-control border border-dashed border-line-strong font-mono text-ui text-faint">{i + 1}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-          <p className="font-mono text-ui text-faint tabular-nums">{n === 0 ? "Up to 3 photos" : `${n} of ${MAX_PHOTOS} taken`}</p>
-        </div>
-
-        {sendError && (
-          <ErrorState
-            variant="inline"
-            title={sendError.status === 401 ? "Your PayPal login has expired" : "The photos didn't send"}
-            description={sendError.status === 401 ? "Log in again to send them. You'll need to retake them afterwards." : sendError.message}
-            action={sendError.status === 401 ? <Button href={loginHref} variant="secondary" size="sm">Log in with PayPal</Button> : undefined}
-          />
-        )}
-
-        {expired ? (
-          <Button href={newClaimHref} size="lg" block prefetch={false}>
-            Get a new code
-          </Button>
-        ) : (
-          <div className={clsx("grid gap-3", n > 0 && n < MAX_PHOTOS && "sm:grid-cols-2")}>
-            {n < MAX_PHOTOS && (
-              <Button size="lg" block variant={n === 0 ? "primary" : "secondary"} onClick={capture} disabled={!live || sending}>
-                <span className="inline-flex items-center gap-2">
-                  <CameraIcon />
-                  {n === 0 ? "Take photo" : "Take another"}
+        <Dock
+          className="border-t border-[oklch(1_0_0/0.08)]"
+          left={
+            <ul className="flex gap-1.5 sm:gap-2" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
+              {Array.from({ length: MAX_PHOTOS }, (_, i) => (
+                <li key={i} className="relative size-9 shrink-0 sm:size-14">
+                  {shots[i] ? (
+                    <>
+                      <span className={clsx("block size-full rounded-control bg-paper p-[2px] shadow-paper", styles.drop)}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={shots[i].url} alt={`Photo ${i + 1}`} className="size-full rounded-[3px] object-cover" />
+                      </span>
+                      <span aria-hidden="true" className="absolute -bottom-1.5 -left-1.5 flex size-5 items-center justify-center rounded-[3px] bg-accent font-mono text-micro font-semibold text-accent-ink">
+                        {String.fromCharCode(65 + i)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => remove(i)}
+                        disabled={sending}
+                        aria-label={`Remove photo ${i + 1}`}
+                        className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-[oklch(0.3_0.01_255)] text-[oklch(0.96_0.005_255)] shadow-[0_0_0_2px_oklch(0.12_0.01_255)] after:absolute after:-inset-2 after:content-[''] disabled:opacity-40"
+                      >
+                        <CrossIcon size={12} />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="flex size-full items-center justify-center rounded-control border border-dashed border-[oklch(1_0_0/0.25)] font-mono text-micro text-[oklch(0.72_0.012_255)]">{i + 1}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          }
+          middle={
+            expired ? null : (
+              <>
+                <button
+                  type="button"
+                  onClick={capture}
+                  disabled={!live || sending || n >= MAX_PHOTOS}
+                  aria-label={n >= MAX_PHOTOS ? "Three photos taken" : `Take photo ${n + 1} of ${MAX_PHOTOS}`}
+                  aria-keyshortcuts="Space"
+                  className={clsx(
+                    "flex size-[4.5rem] items-center justify-center rounded-full border-4 border-[oklch(1_0_0/0.9)] transition-opacity duration-160 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent disabled:opacity-35",
+                    styles.shutter,
+                  )}
+                >
+                  <span className="size-[3.625rem] rounded-full bg-[oklch(1_0_0)]" />
+                </button>
+                <span aria-hidden="true" className="hidden font-mono text-micro text-[oklch(0.72_0.012_255)] sm:pointer-fine:inline-flex">
+                  <kbd className="rounded-[4px] border border-[oklch(1_0_0/0.25)] px-1.5 py-px">Space</kbd>
                 </span>
+              </>
+            )
+          }
+          right={
+            n > 0 &&
+            !expired && (
+              <Button onClick={send} pending={sending} pendingLabel="Sending…" aria-label={sendLabel} className={clsx("max-sm:px-3", styles.rise)}>
+                <span className="sm:hidden">Send</span>
+                <span className="max-sm:hidden">{sendLabel}</span>
               </Button>
-            )}
-            {n > 0 && (
-              <Button size="lg" block onClick={send} pending={sending} pendingLabel={`Sending ${n === 1 ? "photo" : `${n} photos`}…`}>
-                Send {n === 1 ? "photo" : `${n} photos`}
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Laptops only: on a phone this already is the phone. */}
-        {!coarse && !expired && (
-          <div className="max-sm:hidden">
-            {showPhone ? (
-              <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} />
-            ) : (
-              <Button variant="tertiary" size="sm" onClick={() => setPhoneOpen(true)}>
-                Use your phone&apos;s camera instead
-              </Button>
-            )}
-          </div>
-        )}
+            )
+          }
+        />
+        <p className="sr-only" aria-live="polite">
+          {n === 0 ? "" : n < MAX_PHOTOS ? `Photo ${n} taken. You can take ${MAX_PHOTOS - n} more.` : "Three photos taken. Send them, or remove one to retake it."}
+        </p>
       </div>
-    </Card>
-  );
-}
 
-function Chip({ children }: { children: ReactNode }) {
-  return <span className="inline-flex h-7 items-center gap-1.5 rounded-control bg-[oklch(0.12_0.01_255/0.72)] px-2.5 font-mono text-ui text-muted tabular-nums backdrop-blur-sm">{children}</span>;
-}
+      {sendError && (
+        <ErrorState
+          variant="inline"
+          title={sendError.status === 401 ? "Your PayPal login has expired" : "The photos didn't send"}
+          description={sendError.status === 401 ? "Log in again to send them. You'll need to retake them afterwards." : sendError.message}
+          action={sendError.status === 401 ? <Button href={loginHref} variant="secondary" size="sm">Log in with PayPal</Button> : undefined}
+        />
+      )}
 
-// Corner marks: where to keep the product, without covering it.
-function Guides() {
-  const corner = "absolute size-6 border-[oklch(1_0_0/0.7)]";
-  return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-12 sm:inset-x-20 sm:inset-y-14">
-      <span className={clsx(corner, "top-0 left-0 rounded-tl-control border-t-2 border-l-2")} />
-      <span className={clsx(corner, "top-0 right-0 rounded-tr-control border-t-2 border-r-2")} />
-      <span className={clsx(corner, "bottom-0 left-0 rounded-bl-control border-b-2 border-l-2")} />
-      <span className={clsx(corner, "right-0 bottom-0 rounded-br-control border-r-2 border-b-2")} />
-    </div>
+      {expired ? (
+        <Button href={newClaimHref} size="lg" block prefetch={false}>
+          Get a new code
+        </Button>
+      ) : (
+        <p className="text-ui text-muted">
+          {n === 0 ? "Live camera only: there's no upload button. Up to 3 photos; one with all of it is fine." : `${n} of ${MAX_PHOTOS} taken. Send once the label, the cut and the code are all in.`}
+        </p>
+      )}
+
+      {/* Laptops only: on a phone this already is the phone. */}
+      {!coarse && !expired && (
+        <div className="max-sm:hidden">
+          {showPhone ? (
+            <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} />
+          ) : (
+            <Button variant="tertiary" size="sm" onClick={() => setPhoneOpen(true)}>
+              Use your phone&apos;s camera instead
+            </Button>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -365,7 +407,7 @@ const MESSAGES: Record<Exclude<CameraState, "live"> | "expired", { title: string
 function FrameMessage({ camera, onRetry }: { camera: Exclude<CameraState, "live"> | "expired"; onRetry(): void }) {
   const m = MESSAGES[camera];
   return (
-    <div role={camera === "starting" ? "status" : "alert"} className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+    <div role={camera === "starting" ? "status" : "alert"} className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
       <span className={clsx("flex size-10 items-center justify-center rounded-full border", m.tone === "stop" ? "border-stop text-stop" : "border-line-strong text-muted", camera === "starting" && "animate-[skeleton-pulse_1.6s_ease-in-out_infinite]")}>
         {m.tone === "stop" ? <AlertIcon /> : <CameraIcon />}
       </span>

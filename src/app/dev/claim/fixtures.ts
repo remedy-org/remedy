@@ -47,20 +47,86 @@ function decided(prefix: string, model?: string, over: Partial<Claim> = {}) {
   const s = stored(prefix, model);
   const { outcome, reasons } = decide(s.verdict, { spec: recall.spec, code: s.code, photos: s.photos.length });
   const claim = base(s.code, { photos: photosOf(s.photos), verdict: s.verdict, reasons, decision: outcome === "pass" ? "paid" : outcome === "hold" ? "held" : "rejected", ...over });
-  claim.events.push({ at: at(0), type: "photos_received", detail: `${s.photos.length} photos from the live camera` });
+  claim.events.push(
+    { at: at(0), type: "photos_received", detail: `${s.photos.length} photos from the live camera` },
+    { at: at(0.4), type: "prechecked", detail: "Live session, new photos, first claim for this account" },
+    { at: at(16.8), type: "checked", detail: "Photo check answered in 16.4 s (gpt-6.1-sol)" },
+  );
+  if (outcome !== "pass") claim.events.push({ at: at(17.1), type: "decided", detail: "Decided by the rule" });
   return { claim, photoUrls: s.photos.map((p) => `/demo/${p}`) };
 }
 
 export const open = base("M4T");
 
+// The model is reading the photo: received and pre-checked, 18 s in.
 export const checkingModel = base("M4T", { photos: photosOf(["c02-1.jpg"]) });
+checkingModel.events.push(
+  { at: at(0), type: "photos_received", detail: "1 photo from the live camera" },
+  { at: at(0.4), type: "prechecked", detail: "Live session, new photos, first claim for this account" },
+);
 
 export const paid = (() => {
   const d = decided("c01");
   d.claim.payout = { batchId: "5UXD2E8A7NQ6G", status: "PENDING", updatedAt: at(19) };
-  d.claim.events.push({ at: at(19), type: "payout_sent", detail: "Payout of $29.99 sent through PayPal" });
+  d.claim.events.push(
+    { at: at(19), type: "payout_sent", detail: "Payout of $29.99 sent through PayPal" },
+    { at: at(19.2), type: "decided", detail: "Every check passed" },
+  );
   return d;
 })();
+
+// A repost: stopped by the duplicate-photo check alone.
+export const blockedDuplicate = (() => {
+  const claim = base("M4T", {
+    photos: photosOf(["c02-1.jpg"]),
+    decision: "blocked",
+    reasons: [{ check: "duplicate_photo", outcome: "reject", text: "Photo 1 was already used in another claim" }],
+  });
+  claim.events.push({ at: at(0), type: "photos_received", detail: "1 photo from the live camera" }, { at: at(0.3), type: "blocked", detail: "Blocked before the photo check" });
+  return { claim, photoUrls: ["/demo/c02-1.jpg"] };
+})();
+
+// The wrong-code sample as the live demo decided it: GPT-6.1 Sol's own answer on demo claim RM-5514 (7 Nov 2026, photo
+// c11-1.jpg, claim code K7P), decided here by the app's rule.
+const wrongCodeVerdict = Verdict.parse({
+  label: {
+    text_seen: "X-VESOLJE",
+    matches_recalled_product: "yes",
+    evidence: 'The plain grey pillow carries a paper tag tied to it with cord. The tag visibly reads "X-VESOLJE" in handwritten lettering, meeting the demo stand-in requirement.',
+  },
+  steps: [
+    {
+      step: "The pillow is cut fully in half, so it can no longer be used",
+      status: "done",
+      evidence: "Two separate pillow halves are visible, with gaps between them at both ends. The cut ends are open, with exposed stuffing spilling onto the floor.",
+    },
+    { step: "The X-VESOLJE tag is on the cut pillow", status: "done", evidence: 'The paper tag reading "X-VESOLJE" is tied by cord around the left cut half.' },
+  ],
+  challenge_code: {
+    text_seen: "K7Q",
+    matches: "no",
+    evidence: 'The handwritten code reads "K7Q". Compared character by character with "K7P", the first two characters match, but the final character is "Q", not "P".',
+  },
+  same_item_in_all_photos: "yes",
+  looks_like_photo_of_screen_or_print: "no",
+  summary: "The single photo shows the qualifying tagged stand-in pillow cut into two halves. Both proof steps are visibly completed, but the one-time code does not match, so the submission does not satisfy all requirements.",
+});
+export const demoWrongCode = (() => {
+  const { outcome, reasons } = decide(wrongCodeVerdict, { spec: recall.spec, code: "K7P", photos: 1 });
+  const claim = base("K7P", { demo: true, photos: photosOf(["c11-1.jpg"]), verdict: wrongCodeVerdict, reasons, decision: outcome === "reject" ? "rejected" : "held" });
+  claim.events.push(
+    { at: at(0), type: "photos_received", detail: "1 sample photo (demo mode)" },
+    { at: at(0.3), type: "prechecked", detail: "Live session, new photos, first claim for this account" },
+    { at: at(10.3), type: "checked", detail: "Photo check answered in 10.3 s (gpt-6.1-sol)" },
+    { at: at(10.4), type: "decided", detail: "Rejected by the rule" },
+  );
+  return { claim, photoUrls: ["/demo/c11-1.jpg"] };
+})();
+
+/** One demo round, as the index rows give it: which samples ran, and what each got. */
+export const roundAfter = (ids: string[]) => ({
+  runs: ids.map((sample) => ({ sample, decision: ({ genuine: "paid", "wrong-code": "rejected", "ai-no-session": "blocked", reposted: "blocked" } as const)[sample as "genuine"] })),
+});
 
 export const held = decided("c03", "gpt-6.1-terra");
 
@@ -87,6 +153,7 @@ export const blocked = {
   }),
   photoUrls: ["/demo/c08-1.jpg"],
 };
+blocked.claim.events.push({ at: at(0), type: "photos_received", detail: "1 photo sent from outside the session" }, { at: at(0.2), type: "blocked", detail: "Blocked before the photo check" });
 
 export const blockedAccount = {
   claim: base("T6K", {

@@ -19,6 +19,12 @@ export interface CheckRow {
   quote?: string;
 }
 
+/** One step of a claim's own history, for the checking screen's stage timeline: a type from TIMELINE and its time. */
+export interface TimelineEvent {
+  type: string;
+  at: string;
+}
+
 /** What the browser polls: never the payout key or the capture session id. */
 export interface ClaimView {
   id: string;
@@ -27,10 +33,15 @@ export interface ClaimView {
   demo: boolean;
   photos: number;
   rows: CheckRow[];
+  /** The stages the claim has passed and when: no detail text, nothing secret. */
+  timeline: TimelineEvent[];
 }
 
-/** What the camera step polls: whether photos arrived from elsewhere. */
-export type ClaimStatus = Pick<ClaimView, "decision" | "photos">;
+/**
+ * What the camera step and the paid receipt poll: whether photos arrived from elsewhere, and PayPal's payout status once
+ * a payout was sent (absent before).
+ */
+export type ClaimStatus = Pick<ClaimView, "decision" | "photos"> & { payout?: string };
 
 export type ClaimLike = Pick<Claim, "decision" | "reasons" | "photos" | "verdict" | "payout" | "code" | "demo">;
 
@@ -104,8 +115,22 @@ export function checkRows(claim: ClaimLike, spec: CheckSpec): CheckRow[] {
   return rows;
 }
 
+/** The events the checking screen's timeline shows. */
+export const TIMELINE = ["photos_received", "prechecked", "checked", "decided", "blocked", "payout_sent"] as const;
+
+export const timelineOf = (events: Claim["events"]): TimelineEvent[] =>
+  events.filter((e) => (TIMELINE as readonly string[]).includes(e.type)).map((e) => ({ type: e.type, at: e.at }));
+
 export function toView(claim: Claim, spec: CheckSpec): ClaimView {
-  return { id: claim.id, decision: claim.decision, code: claim.code, demo: Boolean(claim.demo), photos: claim.photos.length, rows: checkRows(claim, spec) };
+  return {
+    id: claim.id,
+    decision: claim.decision,
+    code: claim.code,
+    demo: Boolean(claim.demo),
+    photos: claim.photos.length,
+    rows: checkRows(claim, spec),
+    timeline: timelineOf(claim.events),
+  };
 }
 
 export const isDecided = (d: Decision) => d !== "pending";
@@ -206,3 +231,98 @@ export function secondsBetween(events: Claim["events"], from: string, to: string
 
 /** "••••PUJ3Q": enough to recognise your own account, not enough to copy it. */
 export const maskPayer = (payerId: string) => `••••${payerId.slice(-5)}`;
+
+/** "14:30:02": a UTC time to the second, the same on server and client. */
+export function clock(iso: string): string {
+  const d = new Date(iso);
+  return [d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()].map((n) => String(n).padStart(2, "0")).join(":");
+}
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** "Tue 10 Nov": `days` business days (Monday to Friday, UTC) after `iso`, for a held claim's decision date. */
+export function businessDaysAfter(iso: string, days: number): string {
+  const d = new Date(iso);
+  for (let left = days; left > 0; ) {
+    d.setUTCDate(d.getUTCDate() + 1);
+    if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6) left--;
+  }
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
+/** "X-VESOLJE Nursing Pillows" -> "X-VESOLJE Nursing Pillow": one owner's one product. */
+export const productNoun = (recall: Pick<Recall, "product">) => recall.product.trim().replace(/(?<=[a-z])s$/, "");
+
+/** Whether the notice's way to destroy it is cutting it in half (the Kikea pillow), for the short reminders. */
+export const cutInHalf = (spec: Pick<CheckSpec, "proof_steps">) => spec.proof_steps.some((s) => /\bcut\b/i.test(s) && /\bhalf\b/i.test(s));
+
+/** A refusal's headline, from the check that decided it: specific where it can be, the general sentence otherwise. */
+export function refusalHeadline(claim: Pick<Claim, "decision" | "reasons" | "photos">, spec: Pick<CheckSpec, "proof_steps">): string {
+  const check = decidingReasons(claim)[0]?.check ?? "";
+  const photo = claim.photos.length > 1 ? "The photos don't" : "The photo doesn't";
+  const step = /^step_(\d+)$/.exec(check);
+  if (step) {
+    const text = spec.proof_steps[Number(step[1]) - 1] ?? "";
+    return cutInHalf({ proof_steps: [text] }) ? `${photo} show it cut fully in half` : `${photo} show a step the notice asks for`;
+  }
+  switch (check) {
+    case "code":
+      return "The code on the tag doesn't match";
+    case "label":
+      return "We couldn't read the recall label";
+    case "screen":
+      return "This looks like a photo of a screen or a print";
+    case "same_item":
+      return "The photos show different items";
+    case "session":
+      return "This photo wasn't taken on this page's camera";
+    case "duplicate_photo":
+      return "This photo was already used in another claim";
+    case "payer":
+      return "This PayPal account already has a claim for this recall";
+    case "payer_verified":
+      return "This PayPal account isn't verified";
+    case "state":
+      return "This claim was already decided";
+  }
+  return claim.decision === "blocked" ? "Stopped before the photo check" : `${claim.photos.length > 1 ? "These photos don't" : "This photo doesn't"} prove the claim`;
+}
+
+export interface CodeCell {
+  yours: string;
+  seen: string;
+  same: boolean;
+}
+
+const ORDINAL = ["first", "second", "third", "fourth", "fifth", "sixth"];
+
+/**
+ * The claim's code beside what the model read on the tag, character by character, and a caption that says which
+ * characters differ. `seen` is the verdict's challenge_code.text_seen: null or empty when nothing was readable.
+ */
+export function codeDiff(code: string, seen: string | null | undefined): { cells: CodeCell[]; caption: string; readable: boolean } {
+  const yours = code.toUpperCase();
+  const read = (seen ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!read) return { cells: yours.split("").map((c) => ({ yours: c, seen: "", same: false })), caption: "No code was readable on the tag.", readable: false };
+  const n = Math.max(yours.length, read.length);
+  const cells = Array.from({ length: n }, (_, i) => ({ yours: yours[i] ?? "", seen: read[i] ?? "", same: yours[i] === read[i] }));
+  const off = cells.flatMap((c, i) => (c.same ? [] : [i]));
+  if (!off.length) return { cells, caption: `The tag reads ${read}, but the photo check couldn't confirm it's your code.`, readable: true };
+  const [i] = off;
+  if (off.length === 1 && cells[i].yours && cells[i].seen) {
+    return { cells, caption: `The ${ORDINAL[i] ?? `character ${i + 1}`} character: ${cells[i].yours} in your code, ${cells[i].seen} on the tag.`, readable: true };
+  }
+  return { cells, caption: `${off.length} of ${n} characters differ: ${yours} in your code, ${read} on the tag.`, readable: true };
+}
+
+/**
+ * When the paid receipt asks for PayPal's status next, in ms, after polling for `elapsed` ms; null to stop. Every 5 s
+ * for the first 30 s, every 15 s after, never past 2 minutes: at most 12 polls, each one Blob read.
+ */
+export function receiptPollDelay(elapsed: number): number | null {
+  const next = elapsed < 30_000 ? 5_000 : 15_000;
+  return elapsed + next > 120_000 ? null : next;
+}
+
+/** A payout the receipt keeps asking about: sent less than 10 minutes ago and not settled. */
+export const RECEIPT_LIVE_MS = 10 * 60_000;

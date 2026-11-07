@@ -1,42 +1,44 @@
-import { ExhibitLabel } from "@/components/ui";
+import clsx from "clsx";
+import type { ReactNode } from "react";
+import { Paper, Stamp } from "@/components/ui";
 
-// A paper evidence tag with the code hand-lettered on it: what the owner should end up holding.
-// Paper and ink are fixed colours in both themes, like the real thing.
-const PAPER = "oklch(0.95 0.012 85)";
-const INK = "oklch(0.24 0.02 255)";
+export interface CodeTagProps {
+  code: string;
+  /** The micro line along the top, e.g. "Your one-time code". */
+  label?: string;
+  /** The dashed foot, e.g. "Write it big, in marker." */
+  foot?: ReactNode;
+  /** A string from the punched hole, up and off to the left: the tag hangs from the card. */
+  string?: boolean;
+  /** The code ran out: the tag fades and takes an EXPIRED stamp. */
+  expired?: boolean;
+  className?: string;
+}
 
-export function CodeTag({ code, label }: { code: string; label?: string }) {
+/**
+ * The paper evidence tag with the code on it: the object the owner should end up holding, and the same tag the homepage's
+ * Chain of Custody writes. Paper and ink keep their colours in both themes, like the real thing.
+ */
+export function CodeTag({ code, label = "Your one-time code", foot, string, expired, className }: CodeTagProps) {
   return (
-    <figure className="flex flex-col items-center gap-3" aria-label={`Your code: ${code.split("").join(" ")}`}>
-      <div className="relative w-full max-w-72">
-        <svg viewBox="0 0 288 136" className="block w-full" role="img" aria-hidden="true">
-          {/* string */}
-          <path d="M2 40c18 4 26 18 44 22" fill="none" stroke="var(--faint)" strokeWidth="1.5" strokeLinecap="round" />
-          {/* tag: a card with a clipped left end and a reinforced hole */}
-          <path d="M60 8h212a8 8 0 0 1 8 8v104a8 8 0 0 1-8 8H60L32 100V36z" fill={PAPER} />
-          <circle cx="56" cy="68" r="9" fill="none" stroke="oklch(0.8 0.02 85)" strokeWidth="5" />
-          <circle cx="56" cy="68" r="5" fill="var(--surface)" />
-          {label && (
-            <text x="176" y="44" textAnchor="middle" fill={INK} opacity="0.7" style={{ font: "500 13px var(--font-mono)", letterSpacing: "0.08em" }}>
-              {label}
-            </text>
-          )}
-          <text
-            x="176"
-            y={label ? 98 : 84}
-            textAnchor="middle"
-            fill={INK}
-            style={{ font: "600 52px var(--font-mono)", letterSpacing: "0.12em" }}
-          >
-            {code}
-          </text>
+    <figure className={clsx("relative mx-auto w-full max-w-[22.5rem]", className)} aria-label={`${expired ? "Expired code" : "Your code"}: ${code.split("").join(" ")}`}>
+      {string && (
+        <svg aria-hidden="true" className="pointer-events-none absolute right-1/2 bottom-[calc(100%-19px)] h-16 w-[28rem] overflow-visible" viewBox="0 0 448 64" preserveAspectRatio="xMaxYMax meet">
+          <path d="M448 64 C 420 30, 360 8, 0 2" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
-      </div>
-      <figcaption>
-        <ExhibitLabel leader="left" leaderLength={24}>
-          Exhibit · one-time code
-        </ExhibitLabel>
-      </figcaption>
+      )}
+      <Paper variant="tag" hole padding="lg" tilt={-2} className={clsx(expired && "opacity-60")}>
+        <p className="micro text-ink-muted">{label}</p>
+        <p aria-hidden="true" className="mt-4 text-center font-mono text-[4rem] leading-none font-semibold tracking-[0.14em] text-ink">
+          {code}
+        </p>
+        {foot && <p className="mt-6 border-t border-dashed border-paper-line pt-3 text-ui text-ink-muted">{foot}</p>}
+        {expired && (
+          <span className="absolute top-12 right-5">
+            <Stamp tone="neutral">Expired</Stamp>
+          </span>
+        )}
+      </Paper>
     </figure>
   );
 }
