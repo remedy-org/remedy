@@ -73,7 +73,7 @@ export function ClaimCell({ data }: Cell) {
         <span className="mt-0.5 font-mono text-micro whitespace-nowrap text-faint" title={`Filed ${formatTime(data.createdAt)}`}>
           {data.code ? (
             <>
-              <span className="text-muted">Code {data.code}</span> · {formatClock(data.createdAt).slice(0, 5)}
+              <span className="text-muted">Code {data.code}</span> · {formatClock(data.createdAt).slice(0, 5)} UTC
             </>
           ) : (
             formatTime(data.createdAt)
