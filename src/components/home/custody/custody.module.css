@@ -81,7 +81,8 @@
     padding-bottom: 2.5rem;
   }
 
-  /* The device bleeds from column 7 to the viewport's edge, and is held to the screen's height. */
+  /* The device bleeds from column 7 toward the viewport's edge, held to the screen's height and to 46rem: past that
+     (from about 1500px) its claim photo would out-paint the h1, which must stay the LCP element. */
   .device {
     --bleed: max(var(--gutter), (100vw - var(--container-content)) / 2);
     display: block;
@@ -90,7 +91,7 @@
     grid-column: 7 / -1;
     grid-row: 1 / span 2;
     align-self: center;
-    width: min(calc(100% + var(--bleed)), calc((100svh - 9rem) / 0.84));
+    width: min(calc(100% + var(--bleed)), calc((100svh - 9rem) / 0.84), 46rem);
   }
 }
 

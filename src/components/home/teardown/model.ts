@@ -4,21 +4,21 @@
 
 import { CHECKS, EXHIBIT, type CheckId } from "./claim";
 
-export type BeatId = "intro" | CheckId | "paid" | "settle";
+export type BeatId = "intro" | CheckId | "paid";
 
 /**
- * Beats and their share of the pin, in vh of scroll (about 500vh in all, so about 70vh a beat). The code check is the
- * signature shot and holds longest; the verified account has no physical part and is the shortest.
+ * Beats and their share of the pin, in vh of scroll: 520vh in all, and no beat under DESIGN.md's 70vh floor. The code
+ * check and the payout are the signature shots and hold longest. The exhibit ends on the paid pose: the pin cuts to
+ * the console from there, so a return to the hero view would never be seen.
  */
 export const BEATS: readonly { id: BeatId; vh: number }[] = [
-  { id: "intro", vh: 50 },
-  { id: "live", vh: 65 },
-  { id: "fp", vh: 65 },
-  { id: "acct", vh: 40 },
-  { id: "code", vh: 95 },
+  { id: "intro", vh: 70 },
+  { id: "live", vh: 70 },
+  { id: "fp", vh: 70 },
+  { id: "acct", vh: 70 },
+  { id: "code", vh: 85 },
   { id: "torn", vh: 70 },
   { id: "paid", vh: 85 },
-  { id: "settle", vh: 30 },
 ];
 
 export const TOTAL_VH = BEATS.reduce((a, b) => a + b.vh, 0);
@@ -49,6 +49,16 @@ export function opened(id: BeatId, p: number) {
   const t = local(id, p);
   if (p < RANGES[id][0] || p > RANGES[id][1]) return 0;
   return easeOut(inv(0, 0.22, t)) * (1 - easeInOut(inv(0.88, 1, t)));
+}
+
+/**
+ * The prints (check 2) are held out to the left, where the pillow is out of the frame. If they closed with their beat,
+ * the frame would be empty while the camera travels back to the pillow, so they stay open into the next beat and
+ * close as the camera arrives there (its key is at 22% of the beat).
+ */
+function fpOpen(p: number) {
+  if (p <= RANGES.fp[1]) return p < RANGES.fp[0] ? 0 : easeOut(inv(0, 0.22, local("fp", p)));
+  return 1 - easeInOut(inv(0, 0.22, local("acct", p)));
 }
 
 /** A check ticks at 82% of its beat. */
@@ -103,7 +113,6 @@ export const SHOTS: Record<BeatId, Shot> = {
   torn: { az: -20, el: 15, at: [0.02, 0.05, 0.16], rx: 0.44, ry: 0.17 },
   // Pulled back for the rule and the explode, on a slow turntable.
   paid: { az: 24, el: 26, at: [0.02, 0.06, 0.06], rx: 0.52, ry: 0.32 },
-  settle: HERO,
 };
 
 /** Camera keys in p: each beat arrives at 22% of its range and holds to 88%, pushing in. */
@@ -112,14 +121,13 @@ const KEYS: { p: number; shot: Shot }[] = (() => {
   for (const b of BEATS) {
     const [a, z] = RANGES[b.id];
     const s = SHOTS[b.id];
-    const push = b.id === "intro" || b.id === "settle" ? 1 : 0.94;
+    const push = b.id === "intro" ? 1 : 0.94;
     keys.push({ p: lerp(a, z, 0.22), shot: s });
     keys.push({
       p: lerp(a, z, 0.88),
       shot: { ...s, rx: s.rx * push, ry: s.ry * push },
     });
   }
-  keys.push({ p: 1, shot: HERO });
   return keys;
 })();
 
@@ -182,7 +190,7 @@ const CHECK_IDS = CHECKS.map((c) => c.id);
 
 export function stateAt(pIn: number): ExhibitState {
   const p = clamp01(pIn);
-  const beat = BEATS.find((b) => p <= RANGES[b.id][1])?.id ?? "settle";
+  const beat = BEATS.find((b) => p <= RANGES[b.id][1])?.id ?? "paid";
   const active = CHECK_IDS.indexOf(beat as CheckId);
   const done = CHECK_IDS.filter((id) => p >= tickAt(id)).length;
   const codeT = local("code", p);
@@ -195,7 +203,7 @@ export function stateAt(pIn: number): ExhibitState {
     beat,
     cut: easeOut(inv(RANGES.intro[0] + 0.02, RANGES.intro[1] - 0.01, p)),
     live: opened("live", p),
-    fp: opened("fp", p),
+    fp: fpOpen(p),
     code: opened("code", p),
     torn: opened("torn", p),
     explode: Math.sin(Math.PI * smooth(inv(0.05, 0.95, paidT))) * (p >= RANGES.paid[0] && p <= RANGES.paid[1] ? 1 : 0),
@@ -219,7 +227,6 @@ export function stateAt(pIn: number): ExhibitState {
 export function holdOf(id: BeatId) {
   const [a, z] = RANGES[id];
   if (id === "intro") return z - 0.002;
-  if (id === "settle") return 1;
   if (id === "paid") return lerp(a, z, 0.62);
   return lerp(a, z, 0.6);
 }

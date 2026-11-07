@@ -67,7 +67,7 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
         {/* Mounted from chapter 02 on, so the exhibit's stills are loading before it cuts in. */}
         {at >= 1 && (
           <div className="absolute inset-0 z-[5] bg-bg" style={{ visibility: at >= 2 ? "visible" : "hidden" }}>
-            <OpenedExhibit progress={exhibitP} onSeek={seek} />
+            <OpenedExhibit progress={exhibitP} onSeek={seek} skip={skip} />
           </div>
         )}
       </div>

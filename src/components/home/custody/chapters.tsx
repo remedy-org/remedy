@@ -307,9 +307,9 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
 
 export function ConsoleChapter({ p }: { p: Progress }) {
   const compact = useContext(Compact);
-  const height = useTransform(p, (v) => `${(outQuart(ramp(v, 0.915, 0.95)) * (compact ? 3 : 3.5)).toFixed(3)}rem`);
-  const opacity = useTransform(p, (v) => ramp(v, 0.93, 0.95));
-  const flash = useTransform(p, (v) => `color-mix(in oklch, var(--accent) ${(14 * (1 - ramp(v, 0.95, 1))).toFixed(2)}%, transparent)`);
+  const height = useTransform(p, (v) => `${(outQuart(ramp(v, 0.905, 0.94)) * (compact ? 3 : 3.5)).toFixed(3)}rem`);
+  const opacity = useTransform(p, (v) => ramp(v, 0.92, 0.94));
+  const flash = useTransform(p, (v) => `color-mix(in oklch, var(--accent) ${(14 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
   return (
     <div className="@container">
       <div className="flex flex-col gap-6">

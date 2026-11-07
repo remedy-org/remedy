@@ -8,6 +8,7 @@ import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, type Progress } f
 import { ExhibitSlot } from "./ExhibitSlot";
 import { scrollAt } from "./pace";
 import { ScreenBar } from "./frames";
+import { CONSOLE_AT, IN, OUT, STARTS, clamp01, exhibitPage, share } from "./timeline";
 import styles from "./custody.module.css";
 
 // The pinned Chain of Custody on laptops (spec H2). Everything here is drawn from one timeline p (paced against the
@@ -19,34 +20,14 @@ const HANDOFF = [0.12, 0.2] as const;
 /** The consent screen wipes down over the laptop's own screen, top to bottom, like a page loading: no blank frame
  * and no double exposure between the two screens. */
 const WIPE = 0.015;
-/** Where each chapter starts on the screen, and the console after the payout. */
-const STARTS = [0, 0.34, 0.48, 0.6, 0.8, 0.9];
-/** Chapter changes are a cut, never a double exposure: the outgoing chapter fades out over OUT before its start,
- * the incoming one fades in over IN after it, so two chapters are never both above 0. */
-const OUT = [0.012, 0.002] as const;
-const IN = 0.01;
 /** The rail's chapter list comes in once the hero copy has gone (it fades out by 0.16). */
 const RAIL_IN = 0.17;
 
 const inOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-
-export function share(p: number, i: number) {
-  const a = STARTS[i];
-  const b = STARTS[i + 1] ?? 2;
-  // The first chapter is on the screen layer from the moment it takes over from the laptop's own screen, so the
-  // growing clip always has the consent card in it: never an empty or black screen.
-  const fin = i === 0 ? 1 : clamp01((p - a) / IN);
-  const fout = clamp01((b - OUT[1] - p) / (OUT[0] - OUT[1]));
-  return Math.min(fin, fout);
-}
-
-/** The Opened Exhibit's opacity: chapters 03 to 05 together, cut in and out like any chapter. */
-const exhibitShare = (v: number) => Math.max(share(v, 2), share(v, 3), share(v, 4));
 
 function Layer({ p, i, compact, children }: { p: Progress; i: number; compact: boolean; children: ReactNode }) {
   const opacity = useTransform(p, (v) => share(v, i));
-  const y = useTransform(p, (v) => (i === 0 ? 0 : Math.round(8 * (1 - clamp01((v - STARTS[i]) / IN)))));
+  const y = useTransform(p, (v) => (i === 0 ? 0 : Math.round(8 * (1 - clamp01((v - (i === 5 ? CONSOLE_AT : STARTS[i])) / IN)))));
   const visibility = useTransform(opacity, (o) => (o > 0 ? "visible" : "hidden"));
   return (
     <motion.div data-layer={i} className={clsx("absolute inset-0 flex items-center justify-center px-8", compact ? "py-4" : "py-8")} style={{ opacity, y, visibility }}>
@@ -142,7 +123,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
     motionFrame.postRender(() => applyClip(screen.current, stage.current, p.get()));
     let next = 0;
     STARTS.forEach((s, i) => {
-      if (v >= s - OUT[1]) next = i;
+      if (v >= (i === 5 ? CONSOLE_AT : s - OUT[1])) next = i;
     });
     setChapter(next);
   });
@@ -165,6 +146,8 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
   const frame = useTransform(p, [HANDOFF[1] - 0.01, HANDOFF[1]], [0, 1]);
   const railHead = useTransform(p, [RAIL_IN, RAIL_IN + 0.03], [0, 1]);
   const bar = useTransform(p, [0.16, 0.19], [0, 1]);
+  // The rail's skip link hides while the exhibit covers it: the exhibit carries the same link in its own foot.
+  const skipVisibility = useTransform(p, (v) => (exhibitPage(v) > 0 ? "hidden" : "visible"));
 
   return (
     <>
@@ -207,12 +190,12 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
             </div>
           </div>
         </motion.div>
-        <motion.div className="pointer-events-auto pt-4 focus-within:!opacity-100" style={{ opacity: railHead }}>
+        <motion.div className="pointer-events-auto pt-4 focus-within:!opacity-100" style={{ opacity: railHead, visibility: skipVisibility }}>
           {skip}
         </motion.div>
       </div>
 
-      <ExhibitSlot p={p} visible={exhibitShare} onSeek={(t) => seekTo(stage.current, t)} />
+      <ExhibitSlot p={p} skip={skip} onSeek={(t) => seekTo(stage.current, t)} />
     </>
   );
 }

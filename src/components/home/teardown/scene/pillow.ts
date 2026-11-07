@@ -71,9 +71,9 @@ function fuzzMaterial(THREE: Three, level: number) {
   return m;
 }
 
-export function pillowMaterials(THREE: Three): PillowMaterials {
+export async function pillowMaterials(THREE: Three): Promise<PillowMaterials> {
   // Navy sampled off the photo's lit side, then graded for a neutral studio light.
-  const tex = fabricTextures(THREE, [27, 33, 56]);
+  const tex = await fabricTextures(THREE, [27, 33, 56]);
   tex.map.repeat.set(1, 1);
   const cloth = new THREE.MeshPhysicalMaterial({
     map: tex.map,

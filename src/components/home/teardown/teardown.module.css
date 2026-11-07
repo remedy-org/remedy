@@ -130,7 +130,7 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
-  max-width: calc(82rem + 2 * var(--gutter, clamp(24px, 4.45vw, 64px)));
+  max-width: calc(var(--container-content, 82rem) + 2 * var(--gutter, clamp(24px, 4.45vw, 64px)));
   margin-inline: auto;
   padding: clamp(24px, 5vh, 56px) var(--gutter, clamp(24px, 4.45vw, 64px)) clamp(20px, 4vh, 40px);
   pointer-events: none;
@@ -215,6 +215,42 @@
 
 .honesty {
   margin: 0;
+}
+
+/* The honesty label, and the pin's skip link at the right of the same line. */
+.footLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 44px;
+}
+
+.footLine a {
+  flex: none;
+}
+
+.small .footLine {
+  min-height: 0;
+}
+
+/* Phones: no room on the line, so the skip link shows only when focused, over the stage's top edge. */
+.small .footLine a:not(:focus-visible) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.small .footLine a:focus-visible {
+  position: absolute;
+  z-index: 10;
+  top: 12px;
+  left: var(--gutter, 24px);
+  padding-inline: 12px;
+  background: var(--surface-2);
 }
 
 .row {
@@ -339,8 +375,11 @@ button.cellBody:hover .label {
   object-fit: contain;
 }
 
+/* At 85%, from the foot, so the pillow's cut edge still shows above it and the stats row keeps a gap of its own. */
 .small .receipt {
   max-width: 100%;
+  scale: 0.85;
+  transform-origin: 50% 100%;
 }
 
 /* On a phone the receipt lands over the still rather than pushing it out of the way. */
@@ -354,7 +393,7 @@ button.cellBody:hover .label {
 
 /* The static form. */
 .static {
-  max-width: calc(82rem + 2 * var(--gutter, clamp(24px, 4.45vw, 64px)));
+  max-width: calc(var(--container-content, 82rem) + 2 * var(--gutter, clamp(24px, 4.45vw, 64px)));
   margin-inline: auto;
   padding: 96px var(--gutter, clamp(24px, 4.45vw, 64px));
 }
@@ -365,16 +404,41 @@ button.cellBody:hover .label {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   column-gap: var(--col-gap, 24px);
-  row-gap: 64px;
+  row-gap: 0;
   margin-top: 48px;
 }
 
-.staticGrid > :first-child {
+/* The still in columns 1 to 7 with the receipt lying on its lower right, the five checks from column 8, so the two
+   columns end together. */
+.staticFigure {
   grid-column: 1 / span 7;
+  grid-row: 1;
 }
 
-.staticGrid > :last-child {
+.staticChecks {
   grid-column: 8 / -1;
+  grid-row: 1 / span 2;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The receipt lies over the still's empty lower right (columns 4 to 7), as on the hero's light table, clear of the
+   evidence and of the honesty caption, which keeps columns 1 to 4. */
+.staticReceipt {
+  position: relative;
+  z-index: 1;
+  grid-column: 4 / span 4;
+  grid-row: 2;
+  justify-self: end;
+  align-self: start;
+  max-width: 22rem;
+  margin-top: -9rem;
+  rotate: -1.5deg;
+}
+
+.staticFigure figcaption {
+  max-width: 36ch;
 }
 
 .staticFigure {
@@ -390,14 +454,14 @@ button.cellBody:hover .label {
   height: 80%;
 }
 
-/* The desktop still is framed for the live stage (evidence left of centre): crop it to the evidence. */
+/* The desktop still is framed for the live stage: crop it to the evidence (the paid pose, the halves parted). */
 .staticFigure img {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 5 / 4;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
-  object-position: 26% 58%;
+  object-position: 50% 62%;
 }
 
 @media (max-width: 767px) {
@@ -427,8 +491,15 @@ button.cellBody:hover .label {
     row-gap: 40px;
   }
 
-  .staticGrid > :first-child,
-  .staticGrid > :last-child {
+  .staticFigure,
+  .staticChecks,
+  .staticReceipt {
     grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .staticReceipt {
+    margin-top: 0;
+    rotate: none;
   }
 }

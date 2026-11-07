@@ -370,8 +370,8 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
       ),
     );
     sheet.visible = on;
-    sheetMat.opacity = 0.07 * Math.sin(Math.PI * s);
-    lineMat.opacity = 0.85 * open;
+    sheetMat.opacity = 0.1 * Math.sin(Math.PI * s);
+    lineMat.opacity = 0.45 * open;
     lines.visible = open > 0.01;
   }
   return { group, lines, sheet, lineMat, sheetMat, pose, lens };
@@ -398,7 +398,7 @@ export interface Prints {
   gridMat: T.MeshBasicMaterial;
   ghosts: T.Mesh[];
   pose(open: number, hash: number): void;
-  drawGrid(accent: string, faint: string): void;
+  drawGrid(accent: string, faint: string, paper: string): void;
   corner(out: T.Vector3): T.Vector3;
 }
 
@@ -468,8 +468,10 @@ export function buildPrints(THREE: Three, photo: T.Texture, earlier: T.Texture[]
   group.position.set(-0.86, 0.0, 0.06);
   group.rotation.y = 0.5;
 
-  function drawGrid(accent: string, faint: string) {
-    const paint = (c: HTMLCanvasElement, hex: string, on: string, off: string, back: string) => {
+  // The fingerprint's 64 bits in paper on ink, with one amber outline round the grid being checked: the earlier
+  // photos' grids are faint. (Amber stays one focal element, never 25 lit cells.)
+  function drawGrid(accent: string, faint: string, paper: string) {
+    const paint = (c: HTMLCanvasElement, hex: string, on: string, off: string, back: string, outline?: string) => {
       const g = c.getContext("2d");
       if (!g) return;
       const n = c.width;
@@ -485,8 +487,16 @@ export function buildPrints(THREE: Three, photo: T.Texture, earlier: T.Texture[]
         g.roundRect((i % 8) * cell + cell * 0.18, Math.floor(i / 8) * cell + cell * 0.18, cell * 0.64, cell * 0.64, cell * 0.12);
         g.fill();
       });
+      if (outline) {
+        const w = Math.max(2, n * 0.012);
+        g.strokeStyle = outline;
+        g.lineWidth = w;
+        g.beginPath();
+        g.roundRect(w / 2, w / 2, n - w, n - w, n * 0.04);
+        g.stroke();
+      }
     };
-    paint(cvs, EXHIBIT.hash, accent, "rgba(255,255,255,.14)", "rgba(12,11,10,.62)");
+    paint(cvs, EXHIBIT.hash, paper, "rgba(255,255,255,.14)", "rgba(12,11,10,.72)", accent);
     gridTex.needsUpdate = true;
     ghostGrids.forEach((gg, i) => {
       paint(gg.c, EXHIBIT.earlierHashes[i], faint, "rgba(255,255,255,.08)", "rgba(12,11,10,.5)");

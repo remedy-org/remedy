@@ -104,17 +104,25 @@ async function main() {
       }
       const list = values.posters ? beatList : ats;
       for (const at of list) {
-        // Mobile posters frame the evidence alone in a near-square still: the subject rect is the whole canvas.
+        // Mobile posters frame the evidence alone in a near-square still. The wide shots (the whole pillow) are framed
+        // tight, past the canvas edge where only the shot's margin falls, so on a 375px phone the object fills about
+        // 85% of the width instead of a thumbnail's 55%; the macro shots (the print, the tag) keep their margin.
+        // The cut and paid shots part the halves, so they keep a little more room than the whole pillow does.
+        const rect = ["fp", "code"].includes(at.name)
+          ? { x0: 0.1, y0: 0.12, x1: 0.9, y1: 0.88 }
+          : ["torn", "paid"].includes(at.name)
+            ? { x0: 0.02, y0: 0.06, x1: 0.98, y1: 0.94 }
+            : { x0: -0.07, y0: 0.04, x1: 1.07, y1: 0.96 };
         await page.evaluate(
-          ([p, mobile]) => {
+          ([p, r]) => {
             const ex = (
               window as unknown as {
                 __exhibit: { at(p: number, rect?: unknown): void };
               }
             ).__exhibit;
-            ex.at(p as number, mobile ? { x0: 0.1, y0: 0.12, x1: 0.9, y1: 0.88 } : undefined);
+            ex.at(p as number, r ?? undefined);
           },
-          [at.p, job.form === "m"] as const,
+          [at.p, job.form === "m" ? rect : null] as const,
         );
         // A frame, React's commit, then the frame the commit schedules.
         await page.evaluate(() => new Promise((r) => setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(r)), 120)));

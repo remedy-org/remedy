@@ -11,10 +11,10 @@ const BEATS: [p: number, vh: number][] = [
   [0.04, 64], // the dolly: the laptop's screen becomes the stage
   [0.2, 80], // 01 Log in with PayPal
   [0.34, 80], // 02 One-time code
-  // 03 to 05: the Opened Exhibit, one linear stretch, so its own eight beats (teardown/model.ts) keep the share of
-  // the scroll they were designed for: 30 to 95vh each, the code check longest.
+  // 03 to 05: the Opened Exhibit, one linear stretch, so its own seven beats (teardown/model.ts) keep the share of
+  // the scroll they were designed for: 70 to 85vh each, the code check and the payout longest.
   [0.48, EXHIBIT_VH],
-  [0.9, 72], // the console
+  [0.9, 60], // the console
 ];
 
 /** Scroll distance through the pinned runway, in vh: the runway is this plus one stage tall (custody.module.css). */

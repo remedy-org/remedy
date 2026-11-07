@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { useScroll, type MotionValue } from "motion/react";
-import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
 import { CHECKS, EXHIBIT, RECEIPT_ROWS } from "./claim";
 import { BEATS, RANGES, TOTAL_VH, clock, holdOf, stateAt, type BeatId, type ExhibitState, type Shot } from "./model";
@@ -33,13 +33,19 @@ function useMedia(q: string, server: boolean) {
   );
 }
 
+/** Software rasterisers: a floor below any integrated GPU. They get the posters without trying the scene. */
+const SOFTWARE_GL = /swiftshader|llvmpipe|softpipe|basic render|software/i;
+
 let webgl: boolean | undefined;
+/** WebGL2 on real graphics hardware. */
 function hasWebGL() {
   if (webgl === undefined) {
     try {
       const c = document.createElement("canvas");
       const g = c.getContext("webgl2");
-      webgl = !!g;
+      const info = g?.getExtension("WEBGL_debug_renderer_info");
+      const renderer = g ? String(g.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : g.RENDERER)) : "";
+      webgl = !!g && !SOFTWARE_GL.test(renderer);
       g?.getExtension("WEBGL_lose_context")?.loseContext();
     } catch {
       webgl = false;
@@ -50,7 +56,7 @@ function hasWebGL() {
 const noop = () => () => {};
 
 /** The beats that get a pre-rendered still, in order (posters/<theme>-<beat>-<d|m>.webp). */
-const POSTER_BEATS: BeatId[] = ["intro", "live", "fp", "acct", "code", "torn", "paid", "settle"];
+const POSTER_BEATS: BeatId[] = ["intro", "live", "fp", "acct", "code", "torn", "paid"];
 const posterSrc = (beat: BeatId, dark: boolean, small: boolean) => `/teardown/${dark ? "dark" : "light"}-${beat}-${small ? "m" : "d"}.webp`;
 
 /** Resolves any CSS colour (oklch, color-mix, var-free) to #rrggbb through a 1px canvas. */
@@ -82,11 +88,14 @@ function readColors(el: HTMLElement): Colors {
 }
 
 /** One check in the row along the foot: number, name, who reads it, and a tick once passed. */
-function CheckCell({ i, done, active, onSeek }: { i: number; done: boolean; active: boolean; onSeek?: (i: number) => void }) {
+/** In the Chain of Custody the five checks are chapter 04's, numbered under it (04.1 to 04.5). */
+const checkNo = (i: number, chain: boolean) => (chain ? `04.${i + 1}` : CHECKS[i].n);
+
+function CheckCell({ i, done, active, chain, onSeek }: { i: number; done: boolean; active: boolean; chain: boolean; onSeek?: (i: number) => void }) {
   const c = CHECKS[i];
   const body = (
     <>
-      <span className={clsx("font-mono text-micro", active ? "text-accent-text" : "text-faint")}>{c.n}</span>
+      <span className={clsx("font-mono text-micro whitespace-nowrap", active ? "text-accent-text" : "text-faint")}>{checkNo(i, chain)}</span>
       <span className="min-w-0">
         <span className={clsx("block truncate text-ui font-medium", done || active ? "text-text" : "text-muted")}>{c.label}</span>
         <span className="block text-micro text-faint">{c.ai ? "The model reads" : "No AI"}</span>
@@ -103,7 +112,7 @@ function CheckCell({ i, done, active, onSeek }: { i: number; done: boolean; acti
         <span data-fill={i} />
       </span>
       {onSeek ? (
-        <button type="button" className={styles.cellBody} onClick={() => onSeek(i)} aria-label={`Show check ${c.n}: ${c.label}`}>
+        <button type="button" className={styles.cellBody} onClick={() => onSeek(i)} aria-label={`Show check ${i + 1} of 5: ${c.label}`}>
           {body}
         </button>
       ) : (
@@ -163,18 +172,25 @@ function ScreenReaderSummary() {
   );
 }
 
-function Header({ compact }: { compact?: boolean }) {
+/** The Chain of Custody chapter a beat belongs to: 03 the photo, 04 the five checks, 05 the payout. */
+function chapterOf(beat: BeatId) {
+  if (beat === "intro") return "03 / 05 · Live photo";
+  if (beat === "paid") return "05 / 05 · Paid";
+  return "04 / 05 · Five checks";
+}
+
+function Header({ compact, chapter }: { compact?: boolean; chapter?: string }) {
   return (
     <div className="min-w-0">
-      <p className="micro text-faint">Exhibit · Claim {EXHIBIT.id}</p>
-      <h2 className={clsx("mt-3 max-w-[24ch] text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>
-        Five checks on the evidence itself. <span className="text-muted">Then a fixed rule pays.</span>
+      <p className="micro text-faint whitespace-nowrap">{chapter ?? `Exhibit · Claim ${EXHIBIT.id}`}</p>
+      <h2 className={clsx("mt-3 max-w-[26ch] text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>
+        Claim {EXHIBIT.id}, opened. <span className="text-muted">Each check on the part it is about.</span>
       </h2>
     </div>
   );
 }
 
-function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done" | "sent"> }) {
+function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done" | "active" | "sent"> }) {
   const items: [string, React.ReactNode][] = [
     [
       "Since the photo",
@@ -189,7 +205,8 @@ function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done"
           Pay
         </span>
       ) : s.decision === "checking" ? (
-        `Checking · ${Math.max(1, s.done)} of 5`
+        // The check being run, as the hero's laptop counts it.
+        `Checking ${s.active >= 0 ? s.active + 1 : Math.min(5, s.done + 1)} of 5`
       ) : (
         "No photo yet"
       ),
@@ -230,7 +247,7 @@ function Callout({ s }: { s: ExhibitState }) {
       <p className="mt-1 text-ui text-muted">{c.note}</p>
       {c.quote && (
         <figure className="mt-4">
-          <blockquote className="font-mono text-ui leading-[1.6] text-[color:var(--text-2,var(--muted))]">“{c.quote}”</blockquote>
+          <blockquote className="text-ui leading-[1.55] text-text-2">“{c.quote}”</blockquote>
           <figcaption className="mt-2 text-micro text-faint">The model’s words on this photo, verbatim</figcaption>
         </figure>
       )}
@@ -245,6 +262,10 @@ interface StageProps {
   mode: "live" | "poster";
   small: boolean;
   onSeek?: (i: number) => void;
+  /** Mounted in the Chain of Custody: the eyebrow names the chapter, the checks number under 04. */
+  chain?: boolean;
+  /** A skip link for the foot of the stage, so the pin is never without one. */
+  skip?: ReactNode;
   /** Dev and capture only: draw at this p and keep the drawing buffer for screenshots. */
   capture?: boolean;
 }
@@ -253,7 +274,7 @@ function discreteKey(s: ExhibitState) {
   return [s.beat, s.active, s.done, s.chars, s.charNow, clock(s.seconds), s.decision, s.sent, s.stamped, s.receipt > 0].join("|");
 }
 
-function Stage({ p, mode, small, onSeek, capture }: StageProps) {
+function Stage({ p, mode, small, onSeek, chain = false, skip, capture }: StageProps) {
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const subject = useRef<HTMLDivElement>(null);
@@ -272,7 +293,8 @@ function Stage({ p, mode, small, onSeek, capture }: StageProps) {
   const live = mode === "live" && !failed;
 
   // Tier drop on long frames, measured where it matters: while scrolling, consecutive draws more than 28 ms apart
-  // (median of 24) step down to tier 1, then to the posters. The start-up benchmark can't see compositing costs.
+  // (median of 8, so a weak GPU falls back within one beat) step down to tier 1, then to the posters. The start-up
+  // benchmark can't see compositing costs.
   const frames = useRef<{ last: number; gaps: number[] }>({
     last: 0,
     gaps: [],
@@ -286,8 +308,8 @@ function Stage({ p, mode, small, onSeek, capture }: StageProps) {
       f.last = now;
       if (gap > 120) return;
       f.gaps.push(gap);
-      if (f.gaps.length < 24) return;
-      const median = [...f.gaps].sort((a, b) => a - b)[12];
+      if (f.gaps.length < 8) return;
+      const median = [...f.gaps].sort((a, b) => a - b)[4];
       f.gaps = [];
       if (median <= 28) return;
       if (ex.info().tier === 2) {
@@ -357,16 +379,14 @@ function Stage({ p, mode, small, onSeek, capture }: StageProps) {
       const t = Math.min(1, Math.max(0, (st.p - a) / (z - a)));
       f.style.transform = `scaleX(${st.p >= z ? 1 : t})`;
     });
-    // Posters: crossfade between neighbouring stills over the middle of each change.
+    // Posters: a short dissolve centred on each beat's start, where the callout, readouts and check row change, so
+    // the still and the callout always describe the same check.
     if (posters.current && (!live || !scene.current)) {
-      const holds = POSTER_BEATS.map(holdOf);
       posters.current.querySelectorAll<HTMLElement>("[data-poster]").forEach((img, k) => {
-        const a = holds[k - 1] ?? -1;
-        const b = holds[k];
-        const c = holds[k + 1] ?? 2;
-        // A short dissolve at the beat change, so a still is never a double exposure for long.
-        const fadeIn = k === 0 ? 1 : Math.min(1, Math.max(0, (st.p - (a + (b - a) * 0.5)) / ((b - a) * 0.08)));
-        const fadeOut = k === holds.length - 1 ? 1 : 1 - Math.min(1, Math.max(0, (st.p - (b + (c - b) * 0.5)) / ((c - b) * 0.08)));
+        const [a, z] = RANGES[POSTER_BEATS[k]];
+        const w = (z - a) * 0.08;
+        const fadeIn = k === 0 ? 1 : Math.min(1, Math.max(0, (st.p - (a - w / 2)) / w));
+        const fadeOut = k === POSTER_BEATS.length - 1 ? 1 : 1 - Math.min(1, Math.max(0, (st.p - (z - w / 2)) / w));
         img.style.opacity = String(Math.min(fadeIn, fadeOut));
       });
     }
@@ -560,7 +580,7 @@ function Stage({ p, mode, small, onSeek, capture }: StageProps) {
 
       <div className={styles.layout}>
         <header className={styles.head}>
-          <Header compact={small} />
+          <Header compact={small} chapter={chain ? chapterOf(s.beat) : undefined} />
           <Readouts s={s} />
         </header>
         <div className={styles.main}>
@@ -579,10 +599,13 @@ function Stage({ p, mode, small, onSeek, capture }: StageProps) {
           </div>
         </div>
         <footer className={styles.foot}>
-          <p className={clsx(styles.honesty, "micro text-faint")}>{EXHIBIT.honesty}</p>
+          <div className={styles.footLine}>
+            <p className={clsx(styles.honesty, "micro text-faint")}>{EXHIBIT.honesty}</p>
+            {skip}
+          </div>
           <ol className={styles.row}>
             {CHECKS.map((c, i) => (
-              <CheckCell key={c.id} i={i} done={i < s.done} active={i === s.active} onSeek={onSeek} />
+              <CheckCell key={c.id} i={i} done={i < s.done} active={i === s.active} chain={chain} onSeek={onSeek} />
             ))}
           </ol>
         </footer>
@@ -602,38 +625,36 @@ function StaticExhibit() {
         <figure className={styles.staticFigure}>
           <div className={styles.pool} aria-hidden="true" />
           <picture>
-            <source media="(max-width: 767px)" srcSet={posterSrc("settle", true, true)} />
+            <source media="(max-width: 767px)" srcSet={posterSrc("paid", true, true)} />
             <img
               className={styles.onDark}
-              src={posterSrc("settle", true, false)}
+              src={posterSrc("paid", true, false)}
               alt={`Illustration: the X-VESOLJE nursing pillow from claim ${EXHIBIT.id}, cut in half, with its paper tag reading X-VESOLJE M4T.`}
             />
           </picture>
           <picture>
-            <source media="(max-width: 767px)" srcSet={posterSrc("settle", false, true)} />
-            <img className={styles.onLight} src={posterSrc("settle", false, false)} alt="" aria-hidden="true" />
+            <source media="(max-width: 767px)" srcSet={posterSrc("paid", false, true)} />
+            <img className={styles.onLight} src={posterSrc("paid", false, false)} alt="" aria-hidden="true" />
           </picture>
           <figcaption className="micro mt-4 text-faint">{EXHIBIT.honesty}</figcaption>
         </figure>
-        <div className="flex flex-col gap-10">
-          <ol className="flex flex-col">
+        <ol className={clsx(styles.staticChecks, "flex flex-col")}>
             {CHECKS.map((c) => (
-              <li key={c.id} className="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-x-2 border-t border-line py-4">
-                <span className="font-mono text-micro text-faint">{c.n}</span>
-                <div>
-                  <p className="text-body font-medium">{c.label}</p>
-                  <p className="mt-1 text-ui text-muted">{c.note}</p>
-                  {c.quote && <blockquote className="mt-3 font-mono text-ui leading-[1.6] text-[color:var(--text-2,var(--muted))]">“{c.quote}”</blockquote>}
-                </div>
-                <span className="text-pay">
-                  <CheckIcon />
-                  <span className="sr-only">passed</span>
-                </span>
-              </li>
+            <li key={c.id} className="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-x-2 border-t border-line py-4">
+              <span className="font-mono text-micro text-faint">{c.n}</span>
+              <div>
+                <p className="text-body font-medium">{c.label}</p>
+                <p className="mt-1 text-ui text-muted">{c.note}</p>
+                {c.quote && <blockquote className="mt-3 text-ui leading-[1.55] text-muted">“{c.quote}”</blockquote>}
+              </div>
+              <span className="text-pay">
+                <CheckIcon />
+                <span className="sr-only">passed</span>
+              </span>
+            </li>
             ))}
-          </ol>
-          <Receipt stamped className="max-w-[22rem]" />
-        </div>
+        </ol>
+        <Receipt stamped className={styles.staticReceipt} />
       </div>
     </section>
   );
@@ -649,6 +670,8 @@ export interface OpenedExhibitProps {
   progress?: MotionValue<number>;
   /** With `progress`: called when a check is chosen in the row, with the p that shows it. */
   onSeek?: (p: number) => void;
+  /** With `progress`: the pin's skip link, shown in the exhibit's own foot (it covers the pin's rail). */
+  skip?: ReactNode;
   /** Dev and capture only (the /dev/teardown page). */
   capture?: boolean;
 }
@@ -687,7 +710,7 @@ function SelfPinned({ mode, small, capture }: { mode: "live" | "poster"; small: 
   );
 }
 
-export function OpenedExhibit({ progress, onSeek, capture }: OpenedExhibitProps) {
+export function OpenedExhibit({ progress, onSeek, skip, capture }: OpenedExhibitProps) {
   const hydrated = useSyncExternalStore(
     noop,
     () => true,
@@ -703,7 +726,15 @@ export function OpenedExhibit({ progress, onSeek, capture }: OpenedExhibitProps)
   if (progress)
     return (
       <div className="relative h-full w-full">
-        <Stage p={progress} mode={mode} small={small && !capture} capture={capture} onSeek={onSeek ? (i) => onSeek(holdOf(CHECKS[i].id)) : undefined} />
+        <Stage
+          p={progress}
+          mode={mode}
+          small={small && !capture}
+          capture={capture}
+          chain
+          skip={skip}
+          onSeek={onSeek ? (i) => onSeek(holdOf(CHECKS[i].id)) : undefined}
+        />
       </div>
     );
   return <SelfPinned mode={mode} small={small} capture={capture} />;

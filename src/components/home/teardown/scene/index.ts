@@ -9,6 +9,7 @@ import { EXHIBIT } from "../claim";
 import type { ExhibitState, Shot } from "../model";
 import { buildHalf, pillowMaterials, R, SPAN, YC, RH, RW } from "./pillow";
 import { buildPhone, buildPrints, buildTag } from "./parts";
+import { yieldToMain } from "./textures";
 
 export interface Colors {
   dark: boolean;
@@ -35,7 +36,7 @@ export interface Frame {
 
 export interface Exhibit {
   render(s: ExhibitState, rect: Rect): Frame;
-  /** Draws each state once and waits for the GPU: milliseconds per frame. */
+  /** Draws each state once and waits for the GPU (a 1px readback, which blocks until every draw is done): ms a frame. */
   bench(states: ExhibitState[], rect: Rect): number;
   setColors(c: Colors): void;
   setTier(t: Tier): void;
@@ -117,9 +118,13 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
   scene.add(floor);
 
   // ---- The evidence.
-  const mats = pillowMaterials(THREE);
+  // Built in slices with the main thread given back between them (the scene arms mid-scroll, during chapter 02).
+  const mats = await pillowMaterials(THREE);
+  await yieldToMain();
   const left = buildHalf(THREE, -1, 3, mats);
+  await yieldToMain();
   const right = buildHalf(THREE, 1, 4, mats);
+  await yieldToMain();
   scene.add(left.group, right.group);
 
   const tag = buildTag(THREE);
@@ -144,6 +149,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
   const drapeLocal = [ringAt(0.85, 1.04), ringAt(0.2, 1.08), ringAt(-0.75, 1.12)];
   const drape = drapeLocal.map((v) => v.clone());
 
+  await yieldToMain();
   const phone = buildPhone(THREE, photo);
   scene.add(phone.group, phone.lines, phone.sheet);
   const prints = buildPrints(THREE, photo, earlier, "#f1ebdd");
@@ -164,8 +170,10 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
   let tier: Tier = opts.tier;
   function applyColors(c: Colors) {
     colors = c;
-    const accent = new THREE.Color(c.accent);
-    for (const m of [mats.rim, phone.lineMat, phone.sheetMat]) m.color.copy(accent);
+    // Amber only on the active part's rim (the cut, check 5). The camera's frustum and scan plane are drawn in the
+    // neutral --faint, so a check's one amber is its callout, not a wireframe box.
+    mats.rim.color.set(c.accent);
+    for (const m of [phone.lineMat, phone.sheetMat]) m.color.set(c.faint);
     if (c.dark) {
       key.intensity = 2.3;
       fill.intensity = 0.32;
@@ -185,7 +193,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
       mats.cloth.sheenColor.set("#7e8aae");
     }
     for (const f of mats.fuzz) f.color.copy(mats.stuff.color);
-    prints.drawGrid(c.accent, c.faint);
+    prints.drawGrid(c.accent, c.faint, c.paper);
   }
 
   function applyTier(t: Tier) {
@@ -259,14 +267,38 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     renderer.render(scene, camera);
 
     let anchor: Frame["anchor"] = null;
-    if (s.active === 0) anchor = project(phone.lens(P.clone()));
+    // The phone and the tag: the leader ends 8px outside the part's right side (toward the callout), level with the
+    // lens or the code, so it never crosses the phone or strikes through M4T.
+    const beside = (o: THREE.Object3D, at: { x: number; y: number }) => {
+      const b = screenBox(o);
+      return b ? { x: b.x1 + 8, y: Math.min(b.y1 - 4, Math.max(b.y0 + 4, at.y)) } : at;
+    };
+    if (s.active === 0) anchor = beside(phone.group, project(phone.lens(P.clone())));
     else if (s.active === 1) anchor = project(prints.corner(new THREE.Vector3()));
-    else if (s.active === 3) anchor = project(tag.codePoint(new THREE.Vector3()));
+    else if (s.active === 3) anchor = beside(tag.mesh, project(tag.codePoint(new THREE.Vector3())));
     else if (s.active === 4) anchor = project(right.rimTop(new THREE.Vector3()));
     return { anchor };
   }
 
   const box = new THREE.Box3();
+  const corner = new THREE.Vector3();
+  /** An object's projected bounds on the canvas, CSS px. */
+  function screenBox(o: THREE.Object3D) {
+    box.setFromObject(o);
+    if (box.isEmpty()) return null;
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (let i = 0; i < 8; i++) {
+      const q = project(corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z));
+      x0 = Math.min(x0, q.x);
+      y0 = Math.min(y0, q.y);
+      x1 = Math.max(x1, q.x);
+      y1 = Math.max(y1, q.y);
+    }
+    return { x0, y0, x1, y1 };
+  }
   function bounds() {
     const out: {
       name: string;
@@ -284,35 +316,26 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     ];
     for (const [name, o] of parts) {
       if (!o.visible) continue;
-      box.setFromObject(o);
-      if (box.isEmpty()) continue;
-      let x0 = Infinity;
-      let y0 = Infinity;
-      let x1 = -Infinity;
-      let y1 = -Infinity;
-      for (let i = 0; i < 8; i++) {
-        const v = new THREE.Vector3(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z);
-        const q = project(v);
-        x0 = Math.min(x0, q.x);
-        y0 = Math.min(y0, q.y);
-        x1 = Math.max(x1, q.x);
-        y1 = Math.max(y1, q.y);
-      }
-      out.push({ name, x0, y0, x1, y1 });
+      const b = screenBox(o);
+      if (b) out.push({ name, ...b });
     }
     return out;
   }
 
   // Warm every shader before the first visible frame, so scrolling in never stalls on a compile.
+  await yieldToMain();
   await renderer.compileAsync(scene, camera);
 
+  const px = new Uint8Array(4);
   return {
     render,
     bench(states, rect) {
       const gl = renderer.getContext();
       const t0 = performance.now();
       for (const st of states) render(st, rect);
-      gl.finish();
+      // gl.finish() does not block in Chrome's command buffer, so it timed only the JS that queued the draws. Reading
+      // a pixel back does block until the GPU has finished them.
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
       return (performance.now() - t0) / states.length;
     },
     setColors: applyColors,

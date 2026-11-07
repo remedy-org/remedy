@@ -14,13 +14,29 @@ function canvas(w: number, h: number) {
   return { c, g };
 }
 
+/**
+ * Gives the main thread back between slices of work: the scene is built while the visitor scrolls (it arms during
+ * chapter 02), so no slice may be a long task. Idle time when the browser offers it, else the next macrotask.
+ */
+export function yieldToMain() {
+  return new Promise<void>((resolve) => {
+    if (typeof requestIdleCallback === "function") requestIdleCallback(() => resolve(), { timeout: 60 });
+    else setTimeout(resolve, 0);
+  });
+}
+
+/** Rows per slice for the n x n loops below: about 4 ms each on a throttled laptop. */
+const SLICE = 32;
+
 /** Tileable value noise on an n x n texture: lattice of `cells` per side, wrapped, so the texture repeats seamlessly. */
-function tileNoise(n: number, cells: number, seed: number) {
+async function tileNoise(n: number, cells: number, seed: number) {
   const r = rng(seed);
   const lat = Float32Array.from({ length: cells * cells }, () => r());
   const out = new Float32Array(n * n);
   const s = (t: number) => t * t * (3 - 2 * t);
+  const at = (i: number, j: number) => lat[((j + cells) % cells) * cells + ((i + cells) % cells)];
   for (let y = 0; y < n; y++) {
+    if (y && y % SLICE === 0) await yieldToMain();
     const fy = (y / n) * cells;
     const y0 = Math.floor(fy);
     const ty = s(fy - y0);
@@ -28,7 +44,6 @@ function tileNoise(n: number, cells: number, seed: number) {
       const fx = (x / n) * cells;
       const x0 = Math.floor(fx);
       const tx = s(fx - x0);
-      const at = (i: number, j: number) => lat[((j + cells) % cells) * cells + ((i + cells) % cells)];
       const a = at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * tx;
       const b = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * tx;
       out[y * n + x] = a + (b - a) * ty;
@@ -39,34 +54,38 @@ function tileNoise(n: number, cells: number, seed: number) {
 
 /**
  * Brushed cotton, plain navy like the photo (no print): colour with faint large mottling, and a normal map of fine,
- * irregular fibre noise with a slight grain along the weft. No regular ribs.
+ * irregular fibre noise with a slight grain along the weft. No regular ribs. Built in slices (see yieldToMain).
  */
-export function fabricTextures(THREE: Three, base: [number, number, number]) {
+export async function fabricTextures(THREE: Three, base: [number, number, number]) {
   const n = 512;
-  const mottle = tileNoise(n, 6, 11);
-  const f1 = tileNoise(n, 96, 12);
-  const f2 = tileNoise(n, 192, 13);
-  const grain = tileNoise(n, 256, 14);
+  const mottle = await tileNoise(n, 6, 11);
+  const f1 = await tileNoise(n, 96, 12);
+  const f2 = await tileNoise(n, 192, 13);
+  const grain = await tileNoise(n, 256, 14);
   const height = new Float32Array(n * n);
   const col = canvas(n, n);
   const img = col.g.createImageData(n, n);
-  for (let i = 0; i < n * n; i++) {
-    // Fibre height: two octaves of fine noise, plus a grain stretched along x (the weft), from a shifted lookup.
-    const x = i % n;
-    const y = (i / n) | 0;
-    const g = grain[y * n + ((x * 3) % n)];
-    const h = f1[i] * 0.45 + f2[i] * 0.35 + g * 0.2;
-    height[i] = h;
-    const k = 0.9 + (mottle[i] - 0.5) * 0.12 + (h - 0.5) * 0.14;
-    img.data[i * 4] = base[0] * k;
-    img.data[i * 4 + 1] = base[1] * k;
-    img.data[i * 4 + 2] = base[2] * k;
-    img.data[i * 4 + 3] = 255;
+  for (let y = 0; y < n; y++) {
+    if (y && y % (SLICE * 2) === 0) await yieldToMain();
+    for (let x = 0; x < n; x++) {
+      // Fibre height: two octaves of fine noise, plus a grain stretched along x (the weft), from a shifted lookup.
+      const i = y * n + x;
+      const g = grain[y * n + ((x * 3) % n)];
+      const h = f1[i] * 0.45 + f2[i] * 0.35 + g * 0.2;
+      height[i] = h;
+      const k = 0.9 + (mottle[i] - 0.5) * 0.12 + (h - 0.5) * 0.14;
+      img.data[i * 4] = base[0] * k;
+      img.data[i * 4 + 1] = base[1] * k;
+      img.data[i * 4 + 2] = base[2] * k;
+      img.data[i * 4 + 3] = 255;
+    }
   }
   col.g.putImageData(img, 0, 0);
+  await yieldToMain();
   const nrm = canvas(n, n);
   const nimg = nrm.g.createImageData(n, n);
-  for (let y = 0; y < n; y++)
+  for (let y = 0; y < n; y++) {
+    if (y && y % (SLICE * 2) === 0) await yieldToMain();
     for (let x = 0; x < n; x++) {
       const dx = height[y * n + ((x + 1) % n)] - height[y * n + ((x - 1 + n) % n)];
       const dy = height[((y + 1) % n) * n + x] - height[((y - 1 + n) % n) * n + x];
@@ -76,6 +95,7 @@ export function fabricTextures(THREE: Three, base: [number, number, number]) {
       nimg.data[i + 2] = 255;
       nimg.data[i + 3] = 255;
     }
+  }
   nrm.g.putImageData(nimg, 0, 0);
   const map = new THREE.CanvasTexture(col.c);
   map.colorSpace = THREE.SRGBColorSpace;

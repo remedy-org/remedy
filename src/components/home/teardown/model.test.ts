@@ -5,7 +5,9 @@ import { BEATS, RANGES, TOTAL_VH, clock, holdOf, stateAt } from "./model";
 describe("Opened Exhibit model", () => {
   it("lays the beats end to end over p 0..1, about 70vh a beat", () => {
     expect(RANGES.intro[0]).toBe(0);
-    expect(RANGES.settle[1]).toBeCloseTo(1);
+    expect(RANGES.paid[1]).toBeCloseTo(1);
+    // DESIGN.md: never a pinned beat shorter than about 70vh.
+    for (const b of BEATS) expect(b.vh).toBeGreaterThanOrEqual(70);
     for (let i = 1; i < BEATS.length; i++) expect(RANGES[BEATS[i].id][0]).toBeCloseTo(RANGES[BEATS[i - 1].id][1]);
     expect(TOTAL_VH / BEATS.length).toBeGreaterThanOrEqual(60);
     // The code check is the signature shot: the longest hold.
