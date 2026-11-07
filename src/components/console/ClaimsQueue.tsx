@@ -68,6 +68,8 @@ export interface ClaimsQueueProps {
   rows: ClaimRow[];
   // When the server read these rows (ISO).
   at: string;
+  // Payouts in this build go to PayPal's sandbox: the ledger's money says so.
+  sandbox?: boolean;
 }
 
 /**
@@ -75,7 +77,7 @@ export interface ClaimsQueueProps {
  * and a status line. Live while a claim can still change (useQueuePoll). Keyboard: / search, 1 to 6 tabs, ↑/↓ walks
  * the queue with the panel open, Enter opens, Esc closes, A and R open approve or reject on a held claim, ? lists them.
  */
-export function ClaimsQueue({ recall, rows: initial, at: initialAt }: ClaimsQueueProps) {
+export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = false }: ClaimsQueueProps) {
   const { rows, at, failed, state, refresh } = useQueuePoll(recall.id, initial, initialAt);
   const wide = useMedia(WIDE);
   const fill = useMedia(FILL);
@@ -153,7 +155,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt }: ClaimsQueu
 
   return (
     <section aria-label="Claims" className="flex min-h-0 flex-1 flex-col">
-      <Ledger ledger={ledger} />
+      <Ledger ledger={ledger} sandbox={sandbox} />
 
       <div className="mt-1 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-line">
         <StatusTabs value={tab} counts={counts} onChange={setTab} controls="claims-panel" />

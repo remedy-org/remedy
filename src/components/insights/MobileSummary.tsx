@@ -17,7 +17,7 @@ export function MobileSummary({ data }: { data: InsightsData }) {
 
   const kpis = [
     { label: "Units remedied", value: <span className="tabular-nums">{sum("remedied")}</span>, note: say.remedied },
-    { label: "Paid through PayPal", value: <Money value={sum("amountSent")} size="inline" />, note: say.paid },
+    { label: "Paid through PayPal (sandbox)", value: <Money value={sum("amountSent")} size="inline" />, note: say.paid },
     { label: say.timeTitle, value: <span className="tabular-nums">{avg === null ? "—" : `${avg}s`}</span>, note: say.time },
     { label: "Refused", value: <span className="tabular-nums">{sum("refused")}</span>, note: "Rejected or blocked" },
   ];

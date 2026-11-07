@@ -18,7 +18,7 @@ function Item({ value, label, title, className, children }: { value: ReactNode; 
  * The 48px ledger strip over the grid: units remedied of units sold with a 64x4 meter, money sent through PayPal, the
  * median time from photos to PayPal, held and refused. Sample claims' money is shown apart: it was never sent.
  */
-export function Ledger({ ledger, className }: { ledger: LedgerData; className?: string }) {
+export function Ledger({ ledger, className, sandbox = false }: { ledger: LedgerData; className?: string; sandbox?: boolean }) {
   const known = ledger.unitsSold > 0;
   const share = known ? ledger.remedied / ledger.unitsSold : 0;
   return (
@@ -48,7 +48,7 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
         value={<AmountValue cents={ledger.paidCents} />}
         label={
           <>
-            paid through PayPal
+            {sandbox ? "paid in PayPal sandbox" : "paid through PayPal"}
             {ledger.sampleCents > 0 && (
               <span className="text-faint">
                 {" "}

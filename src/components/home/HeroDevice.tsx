@@ -218,8 +218,12 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
             <Paper variant="tag" hole padding="none" className="w-[13.5rem]">
               <div className="flex flex-col gap-1 px-4 pt-10 pb-3.5">
                 <span className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Refund · {CLAIM.id}</span>
-                <span className="text-[1.75rem] leading-none font-semibold tracking-[-0.02em]">
-                  <Money value={CLAIM.amount} size="inline" />
+                {/* "Sandbox" sits beside the amount, as on every demo amount. */}
+                <span className="flex items-baseline gap-2">
+                  <span className="text-[1.75rem] leading-none font-semibold tracking-[-0.02em]">
+                    <Money value={CLAIM.amount} size="inline" />
+                  </span>
+                  <span className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Sandbox</span>
                 </span>
                 <span className="font-mono text-micro text-pay-ink">
                   sent to PayPal · {CLAIM.seconds} s

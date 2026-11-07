@@ -57,7 +57,7 @@ export function captions({ paid, samples, sampleAmount, answered }: ReturnType<t
   const sent = paid - samples;
   return {
     remedied: all ? "Sample claims · never sent" : some ? `Paid claims · ${share}` : "Paid claims",
-    paid: samples ? `${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
+    paid: samples ? `Sandbox USD · ${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
     timeTitle: sent ? "Avg photo to PayPal" : "Avg photo check",
     timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
     time: sent ? `Average of ${sent} sent ${sent === 1 ? "payout" : "payouts"}` : `None sent yet · ${answered} ${answered === 1 ? "claim" : "claims"} checked`,
@@ -71,7 +71,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
     id: "overview",
     widgets: {
       "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), say.remedied),
-      "kpi-paid": kpi("Paid through PayPal", sum("claims.amountSent"), say.paid),
+      "kpi-paid": kpi("Paid through PayPal (sandbox)", sum("claims.amountSent"), say.paid),
       "kpi-median": kpi(say.timeTitle, { id: `claims.${say.timeField}`, aggregation: "avg" }, say.time),
       "kpi-refused": kpi("Refused", sum("claims.refused"), "Rejected or blocked"),
       progress: {
