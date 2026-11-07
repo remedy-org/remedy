@@ -254,10 +254,11 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
               focusTimer.current = window.setTimeout(() => onFocusRow(id), 120);
             }}
             rowClass={still ? undefined : "cursor-pointer"}
-            // The homepage's still is a picture: no cell or header takes focus, so Tab goes past it in one step.
+            // The homepage's still is a picture: no cell or header takes focus. In both, Tab leaves the grid in one step
+            // (to the evidence panel and the footer); the arrow keys move between cells.
             suppressCellFocus={still}
             suppressHeaderFocus={still}
-            tabToNextCell={still ? () => false : undefined}
+            tabToNextCell={() => false}
             overlayNoRowsTemplate="<span></span>"
             animateRows={animate}
             cellFlashDuration={600}

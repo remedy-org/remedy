@@ -121,6 +121,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt }: ClaimsQueu
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // An open dialog (the ? sheet) handles its own keys, Esc included: closing the panel behind it would be the wrong layer.
+      if (help || (e.target instanceof Element && e.target.closest("dialog[open]"))) return;
       if (e.key === "Escape" && open && wide && !typing(e.target)) {
         e.preventDefault();
         close();
@@ -144,7 +146,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt }: ClaimsQueu
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, wide, close, openRow]);
+  }, [open, wide, close, openRow, help]);
 
   const samples = ledger.samples;
   const demos = ledger.demos;

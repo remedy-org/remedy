@@ -17,10 +17,13 @@ export interface ReviewIntent {
 /**
  * Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit click. A seeded claim's
  * review is a sample: the server says what it would have done, and the claim stays held. The keyboard's A and R
- * (intent) open the same confirm or form as the buttons; paying still takes the second click.
+ * (intent) open the same confirm or form as the buttons and move focus into it; paying still takes a second press.
  */
 export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; onDone: (c: DrawerClaim) => void; intent?: ReviewIntent | null }) {
-  const [mode, setMode] = useState<Mode>("idle");
+  // A or R pressed while the panel was still loading opens the confirm as soon as it mounts.
+  const [mode, setMode] = useState<Mode>(intent?.mode ?? "idle");
+  // After Esc or Cancel, focus goes back to the button that opened the confirm, so a second Esc closes the panel.
+  const [back, setBack] = useState<"approve" | "reject" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [reason, setReason] = useState("");
@@ -50,12 +53,23 @@ export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; o
 
   const base = `/api/console/claims/${claim.id}`;
   const reset = () => {
+    if (mode !== "idle") setBack(mode);
     setMode("idle");
     setError(null);
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      className="flex flex-col gap-4"
+      onKeyDown={(e) => {
+        // Esc cancels the open confirm or reason first; the console's own Esc (close the panel) never sees this one.
+        if (e.key === "Escape" && mode !== "idle" && !busy) {
+          e.preventDefault();
+          e.stopPropagation();
+          reset();
+        }
+      }}
+    >
       {error && !error.fields?.reason && <ErrorState variant="inline" title={error.error} reference={error.reference} />}
 
       {mode === "idle" && (
@@ -68,10 +82,10 @@ export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; o
             review.note && <p className="text-ui text-muted">{review.note}</p>
           )}
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => (setSample(null), setMode("approve"))} className="flex-1 sm:flex-none">
+            <Button onClick={() => (setSample(null), setMode("approve"))} autoFocus={back === "approve"} className="flex-1 sm:flex-none">
               {review.sample ? "Approve" : `Approve and pay ${claim.amount}${claim.sandbox ? " sandbox" : ""}`}
             </Button>
-            <Button variant="secondary" onClick={() => (setSample(null), setMode("reject"))} className="flex-1 sm:flex-none">
+            <Button variant="secondary" onClick={() => (setSample(null), setMode("reject"))} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
               Reject
             </Button>
           </div>
@@ -94,11 +108,11 @@ export function ReviewActions({ claim, onDone, intent }: { claim: DrawerClaim; o
           )}
           <div className="flex flex-wrap gap-3">
             {review.sample ? (
-              <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Approving the sample" className="flex-1 sm:flex-none">
+              <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Approving the sample" autoFocus className="flex-1 sm:flex-none">
                 Approve the sample
               </Button>
             ) : (
-              <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Paying through PayPal" className="flex-1 sm:flex-none">
+              <Button onClick={() => run(`${base}/approve`)} pending={busy} pendingLabel="Paying through PayPal" autoFocus className="flex-1 sm:flex-none">
                 Pay {claim.amount}
                 {claim.sandbox ? " sandbox" : ""}
               </Button>

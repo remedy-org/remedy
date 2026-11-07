@@ -25,6 +25,12 @@
   outline: none !important;
 }
 
+/* Below 720px each claim is one full-width card row, which AG Grid's theme gives no focus mark. The ring goes on the
+   anchor, which is exactly the visible card: the row itself is wider than the viewport and would clip its right edge. */
+.claims-grid .ag-full-width-row.ag-row-focus:focus-visible .ag-full-width-anchor {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
 /* Cells centre their content vertically; renderers own their own layout. */
 .claims-grid .ag-cell {
   display: flex;
