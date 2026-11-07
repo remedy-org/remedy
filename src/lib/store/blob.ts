@@ -1,7 +1,7 @@
 import { BlobPreconditionFailedError, get, put } from "@vercel/blob";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { ClaimIndex, isValidClaimId, isValidRecallId, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, type Store } from "./store";
+import { bump, ClaimIndex, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type Store } from "./store";
 
 // Production store: Vercel Blob, private access (the store itself must be created as private).
 export function blobStore(token: string): Store {
@@ -23,13 +23,15 @@ export function blobStore(token: string): Store {
   }
 
   // Serverless instances can write an index at the same time: write only if it hasn't changed since we read it.
-  async function updateJson<S extends z.ZodType>(pathname: string, schema: S, empty: z.infer<S>, change: (index: z.infer<S>) => z.infer<S>) {
+  // A change that returns null writes nothing (false).
+  async function updateJson<S extends z.ZodType>(pathname: string, schema: S, empty: z.infer<S>, change: (index: z.infer<S>) => z.infer<S> | null) {
     for (let attempt = 0; attempt < 5; attempt++) {
       const current = await read(pathname);
-      const index = current ? schema.parse(JSON.parse(current.data.toString("utf8"))) : empty;
+      const next = change(current ? schema.parse(JSON.parse(current.data.toString("utf8"))) : empty);
+      if (next === null) return false;
       try {
-        await write(pathname, JSON.stringify(change(index)), "application/json", current?.etag);
-        return;
+        await write(pathname, JSON.stringify(next), "application/json", current?.etag);
+        return true;
       } catch (e) {
         if (!(e instanceof BlobPreconditionFailedError)) throw e;
       }
@@ -75,5 +77,7 @@ export function blobStore(token: string): Store {
     putPhoto: async (key, jpeg) => write(paths.photo(key), jpeg, "image/jpeg"),
     // Photos never change once written, so the CDN copy is fine.
     getPhoto: async (key) => (await read(paths.photo(key), true))?.data ?? null,
+    getUsage: async (day) => (await readJson(paths.usage(day), Usage)) ?? NO_USAGE,
+    takeUsage: async (day, kind, limit) => updateJson(paths.usage(day), Usage, NO_USAGE, (usage) => bump(usage, kind, limit)),
   };
 }

@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const DEV_SESSION_SECRET = "remedy-dev-only-session-secret-not-for-production";
 
+const Limit = z.coerce.number().int().nonnegative();
+
 const Env = z.object({
   PAYPAL_CLIENT_ID: z.string(),
   PAYPAL_CLIENT_SECRET: z.string(),
@@ -16,6 +18,14 @@ const Env = z.object({
   APP_URL: z.url().default("http://127.0.0.1:3000"),
   // Signs the session cookies (HMAC-SHA256). The default is for local dev only; session.ts refuses it in production.
   SESSION_SECRET: z.string().min(32).default(DEV_SESSION_SECRET),
+  // What the live demo may spend (src/lib/limits.ts). Days are UTC. The claim limits keep Vercel Blob's Hobby quota
+  // (2,000 writes a month) safe: a claim costs about 10 writes.
+  VISION_DAILY_LIMIT: Limit.default(100),
+  DRAFT_DAILY_LIMIT: Limit.default(20),
+  CLAIM_DAILY_LIMIT: Limit.default(60),
+  CLAIM_MONTHLY_LIMIT: Limit.default(150),
+  ACCOUNT_CLAIM_DAILY_LIMIT: Limit.default(5),
+  ACCOUNT_DEMO_DAILY_LIMIT: Limit.default(12),
 });
 
 export type Env = z.infer<typeof Env>;

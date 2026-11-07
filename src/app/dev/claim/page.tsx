@@ -14,6 +14,7 @@ import { SamplePicker } from "@/components/claim/SamplePicker";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "@/components/claim/StepMeter";
 import { Button, ErrorState } from "@/components/ui";
 import { DEMO_SAMPLES, demoSample } from "@/lib/demo";
+import { nextUtcDay } from "@/lib/limits";
 import type { Claim } from "@/lib/types";
 import * as fx from "./fixtures";
 
@@ -67,6 +68,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "consent-signed-in": { group: "Recall", note: "Already logged in with PayPal", render: () => consent({ signedInAs: "Pat Doe" }) },
   "consent-denied": { group: "Recall", note: "PayPal login cancelled", render: () => consent({ authError: "denied" }) },
   "consent-unverified": { group: "Recall", note: "Unverified PayPal account", render: () => consent({ signedInAs: "Pat Doe", unverified: true }) },
+  "consent-limit": { group: "Recall", note: "Claim start refused: account's daily limit", render: () => consent({ signedInAs: "Pat Doe", refusal: { kind: "account", limit: 5, until: nextUtcDay(new Date()) } }) },
   "demo-consent": { group: "Recall", note: "Demo mode", render: () => consent({ demo: true }) },
   picker: {
     group: "Demo",
@@ -100,6 +102,24 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
               { id: "RM-4127", href: "#", title: "A genuine claim", decision: "paid" },
             ]}
             options={DEMO_SAMPLES.map((sample) => ({ sample }))}
+          />
+        </div>
+      </FlowShell>
+    ),
+  },
+  "picker-limit": {
+    group: "Demo",
+    note: "Sample claim refused: today's photo checks used up",
+    render: () => (
+      <FlowShell demo company="Kikea Store">
+        <div className="flex flex-col gap-6">
+          <StepMeter current={2} steps={DEMO_STEPS} />
+          <SamplePicker
+            slug={fx.recall.slug}
+            selected="genuine"
+            runs={[]}
+            options={DEMO_SAMPLES.map((sample) => ({ sample }))}
+            refusal={{ kind: "checks", limit: 100, until: nextUtcDay(new Date()) }}
           />
         </div>
       </FlowShell>
@@ -153,6 +173,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "paid-partial": { group: "Result", note: "Paid, PayPal status unreachable", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: false } }) },
   held: { group: "Result", note: "Held: unclear answers", render: () => result(fx.held) },
   "held-model": { group: "Result", note: "Held: the model was down", render: () => result(fx.heldModel) },
+  "held-limit": { group: "Result", note: "Held: the daily photo-check limit was reached", render: () => result(fx.heldLimit) },
   "held-payout": { group: "Result", note: "Held: PayPal refused the payout", render: () => result(fx.heldPayout) },
   rejected: { group: "Result", note: "Rejected: wrong code", render: () => result(fx.rejected) },
   "rejected-screen": { group: "Result", note: "Rejected: photo of a screen", render: () => result(fx.rejectedScreen) },

@@ -112,6 +112,7 @@ You need a PayPal developer account with a US business sandbox account (sends re
 | `APP_URL` | Where the app runs; defaults to `http://127.0.0.1:3000` |
 | `SESSION_SECRET` | Signs session cookies; required in production (`openssl rand -base64 32`) |
 | `BLOB_READ_WRITE_TOKEN` | Optional: Vercel Blob; without it data lives in `data/` |
+| `VISION_DAILY_LIMIT`, `DRAFT_DAILY_LIMIT`, `CLAIM_DAILY_LIMIT`, `CLAIM_MONTHLY_LIMIT`, `ACCOUNT_CLAIM_DAILY_LIMIT`, `ACCOUNT_DEMO_DAILY_LIMIT` | Optional: what the live demo may spend. Per UTC day: 100 photo checks, 20 check drafts, 60 new claims (150 in any 30 days), and per PayPal account 5 real and 12 demo claims. Past the photo-check limit a real claim is held for a person, never lost ([docs/PRODUCT.md](docs/PRODUCT.md)) |
 
 Checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
 

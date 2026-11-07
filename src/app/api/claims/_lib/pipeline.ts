@@ -2,6 +2,7 @@ import { newCode } from "@/lib/codes";
 import { checkableClaims } from "@/lib/demo";
 import type { DemoSample } from "@/lib/demo";
 import { CAPTURE_SESSION_MINUTES, newCaptureSession, newClaimId, newPayoutKey } from "@/lib/ids";
+import { claimRefusal, utcDay, type Limits, type Refusal } from "@/lib/limits";
 import { PayPalError } from "@/lib/paypal/client";
 import type { PayoutStatus } from "@/lib/paypal/payouts";
 import { decide, preCheck, sendCheck, type OtherClaim } from "@/lib/rule";
@@ -18,6 +19,7 @@ export interface PipelineDeps {
   pay(input: { claimId: string; payoutKey: string; payerId: string; amount: Money; note: string }): Promise<PayoutStatus>;
   hash(jpeg: Buffer): Promise<string>;
   now(): Date;
+  limits: Limits;
 }
 
 export class ClaimError extends Error {
@@ -30,6 +32,14 @@ export class ClaimError extends Error {
   }
 }
 
+/** A new claim refused by one of the live demo's spending limits (src/lib/limits.ts). Nothing was saved. */
+export class LimitReached extends Error {
+  constructor(readonly refusal: Refusal) {
+    super(`The ${refusal.kind} claim limit (${refusal.limit}) is reached`);
+    this.name = "LimitReached";
+  }
+}
+
 export interface Payer {
   payerId: string;
   verified: boolean;
@@ -38,6 +48,7 @@ export interface Payer {
 export const MAX_PHOTOS = 3;
 // A check that hasn't answered this long after the photos arrived is held for a person (see recoverStale).
 export const STALE_AFTER_MS = 150_000;
+export const LIMIT_HOLD = "Remedy's daily photo-check limit is reached; a person will review this claim";
 
 const event = (at: Date, type: string, detail: string) => ({ at: at.toISOString(), type, detail });
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
@@ -75,10 +86,17 @@ export async function findOpenClaim(deps: Pick<PipelineDeps, "store" | "now">, r
   return null;
 }
 
-/** Issues the code and opens the 10-minute camera session. A demo claim takes its code from the sample. */
-export async function createClaim(deps: Pick<PipelineDeps, "store" | "now">, { recall, payer, sample }: { recall: Recall; payer: Payer; sample?: DemoSample }): Promise<Claim> {
+/**
+ * Issues the code and opens the 10-minute camera session. A demo claim takes its code from the sample. Throws
+ * LimitReached, saving nothing, when a claim limit is hit.
+ */
+export async function createClaim(deps: Pick<PipelineDeps, "store" | "now" | "limits">, { recall, payer, sample }: { recall: Recall; payer: Payer; sample?: DemoSample }): Promise<Claim> {
   const now = deps.now();
-  const taken = new Set((await deps.store.listClaims()).map((r) => r.id));
+  const rows = await deps.store.listClaims();
+  const visionUsed = sample ? (await deps.store.getUsage(utcDay(now))).vision : 0;
+  const refusal = claimRefusal(rows, { payerId: payer.payerId, demo: Boolean(sample), now, limits: deps.limits, visionUsed });
+  if (refusal) throw new LimitReached(refusal);
+  const taken = new Set(rows.map((r) => r.id));
   const code = sample?.code ?? newCode();
   const claim: Claim = {
     id: newClaimId(taken),
@@ -178,6 +196,13 @@ export async function checkClaim(deps: PipelineDeps, claimId: string): Promise<C
   if (!recall) {
     const reason: Reason = { check: "model", outcome: "hold", text: "The recall's check settings couldn't be loaded, so a person will look at your photos" };
     return (await commit(store, claimId, (c) => hold(c, deps.now(), [reason], reason.text))) ?? start;
+  }
+
+  // Counted once per claim, before the call: a claim already checked returned above. At the limit the claim is held,
+  // never refused, since its photos are in. A store error here leaves it to recoverStale.
+  if (!(await store.takeUsage(utcDay(deps.now()), "vision", deps.limits.vision))) {
+    const reason: Reason = { check: "model", outcome: "hold", text: LIMIT_HOLD };
+    return (await commit(store, claimId, (c) => hold(c, deps.now(), [reason], `the daily limit of ${plural(deps.limits.vision, "photo check")} is reached`))) ?? start;
   }
 
   let result: Awaited<ReturnType<PipelineDeps["vision"]>>;

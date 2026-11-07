@@ -88,6 +88,18 @@ describe("localStore", () => {
     expect(rows.find((r) => r.id === "RM-0500")).not.toHaveProperty("seeded");
   });
 
+  it("counts model calls per UTC day up to the limit, writing nothing at it", async () => {
+    const store = localStore(dir);
+    expect(await store.getUsage("2026-11-07")).toEqual({ vision: 0, draft: 0 });
+    const taken = await Promise.all(Array.from({ length: 5 }, () => store.takeUsage("2026-11-07", "vision", 3)));
+    expect(taken.filter(Boolean)).toHaveLength(3);
+    expect(await store.takeUsage("2026-11-07", "draft", 1)).toBe(true);
+    expect(await store.getUsage("2026-11-07")).toEqual({ vision: 3, draft: 1 });
+    expect(await store.getUsage("2026-11-08")).toEqual({ vision: 0, draft: 0 });
+    expect(await readdir(join(dir, "usage"))).toEqual(["2026-11-07.json"]);
+    await expect(store.takeUsage("../x", "vision", 3)).rejects.toThrow();
+  });
+
   it("rejects an invalid claim before writing it", async () => {
     const store = localStore(dir);
     await expect(store.putClaim(sampleClaim({ id: "bad" }))).rejects.toThrow();

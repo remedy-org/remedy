@@ -1,4 +1,5 @@
 import "server-only";
+import { parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
 import type { Recall } from "@/lib/types";
 import { ConsentCard, type AuthError, type ConsentCardProps } from "./ConsentCard";
@@ -23,6 +24,7 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
       signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : null}
       authError={authError}
       unverified={unverified}
+      refusal={parseRefusal(query, new Date())}
     />
   );
 }

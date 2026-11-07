@@ -108,6 +108,32 @@ describe("blobStore", () => {
     expect(await store.updateClaim("RM-9999", (c) => c)).toBeNull();
   });
 
+  it("counts model calls in one private file per UTC day, over the copy it read, and writes nothing at the limit", async () => {
+    const store = blobStore("tok");
+    expect(await store.takeUsage("2026-11-07", "vision", 2)).toBe(true);
+    // Another instance counts a call between our read and our write: ours is retried on top of theirs.
+    const { put } = await import("@vercel/blob");
+    const real = vi.mocked(put).getMockImplementation()!;
+    let raced = false;
+    vi.mocked(put).mockImplementation(async (pathname, body, options) => {
+      if (pathname === "usage/2026-11-07.json" && !raced) {
+        raced = true;
+        await real(pathname, JSON.stringify({ vision: 2, draft: 0 }), { access: "private", allowOverwrite: true });
+      }
+      return real(pathname, body, options);
+    });
+    // Their write filled the limit, so the retry counts nothing.
+    expect(await store.takeUsage("2026-11-07", "vision", 2)).toBe(false);
+    vi.mocked(put).mockImplementation(real);
+    calls.put.length = 0;
+    expect(await store.takeUsage("2026-11-07", "vision", 2)).toBe(false);
+    expect(calls.put).toEqual([]);
+    expect(await store.takeUsage("2026-11-07", "draft", 2)).toBe(true);
+    expect(await store.getUsage("2026-11-07")).toEqual({ vision: 2, draft: 1 });
+    expect(blobs.get("usage/2026-11-07.json")?.access).toBe("private");
+    expect(calls.put.at(-1)?.options).toMatchObject({ ifMatch: expect.any(String), contentType: "application/json" });
+  });
+
   it("returns null for missing or malformed ids", async () => {
     const store = blobStore("tok");
     expect(await store.getClaim("RM-9999")).toBeNull();

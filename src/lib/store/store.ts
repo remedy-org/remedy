@@ -31,6 +31,14 @@ export type RecallSummary = z.infer<typeof RecallSummary>;
 export const RecallIndex = z.object({ recalls: z.array(RecallSummary) });
 export type RecallIndex = z.infer<typeof RecallIndex>;
 
+// usage/<UTC day>.json: the model calls made that day, counted against the budgets in src/lib/limits.ts.
+const Count = z.number().int().nonnegative().default(0);
+export const Usage = z.object({ vision: Count, draft: Count });
+export type Usage = z.infer<typeof Usage>;
+export type UsageKind = keyof Usage;
+export const NO_USAGE: Usage = { vision: 0, draft: 0 };
+export const UtcDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 export interface Store {
   getRecall(id: string): Promise<Recall | null>;
   // Writes the recall's file, then its row in recalls.json. Slugs must be unique: a clash throws.
@@ -46,7 +54,15 @@ export interface Store {
   listClaims(): Promise<ClaimSummary[]>;
   putPhoto(key: string, jpeg: Buffer): Promise<void>;
   getPhoto(key: string): Promise<Buffer | null>;
+  // A day's model calls so far; zeros before the first.
+  getUsage(day: string): Promise<Usage>;
+  // Counts one call of this kind for the day, with the indexes' conditional write, if fewer than limit are counted.
+  // At the limit it writes nothing and returns false.
+  takeUsage(day: string, kind: UsageKind, limit: number): Promise<boolean>;
 }
+
+// The next count, or null at the limit (nothing to write).
+export const bump = (usage: Usage, kind: UsageKind, limit: number): Usage | null => (usage[kind] < limit ? { ...usage, [kind]: usage[kind] + 1 } : null);
 
 export function summarize(c: Claim): ClaimSummary {
   return {
@@ -91,6 +107,7 @@ export const paths = {
   recall: (id: string) => `recalls/${RecallId.parse(id)}.json`,
   claim: (id: string) => `claims/${ClaimId.parse(id)}.json`,
   photo: (key: string) => `photos/${PhotoKey.parse(key)}`,
+  usage: (day: string) => `usage/${UtcDay.parse(day)}.json`,
 };
 
 export const isValidRecallId = (id: string) => RecallId.safeParse(id).success;

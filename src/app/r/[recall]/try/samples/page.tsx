@@ -5,13 +5,14 @@ import { companyName } from "@/components/claim/model";
 import { SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
 import { DEMO_STEPS, StepMeter } from "@/components/claim/StepMeter";
 import { DEMO_SAMPLES, demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
+import { parseRefusal } from "@/lib/limits";
 import { requireSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Pick a sample claim" };
 
 // /r/<slug>/try/samples: after the PayPal login, the judge picks which sample to send.
-export default async function SamplesPage({ params }: PageProps<"/r/[recall]/try/samples">) {
+export default async function SamplesPage({ params, searchParams }: PageProps<"/r/[recall]/try/samples">) {
   const store = await getAppStore();
   const recall = await getRecallBySlug((await params).recall, store);
   if (!recall || !isDemoAllowed(recall)) notFound();
@@ -34,7 +35,7 @@ export default async function SamplesPage({ params }: PageProps<"/r/[recall]/try
     <FlowShell demo company={companyName(recall)}>
       <div className="flex flex-col gap-6">
         <StepMeter current={2} steps={DEMO_STEPS} />
-        <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} />
+        <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} refusal={parseRefusal(await searchParams, new Date())} />
       </div>
     </FlowShell>
   );
