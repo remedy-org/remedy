@@ -1,87 +1,121 @@
+import clsx from "clsx";
+import type { ReactNode } from "react";
+import { Paper, Stamp } from "@/components/ui";
+import styles from "./home.module.css";
+import { Enter } from "./Reveal";
 import { Section } from "./Section";
 
 // Facts from IDEA.md §2.2 (each marked VERIFIED there): the PIRG report, the CPSC recalls API pull for 1 Oct-5 Nov
-// 2026, the Kikea notice itself, and the CPSC's request for information.
-const STATS = [
+// 2026, the Kikea notice itself, and the CPSC's request for information. Each is a numbered footnote at the foot of
+// the band, the way a report cites.
+const SOURCES = [
+  { n: 1, label: "PIRG, Too Much to Recall, January 2024", href: "https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf" },
   {
-    figure: "6–10%",
-    text: "of recalled products are ever returned or destroyed. The rest stay in homes.",
-    source: "PIRG, Too Much to Recall, January 2024",
-    href: "https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf",
-  },
-  {
-    figure: "20 of 27",
-    text: "refund recalls that asked for a photo from 1 October to 5 November 2026 had owners email it to an inbox.",
-    source: "CPSC recalls API, our count",
+    n: 2,
+    label: "CPSC recalls API, 1 October to 5 November 2026, our count",
     href: "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2026-10-01&RecallDateEnd=2026-11-05",
   },
-];
-
-const QUOTES = [
   {
-    who: "The inbox",
-    quote: (
-      <>
-        &ldquo;&hellip;cut the pillow in half after confirming the recalled pillow with the firm and send a photo of the destroyed pillow to{" "}
-        <span className="font-mono text-accent-text">z•••••929@gmail.com</span>.&rdquo;
-      </>
-    ),
-    source: "Kikea Store, CPSC recall 27-071: 19,596 nursing pillows.",
+    n: 3,
+    label: "Kikea Store, CPSC recall 27-071",
     href: "https://www.cpsc.gov/Recalls/2027/Kikea-Store-Recalls-X-VESOLJE-Nursing-Pillows-Due-to-Risk-of-Serious-Injury-or-Death-from-Suffocation-Violate-Mandatory-Standards-for-Nursing-Pillows",
   },
-  {
-    who: "The regulator",
-    quote: (
-      <>
-        &ldquo;&hellip;altered, fabricated, or artificially generated images&hellip; purporting to demonstrate product destruction.&rdquo;
-      </>
-    ),
-    source: "CPSC request for information CPSC-2026-0067, 15 April 2026.",
-    href: "https://public-inspection.federalregister.gov/2026-07328.pdf",
-  },
+  { n: 4, label: "CPSC request for information CPSC-2026-0067, 15 April 2026", href: "https://public-inspection.federalregister.gov/2026-07328.pdf" },
 ];
+
+const STATS: { figure: string; text: string; note: number }[] = [
+  { figure: "6–10%", text: "of recalled products are ever returned or destroyed. The rest stay in homes.", note: 1 },
+  { figure: "20 of 27", text: "refund recalls that asked for a photo from 1 October to 5 November 2026 had owners email it to an inbox.", note: 2 },
+];
+
+const link = "underline decoration-paper-line underline-offset-4 transition-colors duration-160 hover:decoration-ink focus-visible:outline-ink";
+
+function Note({ n }: { n: number }) {
+  return (
+    <sup className="ml-0.5 font-mono text-micro">
+      <a href={`#source-${n}`} aria-label={`Source ${n}`} className={clsx(link, "px-0.5 no-underline")}>
+        {n}
+      </a>
+    </sup>
+  );
+}
+
+/** A document lying on the paper band: a mono metadata row, the excerpt, and its source. */
+function Document({ meta, note, children, className, stamp }: { meta: string; note: number; children: ReactNode; className?: string; stamp?: ReactNode }) {
+  return (
+    <Paper as="figure" variant="notice" padding="none" className={clsx("m-0", className)}>
+      <div className="flex items-center justify-between gap-4 border-b border-paper-line px-6 py-3 sm:px-8">
+        <span className="micro text-ink-muted">{meta}</span>
+        <Note n={note} />
+      </div>
+      <blockquote className="relative px-6 pt-6 pb-8 sm:px-8 sm:pt-8 sm:pb-10">
+        <p className="text-body text-pretty sm:text-lead">{children}</p>
+        {stamp}
+      </blockquote>
+    </Paper>
+  );
+}
 
 export function Problem() {
   return (
     <Section
       id="problem"
       exhibit="A · The problem"
+      head="statement"
+      tone="paper"
       title="Recall refunds run on an inbox."
       muted="AI broke the inbox."
       lead="To get a refund, owners destroy the product and email a photo. Someone at the company checks each one by hand, and an image model can now draw that photo."
     >
-      <dl className="grid gap-y-10 md:grid-cols-2 md:gap-x-12">
+      <dl className="grid gap-y-12 md:grid-cols-2 md:gap-x-12">
         {STATS.map((s) => (
-          <div key={s.figure} className="border-t border-line pt-6">
-            <dt className="text-h2 font-semibold tabular-nums sm:text-h1">{s.figure}</dt>
-            <dd className="mt-3 max-w-[44ch]">
-              <p className="text-body text-pretty text-muted">{s.text}</p>
-              <a href={s.href} className="mt-2 inline-flex min-h-11 items-center text-ui text-faint underline-offset-4 transition-colors duration-160 hover:text-text hover:underline">
-                {s.source}
-              </a>
+          <div key={s.figure} className="border-t border-paper-line pt-6 sm:pt-8">
+            <dt className="font-serif text-numeral font-normal whitespace-nowrap italic tabular-nums">{s.figure}</dt>
+            <dd className="mt-4 max-w-[40ch] text-body text-pretty text-ink-muted">
+              {s.text}
+              <Note n={s.note} />
             </dd>
           </div>
         ))}
       </dl>
 
-      <div className="mt-12 grid gap-6 md:grid-cols-2 lg:mt-16">
-        {QUOTES.map((q) => (
-          <figure key={q.who} className="m-0 flex flex-col rounded-card border border-line bg-surface">
-            <span className="micro px-6 pt-6 text-faint sm:px-8 sm:pt-8">{q.who}</span>
-            <blockquote className="flex-1 px-6 pt-4 pb-8 sm:px-8">
-              <p className="text-body text-text sm:text-lead">{q.quote}</p>
-            </blockquote>
-            <figcaption className="border-t border-line px-6 py-3 sm:px-8">
-              <a href={q.href} className="inline-flex min-h-11 items-center text-ui text-muted underline-offset-4 transition-colors duration-160 hover:text-text hover:underline">
-                {q.source}
-              </a>
-            </figcaption>
-          </figure>
+      <Enter className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-12" threshold={0.3}>
+        <div className="contents lg:flex lg:flex-col lg:gap-8">
+          <Document meta="CPSC 27-071 · Kikea Store · 19,596 units" note={3} className="lg:-rotate-[0.6deg]">
+            &ldquo;&hellip;cut the pillow in half after confirming the recalled pillow with the firm and send a photo of the destroyed pillow to{" "}
+            <span className={clsx(styles.highlight, "font-mono whitespace-nowrap")}>z•••••929@gmail.com</span>.&rdquo;
+          </Document>
+          <blockquote className="order-last mt-4 max-w-[44ch] border-l-2 border-ink pl-6 text-head-sm font-medium text-balance lg:order-none">
+            The same request warns that fraud controls can &ldquo;reduce recall participation&rdquo;.{" "}
+            <span className="text-ink-muted">Remedy keeps the refund easy for a real owner and expensive for a fake.</span>
+          </blockquote>
+        </div>
+        <Document
+          meta="CPSC-2026-0067 · Request for information"
+          note={4}
+          className="lg:mt-8 lg:rotate-[0.8deg]"
+          stamp={
+            <span className="pointer-events-none absolute right-6 -bottom-4 sm:right-8">
+              <Stamp tone="stop" rotate={-6} className={clsx(styles.stamp, "bg-paper-2")}>
+                Received
+              </Stamp>
+            </span>
+          }
+        >
+          &ldquo;&hellip;altered, fabricated, or artificially generated images&hellip; purporting to demonstrate product destruction.&rdquo;
+        </Document>
+      </Enter>
+
+      <ol aria-label="Sources" className="mt-8 grid gap-x-8 gap-y-1 border-t border-paper-line pt-6 md:grid-cols-2 lg:grid-cols-4">
+        {SOURCES.map((s) => (
+          <li key={s.n} id={`source-${s.n}`} className="flex gap-3 font-mono text-micro text-ink-muted">
+            <span className="w-4 shrink-0 tabular-nums">{s.n}</span>
+            <a href={s.href} className={clsx(link, "inline-flex min-h-6 items-center")}>
+              {s.label}
+            </a>
+          </li>
         ))}
-      </div>
-      <p className="mt-8 max-w-read text-body text-muted">
-        The same request warns that fraud controls can &ldquo;reduce recall participation&rdquo;. Remedy keeps the refund easy for a real owner and expensive for a fake.
-      </p>
+      </ol>
     </Section>
   );
 }
