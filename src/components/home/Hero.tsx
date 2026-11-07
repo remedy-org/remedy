@@ -28,7 +28,9 @@ export function Hero() {
         <span className="contents">Proof it&rsquo;s destroyed.</span> <span className="contents text-muted">Paid in a minute.</span>
       </h1>
       <p className={clsx("mt-6 max-w-[34ch] text-body text-pretty text-text-2 sm:text-lead lg:mt-8", styles.focusIn)} style={line(1)}>
-        Owners cut the recalled product on a live camera, with a one-time code on it. Remedy checks the photo and pays the refund through PayPal.
+        {/* Two blocks on phones, one paragraph from sm: each half stays smaller than the h1, so the h1 is the LCP. */}
+        <span className="block sm:inline">Owners cut the recalled product on a live camera, with a one-time code on it.</span>{" "}
+        <span className="block sm:inline">Remedy checks the photo and pays the refund through PayPal.</span>
       </p>
       <div className={clsx("mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 lg:mt-10", styles.focusIn)} style={line(2)}>
         <Button href="/signin" size="lg">

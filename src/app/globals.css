@@ -190,8 +190,11 @@
 
   /* Six steps, one voice: 56 / 40 / 22 / 17 / 14 / 12 (28 is the 40 step's phone floor and the app's screen titles). */
   --text-*: initial;
-  /* The homepage h1 and the one money figure per screen where the number is the point: 56px at 1440, 36px at 375. */
-  --text-display: clamp(2.25rem, 3.9vw, 3.5rem);
+  /*
+   * The homepage h1 and the one money figure per screen where the number is the point: 56px at 1440, 40px on phones
+   * (40, not 36: at 36 the hero lead's block outweighs the h1 and becomes the phone's LCP element).
+   */
+  --text-display: clamp(2.5rem, 3.9vw, 3.5rem);
   --text-display--line-height: 1.03;
   --text-display--letter-spacing: -0.03em;
   /* Section headings (two-tone), the Problem stats, Proof's 0: 40px at 1440, 28px at 375. */

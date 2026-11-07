@@ -356,7 +356,7 @@ function CheckRow({ p, i }: { p: Progress; i: number }) {
         // On a short phone the quotes give way to the five checks; the laptop always shows them, with their leaders.
         <motion.p
           data-quote={check.region}
-          className={clsx("mt-2 border-l border-line-strong pl-3 font-mono text-micro text-pretty text-muted @min-[720px]:ml-9", compact && "@max-[719px]:hidden")}
+          className={clsx("mt-2 border-l border-line-2 pl-3 text-ui leading-[1.55] text-pretty text-muted @min-[720px]:ml-9", compact && "@max-[719px]:hidden")}
           style={{ opacity: t }}
         >
           &ldquo;{check.quote}&rdquo;
@@ -409,7 +409,7 @@ export function ChecksChapter({ p }: { p: Progress }) {
       const r = el.querySelector(`[data-region="${id}"]`)?.getBoundingClientRect();
       if (!q || !r || !r.width) continue;
       const x1 = (q.left - o.left) / k - 6;
-      const y1 = (q.top - o.top) / k + 9;
+      const y1 = (q.top - o.top) / k + 11;
       const x2 = (r.right - o.left) / k;
       const y2 = (r.top - o.top + r.height / 2) / k;
       const xm = x1 - Math.max(16, (x1 - x2) * 0.35);

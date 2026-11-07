@@ -1,6 +1,6 @@
 # Remedy design system: "Evidence Room"
 
-Approved 7 Nov 2026 from three explored directions (variant B), then made physical the same day ("Evidence Room, made physical": paper objects, stamps, a lit light table, one serif for money). It will be refined as we build; changes land here first, then in code. `docs/PRODUCT.md` owns what exists; this file owns how it looks and moves.
+Approved 7 Nov 2026 from three explored directions (variant B), then made physical the same day ("Evidence Room, made physical": paper objects, stamps, a lit light table). Wave 3 (7 Nov) rebuilt the palette and type as **Lamplight**, the judged winner of three researched directions: a warm graphite room, cream paper and one amber, with Schibsted Grotesk for every word and JetBrains Mono for evidence. The research and judging live in the wave 3 scratchpad (`RESEARCH.md`, `DIRECTION.md`). It will be refined as we build; changes land here first, then in code. `docs/PRODUCT.md` owns what exists; this file owns how it looks and moves.
 
 ## Brief
 
@@ -8,11 +8,11 @@ Approved 7 Nov 2026 from three explored directions (variant B), then made physic
 
 | Surface | Archetype | Density | Motion budget |
 |---|---|---|---|
-| Homepage | Marketing, product-first hero | Roomy | Exactly four moves: focus-in, one scrubbed sequence, ink, drop (see Motion) |
+| Homepage | Marketing, product-first hero, confidence through restraint | Roomy | Exactly four moves: focus-in, one scrubbed sequence, ink, drop (see Motion), on inertial wheel scrolling |
 | Claim flow | Guided verification (Stripe Identity patterns) | Roomy, one action per screen | State changes, plus one arrival moment (the receipt) |
 | Seller console | Data, calm density (AG Grid) | Tight | Near zero: panel 160ms, cell flash, row insert |
 
-**One brand hue:** evidence-tag amber, used for the primary action and the "exhibit" annotations. Everything else is tinted graphite.
+**One brand hue:** evidence-tag amber, and only for "the thing to do now" or "the thing happening now": one amber focal element per viewport (the 22px nav mark and the focus ring never count). Everything else is warm graphite, and the cream paper.
 
 ## What we borrow, and from where
 
@@ -26,96 +26,90 @@ These patterns come from measured reference sites (Stripe, Linear, Mercury, Pers
 - **Navigation (Linear, Mercury):** "Sign in" as quiet text, one filled primary button.
 - **Grid (AG Grid's own demo):** status tabs, dot pills, two-line cells.
 
-**Never:** more than one pinned sequence per page; a pin longer than 320vh; a pinned frame that is ever empty; a pin without a skip link; a fade-in from black, gradient or acid brand colours, illustration carousels, walls of logos and video tiles, emoji, lorem ipsum, or PayPal's logo (we name PayPal in plain text only).
+**Never:** more than one pinned sequence per page; a pinned beat shorter than about 70vh of scroll (the owner found the old 320vh pin "very fast"; the cap is gone, the pacing in `custody/pace.ts` rules); a pinned frame that is ever empty; a pin without a skip link; a fade-in from black, gradient or acid brand colours, illustration carousels, walls of logos and video tiles, emoji, lorem ipsum, or PayPal's logo (we name PayPal in plain text only).
 
 ## Type
 
-- **Instrument Sans** for headings and body, loaded with `next/font/google`. It is not the create-next-app default, so it doesn't read as a template.
-- **IBM Plex Mono** for evidence: codes (`K7M`), claim IDs, payer IDs, amounts in grids, timestamps and exhibit labels.
-- **Instrument Serif, 400 italic only**, for monumental money and the hero's second line, on the homepage only (`font-serif`). It's loaded in the root layout without a preload, so a page that sets no text in it never downloads it.
-- **Weights:** 400 for body, 500 for UI labels, 600 for headings. Nothing heavier.
+One voice. Both families are OFL and load with `next/font/google` in `src/app/layout.tsx`:
 
-| Token | Size / line height | Use (and only this) |
+- **Schibsted Grotesk** for every word: display, headings, body, UI. One variable file, preloaded (it carries the h1, the LCP element). Weights: 400 body and leads; 500 display, headings, UI labels, buttons and pills; 600 only for the wordmark and the console ledger's figures.
+- **JetBrains Mono** for evidence: claim IDs (RM-0442), codes (M4T, "Code K7Q"), recall numbers, masked payer IDs, timestamps, the grid's AMOUNT column, micro labels, stamps and the tag. 400 for data, 500 for IDs, the tag code and stamps. Not preloaded; it swaps in. Every ID and code is `white-space: nowrap`.
+- **No serif, anywhere.** Instrument Sans, IBM Plex Mono and Instrument Serif are gone, and so is `--font-serif`.
+
+Six steps: 56 / 40 / 22 / 17 / 14 / 12 (plus 28, the 40 step's phone floor and the app's screen titles). No screen renders more than six sizes.
+
+| Token | Size / line height / tracking | Use (and only this) |
 |---|---|---|
-| `numeral` | Serif italic 400, clamp(72px, 11vw, 160px) / 0.9, -0.02em, tabular | Monumental numbers: the custody payout `$29.99`, Problem stats, Proof's `0` |
-| `display` | Sans 600, clamp(44px, 7.8vw, 116px) / 0.94, -0.04em; line 2 in serif italic 400, -0.02em, `--muted` | Homepage hero h1 only (112px at 1440) |
-| `title-lg` | Sans 600, clamp(36px, 4.4vw, 64px) / 1.0, -0.035em | Homepage statement titles; at most two two-tone uses on the page |
-| `head-sm` | Sans 500, 20 / 1.3, -0.01em, two-tone | Homepage small section heads |
-| `h1` | 44 / 1.08, -0.02em | App only; not used on the homepage |
-| `title` | Sans 600, 32 / 1.1, -0.02em; 26 below 640px | Claim-flow screen titles |
-| `amount` | Sans 600, 64 / 1.0, -0.03em, tabular; 52 below 640px | Claim-flow refund and receipt amount |
-| `h2` | 28 / 1.15, -0.015em | Screen titles in the console |
-| `lead` | 20 / 1.5 | Hero and section intros, at most 60ch wide |
-| `body` | 16 / 1.6 | Running text, at most 68ch wide |
-| `ui` | 14 / 1.45 | Controls, grid cells, labels |
-| `micro` | 12 / 1.4, +0.06em, uppercase in mono | Exhibit labels, eyebrows |
+| `display` | clamp(40px, 3.9vw, 56px) / 1.03 / -0.03em, 500 | The homepage h1 (two-tone, no italic, nothing on the site is bigger), and the one number per screen where the number is the point: the paid receipt's $29.99 (`Money size="numeral"`, the custody odometer), Proof's 0. 40px on phones, not 36: at 36 the hero lead's block outweighs the h1 as the phone's LCP |
+| `title-lg` | clamp(28px, 2.8vw, 40px) / 1.06 / -0.028em, 500 | Section headings, two-tone (`--text`, then `--muted`); the Problem stats; "Running a recall?" |
+| `head-sm` | 22 / 1.3 / -0.01em, 500 | Small heads, gate and check names, the hero facts |
+| `lead` | 22 / 1.45, 400, `--text-2` | The hero lead only (34ch); section intros are body |
+| `body` | 17 / 1.55, 400, `--text-2` | Running text, at most 68ch; section intros at most 60ch |
+| `ui` | 14 / 1.45 | Controls, grid cells, receipt rows, captions, the model's quoted evidence (sans, `--muted`, line height 1.55) |
+| `micro` | 12 / 1.4, +0.04em, uppercase in mono | Eyebrows, exhibit labels, stamps. Pills use it in sans 500 with no case change and no tracking |
+| `amount` | 56 / 1.0 / -0.03em, 500; 40 below 640px | Claim-flow refund and receipt amount |
+| `title`, `h2` | 28 / 1.1 / -0.02em, 500 | Claim-flow and console screen titles |
+| `h1` | 40 / 1.06 / -0.028em | App page titles |
 
-Use tabular numbers everywhere digits line up. The homepage may use seven sizes (160 / 112 / 64 / 20 / 16 / 14 / 12); app screens keep six.
+**Figures:** never put `tabular-nums` on Schibsted text: its `tnum` also makes the point and comma tabular ("$29 .99", "19 , 596"). Tabular figures live only on mono (`code, kbd, samp, pre, .font-mono` get `tabular-nums slashed-zero` in base). Digits that must line up go in mono (`Money size="grid"`, timers); everything else keeps Schibsted's proportional figures.
 
 **Money** (`<Money value={29.99} size="numeral|amount|inline|grid" />`): the whole part, then the cents de-emphasised, as Mercury does.
-- `numeral` and `amount`: cents at 55%, raised to the cap height (`vertical-align: .62em`).
-- `inline` (the surrounding text's font) and `grid` (14px mono): cents at 73%, raised 0.2em.
+- `numeral` (display) and `amount`: cents at 55%, raised to the cap height (`vertical-align: .62em`), tight to the whole.
+- `inline` (the surrounding text's font) and `grid` (14px mono, tabular): cents at 73%, raised 0.2em.
 - Screen readers and copy-paste get the plain "$29.99"; the split parts are hidden from assistive tech.
 
 ## Colour
 
-Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind through `@theme inline`. Dark is the brand; the app also has a designed light mode. The homepage is dark only, by choice.
+Colours are OKLCH tokens in `src/app/globals.css`, exposed to Tailwind through `@theme inline`. **Dark is the default**; light is the designed alternative. A saved choice (the theme toggle, on every page including the homepage) wins; with none saved, a visitor whose system prefers light gets light (the pre-paint script in `layout.tsx`). Token names are stable, so every page follows.
+
+**Guards:** dark neutrals sit at chroma 0.004, hue 75 (above 0.005 the room turns brown and the amber, which shares the hue, stops popping); dark surfaces step by exactly +0.035 L; light neutrals stay at chroma 0.008 or less. A token that differs by theme lives only in the two theme blocks, never in the shared `:root, [data-theme]` block (which comes later and would override them).
 
 | Token | Dark | Light | Role |
 |---|---|---|---|
-| `--bg` | `oklch(0.165 0.012 255)` | `oklch(0.985 0.003 255)` | Page |
-| `--surface` | `oklch(0.205 0.013 255)` | `oklch(1 0 0)` | Cards, panels |
-| `--surface-2` | `oklch(0.245 0.014 255)` | `oklch(0.962 0.004 255)` | Insets, grid header |
-| `--line` | `oklch(1 0 0 / 0.08)` | `oklch(0.2 0.02 255 / 0.1)` | Hairlines |
-| `--text` | `oklch(0.96 0.005 255)` | `oklch(0.2 0.02 255)` | Primary text |
-| `--muted` | `oklch(0.72 0.012 255)` | `oklch(0.46 0.02 255)` | Secondary text, second half of headlines |
-| `--faint` | `oklch(0.64 0.012 255)` | `oklch(0.54 0.015 255)` | Meta and small print; still 4.5:1 on every surface |
-| `--accent` | `oklch(0.80 0.15 75)` | `oklch(0.74 0.15 72)` | Primary button fill, exhibit marks |
-| `--accent-ink` | `oklch(0.22 0.03 70)` | `oklch(0.22 0.03 70)` | Text on accent |
-| `--accent-text` | `oklch(0.82 0.13 78)` | `oklch(0.52 0.12 62)` | Amber used as text |
-| `--pay` | `oklch(0.78 0.16 150)` | `oklch(0.48 0.14 150)` | Paid, check passed |
-| `--hold` | `oklch(0.76 0.10 240)` | `oklch(0.50 0.12 250)` | Held for a person |
-| `--stop` | `oklch(0.70 0.17 25)` | `oklch(0.51 0.19 27)` | Rejected, blocked |
+| `--bg` | `oklch(0.155 0.004 75)` #0d0c0a | `oklch(0.975 0.006 85)` #f9f6f2 | Page |
+| `--surface` | `0.19 0.004 75` | `0.995 0.003 85` | Cards, console window body, rule table, photo card, the light table |
+| `--surface-2` | `0.225 0.004 75` | `0.955 0.007 85` | Console chrome bar, grid header, evidence panel, quiet button |
+| `--surface-3` | `0.26 0.004 75` | `0.93 0.008 85` | Active tab chip, meter track, quiet-button hover. Pills never sit on it |
+| `--section-lift` | `0.175 0.004 75` | `0.96 0.007 85` | Top colour of each section's fade into the page |
+| `--line` | warm white at 8% | ink at 11% | Hairlines inside components |
+| `--line-2` | warm white at 15% | ink at 18% | Outlines of non-input controls: quiet buttons, chips, the SAMPLE DATA badge |
+| `--line-strong` | `0.53 0.006 80` (opaque) | `0.62 0.008 70` | Input and search borders only (3:1) |
+| `--text` / `--text-2` / `--muted` / `--faint` | `0.96` / `0.86` / `0.74` / `0.68` | `0.21` / `0.33` / `0.45` / `0.51` | Headings; body and leads; second tone, captions, nav; meta and eyebrows |
+| `--accent` | `0.79 0.145 72` | `0.77 0.145 70` | Amber fill (rules below) |
+| `--accent-text` | `0.82 0.12 76` | `0.50 0.12 60` | The active state's label only |
+| `--pay` / `--hold` / `--stop` | `0.79 0.15 150` / `0.78 0.08 240` / `0.72 0.16 28` | `0.45 0.13 150` / `0.44 0.11 250` / `0.48 0.18 28` | Paid; held for a person (the only blue); rejected or blocked |
+| `--pool` | amber light at 8.5% | amber light at 40% | The light table (see Depth) |
+| `--bevel` / `--halo` | 0.5px white top edge at 8% / cream halo at 5% | Clerk's two 2.4% soft layers / none | Machined detail on dark cards and controls |
+| `--band` / `--band-sheet` | `--paper` / `--paper-2` | `--paper-2` / `--paper` | The Problem band and a notice lying on it |
 
-**Paper and ink** keep their colour in both themes, like the real objects (the tag, the receipt, the notice):
+**Paper and ink** keep their colour in both themes, like the real objects: `--paper` `oklch(0.94 0.014 85)`, `--paper-2` `0.90 0.016 85`, `--ink` `0.23 0.010 65`, `--ink-muted` `0.42 0.012 65`, `--pay-ink` `0.42 0.13 150`, `--hold-ink` `0.44 0.11 250`, `--stop-ink` `0.47 0.17 28`, `--paper-line` ink at 18%, `--highlight` amber at 55%. `--photo-scrim` (bg at 78%) and `--photo-scrim-text` back the "AI-made test photo" label on every sample photo.
 
-| Token | Value | Role |
-|---|---|---|
-| `--paper` | `oklch(0.95 0.012 85)` | Tags, sheets, receipts; the Problem band |
-| `--paper-2` | `oklch(0.91 0.014 85)` | Chips and rows on paper; notices lying on paper |
-| `--paper-line` | `oklch(0.24 0.02 255 / 0.18)` | Hairlines and dashed rows on paper |
-| `--ink` | `oklch(0.24 0.02 255)` | Text on paper |
-| `--ink-muted` | `oklch(0.42 0.02 255)` | Secondary text and exhibit labels on paper |
-| `--pay-ink` | `oklch(0.44 0.14 150)` | Paid, on paper |
-| `--hold-ink` | `oklch(0.46 0.12 250)` | Held, on paper |
-| `--stop-ink` | `oklch(0.50 0.18 27)` | Refused, on paper |
-| `--highlight` | `--accent` at 55% | Highlighter under ink |
-| `--table-glow` | an amber radial under the hero device | The lit light table (dark surfaces only) |
-| `--rail` | `oklch(1 0 0 / 0.06)` | The homepage's page rails |
+**Where amber may appear:** the one primary action on a screen ("Start a recall" in the hero; the nav's copy is a quiet button); the active state of a sequence (the chapter or check running now, the console's open row, the marked code region on the live photo); the highlighter on paper; `--accent-text` for the active state's label; the light-table pool. **Never** on eyebrows, exhibit labels or letters, links, headings, icons, inactive chart bars, section backgrounds or gradients, and never twice on one screen.
 
 **Rules:**
-- Each state colour has a soft background at 14% alpha and its text colour. State is never shown by colour alone: it always has a word and an icon.
-- Held is blue, not amber, so it never reads as the brand.
-- Body text meets 4.5:1 and UI borders 3:1 in both themes. Every ink meets 4.5:1 on `--paper` and `--paper-2`, a stamp's ink at 85% included, and every state colour meets 4.5:1 on its soft pill in both themes.
-- `npx tsx scripts/contrast.ts` checks all of these from `globals.css` (OKLCH to sRGB to WCAG) and fails on any miss. Run it after changing a colour; when a pair fails, lower that colour's lightness in 0.02 steps until it passes. (It set the inks at 0.44 / 0.46 / 0.50 and the light state colours at 0.48 / 0.50 / 0.51.)
-- Amber never sits on paper as text (1.5:1); on paper, exhibit labels use `--ink-muted`.
+- Each state colour has a soft background at 14% and its text colour. State is never shown by colour alone: it always has a word and an icon or dot shape.
+- Every text pair is at least 4.5:1 in both themes, on every surface, the section fade, the open row and the pool's brightest point; input borders 3:1; every ink 4.5:1 on paper, paper-2 and the band, stamps included at 85%; every state colour 4.5:1 on its pill on the page, a card, the grid header and the open row.
+- `npx tsx scripts/contrast.ts` checks all of these from `globals.css` (OKLCH to sRGB to WCAG, translucent layers composited) and fails on any miss. When a pair fails, lower that colour's lightness in 0.02 steps until it passes.
+- Amber never sits on paper as text (1.5:1); stamps sit on `--paper` only.
 
 ## Space, radius, depth
 
 - **Spacing:** a 4px base. Use 4, 8, 12, 16, 24, 32, 48, 64, 96, 128 (homepage section padding: 128 desktop, 72 mobile).
-- **Widths:** content max 1200px; reading columns 68ch; claim flow 480px for the main card.
-- **Radius:**
-  - 6px for buttons, inputs and chips;
-  - 10px for cards and drawers;
-  - 16px for device frames;
-  - 999px for status pills only.
-- **Depth:** 1px hairline borders do the structural work. Floating layers (menus, drawer, toasts) get a ring (`0 0 0 1px var(--line)`) plus one soft shadow. Paper objects get a `--paper-line` ring plus `--paper-shadow` (`--paper-shadow-flat` when paper lies on paper). No other shadows.
+- **One grid for the whole site:** the page frame is `.page` (content at most 82rem, 1312px, inside fluid gutters `--gutter: clamp(24px, 4.45vw, 64px)`, so 1440px in all at 1440), and `.grid-12` is the 12-column grid inside it (`--col-gap: clamp(16px, 1.67vw, 24px)`). Full-bleed backgrounds and media may run edge to edge; text never does. Text starts on two grid lines: column 1 (eyebrows, headings, primary text) and column 8 (section intros, the second stat, the CTA). The hero copy takes columns 1 to 6 and the laptop runs from column 7 off the right edge; the pinned custody rail takes columns 1 to 3 and its screen 4 to 12.
+- **No visible boundary:** no rails, ticks, margin numerals, column-edge rules or hairlines between sections. Structure comes from alignment, tone and space. Each section after another `--bg` section opens with a fade from `--section-lift` into `--bg` over 288px; the paper band is its own boundary.
+- **Widths:** reading columns 68ch; claim flow 480px for the main card.
+- **Radius:** 6px buttons, inputs and chips; 10px cards and drawers; 16px device frames; 999px status pills only.
+- **Depth:**
+  - Dark UI (cards, the console window, rule table, photo card, evidence panel) uses `shadow-card`: the 1px `--line` ring, the 0.5px `--bevel` top edge and the cream `--halo`. Controls use `shadow-ring` (ring and bevel). In light the bevel becomes two soft layers and the halo is off.
+  - Buttons: primary is amber with a 0.5px white top edge at 35%; the quiet button (`secondary`) is `--surface-2` with an inset `--line-2` ring and the bevel, `--surface-3` on hover; tertiary is a text link whose arrow moves 3px on hover.
+  - Paper uses `--paper-shadow` (ring, inner top highlight, contact shadow, long drop), or `--paper-drop` plus `--paper-top` when masked (a punched tag, a perforated receipt). Paper appears once per viewport, as the focal point.
+  - Floating layers use `shadow-float`. Nothing else casts a shadow.
+- **The light table (the signature):** one warm pool of light (`--table-glow`, a closest-side radial of `--pool`) under the paper object that leads the screen. It sits under all content, never moves, never overflows its section, and there is at most one per section and per viewport: on the hero's table, painted in the table's own perspective under the laptop and the receipt, and under the paid receipt in the Chain of Custody, where it comes on with the PAID · SANDBOX stamp. None in the console, none behind a heading, no cones or beams.
 - **Grain** (homepage and claim flow, not the console): `.grain` on the layout root adds a fixed 160px `feTurbulence` noise tile at 3.5%, with no blend mode so scrolling never repaints the viewport.
-- **Rails** (homepage only, 1024px and up): two 1px `--rail` lines at the 1200px content edges with a 6px tick every 96px.
-- **Light table:** `--table-glow` under the device and a 1px top bevel highlight (`inset 0 1px 0 oklch(1 0 0 / .06)`) on the table plane.
 
 ## Motion
 
+- **Scrolling:** the homepage wheel is inertial (Lenis, `SmoothScroll.tsx`, lerp 0.1), off under reduced motion; keyboard, anchors, the skip link, touch and find-in-page stay native, and inner scrollers keep their wheel.
 - **Micro-interactions:** 160ms ease-out (`cubic-bezier(0.2, 0.8, 0.2, 1)`), transform and opacity only.
 - **Larger transitions:** up to 360ms.
 - **Library:** Motion (`motion/react`), only where CSS can't do it.
@@ -132,7 +126,7 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
 
 - **The homepage's four moves**, and nothing else animates:
   1. **Focus-in:** headings and leads go from blur 10px, 12px down and transparent to rest over 900ms `--ease-out-expo`, 80ms apart per line. Above the fold it runs in CSS on first paint; below, at 35% in view. Text only, never the 3D laptop.
-  2. **Scrub:** the one pinned Chain of Custody sequence.
+  2. **Scrub:** the one pinned Chain of Custody sequence. Its moves are written against its own timeline p; `custody/pace.ts` maps the scroll onto p so each beat gets its own share (16vh at rest, 64 for the dolly, 80 to 104 per chapter, 72 for the console: 584vh of scroll in all, plus the stage). The phone version gives each chapter 72vh. Chapters 03 to 05 render inside `ExhibitSlot.tsx`, the mount point for the 3D "Opened Exhibit" (its contract is in that file).
   3. **Ink:** things drawn by a pen. The highlighter (`background-size` 0 to 100%, 700ms), leader lines and strings (`pathLength` 0 to 1, 600ms `--ease-out-quart`), stamps (`.stamp-land`: scale 1.4 to 1 and fade in, 200ms `--ease-back`; the tilt never moves).
   4. **Drop:** paper objects settling, with `SPRING.drop` and a 2° rotation settle.
 - **The hero moment:** the device sits in a slight 3D tilt on the light table (CSS perspective; up to 4° extra tilt following the pointer on desktop). Once it's in view, the five checks (in the order of "What stops a fake") tick in one after another, 450ms apart, then the payout chip lands with the time. Below a 640px stage the screen shows the camera alone and the checks tick in a full-size card under the laptop. It plays once, and replays on a "Replay" control.
@@ -151,17 +145,17 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
 
 **Inputs:** a 1px line border, the focus ring as above, the label above the field, help text below in `--muted`, and errors in `--stop` with a fix.
 
-**Status pill:** a dot, then a word ("Paid", "Held", "Rejected", "Blocked"), in the state's soft background and text colour.
+**Status pill:** 22px tall, 12px Schibsted 500: a dot, then a word ("Paid", "Held", "Rejected", "Blocked"), in the state's soft background and text colour. In progress is neutral (`--surface-2`, `--text-2`, a hollow `--faint` dot): it repeats down a list, so it is never amber.
 
-**Exhibit label:** mono, micro size, amber text with a hairline leader line to what it annotates. On paper it uses `--ink-muted`.
+**Exhibit label:** mono, micro size, `--faint` text with a `--line-2` hairline leader to what it annotates. On paper it uses `--ink-muted`.
 
 **Paper** (`<Paper variant="tag|sheet|receipt|notice">`): `--paper` and `--ink`, radius 6, ring plus `--paper-shadow`. A tag has its top corners cut; a notice is `--paper-2` with the flat shadow, for a document lying on the paper band. Options: `hole` (a 10px punched hole with a reinforcement ring, 14px from the top edge), `perforated` (a torn top edge), `tilt` (-1.5° to 2°). The hole and the perforation are real cut-outs: the surface behind shows through.
 
-**Stamp** (`<Stamp tone="pay|hold|stop|neutral">PAID</Stamp>`): 2px border, radius 6, 14px Plex Mono 600, +0.14em tracking, the tone's ink at 85%, rotated -8°. Decorative (`aria-hidden`): the status is always also in text. Never bigger than 14px type, never textured, one colour. `land` plays the landing once on mount.
+**Stamp** (`<Stamp tone="pay|hold|stop|neutral">PAID</Stamp>`): 2px border, radius 6, 14px JetBrains Mono 500, +0.14em tracking, the tone's ink at 85%, rotated -8°. Decorative (`aria-hidden`): the status is always also in text. Never bigger than 14px type, never textured, one colour. `land` plays the landing once on mount.
 
 **The mark:** an amber evidence tag (top corners cut, a punched hole, the code written on it) on a string loop, hanging at the stamp's -8°. 22px in the homepage nav, 18px in app chrome. The string draws in once on load (600ms `--ease-in-out-quart`), static under reduced motion.
 
-**Theme toggle:** a 36px icon button with a 44px hit area and an `aria-label`; the glyph is a half-lit disc that turns over with the theme.
+**Theme toggle:** a 36px icon button with a 44px hit area and an `aria-label`; the glyph is a half-lit disc that turns over with the theme. It stores "dark" or "light", so a choice outlasts the system preference. The homepage nav has one too.
 
 **Evidence panel** (the console's; one component, `EvidencePanel` in `EvidenceDrawer.tsx`):
 1. the photos as Exhibit A, which open full size;
@@ -172,29 +166,29 @@ Colours are OKLCH tokens in `src/app/globals.css` and exposed to Tailwind throug
 It docks 440px wide beside the grid from 1280px, opens as a sheet over the grid from 1024px, and fills the screen on phones. Esc closes it and returns focus to the row; moving through the grid's rows with ↑ and ↓ moves it with them.
 
 **AG Grid:**
-- Theming API (`themeQuartz.withParams`) mapped to the tokens above.
+- Theming API (`themeQuartz.withParams`) mapped to the tokens above: the window body `--surface`, the header `--surface-2` in 12px mono, the open row `--surface` + `--accent-soft` with a 2px amber edge.
 - Header 36px, rows 52px (two-line cells), font `ui` and mono for IDs and amounts.
 - Evidence cells: photo thumbnails, the decision pill with its reason, an evidence barcode (one bar per check: pre-checks, then the model's), payout status, and a timeline chip.
-- No zebra stripes; hairline row borders; the selected row tinted `--accent` at 8%, the open row with a 2px amber edge.
+- No zebra stripes; hairline row borders.
 - Below 720px of grid width each claim is one card row (72px). The homepage's read-only still keeps its columns down to 592px.
 
 ## Screens
 
-**Homepage**, as shipped (`src/app/(marketing)/page.tsx`); the reduced-motion page is at most 7,600px tall at 1440 (7,552px now):
-1. Nav: wordmark, How it works, then the exhibits by letter (A Problem, B Checks, C Proof, D For companies), Sign in, and **Start a recall**.
-2. Hero, which is also "How it works": a two-tone headline, the lead, **Start a recall** and "Try a claim with sample photos →" (with a faint line that the demo needs a PayPal sandbox personal account), the device on the light table, and the Chain of Custody: one real claim in five chapters (Log in with PayPal, One-time code, Live photo, Five checks, Paid). It is the one pinned sequence on laptops of at least 1024×700 with motion allowed, a sticky phone on smaller screens, and static figures without JS or under reduced motion. There is no separate "How it works" section.
-3. Exhibit A, the problem, on paper: 6–10% of recalled products come back, and real notices still say "email a photo to a @gmail.com inbox".
-4. Exhibit B, what stops a fake: the five checks as a gate pipeline, the first three needing no AI, and "Run these four yourself".
-5. Exhibit C, proof: the eval table from `docs/EVAL.md`.
-6. Exhibit D, for companies: the real read-only claims grid (`ClaimsGridPreview`) on the 40 seeded sample claims, loaded one viewport ahead; the static `ConsoleReplica` stands in, at the same 809px at 1440, until it loads and without JS. Both are labelled SAMPLE DATA, with "Sample / not sent" payouts and AI-made photo labels. Phones get four card rows, one of each outcome. Then Log in with PayPal.
-7. Footer.
+**Homepage**, as shipped (`src/app/(marketing)/page.tsx`), dark by default and following the theme toggle:
+1. Nav on the page frame: wordmark, How it works, then the exhibits by letter (A Problem, B Checks, C Proof, D For companies), the theme toggle, Sign in, and **Start a recall** as the quiet button. No rule under it; the page shows through a blur.
+2. Hero, which is also "How it works": the 56px two-tone headline ("Proof it's destroyed." then "Paid in a minute." in `--muted`, one voice), the lead, **Start a recall** (the screen's one amber) and "Try a claim with sample photos →", the sandbox-account note, and a row of three checkable facts (15 s photo to payout on RM-0442, 5 checks, 36 claims tested). The laptop with the live claim screen sits on the light table from column 7, the refund receipt in front of it on the pool, two neutral exhibit labels (Label and code M4T, Cut) clear of the receipt. Then the Chain of Custody: one real claim in five chapters (Log in with PayPal, One-time code, Live photo, Five checks, Paid) and the console. It is the one pinned sequence on laptops of at least 1024×700 with motion allowed, a sticky phone on smaller screens (the product above the fold, the facts after it), and static figures without JS or under reduced motion. The Paid chapter is a perforated receipt: $29.99 at display size rolling up, the PAID · SANDBOX stamp, and the pool coming on with it.
+3. Exhibit A, the problem, on the paper band: the two stats on the heading's grid lines, the CPSC notice and request for information as documents, numbered sources.
+4. Exhibit B, what stops a fake: the five gates in columns 1 to 6, each marked No AI or Model reads, the four sample lanes in 7 to 12, and "Try the four samples yourself".
+5. Exhibit C, proof: 0 web photos paid at display size, three supporting figures on column 8, the eval table from `docs/EVAL.md`.
+6. Exhibit D, for companies: the real read-only claims grid (`ClaimsGridPreview`) on the 40 seeded sample claims, loaded one viewport ahead; the static `ConsoleReplica` stands in until it loads and without JS. Both are labelled SAMPLE DATA, with "Sample / not sent" payouts and AI-made photo labels. Then Log in with PayPal as a quiet button (the footer tag's is the amber one).
+7. Footer: the "Running a recall?" tag hanging on its string across columns 2 to 11, then the sitemap, sources and disclaimer.
 
 **Claim flow:** one step per screen on the graphite background, following Stripe Identity; focus moves to each step's heading:
-- **Consent screen:** the 64px refund and the hazard banner above the fold, the company and Remedy side by side, the numbered steps, then one full-width primary button. The demo (`/try`) swaps the steps for the four sample claims (thumbnail and expected outcome), adds a sandbox callout above the button, and a judges' rail (280px at 1440; a "For judges" pill on phones).
+- **Consent screen:** the 56px refund (40px on phones) and the hazard banner above the fold, the company and Remedy side by side, the numbered steps, then one full-width primary button. The demo (`/try`) swaps the steps for the four sample claims (thumbnail and expected outcome), adds a sandbox callout above the button, and a judges' rail (280px at 1440; a "For judges" pill on phones).
 - **Code step:** the paper tag with the one-time code, a timer pill, and the phone QR leading on laptops.
 - **Camera step:** a full-width viewfinder with the shutter on the first phone screen, guide chips and the Space key as shutter on laptops.
 - **Checking:** the first photo as Exhibit A beside a five-stage timeline that fills with the model's quotes.
-- **Result:** paper. Paid is a perforated receipt with the 64px amount, a PAID stamp and the live PayPal status ("Paid N s after your photo", then "Received"; the receipt asks every 5 s for 30 s, then every 15 s, for 2 minutes at most, never while the tab is hidden, and stops on a settled status, rather than the spec's 4 s for 3 minutes, to stay inside the Blob budget); in a sandbox build the stamp reads PAID · SANDBOX and the line says sandbox money, sample or not; held and refused are a sheet with the evidence, the stamp and, when refused, the one failing check in red.
+- **Result:** paper. Paid is a perforated receipt with the 56px amount, a PAID stamp and the live PayPal status ("Paid N s after your photo", then "Received"; the receipt asks every 5 s for 30 s, then every 15 s, for 2 minutes at most, never while the tab is hidden, and stops on a settled status, rather than the spec's 4 s for 3 minutes, to stay inside the Blob budget); in a sandbox build the stamp reads PAID · SANDBOX and the line says sandbox money, sample or not; held and refused are a sheet with the evidence, the stamp and, when refused, the one failing check in red.
 
 **Console:** from 1024px the queue fills the viewport: the recall's ledger (remedied of sold with a meter, paid out, held, refused), status tabs (All, Paid, Held, Rejected, Blocked, In progress) with search, the claims grid, and the evidence panel docked on the right. It polls for new claims every 8s only while the queue can still change (a claim filed in the last 12.5 minutes still pending, a payout settling in its first half hour, or a demo claim from the last 10 minutes), only while the tab is visible and for 10 minutes per view, flashing the cells that change; a new claim shows within about 8 to 12 s. An abandoned claim or a payout parked at UNCLAIMED never keeps it polling. With a row open, the evidence panel docks from under the console header to the foot of the window and leads with what decided the claim. Phones get card rows and no horizontal scroll.
 
@@ -207,10 +201,11 @@ Every data view ships all five: empty, loading (skeletons shaped like the conten
 A screen is done only when it passes the anti-slop gate in the `design` skill:
 - grayscale and squint tests;
 - spacing on the 4px scale;
-- at most 6 sizes and 3 weights (7 sizes on the homepage);
+- at most 6 sizes and 3 weights;
 - real copy;
 - all five states;
 - works at 375px;
 - AA contrast;
-- a real dark palette;
+- a real dark palette (warm graphite at chroma 0.004, not navy);
+- one amber focal element per viewport;
 - and it looks like the references, not a template.

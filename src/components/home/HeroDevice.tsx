@@ -20,7 +20,7 @@ const MAX_TILT = 4;
 
 const EXHIBITS: { id: AnchorId; n: string; text: string; className: string }[] = [
   { id: "label", n: "01", text: "Label, code M4T", className: "left-[22%] -top-[1%]" },
-  { id: "cut", n: "02", text: "Cut", className: "-left-[5%] top-[46%]" },
+  { id: "cut", n: "02", text: "Cut", className: "right-[95%] top-[46%]" },
 ];
 
 const NOSCRIPT = `<style>[data-hero-device] [data-seq=show]{opacity:1!important;transform:none!important}[data-hero-device] [data-seq=hide]{opacity:0!important}</style>`;
