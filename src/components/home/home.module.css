@@ -1,0 +1,176 @@
+/*
+ * The homepage's own moves (DESIGN.md, Motion): focus-in, ink and drop. Everything rests in its final state: a
+ * section is only "armed" (hidden, waiting) when JS runs, motion is allowed and it starts below the fold (see
+ * useEnter in Reveal.tsx), so no-JS visitors, reduced motion and full-page screenshots all see the finished page.
+ */
+
+/* SPRING.drop (stiffness 320, damping 26) sampled every 20ms, as a CSS easing: 3.5% overshoot, settled by 460ms. */
+.reveal,
+.enter {
+  --drop: linear(0, 0.058, 0.185, 0.342, 0.5, 0.643, 0.763, 0.858, 0.928, 0.977, 1.008, 1.026, 1.034, 1.035, 1.032, 1.028, 1.022, 1.016, 1.012, 1.008, 1.004, 1.002, 1.001, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 1. Focus-in: blur 10px, 12px down and transparent to rest, 900ms, 80ms apart per line. Text only. */
+  .line {
+    transition:
+      opacity var(--dur-reveal) var(--ease-out-expo),
+      filter var(--dur-reveal) var(--ease-out-expo),
+      translate var(--dur-reveal) var(--ease-out-expo);
+    transition-delay: calc(var(--line, 0) * 80ms);
+  }
+
+  .reveal[data-enter="armed"] .line {
+    opacity: 0;
+    filter: blur(10px);
+    translate: 0 12px;
+  }
+
+  /* 3. Ink: the highlighter sweeps left to right, 700ms ease-out after 200ms. */
+  .highlight {
+    transition: background-size 700ms ease-out 200ms;
+  }
+
+  .enter[data-enter="armed"] .highlight {
+    background-size: 0% var(--hl-height);
+  }
+
+  /* 3. Ink: a stamp lands (scale 1.4 to 1, fade in, 200ms --ease-back); its tilt never moves. */
+  .enter[data-enter="armed"] .stamp {
+    opacity: 0;
+  }
+
+  .enter[data-enter="play"] .stamp {
+    animation: stamp-land 200ms var(--ease-back) var(--stamp-at, 500ms) both;
+  }
+
+  /* A pen note beside a stamp appears with it. */
+  .enter[data-enter="armed"] .note {
+    opacity: 0;
+  }
+
+  .enter[data-enter="play"] .note {
+    transition: opacity 200ms ease-out var(--stamp-at, 500ms);
+  }
+
+  /* 3. Ink: a string or a leader draws in (pathLength 0 to 1, 600ms --ease-out-quart). */
+  .enter[data-enter="armed"] .draw {
+    stroke-dashoffset: 1;
+  }
+
+  .enter[data-enter="play"] .draw {
+    transition: stroke-dashoffset 600ms var(--ease-out-quart) var(--draw-at, 0ms);
+  }
+
+  /* 4. Drop: a paper tag falls from the top of its lane and settles with SPRING.drop and a 2deg rotation. */
+  .enter[data-enter="armed"] .fall {
+    translate: 0 var(--fall, -120px);
+    rotate: 2deg;
+    opacity: 0;
+  }
+
+  .enter[data-enter="play"] .fall {
+    transition:
+      translate 460ms var(--drop) var(--fall-at, 0ms),
+      rotate 460ms var(--drop) var(--fall-at, 0ms),
+      opacity 120ms linear var(--fall-at, 0ms);
+  }
+
+  /* The dashed trail behind a falling tag draws down with it. */
+  .enter[data-enter="armed"] .trail {
+    scale: 1 0;
+  }
+
+  .enter[data-enter="play"] .trail {
+    transition: scale var(--trail-for, 120ms) linear var(--trail-at, 0ms);
+  }
+
+  /* The console's evidence panel slides in: x 40px to 0 and fade, 360ms --ease-snap. */
+  .enter[data-enter="armed"] .panel {
+    translate: 40px 0;
+    opacity: 0;
+  }
+
+  .enter[data-enter="play"] .panel {
+    transition:
+      translate var(--dur-move) var(--ease-snap) 200ms,
+      opacity var(--dur-move) var(--ease-snap) 200ms;
+  }
+}
+
+/* The highlighter itself, drawn under the ink: --highlight on a band through the lower x-height. */
+.highlight {
+  --hl-height: 0.7em;
+  background-image: linear-gradient(var(--highlight), var(--highlight));
+  background-repeat: no-repeat;
+  background-position: 0 80%;
+  background-size: 100% var(--hl-height);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding-inline: 0.12em;
+  margin-inline: -0.12em;
+}
+
+.draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.trail {
+  transform-origin: top;
+}
+
+@keyframes stamp-land {
+  from {
+    opacity: 0;
+    scale: 1.4;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/*
+ * Page rails (lg and up): two 1px lines at the 1200px content edges, a 6px tick every 96px running outwards, and a
+ * 10px mono label every fourth tick, like the ruler on the light table.
+ */
+.rails {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  background:
+    linear-gradient(var(--rail), var(--rail)) var(--rail-x) 0 / 1px 100% no-repeat,
+    repeating-linear-gradient(to bottom, var(--rail) 0 1px, transparent 1px 96px) var(--tick-x) 95px / 6px 100% no-repeat;
+}
+
+.railLeft {
+  left: calc(50% - 600px - 6px);
+  --rail-x: 100%;
+  --tick-x: 0;
+}
+
+.railRight {
+  left: calc(50% + 600px - 1px);
+  --rail-x: 0;
+  --tick-x: 100%;
+}
+
+.railLabel {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--faint);
+  opacity: 0.7;
+  translate: 0 -50%;
+}
