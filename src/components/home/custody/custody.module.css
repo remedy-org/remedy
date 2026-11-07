@@ -28,10 +28,10 @@
   }
 }
 
-/* ------------------------------------------------------------------ The odometer under the payout numeral. */
+/* -------------------------------------------------------------------- The odometer: the paid receipt's figure. */
 .odometer {
   display: inline-block;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .figure {
@@ -44,8 +44,8 @@
   position: relative;
   display: inline-block;
   height: 1em;
-  /* Clip the wheel top and bottom only: the italic leans past the box on the right. */
-  clip-path: inset(0 -0.4em);
+  /* Clip the wheel top and bottom only. */
+  clip-path: inset(0 -0.1em);
 }
 
 .strip {
@@ -75,33 +75,77 @@
   letter-spacing: 0;
 }
 
-/* ------------------------------------------------------------------------------- The hero device (laptops). */
+/* ------------------------------------------------------------------------------------------------ The hero. */
 /*
- * The laptop sits under the h1, right of the lead, and its lid rises into the second line's row, right of its last
- * glyph. --d is the display size, so the device tracks the headline from 1024px up; it is also held to the viewport's
- * height so the screen's top half is always above the fold. It bleeds off the right edge onto the table.
+ * On the page frame and the one 12-column grid: the copy in columns 1 to 6, centred in the first screen, the facts row
+ * on the same grid line at its foot, and the device from column 7, running off the right edge onto the table.
  */
+.hero {
+  position: relative;
+  margin-inline: auto;
+  max-width: calc(var(--container-content) + 2 * var(--gutter));
+  padding: 2.5rem var(--gutter) 3.5rem;
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+}
+
+/* Positioned, so it paints above the device's table plane, which runs under it. */
+.facts {
+  position: relative;
+  z-index: 1;
+  margin-top: 3rem;
+}
+
 .device {
   display: none;
 }
 
 @media (min-width: 1024px) {
+  .hero {
+    height: calc(100svh - 4rem);
+    min-height: 39rem;
+    padding-block: 0;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr) auto;
+    column-gap: var(--col-gap);
+    align-items: center;
+  }
+
+  .copy {
+    grid-column: 1 / span 6;
+    grid-row: 1;
+    padding-top: 1rem;
+  }
+
+  .facts {
+    grid-column: 1 / span 5;
+    grid-row: 2;
+    margin-top: 0;
+    padding-bottom: 2.5rem;
+  }
+
+  /* The device bleeds from column 7 to the viewport's edge, and is held to the screen's height. */
   .device {
-    --d: clamp(2.75rem, 7.8vw, 7.25rem);
+    --bleed: max(var(--gutter), (100vw - var(--container-content)) / 2);
     display: block;
-    position: absolute;
+    position: relative;
     z-index: 0;
-    --bleed: calc(max(2rem, (100vw - 75rem) / 2) + 1rem);
-    width: min(50vw, calc((100svh - 4rem - 1.88 * var(--d)) * 1.02));
-    right: calc(-1 * var(--bleed));
-    top: calc(1.88 * var(--d) - 2rem);
+    grid-column: 7 / -1;
+    grid-row: 1 / span 2;
+    align-self: center;
+    width: min(calc(100% + var(--bleed)), calc((100svh - 9rem) / 0.84));
   }
 }
 
 /* --------------------------------------------------------------------------- The pinned stage (laptops). */
+/* The runway: the paced scroll (pace.ts, --scroll) plus the sticky stage itself. */
 .runway {
   position: relative;
-  height: 320vh;
+  height: calc(var(--scroll, 560vh) + 100svh - 4rem);
 }
 
 .stage {
@@ -109,8 +153,11 @@
   top: 4rem;
   height: calc(100svh - 4rem);
   overflow: clip;
-  /* The 1200px content column's edge, where the page rails run: the rail and the screen sit on it. */
-  --edge: max(0px, (100% - 75rem) / 2);
+  /* The page frame inside the full-width stage: its content edge and one grid column, so the rail and the screen
+     sit on the same grid lines as every section. Used for left/right/width only (the % is the stage's width). */
+  --content: min(100% - 2 * var(--gutter), var(--container-content));
+  --edge: calc((100% - var(--content)) / 2);
+  --col: calc((var(--content) - 11 * var(--col-gap)) / 12);
 }
 
 /* The flat screen layer that takes over from the laptop: full stage, unscaled, revealed by its clip-path. */
@@ -121,9 +168,13 @@
   background: var(--bg);
 }
 
+/* The screen takes columns 4 to 12; the rail columns 1 to 3. */
 .screenInner {
   position: absolute;
-  inset: 1rem calc(var(--edge) + 1rem) 1rem calc(var(--edge) + 18.5rem);
+  top: 1rem;
+  bottom: 1rem;
+  left: calc(var(--edge) + 3 * var(--col) + 3 * var(--col-gap));
+  right: var(--edge);
   display: flex;
   flex-direction: column;
 }
@@ -134,34 +185,17 @@
   top: 1rem;
   bottom: 1rem;
   left: var(--edge);
-  width: 17.5rem;
-  padding: 2rem 1.5rem 1.5rem 2rem;
+  width: calc(3 * var(--col) + 2 * var(--col-gap));
+  padding: 2rem 1.5rem 1.5rem 0;
   display: flex;
   flex-direction: column;
 }
 
-/* The custody thread: an amber line down the right page rail that fills with the scroll. */
-.thread {
-  position: absolute;
-  z-index: 4;
-  top: 1rem;
-  bottom: 1rem;
-  right: max(0.4375rem, var(--edge) - 1px);
-  width: 2px;
-  background: var(--line);
-}
-
-.threadFill {
-  position: absolute;
-  inset: 0;
-  background: var(--accent);
-  transform-origin: 50% 0;
-}
-
 /* ------------------------------------------------------------------------- The sticky phone (below 1024px). */
+/* Five chapters at about 72vh of scroll each, plus the stage. */
 .phoneRunway {
   position: relative;
-  height: 240vh;
+  height: calc(360vh + 100svh - 4rem);
 }
 
 .phoneStage {

@@ -36,7 +36,7 @@ export function CheckList({
         <section key={g} aria-label={`${label}: ${GROUPS[g]}`}>
           <h3 className="micro flex items-baseline justify-between gap-3 border-b border-line pb-2 text-faint">
             <span>{GROUPS[g]}</span>
-            {times?.[g] && <span className="shrink-0 tabular-nums normal-case">{times[g]}</span>}
+            {times?.[g] && <span className="shrink-0 normal-case">{times[g]}</span>}
           </h3>
           <CheckProgress label={GROUPS[g]} steps={rows.map((r) => toStep(r, code, quoteClassName))} />
         </section>

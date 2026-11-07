@@ -157,7 +157,7 @@ function Figure({ label, value, note }: { label: string; value: string; note?: s
   return (
     <div className="flex flex-col gap-1">
       <span className="text-ui text-muted">{label}</span>
-      <span className="text-h2 font-semibold tabular-nums">{value}</span>
+      <span className="text-h2 font-semibold">{value}</span>
       {note && <span className="text-ui text-muted">{note}</span>}
     </div>
   );

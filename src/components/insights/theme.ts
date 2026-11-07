@@ -2,7 +2,7 @@ import type { StudioLib } from "./studio-lib";
 
 // AG Studio themed to the Evidence Room (DESIGN.md). Every colour is one of the app's own tokens, so the report
 // matches the console in both themes. The canvas is the page itself: no frame, graphite widgets with a hairline, and
-// subtitles set as exhibit labels (mono, amber) like everywhere else in Remedy.
+// subtitles set as exhibit labels (mono, faint) like everywhere else in Remedy: amber is only for what's happening now.
 //
 // Studio computes with its colours (charts draw them on a canvas), so it can't take var() or oklch(): the client
 // resolves each token to sRGB first (resolveColor in InsightsStudio) and rebuilds the theme when the theme toggles.
@@ -86,9 +86,9 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   studioWidgetTitleFontWeight: 500,
   studioWidgetTitleTextColor: token("text"),
   studioWidgetSubtitleFontFamily: MONO,
-  studioWidgetSubtitleFontSize: 11,
+  studioWidgetSubtitleFontSize: 12,
   studioWidgetSubtitleFontWeight: 400,
-  studioWidgetSubtitleTextColor: token("accent-text"),
+  studioWidgetSubtitleTextColor: token("faint"),
   studioWidgetCaptionFontFamily: SANS,
   studioWidgetCaptionFontSize: 12,
   studioWidgetCaptionTextColor: token("muted"),

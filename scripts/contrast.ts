@@ -96,8 +96,11 @@ function need(tokens: Record<string, string>, name: string) {
 
 type Pair = { fg: string; bg: string; min: number; note?: string };
 
-// A colour spec: a token, a token at an alpha ("--pay-ink@0.85"), or a stack painted bottom to top ("--surface+--pay-soft").
+// A colour spec: a token, a token at an alpha ("--pay-ink@0.85"), "white", or a stack painted bottom to top
+// ("--surface+--pay-soft").
 function layer(tokens: Record<string, string>, part: string): RGBA {
+  // "white": a pure-white photo, the worst case under the photo label's scrim.
+  if (part === "white") return { r: 1, g: 1, b: 1, a: 1 };
   const [name, alpha] = part.split("@");
   const c = resolveColor(tokens, need(tokens, name));
   return alpha ? { ...c, a: c.a * Number(alpha) } : c;
@@ -107,25 +110,35 @@ function paint(tokens: Record<string, string>, spec: string): RGBA {
   return spec.split("+").reduce((acc, part) => over(layer(tokens, part), acc), { r: 0, g: 0, b: 0, a: 1 } as RGBA);
 }
 
-const surfaces = ["--bg", "--surface", "--surface-2"];
+// Every surface text can sit on: the three steps, the section fade's top, the console's open row, and the light
+// table's pool at its brightest (the pool sits under content, so text over it is measured at its peak).
+const surfaces = ["--bg", "--surface", "--surface-2", "--surface-3", "--section-lift", "--surface+--accent-soft", "--bg+--pool"];
 const app: Pair[] = [
-  ...["--text", "--muted", "--faint"].flatMap((fg) => surfaces.map((bg) => ({ fg, bg, min: 4.5 }))),
+  ...["--text", "--text-2", "--muted", "--faint"].flatMap((fg) => surfaces.map((bg) => ({ fg, bg, min: 4.5 }))),
   ...["--accent-text"].flatMap((fg) => surfaces.map((bg) => ({ fg, bg, min: 4.5 }))),
   { fg: "--accent-ink", bg: "--accent", min: 4.5, note: "primary button" },
   { fg: "--accent-ink", bg: "--accent-hover", min: 4.5, note: "primary button, hover" },
   ...["--pay", "--hold", "--stop"].flatMap((s) => [
-    ...surfaces.map((bg) => ({ fg: s, bg, min: 4.5 })),
-    { fg: s, bg: `--surface+${s}-soft`, min: 4.5, note: "status pill on a card" },
+    ...surfaces.slice(0, 3).map((bg) => ({ fg: s, bg, min: 4.5 })),
     { fg: s, bg: `--bg+${s}-soft`, min: 4.5, note: "status pill on the page" },
+    { fg: s, bg: `--surface+${s}-soft`, min: 4.5, note: "status pill on a card" },
+    { fg: s, bg: `--surface-2+${s}-soft`, min: 4.5, note: "status pill on the grid header or panel" },
+    { fg: s, bg: `--surface+--accent-soft+${s}-soft`, min: 4.5, note: "status pill on the open row" },
   ]),
-  ...["--bg", "--surface"].map((bg) => ({ fg: "--line-strong", bg, min: 3, note: "input border" })),
+  ...["--bg", "--surface", "--surface-2"].map((bg) => ({ fg: "--line-strong", bg, min: 3, note: "input border" })),
+  { fg: "--photo-scrim-text", bg: "white+--photo-scrim", min: 4.5, note: "AI-made photo label, scrim over a white photo" },
 ];
 
 const paperBgs = ["--paper", "--paper-2"];
+// Paper and its inks are fixed, but the band and the sheet on it differ by theme, and so does the highlighter's amber:
+// run these for each theme.
 const paper: Pair[] = [
   ...["--ink", "--ink-muted", "--pay-ink", "--hold-ink", "--stop-ink"].flatMap((fg) => paperBgs.map((bg) => ({ fg, bg, min: 4.5 }))),
+  ...["--ink", "--ink-muted"].flatMap((fg) => ["--band", "--band-sheet"].map((bg) => ({ fg, bg, min: 4.5, note: "the Problem band" }))),
   ...["--pay-ink", "--hold-ink", "--stop-ink", "--ink-muted"].map((s) => ({ fg: `${s}@0.85`, bg: "--paper", min: 4.5, note: "Stamp (ink at 0.85)" })),
   { fg: "--ink", bg: "--paper+--highlight", min: 4.5, note: "highlighted text on paper" },
+  { fg: "--ink-muted", bg: "--paper+--highlight", min: 4.5, note: "highlighted muted text on paper" },
+  { fg: "--ink", bg: "--paper-2+--highlight", min: 4.5, note: "highlighted text on paper-2" },
   { fg: "--accent-text", bg: "--paper", min: 0, note: "info: amber text never sits on paper" },
 ];
 
@@ -151,7 +164,8 @@ const white = oklchToRgb(1, 0, 0);
 const black = oklchToRgb(0, 0, 0);
 if (Math.abs(ratio(white, black) - 21) > 0.01) throw new Error("contrast maths is off");
 
-report("Paper and ink (fixed colours, the same in both themes)", themes.dark, paper);
+report("Paper and ink, dark", themes.dark, paper);
+report("Paper and ink, light", themes.light, paper);
 report("App tokens, dark", themes.dark, app);
 report("App tokens, light", themes.light, app);
 

@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Button, Wordmark } from "@/components/ui";
-import { ScrollProgress } from "./ScrollProgress";
+import { Button, ThemeToggle, Wordmark } from "@/components/ui";
 
 // In page order. The exhibits carry their letter, as the sections do; How it works is the hero's own sequence.
 const LINKS = [
@@ -11,17 +10,22 @@ const LINKS = [
   { href: "#companies", exhibit: "D", label: "For companies" },
 ];
 
+/**
+ * The homepage nav on the page frame: the wordmark on the first grid line, the exhibits beside it, then the theme,
+ * Sign in as quiet text and "Start a recall" as the quiet button (the hero's amber button is the screen's one action).
+ * No rule under it: the page shows through a blur.
+ */
 export function Nav() {
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur-md">
-      <nav aria-label="Main" className="mx-auto flex h-16 max-w-content items-center gap-8 px-4 sm:px-8">
+    <header className="sticky top-0 z-30 bg-bg/80 backdrop-blur-md backdrop-saturate-150">
+      <nav aria-label="Main" className="page flex h-16 items-center gap-10">
         <Wordmark size="md" href="/" />
         <ul className="hidden items-center gap-7 lg:flex">
           {LINKS.map((l) => (
             <li key={l.href}>
-              <a href={l.href} className="group inline-flex min-h-11 items-center gap-1.5 rounded-control text-ui text-muted transition-colors duration-160 hover:text-text">
+              <a href={l.href} className="inline-flex min-h-11 items-center gap-1.5 rounded-control text-ui text-muted transition-colors duration-160 hover:text-text">
                 {l.exhibit && (
-                  <span aria-hidden="true" className="font-mono text-micro text-faint transition-colors duration-160 group-hover:text-accent-text">
+                  <span aria-hidden="true" className="font-mono text-micro text-faint">
                     {l.exhibit}
                   </span>
                 )}
@@ -30,16 +34,16 @@ export function Nav() {
             </li>
           ))}
         </ul>
-        <div className="ml-auto flex items-center gap-4 sm:gap-6">
-          <Link href="/signin" className="inline-flex min-h-11 items-center rounded-control text-ui text-muted transition-colors duration-160 hover:text-text">
+        <div className="ml-auto flex items-center gap-3 sm:gap-5">
+          <ThemeToggle />
+          <Link href="/signin" className="hidden min-h-11 items-center rounded-control text-ui text-muted transition-colors duration-160 hover:text-text sm:inline-flex">
             Sign in
           </Link>
-          <Button href="/signin" size="sm">
+          <Button href="/signin" variant="secondary" size="sm">
             Start a recall
           </Button>
         </div>
       </nav>
-      <ScrollProgress />
     </header>
   );
 }

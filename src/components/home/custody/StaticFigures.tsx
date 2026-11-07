@@ -17,8 +17,8 @@ import { AiLabel, ChecksChapter, CodeTag, ConsentChapter, ExhibitPrint, PaidChap
 function Caption({ n, title, text }: { n: string; title: string; text: string }) {
   return (
     <figcaption className="flex flex-col gap-1.5">
-      <span className="micro text-accent-text">
-        {n} · {title}
+      <span className="micro text-faint">
+        {n} · <span className="text-text-2">{title}</span>
       </span>
       <span className="max-w-[60ch] text-ui text-pretty text-muted">{text}</span>
     </figcaption>
@@ -31,7 +31,7 @@ function Screen({ i, children }: { i: number; children: ReactNode }) {
   return (
     <figure className="m-0 flex flex-col gap-4">
       <Caption n={c.n} title={c.title} text={c.text} />
-      <div className="rounded-frame border border-line bg-bg p-5" aria-hidden="true">
+      <div className="rounded-frame bg-bg p-5 shadow-card" aria-hidden="true">
         {children}
       </div>
     </figure>
@@ -53,16 +53,21 @@ function PaperObject({ n, title, text, children, className }: { n: string; title
 export function StaticFigures() {
   const done = useDone();
   return (
-    <div className="mx-auto max-w-content px-4 pt-4 pb-18 sm:px-8 lg:pt-0 lg:pb-12">
-      <h2 id="how-title" className="max-w-[46ch] text-head-sm font-medium text-balance">
-        One real claim, start to finish.{" "}
-        <span className="text-muted">
-          Claim {CLAIM.id} ran through the judges&rsquo; demo on 7 Nov and was paid {CLAIM.seconds} s after the photo.
-        </span>
-      </h2>
+    <div className="page pt-18 pb-18 lg:pt-24 lg:pb-32">
+      <div className="grid-12 gap-y-5 lg:items-end">
+        <div className="col-span-12 lg:col-span-7">
+          <p className="micro text-faint">How it works</p>
+          <h2 id="how-title" className="mt-5 text-title-lg font-medium text-balance">
+            One real claim, start to finish. <span className="text-muted">Paid {CLAIM.seconds}&nbsp;s after the photo.</span>
+          </h2>
+        </div>
+        <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8 lg:pb-1">
+          Claim {CLAIM.id} ran through the judges&rsquo; demo on 7 Nov, on the Kikea X-VESOLJE recall, in PayPal sandbox money.
+        </p>
+      </div>
       {/* Two columns in reading order: 01 beside 02, 03 beside 04, then 05 across. The small paper objects sit centred
           beside the tall screens, like things laid on the table next to them. */}
-      <div className="mt-6 grid gap-x-10 gap-y-12 lg:grid-cols-2 lg:gap-y-10">
+      <div className="mt-12 grid gap-x-[var(--col-gap)] gap-y-12 lg:mt-16 lg:grid-cols-2 lg:gap-y-16">
         <Screen i={0}>
           <ConsentChapter />
         </Screen>
@@ -78,7 +83,7 @@ export function StaticFigures() {
           <ChecksChapter p={done} />
         </Screen>
         {/* The payout wide enough for the rule card and the numeral side by side; the console row beside it. */}
-        <div className="grid gap-x-6 gap-y-12 lg:col-span-2 lg:grid-cols-12">
+        <div className="grid gap-x-[var(--col-gap)] gap-y-12 lg:col-span-2 lg:grid-cols-12">
           <div className="lg:col-span-9">
             <Screen i={4}>
               <PaidChapter p={done} />
@@ -90,7 +95,7 @@ export function StaticFigures() {
             text="The paid claim lands in the company's queue with its photo, its checks and the time from photo to PayPal."
             className="lg:col-span-3"
           >
-            <div className="w-full max-w-[20rem] overflow-hidden rounded-card bg-surface shadow-ring">
+            <div className="w-full max-w-[20rem] overflow-hidden rounded-card bg-surface shadow-card">
               <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
                 <span className="text-ui font-medium">Console</span>
                 <span className="micro text-faint">{CLAIM.recall}</span>

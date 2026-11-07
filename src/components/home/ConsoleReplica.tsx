@@ -174,7 +174,7 @@ function EvidencePanel({ row }: { row: PreviewRow }) {
         </p>
         <div className="mt-3 flex gap-2" aria-hidden="true">
           <span className="inline-flex h-9 items-center rounded-control bg-accent px-3 text-ui font-medium text-accent-ink">Approve</span>
-          <span className="inline-flex h-9 items-center rounded-control border border-line-strong px-3 text-ui font-medium">Reject</span>
+          <span className="inline-flex h-9 items-center rounded-control bg-surface-2 px-3 text-ui font-medium shadow-[inset_0_0_0_1px_var(--line-2)]">Reject</span>
           <span className="ml-auto self-center font-mono text-micro text-faint">A / R</span>
         </div>
       </div>
@@ -218,13 +218,13 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
         </span>
         <span className="flex items-center gap-3">
           <span className="micro text-faint">CPSC 27-071</span>
-          <span className="micro inline-flex h-5 items-center rounded-control border border-line-strong px-1.5 text-muted">Sample data</span>
+          <span className="micro inline-flex h-5 items-center rounded-control border border-line-2 px-1.5 text-muted">Sample data</span>
         </span>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 border-b border-line px-4 pb-4 text-ui sm:flex sm:flex-wrap sm:items-baseline sm:gap-x-8 sm:px-5">
         <div className="col-span-2 flex items-baseline gap-2">
           <dt className="sr-only">Remedied</dt>
-          <dd className="font-semibold whitespace-nowrap tabular-nums">26 of 19,596</dd>
+          <dd className="font-semibold whitespace-nowrap">26 of 19,596</dd>
           <span className="hidden h-1 w-16 self-center overflow-hidden rounded-full bg-surface-2 sm:block" aria-hidden="true">
             <span className="block h-full w-[2px] bg-pay" />
           </span>
@@ -241,11 +241,11 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
           </span>
         </div>
         <div className="flex items-baseline gap-2">
-          <dd className="font-semibold tabular-nums">3</dd>
+          <dd className="font-semibold">3</dd>
           <dt className="text-muted">held</dt>
         </div>
         <div className="flex items-baseline gap-2">
-          <dd className="font-semibold tabular-nums">9</dd>
+          <dd className="font-semibold">9</dd>
           <dt className="text-muted">refused</dt>
         </div>
       </dl>

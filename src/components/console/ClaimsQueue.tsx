@@ -311,7 +311,7 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       onClick={(e) => e.target === e.currentTarget && e.currentTarget.close()}
       aria-labelledby="shortcuts-title"
-      className="m-auto w-[360px] max-w-[calc(100vw-2rem)] rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0.1_0.01_255/0.5)]"
+      className="m-auto w-[360px] max-w-[calc(100vw-2rem)] rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0.1_0.004_75/0.5)]"
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <h2 id="shortcuts-title" className="text-ui font-medium">

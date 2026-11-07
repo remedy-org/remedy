@@ -20,7 +20,7 @@ export function CpscNotice({ notice }: { notice: CpscSummary }) {
           </>
         )}
         <dt className="text-muted">Units</dt>
-        <dd className="tabular-nums">{notice.unitsSold ? formatCount(notice.unitsSold) : "CPSC gives no count"}</dd>
+        <dd>{notice.unitsSold ? formatCount(notice.unitsSold) : "CPSC gives no count"}</dd>
       </dl>
       {notice.remedy && (
         <div className="flex flex-col gap-1 border-t border-line pt-4">

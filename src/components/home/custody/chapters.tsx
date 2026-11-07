@@ -4,7 +4,7 @@ import clsx from "clsx";
 import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { AlertIcon, CheckIcon, ClockIcon, Money, Paper, SPRING, StatusPill } from "@/components/ui";
+import { AlertIcon, CheckIcon, ClockIcon, Money, Paper, SPRING, Stamp, StatusPill } from "@/components/ui";
 import { CHECKS, CLAIM, CODE_AT, CONSOLE_ROWS, REGIONS, TICK_AT, WRITE_AT, type RegionId } from "./claim";
 import styles from "./custody.module.css";
 
@@ -42,7 +42,7 @@ const CHIP = "inline-flex h-6 items-center rounded-control px-2 font-mono text-m
 
 /** The honest label every rendering of the AI-made sample photo carries. */
 export function AiLabel({ className }: { className?: string }) {
-  return <span className={clsx(CHIP, "absolute bg-bg/80 text-text", className)}>AI-made test photo</span>;
+  return <span className={clsx(CHIP, "absolute bg-photo-scrim text-photo-scrim-text", className)}>AI-made test photo</span>;
 }
 
 function Photo({ sizes }: { sizes: string }) {
@@ -87,11 +87,11 @@ export function ConsentChapter() {
     <div className="@container">
       <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
         <div className={clsx("hidden flex-col @min-[720px]:flex", compact ? "gap-4" : "gap-6")}>
-          <span className="micro text-accent-text">
+          <span className="micro text-faint">
             {CLAIM.recall} · Recalled {CLAIM.recalled}
           </span>
-          <p className="text-h2 font-semibold">{CLAIM.product}</p>
-          <p className="flex gap-3 rounded-card bg-stop-soft p-4 text-body font-semibold text-text">
+          <p className="text-h2 font-medium">{CLAIM.product}</p>
+          <p className="flex gap-3 rounded-card bg-stop-soft p-4 text-body font-medium text-text">
             <AlertIcon className="mt-1 shrink-0 text-stop" />
             Risk of serious injury or death from suffocation. Stop using it now.
           </p>
@@ -112,21 +112,21 @@ export function ConsentChapter() {
         <div
           data-dolly-target
           className={clsx(
-            "flex flex-col gap-5 @min-[720px]:rounded-card @min-[720px]:bg-surface @min-[720px]:shadow-ring",
+            "flex flex-col gap-5 @min-[720px]:rounded-card @min-[720px]:bg-surface @min-[720px]:shadow-card",
             compact ? "@min-[720px]:gap-5 @min-[720px]:p-6" : "@min-[720px]:gap-6 @min-[720px]:p-8",
           )}
         >
           {/* On a short phone the marks and the steps give way, so the button stays in the frame. */}
           <div className={clsx("flex flex-col gap-3", compact && "@max-[719px]:hidden")}>
             <div className="flex">
-              <span className="flex size-11 items-center justify-center rounded-card bg-surface-2 text-body font-semibold text-text">KS</span>
+              <span className="flex size-11 items-center justify-center rounded-card bg-surface-2 text-body font-medium text-text">KS</span>
               <span className="-ml-2.5 flex size-11 items-center justify-center rounded-card bg-bg ring-2 ring-surface">
                 <TagGlyph />
               </span>
             </div>
             <span className="text-ui text-muted">Kikea Store works with Remedy to pay this recall.</span>
           </div>
-          <p className="text-title font-semibold text-pretty">
+          <p className="text-title font-medium text-pretty">
             Get $29.99 back for your X-VESOLJE pillow.{" "}
             <span className="text-muted">Remedy sends it through PayPal for Kikea Store once your photo shows it&rsquo;s destroyed.</span>
           </p>
@@ -157,7 +157,7 @@ function CodeCell({ p, at, char }: { p: Progress; at: number; char: string }) {
   const y = useTransform(t, (v) => Math.round((1 - v) * 10));
   return (
     <span className="flex h-16 w-14 items-center justify-center rounded-control border border-line-strong bg-surface">
-      <motion.span className="font-mono text-[1.75rem] leading-none font-semibold" style={{ opacity: t, y }}>
+      <motion.span className="font-mono text-[1.75rem] leading-none font-medium" style={{ opacity: t, y }}>
         {char}
       </motion.span>
     </span>
@@ -175,7 +175,7 @@ export function CodeChapter({ p }: { p: Progress }) {
       <div className={clsx("grid items-center @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] @min-[720px]:gap-14", compact ? "gap-6" : "gap-10")}>
         <div className={clsx("flex flex-col", compact ? "gap-4" : "gap-6")}>
           <div className="flex items-center justify-between gap-4">
-            <p className="text-title font-semibold">Your one-time code</p>
+            <p className="text-title font-medium">Your one-time code</p>
             <span className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-line px-2.5 font-mono text-ui text-muted tabular-nums">
               <ClockIcon size={14} />
               9:42
@@ -226,7 +226,7 @@ export function CodeTag({ wipe, short, className }: { wipe?: MotionValue<string>
       <p className="micro text-ink-muted">
         {CLAIM.recall} · {CLAIM.company}
       </p>
-      <motion.p className="mt-5 font-mono leading-none font-semibold tracking-[0.08em]" style={wipe ? { clipPath: wipe } : undefined}>
+      <motion.p className="mt-5 font-mono leading-none font-medium tracking-[0.08em]" style={wipe ? { clipPath: wipe } : undefined}>
         <span className="block text-[1.75rem]">X-VESOLJE</span>
         <span className="mt-3 block text-[3.5rem] tracking-[0.14em]">{CLAIM.code}</span>
       </motion.p>
@@ -246,7 +246,7 @@ export function ExhibitPrint({ children, className, sizes }: { children?: ReactN
         <Photo sizes={sizes} />
         {children}
       </div>
-      <span className="absolute -top-2.5 -left-2.5 flex size-6 items-center justify-center rounded-control bg-accent font-mono text-micro font-semibold text-accent-ink">A</span>
+      <span className="absolute -top-2.5 -left-2.5 flex size-6 items-center justify-center rounded-control bg-ink font-mono text-micro font-medium text-paper">A</span>
     </div>
   );
 }
@@ -261,7 +261,7 @@ export function PhotoChapter({ p }: { p: Progress }) {
     <div className="@container">
       <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_14rem] @min-[720px]:gap-14">
         <div className="flex flex-col gap-4">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-card bg-[oklch(0.12_0.01_255)]">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-card bg-[oklch(0.12_0.004_75)] shadow-card">
             <Photo sizes="(min-width: 1024px) 640px, 320px" />
             <motion.span
               className="absolute rounded-2xl border-2 border-[oklch(1_0_0/0.85)] shadow-[0_0_0_100vmax_oklch(0_0_0/0.45)]"
@@ -269,12 +269,12 @@ export function PhotoChapter({ p }: { p: Progress }) {
             />
             <span className="absolute top-3 left-3 flex flex-wrap gap-1.5">
               {["Label", "Cut in half", `Code ${CLAIM.code}`].map((c) => (
-                <span key={c} className={clsx(CHIP, "bg-bg/80 text-text")}>
+                <span key={c} className={clsx(CHIP, "bg-photo-scrim text-photo-scrim-text")}>
                   {c}
                 </span>
               ))}
             </span>
-            <span className={clsx(CHIP, "absolute top-3 right-3 bg-accent text-accent-ink @max-[719px]:hidden")}>Exhibit A</span>
+            <span className={clsx(CHIP, "absolute top-3 right-3 bg-photo-scrim text-photo-scrim-text @max-[719px]:hidden")}>Exhibit A</span>
             <AiLabel className="bottom-3 left-3" />
             <motion.span className="absolute inset-0 bg-[oklch(1_0_0)]" style={{ opacity: flash }} />
           </div>
@@ -286,7 +286,7 @@ export function PhotoChapter({ p }: { p: Progress }) {
                     <div className="relative size-full overflow-hidden rounded-[3px]">
                       <Photo sizes="48px" />
                     </div>
-                    <span className="absolute -top-2 -left-2 flex size-5 items-center justify-center rounded-[3px] bg-accent font-mono text-micro font-semibold text-accent-ink">
+                    <span className="absolute -top-2 -left-2 flex size-5 items-center justify-center rounded-[3px] bg-ink font-mono text-micro font-medium text-paper">
                       A
                     </span>
                   </div>
@@ -348,7 +348,7 @@ function CheckRow({ p, i }: { p: Progress; i: number }) {
         <motion.span className="text-body" style={{ opacity: text }}>
           {check.label}
         </motion.span>
-        <span className={clsx(CHIP, "ml-auto shrink-0 border", check.ai ? "border-accent/40 text-accent-text" : "border-line text-muted")}>
+        <span className={clsx(CHIP, "ml-auto shrink-0 border", check.ai ? "border-line-2 text-text-2" : "border-line text-muted")}>
           {check.ai ? "Model reads" : "No AI"}
         </span>
       </div>
@@ -379,7 +379,7 @@ function Region({ p, id, n, at }: { p: Progress; id: RegionId; n: number; at: nu
       />
       {/* Phones: a numbered dot, matching the check's number. */}
       <span
-        className="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-accent font-mono text-micro font-semibold text-accent-ink @min-[720px]:hidden"
+        className="absolute flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-accent font-mono text-micro font-medium text-accent-ink @min-[720px]:hidden"
         style={{ left: `${(r.x + r.w / 2) * 100}%`, top: `${(r.y + r.h / 2) * 100}%` }}
       >
         {n}
@@ -493,11 +493,12 @@ function Digit({ p, d, i, lead }: { p: Progress; d: number; i: number; lead?: bo
   );
 }
 
-/** $29.99 in the monumental serif, rolling up from $0.00. Screen readers and copy get the plain amount. */
+/** $29.99 at the display size (the one number on this screen), rolling up from $0.00. Screen readers and copy get
+ * the plain amount. */
 export function Odometer({ p }: { p: Progress }) {
   const [whole, cents] = CLAIM.amount.toFixed(2).split(".");
   return (
-    <span className={clsx("font-serif text-numeral font-normal italic tabular-nums", styles.odometer)}>
+    <span className={clsx("font-sans text-display font-medium", styles.odometer)}>
       <span className="sr-only select-none">${CLAIM.amount.toFixed(2)}</span>
       <span aria-hidden="true" className={styles.figure}>
         <span>$</span>
@@ -518,14 +519,18 @@ export function Odometer({ p }: { p: Progress }) {
 export function PaidChapter({ p }: { p: Progress }) {
   const compact = useContext(Compact);
   const decided = useTransform(p, (v) => ramp(v, 0.805, 0.815));
+  // The PAID · SANDBOX stamp lands once the figure has rolled up, and the light table's pool comes on with it (the
+  // same trigger: part of the ink move, not a new one). At rest (reduced motion, the static figures) both are there.
+  const stamped = useAfter(p, 0.855);
+  const lit = useTransform(p, (v) => outQuart(ramp(v, 0.855, 0.875)));
   return (
     <div className="@container">
       <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] @min-[720px]:gap-16">
-        <div className="flex flex-col gap-5">
+        <div className={clsx("flex flex-col gap-5", compact && "@max-[719px]:hidden")}>
           <p className="text-head-sm font-medium">
             A fixed rule decides. <span className="text-muted">The model only says what it sees.</span>
           </p>
-          <div className="flex flex-col rounded-card border border-line bg-surface font-mono text-micro @min-[720px]:text-ui">
+          <div className="flex flex-col rounded-card bg-surface font-mono text-micro shadow-card @min-[720px]:text-ui">
             {RULE.map((r) => (
               <div key={r.when} className={clsx("relative flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0", r.pay && "pr-10 @min-[720px]:pr-4")}>
                 <span className="flex-1 text-muted @min-[720px]:w-[19ch] @min-[720px]:flex-none @min-[720px]:whitespace-nowrap">{r.when}</span>
@@ -539,17 +544,41 @@ export function PaidChapter({ p }: { p: Progress }) {
               </div>
             ))}
           </div>
-          <p className={clsx("text-ui text-muted", compact && "@max-[719px]:hidden")}>The model never moves money. The rule is in the code, the same for every claim.</p>
+          <p className="text-ui text-muted">The model never moves money. The rule is in the code, the same for every claim.</p>
         </div>
-        <div className="flex flex-col gap-4">
-          <span className="micro text-faint">Sent to the owner&rsquo;s PayPal account</span>
-          <Odometer p={p} />
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-ui text-muted">
-            <span className="text-pay">sent to PayPal · {CLAIM.seconds} s after the photo</span>
-            <span className="text-faint">
-              Claim {CLAIM.id} · PayPal sandbox
-            </span>
-          </p>
+
+        {/* The refund receipt on the light table: the paper leads this screen, and the pool lies under it. */}
+        <div className="relative isolate flex justify-center py-4 @min-[720px]:py-10">
+          <motion.div aria-hidden="true" className="pointer-events-none absolute -inset-x-[12%] -inset-y-[18%] -z-10 bg-[image:var(--table-glow)]" style={{ opacity: lit }} />
+          <Paper variant="receipt" perforated padding="none" tilt={-1} className="w-full max-w-[23rem]">
+            <div className="flex flex-col gap-5 px-6 pt-9 pb-6">
+              <div className="flex items-center justify-between gap-3 font-mono text-micro text-ink-muted">
+                <span className="tracking-[0.04em] uppercase">Refund receipt</span>
+                <span className="whitespace-nowrap">Claim {CLAIM.id}</span>
+              </div>
+              {/* The stamp sits beside the figure, and wraps under it on a narrow receipt rather than cover it. */}
+              <div className="flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                <Odometer p={p} />
+                {stamped && (
+                  <Stamp tone="pay" land>
+                    Paid · Sandbox
+                  </Stamp>
+                )}
+              </div>
+              <dl className={clsx("text-ui", compact && "@max-[719px]:hidden")}>
+                {[
+                  ["Sent to PayPal", `${CLAIM.seconds} s after the photo`],
+                  ["Money", "PayPal sandbox"],
+                  ["Recall", `${CLAIM.recall} · X-VESOLJE`],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between gap-4 border-t border-dashed border-paper-line py-2">
+                    <dt className="text-ink-muted">{k}</dt>
+                    <dd className="text-right">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </Paper>
         </div>
       </div>
     </div>
@@ -666,7 +695,7 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             Sample claims, never paid
           </span>
         </div>
-        <div className="overflow-hidden rounded-card bg-surface shadow-ring">
+        <div className="overflow-hidden rounded-card bg-surface shadow-card">
           <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-3">
             <span className="text-ui font-medium">Kikea X-VESOLJE nursing pillows</span>
             <span className="micro text-faint">{CLAIM.recall}</span>

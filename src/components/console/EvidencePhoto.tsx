@@ -44,7 +44,7 @@ export function EvidencePhoto({ src, n, of, sample, sized, className }: { src: s
           />
         )}
         {sample && state !== "error" && (
-          <span className="micro absolute inset-x-0 bottom-0 bg-[oklch(0.165_0.012_255/0.78)] px-2 py-1 text-[oklch(0.96_0.005_255)]">AI-made test photo</span>
+          <span className="micro absolute inset-x-0 bottom-0 bg-[oklch(0.155_0.004_75/0.78)] px-2 py-1 text-[oklch(0.96_0.006_85)]">AI-made test photo</span>
         )}
       </a>
       <figcaption className="font-mono text-micro text-muted">{label}</figcaption>

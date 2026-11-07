@@ -92,7 +92,7 @@ function SideTable({ rows, caption }: { rows: Row[]; caption: string }) {
           {rows.map((r) => (
             <th key={r.model} scope="col" className={clsx("py-3 pl-3 text-right align-bottom", r.chosen ? "font-medium text-text" : "font-normal text-muted")}>
               <Model>{r.model}</Model>
-              {r.chosen && <span className="micro mt-0.5 block text-accent-text">What we run</span>}
+              {r.chosen && <span className="micro mt-0.5 block text-faint">What we run</span>}
             </th>
           ))}
         </tr>
@@ -129,22 +129,22 @@ export function Proof() {
         </>
       }
     >
-      {/* The one number that matters, at monument size, and the only full-contrast figure: the three supporting figures
-          sit beside it, smaller and muted. */}
-      <div className="grid gap-y-8 border-t border-line pt-8 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-end lg:gap-x-16">
-        <Reveal className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-x-5 sm:gap-x-10">
-          <p aria-hidden="true" className={clsx(styles.line, "font-serif text-numeral leading-[0.8] font-normal italic tabular-nums")}>
+      {/* The one number that matters, at the section's title size and the only full-contrast figure, on the heading's
+          grid line; the three supporting figures sit on the lead's (column 8), smaller and muted. */}
+      <div className="grid-12 gap-y-8 border-t border-line pt-8 lg:items-end">
+        <Reveal className="col-span-12 flex items-baseline gap-x-5 lg:col-span-7">
+          <p aria-hidden="true" className={clsx(styles.line, "text-display leading-none font-medium")}>
             0
           </p>
-          <p className={clsx(styles.line, "max-w-[22ch] pb-1 text-head-sm font-medium text-balance sm:pb-2")} style={{ "--line": 1 } as CSSProperties}>
+          <p className={clsx(styles.line, "max-w-[24ch] text-head-sm font-medium text-balance")} style={{ "--line": 1 } as CSSProperties}>
             <span className="sr-only">0 </span>web photos paid with the code check on, by any model, in any run.
           </p>
         </Reveal>
 
-        <dl className="grid grid-cols-3 gap-x-4 sm:gap-x-8 lg:pb-2">
+        <dl className="col-span-12 grid grid-cols-3 gap-x-4 sm:gap-x-[var(--col-gap)] lg:col-span-5">
           {FIGURES.map((f) => (
-            <div key={f.figure} className="flex flex-col border-t border-line pt-3 sm:pt-4">
-              <dt className="text-body font-medium whitespace-nowrap text-muted tabular-nums sm:text-head-sm">{f.figure}</dt>
+            <div key={f.figure} className="flex flex-col">
+              <dt className="text-body font-medium whitespace-nowrap text-text-2 sm:text-head-sm">{f.figure}</dt>
               <dd className="mt-1.5 max-w-[28ch] text-[0.75rem]/[1.4] text-pretty text-faint sm:mt-2 sm:text-ui sm:text-muted">
                 <span className="sm:hidden">{f.short}</span>
                 <span className="hidden sm:inline">{f.text}</span>
@@ -155,7 +155,7 @@ export function Proof() {
       </div>
 
       {/* The eval table: a real table from md up, one card per model on phones. */}
-      <div className="mt-8 sm:mt-12">
+      <div className="mt-12 sm:mt-16">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <h3 className="hidden text-ui font-medium sm:block">Spike 2, 7 November 2026</h3>
           <p className="hidden text-ui text-muted sm:block">
@@ -180,10 +180,10 @@ export function Proof() {
           <tbody>
             {ROWS.map((r) => (
               <tr key={r.model} className="border-b border-line align-top">
-                <th scope="row" className={clsx("py-3.5 pr-4 text-left", r.chosen ? "border-l-2 border-l-accent pl-[calc(1rem-2px)] font-medium text-text" : "pl-4 font-normal text-muted")}>
+                <th scope="row" className={clsx("py-3.5 pr-4 text-left", r.chosen ? "border-l-2 border-l-text pl-[calc(1rem-2px)] font-medium text-text" : "pl-4 font-normal text-muted")}>
                   <span className="flex flex-col">
                     <Model>{r.model}</Model>
-                    {r.chosen && <span className="micro mt-1 text-accent-text">What we run</span>}
+                    {r.chosen && <span className="micro mt-1 text-faint">What we run</span>}
                   </span>
                 </th>
                 {COLUMNS.map((c) => (

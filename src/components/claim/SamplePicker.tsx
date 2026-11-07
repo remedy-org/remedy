@@ -95,13 +95,13 @@ export function SamplePicker({
                     {letter}
                   </span>
                   {locked && (
-                    <span className="absolute inset-x-1.5 top-1/2 flex -translate-y-1/2 items-center justify-center gap-1.5 rounded-control bg-[oklch(0.12_0.01_255/0.85)] px-2 py-1.5 text-ui text-[oklch(0.96_0.005_255)]">
+                    <span className="absolute inset-x-1.5 top-1/2 flex -translate-y-1/2 items-center justify-center gap-1.5 rounded-control bg-[oklch(0.12_0.004_75/0.85)] px-2 py-1.5 text-ui text-[oklch(0.96_0.006_85)]">
                       <LockIcon className="shrink-0" />
                       After A
                     </span>
                   )}
                   {/* The honest label, on every sample photo at every size. */}
-                  <span className="absolute inset-x-0 bottom-0 bg-[oklch(0.12_0.01_255/0.8)] py-0.5 text-center font-mono text-[10px] leading-4 tracking-[0.06em] text-[oklch(0.96_0.005_255)] uppercase">
+                  <span className="absolute inset-x-0 bottom-0 bg-[oklch(0.12_0.004_75/0.8)] py-0.5 text-center font-mono text-[10px] leading-4 tracking-[0.06em] text-[oklch(0.96_0.006_85)] uppercase">
                     AI-made
                   </span>
                 </span>

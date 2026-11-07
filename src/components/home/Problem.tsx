@@ -61,17 +61,17 @@ export function Problem() {
     <Section
       id="problem"
       exhibit="A · The problem"
-      head="statement"
       tone="paper"
       title="Recall refunds run on an inbox."
       muted="AI broke the inbox."
       lead="To get a refund, owners destroy the product and email a photo. Someone at the company checks each one by hand, and an image model can now draw that photo."
     >
-      <dl className="grid gap-y-12 md:grid-cols-2 md:gap-x-12">
-        {STATS.map((s) => (
-          <div key={s.figure} className="border-t border-paper-line pt-6 sm:pt-8">
-            <dt className="font-serif text-numeral font-normal whitespace-nowrap italic tabular-nums">{s.figure}</dt>
-            <dd className="mt-4 max-w-[40ch] text-body text-pretty text-ink-muted">
+      {/* The stats on the heading's two grid lines (columns 1 and 8), so nothing floats between them. */}
+      <dl className="grid-12 gap-y-10">
+        {STATS.map((s, i) => (
+          <div key={s.figure} className={clsx("col-span-12 border-t border-paper-line pt-6", i === 0 ? "md:col-span-6 lg:col-span-7" : "md:col-span-6 lg:col-span-5")}>
+            <dt className="text-title-lg font-medium whitespace-nowrap">{s.figure}</dt>
+            <dd className="mt-3 max-w-[40ch] text-body text-pretty text-ink-muted">
               {s.text}
               <Note n={s.note} />
             </dd>
@@ -79,13 +79,13 @@ export function Problem() {
         ))}
       </dl>
 
-      <Enter className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-12" threshold={0.3}>
-        <div className="contents lg:flex lg:flex-col lg:gap-8">
+      <Enter className="mt-14 grid-12 gap-y-8 lg:items-start" threshold={0.3}>
+        <div className="col-span-12 flex flex-col gap-8 lg:col-span-7">
           <Document meta="CPSC 27-071 · Kikea Store · 19,596 units" note={3} className="lg:-rotate-[0.6deg]">
             &ldquo;&hellip;cut the pillow in half after confirming the recalled pillow with the firm and send a photo of the destroyed pillow to{" "}
             <span className={clsx(styles.highlight, "font-mono whitespace-nowrap")}>z•••••929@gmail.com</span>.&rdquo;
           </Document>
-          <blockquote className="order-last mt-4 max-w-[44ch] border-l-2 border-ink pl-6 text-head-sm font-medium text-balance lg:order-none">
+          <blockquote className="order-last max-w-[44ch] border-l-2 border-ink pl-6 text-head-sm font-medium text-balance lg:order-none">
             The same request warns that fraud controls can &ldquo;reduce recall participation&rdquo;.{" "}
             <span className="text-ink-muted">Remedy keeps the refund easy for a real owner and expensive for a fake.</span>
           </blockquote>
@@ -93,10 +93,10 @@ export function Problem() {
         <Document
           meta="CPSC-2026-0067 · Request for information"
           note={4}
-          className="lg:mt-8 lg:rotate-[0.8deg]"
+          className="col-span-12 lg:col-span-5 lg:mt-8 lg:rotate-[0.8deg]"
           stamp={
             <span className="pointer-events-none absolute right-6 -bottom-4 sm:right-8">
-              <Stamp tone="stop" rotate={-6} className={clsx(styles.stamp, "bg-paper-2")}>
+              <Stamp tone="stop" rotate={-6} className={clsx(styles.stamp, "bg-paper")}>
                 Received
               </Stamp>
             </span>
@@ -106,10 +106,10 @@ export function Problem() {
         </Document>
       </Enter>
 
-      <ol aria-label="Sources" className="mt-8 grid gap-x-8 gap-y-1 border-t border-paper-line pt-6 md:grid-cols-2 lg:grid-cols-4">
+      <ol aria-label="Sources" className="mt-14 grid-12 gap-y-1 border-t border-paper-line pt-6">
         {SOURCES.map((s) => (
-          <li key={s.n} id={`source-${s.n}`} className="flex gap-3 font-mono text-micro text-ink-muted">
-            <span className="w-4 shrink-0 tabular-nums">{s.n}</span>
+          <li key={s.n} id={`source-${s.n}`} className="col-span-12 flex gap-3 font-mono text-micro text-ink-muted md:col-span-6 lg:col-span-3">
+            <span className="w-4 shrink-0">{s.n}</span>
             <a href={s.href} className={clsx(link, "inline-flex min-h-6 items-center")}>
               {s.label}
             </a>
