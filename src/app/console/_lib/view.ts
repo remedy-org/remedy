@@ -148,11 +148,10 @@ function timelineOf(c: Pick<ClaimSummary, "decision" | "times" | "seeded">): Row
   };
 }
 
-/** The verdict column's muted line: the reason, or how many checks a paid claim passed. */
+/** The verdict column's muted line: the reason, or that a paid claim passed every check (the bars beside it count them). */
 function noteOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes">, bars: CheckBar[] | null, recall: Pick<Recall, "autoPay">): string | null {
   if (c.decision === "paid" && !c.reason) {
-    const passed = bars?.filter((b) => b.state === "pass").length;
-    return passed ? `All ${passed} checks passed` : null;
+    return bars?.some((b) => b.state === "pass") ? "All checks passed" : null;
   }
   return reasonOf(c, recall);
 }

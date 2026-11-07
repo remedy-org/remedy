@@ -42,7 +42,7 @@ describe("the grid's evidence cells", () => {
       "screen:pass",
       "step_1:pass",
     ]);
-    expect(row.note).toBe("All 7 checks passed");
+    expect(row.note).toBe("All checks passed");
     expect(barsSentence(row.bars!)).toBe("8 checks: 7 passed, 1 not run");
   });
 
