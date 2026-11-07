@@ -9,7 +9,7 @@ import { PayPalError } from "@/lib/paypal/client";
 import type { Store } from "@/lib/store";
 import { localStore } from "@/lib/store/local";
 import type { Claim, Recall, Verdict } from "@/lib/types";
-import { checkClaim, ClaimError, createClaim, findOpenClaim, othersFor, receivePhotos, recoverStale, STALE_AFTER_MS, type PipelineDeps } from "./pipeline";
+import { checkClaim, ClaimError, createClaim, findOpenClaim, LIMIT_HOLD, LimitReached, othersFor, receivePhotos, recoverStale, STALE_AFTER_MS, type PipelineDeps } from "./pipeline";
 
 const T0 = new Date("2026-11-07T10:00:00.000Z");
 
@@ -49,6 +49,7 @@ beforeEach(async () => {
     },
     vision: vi.fn(async () => ({ verdict: verdict(), seconds: 12.3, model: "gpt-test" })),
     pay: vi.fn(async () => ({ batchId: "BATCH1", batchStatus: "PENDING" })),
+    limits: { vision: 100, draft: 20, claimsPerDay: 60, claimsPerMonth: 150, accountClaimsPerDay: 5, accountDemosPerDay: 12 },
   };
 });
 
@@ -83,6 +84,30 @@ describe("createClaim", () => {
     expect(claim.code).toBe("K7P");
     expect(claim.demo).toBe(true);
     expect(claim.events.find((e) => e.type === "demo_sample")?.detail).toBe("wrong-code");
+  });
+});
+
+describe("createClaim limits", () => {
+  it("refuses a start past the account's daily limit, saving nothing, and starts again the next UTC day", async () => {
+    deps.limits.accountClaimsPerDay = 2;
+    await createClaim(deps, { recall, payer: owner });
+    await createClaim(deps, { recall, payer: owner });
+    const refused = await createClaim(deps, { recall, payer: owner }).catch((e: unknown) => e);
+    expect(refused).toBeInstanceOf(LimitReached);
+    expect((refused as LimitReached).refusal).toEqual({ kind: "account", limit: 2, until: new Date("2026-11-08T00:00:00.000Z") });
+    expect(await store.listClaims()).toHaveLength(2);
+    // Another account, and demo claims from this one, are counted apart.
+    await createClaim(deps, { recall, payer: { payerId: "OWNER0000002", verified: true } });
+    await createClaim(deps, { recall, payer: owner, sample: demoSample("genuine")! });
+    clock = new Date("2026-11-08T00:00:01.000Z");
+    expect((await createClaim(deps, { recall, payer: owner })).decision).toBe("pending");
+  });
+
+  it("refuses a demo start once today's photo checks are used up, but still starts a real claim", async () => {
+    deps.limits.vision = 1;
+    expect(await store.takeUsage("2026-11-07", "vision", 1)).toBe(true);
+    await expect(createClaim(deps, { recall, payer: owner, sample: demoSample("genuine")! })).rejects.toMatchObject({ refusal: { kind: "checks", limit: 1 } });
+    expect((await createClaim(deps, { recall, payer: owner })).decision).toBe("pending");
   });
 });
 
@@ -297,6 +322,32 @@ describe("checkClaim", () => {
     await checkClaim(deps, claim.id);
     expect(deps.vision).toHaveBeenCalledTimes(1);
     expect(deps.pay).toHaveBeenCalledTimes(1);
+    // Counted once, for the one model call.
+    expect(await store.getUsage("2026-11-07")).toEqual({ vision: 1, draft: 0 });
+  });
+
+  it("holds a claim for a person, without calling the model, once the day's photo checks are used up", async () => {
+    deps.limits.vision = 1;
+    const first = await open();
+    await send(first);
+    expect((await checkClaim(deps, first.id)).decision).toBe("paid");
+    const other = { payerId: "OWNER0000002", verified: true };
+    const second = await createClaim(deps, { recall, payer: other });
+    await receivePhotos(deps, { claimId: second.id, payerId: other.payerId, sessionId: second.captureSession!.id, photos: [photo("f0f0f0f0f0f0f0f0")] });
+    const held = await checkClaim(deps, second.id);
+    expect(held.decision).toBe("held");
+    expect(held.reasons).toEqual([{ check: "model", outcome: "hold", text: LIMIT_HOLD }]);
+    expect(held.photos).toHaveLength(1);
+    expect(deps.vision).toHaveBeenCalledTimes(1);
+    expect(checkRows(held, recall.spec).at(-1)).toMatchObject({ label: "Photo check", state: "hold", detail: LIMIT_HOLD });
+    // The next UTC day has a fresh budget.
+    clock = new Date("2026-11-08T00:00:01.000Z");
+    const third = { payerId: "OWNER0000003", verified: true };
+    const next = { ...(await createClaim(deps, { recall, payer: third })), code: "M4T" };
+    await store.putClaim(next);
+    await receivePhotos(deps, { claimId: next.id, payerId: third.payerId, sessionId: next.captureSession!.id, photos: [photo("0f0f0f0f0f0f0f0f")] });
+    expect((await checkClaim(deps, next.id)).decision).toBe("paid");
+    expect(deps.vision).toHaveBeenCalledTimes(2);
   });
 });
 

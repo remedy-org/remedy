@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { Button, Card, ClockIcon, ErrorState } from "@/components/ui";
+import type { Refusal } from "@/lib/limits";
 import type { Recall } from "@/lib/types";
 import { CameraIcon, EyeIcon } from "./icons";
+import { LimitNotice } from "./LimitNotice";
 import { companyName, money, SANDBOX_ACCOUNTS_URL } from "./model";
 
 export type AuthError = "denied" | "state" | "paypal" | "refused";
@@ -22,10 +24,12 @@ export interface ConsentCardProps {
   demo?: boolean;
   authError?: AuthError | null;
   unverified?: boolean;
+  /** The last start was refused by a spending limit. */
+  refusal?: Refusal | null;
 }
 
 /** Stripe Identity's consent pattern: the company and Remedy side by side, three bullets, one full-width action. */
-export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified }: ConsentCardProps) {
+export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal }: ConsentCardProps) {
   const company = companyName(recall);
   const amount = money(recall.refund);
   const error = authError ? AUTH_ERRORS[authError] : null;
@@ -68,6 +72,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         />
       )}
       {error && <ErrorState variant="inline" title={error.title} description={error.description} />}
+      {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} />}
 
       <div className="flex flex-col gap-3">
         <Button href={href} size="lg" block prefetch={false}>

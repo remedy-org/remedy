@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { body, company, fail, isResponse } from "@/app/console/_lib/api";
 import { readCpsc } from "@/app/console/_lib/import";
 import { RecallRefInput } from "@/app/console/_lib/recalls";
+import { getAppStore } from "@/lib/demo";
+import { limits, nextUtcDay, plural, retryIn, utcDay } from "@/lib/limits";
 import { draftSpec } from "@/lib/spec";
 
 // The model reads the notice and its photos; about 15 seconds at high effort.
@@ -17,6 +19,12 @@ export async function POST(request: NextRequest) {
 
   const record = await readCpsc(input.ref);
   if (isResponse(record)) return record;
+  // Counted before the call: every draft costs a model call, whether or not it's published.
+  const now = new Date();
+  const { draft: limit } = limits();
+  if (!(await (await getAppStore()).takeUsage(utcDay(now), "draft", limit))) {
+    return fail(429, `Remedy drafts at most ${plural(limit, "recall")} a day to keep this live demo affordable, and today's are used up. Write the checks yourself, or try the draft again ${retryIn(nextUtcDay(now), now)}.`);
+  }
   try {
     return NextResponse.json(await draftSpec(record));
   } catch (e) {

@@ -1,3 +1,4 @@
+import { LIMIT_HOLD } from "@/app/api/claims/_lib/pipeline";
 import { demoRecall } from "@/lib/demo";
 import storedVerdicts from "@/lib/demo/verdicts.json";
 import { decide } from "@/lib/rule";
@@ -65,6 +66,8 @@ export const held = decided("c03", "gpt-6.1-terra");
 
 const model: Reason = { check: "model", outcome: "hold", text: "The photo check didn't answer, so a person will look at your photos instead" };
 export const heldModel = { claim: base("M4T", { photos: photosOf(["c02-1.jpg"]), decision: "held", reasons: [model] }), photoUrls: ["/demo/c02-1.jpg"] };
+const limit: Reason = { check: "model", outcome: "hold", text: LIMIT_HOLD };
+export const heldLimit = { claim: base("M4T", { photos: photosOf(["c02-1.jpg"]), decision: "held", reasons: [limit] }), photoUrls: ["/demo/c02-1.jpg"] };
 
 export const heldPayout = (() => {
   const d = decided("c01");

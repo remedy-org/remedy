@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
 import { demoSample, isDemoAllowed } from "@/lib/demo";
+import { refusalQuery } from "@/lib/limits";
 import { getSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
 import { liveDeps } from "./_lib/deps";
 import { fail, json, seeOther, toLogin } from "./_lib/http";
-import { claimPath, createClaim, demoSampleOf } from "./_lib/pipeline";
+import { claimPath, createClaim, demoSampleOf, LimitReached } from "./_lib/pipeline";
 
 // POST /api/claims (form: recall=<slug>, sample=<demo sample id>): files a demo claim with the sample's code.
 // Real claims start at GET /api/claims/start, which continues an open claim instead of always making a new one.
@@ -28,6 +29,8 @@ export async function POST(request: NextRequest) {
     const claim = await createClaim(deps, { recall, payer: session, sample });
     return seeOther(claimPath(recall.slug, claim));
   } catch (e) {
+    // Only reached once the demo recall was found by this slug. The picker says which limit, and when to come back.
+    if (e instanceof LimitReached) return seeOther(`/r/${slug}/try/samples?${refusalQuery(e.refusal)}`);
     return fail(e);
   }
 }

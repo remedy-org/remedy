@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Button, Card, StatusPill, statusLabel } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
+import type { Refusal } from "@/lib/limits";
 import type { Decision } from "@/lib/types";
+import { LimitNotice } from "./LimitNotice";
 
 export interface SampleOption {
   sample: DemoSample;
@@ -17,7 +19,7 @@ export interface DemoRun {
 }
 
 /** Demo mode's stand-in for the camera: pick one of the four sample claims. A plain form, no script needed. */
-export function SamplePicker({ slug, options, selected, runs }: { slug: string; options: SampleOption[]; selected: string; runs: DemoRun[] }) {
+export function SamplePicker({ slug, options, selected, runs, refusal }: { slug: string; options: SampleOption[]; selected: string; runs: DemoRun[]; refusal?: Refusal | null }) {
   return (
     <Card padding="lg" as="section" aria-labelledby="picker-title" className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
@@ -26,6 +28,8 @@ export function SamplePicker({ slug, options, selected, runs }: { slug: string; 
         </h2>
         <p className="text-body text-muted">Each one runs the real checks. Only the genuine claim should be paid, and only once per PayPal account.</p>
       </div>
+
+      {refusal && <LimitNotice refusal={refusal} demo />}
 
       <form action="/api/claims" method="post" className="flex flex-col gap-6">
         <input type="hidden" name="recall" value={slug} />

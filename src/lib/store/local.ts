@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { z } from "zod";
 import { Claim, Recall } from "../types";
-import { ClaimIndex, isValidClaimId, isValidRecallId, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, type Store } from "./store";
+import { bump, ClaimIndex, isValidClaimId, isValidRecallId, NO_USAGE, paths, RecallIndex, summarize, summarizeRecall, upsert, upsertRecall, Usage, type Store } from "./store";
 
 // Dev store: the same layout as the blob store, as files under `dir` (data/, git-ignored).
 export function localStore(dir: string): Store {
@@ -30,12 +30,15 @@ export function localStore(dir: string): Store {
     await rename(tmp, file(rel));
   }
 
-  // One process, so a promise chain is enough to stop two index updates interleaving.
+  // One process, so a promise chain is enough to stop two index updates interleaving. A change that returns null
+  // writes nothing (false).
   let indexLock: Promise<unknown> = Promise.resolve();
-  function updateJson<S extends z.ZodType>(rel: string, schema: S, empty: z.infer<S>, change: (index: z.infer<S>) => z.infer<S>) {
+  function updateJson<S extends z.ZodType>(rel: string, schema: S, empty: z.infer<S>, change: (index: z.infer<S>) => z.infer<S> | null) {
     const next = indexLock.then(async () => {
-      const index = (await readJson(rel, schema)) ?? empty;
-      await write(rel, JSON.stringify(change(index), null, 2));
+      const changed = change((await readJson(rel, schema)) ?? empty);
+      if (changed === null) return false;
+      await write(rel, JSON.stringify(changed, null, 2));
+      return true;
     });
     indexLock = next.catch(() => {});
     return next;
@@ -75,5 +78,7 @@ export function localStore(dir: string): Store {
     listClaims: async () => ((await readJson(paths.index, ClaimIndex)) ?? { claims: [] }).claims,
     putPhoto: async (key, jpeg) => write(paths.photo(key), jpeg),
     getPhoto: async (key) => read(paths.photo(key)),
+    getUsage: async (day) => (await readJson(paths.usage(day), Usage)) ?? NO_USAGE,
+    takeUsage: async (day, kind, limit) => updateJson(paths.usage(day), Usage, NO_USAGE, (usage) => bump(usage, kind, limit)),
   };
 }

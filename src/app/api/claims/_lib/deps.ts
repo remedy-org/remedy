@@ -5,6 +5,7 @@ import { getAppStore } from "@/lib/demo";
 import type { DemoSample } from "@/lib/demo";
 import { env } from "@/lib/env";
 import { dHash } from "@/lib/fingerprint";
+import { limits } from "@/lib/limits";
 import { sendPayout } from "@/lib/paypal/payouts";
 import { runVisionCheck } from "@/lib/vision/check";
 import type { PipelineDeps } from "./pipeline";
@@ -20,6 +21,7 @@ export async function liveDeps(): Promise<PipelineDeps> {
     pay: sendPayout,
     hash: dHash,
     now: () => new Date(),
+    limits: limits(),
   };
 }
 
