@@ -4,8 +4,7 @@ import type { AgDefaultWidgetDefinition, AgTypeScriptRegistry, AgTypeScriptWidge
 
 export interface RecallProgressDef {
   type: "recall-progress";
-  /** samples: units remedied by sample claims, which were never paid to a real owner. */
-  dataMapping: { remedied: AgWidgetFieldReference[]; sold: AgWidgetFieldReference[]; samples?: AgWidgetFieldReference[] };
+  dataMapping: { remedied: AgWidgetFieldReference[]; sold: AgWidgetFieldReference[] };
   format?: AgWidgetDataFormat<Record<string, never>>;
 }
 

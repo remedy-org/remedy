@@ -1,0 +1,81 @@
+/*
+ * Insights runs AG Studio in edit mode only for the analyst's rail; to a company the report is a set of read-only panels.
+ * So a hovered or selected widget gets no editor frame, no resize handles and no empty toolbar (Studio's or a chart's,
+ * which a screen reader would still announce), and a widget's title and caption don't raise a tooltip over the content
+ * beneath.
+ */
+.insights-report .ag-studio-layout-widget {
+  --ag-studio-layout-widget-resize-border-color: transparent;
+}
+
+/*
+ * The keyboard on the canvas (InsightsStudio names each panel's stop): Tab lands on a panel, which gets the app's focus
+ * ring on its card in place of Studio's grey box. A panel with nothing to operate is read, not visited: no stop.
+ */
+.insights-report .ag-studio-layout-widget[data-no-controls] > :is(.ag-tab-guard, .ag-studio-layout-widget-focus-container) {
+  visibility: hidden;
+}
+
+.insights-report .ag-studio-layout-widget.ag-studio-layout-widget-focus,
+.insights-report .ag-studio-layout-widget-focus.ag-studio-layout-widget-editing .ag-studio-layout-widget-overlay {
+  box-shadow: none;
+}
+
+.insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-container {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.insights-report .ag-studio-layout-widget-overlay-resize,
+.insights-report .ag-studio-widget-toolbar:not(:has(button)),
+.insights-report .ag-charts-toolbar:empty {
+  display: none;
+}
+
+/*
+ * A panel's downloads (the grid's CSV, a chart's image) sit inside its card on the title's line, named in words: Studio
+ * draws them as unlabelled icons floating above the card, where they read as belonging to the panel before.
+ */
+.insights-report .ag-studio-widget-toolbar:is(.ag-studio-widget-toolbar-outside-top, .ag-studio-widget-toolbar-inside-top) {
+  top: 16px;
+  right: 24px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.insights-report .ag-studio-widget-toolbar-button {
+  padding: 0 8px;
+  color: var(--muted);
+  font: 400 12px/22px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.insights-report .ag-studio-widget-toolbar-button + .ag-studio-widget-toolbar-button {
+  box-shadow: inset 1px 0 0 var(--line);
+}
+
+.insights-report .ag-studio-widget-toolbar-button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.insights-report .ag-studio-widget-toolbar-button .ag-icon {
+  display: none;
+}
+
+.insights-report .ag-studio-widget-toolbar-button::after {
+  content: attr(aria-label);
+}
+
+.insights-report :is(.ag-studio-layout-widget-title, .ag-studio-layout-widget-subtitle, .ag-studio-layout-widget-caption) {
+  pointer-events: none;
+}
+
+/* The grid's header labels read as the Claims grid's: mono uppercase with +0.06em tracking. */
+.insights-report .ag-header-cell-text {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

@@ -4,6 +4,10 @@
 export const STAGES = ["Filed", "Photos sent", "Passed pre-checks", "Passed photo check", "Paid"] as const;
 export type Stage = (typeof STAGES)[number];
 
+/** How the report shows a decision or a stage: "Paid" reads as "Approved", as the console's pill does, since "paid"
+ * belongs only beside a payout really sent. The data keeps its own values, so filters still match. */
+export const shownAs = (value: string) => (value === "Paid" ? "Approved" : value);
+
 /**
  * Why a claim stopped where it did: refused by a check (rejected or blocked, drawn in --stop), held for a person
  * (waiting, drawn in --hold, never counted as refused), or still in progress.

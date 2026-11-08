@@ -1,8 +1,8 @@
 import type { StudioLib } from "./studio-lib";
 
 // AG Studio themed to the Evidence Room (DESIGN.md). Every colour is one of the app's own tokens, so the report
-// matches the console in both themes. The canvas is the page itself: no frame, graphite widgets with a hairline, and
-// subtitles set as exhibit labels (mono, faint) like everywhere else in Remedy: amber is only for what's happening now.
+// matches the console in both themes. The canvas is the page itself: no frame, graphite widgets with a hairline, a
+// title and no subtitle. Amber is kept for the one action on a page, so nothing in the report uses it.
 //
 // Studio computes with its colours (charts draw them on a canvas), so it can't take var() or oklch(): the client
 // resolves each token to sRGB first (resolveColor in InsightsStudio) and rebuilds the theme when the theme toggles.
@@ -31,7 +31,7 @@ const PALETTE = [
   "color-mix(in oklch, var(--text) 20%, var(--surface))",
 ];
 
-export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans: SANS, mono: MONO }: Fonts, aiPanelWidth = 400) {
+export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans: SANS, mono: MONO }: Fonts) {
   const token = (name: string) => resolve(`var(--${name})`);
   const line = (name: string) => ({ width: 1, color: token(name) });
   const palette = Object.fromEntries(
@@ -67,7 +67,8 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   menuTextColor: token("text"),
   menuBorder: line("line"),
 
-  // No frame: the canvas is the page's own background, and widget edges sit on the page's 32px gutter.
+  // No frame: the canvas is the page's own background, and its padding plus Studio's 16px around each widget puts
+  // the widgets' edges on the page's 32px gutter.
   studioWrapperBorder: false,
   studioWrapperBorderRadius: 0,
   studioWrapperSpacing: 0,
@@ -76,7 +77,7 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   studioCanvasBorderRadius: 0,
   studioCanvasShadow: false,
   studioCanvasBackgroundColor: token("bg"),
-  studioCanvasPadding: 20,
+  studioCanvasPadding: 16,
   studioCanvasRowHeight: 16,
   studioCanvasFontFamily: SANS,
   studioCanvasGridLineColor: token("line"),
@@ -89,52 +90,50 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   studioWidgetTitleFontSize: 14,
   studioWidgetTitleFontWeight: 500,
   studioWidgetTitleTextColor: token("text"),
-  studioWidgetSubtitleFontFamily: MONO,
+  studioWidgetSubtitleFontFamily: SANS,
   studioWidgetSubtitleFontSize: 12,
   studioWidgetSubtitleFontWeight: 400,
-  studioWidgetSubtitleTextColor: token("faint"),
+  studioWidgetSubtitleTextColor: token("muted"),
   studioWidgetCaptionFontFamily: SANS,
   studioWidgetCaptionFontSize: 12,
   studioWidgetCaptionTextColor: token("muted"),
-  studioWidgetResizeBorderColor: token("accent"),
+  studioWidgetResizeBorderColor: token("line-2"),
   studioWidgetToolbarBackgroundColor: token("surface-2"),
   studioWidgetToolbarBorder: line("line"),
   studioWidgetLoadingOverlayBackgroundColor: token("surface"),
   studioWidgetNoDataOverlayBackgroundColor: token("surface"),
-  // title-lg's phone floor on the type scale: the KPI row reads as a ledger, not four display numbers.
-  studioValueWidgetFontSize: 28,
+  // An analyst's value tile: the ledger's 22, not a display number.
+  studioValueWidgetFontSize: 22,
 
   studioPanelContainerBackgroundColor: token("surface"),
   studioPanelContainerBorder: line("line"),
   studioPanelContainerBorderRadius: 0,
   studioPanelDividerColor: token("line"),
-  studioPanelDividerActiveColor: token("accent"),
+  studioPanelDividerActiveColor: token("text-2"),
   studioPanelSectionBorderColor: token("line"),
   studioPanelHeaderFontFamily: SANS,
   studioPanelHeaderFontWeight: 500,
   studioPanelChevronButtonHoverBackgroundColor: token("surface-2"),
   studioPanelChevronButtonHoverColor: token("text"),
-  studioToggleButtonActiveBackgroundColor: token("accent-soft"),
-  studioToggleButtonActiveBorderColor: token("accent"),
-  studioToggleButtonActiveColor: token("accent-text"),
+  studioToggleButtonActiveBackgroundColor: token("surface-2"),
+  studioToggleButtonActiveBorderColor: token("text-2"),
+  studioToggleButtonActiveColor: token("text"),
 
-  // The analyst's rail: wide enough for a quoted check and a drafted note; the whole width on a phone.
-  studioAiPanelWidth: aiPanelWidth,
-  // Studio holds 600px by default; on a phone the rail is all there is.
-  studioMinWidth: aiPanelWidth < 400 ? aiPanelWidth : 600,
+  // The analyst's rail: wide enough for a quoted check and a drafted note.
+  studioAiPanelWidth: 400,
   studioAiPanelInputMessageBackgroundColor: token("surface-2"),
   studioAiPanelButtonHoverBackgroundColor: token("surface-2"),
-  studioAiPanelRichTextAccentBackgroundColor: token("accent-soft"),
+  studioAiPanelRichTextAccentBackgroundColor: token("surface-2"),
 
-  // Grid widgets: mono uppercase headers in --faint, hairline rows, no zebra (DESIGN.md, AG Grid).
+  // Grid widgets: the Claims grid's header row (mono labels in --faint on --surface-2), hairline rows, no zebra.
   gridFontFamily: SANS,
   gridFontSize: 14,
   gridCellTextColor: token("text"),
-  gridHeaderBackgroundColor: token("surface"),
+  gridHeaderBackgroundColor: token("surface-2"),
   gridHeaderTextColor: token("faint"),
   gridHeaderFontFamily: MONO,
   gridHeaderFontSize: 12,
-  gridHeaderFontWeight: 400,
+  gridHeaderFontWeight: 500,
   gridRowHeight: 44,
   gridRowBorder: line("line"),
   gridHeaderRowBorder: line("line"),

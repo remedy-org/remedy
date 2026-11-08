@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import type { AgWidgetParams } from "ag-studio";
 import type { MouseEvent } from "react";
-import { funnel, KIND_LABEL, type StopKind } from "../funnel";
+import { funnel, KIND_LABEL, shownAs, type StopKind } from "../funnel";
 import type { CheckFunnelDef } from "./defs";
 import { moveBetweenItems } from "./listKeys";
 import { num, useRows } from "./useRows";
@@ -46,7 +46,7 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
         return (
           <li key={s.stage} className="flex flex-col gap-1">
             <div className="grid grid-cols-[9.5rem_2.5rem_1fr] items-center gap-3">
-              <span className="truncate text-ui text-text">{s.stage}</span>
+              <span className="truncate text-ui text-text">{shownAs(s.stage)}</span>
               <span className="text-right font-mono text-ui text-text tabular-nums">{s.reached}</span>
               <span className="relative h-3 rounded-[3px] bg-surface-2" aria-hidden="true">
                 <span
@@ -64,7 +64,7 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
                 className={clsx(
                   "group ml-[9.5rem] flex min-h-6 items-center gap-2 rounded-control px-2 py-0.5 text-left text-micro transition-colors",
                   "disabled:cursor-default enabled:hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
-                  selected.has(s.stage) ? "bg-accent-soft ring-1 ring-accent" : "",
+                  selected.has(s.stage) ? "bg-surface-2 ring-1 ring-text-2" : "",
                 )}
                 // The reasons in full (a long one wraps to two lines here), then what a click does.
                 title={s.stopped ? [...s.groups.map((g) => `${g.count} ${KIND_LABEL[g.kind]}: ${g.summary}`), `Filter the page to these ${s.stopped}`].join("\n") : undefined}

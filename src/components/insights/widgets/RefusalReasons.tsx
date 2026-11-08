@@ -7,10 +7,11 @@ import type { RefusalReasonsDef } from "./defs";
 import { moveBetweenItems } from "./listKeys";
 import { num, useRows } from "./useRows";
 
-// Custom widget 3: why claims were refused, each reason tagged with the kind of check that caught it (a pre-check
-// that needs no AI, the model reading the photo, or a person). Refusals are always --stop, never a palette slot.
+// Custom widget 3: why claims were refused, each reason followed by where it was caught: before the model read the
+// photo (a pre-check), by the model, or by a person. The bars are the funnel's muted ink: the title already says
+// these were refused.
 
-const GATE_LABEL: Record<string, string> = { "No AI": "NO AI", "Model reads": "MODEL READS", Person: "PERSON" };
+const GATE_LABEL: Record<string, string> = { "No AI": "before the model", "Model reads": "by the model", Person: "by a person" };
 
 export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
   const { dataMapping, widgetApi } = params;
@@ -25,7 +26,6 @@ export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
     .filter((r): r is { reason: string; gate: string; count: number } => Boolean(r.reason) && r.count > 0)
     .sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));
   const max = Math.max(1, ...items.map((i) => i.count));
-  const total = items.reduce((n, i) => n + i.count, 0);
   const selected = new Set(widgetApi.getCrossFilterSelections()?.flatMap((s) => (s.type === "value" ? s.values.map(String) : [])) ?? []);
 
   const toggle = (value: string) => (e: MouseEvent) => {
@@ -38,10 +38,7 @@ export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 px-1.5 pb-1" onClick={() => widgetApi.resetCrossFilter()}>
-      <p className="text-micro text-muted">
-        <span className="font-mono text-text tabular-nums">{total}</span> refused. Each reason names the check that caught it.
-      </p>
+    <div className="flex h-full min-h-0 flex-col px-1.5 pb-1" onClick={() => widgetApi.resetCrossFilter()}>
       <ul className="flex min-h-0 flex-1 flex-col overflow-y-auto" onKeyDown={moveBetweenItems}>
         {items.map((i) => (
           <li key={i.reason}>
@@ -52,17 +49,17 @@ export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
               className={clsx(
                 "grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-control px-2 py-1 text-left transition-colors hover:bg-surface-2",
                 "focus-visible:outline-2 focus-visible:outline-offset-0",
-                selected.has(i.reason) && "bg-accent-soft ring-1 ring-accent",
+                selected.has(i.reason) && "bg-surface-2 ring-1 ring-text-2",
                 selected.size > 0 && !selected.has(i.reason) && "opacity-45",
               )}
             >
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-ui text-text">{i.reason}</span>
-                <span className="shrink-0 rounded-[4px] border border-line px-1.5 font-mono text-micro leading-[1.125rem] tracking-[0.06em] text-muted">{GATE_LABEL[i.gate] ?? i.gate.toUpperCase()}</span>
+              <span className="min-w-0 truncate text-ui text-text">
+                {i.reason}
+                {GATE_LABEL[i.gate] && <span className="text-muted"> · {GATE_LABEL[i.gate]}</span>}
               </span>
               <span className="text-right font-mono text-ui text-text tabular-nums">{i.count}</span>
               <span aria-hidden="true" className="col-span-2 h-1.5 rounded-full bg-surface-2">
-                <span className="block h-full rounded-full bg-stop" style={{ width: `${(i.count / max) * 100}%` }} />
+                <span className="block h-full rounded-full bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]" style={{ width: `${(i.count / max) * 100}%` }} />
               </span>
             </button>
           </li>

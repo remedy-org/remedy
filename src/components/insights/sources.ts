@@ -1,7 +1,7 @@
 import type { AgDataSourcesDefinition, AgFieldDefinition, AgFormat } from "ag-studio";
 import { duration } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
-import { captions, provenance } from "./report";
+import { timeField as timeFieldOf } from "./report";
 import type { InsightsRegistry } from "./widgets/defs";
 
 // AG Studio's data sources for one recall: its claims, their checks (many to one), the recall itself and a calendar on
@@ -19,13 +19,13 @@ const secs = { createValueFormatter: () => (v: number | null | undefined) => (ty
 const whole = { formatOptions: { format: new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }) } };
 
 const HONESTY =
-  "Sample claims (source = Sample) are eval samples shown in every company's console; they were never paid to a real owner. " +
-  "Judges' demo claims used sample photos and PayPal sandbox money. Amounts are USD sent from Remedy's PayPal sandbox account for the company.";
+  "Claims with source Sample were filed with stored photo sets for payees whose PayPal accounts aren't live: their decisions are real, but no money was sent for them. " +
+  "Amounts are USD sent through PayPal from the company's account.";
 
 export function buildSources(data: InsightsData): AgDataSourcesDefinition<InsightsRegistry> {
   const days = data.claims.map((c) => c.filedAt.slice(0, 10)).sort();
   const today = data.asOf.slice(0, 10);
-  const { timeField } = captions(provenance(data.claims));
+  const timeField = timeFieldOf(data.claims);
   const sent = timeField === "timeToSendSec";
   return {
     description: `Claims filed against CPSC recall ${data.recall.id} (${data.recall.product}), and the checks that decided them. ${HONESTY} A fixed rule decides every claim from the checks: any "no" rejects, any "unclear" holds it for a person. The model only describes the photos.`,
@@ -39,24 +39,25 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           // The grid widget renders this column as a link to the claim in the queue (widgets/index.ts).
           ["id", "Claim", "textFormat", { context: { claimOf: data.recall.id } }],
           ["filedAt", "Filed", "dateTimeFormat", { formatOptions: { format: new Intl.DateTimeFormat("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC", timeZoneName: "short" }) } }],
-          ["decision", "Decision", "textFormat"],
+          // The grid shows "Paid" as "Approved", as the console's pill does (widgets/index.ts).
+          ["decision", "Decision", "textFormat", { context: { decision: true }, description: "Paid means approved by the rule; amountSent says whether money was really sent." }],
           ["decisionRank", "Decision order", "integerFormat", { hide: true, description: "1 Paid, 2 Held, 3 Rejected, 4 Blocked, 5 In progress." }],
           ["refusalReason", "Refusal reason", "textFormat", { description: "Why a rejected or blocked claim was refused, in the CPSC report's wording. Blank for other claims." }],
-          ["refusalGate", "Refused by", "textFormat", { description: "The kind of check that refused the claim: No AI (a pre-check), Model reads (the photo check) or Person (a review). Blank unless refused." }],
+          ["refusalGate", "Refused by", "textFormat", { description: "Where the claim was refused: before the model read the photo (a pre-check), by the model (the photo check) or by a person (a review). Blank unless refused." }],
           ["failedCheck", "Deciding check", "textFormat", { description: "The check that refused or held the claim (code, label, same_item, screen, step_N, session, duplicate_photo, payer, payer_verified, review)." }],
           ["reason", "Reason", "textFormat"],
-          ["source", "Source", "textFormat", { description: "Sample, Judges' demo or Owner." }],
+          ["source", "Source", "textFormat", { hide: true, description: "Sample (stored photo set, nothing sent), Judges' demo or Owner." }],
           ["payer", "PayPal account", "textFormat", { description: "Last four characters of the PayPal payer id only." }],
           ["verified", "PayPal verified", "booleanFormat"],
-          ["amountPaid", "Paid out", "currencyFormat", { ...usd, description: "USD the rule paid for this claim; 0 unless paid. On a sample claim it was decided, never sent." }],
-          ["refund", "Refund", "textFormat", { description: "The refund as the console shows it: the amount, \"· not sent\" on a sample claim or a held one, or — when the claim was refused or is in progress." }],
-          ["amountSent", "Paid through PayPal", "currencyFormat", { ...usd, description: "USD really sent through PayPal (sandbox in this build); 0 for sample claims, whose payouts never left." }],
+          ["amountPaid", "Paid out", "currencyFormat", { ...usd, description: "USD the rule paid for this claim; 0 unless paid. When the payee's PayPal account isn't live, it was approved and not sent." }],
+          ["refund", "Refund", "textFormat", { description: "The refund as the console shows it: the amount, \"· not sent\" when nothing was sent, or — when the claim was refused or is in progress." }],
+          ["amountSent", "Paid through PayPal", "currencyFormat", { ...usd, description: "USD really sent through PayPal; 0 when nothing was sent." }],
           ["remedied", "Units remedied", "integerFormat", { ...whole, description: "1 when the claim was paid: a unit destroyed and refunded." }],
-          ["remediedSample", "Sample units remedied", "integerFormat", { ...whole, hide: true, description: "1 when a sample claim was decided paid. Its payout was never sent to a real owner." }],
+          ["remediedSample", "Units remedied, not sent", "integerFormat", { ...whole, hide: true, description: "1 when the claim was approved for a payee whose PayPal account isn't live, so nothing was sent." }],
           ["refused", "Refused", "integerFormat", { ...whole, description: "1 when the claim was rejected or blocked." }],
           ["held", "Held", "integerFormat", { ...whole, description: "1 when the claim waits for a person." }],
-          ["timeToPaySec", "Photo to PayPal", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the payout being sent. Paid claims only; a sample claim's are sample timings." }],
-          ["timeToSendSec", "Photo to PayPal, sent", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to a payout really sent through PayPal. Blank for sample claims." }],
+          ["timeToPaySec", "Photo to PayPal", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the payout being sent. Paid claims only." }],
+          ["timeToSendSec", "Photo to PayPal, sent", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to a payout really sent through PayPal. Blank when nothing was sent." }],
           ["paidOnReview", "Paid on review", "integerFormat", { ...whole, description: "1 when the claim was paid only after a person approved it on review; its time to pay includes that wait." }],
           ["modelSec", "Photo check time", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the model's answer." }],
           ["photoCount", "Photos", "integerFormat"],
@@ -74,7 +75,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["id", "Check id", "textFormat", { hide: true }],
           ["claimId", "Claim", "textFormat", { hide: true }],
           ["check", "Check", "textFormat"],
-          ["stage", "Check stage", "textFormat", { description: "Pre-check (no AI) or Photo check (the model reads the photo)." }],
+          ["stage", "Check stage", "textFormat", { description: "Pre-check (before the model) or Photo check (the model reads the photo)." }],
           ["outcome", "Check outcome", "textFormat", { description: "Passed, Held (the model was unsure) or Refused." }],
         ]),
       },
@@ -98,15 +99,15 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
       { id: "claims-filedAt-calendar", source: { tableId: "claims", fieldId: "filedAt" }, target: { calendarId: CALENDAR_ID }, truncate: "day" },
     ],
     // Studio's aggregations have no median, and an average of payouts that take seconds turns into minutes with one
-    // claim a person approved later. This measure works under a grouping (Exhibit E, by day); a value tile asks for it
-    // ungrouped and gets nothing, so the KPI tile uses the median-time widget instead. It is the tile's own median, over
-    // the same field (payouts really sent, or the photo check's time while none was), so the chart and the tile agree.
+    // claim a person approved later. This measure works under a grouping (an analyst's chart by day); a value tile asks
+    // for it ungrouped and gets nothing, so a tile uses the median-time widget instead. It is the figure over the report,
+    // over the same field (payouts really sent, or the photo check's time while none was), so a chart and it agree.
     expressions: [
       {
         id: "medianToPaySec",
         name: sent ? "Median photo to PayPal" : "Median photo check",
         description: sent
-          ? "Median seconds from photos to a payout really sent through PayPal; sample claims, whose payouts never left, are not in it. Use it grouped, by day or by source; for one overall figure use the Median time widget."
+          ? "Median seconds from photos to a payout really sent through PayPal; claims where nothing was sent are not in it. Use it grouped, by day or by source; for one overall figure use the Median time widget."
           : "No payout has been sent yet, so this is the median seconds from photos to the model's answer. Use it grouped, by day or by source; for one overall figure use the Median time widget.",
         isMeasure: true,
         format: "decimalFormat",

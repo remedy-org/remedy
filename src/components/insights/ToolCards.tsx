@@ -67,7 +67,6 @@ function Open(p: AgAiToolDetailParams) {
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <Head d={d} />
         <span className="truncate text-micro text-muted">
-          {d.source === "Sample" ? "Sample photo · " : d.source === "Judges' demo" ? "Demo sample photo · " : ""}
           Open in Claims <span aria-hidden="true">→</span>
         </span>
       </span>

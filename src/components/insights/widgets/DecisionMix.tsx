@@ -4,6 +4,7 @@ import clsx from "clsx";
 import type { AgWidgetParams } from "ag-studio";
 import type { MouseEvent } from "react";
 import type { DecisionMixDef } from "./defs";
+import { shownAs } from "../funnel";
 import { moveBetweenItems } from "./listKeys";
 import { num, useRows } from "./useRows";
 
@@ -59,13 +60,13 @@ export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
               className={clsx(
                 "grid w-full grid-cols-[1fr_auto_3rem] items-center gap-3 rounded-control px-2 py-0.5 text-left transition-colors hover:bg-surface-2",
                 "focus-visible:outline-2 focus-visible:outline-offset-0",
-                selected.has(i.label) && "bg-accent-soft ring-1 ring-accent",
+                selected.has(i.label) && "bg-surface-2 ring-1 ring-text-2",
                 selected.size > 0 && !selected.has(i.label) && "opacity-45",
               )}
             >
               <span className="flex items-center gap-2 text-ui text-text">
                 <span aria-hidden="true" className={clsx("size-2 shrink-0 rounded-full", DOT[i.label] ?? FILL[i.label])} />
-                {i.label}
+                {shownAs(i.label)}
               </span>
               <span className="font-mono text-ui text-text tabular-nums">{i.n}</span>
               <span className="text-right font-mono text-micro text-faint tabular-nums">{share(i.n)}</span>
