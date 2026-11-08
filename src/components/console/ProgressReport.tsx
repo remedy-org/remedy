@@ -6,6 +6,7 @@ import { StatusPill } from "@/components/ui";
 import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
 import { formatCount, formatDate, keepHyphens, plural } from "./format";
+import { VerdictMark } from "./VerdictMark";
 
 function H({ children }: { children: ReactNode }) {
   return <h3 className="text-body font-medium">{children}</h3>;
@@ -125,9 +126,16 @@ export function ProgressReport({
             {report.outcomes.map((o, i) => (
               <tr key={o.decision}>
                 <td className={td}>
-                  <span className="inline-flex w-(--verdict-pill-w)">
-                    <StatusPill status={o.decision} label={o.label} />
-                  </span>
+                  {home ? (
+                    <span className="inline-flex w-(--verdict-pill-w)">
+                      <StatusPill status={o.decision} label={o.label} />
+                    </span>
+                  ) : (
+                    // The console's mark and word, in the sheet's ink: a filed document reads in words, not in chips.
+                    <VerdictMark verdict={o.decision === "paid" ? (o.label === "Paid" ? "paid" : "approved") : o.decision} className="text-text">
+                      {o.label}
+                    </VerdictMark>
+                  )}
                   <span className="mt-1.5 block text-muted sm:hidden">{o.note}</span>
                 </td>
                 <td className={`${td} text-right ${figure}`}>{formatCount(o.count)}</td>
