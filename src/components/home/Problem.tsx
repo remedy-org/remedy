@@ -295,21 +295,22 @@ export function Problem() {
         // than the sheet or reads as the face of a box.
         set("--y", `${(6 * (1 - outExpo(seg(t, T.rise)))).toFixed(3)}vh`);
         set("--lean", `${(14 * (1 - outExpo(seg(t, T.lean)))).toFixed(3)}deg`);
-        set("--tilt", `${(-5.5 + 4.3 * outExpo(seg(t, T.tilt))).toFixed(3)}deg`);
+        set("--tilt", `${(-5.5 + 5.1 * outExpo(seg(t, T.tilt))).toFixed(3)}deg`);
         const th = 95 * (1 - inOutQuart(seg(t, T.fold)));
         const rad = (th * Math.PI) / 180;
         const light = seg(t, T.shade);
         set("--fk", Math.max(0, Math.cos(rad)));
         set("--shade", 0.92 * (1 - light * light * (3 - 2 * light)));
-        // The turning part darkens a little by (1 - cos)/2, most along the crease.
-        set("--sf", ((1 - Math.cos(rad)) / 2) * 0.5);
+        // The turning part darkens a little by (1 - cos)/2, most along the crease, never past about 10%: paused
+        // mid-unfold it still reads as the same paper folded, not a grey slab.
+        set("--sf", ((1 - Math.cos(rad)) / 2) * 0.2);
         set("--fsy", HINGE + (1 - HINGE) * Math.max(0, Math.cos(rad)));
         set("--open", seg(t, [T.fold[1], T.fold[1] + 6]));
         const phase = th > 0.05 ? "fold" : "open";
         if (el.dataset.phase !== phase) el.dataset.phase = phase;
         // After the cut the lamp narrows to a pool on it; as B scrolls over, the whole sheet sinks a little further.
         set("--dim", outQuart(seg(t, T.dim)));
-        set("--dimx", 0.35 * outQuart(seg(t, T.sink)));
+        set("--dimx", 0.12 * outQuart(seg(t, T.sink)));
         set("--sc", 1 - 0.025 * outQuart(seg(t, T.sink)));
         // As Fraud checks covers the last of the sheet, the section's name and the sheet's top strip go with it (its top
         // edge from 300px down to 140px), so no "Why recalls stall" is left over Fraud checks under the nav.
@@ -343,12 +344,13 @@ export function Problem() {
         set("--ring", outQuart(o ? o.ring : seg(t, T.ring)));
         set("--mk", outQuart(seg(t, T.mark)));
         // The lead prints as the string snaps; the rest after it. Stacked, both wait for the cut and for the payoff
-        // to come up the screen. Not pinned, each line prints once as a timed transition (problem.module.css), so a
-        // paused thumb never leaves it half-blurred.
+        // to come up the screen. Pinned or not, each line prints once as a timed transition when the scroll passes the
+        // middle of its stretch (problem.module.css), so a fling that runs out there, or a paused thumb, never leaves it
+        // half-blurred.
         const cut = seg(t, T.snip);
         const lead = o ? Math.min(o.po, cut) : seg(t, [T.payoff[0], T.payoff[0] + PAYOFF_LEAD]);
         const rest = o ? Math.min(o.po, cut) : seg(t, [T.payoff[1] - PAYOFF_REST, T.payoff[1]]);
-        const once = (v: number) => (mode === "play" ? (v >= 0.5 ? 1 : 0) : outExpo(v));
+        const once = (v: number) => (v >= 0.5 ? 1 : 0);
         set("--po", once(lead));
         set("--po2", once(rest));
       }

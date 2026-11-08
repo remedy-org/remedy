@@ -163,14 +163,13 @@ function useRouterOwnsHashJumps() {
 }
 
 // The link's box is the chip: 32px tall and 8px past the text each side (the negative margin keeps the row where it
-// was), with a 44px hit area around it, so the focus ring and the current chip are one shape. The current link, and a
-// link under the pointer or keyboard focus (the shared .nav-link behaviour, globals.css), is --text on --surface-2 (with
-// the light theme's --line-2 hairline); only the chip's opacity moves, 120ms in, and it is never amber.
+// was), with a 44px hit area around it, so the focus ring and the current chip are one shape. Only the current link
+// wears the chip, --text on --surface-2 (with the light theme's --line-2 hairline), so it always says where the reader
+// is; a link under the pointer or keyboard focus only turns --text. Never amber.
 const linkClass = clsx(
-  "relative isolate -mx-2 inline-flex h-8 items-center rounded-control px-2 text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text",
+  "relative isolate -mx-2 inline-flex h-8 items-center rounded-control px-2 text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text focus-visible:text-text",
   "after:absolute after:inset-x-0 after:-inset-y-1.5",
   "before:absolute before:inset-0 before:-z-10 before:rounded-control before:bg-surface-2 before:shadow-(--nav-chip-ring) before:opacity-0 before:transition-opacity before:duration-160 before:ease-snap",
-  "hover:before:opacity-100 hover:before:duration-120 focus-visible:text-text focus-visible:before:opacity-100",
   "aria-[current=location]:text-text aria-[current=location]:before:opacity-100",
 );
 

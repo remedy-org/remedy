@@ -72,8 +72,13 @@ function CtaTag() {
           </div>
         </div>
       </Paper>
-      {/* The string hangs from the footer's top rule and runs down over the paper into the tag's hole (19px below the
-          tag's top edge, so the padding above plus 19px). Drawn in on enter. */}
+      {/* The string hangs from a brass pin at the top of the tag's padding and runs down over the paper into the tag's
+          hole (19px below the tag's top edge, so the padding above plus 19px), so the tag hangs from something, as the
+          code tag in How it works does. Drawn in on enter. */}
+      <span
+        aria-hidden="true"
+        className="absolute top-0 left-[calc(50%-16px)] z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_0_0_1px_var(--accent-edge),0_2px_3px_-1px_oklch(0_0_0/0.4)]"
+      />
       <svg
         aria-hidden="true"
         className="absolute top-0 left-1/2 z-10 h-[75px] w-24 -translate-x-1/2 overflow-visible"
@@ -84,7 +89,7 @@ function CtaTag() {
         <path
           className={styles.draw}
           pathLength={1}
-          d="M30 0C34 40 70 58 62 96c-4 18-14 30-14 40"
+          d="M32 0C34 40 70 58 62 96c-4 18-14 30-14 40"
           stroke="var(--muted)"
           strokeWidth="1.5"
           strokeLinecap="round"
