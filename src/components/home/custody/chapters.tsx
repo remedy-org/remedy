@@ -4,9 +4,10 @@ import clsx from "clsx";
 import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { AlertIcon, ClockIcon, Money, NoBreakHyphens, Paper, SPRING, StatusPill } from "@/components/ui";
+import { AlertIcon, ClockIcon, DURATION, EASE, Money, NoBreakHyphens, Paper, SPRING, StatusPill } from "@/components/ui";
 import { RemedyMark } from "@/components/ui/Wordmark";
 import { CLAIM, CODE_AT, CONSENT_AT, CONSOLE_ROWS, SHOT_AT, WRITE_AT } from "./claim";
+import { useGate } from "./gate";
 
 // The five chapters of the Chain of Custody, as presentational copies of the real claim screens. Each one is drawn from
 // a scroll progress `p` (0 to 1 over the whole runway, spec H2); a progress fixed at 1 (useDone) gives every chapter's
@@ -36,12 +37,13 @@ function useAfter(p: Progress, at: number) {
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const ramp = (v: number, a: number, b: number) => clamp01((v - a) / (b - a));
-const outQuart = (t: number) => 1 - (1 - t) ** 4;
 
-/** A line that lights from 35% once the progress passes `at`, so a step can come up in its turn. Lit at rest. */
+/** A line that lights from 35% once the progress passes `at`, in time, so a step comes up in its turn and a stop never
+ * rests on it half lit. Lit at rest. */
 function Lit({ p, at, className, children }: { p?: Progress; at: number; className?: string; children: ReactNode }) {
   const done = useDone();
-  const opacity = useTransform(p ?? done, (v) => 0.35 + 0.65 * ramp(v, at, at + 0.012));
+  const lit = useGate(p ?? done, (v) => v >= at);
+  const opacity = useTransform(lit, (k) => 0.35 + 0.65 * k);
   return (
     <motion.span className={className} style={{ opacity }}>
       {children}
@@ -70,8 +72,9 @@ export function ConsentChapter({ p }: { p?: Progress }) {
   const compact = useContext(Compact);
   // In the pinned sequence the product column comes in only once the screen's clip has grown to the grid (0.2), so
   // while it grows from the laptop's screen the clip holds the consent card alone, and never slices this column's words.
+  // It comes in time, so a stop there never rests on it half drawn.
   const done = useDone();
-  const product = useTransform(p ?? done, (v) => outQuart(ramp(v, 0.195, 0.205)));
+  const product = useGate(p ?? done, (v) => v >= 0.195);
   return (
     <div className="@container">
       <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
@@ -152,8 +155,9 @@ export function ConsentChapter({ p }: { p?: Progress }) {
 /* --------------------------------------------------------------------------------------------- 02 The code */
 
 function CodeCell({ p, at, char }: { p: Progress; at: number; char: string }) {
-  const t = useTransform(p, (v) => outQuart(ramp(v, at - 0.008, at + 0.004)));
-  const y = useTransform(t, (v) => Math.round((1 - v) * 10));
+  // Each character drops into its cell in time once p reaches it, so a stop never rests on one half there.
+  const t = useGate(p, (v) => v >= at - 0.004);
+  const y = useTransform(t, (v) => (1 - v) * 10);
   return (
     <span className="flex h-16 w-14 items-center justify-center rounded-control border border-line-strong bg-surface">
       <motion.span className="font-mono text-[1.75rem] leading-none font-medium" style={{ opacity: t, y }}>
@@ -350,8 +354,10 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
 
 export function ConsoleChapter({ p }: { p: Progress }) {
   const compact = useContext(Compact);
-  const height = useTransform(p, (v) => `${(outQuart(ramp(v, 0.905, 0.94)) * (compact ? 3 : 3.5)).toFixed(3)}rem`);
-  const opacity = useTransform(p, (v) => ramp(v, 0.92, 0.94));
+  // RM-0442's row opens into the table once the console is in (an object moving, 560ms), its words after the space.
+  const open = useGate(p, (v) => v >= 0.91, { duration: DURATION.object, ease: EASE.outQuart }, { duration: 0.28, ease: EASE.outQuart });
+  const height = useTransform(open, (k) => `${(k * (compact ? 3 : 3.5)).toFixed(3)}rem`);
+  const opacity = useTransform(open, [0.5, 1], [0, 1]);
   const flash = useTransform(p, (v) => `color-mix(in oklch, var(--accent) ${(14 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
   // It fills the stage down to its foot, so as the pin releases the stage never shows an empty band under it.
   return (

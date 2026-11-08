@@ -106,6 +106,17 @@ The server always renders the static form.
 - The clock follows the real 15 s: the pre-checks finish in under a second, the model reads until about 0:14, and the
   payout goes at 0:15.
 
+### Pacing
+
+- Each beat's shot is a camera key at 22% of the beat, pushed in 6% by 88%. Between keys the camera eases on DESIGN.md's
+  state-to-state curve, `cubic-bezier(0.65, 0, 0.35, 1)` (`inOutCubic` in `model.ts`), so its peak speed is 1.5x the
+  average. A move between distant subjects also pulls back mid-way (`PULL` 0.5 m of half-width per metre the aim travels,
+  at most `PULL_MAX` 0.45 m past the wider shot), so a stop mid-move shows both subjects whole.
+- A part opens over the first 22% of its beat and closes over the last 12%; its leader draws on from 12% to 22% and
+  lifts as it closes.
+- In the custody pin the exhibit comes and goes as one opaque layer, cut in time (`custody/gate.ts`): 360ms in over
+  chapter 02, 240ms out onto the console.
+
 ### Regenerating the stills
 
 Start `next dev`, then run:

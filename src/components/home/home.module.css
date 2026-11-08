@@ -73,7 +73,7 @@
     transition:
       translate 460ms var(--drop) var(--fall-at, 0ms),
       rotate 460ms var(--drop) var(--fall-at, 0ms),
-      opacity 120ms linear var(--fall-at, 0ms);
+      opacity 160ms var(--ease-out-expo) var(--fall-at, 0ms);
   }
 
   /* The dashed trail behind a falling tag draws down with it. */
@@ -82,7 +82,7 @@
   }
 
   .enter[data-enter="play"] .trail {
-    transition: scale var(--trail-for, 120ms) linear var(--trail-at, 0ms);
+    transition: scale var(--trail-for, 120ms) var(--ease-out-quart) var(--trail-at, 0ms);
   }
 
   /* The gate pipeline arms each lane on its own (Pipeline.tsx useLanes): data-go on every cell of the lane, and
@@ -97,7 +97,7 @@
     transition:
       translate 460ms var(--drop) calc(var(--go-at, 0ms) + var(--fall-at, 0ms)),
       rotate 460ms var(--drop) calc(var(--go-at, 0ms) + var(--fall-at, 0ms)),
-      opacity 120ms linear calc(var(--go-at, 0ms) + var(--fall-at, 0ms));
+      opacity 160ms var(--ease-out-expo) calc(var(--go-at, 0ms) + var(--fall-at, 0ms));
   }
 
   .lane[data-go="armed"] .trail {
@@ -105,7 +105,7 @@
   }
 
   .lane[data-go="play"] .trail {
-    transition: scale var(--trail-for, 120ms) linear calc(var(--go-at, 0ms) + var(--trail-at, 0ms));
+    transition: scale var(--trail-for, 120ms) var(--ease-out-quart) calc(var(--go-at, 0ms) + var(--trail-at, 0ms));
   }
 
   .lane[data-go="armed"] .stamp,

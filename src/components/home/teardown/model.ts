@@ -39,6 +39,9 @@ const inv = (a: number, b: number, x: number) => clamp01((x - a) / (b - a));
 export const easeOut = (x: number) => 1 - (1 - x) ** 4;
 export const easeInOut = (x: number) => (x < 0.5 ? 8 * x ** 4 : 1 - (-2 * x + 2) ** 4 / 2);
 export const smooth = (x: number) => x * x * (3 - 2 * x);
+/** DESIGN.md's state-to-state curve, cubic-bezier(0.65, 0, 0.35, 1): the camera's moves between beats. Its peak speed is
+ * 1.5x the average (the quartic's was 2x), so a move spreads over its whole window instead of whipping past mid-way. */
+export const inOutCubic = (x: number) => (x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2);
 const lerp = (a: number, b: number, x: number) => a + (b - a) * x;
 
 /** Where p sits inside a beat, 0 to 1. */
@@ -137,13 +140,13 @@ const KEYS: { p: number; shot: Shot }[] = (() => {
 function keysAt(p: number) {
   let i = 0;
   while (i < KEYS.length - 2 && p > KEYS[i + 1].p) i++;
-  return { a: KEYS[i].shot, b: KEYS[i + 1].shot, x: easeInOut(inv(KEYS[i].p, KEYS[i + 1].p, p)) };
+  return { a: KEYS[i].shot, b: KEYS[i + 1].shot, x: inOutCubic(inv(KEYS[i].p, KEYS[i + 1].p, p)) };
 }
 
 /** How far the camera pulls back mid-move, per metre the aim travels, as extra half-width (metres). */
-const PULL = 0.4;
+const PULL = 0.5;
 /** The most a move may pull back past the wider of its two shots. */
-const PULL_MAX = 0.35;
+const PULL_MAX = 0.45;
 
 /**
  * The shot at p, eased between keys. A move between two distant subjects pulls back as it goes (more the further the

@@ -2,12 +2,14 @@
 
 import { motion, useScroll, useTransform, type MotionValue } from "motion/react";
 import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { EASE } from "@/components/ui";
 import { HeroDevice, useMedia } from "../HeroDevice";
 import { CHAPTERS } from "./claim";
 import { CustodyStage } from "./CustodyStage";
 import { HeroPhone } from "./HeroPhone";
 import { PhoneRunway } from "./PhoneRunway";
 import { StaticFigures } from "./StaticFigures";
+import { ENTER, IN_OUT, LEAVE, useGate } from "./gate";
 import { PACE, SCROLL_VH, scrollAt } from "./pace";
 import styles from "./custody.module.css";
 
@@ -75,27 +77,31 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
   }, [p, stage, device]);
 
   const k = useTransform(p, (v) => easeInOut(ramp(v, DOLLY[0], DOLLY[1])));
+  // The hero copy, its facts and the laptop's labels leave in time as the dolly starts, and come back the same way: a
+  // scrubbed fade held the headline blurred at half strength wherever the reader paused. The copy leaves at half the
+  // focus-in's length and comes back as a reveal; the labels (paper on the light table) go at once, never left
+  // half-transparent over the keyboard.
+  const copy = useGate(p, (v) => v < DOLLY[0] + 0.005, { duration: 0.7, ease: EASE.outExpo }, { duration: 0.36, ease: IN_OUT });
+  const labels = useGate(p, (v) => v < DOLLY[0] + 0.005, ENTER, LEAVE);
+  // The laptop goes once the consent screen has dissolved in over its screen (at 0.12, CustodyStage), before the clip's
+  // right edge pulls in from beyond the viewport and would uncover the laptop's own screen there.
+  const body = useGate(p, (v) => v < 0.13, ENTER, { duration: 0.24, ease: IN_OUT });
   return {
     text: {
-      y: useTransform(p, (v) => Math.round(-64 * ramp(v, DOLLY[0], 0.18))),
-      opacity: useTransform(p, (v) => 1 - ramp(v, DOLLY[0], 0.16)),
-      filter: useTransform(p, (v) => {
-        const b = 8 * ramp(v, DOLLY[0], 0.16);
-        return b ? `blur(${b.toFixed(2)}px)` : "none";
-      }),
+      y: useTransform(copy, (c) => -24 * (1 - c)),
+      opacity: copy,
+      filter: useTransform(copy, (c) => (c < 1 ? `blur(${(6 * (1 - c)).toFixed(2)}px)` : "none")),
       willChange: useTransform(p, (v) => (v > 0.02 && v < 0.22 ? "transform, opacity, filter" : "auto")),
     },
     device: {
       x: useTransform(k, (t) => t * target.current.x),
       y: useTransform(k, (t) => t * target.current.y),
       scale: useTransform(k, (t) => 1 + (SCALE - 1) * t),
-      // Gone by 0.15, while the screen layer's clip has barely moved: past that its right edge pulls in from beyond the
-      // viewport and would uncover the laptop's own screen there, its words cut by the viewport's edge.
-      opacity: useTransform(p, (v) => 1 - ramp(v, 0.13, 0.15)),
+      opacity: body,
       "--tilt-k": useTransform(p, (v) => 1 - easeInOut(ramp(v, DOLLY[0], 0.15))),
       willChange: useTransform(p, (v) => (v > 0.02 && v < 0.22 ? "transform, opacity" : "auto")),
     },
-    labels: useTransform(p, (v) => 1 - ramp(v, DOLLY[0], 0.1)),
+    labels,
   };
 }
 

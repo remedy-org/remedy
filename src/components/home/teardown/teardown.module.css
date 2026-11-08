@@ -218,6 +218,12 @@
   will-change: opacity, transform;
 }
 
+/* One height for every check's callout (the tallest is about 190px), so as the next one cuts in, its first line and the
+   leader's end stay where they were instead of jumping with the column's centring. */
+.stage:not(.small) .calloutWrap {
+  min-height: 12rem;
+}
+
 .callout {
   max-width: 21rem;
 }
@@ -404,6 +410,12 @@ button.cellBody:hover .label {
 
 .small .posters img {
   object-fit: contain;
+}
+
+/* The phone's tag macro still has the pillow's body across its top (the desktop's mask above is not used on phones):
+   fade the top of the still away, so the tag and its string hang alone, as on the desktop. */
+.small[data-beat="code"] .posters img {
+  mask-image: linear-gradient(to bottom, transparent 22%, #000 33%);
 }
 
 /* Compact, at 80% from the bottom right, with only the two rows the readouts don't already say (checks, photo to
