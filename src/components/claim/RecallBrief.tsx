@@ -1,3 +1,4 @@
+import { preload } from "react-dom";
 import type { Recall } from "@/lib/types";
 import { companyName, day, recallReason } from "./model";
 import { RecallPhoto } from "./RecallPhoto";
@@ -20,22 +21,28 @@ function Hazard({ text }: { text: string }) {
 /**
  * What was recalled and why: on a laptop the left column (the product, the CPSC line, the hazard, CPSC's photo, facts);
  * on a phone the CPSC line beside a small CPSC photo, and the hazard, so the owner can say "that's ours" while the offer
- * and its action stay above the fold. The price is the card's. `heading`: the brief's product name is the page's h1
- * (read out only; the offer is the headline seen), or an h2 beside a step that has its own h1.
+ * and its action stay above the fold. The price is the card's. `heading`: the brief's product name, an h2 under the
+ * offer's h1 (read out only: on screen the product is the brief's small header).
  */
-export function RecallBrief({ recall, heading = "h1" }: { recall: Recall; heading?: "h1" | "h2" }) {
+export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; heading?: "h1" | "h2" }) {
   const hazard = hazardLine(recall);
   const image = recall.images[0];
   const company = companyName(recall);
   const Heading = heading;
-  // Muted sans; mono only for the recall number, the one piece of data in it.
+  // cpsc.gov's photo starts loading with the page, so its plate is never an empty box after a client-side navigation.
+  if (image) preload(image.url, { as: "image", fetchPriority: "high" });
+  // Muted sans; mono only for the recall number, the one piece of data in it. On a phone the link has a line of its
+  // own, with no separator, so no line ever starts with a dot.
   const source = (
     <>
-      CPSC <span className="font-mono">{recall.id}</span> · Recalled {day(recall.recallDate)} ·{" "}
-      {/* py-3 on the inline link: a 44px target that doesn't change the line. */}
-      <a href={recall.url} className="py-3 whitespace-nowrap text-text underline decoration-line-strong underline-offset-4 hover:decoration-text" rel="noopener noreferrer" target="_blank">
-        cpsc.gov<span className="sr-only"> recall notice (opens in a new tab)</span>
-      </a>
+      CPSC <span className="font-mono">{recall.id}</span> · Recalled {day(recall.recallDate)}
+      <span className="max-sm:hidden"> · </span>
+      <span className="max-sm:mt-0.5 max-sm:block">
+        {/* A 44px target on the text's own box: the hit area is the ::after, so the focus ring hugs the word. */}
+        <a href={recall.url} className="text-link text-text underline decoration-line-strong underline-offset-4 hover:decoration-text" rel="noopener noreferrer" target="_blank">
+          cpsc.gov<span className="sr-only"> recall notice (opens in a new tab)</span>
+        </a>
+      </span>
     </>
   );
   return (
@@ -56,9 +63,9 @@ export function RecallBrief({ recall, heading = "h1" }: { recall: Recall; headin
         </div>
       </div>
 
-      {/* Tablets and laptops: the product one step under the offer's size, so the offer is the one headline. */}
-      <div className="flex flex-col gap-2 max-sm:hidden">
-        <p aria-hidden="true" className="max-w-[24ch] text-head-sm font-medium text-balance text-text">
+      {/* Tablets and laptops: the product as the brief's small header, so the offer beside it is the one headline. */}
+      <div className="flex flex-col gap-1 max-sm:hidden">
+        <p aria-hidden="true" className="text-body font-medium text-balance text-text">
           {recall.product}
         </p>
         <p className="text-ui text-muted">{source}</p>
@@ -70,9 +77,10 @@ export function RecallBrief({ recall, heading = "h1" }: { recall: Recall; headin
           {/* CPSC's own photo, hot-linked from cpsc.gov so it stays the official one. Multiplied into the plate, so its
               white studio background never reads as a slab brighter than the plate around it. The caption is its text. */}
           {/* The plate's height is fixed, so the page is laid out before cpsc.gov's photo arrives: nothing under it moves. */}
-          <div className="flex h-48 items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line lg:h-80">
+          {/* In the dark room the cream plate is dimmed a step, so it never outshines the page's one amber. */}
+          <div className="flex h-48 items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line brightness-[0.84] lg:h-80 in-data-[theme=light]:brightness-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.url} alt={image.caption ? "" : `The recalled ${recall.product}`} className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
+            <img src={image.url} alt={image.caption ? "" : `The recalled ${recall.product}`} fetchPriority="high" className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
           </div>
           {image.caption && <figcaption className="max-w-read text-ui text-faint">{image.caption}</figcaption>}
         </figure>
@@ -88,7 +96,7 @@ export function RecallBrief({ recall, heading = "h1" }: { recall: Recall; headin
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 border-b border-line py-3 pr-4">
+    <div className="flex flex-col gap-1 pt-3 pr-4">
       <dt className="text-faint">{label}</dt>
       <dd className="text-text">{value}</dd>
     </div>

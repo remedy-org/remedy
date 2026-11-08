@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { ThemeToggle, Wordmark } from "@/components/ui";
 import type { Recall } from "@/lib/types";
 
-// A 44px target on a 24px line: the extra height overhangs the footer's own padding.
-const FOOT_LINK = "-my-2.5 inline-flex min-h-11 items-center underline decoration-line-2 underline-offset-4 transition-colors duration-160 hover:text-text hover:decoration-text";
+// A 44px target on a 24px line (the ::after overhangs the footer's own padding), and a focus ring that hugs the word.
+const FOOT_LINK = "text-link scroll-mb-6 underline decoration-line-2 underline-offset-4 transition-colors duration-160 hover:text-text hover:decoration-text";
 
 /** The header's one line of context on a claim's steps: the recall it is for, never the company's name. */
 export const recallContext = (recall: Pick<Recall, "product">) => `${recall.product} recall`;
@@ -43,7 +43,7 @@ export function FlowShell({ children, context }: FlowShellProps) {
         </div>
       </header>
 
-      <main id="main" tabIndex={-1} className="page flex-1 pt-8 pb-16 outline-none sm:pt-12 max-sm:[body:has([data-camera])_&]:pb-0 [@media(max-height:600px)]:pt-4">
+      <main id="main" tabIndex={-1} className="page flex-1 pt-8 pb-10 outline-none sm:pt-12 sm:pb-16 max-sm:[body:has([data-camera])_&]:pb-0 [@media(max-height:600px)]:pt-4">
         {children}
       </main>
 

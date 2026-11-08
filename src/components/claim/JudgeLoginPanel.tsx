@@ -20,7 +20,7 @@ export function JudgeLoginPanel({
   why?: ReactNode;
   id?: string;
   heading?: "h2" | "h3";
-  /** The panel's name: /signin calls it the guest login. */
+  /** The panel's name: "Demo account" on /try and /signin alike. */
   title?: string;
   className?: string;
 }) {

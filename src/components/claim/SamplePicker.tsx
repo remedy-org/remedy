@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import Link from "next/link";
-import { ArrowRightIcon, Button, LinkPending } from "@/components/ui";
+import { ArrowRightIcon, Button, LinkPending, NoBreakHyphens } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
 import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import type { Refusal } from "@/lib/limits";
@@ -62,6 +62,9 @@ export function SamplePicker({
   runs,
   roundDone,
   refusal,
+  product,
+  signedInAs,
+  cleared,
 }: {
   slug: string;
   /** "Kikea Store": once all four have run, their claims can be seen as the company sees them. */
@@ -73,6 +76,12 @@ export function SamplePicker({
   /** Every claim has run in this round. */
   roundDone: boolean;
   refusal?: Refusal | null;
+  /** "X-VESOLJE Nursing Pillow": the recall the four claims are for, said under the title. */
+  product: string;
+  /** Who PayPal logged in, as the recall page says it. */
+  signedInAs: string;
+  /** Start over just cleared the round: said to a screen reader, once. */
+  cleared?: boolean;
 }) {
   const scored = roundRuns(runs);
   // Refused by a limit: the list stays as a record, and nothing can run until it resets.
@@ -81,6 +90,12 @@ export function SamplePicker({
   // Once all four have run, each row is the record of its claim and opens its result.
   const resultOf = (sample: string) => runs.find((r) => r.sample === sample);
   if (roundDone) return <RoundDone slug={slug} company={company} options={options} latest={latest} resultOf={resultOf} />;
+  // Back from PayPal: what these claims are for, and that the login worked, in the recall page's own words.
+  const context = (
+    <p className="text-ui text-pretty text-muted">
+      <NoBreakHyphens>{product}</NoBreakHyphens> · Logged in with PayPal as {signedInAs}
+    </p>
+  );
   return (
     // The step grid: the chosen claim's photo on the left, where the camera and the checks will keep it; the list and
     // the button on the right.
@@ -100,7 +115,13 @@ export function SamplePicker({
       <div className="flex min-w-0 flex-col gap-6">
       {/* A limit's notice, rendered later, takes focus from the title. */}
       <FocusTitle id="picker-title" />
-      <StepTitle id="picker-title">Choose a claim</StepTitle>
+      <div className="flex flex-col gap-2">
+        <StepTitle id="picker-title">Choose a claim</StepTitle>
+        {context}
+      </div>
+      <p role="status" className="sr-only">
+        {cleared ? "The four claims are cleared." : ""}
+      </p>
 
       {refusal && <LimitNotice refusal={refusal} demo />}
 
@@ -108,7 +129,7 @@ export function SamplePicker({
         <input type="hidden" name="recall" value={slug} />
         {/* The rows' rings sit on the column's own edges, the button's: their padding is inside. */}
         <fieldset disabled={off} className="flex flex-col gap-1">
-          <legend className="sr-only">Claims to run</legend>
+          <legend className="sr-only">Claims to send</legend>
           {options.map(({ sample, locked }) => {
             const run = latest.get(sample.id);
             const outcome = outcomeOf(run?.decision);
@@ -147,7 +168,7 @@ export function SamplePicker({
                   className={clsx("size-16 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_65%] ring-1 ring-line", locked && "opacity-50")}
                 />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span id={`${id}-title`} className={clsx("text-body font-medium", locked ? "text-muted" : "text-text")}>
+                  <span id={`${id}-title`} className={clsx("text-body font-medium text-balance", locked ? "text-muted" : "text-text")}>
                     {copy?.title ?? sample.title}
                   </span>
                   <span id={`${id}-line`} className="text-ui text-muted">
@@ -193,7 +214,7 @@ export function SamplePicker({
       {scored.length > 0 && (
         <form action="/api/claims/round" method="post">
           <input type="hidden" name="recall" value={slug} />
-          <SubmitButton variant="tertiary" size="sm">
+          <SubmitButton variant="tertiary" size="sm" arrow={false}>
             Start over
           </SubmitButton>
         </form>
@@ -215,7 +236,7 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
     <section aria-labelledby="picker-title" className="flex w-full flex-col gap-8">
       <FocusTitle id="picker-title" />
       <div className="flex max-w-[34rem] flex-col gap-3">
-        <StepTitle id="picker-title">{clean ? "Remedy paid the genuine claim and stopped all three fakes" : "All four claims ran"}</StepTitle>
+        <StepTitle id="picker-title">{clean ? "Remedy paid the genuine claim and stopped all three fakes" : "All four claims sent"}</StepTitle>
         <p className="text-body text-pretty text-muted">Open any of them to see why. The company sees the same four, with their evidence, in its console.</p>
       </div>
       <ul className="flex flex-col border-t border-line">
@@ -261,7 +282,7 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
         </Button>
         <form action="/api/claims/round" method="post">
           <input type="hidden" name="recall" value={slug} />
-          <SubmitButton variant="tertiary" size="md">
+          <SubmitButton variant="tertiary" size="md" arrow={false}>
             Start over
           </SubmitButton>
         </form>

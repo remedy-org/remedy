@@ -51,6 +51,9 @@ export interface ConsentCardProps {
 /** The demo account's login in the card: the phone's bar shows it before it offers the PayPal login. */
 export const JUDGE_LOGIN_ID = "demo-account";
 
+/** What Remedy reads from a PayPal login, said once under every Log in with PayPal (here and on /signin). */
+export const PAYPAL_CONSENT = "Remedy sees your PayPal name, email and account ID, never your password.";
+
 /** The primary button's words, shared with the phone's sticky bar. */
 export function consentAction({ signedInAs, demo, unverified, yourClaim }: Pick<ConsentCardProps, "signedInAs" | "demo" | "unverified" | "yourClaim">): string {
   if (yourClaim) return yourClaim.decision === "pending" && !yourClaim.photos ? "Continue your claim" : "See your claim";
@@ -91,7 +94,8 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   return (
     <section aria-labelledby="consent-title" className={`${frame} gap-7`}>
       <div className="flex flex-col gap-3">
-        <StepTitle id="consent-title" as="h2" className="text-pretty">
+        {/* The page's one headline: the brief beside it is the recall it answers, a step smaller. */}
+        <StepTitle id="consent-title" className="text-pretty">
           <NoBreakHyphens>{demo ? "Try Remedy on a real recall" : `${money(recall.refund)} back for your ${productNoun(recall)}`}</NoBreakHyphens>
         </StepTitle>
         <p className="text-body text-pretty text-muted">
@@ -105,17 +109,24 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         </p>
       </div>
 
-      {/* /try: the four claims about to be sent, so the page reads as the product, not a login form. */}
+      {/* /try: the four claims about to be sent, so the page reads as the product, not a login form. A preview under its
+          own label, not a menu: no ring or hover on the photos, the names in the second tone. They are picked after the
+          login. */}
       {demo && !signedInAs && (
-        <ul aria-label="The four claims" className="grid grid-cols-2 gap-x-4 gap-y-3">
-          {DEMO_SAMPLES.map((sample) => (
-            <li key={sample.id} className="flex min-w-0 items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={sample.photos[0]} alt="" width={40} height={40} className="size-10 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_65%] ring-1 ring-line" />
-              <span className="text-ui text-balance text-text-2">{sampleTitle(sample.id, sample.title)}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col gap-3">
+          <p id="four-claims" className="text-ui text-muted">
+            The four claims you&apos;ll send
+          </p>
+          <ul aria-labelledby="four-claims" className="grid grid-cols-2 gap-x-4 gap-y-3">
+            {DEMO_SAMPLES.map((sample) => (
+              <li key={sample.id} className="flex min-w-0 items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={sample.photos[0]} alt="" width={56} height={56} className="size-14 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_65%]" />
+                <span className="text-ui text-balance text-muted">{sampleTitle(sample.id, sample.title)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {unverified && (
@@ -136,7 +147,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
             {action}
           </Button>
         )}
-        <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : "Remedy sees your PayPal name, email and account ID, never your password."}</p>
+        <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : PAYPAL_CONSENT}</p>
       </div>
     </section>
   );
@@ -167,7 +178,7 @@ function ClaimStatus({ claim, company, action }: { claim: YourClaim; company: st
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <StepTitle id="consent-title" as="h2" className="text-pretty">
+        <StepTitle id="consent-title" className="text-pretty">
           {title}
         </StepTitle>
         <p className="text-body text-muted">

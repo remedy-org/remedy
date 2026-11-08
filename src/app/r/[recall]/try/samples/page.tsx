@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { notYet, roundClaims } from "@/app/api/claims/_lib/pipeline";
 import { FlowShell, recallContext } from "@/components/claim/FlowShell";
 import { ClaimFrame } from "@/components/claim/Exhibit";
-import { companyName, noModelAnswer } from "@/components/claim/model";
+import { companyName, maskPayer, noModelAnswer, productNoun } from "@/components/claim/model";
 import { SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
 import { DEMO_SAMPLES, demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
 import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
@@ -44,7 +44,18 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   return (
     <FlowShell context={recallContext(recall)}>
       <ClaimFrame>
-        <SamplePicker slug={recall.slug} company={companyName(recall)} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={refusal} />
+        <SamplePicker
+          slug={recall.slug}
+          company={companyName(recall)}
+          options={options}
+          selected={selected}
+          runs={runs}
+          roundDone={roundDone}
+          refusal={refusal}
+          product={productNoun(recall)}
+          signedInAs={session.name ?? maskPayer(session.payerId)}
+          cleared={query.cleared === "1" && !runs.length}
+        />
       </ClaimFrame>
     </FlowShell>
   );

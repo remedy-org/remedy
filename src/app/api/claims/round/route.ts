@@ -8,7 +8,8 @@ import { seeOther } from "../_lib/http";
 export async function POST(request: NextRequest) {
   const form = await request.formData().catch(() => null);
   const slug = RecallSlug.safeParse(String(form?.get("recall") ?? ""));
-  const response = seeOther(slug.success ? `/r/${slug.data}/try/samples` : "/");
+  // ?cleared: the picker tells a screen reader the four claims were cleared (the page itself just looks fresh).
+  const response = seeOther(slug.success ? `/r/${slug.data}/try/samples?cleared=1` : "/");
   response.cookies.set(DEMO_ROUND_COOKIE, newDemoRound(), demoRoundCookie());
   return response;
 }

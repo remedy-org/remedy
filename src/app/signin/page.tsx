@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PAYPAL_CONSENT } from "@/components/claim/ConsentCard";
 import { JudgeLoginPanel } from "@/components/claim/JudgeLoginPanel";
 import { previewProps } from "@/components/console/preview";
 import { SigninPreview } from "@/components/console/SigninPreview";
@@ -68,15 +69,15 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <Button href={start} size="lg" block className="mt-8" prefetch={false}>
             Log in with PayPal
           </Button>
-          <p className="mt-3 text-ui text-muted">Remedy reads your PayPal name and email to open your workspace.</p>
+          <p className="mt-3 text-ui text-muted">{PAYPAL_CONSENT}</p>
 
-          {/* The shared login sits under the real way in, never in front of it: one quiet line, "Use a guest login", that
-              opens the same rows as /try's, named the guest login. Open from the start when a try result sent the visitor
-              here for its claim. */}
+          {/* The shared login sits under the real way in, never in front of it (a company's own PayPal login is the door):
+              one quiet line, "Use the demo account", that opens the same rows as /try's, under /try's name. Open from the
+              start when a try result sent the visitor here for its claim. */}
           {login && (
             <details className="group mt-6" open={fromClaim || undefined}>
               <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-ui text-muted hover:text-text [&::-webkit-details-marker]:hidden">
-                Use a guest login
+                Use the demo account
                 <svg aria-hidden="true" viewBox="0 0 10 6" className="h-1.5 w-2.5 transition-transform duration-160 group-open:rotate-180">
                   <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -84,8 +85,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
               <JudgeLoginPanel
                 login={login}
                 heading="h2"
-                title="Guest login"
-                why={fromClaim ? "This claim is in the company console. Log in with the guest login to see it." : undefined}
+                title="Demo account"
+                why={fromClaim ? "This claim is in the company console. Log in with the demo account to see it." : undefined}
                 className="mt-3"
               />
             </details>
@@ -94,7 +95,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           {/* An owner's way in is the recall's own page, with its notice and PayPal login: never the demo. */}
           <p className="mt-10 border-t border-line pt-5 text-ui text-muted">
             Own a recalled product? Use the claim link on the recall notice, or{" "}
-            <Link href="/r/kikea-x-vesolje" className="py-3 text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
+            <Link href="/r/kikea-x-vesolje" className="text-link text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
               file a claim
             </Link>
             .

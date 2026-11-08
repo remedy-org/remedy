@@ -111,12 +111,12 @@ describe("demo rounds on one shared PayPal account", () => {
     const first = await runRound(null);
     expect(first.outcomes).toEqual(EXPECTED);
 
-    // "Run the samples again": a new round for this browser, back on the picker.
+    // "Start over": a new round for this browser, back on the picker, which says the four were cleared.
     const form = new FormData();
     form.set("recall", SLUG);
     const again = await newRound(new NextRequest(`${ORIGIN}/api/claims/round`, { method: "POST", body: form, headers: withRound(first.round) }));
     expect(again.status).toBe(303);
-    expect(again.headers.get("location")).toBe(`/r/${SLUG}/try/samples`);
+    expect(again.headers.get("location")).toBe(`/r/${SLUG}/try/samples?cleared=1`);
     const second = roundOf(again);
     expect(second).not.toBeNull();
     expect(second).not.toBe(first.round);
