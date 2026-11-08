@@ -121,9 +121,9 @@ export const STOPS: readonly Stop[] = [
   // For companies: the tour whole, its tabs 16px under the nav and the console frame under them (the frame is sized to
   // fit this, home.module.css .stage). Phones and narrow windows, which get the story instead, stop at its heading.
   { name: "For companies", at: (p) => p.fit(p.line("#companies [data-tour]", 16) ?? p.line("#companies header")) },
-  // The footer's tag: "See a refund land in a minute." and Try a claim, at the page end; on a short screen, the tag
-  // whole nearest the end.
-  { name: "Footer", at: (p) => p.fit(p.end("footer")) },
+  // The footer's tag: "See a refund land in a minute." and Try a claim, at the page end; on a short screen, where the end
+  // would cut the tag under the nav, the tag whole nearest the end (within half a screen of it).
+  { name: "Footer", at: (p) => p.fit(p.end("footer"), { min: p.foot("main ~ footer", 1.5) }) },
 ];
 
 /**
