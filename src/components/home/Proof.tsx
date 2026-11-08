@@ -37,7 +37,7 @@ export function Proof() {
     >
       {/* The one number that matters, at the section's title size and the only full-contrast figure, on the heading's
           grid line; the two supporting figures sit on the lead's (column 8), smaller and muted. */}
-      <div className="grid-12 gap-y-8 border-t border-line pt-8 lg:items-end">
+      <div className="grid-12 gap-y-8 border-t border-line pt-8 lg:items-baseline">
         <Reveal className="col-span-12 flex items-baseline gap-x-5 lg:col-span-7">
           <p aria-hidden="true" className={clsx(styles.line, "text-display leading-none font-medium")}>
             0

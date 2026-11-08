@@ -30,10 +30,9 @@ export interface SectionProps {
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
 
 /**
- * A homepage section on the one 12-column grid. No rules between sections: each one opens with a fade from
- * --section-lift into the page over 288px (the paper band is its own boundary: a large sheet lying on the room, inset
- * from the screen's edges with rounded corners, never a full-bleed jump from graphite to cream), then 128px of air on
- * laptops (72px on phones). The heading takes columns 1 to 7 and the lead columns 8 to 12, bottom-aligned, so every section's text
+ * A homepage section on the one 12-column grid. No rules and no seams between sections: they sit straight on the page
+ * and are parted by 128px of air on laptops (72px on phones). (Where Fraud checks slides over the pinned Problem sheet,
+ * problem.module.css gives it its face: a lift at its top, a lit leading edge and a shadow.) The heading takes columns 1 to 7 and the lead columns 8 to 12, bottom-aligned, so every section's text
  * starts on the same two grid lines. The heading is 40px, two-tone, and focuses in: the promise in --text, the support in
  * --muted, each half its own block on the same column start and capped at the same 34ch, so both lines start and wrap alike.
  */
@@ -57,7 +56,7 @@ export function Section({
   // Beside a lead, both halves cap at 34ch so they start and wrap alike; a wider heading keeps its span.
   const cap = headingSpan === 7 && "max-w-[34ch]";
   return (
-    <section id={id} aria-labelledby={headingId} className={clsx(paper ? styles.band : styles.fade, className)}>
+    <section id={id} aria-labelledby={headingId} className={clsx(paper && styles.band, className)}>
       <div className={clsx("page", padClassName)}>
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
           <div className={clsx("col-span-12", headingSpan === 12 ? "" : headingSpan === 9 ? "lg:col-span-9" : "lg:col-span-7")}>

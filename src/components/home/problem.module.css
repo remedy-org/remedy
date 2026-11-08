@@ -1138,6 +1138,8 @@
   .section + section {
     position: relative;
     z-index: 2;
+    /* Opaque, with a face: --section-lift at its leading edge, fading into the page over 288px. */
+    background: linear-gradient(var(--section-lift), var(--bg) 288px);
     box-shadow:
       0 -1px 0 oklch(1 0 0 / 0.09),
       0 -2px 6px oklch(0 0 0 / 0.5),

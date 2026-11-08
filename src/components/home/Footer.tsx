@@ -40,7 +40,7 @@ const linkClass = "inline-flex min-h-11 items-center text-ui text-muted transiti
 function CtaTag() {
   return (
     <Enter className="relative pt-14" threshold={0.3}>
-      <Paper variant="tag" hole padding="none" className="sm:-rotate-1">
+      <Paper variant="tag" hole padding="none">
         <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div>
             <p className="eyebrow text-ink-muted">Try it</p>
@@ -95,7 +95,7 @@ function CtaTag() {
 
 export function Footer() {
   return (
-    <footer className={styles.fade}>
+    <footer>
       {/* The tag hangs on the grid: columns 2 to 11 on laptops. */}
       <div className="page grid-12">
         <div className="col-span-12 lg:col-span-10 lg:col-start-2">

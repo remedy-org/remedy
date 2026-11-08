@@ -75,29 +75,6 @@
   transform-origin: top;
 }
 
-.lane {
-  --drop: linear(0, 0.058, 0.185, 0.342, 0.5, 0.643, 0.763, 0.858, 0.928, 0.977, 1.008, 1.026, 1.034, 1.035, 1.032, 1.028, 1.022, 1.016, 1.012, 1.008, 1.004, 1.002, 1.001, 1);
-}
-
-@keyframes stamp-land {
-  from {
-    opacity: 0;
-    scale: 1.4;
-  }
-  to {
-    opacity: 1;
-    scale: 1;
-  }
-}
-
-/*
- * Sections are separated by tone and space, never by rules: each one that follows another --bg section opens on
- * --section-lift and fades into the page over 288px (Apple's section fade).
- */
-.fade {
-  background: linear-gradient(var(--section-lift), var(--bg) 288px);
-}
-
 /*
  * The light table (DESIGN.md's signature): one warm pool of light under the paper object that leads the screen. It
  * sits under every piece of content (its parent isolates), never moves, and stays inside its section's box.
