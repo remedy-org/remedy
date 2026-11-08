@@ -41,8 +41,7 @@ export function Hero() {
         {/* Two blocks on phones, one paragraph from sm: each half stays smaller than the h1, so the h1 is the LCP. */}
         <span className="block sm:inline">Remedy turns any CPSC recall into a live refund program.</span>{" "}
         <span className="block sm:inline">
-          Owners show the destroyed product to a live camera with a one-time code, and the refund lands in their PayPal account
-          within a minute.
+          The owner photographs the cut-up product with a one-time code, and the refund lands in their PayPal account.
         </span>
       </p>
       <div className={clsx("mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 lg:mt-10", styles.focusIn)} style={line(2)}>

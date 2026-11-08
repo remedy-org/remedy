@@ -77,7 +77,7 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
       const k = r.width / tag.offsetWidth || 1;
       const x = (c.left + c.width / 2 - (r.left + r.width / 2)) / k;
       const y = (c.top + c.height / 2 - (r.top + r.height / 2)) / k;
-      const a = animate(tag, { x: [x, 0], y: [y, 0], scale: [s, 1], opacity: [0, 1, 1], rotate: [6, -3] }, { duration: 0.52, ease: [0.2, 0.8, 0.2, 1] });
+      const a = animate(tag, { x: [x, 0], y: [y, 0], scale: [s, 1], opacity: [0, 1, 1], rotate: [6, -2] }, { duration: 0.52, ease: [0.2, 0.8, 0.2, 1] });
       const b = animate(shadow, { opacity: [0, 1] }, { duration: 0.2, delay: 0.38 });
       stop = () => {
         a.stop();
@@ -136,16 +136,18 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
         <motion.div className={styles.receipt} style={labels ? { opacity: labels } : undefined} aria-hidden="true">
           {/* With motion the flight owns these styles (React never changes them after mount); reduced motion rests them. */}
           <span ref={shadowRef} data-seq="show" className={styles.receiptShadow} style={reduced ? undefined : { opacity: 0 }} />
-          <div ref={tagRef} data-seq="show" className="origin-center" style={reduced ? { rotate: "-3deg" } : { opacity: 0 }}>
+          <div ref={tagRef} data-seq="show" className="origin-center" style={reduced ? { rotate: "-2deg" } : { opacity: 0 }}>
+            {/* The money, said once in the hero: the screen says the checks passed, the facts give the time. */}
             <Paper variant="tag" hole padding="none" className="w-[13.5rem]">
-              <div className="flex flex-col gap-1 px-4 pt-10 pb-3.5">
-                <span className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Refund · {CLAIM.id}</span>
-                <span className="text-[1.75rem] leading-none font-medium tracking-[-0.02em]">
+              <div className="flex flex-col px-4 pt-10 pb-3.5">
+                <span className="flex items-baseline justify-between gap-3 text-[0.75rem] leading-none text-ink-muted">
+                  Refund
+                  <span className="font-mono font-medium text-ink">{CLAIM.id}</span>
+                </span>
+                <span className="mt-2.5 text-[1.75rem] leading-none font-medium tracking-[-0.02em]">
                   <Money value={CLAIM.amount} size="inline" />
                 </span>
-                <span className="font-mono text-micro text-pay-ink">
-                  sent to PayPal · {CLAIM.seconds} s
-                </span>
+                <span className="mt-2 text-[0.75rem] leading-none font-medium text-pay-ink">Paid to PayPal</span>
               </div>
             </Paper>
           </div>

@@ -10,28 +10,25 @@ export function HeroPhone() {
     <figure className="m-0 flex flex-col items-center gap-3">
       <PhoneFrame step={4} className="relative">
         <div className="flex flex-col gap-4 p-4" aria-hidden="true">
-          <Paper variant="receipt" perforated padding="none" tilt={-1}>
-            <div className="flex flex-col gap-4 px-5 pt-8 pb-5">
-              <div className="flex items-center justify-between gap-3 font-mono text-micro text-ink-muted">
-                <span className="tracking-[0.06em] uppercase">Refund receipt</span>
-                <span>Claim {CLAIM.id}</span>
+          {/* The paid receipt, flat: the one physical moment, so the one stamp. The amount and the claim id once each. */}
+          <Paper variant="receipt" perforated padding="none">
+            <div className="flex flex-col px-5 pt-8 pb-5">
+              <div className="flex items-baseline justify-between gap-3 text-ui text-ink-muted">
+                <span>Refund receipt</span>
+                <span className="font-mono text-micro font-medium text-ink">{CLAIM.id}</span>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <Money value={CLAIM.amount} size="amount" />
                 <Stamp tone="pay">Paid</Stamp>
               </div>
-              <p className="text-ui text-ink-muted">Refunded to your PayPal account through Remedy.</p>
-              <span className="inline-flex h-7 items-center self-start rounded-control bg-paper-2 px-2.5 font-mono text-micro whitespace-nowrap">
-                Paid {CLAIM.seconds} s after your photo
-              </span>
-              <dl className="text-ui">
+              <dl className="mt-4 text-ui">
                 {[
-                  ["Status", "Sent to PayPal"],
-                  ["Recall", `${CLAIM.recall} · X-VESOLJE`],
-                ].map(([k, v]) => (
+                  ["Sent to", "Your PayPal account"],
+                  ["Recall", CLAIM.recall],
+                ].map(([k, v], i) => (
                   <div key={k} className="flex justify-between gap-4 border-t border-dashed border-paper-line py-2">
                     <dt className="text-ink-muted">{k}</dt>
-                    <dd className="text-right font-medium">{v}</dd>
+                    <dd className={i === 1 ? "font-mono" : "font-medium"}>{v}</dd>
                   </div>
                 ))}
               </dl>
@@ -41,10 +38,7 @@ export function HeroPhone() {
             <span className="relative size-12 shrink-0 overflow-hidden rounded-control border border-line">
               <Image src={CLAIM.photo} alt="" fill sizes="48px" className="object-cover" style={{ objectPosition: CLAIM.objectPosition }} />
             </span>
-            <span className="flex flex-col">
-              <span className="text-ui">All checks passed</span>
-              <span className="font-mono text-micro text-faint uppercase">Photo 1</span>
-            </span>
+            <span className="text-ui text-text-2">All 5 checks passed</span>
           </div>
         </div>
       </PhoneFrame>

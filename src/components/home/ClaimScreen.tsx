@@ -2,7 +2,6 @@ import clsx from "clsx";
 import Image from "next/image";
 import { motion } from "motion/react";
 import { CheckIcon, NoBreakHyphens } from "@/components/ui";
-import { CLAIM } from "./custody/claim";
 
 // What the laptop in the hero shows: claim RM-0442, the judges' genuine demo claim (DEMO_SAMPLES "genuine": photo c02,
 // code M4T) on the Kikea X-VESOLJE recall, mid-check. Sizes are in em so the screen scales with the device.
@@ -46,16 +45,12 @@ function CheckRow({ label, state }: { label: string; state: "waiting" | "running
 export function ClaimScreen({ phase }: { phase: number }) {
   return (
     <div className="flex h-full flex-col text-text">
-      {/* Top bar: what is live on the left, the recall's number on the right. */}
+      {/* Top bar: the product on the left, the recall's number (data, so mono) on the right. */}
       <div className="flex h-[3.4em] shrink-0 items-center gap-[1.4em] border-b border-line px-[1.6em]">
-        <span className="flex items-center gap-[0.6em] font-mono text-[1.05em] tracking-[0.06em] text-pay uppercase">
-          <span className="size-[0.6em] rounded-full bg-pay" />
-          Live
-        </span>
-        <span className="text-[1.15em] text-muted">
+        <span className="text-[1.2em] text-text-2">
           <NoBreakHyphens>Kikea X-VESOLJE nursing pillow</NoBreakHyphens>
         </span>
-        <span className="ml-auto font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">CPSC 27-071</span>
+        <span className="ml-auto font-mono text-[1.05em] text-faint">CPSC 27-071</span>
       </div>
 
       <div className="flex min-h-0 flex-1">
@@ -78,17 +73,17 @@ export function ClaimScreen({ phase }: { phase: number }) {
             {/* The marked code region: a 1.5px box on the tag's code, labelled on it. In --text, not amber: the hero's CTA
                 is the viewport's one amber. */}
             <span className="absolute top-[53%] left-[69%] h-[25%] w-[24.5%] rounded-[0.35em] border-[1.5px] border-text/70" aria-hidden="true">
-              <span className="absolute bottom-full left-[-1.5px] mb-[0.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] whitespace-nowrap text-text uppercase">
-                Code M4T
+              <span className="absolute bottom-full left-[-1.5px] mb-[0.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.3em] font-mono text-[1.1em] font-medium whitespace-nowrap text-text">
+                M4T
               </span>
             </span>
           </div>
           <div className="flex flex-1 items-center justify-between">
-            <span className="font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Photo 1 of 3</span>
+            <span className="w-[8em] text-[1.15em] text-muted">Photo 1 of 3</span>
             <span className="flex size-[3.4em] items-center justify-center rounded-full border-2 border-text/80">
               <span className="size-[2.5em] rounded-full bg-text/90" />
             </span>
-            <span className="font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">No uploads</span>
+            <span className="w-[8em] text-right text-[1.15em] text-muted">Live camera</span>
           </div>
         </div>
 
@@ -103,42 +98,40 @@ export function ClaimScreen({ phase }: { phase: number }) {
 
 /** The checks ticking in, then the payout. Sized in em, so it scales with the device. */
 export function ChecksPanel({ phase }: { phase: number }) {
-  const paid = phase >= FINAL_PHASE;
+  const passed = phase >= FINAL_PHASE;
   return (
     <>
-      <span className="font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Checks</span>
+      <span className="text-[1.15em] text-muted">Checks</span>
       <ol className="mt-[0.4em]">
         {CHECKS.map((label, i) => (
           <CheckRow key={label} label={label} state={phase > i ? "pass" : phase === i ? "running" : "waiting"} />
         ))}
       </ol>
 
-      <span className="mt-auto pt-[1em] font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Result</span>
-      <div className="relative mt-[0.7em] h-[3.6em]">
+      {/* The checks' own outcome, said once: the money is the receipt's, which leaves the screen from here (data-chip),
+          and the time is the hero's facts'. */}
+      <div className="relative mt-auto h-[3.8em] border-t border-line">
         <span
           data-seq="hide"
           className={clsx(
-            // Out over 120ms before the chip comes in (its delay below): the two messages never overprint.
-            // A live status, not a placeholder: a solid hairline and a readable muted label until the payout lands.
-            "absolute inset-0 flex items-center rounded-[0.5em] border border-line-2 bg-surface px-[1em] text-[1.25em] text-muted transition-opacity duration-[120ms]",
-            paid && "opacity-0",
+            // Out over 120ms before the outcome comes in (its delay below): the two messages never overprint.
+            "absolute inset-0 flex items-center text-[1.25em] text-muted transition-opacity duration-[120ms]",
+            passed && "opacity-0",
           )}
         >
-          {phase < CHECKS.length ? `Checking ${phase + 1} of ${CHECKS.length}` : "Sending refund"}
+          {phase < CHECKS.length ? `Checking ${phase + 1} of ${CHECKS.length}` : "Sending to PayPal"}
         </span>
         <motion.span
           data-seq="show"
           data-chip
-          className="absolute inset-0 flex items-center gap-[0.5em] rounded-[0.5em] border border-pay/50 bg-pay-soft px-[1em] text-[1.2em] whitespace-nowrap text-pay"
+          className="absolute inset-0 flex items-center text-[1.25em] font-medium whitespace-nowrap text-pay"
           initial={false}
-          animate={paid ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 8, scale: 0.96 }}
-          transition={{ type: "spring", stiffness: 380, damping: 30, delay: paid ? 0.14 : 0 }}
+          animate={passed ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+          transition={{ type: "spring", stiffness: 380, damping: 30, delay: passed ? 0.14 : 0 }}
         >
-          <span className="font-mono font-medium">$29.99</span>
-          <span>sent to PayPal · {CLAIM.seconds} s</span>
+          All 5 checks passed
         </motion.span>
       </div>
-      <span className="mt-[0.9em] text-[1.05em] text-faint">PayPal Payouts · verified account</span>
     </>
   );
 }
