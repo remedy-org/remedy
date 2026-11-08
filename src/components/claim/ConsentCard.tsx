@@ -1,5 +1,4 @@
-import clsx from "clsx";
-import { Button, Card, ErrorState, NoBreakHyphens } from "@/components/ui";
+import { Button, NoBreakHyphens } from "@/components/ui";
 import type { JudgeLogin } from "@/lib/demo/judgeLogin";
 import type { Refusal } from "@/lib/limits";
 import type { Decision, Recall } from "@/lib/types";
@@ -7,6 +6,7 @@ import { StepTitle } from "./Exhibit";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
 import { companyName, cutInHalf, money, productNoun, taggedThing } from "./model";
+import { Notice } from "./Notice";
 
 export type AuthError = "denied" | "state" | "paypal" | "refused";
 
@@ -74,36 +74,39 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   const thing = thingOf(recall);
   const cut = cutInHalf(recall.spec);
   const how = `${cut ? `Cut the ${thing} in half first` : `Destroy the ${thing} first, as the notice says`}, then photograph it with a code we give you, and PayPal pays you${recall.autoPay ? "" : ` once ${company} approves it`}.`;
-  // Phones: the offer is the page's headline, not a box inside it.
-  const open = "max-sm:border-0 max-sm:bg-transparent max-sm:p-0";
+  // On the page, not in a box: the offer is the screen's headline, beside the recall it answers.
+  const frame = "flex flex-col border-line max-lg:border-t max-lg:pt-8 lg:-ml-8 lg:self-stretch lg:border-l lg:pl-8";
 
   if (yourClaim) {
     return (
-      <Card padding="lg" as="section" aria-labelledby="consent-title" className={clsx("flex flex-col gap-6", open)}>
+      <section aria-labelledby="consent-title" className={`${frame} gap-6`}>
         <ClaimStatus claim={yourClaim} company={company} action={action} />
         <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : "You log in on PayPal's own page."}</p>
-      </Card>
+      </section>
     );
   }
 
   return (
-    <Card padding="lg" as="section" aria-labelledby="consent-title" className={clsx("flex flex-col gap-7", open)}>
+    <section aria-labelledby="consent-title" className={`${frame} gap-7`}>
       <div className="flex flex-col gap-3">
         <StepTitle id="consent-title" as="h2" className="text-pretty">
-          <NoBreakHyphens>{demo ? `Run a claim for the ${productNoun(recall)}` : `${money(recall.refund)} back for your ${productNoun(recall)}`}</NoBreakHyphens>
+          <NoBreakHyphens>{demo ? "Try Remedy on a real recall" : `${money(recall.refund)} back for your ${productNoun(recall)}`}</NoBreakHyphens>
         </StepTitle>
-        <p className="text-body text-pretty text-muted">{demo ? "Four claims. Remedy pays only the genuine one." : how}</p>
+        <p className="text-body text-pretty text-muted">
+          {demo ? (
+            <>
+              Send four claims for the <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens> with a PayPal demo account. Remedy pays the genuine one and stops the three that aren&apos;t.
+            </>
+          ) : (
+            how
+          )}
+        </p>
       </div>
 
-
       {unverified && (
-        <ErrorState
-          variant="inline"
-          title="This PayPal account isn't verified"
-          description="PayPal only lets us refund verified accounts. Verify yours with PayPal (a confirmed email and a linked bank or card), then log in again."
-        />
+        <Notice title="This PayPal account isn't verified">PayPal only lets us refund verified accounts. Verify yours with PayPal (a confirmed email and a linked bank or card), then log in again.</Notice>
       )}
-      {error && <ErrorState variant="inline" title={error.title} description={error.description} />}
+      {error && <Notice title={error.title}>{error.description}</Notice>}
       {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} notice={notice} />}
 
       <div className="flex flex-col gap-4">
@@ -120,7 +123,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         )}
         <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : "Remedy sees your PayPal name, email and account ID, never your password."}</p>
       </div>
-    </Card>
+    </section>
   );
 }
 

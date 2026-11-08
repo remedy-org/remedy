@@ -1,7 +1,8 @@
-import { Button, ErrorState } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { plural, retryIn, type Refusal } from "@/lib/limits";
 import { FocusTitle } from "./FocusTitle";
 import { ResetTime } from "./LocalTime";
+import { Notice } from "./Notice";
 
 /**
  * What a start refused by a daily limit says: which limit and that nothing was started or paid. `retry` is when to
@@ -35,22 +36,16 @@ export interface RecallNotice {
 export function LimitNotice({ refusal, demo, notice, now = new Date() }: { refusal: Refusal; demo: boolean; notice?: RecallNotice; now?: Date }) {
   const { title, description, retry } = limitCopy(refusal, { now });
   return (
-    <div id="limit-notice" tabIndex={-1} className="rounded-card outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+    <div id="limit-notice" tabIndex={-1} className="rounded-control outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus">
       <FocusTitle id="limit-notice" />
-      <ErrorState
-        variant="inline"
-        title={title}
-        description={
-          <>
-            {description} You can start {demo ? "one" : "a claim"} again <ResetTime until={refusal.until.toISOString()} prefix="after " fallback={retry} />.{" "}
-            {demo
-              ? "The company console shows every claim so far."
-              : notice
-                ? `Your refund is still owed: ${notice.company}'s recall notice says how to reach them for it.`
-                : null}
-          </>
-        }
-      />
+      <Notice tone="neutral" title={title}>
+        {description} You can start {demo ? "one" : "a claim"} again <ResetTime until={refusal.until.toISOString()} prefix="after " fallback={retry} />.{" "}
+        {demo
+          ? "The company console shows every claim so far."
+          : notice
+            ? `Your refund is still owed: ${notice.company}'s recall notice says how to reach them for it.`
+            : null}
+      </Notice>
     </div>
   );
 }
