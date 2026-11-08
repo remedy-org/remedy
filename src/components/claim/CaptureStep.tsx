@@ -320,7 +320,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             <Cutout>
               {/* The photo the shutter takes next, numbered as the slots below are; opposite it, the time left. */}
               {n < MAX_PHOTOS && <GlassChip className="absolute top-2 left-2">{n === 0 ? "Photo 1" : `Next: photo ${n + 1}`}</GlassChip>}
-              <GlassChip className={clsx("absolute top-2 right-2", left < 60_000 && "font-medium", left < 10_000 && styles.urgent)}>
+              <GlassChip mono className={clsx("absolute top-2 right-2", left < 60_000 && "font-medium", left < 10_000 && styles.urgent)}>
                 <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`}>
                   {mmss(left)}
                 </span>
@@ -342,7 +342,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           )}
           {/* The time left stays in its corner while the camera won't open, as it does over the feed. */}
           {!live && !expired && (
-            <GlassChip className={clsx("absolute top-2 right-2 z-10", left < 60_000 && "font-medium")}>
+            <GlassChip mono className={clsx("absolute top-2 right-2 z-10", left < 60_000 && "font-medium")}>
               <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`}>
                 {mmss(left)}
               </span>
@@ -409,9 +409,10 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             className="border-t border-[oklch(1_0_0/0.08)]"
             left={
               expired ? null : (
-                <ul className="flex gap-2.5" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
+                // A laptop's frame is 448px wide: three 44px slots leave the shutter its own column.
+                <ul className="flex gap-2.5 lg:gap-2" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
                   {Array.from({ length: MAX_PHOTOS }, (_, i) => (
-                    <li key={i} className="relative size-12 shrink-0 sm:size-14">
+                    <li key={i} className="relative size-12 shrink-0 sm:size-14 lg:size-11">
                       {shots[i] ? (
                         <button
                           type="button"
@@ -521,7 +522,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             <EvidenceText>{reminder}</EvidenceText>
           </p>
         ) : (
-          <h1 id="capture-title-wide" tabIndex={-1} className="text-title font-semibold text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+          <h1 id="capture-title-wide" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
             {expired ? (
               <>
                 Code <span className="font-mono">{code}</span> has expired

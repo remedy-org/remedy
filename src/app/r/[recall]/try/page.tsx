@@ -5,7 +5,7 @@ import { getAppStore, isDemoAllowed } from "@/lib/demo";
 import { getSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
 
-const description = "Run four claims on a live recall. Remedy pays the genuine one through PayPal and stops the three fakes.";
+const description = "Send four claims on a real recall. Remedy pays the genuine one through PayPal and stops the three fakes.";
 export const metadata: Metadata = {
   title: "Try a claim",
   description,

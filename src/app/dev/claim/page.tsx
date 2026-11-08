@@ -6,16 +6,17 @@ import { ClaimErrorCard } from "@/components/claim/ClaimErrorCard";
 import { ClaimFlow, type ClaimFlowProps } from "@/components/claim/ClaimFlow";
 import { ContinueCard } from "@/components/claim/ContinueCard";
 import { ExpiredCard } from "@/components/claim/ExpiredCard";
-import { FlowShell } from "@/components/claim/FlowShell";
+import { FlowShell, recallContext } from "@/components/claim/FlowShell";
 import { FlowSkeleton } from "@/components/claim/FlowSkeleton";
-import { ClaimFrame } from "@/components/claim/Exhibit";
-import { checkRows, money, toView } from "@/components/claim/model";
+import { ClaimFrame, STEP_GRID } from "@/components/claim/Exhibit";
+import { RecallBrief } from "@/components/claim/RecallBrief";
+import { checkRows, toView } from "@/components/claim/model";
 import { NotFoundCard } from "@/components/claim/NotFoundCard";
 import { RecallView } from "@/components/claim/RecallScreen";
 import { Result, type ResultProps } from "@/components/claim/Result";
 import { SamplePicker } from "@/components/claim/SamplePicker";
-import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter } from "@/components/claim/StepMeter";
 import { DEMO_SAMPLES, demoSample, isSandboxBuild } from "@/lib/demo";
+import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { nextUtcDay } from "@/lib/limits";
 import { activityUrl } from "@/lib/paypal/identity";
 import type { Claim } from "@/lib/types";
@@ -31,7 +32,7 @@ type Render = () => ReactNode | Promise<ReactNode>;
 async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "preview">, claim: Claim = fx.open) {
   const phoneUrl = `http://127.0.0.1:3000/r/${fx.recall.slug}/claim/${claim.id}`;
   return (
-    <FlowShell>
+    <FlowShell context={recallContext(fx.recall)}>
       <ClaimFlow
         claimId={claim.id}
         code={claim.code}
@@ -39,7 +40,7 @@ async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "previe
         expiresAt={claim.captureSession!.expiresAt}
         startNow={fx.NOW}
         spec={fx.recall.spec}
-        amount={money(fx.recall.refund)}
+        refund={fx.recall.refund}
         view={toView(claim, fx.recall.spec)}
         qrSvg={await QRCode.toString(phoneUrl, { type: "svg", margin: 0, color: { dark: "#15181d", light: "#ffffff" } })}
         phoneUrl={phoneUrl}
@@ -52,11 +53,10 @@ async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "previe
 }
 
 function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultProps> = {}) {
-  const steps = over.sample ? DEMO_STEPS : REAL_STEPS;
   // A demo claim shows its sample's own photo, as ClaimScreen does.
   const photoUrls = over.sample ? d.photoUrls.map(() => over.sample!.photos[0]) : d.photoUrls;
   return (
-    <FlowShell>
+    <FlowShell context={recallContext(fx.recall)}>
       <Result
         claim={d.claim}
         recall={fx.recall}
@@ -64,7 +64,6 @@ function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultPr
         photoUrls={photoUrls}
         againHref="#"
         now={fx.NOW + 10 * 60_000}
-        meter={<StepMeter {...resultMeter(d.claim.decision, steps)} steps={steps} />}
         sandbox={isSandboxBuild()}
         activityUrl={isSandboxBuild() && d.claim.decision === "paid" ? activityUrl() : undefined}
         {...over}
@@ -74,9 +73,8 @@ function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultPr
 }
 
 const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug" | "company">) => (
-  <FlowShell>
+  <FlowShell context={recallContext(fx.recall)}>
     <ClaimFrame>
-      <StepMeter current={2} steps={DEMO_STEPS} />
       <SamplePicker slug={fx.recall.slug} company="Kikea Store" {...props} />
     </ClaimFrame>
   </FlowShell>
@@ -85,8 +83,16 @@ const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug" | "compan
 const consent = (over: Partial<Parameters<typeof RecallView>[0]> = {}) => <RecallView recall={fx.recall} href="#" {...over} />;
 const genuine = demoSample("genuine")!;
 const handoff = (signedInAs?: string) => (
-  <FlowShell>
-    <ContinueCard id={fx.open.id} product="X-VESOLJE Nursing Pillow" company="Kikea Store" loginHref="#" expiresAt={new Date(Date.now() + 8 * 60_000 + 12_000).toISOString()} startNow={Date.now()} signedInAs={signedInAs} />
+  <FlowShell context={recallContext(fx.recall)}>
+    <ClaimFrame>
+      {/* As ClaimScreen lays it out: the recall on a laptop's left, the login on the right. */}
+      <div className={STEP_GRID}>
+        <div className="max-lg:hidden">
+          <RecallBrief recall={fx.recall} heading="h2" />
+        </div>
+        <ContinueCard id={fx.open.id} product="X-VESOLJE Nursing Pillow" company="Kikea Store" loginHref="#" expiresAt={new Date(Date.now() + 8 * 60_000 + 12_000).toISOString()} startNow={Date.now()} signedInAs={signedInAs} />
+      </div>
+    </ClaimFrame>
   </FlowShell>
 );
 
@@ -111,7 +117,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     note: "Back from the notice with a paid claim",
     render: () => consent({ signedInAs: "Pat Doe", yourClaim: { id: "RM-0442", href: "#", decision: "paid", photos: 1, paidOn: "7 Nov 2026" } }),
   },
-  "demo-consent": { group: "Recall", note: "Demo mode", render: () => consent({ demo: true }) },
+  "demo-consent": { group: "Recall", note: "Demo mode", render: () => consent({ demo: true, judgeLogin: judgeLogin("personal") }) },
   "demo-consent-signed-in": { group: "Recall", note: "Demo mode, logged in", render: () => consent({ demo: true, signedInAs: "Pat Doe" }) },
   picker: {
     group: "Demo",
@@ -179,10 +185,9 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     group: "Code",
     note: "Session ended before any photo",
     render: () => (
-      <FlowShell>
+      <FlowShell context={recallContext(fx.recall)}>
         <ClaimFrame>
-          <StepMeter current={2} />
-          <ExpiredCard code="M4T" againHref="#" />
+          <ExpiredCard code="M4T" written="X-VESOLJE" againHref="#" />
         </ClaimFrame>
       </FlowShell>
     ),
@@ -213,6 +218,16 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
   "checking-slow": { group: "Checking", note: "Past 40 s: taking longer than usual", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 47 }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
   "checking-offline": { group: "Checking", note: "Polling lost the connection", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 21, offline: true }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
+  climax: {
+    group: "Checking",
+    note: "The climax, live: the checks land, the list holds, the receipt prints",
+    render: () => flow({ preview: { phase: "checking", checking: { elapsed: 4, animate: true, next: "/dev/claim?s=paid-arrive" }, photoUrls: fx.paid.photoUrls } }, fx.paid.claim),
+  },
+  "climax-refused": {
+    group: "Checking",
+    note: "Live: the checks land on a wrong code, then the refusal",
+    render: () => flow({ preview: { phase: "checking", checking: { elapsed: 4, animate: true, next: "/dev/claim?s=rejected" }, photoUrls: fx.rejected.photoUrls } }, fx.rejected.claim),
+  },
   "checking-done": { group: "Checking", note: "All checks resolved: quotes and green code cells", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 19 }, photoUrls: fx.paid.photoUrls } }, fx.paid.claim) },
   "checking-blocked": { group: "Checking", note: "Stopped by a pre-check", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 1 }, photoUrls: fx.blocked.photoUrls } }, fx.blocked.claim) },
   "demo-checking": {

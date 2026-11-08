@@ -6,9 +6,10 @@ import styles from "./flow.module.css";
 import type { CheckRow } from "./model";
 
 /**
- * The claim's checks as the owner reads them: the five checks and the refund, six rows, always the same six. The
- * pipeline records finer answers (the label, the code, each step, a real photo); each row takes the worst of its own.
- * The words are the claim flow's own, so src/lib/fiveChecks.ts (the homepage's) stays as it is.
+ * The claim's checks as the owner reads them: the five checks, then the refund, always the same six. The pipeline
+ * records finer answers (the label, the code, each step, a real photo); each row takes the worst of its own. The words
+ * are the claim flow's own, so src/lib/fiveChecks.ts (the homepage's) stays as it is. The list shows the five; the
+ * refund is the outcome column's row (RefundRow), which the receipt prints over.
  */
 export type SixKey = "session" | "duplicate" | "account" | "code" | "destroyed" | "refund";
 
@@ -20,13 +21,15 @@ export interface SixRow {
   state: CheckState;
   /** Nothing was recorded for it: the claim stopped before it ran. */
   unrun?: boolean;
-  /** Why it failed or is held, in the pipeline's words. */
+  /** Why it failed or is held, in the owner's words. */
   detail?: string;
+  /** Why it passed, in one plain line. */
+  because?: string;
   /** What the photo check read on the tag: "X-VESOLJE · K7P". */
   read?: string;
   /** The photo check's own words, once. */
   quote?: string;
-  /** The PayPal reference of a sent refund. */
+  /** The PayPal payout id of a sent refund. */
   reference?: string;
 }
 
@@ -63,7 +66,7 @@ export interface SixOptions {
   photos?: number;
   /** A refused repost's earlier claim, when it's this account's own: the row names it. */
   earlier?: string;
-  /** The result: its headline and lead say why a check failed, so the failed row doesn't say it again. */
+  /** The result: its outcome column says why a check failed or is held, so the row doesn't say it again. */
   explained?: boolean;
   /** The label hand-written on the tag beside the code ("X-VESOLJE"), when the notice asks for one. */
   written?: string | null;
@@ -75,11 +78,12 @@ export interface SixOptions {
 export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo, photos = 1, earlier, explained, written, read }: SixOptions): SixRow[] {
   const of = (key: SixKey) => rows.filter((r) => KEY_OF(r.id) === key);
   const model = rows.find((r) => r.id === "model");
-  const base: { key: SixKey; name: string; label: ReactNode }[] = [
+  const these = photos > 1 ? "these photos" : "this photo";
+  const base: { key: SixKey; name: string; label: ReactNode; because?: string }[] = [
     // One name, demo and real: what the check can know is that the photo came through this claim's own camera.
-    { key: "session", name: "sent from Remedy's camera", label: "Sent from Remedy's camera" },
-    { key: "duplicate", name: "photo not used before", label: "Photo not used before" },
-    { key: "account", name: "one claim per PayPal account", label: "One claim per PayPal account" },
+    { key: "session", name: "sent from Remedy's camera", label: "Sent from Remedy's camera", because: demo ? "Sent through this claim, within its 10 minutes." : "Taken in this claim's camera, within 10 minutes." },
+    { key: "duplicate", name: "photo not used before", label: "Photo not used before", because: `No earlier claim has ${these}.` },
+    { key: "account", name: "one claim per PayPal account", label: "One claim per PayPal account", because: "No other claim from this PayPal account." },
     {
       key: "code",
       name: written ? `tag shows ${written} and ${code}` : `label and code ${code}`,
@@ -93,27 +97,26 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
         </>
       ),
     },
-    { key: "destroyed", name: `${noun.toLowerCase()} ${cut ? "cut in half" : "destroyed"}`, label: `${noun} ${cut ? "cut in half" : "destroyed"}` },
-    { key: "refund", name: "refund to PayPal", label: "Refund to PayPal" },
+    { key: "destroyed", name: `${noun.toLowerCase()} ${cut ? "cut in half" : "destroyed"}`, label: `${noun} ${cut ? "cut in half" : "destroyed"}`, because: `The photo shows it ${cut ? "cut in half" : "destroyed"}.` },
+    { key: "refund", name: "refund to PayPal", label: "Refund to your PayPal" },
   ];
   const six = base.map((b): SixRow => {
     // The photo check never answered: both of its rows wait for a person.
     const own = model && (b.key === "code" || b.key === "destroyed") ? [model] : of(b.key);
     if (!own.length) {
       if (!decided) return { ...b, state: "waiting" };
-      return b.key === "refund" && held ? { ...b, state: "hold" } : { ...b, state: "skipped", unrun: true };
+      return b.key === "refund" && held ? { ...b, state: "hold" } : { ...b, state: "skipped", unrun: true, because: undefined };
     }
     const state = RANK.find((s) => own.some((r) => r.state === s)) ?? "pass";
     const off = own.filter((r) => r.state !== "pass" && r.state !== "skipped");
     const detail = off.length && b.key !== "refund" ? off.map((r) => r.detail).filter(Boolean).join(". ") || undefined : undefined;
-    const out: SixRow = { ...b, state, detail };
+    const out: SixRow = { ...b, state, detail, because: state === "pass" ? b.because : undefined };
     if (state === "waiting" || state === "running") return out;
-    // The label and "Failed" say it; the pipeline's sentence would only repeat them.
-    if (b.key === "session") out.detail = undefined;
+    if (b.key === "session" && out.detail) out.detail = `${these.charAt(0).toUpperCase()}${these.slice(1)} came from outside the claim's camera.`;
     // "Already sent with claim RM-3481": a photo is numbered only when several were sent.
     if (b.key === "duplicate" && out.detail) {
       const where = earlier ? `claim ${earlier}` : "another claim";
-      out.detail = photos > 1 ? out.detail.replace(/(was|were) already used in another claim/, `$1 already sent with ${where}`) : `Already sent with ${where}`;
+      out.detail = photos > 1 ? out.detail.replace(/(was|were) already used in another claim/, `$1 already sent with ${where}`) : `Already sent with ${where}.`;
     }
     if (b.key === "code" && !model) {
       const seen = read?.code ?? firstQuoted(own.find((r) => r.id === "code")?.quote);
@@ -122,29 +125,34 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
       if (label || seen) out.read = [label, seen].filter(Boolean).join(" · ");
       // What was read says it: the pipeline's sentence would only repeat it.
       if (out.read && state === "reject") out.detail = undefined;
-      // Unsure: one plain line in Remedy's voice, not the pipeline's list. The model's words stay in the evidence.
+      // Unsure: one plain line in Remedy's voice, not the pipeline's list. The photo check's words stay in the evidence.
       if (state === "hold") {
         const unsure = own.filter((r) => r.state === "hold").map((r) => (r.id === "code" ? code : "the label"));
         out.detail = `We couldn't read ${unsure.join(" or ")} on the tag.`;
         out.read = undefined;
       }
+      if (state === "pass" && !out.read) out.because = "The tag matches this claim.";
     }
     if (b.key === "destroyed" && !model) {
       const steps = own.filter((r) => /^step_\d+$/.test(r.id) && r.state !== "pass" && r.state !== "skipped");
       if (steps.length) out.detail = steps.some((r) => r.state === "hold") ? `We couldn't see ${cut ? "the cut" : "that it's destroyed"} clearly.` : `The photo doesn't show it ${cut ? "cut in half" : "destroyed"}.`;
       else if (state === "pass") out.quote = firstSentence(own.find((r) => r.quote)?.quote);
     }
+    if (model && (b.key === "code" || b.key === "destroyed")) out.detail = "The photo check didn't answer.";
     if (b.key === "refund") out.reference = /PayPal reference (\S+)/.exec(own[0]?.detail ?? "")?.[1];
     if (b.key === "refund" && state === "hold") out.detail = own[0]?.detail;
-    if (explained && (state === "reject" || state === "blocked")) out.detail = undefined;
+    if (explained && b.key !== "refund" && state !== "pass") {
+      out.detail = undefined;
+      if (state !== "reject") out.read = undefined;
+    }
     return out;
   });
   // A demo claim's account check runs only for the genuine one (one account sends all four): where it didn't, no row.
   return demo ? six.filter((r) => !(r.key === "account" && r.state === "skipped")) : six;
 }
 
-/** The outcome word on a row's right. The refund's words are the receipt's and the headline's: Sent, then Received. */
-export function outcomeWord(r: Pick<SixRow, "key" | "state" | "unrun">, amount?: string): string {
+/** A row's state as one word, for the screen reader's line and the list's hidden text. */
+export function outcomeWord(r: Pick<SixRow, "key" | "state" | "unrun">): string {
   switch (r.state) {
     case "running":
       return r.key === "refund" ? "Sending" : "Checking";
@@ -154,17 +162,13 @@ export function outcomeWord(r: Pick<SixRow, "key" | "state" | "unrun">, amount?:
     case "blocked":
       return "Failed";
     case "hold":
-      // The refund isn't checked: it waits on the person who checks the rest.
-      return r.key === "refund" ? "Waiting" : "For review";
+      return r.key === "refund" ? "Waiting for a person" : "For a person to look at";
     case "skipped":
       return r.key === "refund" ? "Not sent" : r.unrun ? "Not run" : "Skipped";
     default:
-      return r.key === "refund" && amount ? amount : "";
+      return r.key === "refund" ? "After the checks" : "Waiting";
   }
 }
-
-// Passed is quiet (a small green tick, muted word): the failure, or the refund, is the one loud thing on the list.
-const TONE: Partial<Record<CheckState, string>> = { pass: "text-muted", reject: "text-stop", blocked: "text-stop", hold: "text-hold" };
 
 /** A row's 16px mark: a tick for a pass, filled for a failure or a hold, a ring while it waits, a turning arc while it runs. */
 function Glyph({ state }: { state: CheckState }) {
@@ -195,92 +199,70 @@ function Glyph({ state }: { state: CheckState }) {
   }
 }
 
-/** Under a row: what was read, the photo check's own sentence, the PayPal reference, or why it failed. */
-function RowLines({ r, live }: { r: SixRow; live?: boolean }) {
-  return (
-    <>
-      {r.read && <span className={clsx("truncate font-mono text-micro text-faint", live && styles.rise)}>Read {r.read}</span>}
-      {r.quote && (
-        <q className={clsx("text-ui text-muted [@media(max-height:600px)]:line-clamp-1", live && styles.rise)}>
+/** The one line under a check: "Checking" while it runs, then why it passed or what went wrong. */
+function Reason({ r }: { r: SixRow }) {
+  if (r.state === "running") return <>Checking</>;
+  if (r.state === "pass") {
+    if (r.read)
+      return (
+        <>
+          Read on the tag: <span className="font-mono whitespace-nowrap text-text-2">{r.read}</span>
+        </>
+      );
+    if (r.quote)
+      return (
+        <q className="[@media(max-height:600px)]:line-clamp-1">
           <ModelQuote>{r.quote}</ModelQuote>
         </q>
-      )}
-      {r.reference && <span className={clsx("truncate font-mono text-micro text-faint", live && styles.rise)}>PayPal {r.reference}</span>}
-      {r.detail && (
-        <span className={clsx("text-ui text-muted", live && styles.rise)}>
-          <EvidenceText>{r.detail}</EvidenceText>
-        </span>
-      )}
-    </>
-  );
+      );
+    return <>{r.because}</>;
+  }
+  if (r.read && !r.detail)
+    return (
+      <>
+        Read on the tag: <span className="font-mono whitespace-nowrap text-text">{r.read}</span>
+      </>
+    );
+  if (r.detail) return <EvidenceText>{r.detail}</EvidenceText>;
+  return null;
 }
 
 /**
- * The five checks, then the refund set apart as their outcome: no mark, the amount on the right. A check row is a mark,
- * the check and its outcome; under the code and the cut, one line of what the photo check read or saw. `live`: the
- * checking screen, where each answer lands as it resolves (a 160ms settle of the mark, only under no-preference).
+ * The five checks, each a mark, its name and one plain line under it, resolving in place: "Checking", then the reason.
+ * A waiting row keeps its line's height, so nothing below it moves when it lands. No outcome column: the mark and the
+ * reason say it once (the word is there for a screen reader). `live`: the checking screen, where each answer lands as
+ * it resolves (a 160ms settle of the mark, only under no-preference).
  */
-export function CheckList({
-  rows,
-  label = "Checks",
-  amount,
-  live,
-  refundWord,
-  className,
-}: {
-  rows: SixRow[];
-  label?: string;
-  amount?: string;
-  live?: boolean;
-  /** The paid result: PayPal's own status (Sent, then Received) in place of the word. */
-  refundWord?: ReactNode;
-  className?: string;
-}) {
+export function CheckList({ rows, label = "Checks", live, className }: { rows: SixRow[]; label?: string; live?: boolean; className?: string }) {
   const checks = rows.filter((r) => r.key !== "refund");
-  const refund = rows.find((r) => r.key === "refund");
-  const word = (r: SixRow) => outcomeWord(r, amount);
   return (
-    <div className={clsx("flex flex-col", className)}>
-      <ol aria-label={label} className="flex flex-col border-t border-line">
-        {checks.map((r) => {
-          const waiting = r.state === "waiting";
-          const w = word(r);
-          return (
-            <li key={r.key} data-row={r.key} className="grid grid-cols-[1rem_minmax(0,1fr)_auto] gap-x-3 border-b border-line py-3 [@media(max-height:600px)]:py-2">
-              <span key={r.state} className={clsx("flex h-[1.55em] items-center text-body", live && !waiting && styles.settle)}>
-                <Glyph state={r.state} />
+    <ol aria-label={label} className={clsx("flex flex-col border-t border-line", className)}>
+      {checks.map((r) => {
+        const quiet = r.state === "waiting" || r.unrun;
+        const failed = r.state === "reject" || r.state === "blocked";
+        // Whether the row has a line to show: running, a pass's reason, or what was read or went wrong.
+        const said = r.state === "running" || Boolean(r.read || r.detail) || (r.state === "pass" && Boolean(r.quote || r.because));
+        const reason = quiet || !said ? null : <Reason r={r} />;
+        return (
+          <li key={r.key} data-row={r.key} className="grid grid-cols-[1rem_minmax(0,1fr)] gap-x-3 border-b border-line py-3 [@media(max-height:600px)]:py-2">
+            <span key={r.state} className={clsx("flex h-[1.55em] items-center text-body", live && !quiet && styles.settle)}>
+              <Glyph state={r.state} />
+            </span>
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className={clsx("text-body", quiet ? "text-faint" : "text-text")}>
+                {r.label}
+                <span className="sr-only">: {outcomeWord(r).toLowerCase()}</span>
               </span>
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className={clsx("text-body", waiting || r.unrun ? "text-faint" : "text-text")}>{r.label}</span>
-                <RowLines r={r} live={live} />
-              </span>
-              <span key={w} className={clsx("pt-[0.15em] text-right text-ui font-medium whitespace-nowrap", TONE[r.state] ?? "text-muted", live && w && styles.swap)}>
-                {w}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-      {refund && (
-        <div data-row="refund" className="grid grid-cols-[1rem_minmax(0,1fr)_auto] gap-x-3 border-b border-line pt-7 pb-3">
-          <span className="col-start-2 flex min-w-0 flex-col gap-0.5">
-            <span className={clsx("text-body", refund.state === "waiting" || refund.state === "skipped" ? "text-muted" : "text-text")}>{refund.label}</span>
-            <RowLines r={refund} live={live} />
-          </span>
-          {/* The same size as "Passed": the outcome is bright, not bigger. */}
-          <span
-            key={word(refund)}
-            className={clsx(
-              "pt-[0.15em] text-right text-ui whitespace-nowrap",
-              refund.state === "pass" ? "font-medium text-text" : refund.state === "hold" ? "font-medium text-hold" : "font-medium text-muted",
-              refund.state === "waiting" && "font-mono font-normal text-faint",
-              live && styles.swap,
-            )}
-          >
-            {(refund.state === "pass" && refundWord) || word(refund)}
-          </span>
-        </div>
-      )}
-    </div>
+              {/* While the checks run every row keeps the line, so the list never changes height as rows land. */}
+              {(live || reason) && (
+                <span key={`${r.state}-${r.read ?? ""}`} className={clsx("min-h-[1.45em] text-ui text-pretty", failed && !r.read ? "text-text" : "text-muted", live && reason && styles.swap)}>
+                  {reason}
+                </span>
+              )}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

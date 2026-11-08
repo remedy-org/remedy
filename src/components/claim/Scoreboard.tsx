@@ -16,12 +16,6 @@ export function latestRuns(runs: RoundRun[]): Map<string, RoundRun> {
   return out;
 }
 
-/** "2 of 4 run": how far this browser's round has got. */
-export function ranLine(runs: RoundRun[]): string {
-  const latest = latestRuns(runs);
-  return `${DEMO_SAMPLES.filter((s) => latest.has(s.id)).length} of ${DEMO_SAMPLES.length} run`;
-}
-
 /** The first sample in the guided order (genuine, wrong code, upload, repost) this round hasn't run, if any. */
 export function nextSample(runs: RoundRun[], except?: string): DemoSample | null {
   const ran = new Set(runs.map((r) => r.sample));

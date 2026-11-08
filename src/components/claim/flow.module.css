@@ -4,21 +4,20 @@
  */
 
 @media (prefers-reduced-motion: no-preference) {
-  /* The current step's segment fills from the left on arrival. */
-  .fill {
-    transform-origin: left center;
-    animation: fill 360ms var(--ease-snap) both;
+  /*
+   * The receipt prints: the paper feeds down out of the slot (the refund row's top hairline) into the room it will
+   * take, clipped at the slot's edge only, so its shadow and the perforation's bites stay whole on the other sides.
+   */
+  .feed {
+    clip-path: inset(0 -48px -64px -48px);
+  }
+  .feed > * {
+    animation: feed var(--feed-ms, 900ms) var(--ease-out-quart) both;
   }
 
-  /* The receipt prints: it slides down 16px as its clip opens from the top. */
-  .print {
-    animation: print 560ms var(--ease-out-expo) backwards;
-  }
-
-  /* A check mark drawing itself (pathLength 1 on the path). */
-  .draw {
-    stroke-dasharray: 1;
-    animation: draw var(--draw-ms, 360ms) var(--ease-out-expo) var(--draw-delay, 0ms) both;
+  /* What waits for the receipt to print, then comes in: the paid result's photo beside the checks. */
+  .later {
+    animation: swap 360ms var(--ease-snap) var(--feed-ms, 900ms) both;
   }
 
   /* The check running now: an arc turning on its ring. */
@@ -31,27 +30,17 @@
     animation: settle 160ms var(--ease-snap) both;
   }
 
-  /* The current stage of the timeline: a ring breathing out. */
-  .pulse::after {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: 999px;
-    border: 1px solid currentColor;
-    animation: pulse 1.2s ease-out infinite;
-  }
-
   /* A captured photo settling into its slot, with the 2deg rotation settle. */
   .drop {
     animation: drop 420ms var(--ease-snap) both;
   }
 
-  /* A line of the checking screen's evidence fading in. */
+  /* A line of the camera's controls fading in. */
   .rise {
     animation: rise 200ms var(--ease-snap) both;
   }
 
-  /* The payout status word changing. */
+  /* A word or a line changing: a check's reason, the refund's state, the headline. */
   .swap {
     animation: swap 160ms var(--ease-snap) both;
   }
@@ -78,40 +67,9 @@
   }
 }
 
-/* The countdown's depletion line: state, so it moves even under reduced motion; it just doesn't ease. */
-.deplete {
-  transform-origin: left center;
-  transition: transform 1s linear;
-}
-@media (prefers-reduced-motion: reduce) {
-  .deplete {
-    transition: none;
-  }
-}
-
-@keyframes fill {
+@keyframes feed {
   from {
-    transform: scaleX(0);
-  }
-}
-
-@keyframes print {
-  from {
-    transform: translateY(16px);
-    clip-path: inset(0 0 100% 0);
-  }
-  to {
-    transform: none;
-    clip-path: inset(-40px -40px -40px -40px);
-  }
-}
-
-@keyframes draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
+    transform: translateY(-100%);
   }
 }
 
@@ -125,17 +83,6 @@
   from {
     opacity: 0.4;
     transform: scale(0.6);
-  }
-}
-
-@keyframes pulse {
-  from {
-    opacity: 0.5;
-    scale: 1;
-  }
-  to {
-    opacity: 0;
-    scale: 1.8;
   }
 }
 

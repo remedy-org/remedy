@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { notYet, roundClaims } from "@/app/api/claims/_lib/pipeline";
-import { FlowShell } from "@/components/claim/FlowShell";
+import { FlowShell, recallContext } from "@/components/claim/FlowShell";
 import { ClaimFrame } from "@/components/claim/Exhibit";
 import { companyName, noModelAnswer } from "@/components/claim/model";
 import { SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
-import { DEMO_STEPS, StepMeter } from "@/components/claim/StepMeter";
 import { DEMO_SAMPLES, demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
 import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getDemoRound, requireSession } from "@/lib/session";
@@ -36,17 +35,15 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   const asked = typeof query.sample === "string" ? options.find((o) => o.sample.id === query.sample && !o.locked)?.sample.id : undefined;
   const selected = asked ?? options.find((o) => !o.locked && !ran.has(o.sample.id))?.sample.id ?? "genuine";
   const roundDone = DEMO_SAMPLES.every((s) => ran.has(s.id));
-  // A run the claim limits would refuse is never offered: the notice shows before "Run this sample", from the same
+  // A run the claim limits would refuse is never offered: the notice shows before "Start this claim", from the same
   // index.json read. Today's photo checks aren't read here (another Blob read on every view); the start still refuses
   // on them, and redirects back with ?limit=.
   const now = new Date();
   const refusal = parseRefusal(query, now) ?? claimRefusal(all, { payerId: session.payerId, demo: true, now, limits: limits() });
 
   return (
-    <FlowShell>
+    <FlowShell context={recallContext(recall)}>
       <ClaimFrame>
-        {/* Once all four have run, the page is their record, not a step: no meter. */}
-        {!roundDone && <StepMeter current={2} steps={DEMO_STEPS} />}
         <SamplePicker slug={recall.slug} company={companyName(recall)} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={refusal} />
       </ClaimFrame>
     </FlowShell>

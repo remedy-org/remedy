@@ -232,7 +232,7 @@ export function payoutWords(status: string | null | undefined): { label: string;
     case "":
       return { label: "Unknown", tone: "muted", note: "" };
     default:
-      return { label: "Sent", tone: "muted", note: "PayPal usually finishes in a few minutes." };
+      return { label: "Processing", tone: "muted", note: "PayPal usually finishes within a few minutes." };
   }
 }
 

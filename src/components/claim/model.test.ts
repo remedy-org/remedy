@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sampleClaim } from "@/lib/__fixtures__/claim";
 import { DEMO_SPEC } from "@/lib/demo/kikea";
 import { acceptsStandIn, businessDaysAfter, codeDiff, coverCrop, handWrittenLabel, maskEmail, misreadOf, ownerLabel, payoutHold, productNoun, readableReasons, receiptPollDelay, refusalHeadline, taggedThing, timelineOf } from "./model";
-import { nextSample, ranLine } from "./Scoreboard";
+import { latestRuns, nextSample } from "./Scoreboard";
 
 describe("codeDiff", () => {
   it("marks the one character the model read differently, and says which", () => {
@@ -99,18 +99,18 @@ describe("the code step's instruction", () => {
 });
 
 describe("the demo round", () => {
-  it("says how far this round has got, counting each sample's latest decided run once", () => {
-    expect(ranLine([])).toBe("0 of 4 run");
-    expect(ranLine([{ sample: "genuine", decision: "paid" }])).toBe("1 of 4 run");
-    expect(ranLine([{ sample: "genuine", decision: "paid" }, { sample: "genuine", decision: "held", unanswered: true }])).toBe("1 of 4 run");
-    expect(ranLine([{ sample: "wrong-code", decision: "pending" }])).toBe("0 of 4 run");
+  it("keeps each sample's latest decided run once", () => {
+    expect(latestRuns([]).size).toBe(0);
+    expect(latestRuns([{ sample: "genuine", decision: "paid" }]).size).toBe(1);
+    expect(latestRuns([{ sample: "genuine", decision: "paid" }, { sample: "genuine", decision: "held", unanswered: true }]).get("genuine")?.decision).toBe("paid");
+    expect(latestRuns([{ sample: "wrong-code", decision: "pending" }]).size).toBe(0);
     const all = [
       { sample: "reposted", decision: "blocked" },
       { sample: "ai-no-session", decision: "blocked" },
       { sample: "wrong-code", decision: "rejected" },
       { sample: "genuine", decision: "paid" },
     ] as const;
-    expect(ranLine([...all])).toBe("4 of 4 run");
+    expect(latestRuns([...all]).size).toBe(4);
   });
   it("suggests the next unrun sample in the guided order", () => {
     expect(nextSample([{ sample: "genuine", decision: "paid" }], "genuine")?.id).toBe("wrong-code");

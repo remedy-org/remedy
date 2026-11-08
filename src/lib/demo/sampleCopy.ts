@@ -7,13 +7,14 @@ export const SAMPLE_PRECHECKED = "Session, account and photo fingerprint checks 
 export const samplePayoutDetail = (amount: string) => `The rule approved ${amount}. No payout sent`;
 export const SAMPLE_PAYOUT_UPDATED = "No PayPal status: no payout was sent";
 
-// What the claim flow calls each of the four demo claims: its title, and one line of what happens to it. The same words
-// in the picker, on the photo step and on a result's "Next claim".
+// What the claim flow calls each of the four demo claims: an owner's situation, and one line of what is in the photo
+// (never the outcome: the checks say that). The same words in the picker, on the photo step and on a result's "Next
+// claim".
 export const SAMPLE_COPY: Record<string, { title: string; line: string }> = {
-  genuine: { title: "Right code on the tag", line: "Pays $29.99 to your PayPal." },
-  "wrong-code": { title: "Wrong code on the tag", line: "Remedy reads the tag and refuses it." },
-  "ai-no-session": { title: "A photo from the camera roll", line: "Refused before the photo check." },
-  reposted: { title: "A photo already claimed", line: "Caught as a repeat of an earlier claim." },
+  genuine: { title: "A genuine claim", line: "The pillow cut in half, its tag written with this claim's code." },
+  "wrong-code": { title: "Wrong code on the tag", line: "A real cut pillow, but the tag carries a code this claim was never given." },
+  "ai-no-session": { title: "Photo pulled from the web", line: "A picture of a cut pillow that was never taken in this claim's camera." },
+  reposted: { title: "A photo used before", line: "The genuine claim's photo, sent again as a new claim." },
 };
 
 export const sampleTitle = (id: string, fallback = "Claim") => SAMPLE_COPY[id]?.title ?? fallback;

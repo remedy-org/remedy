@@ -1,76 +1,41 @@
-import { Card, Skeleton, SkeletonText } from "@/components/ui";
+import { Skeleton, SkeletonText } from "@/components/ui";
 import { FlowShell } from "./FlowShell";
 
-function Meter() {
-  return (
-    <div className="mx-auto grid w-full max-w-[40rem] grid-cols-4 gap-2">
-      {[0, 1, 2, 3].map((i) => (
-        <Skeleton key={i} className="h-0.5" />
-      ))}
-    </div>
-  );
-}
-
 /**
- * Loading: the shape of what's coming, no spinner. `wide` is the recall screen (RecallView): the step meter over the
- * brief beside the consent card. The default is one step card, for the samples, a claim and its result.
+ * Loading: the shape of what's coming, no spinner, on the steps' own 960px frame. `wide` is the recall screen
+ * (RecallView): the brief beside the offer. The default is a step: the headline and its line on the left, the photo and
+ * the rows on the right, as the samples, a claim and its result lay them out.
  */
 export function FlowSkeleton({ wide = false }: { wide?: boolean }) {
-  if (wide) {
-    return (
-      <FlowShell>
-        <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading the recall">
-          <Meter />
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-20">
-            <div className="flex flex-col gap-6">
-              <Skeleton className="h-4 w-40" />
-              <div className="flex flex-col gap-3">
-                <Skeleton className="h-8 w-4/5 max-w-[24ch]" />
-                <SkeletonText lines={2} className="max-w-read" />
-              </div>
-              <Skeleton className="hidden h-64 w-full rounded-card lg:block" />
-              <div className="grid grid-cols-2 gap-4 border-t border-line pt-4 sm:grid-cols-3">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex flex-col gap-2">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-6">
-              <Card padding="lg" className="flex flex-col gap-8">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="size-10 rounded-card" />
-                  <Skeleton className="h-px w-8" />
-                  <Skeleton className="size-10 rounded-card" />
-                </div>
-                <div className="flex flex-col gap-3">
-                  <Skeleton className="h-8 w-3/4" />
-                  <SkeletonText lines={2} />
-                </div>
-                <SkeletonText lines={4} />
-                <Skeleton className="h-12 w-full" />
-              </Card>
-            </div>
-          </div>
-        </div>
-      </FlowShell>
-    );
-  }
   return (
     <FlowShell>
-      <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading your claim">
-        <Meter />
-        <Card padding="lg" className="flex flex-col gap-8">
-          <div className="flex flex-col gap-3">
-            <Skeleton className="h-8 w-3/4" />
-            <SkeletonText lines={2} />
-          </div>
-          <Skeleton className="h-40 w-full rounded-card" />
-          <SkeletonText lines={3} />
-          <Skeleton className="h-12 w-full" />
-        </Card>
+      <div className="mx-auto grid w-full max-w-[60rem] grid-cols-[minmax(0,1fr)] items-start gap-8 lg:grid-cols-2 lg:gap-16" aria-busy="true" aria-label={wide ? "Loading the recall" : "Loading your claim"}>
+        {wide ? (
+          <>
+            <div className="flex flex-col gap-5">
+              <Skeleton className="h-6 w-3/5" />
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="hidden h-56 w-full rounded-control sm:block" />
+            </div>
+            <div className="flex flex-col gap-6 border-t border-line pt-6">
+              <Skeleton className="h-8 w-4/5" />
+              <SkeletonText lines={2} />
+              <Skeleton className="h-12 w-full rounded-button-lg" />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-4">
+              <Skeleton className="h-8 w-3/4" />
+              <SkeletonText lines={2} />
+              <Skeleton className="mt-4 h-16 w-full" />
+            </div>
+            <div className="flex flex-col gap-4 max-lg:hidden">
+              <Skeleton className="h-64 w-44 rounded-card" />
+              <SkeletonText lines={5} />
+            </div>
+          </>
+        )}
       </div>
     </FlowShell>
   );

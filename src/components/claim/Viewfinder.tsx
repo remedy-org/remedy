@@ -5,12 +5,15 @@ import { EvidenceText } from "./EvidenceText";
 // The camera's chrome, shared by the live camera and the demo's photo: a dark frame in both themes, the cutout guide
 // (Stripe Identity's), the instruction bar under it and the dock. Presentational only.
 
-/** Dark glass, 12px mono: the data chips that sit on the camera feed (the photo number, the timer). */
-export function GlassChip({ children, className, tone }: { children: ReactNode; className?: string; tone?: "accent" }) {
+/**
+ * Dark glass chips on the camera feed: words ("Photo 1") in the sans, data (the code, the timer) in mono with `mono`.
+ */
+export function GlassChip({ children, className, tone, mono }: { children: ReactNode; className?: string; tone?: "accent"; mono?: boolean }) {
   return (
     <span
       className={clsx(
-        "inline-flex h-7 items-center gap-1.5 rounded-control px-2.5 font-mono text-micro tracking-normal whitespace-nowrap tabular-nums backdrop-blur-sm",
+        "inline-flex h-7 items-center gap-1.5 rounded-control px-2.5 whitespace-nowrap backdrop-blur-sm",
+        mono ? "font-mono text-micro tracking-normal tabular-nums" : "text-micro font-medium tracking-normal",
         tone === "accent" ? "bg-accent text-accent-ink" : "bg-[oklch(0.12_0.004_75/0.72)] text-[oklch(0.96_0.006_85)]",
         className,
       )}

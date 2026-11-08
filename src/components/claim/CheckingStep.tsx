@@ -3,12 +3,14 @@
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AlertIcon } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
 import { CheckList, outcomeWord, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
-import { CHECK_GRID, OutcomeHead, WIDE_ONLY } from "./Exhibit";
+import { ClaimLayout, OutcomeHead } from "./Exhibit";
 import styles from "./flow.module.css";
-import { cutInHalf, handWrittenLabel, isDecided, nounOf, type ClaimView } from "./model";
+import { cutInHalf, handWrittenLabel, isDecided, money, nounOf, type ClaimView } from "./model";
+import { RefundRow } from "./Receipt";
 import { PAID_TITLE } from "./ReceiptLive";
 
 // Each row resolves on its own beat, one after another, in reduced motion too: there it is a plain swap. The camera's
@@ -17,8 +19,8 @@ const PRE_MS = 420;
 const STEP_MS = 650;
 // Only a wait this long earns "you can close this page".
 const SAVED_S = 10;
-// The finished list stays up this long before the result replaces it.
-const HOLD_MS = 1500;
+// The finished list stays up this long before the result replaces it (and, when paid, the receipt prints).
+const HOLD_MS = 1200;
 // Each poll reads the claim from the store, and those reads are capped per month.
 const POLL_MS = 2000;
 // Past this, the screen says it's taking longer than usual.
@@ -36,20 +38,21 @@ export interface CheckingStepProps {
   claimId: string;
   view: ClaimView;
   spec: CheckSpec;
-  /** "$29.99", for the refund row. */
-  amount: string;
+  /** The refund, for the refund row. */
+  refund: { value: string; currency: string };
   /** The server clock at render (ms). */
   startNow: number;
   /** The photos sent, in order (local copies, or the sample's); else the owner's photo route for each. */
   photoUrls?: string[];
   /** The photos are still on their way up: nothing has resolved yet. */
   sending?: boolean;
-  /** Dev previews: no polling, no refresh, every known row shown, and a fixed elapsed time. */
-  preview?: { elapsed?: number; offline?: boolean };
+  /**
+   * Dev previews: no polling, no refresh, every known row shown, and a fixed elapsed time. `animate` lands the known rows
+   * one by one as a live claim does, then opens `next` (the result's preview) after the hold.
+   */
+  preview?: { elapsed?: number; offline?: boolean; animate?: boolean; next?: string };
   /** "Kikea Store", for a held claim's headline. */
   company?: string;
-  /** Every row has resolved: the step meter moves on to the refund. */
-  onSettled?(): void;
 }
 
 /**
@@ -58,7 +61,7 @@ export interface CheckingStepProps {
  * first screen; from 1024px it sits whole beside the list. Once decided, the rows land in order, the finished list
  * holds for a moment, and the page re-renders as the result.
  */
-export function CheckingStep({ claimId, view: initial, spec, amount, startNow, photoUrls, sending, preview, company = "The company", onSettled }: CheckingStepProps) {
+export function CheckingStep({ claimId, view: initial, spec, refund, startNow, photoUrls, sending, preview, company = "The company" }: CheckingStepProps) {
   const router = useRouter();
   const [view, setView] = useState(initial);
   const [offline, setOffline] = useState(preview?.offline ?? false);
@@ -75,7 +78,7 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
   const decided = isDecided(view.decision);
   const all = sixRows(view.rows, { code: view.code, noun: nounOf(spec), cut: cutInHalf(spec), decided, held: view.decision === "held", demo: view.demo, photos: Math.max(view.photos, photoUrls?.length ?? 0), written: handWrittenLabel(spec) });
   const known = sending ? 0 : firstWaiting(all);
-  const [shown, setShown] = useState(preview ? known : 0);
+  const [shown, setShown] = useState(preview && !preview.animate ? known : 0);
   const done = decided && shown >= all.length;
   // Once a check has failed, nothing after it is pending: every later row (and the refund, not sent) lands with it.
   const failAt = decided ? all.findIndex((r) => r.state === "reject" || r.state === "blocked") : -1;
@@ -85,10 +88,6 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
     const t = setTimeout(() => setShown((s) => (failAt >= 0 && s >= failAt ? all.length : s + 1)), shown < 3 ? PRE_MS : STEP_MS);
     return () => clearTimeout(t);
   }, [shown, known, failAt, all.length]);
-
-  useEffect(() => {
-    if (done) onSettled?.();
-  }, [done, onSettled]);
 
   // The row being checked stays on screen: a phone scrolls it up when it would fall below the fold.
   useEffect(() => {
@@ -144,8 +143,9 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
   }, [claimId, decided, preview, sending, unseen]);
 
   useEffect(() => {
-    if (!done || preview) return;
-    const t = setTimeout(() => router.refresh(), HOLD_MS);
+    if (!done || (preview && !preview.next)) return;
+    const next = preview?.next;
+    const t = setTimeout(() => (next ? router.push(next) : router.refresh()), HOLD_MS);
     return () => clearTimeout(t);
   }, [done, preview, router]);
 
@@ -177,29 +177,29 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
         ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn't answer."
         : "Your claim is saved. You can close this page.";
 
-  // One line for a screen reader, rewritten as each row lands: the list itself stays quiet. Checks are named, never
-  // numbered: nothing on screen numbers them.
+  // One line for a screen reader, rewritten as each row lands (role="status", so it waits its turn): the check, its
+  // outcome and its reason. The list itself stays quiet. Checks are named, never numbered: nothing on screen numbers them.
   const last = shown > 0 ? all[Math.min(shown, all.length) - 1] : null;
   const checks = all.filter((r) => r.key !== "refund").length;
+  const amount = money(refund);
   const spoken = done
     ? view.decision === "paid"
       ? `All ${checks} checks passed. ${amount} refund sent to your PayPal.`
       : view.decision === "held"
-        ? "Claim for review."
-        : "Not paid."
+        ? `A person will check this claim. ${amount} not sent yet.`
+        : `Not paid. ${amount} not sent.`
     : last && last.key !== "refund"
-      ? `${last.name[0].toUpperCase()}${last.name.slice(1)}: ${outcomeWord(last).toLowerCase() || "done"}.`
+      ? `${last.name[0].toUpperCase()}${last.name.slice(1)}: ${outcomeWord(last).toLowerCase()}. ${last.because ?? last.detail ?? ""}`.trim()
       : "";
+  const refundRow = rows.find((r) => r.key === "refund");
 
-  // Tall laptops (lg and over 600px high): the photo whole, beside the list. Phones and short screens: a thumbnail beside
-  // the headline. The result keeps this layout, so nothing moves when the outcome lands.
+  // Tall laptops: the headline and the refund on the left, the photo and the checks on the right. Phones and short
+  // screens: the headline with a thumbnail, the checks, then the refund. The result keeps this layout, so nothing moves
+  // when the outcome lands; a paid result prints the receipt out of the refund row.
   return (
-    <section aria-labelledby="checking-title" className={CHECK_GRID}>
-      <div className={clsx(WIDE_ONLY, "sticky top-8 min-w-0 flex-col gap-4")}>
-        <ClaimPhotos urls={srcs} claimId={view.id} />
-      </div>
-
-      <div className="flex min-w-0 flex-col gap-5 [@media(max-height:600px)]:gap-3">
+    <ClaimLayout
+      labelledBy="checking-title"
+      head={
         <OutcomeHead
           id="checking-title"
           thumb={srcs[0]}
@@ -213,24 +213,34 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
           aside={
             elapsed !== null &&
             !done && (
-              <span className="self-start pt-2 font-mono text-ui text-faint" aria-hidden="true">
+              // A 320px phone gives the headline the room: the rows themselves show the progress.
+              <span className="self-start pt-2 font-mono text-ui text-faint max-[25rem]:hidden" aria-hidden="true">
                 {clock(elapsed)}
               </span>
             )
           }
         />
-
-        {offline && (
-          <p role="status" className="rounded-control border border-line bg-surface-2 px-3 py-2.5 text-ui text-muted">
-            Lost the connection for a moment. Your claim is still being checked; this page catches up when you&apos;re back online.
+      }
+      checks={
+        <>
+          <CheckList rows={rows} label={`Checks for claim ${view.id}`} live />
+          <p role="status" className="sr-only">
+            {spoken}
           </p>
-        )}
-
-        <CheckList rows={rows} label={`Checks for claim ${view.id}`} amount={amount} live />
-        <p role="status" className="sr-only">
-          {spoken}
-        </p>
-      </div>
-    </section>
+        </>
+      }
+      photo={<ClaimPhotos urls={srcs} claimId={view.id} />}
+      outcome={
+        <>
+          {offline && (
+            <p role="status" className="flex gap-2.5 text-ui text-muted">
+              <AlertIcon className="mt-0.5 shrink-0" />
+              <span>Lost the connection for a moment. Your claim is still being checked; this page catches up when you&apos;re back online.</span>
+            </p>
+          )}
+          {refundRow && <RefundRow amount={refund} state={refundRow.state} />}
+        </>
+      }
+    />
   );
 }

@@ -8,7 +8,7 @@ import type { Decision } from "@/lib/types";
 import { photoWidth, STEP_GRID, StepTitle } from "./Exhibit";
 import { FocusTitle } from "./FocusTitle";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
-import { latestRuns, ranLine, type RoundRun } from "./Scoreboard";
+import { latestRuns, type RoundRun } from "./Scoreboard";
 
 export interface SampleOption {
   sample: DemoSample;
@@ -30,12 +30,12 @@ export interface DemoRun {
 /** This round's runs that reached the photos step. */
 export const roundRuns = (runs: DemoRun[]): RoundRun[] => runs.flatMap((r) => (r.sample ? [{ sample: r.sample, decision: r.decision, unanswered: r.unanswered }] : []));
 
-// A refusal here is the product working, not an error: muted, with what stopped it. Only a payout is green.
-const REFUSED_BY: Record<string, string> = { "wrong-code": "wrong code", "ai-no-session": "not from the camera", reposted: "photo reused" };
-function outcomeOf(decision: Decision | undefined, sample: string): { word: string; tone: string } | null {
+// A refusal here is the product working, not an error: muted. Only a payout is green. The title already says what the
+// claim was, so the outcome is one word.
+function outcomeOf(decision: Decision | undefined): { word: string; tone: string } | null {
   if (decision === "paid") return { word: "Paid", tone: "text-pay" };
-  if (decision === "held") return { word: "For review", tone: "text-hold" };
-  if (decision === "rejected" || decision === "blocked") return { word: REFUSED_BY[sample] ? `Refused: ${REFUSED_BY[sample]}` : "Refused", tone: "text-muted" };
+  if (decision === "held") return { word: "With a person", tone: "text-hold" };
+  if (decision === "rejected" || decision === "blocked") return { word: "Refused", tone: "text-muted" };
   return null;
 }
 
@@ -99,10 +99,7 @@ export function SamplePicker({
       <div className="flex min-w-0 flex-col gap-6">
       {/* A limit's notice, rendered later, takes focus from the title. */}
       <FocusTitle id="picker-title" />
-      <div className="flex items-baseline justify-between gap-4">
-        <StepTitle id="picker-title">Choose a claim</StepTitle>
-        {scored.length > 0 && <span className="shrink-0 text-ui text-muted">{ranLine(scored)}</span>}
-      </div>
+      <StepTitle id="picker-title">Choose a claim</StepTitle>
 
       {refusal && <LimitNotice refusal={refusal} demo />}
 
@@ -112,7 +109,8 @@ export function SamplePicker({
           <legend className="sr-only">Claims to run</legend>
           {options.map(({ sample, locked }) => {
             const run = latest.get(sample.id);
-            const outcome = outcomeOf(run?.decision, sample.id);
+            const outcome = outcomeOf(run?.decision);
+            const runId = resultOf(sample.id)?.id;
             const copy = SAMPLE_COPY[sample.id];
             const id = `sample-${sample.id}`;
             return (
@@ -151,10 +149,15 @@ export function SamplePicker({
                     {copy?.title ?? sample.title}
                   </span>
                   <span id={`${id}-line`} className="text-ui text-muted">
-                    {locked ? <span id={`${id}-locked`}>Run the first claim before this one.</span> : (copy?.line ?? sample.decidedBy)}
+                    {locked ? <span id={`${id}-locked`}>Send the genuine claim first: this one sends its photo again.</span> : (copy?.line ?? sample.decidedBy)}
                   </span>
                   {/* The outcome reads as the row's last line, so the title never squeezes beside it. */}
-                  {outcome && <span className={clsx("text-ui font-medium", outcome.tone)}>{outcome.word}</span>}
+                  {outcome && (
+                    <span className="text-ui">
+                      <span className={clsx("font-medium", outcome.tone)}>{outcome.word}</span>
+                      {runId && <span className="text-faint"> · <span className="font-mono">{runId}</span></span>}
+                    </span>
+                  )}
                 </span>
                 {!off && (
                   <span
@@ -179,66 +182,64 @@ export function SamplePicker({
             <LimitNextStep demo />
           ) : (
             <Button type="submit" size="lg" block>
-              Run this claim
+              Start this claim
             </Button>
           )}
         </div>
       </form>
 
-      {runs.length > 0 && (
-        <div className="flex flex-col gap-2 pt-2">
-          <h3 className="text-ui font-medium text-muted">Your claims</h3>
-          <ul className="flex flex-col border-t border-line">
-            {runs.map((r) => (
-              <li key={r.id} className="border-b border-line">
-                <Link href={r.href} className="flex min-h-11 items-center gap-3 text-ui text-muted hover:text-text">
-                  <span className="font-mono text-micro text-faint">{r.id}</span>
-                  <span className="truncate">{sampleTitle(r.sample ?? "", r.title)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <form action="/api/claims/round" method="post" className="pt-2">
-            <input type="hidden" name="recall" value={slug} />
-            <Button type="submit" variant="tertiary" size="sm">
-              Start over
-            </Button>
-          </form>
-        </div>
+      {scored.length > 0 && (
+        <form action="/api/claims/round" method="post">
+          <input type="hidden" name="recall" value={slug} />
+          <Button type="submit" variant="tertiary" size="sm">
+            Start over
+          </Button>
+        </form>
       )}
       </div>
     </section>
   );
 }
 
-/** The round's record once all four have run: each claim, its outcome and its number, opening its result; then Start over. */
+/** The round's record once all four have run: the outcome said once, then each claim with its number, opening its result. */
 function RoundDone({ slug, company, options, latest, resultOf }: { slug: string; company: string; options: SampleOption[]; latest: Map<string, RoundRun>; resultOf(sample: string): DemoRun | undefined }) {
   // The four claims' ids, so the company's console opens on them.
   const first = options.map(({ sample }) => resultOf(sample.id)).find(Boolean);
+  const decided = (id: string) => latest.get(id)?.decision;
+  const fakes = options.filter(({ sample }) => sample.id !== "genuine");
+  // Said only when it is what happened: a genuine claim held for a person, say, keeps the plain title.
+  const clean = decided("genuine") === "paid" && fakes.every(({ sample }) => decided(sample.id) === "rejected" || decided(sample.id) === "blocked");
   return (
-    <section aria-labelledby="picker-title" className="flex w-full flex-col gap-6">
+    <section aria-labelledby="picker-title" className="flex w-full flex-col gap-8">
       <FocusTitle id="picker-title" />
-      <StepTitle id="picker-title">All four claims ran</StepTitle>
+      <div className="flex max-w-[34rem] flex-col gap-3">
+        <StepTitle id="picker-title">{clean ? "Remedy paid the genuine claim and stopped all three fakes" : "All four claims ran"}</StepTitle>
+        <p className="text-body text-pretty text-muted">Open any of them to see why. The company sees the same four, with their evidence, in its console.</p>
+      </div>
       <ul className="flex flex-col border-t border-line">
         {options.map(({ sample }) => {
           const run = resultOf(sample.id);
-          const outcome = outcomeOf(latest.get(sample.id)?.decision, sample.id);
+          const outcome = outcomeOf(decided(sample.id));
           const row = (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={sample.photos[0]} alt="" className="size-12 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_65%] ring-1 ring-line" />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-body text-text">{sampleTitle(sample.id, sample.title)}</span>
-                {outcome && <span className={clsx("text-ui font-medium sm:hidden", outcome.tone)}>{outcome.word}</span>}
-                {run && <span className="font-mono text-micro text-faint">{run.id}</span>}
+                {run && <span className="font-mono text-ui text-faint">{run.id}</span>}
               </span>
-              {outcome && <span className={clsx("shrink-0 text-ui font-medium max-sm:hidden", outcome.tone)}>{outcome.word}</span>}
+              {outcome && <span className={clsx("shrink-0 text-ui font-medium", outcome.tone)}>{outcome.word}</span>}
+              {run && (
+                <span aria-hidden="true" className="shrink-0 text-faint transition-transform duration-160 group-hover:translate-x-0.5">
+                  →
+                </span>
+              )}
             </>
           );
           return (
             <li key={sample.id} className="border-b border-line">
               {run ? (
-                <Link href={run.href} className="flex items-center gap-4 py-3 hover:bg-surface">
+                <Link href={run.href} className="group -mx-3 flex items-center gap-4 rounded-control px-3 py-3 transition-colors duration-160 hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus">
                   {row}
                 </Link>
               ) : (
@@ -249,7 +250,7 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
         })}
       </ul>
       {/* The next thing worth seeing is the company's side of the same four claims; starting over is the quiet way back. */}
-      <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-6">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-6">
         <Button href={first ? `/console?claim=${first.id}` : "/console"} size="lg" prefetch={false} className="max-sm:w-full">
           See these claims as {company}
         </Button>

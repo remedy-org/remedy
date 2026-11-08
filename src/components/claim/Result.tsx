@@ -1,17 +1,16 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { Button, Money, Paper } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { canAskForReview, reviewAsked } from "@/lib/appeal";
 import type { DemoSample } from "@/lib/demo";
 import { sampleTitle } from "@/lib/demo/sampleCopy";
-import type { Claim, Recall } from "@/lib/types";
-import { CheckList, sixRows } from "./CheckList";
+import type { Claim, Recall, Reason } from "@/lib/types";
+import { CheckList, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
-import { EvidenceText, evidenceSummary } from "./EvidenceText";
-import { CHECK_GRID, ClaimFrame, ExhibitPhoto, NARROW_ONLY, OutcomeHead, WIDE_ONLY } from "./Exhibit";
+import { evidenceSummary } from "./EvidenceText";
+import { ClaimFrame, ClaimLayout, ExhibitPhoto, NARROW_ONLY, OutcomeHead, WIDE_ONLY } from "./Exhibit";
 import styles from "./flow.module.css";
 import { FocusTitle } from "./FocusTitle";
-import { ClaimTime } from "./LocalTime";
 import {
   adviceFor,
   businessDaysAfter,
@@ -21,7 +20,6 @@ import {
   cutInHalf,
   decidingReasons,
   handWrittenLabel,
-  maskPayer,
   misreadOf,
   money,
   noModelAnswer,
@@ -32,7 +30,8 @@ import {
   secondsBetween,
   type CheckRow,
 } from "./model";
-import { BringIntoView, PaidTitle, PayoutLive, PayoutRow, PayoutWord } from "./ReceiptLive";
+import { Receipt } from "./Receipt";
+import { BringIntoView, PaidTitle, PayoutLive } from "./ReceiptLive";
 import { nextSample, type RoundRun } from "./Scoreboard";
 
 export interface PayoutLive {
@@ -72,8 +71,6 @@ export interface ResultProps {
   duplicate?: Duplicate | null;
   /** The server's clock at render (ms): the receipt prints only for a claim decided under a minute ago. */
   now?: number;
-  /** The step meter, above the result. */
-  meter?: ReactNode;
   /** Payouts go to PayPal's sandbox in this build: the receipt points to PayPal activity rather than an email. */
   sandbox?: boolean;
   /** A sandbox build's paid receipt: PayPal's activity page, where the payout shows. */
@@ -82,33 +79,42 @@ export interface ResultProps {
   account?: string | null;
 }
 
-/** What each outcome puts where: the headline, the evidence beside it on a laptop, and what follows the checks. */
+/** What each outcome puts where: the headline and its line, the evidence, and the outcome column under the headline. */
 interface Parts {
   title: ReactNode;
+  /** What we saw and what's wrong, in one or two plain sentences, under the headline. */
   lead?: ReactNode;
-  /** A laptop's left column: the checking screen's photo, kept in its place. */
+  /** A laptop's photo, under the outcome: the checking screen's photo, kept in its place. */
   side: ReactNode;
-  /** Phones: what comes straight under the headline (a refusal's code or its matching photos). */
+  /** Phones: the evidence that replaces the thumbnail (a repost's two photos), over the checks. */
   under?: ReactNode;
-  /** After the checks: the receipt, what happens next, the way on. */
+  /** The outcome column: the receipt, what happens next, the way on. */
   next?: ReactNode;
   /** The claim's number as metadata, when nothing else on the screen carries it. */
   meta?: boolean;
   /** The photos are on screen already (a repost's comparison): no thumbnail beside the headline. */
   photosShown?: boolean;
+  /** The photo comes in after the receipt has printed (it sat where the receipt prints). */
+  photoIn?: boolean;
 }
 
+/** A sentence as the page writes it: "We couldn't…" for the pipeline's "Couldn't…", and a full stop. */
+const sentence = (s: string) => {
+  const t = s.trim().replace(/^Couldn't/, "We couldn't");
+  return /[.!?]$/.test(t) ? t : `${t}.`;
+};
+
 /**
- * The end of a claim, in the checking screen's own layout (CheckingStep), so the outcome lands in place: the photo stays
- * where it was, the headline where it was, and the checks as they resolved. Paid prints the receipt under the refund
- * row; held and refused say what happens next.
+ * The end of a claim, in the checking screen's own layout (ClaimLayout), so the outcome lands in place: the photo and
+ * the checks stay where they were in the evidence column, the headline where it was, and the outcome column under it
+ * takes the receipt (paid) or what happens next (held, refused).
  */
 export function Result(props: ResultProps) {
   const { claim, recall, rows } = props;
   const cut = cutInHalf(recall.spec);
   const read = claim.verdict ? { label: claim.verdict.label.text_seen, code: claim.verdict.challenge_code.text_seen } : undefined;
   const paid = claim.decision === "paid";
-  const six = sixRows(rows, {
+  const options = {
     code: claim.code,
     noun: nounOf(recall.spec),
     cut,
@@ -117,35 +123,44 @@ export function Result(props: ResultProps) {
     demo: Boolean(claim.demo),
     photos: claim.photos.length,
     earlier: props.duplicate?.earlier?.id,
-    explained: true,
     written: handWrittenLabel(recall.spec),
     read,
-  });
+  };
+  // The outcome column says why a check failed or is held, so its row doesn't say it again.
+  const six = sixRows(rows, { ...options, explained: true });
   const summary = evidenceSummary(six, { decision: claim.decision, cut, unanswered: noModelAnswer(claim.decision, claim.reasons) });
-  const parts = paid ? paidParts(props) : claim.decision === "held" ? heldParts(props) : refusedParts(props);
-  const amount = money(claim.payout?.amount ?? recall.refund);
+  const parts = paid ? paidParts(props) : claim.decision === "held" ? heldParts(props, sixRows(rows, options)) : refusedParts(props);
   const page = (
-    <div className={CHECK_GRID}>
-      <div className={clsx(WIDE_ONLY, "sticky top-8 min-w-0 flex-col gap-4")}>{parts.side}</div>
-      <section aria-labelledby="result-title" className="flex min-w-0 flex-col gap-5 [@media(max-height:600px)]:gap-3">
-        <OutcomeHead id="result-title" thumb={parts.photosShown ? undefined : props.photoUrls[0]} title={parts.title} lead={parts.lead} />
-        {parts.under && <div className={clsx(NARROW_ONLY, "flex flex-col gap-6")}>{parts.under}</div>}
-        <CheckList rows={six} label={`Checks for this claim: ${summary}`} amount={amount} refundWord={paid ? <PayoutWord /> : undefined} />
-        {parts.next && <div className="flex flex-col gap-6 pt-3">{parts.next}</div>}
-        {parts.meta && (
-          <p className="text-ui text-faint">
-            Claim <span className="font-mono whitespace-nowrap">{claim.id}</span>
-          </p>
-        )}
-      </section>
-    </div>
+    <ClaimLayout
+      labelledBy="result-title"
+      head={<OutcomeHead id="result-title" thumb={parts.photosShown ? undefined : props.photoUrls[0]} title={parts.title} lead={parts.lead} />}
+      checks={
+        <>
+          {parts.under && <div className={clsx(NARROW_ONLY, "flex flex-col gap-4")}>{parts.under}</div>}
+          <CheckList rows={six} label={`Checks for this claim: ${summary}`} />
+          {/* The claim's number as the evidence's own metadata, when nothing else on the screen carries it: under the checks
+              on a laptop, at the foot of the page on a phone. */}
+          {parts.meta && <Meta id={claim.id} className={WIDE_BLOCK} />}
+          {/* Paid: the receipt takes the left column, so the photo joins the checks, the evidence the money moved on. */}
+          {paid && <div className={clsx(WIDE_ONLY, "min-w-0 flex-col pt-3", parts.photoIn && styles.later)}>{parts.side}</div>}
+        </>
+      }
+      photo={paid ? undefined : parts.side}
+      outcome={
+        (parts.next || parts.meta) && (
+          <>
+            {parts.next}
+            {parts.meta && <Meta id={claim.id} className={NARROW_ONLY} />}
+          </>
+        )
+      }
+    />
   );
   return (
     <ClaimFrame>
       <FocusTitle id="result-title" />
-      {props.meter}
       {paid ? (
-        <PayoutLive claimId={claim.id} status={props.payout?.status ?? claim.payout?.status ?? null} live={Boolean(props.payout?.live)} amount={amount}>
+        <PayoutLive claimId={claim.id} status={props.payout?.status ?? claim.payout?.status ?? null} live={Boolean(props.payout?.live)} amount={money(claim.payout?.amount ?? recall.refund)}>
           {page}
         </PayoutLive>
       ) : (
@@ -155,60 +170,32 @@ export function Result(props: ResultProps) {
   );
 }
 
+const WIDE_BLOCK = "hidden lg:[@media(min-height:601px)]:block";
+
+function Meta({ id, className }: { id: string; className?: string }) {
+  return (
+    <p className={clsx("text-ui text-faint", className)}>
+      Claim <span className="font-mono whitespace-nowrap">{id}</span>
+    </p>
+  );
+}
+
 /* ------------------------------------------------------------------------------------------------ Paid */
 
 function paidParts({ claim, recall, photoUrls, againHref, sample, round, now, sandbox, account, activityUrl, payout }: ResultProps): Parts {
   const amount = claim.payout?.amount ?? recall.refund;
   const sentAt = claim.events.find((e) => e.type === "payout_sent")?.at ?? claim.payout?.updatedAt;
   const decidedAt = claim.events.find((e) => e.type === "decided")?.at;
-  const took = secondsBetween(claim.events, "photos_received", "payout_sent");
   // The one arrival moment: it prints only when it's news. A reload, or a later visit, shows it at rest.
   const arrive = Boolean(now && decidedAt && now - Date.parse(decidedAt) < 60_000);
   const demo = Boolean(sample);
-  const receipt = (
-    // Flat paper with a hairline, printed under the refund row it confirms: the status row says when it has arrived.
-    <Paper id="receipt" variant="receipt" padding="lg" className={clsx("w-full scroll-mb-6 [&>div]:shadow-[0_0_0_1px_var(--paper-line)]", arrive && styles.print)}>
-      <div className="flex items-baseline justify-between gap-4 text-ui text-ink-muted">
-        <span>Refund receipt</span>
-        <span className="font-mono text-micro">CPSC {recall.id}</span>
-      </div>
-
-      <Money value={Number(amount.value)} currency={amount.currency} size="amount" className="mt-5 block text-ink" />
-
-      <dl className="mt-5 border-t border-paper-line">
-        <PayoutRow />
-        {/* The PayPal login the owner knows, masked; without one, the payer ID's tail. */}
-        <ReceiptRow label="To" mono={!account}>
-          {account ? (
-            <Masked text={account} />
-          ) : (
-            <>
-              <span className="sr-only">PayPal account ending {claim.payerId.slice(-5)}</span>
-              <span aria-hidden="true">{maskPayer(claim.payerId)}</span>
-            </>
-          )}
-        </ReceiptRow>
-        <ReceiptRow label="Claim" mono>
-          {claim.id}
-        </ReceiptRow>
-        {/* Measured from the photos arriving to the payout leaving: sent, which is true before PayPal says received. */}
-        {sentAt && (
-          <ReceiptRow label="Sent">
-            <ClaimTime iso={sentAt} format="stamp" />
-            {took !== null && (
-              <span className="text-ink-muted">
-                {" "}
-                · <span className="font-mono">{took}</span> {took === 1 ? "second" : "seconds"} after your photo
-              </span>
-            )}
-          </ReceiptRow>
-        )}
-      </dl>
-      {payout && !payout.fresh && <p className="mt-3 text-ui text-ink-muted">PayPal didn&apos;t answer just now, so this is the last status we saved.</p>}
-      {!sandbox && !demo && <p className="mt-3 text-ui text-ink-muted">PayPal emails you a receipt too.</p>}
-      {/* No email on this build's payouts: the foot points to PayPal's activity page instead, once. */}
-      {(sandbox || demo) && (
-        <p className="mt-5 text-ui text-ink-muted">
+  // One quiet line at the receipt's foot: where else the payout shows. No email on this build's payouts, so PayPal's
+  // activity page instead.
+  const foot = (
+    <>
+      {payout && !payout.fresh && <p>PayPal didn&apos;t answer just now, so this is the last status we saved.</p>}
+      {sandbox || demo ? (
+        <p>
           See it in your{" "}
           {activityUrl ? (
             <a href={activityUrl} target="_blank" rel="noreferrer" className="text-ink underline decoration-paper-line underline-offset-4 hover:decoration-ink">
@@ -219,58 +206,46 @@ function paidParts({ claim, recall, photoUrls, againHref, sample, round, now, sa
           )}
           .
         </p>
+      ) : (
+        <p>PayPal emails you a receipt too.</p>
       )}
-    </Paper>
+    </>
   );
   return {
     title: <PaidTitle />,
     side: <ClaimPhotos urls={photoUrls} claimId={claim.id} />,
+    photoIn: arrive,
     next: (
       <>
-        {receipt}
+        <Receipt
+          amount={amount}
+          recallId={recall.id}
+          claimId={claim.id}
+          account={account}
+          payerTail={claim.payerId.slice(-5)}
+          payoutId={claim.payout?.batchId}
+          sentAt={sentAt}
+          took={secondsBetween(claim.events, "photos_received", "payout_sent")}
+          arrive={arrive}
+          foot={foot}
+        />
         {arrive && <BringIntoView id="receipt" />}
-        {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} />}
+        {/* The way on comes in once the receipt is out, so the paper is the only thing moving. */}
+        {sample && (
+          <div className={clsx(arrive && styles.later)}>
+            <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} />
+          </div>
+        )}
       </>
     ),
   };
 }
-/** "p••@owner.test": Schibsted's bullets sit wide apart, so the mask's run of them is set in mono, as the console's is. */
-function Masked({ text }: { text: string }) {
-  // Read out as "d, hidden, @owner.test" rather than a run of bullets.
-  const spoken = text.replace(/•+/g, ", hidden, ");
-  return (
-    <>
-      <span className="sr-only">{spoken}</span>
-      <span aria-hidden="true">
-      {text.split(/(•+)/).map((part, i) =>
-    part.startsWith("•") ? (
-      <span key={i} className="font-mono tracking-[-0.08em]">
-        {part}
-      </span>
-    ) : (
-        part
-      ),
-      )}
-      </span>
-    </>
-  );
-}
-
-function ReceiptRow({ label, mono, children }: { label: string; mono?: boolean; children: ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-paper-line py-3 text-ui last:border-b-0">
-      <dt className="shrink-0 text-ink-muted">{label}</dt>
-      <dd className={clsx("min-w-0 text-right text-ink [overflow-wrap:anywhere]", mono && "font-mono")}>{children}</dd>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------------------------------------ Held */
 
-function heldParts({ claim, recall, photoUrls, againHref, sample, round }: ResultProps): Parts {
+function heldParts({ claim, recall, photoUrls, againHref, sample, round }: ResultProps, six: SixRow[]): Parts {
   const reasons = decidingReasons(claim);
   const submitted = claim.events.find((e) => e.type === "photos_received")?.at ?? claim.createdAt;
-  const checked = claim.events.find((e) => e.type === "decided")?.at ?? claim.events.find((e) => e.type === "checked")?.at;
   const company = companyName(recall);
   const nb = company.replace(/ /g, "\u00a0");
   // The owner asked a person to look at a claim the rule refused: this screen is the confirmation.
@@ -280,11 +255,19 @@ function heldParts({ claim, recall, photoUrls, againHref, sample, round }: Resul
   const unanswered = noModelAnswer(claim.decision, claim.reasons);
   const by = businessDaysAfter(asked ?? submitted, 2);
   const refund = money(recall.refund);
+  // What's wrong, once: the checks that need a person, in the rows' own words.
+  const unsure = six.filter((r) => r.key !== "refund" && r.state === "hold" && r.detail).map((r) => sentence(r.detail!));
   const lead = payout
-    ? `${payout === "network" ? "Remedy couldn't reach PayPal to send it" : "PayPal didn't accept the transfer"}, so a person at ${company} will send ${refund} by ${by}. Nothing has been paid yet.${payout === "refused" ? " If your PayPal account shows a notice, sort it out there." : ""}`
+    ? `${payout === "network" ? "Remedy couldn't reach PayPal to send it." : "PayPal didn't accept the transfer."}${payout === "refused" ? " If your PayPal account shows a notice, sort it out there." : ""}`
     : unanswered
-      ? `We couldn't finish the photo check, so a person at ${company} will look at it by ${by}. Nothing was paid.`
-      : `${asked ? "You asked for a review. " : ""}They decide by ${by}.`;
+      ? "We couldn't finish the photo check, so a person will look at your photos instead."
+      : asked
+        ? `You asked for a review. ${reasons.filter((r) => r.outcome === "reject").map((r) => sentence(refusalHeadline({ ...claim, decision: "rejected", reasons: [r] }, recall.spec))).join(" ")}`
+        : [...new Set(unsure)].join(" ") || "Some of the checks need a person to look.";
+  // What happens next, in true facts only: who decides, by when, and how the money would arrive.
+  const next = payout
+    ? `A person at ${company} sends ${refund} by ${by}. Nothing has been paid yet, and PayPal emails you when it arrives.`
+    : `${company} decides by ${by}. If they approve it, PayPal sends you ${refund} and emails you.`;
   return {
     title: payout ? `Your photos passed. ${company} will send your refund` : <>A person at {nb} will check this claim</>,
     lead,
@@ -292,44 +275,11 @@ function heldParts({ claim, recall, photoUrls, againHref, sample, round }: Resul
     meta: true,
     next: (
       <>
-        {/* On the checks' own hairlines, not in a box. The date is the headline's lead, so the last step is only named. */}
-        <ol aria-label="What happens next" className="flex flex-col border-t border-line">
-          <TimelineRow state="done" label="Photos received" time={submitted} />
-          {checked && <TimelineRow state="done" label={asked ? "Refused by the checks" : payout ? "Checks passed" : "Checks run"} time={checked} />}
-          {asked && <TimelineRow state="done" label="You asked for a review" time={asked} />}
-          <TimelineRow state="now" label="Waiting for a person" />
-          <TimelineRow state="next" label={payout ? "Refund sent" : "Decision"} />
-        </ol>
-
-        {asked && reasons.length > 0 && (
-          <p className="text-ui text-muted">
-            <EvidenceText>{reasons.map((r) => r.text).join(". ")}</EvidenceText>
-          </p>
-        )}
-
-        {/* How the answer reaches the owner, in true facts only: the payout's own email from PayPal. */}
-        <p className="text-ui text-muted">{payout ? `PayPal emails you when the ${refund} arrives.` : `If they approve it, PayPal emails you when the ${refund} arrives.`}</p>
+        <p className="border-t border-line pt-5 text-body text-pretty text-muted">{next}</p>
         {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} unanswered={unanswered} />}
       </>
     ),
   };
-}
-
-/** `time`: the viewer's local time, to the minute. */
-function TimelineRow({ state, label, time }: { state: "done" | "now" | "next"; label: string; time?: string }) {
-  return (
-    <li className="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-x-3 border-b border-line py-3 text-ui">
-      <span aria-hidden="true" className="flex justify-center">
-        <span className={clsx("relative size-2 rounded-full", state === "done" ? "bg-muted" : state === "now" ? clsx("bg-text text-text", styles.pulse) : "border border-line-strong")} />
-      </span>
-      <span className={state === "done" ? "text-muted" : "text-text"}>{label}</span>
-      {time && (
-        <span className="text-faint">
-          <ClaimTime iso={time} format="day" />
-        </span>
-      )}
-    </li>
-  );
 }
 
 /* --------------------------------------------------------------------------------------------- Refused */
@@ -350,91 +300,72 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
   // Each PayPal account claims once per recall: the way forward is the claim that counts (same account, so it's theirs).
   const earlier = !sample ? /\((RM-\d+)\)/.exec(reasons.find((r) => r.check === "payer")?.text ?? "")?.[1] : undefined;
   const seen = codeDiff(claim.code, claim.verdict?.challenge_code.text_seen);
-  const read = seen.cells.map((c) => c.seen).join("");
-  const body = reviewed ? (
-    <EvidenceText>{`${asked ? "You asked for a review, and" : "Your claim was held for a person, and"} ${company} refused it: ${reasons[0]?.text ?? ""}`}</EvidenceText>
+  const tagRead = seen.cells.map((c) => c.seen).join("");
+  // What we saw and what's wrong, in one or two sentences: the deciding reason first, then any other, each once.
+  const first = reviewed ? (
+    `${asked ? "You asked for a review, and" : "Your claim was held for a person, and"} ${company} refused it: ${reasons[0]?.text ?? ""}`
   ) : lead === "code" ? (
     seen.readable ? (
       <>
-        The code on the tag reads <span className="font-mono">{read}</span>. Yours is <span className="font-mono">{claim.code}</span>.
+        The tag in your photo reads <span className="font-mono whitespace-nowrap">{tagRead}</span>. Your claim&apos;s code is{" "}
+        <span className="font-mono whitespace-nowrap">{claim.code}</span>.
       </>
     ) : (
       <>
-        We couldn&apos;t read a code on the tag. Yours is <span className="font-mono">{claim.code}</span>.
+        We couldn&apos;t read a code on the tag. Your claim&apos;s code is <span className="font-mono whitespace-nowrap">{claim.code}</span>.
       </>
     )
   ) : lead === "session" ? (
-    `${claim.photos.length > 1 ? "These photos weren't" : "This photo wasn't"} sent from Remedy's camera. Only photos taken in the claim, within 10 minutes of its code, count.`
+    `${claim.photos.length > 1 ? "These photos weren't" : "This photo wasn't"} taken in Remedy's camera. Only photos taken in the claim, within 10 minutes of its code, count.`
   ) : lead === "duplicate_photo" ? (
+    // The pair beside it carries the earlier claim's number: said there, once.
     duplicate?.earlier ? (
-      <>
-        {these} already sent with claim <span className="font-mono">{duplicate.earlier.id}</span>.
-      </>
+      `${these} already sent with an earlier claim of yours.`
     ) : (
       `${these} already sent with ${duplicate ? "another PayPal account's claim" : "another claim"}.`
     )
   ) : (
-    `${refusalHeadline(claim, recall.spec)}.`
+    sentence(refusalHeadline(claim, recall.spec))
   );
+  const rest = reviewed ? [] : reasons.slice(1).map((r: Reason) => sentence(refusalHeadline({ ...claim, reasons: [r] }, recall.spec)));
   // What to do differently, said once: never a sentence that only repeats the button under it ("Start a new claim"), and
   // never the review's terms, which sit under its own button. When starting over can't help (a second claim from one
   // account), only that reason's advice applies.
-  const next = reviewed
+  const advice = reviewed
     ? []
     : appeal
-      ? misread
-        ? [`If your tag says ${claim.code}, ask a person to look.`]
-        : []
+      ? []
       : lead === "code"
         ? ["Next time, write the code large and clear, in marker."]
         : lead === "session" || lead === "duplicate_photo"
           ? []
           : [...new Set((retry ? reasons : reasons.filter((r) => !canRetry([r]))).map((r) => adviceFor(r.check)))];
-  const diff = lead === "code" && <CodeDiff code={claim.code} seen={claim.verdict?.challenge_code.text_seen} />;
   const pair = lead === "duplicate_photo" && photoUrls[0] && duplicate?.earlier ? <DuplicatePair claimId={claim.id} photoUrls={photoUrls} earlier={duplicate.earlier} n={duplicate.photo} /> : null;
+  const actions = Boolean(earlier || appeal || (!sample && retry && !reviewed) || sample);
   return {
     title: reviewed ? `A person at ${company} looked at this and refused it` : "We couldn't pay this claim",
-    lead: body,
-    // A laptop: the evidence where the photo was. A repost's photo beside the earlier one, or the photo whole, and under
-    // it the code as read against the claim's.
-    side: (
+    lead: (
       <>
-        {pair ?? <ClaimPhotos urls={photoUrls} claimId={claim.id} />}
-        {diff}
+        {first}
+        {rest.length > 0 && ` ${rest.join(" ")}`}
       </>
     ),
-    under: (diff || pair) && (
-      <>
-        {diff}
-        {pair}
-      </>
-    ),
+    // A laptop: the evidence where the photo was. A repost's photo beside the earlier one, or the photo whole.
+    side: pair ?? <ClaimPhotos urls={photoUrls} claimId={claim.id} />,
+    under: pair,
     photosShown: Boolean(pair),
     meta: true,
-    next: (
+    next: (advice.length > 0 || actions) && (
       <>
-        {reasons.length > 1 && (
-          <div className="flex flex-col gap-2">
-            <h3 className="text-ui font-medium text-muted">Why</h3>
-            <ul className="flex flex-col gap-1.5 text-body text-text">
-              {reasons.map((r, i) => (
-                <li key={`${r.check}-${i}`}>
-                  <EvidenceText>{r.check === "session" ? "Not sent from Remedy's camera" : r.text}</EvidenceText>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {!sample &&
-          next.map((a) => (
-            <p key={a} className="text-body text-text">
+          advice.map((a) => (
+            <p key={a} className="text-body text-pretty text-text">
               {a}
             </p>
           ))}
         {earlier && (
           <Button href={`/r/${recall.slug}/claim/${earlier}`} size="lg" block prefetch={false}>
-            See your claim {earlier}
+            {duplicate?.earlier?.id === earlier ? "See your earlier claim" : `See your claim ${earlier}`}
           </Button>
         )}
         {/* An uncertain read: asking a person leads, since starting over means a new tag and new photos. */}
@@ -443,7 +374,15 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
             <Button type="submit" size="lg" block>
               Ask a person to look
             </Button>
-            <p className="text-ui text-muted">A person at {company} decides from your photos. You can ask once.</p>
+            <p className="text-ui text-pretty text-muted">
+              {misread ? (
+                <>
+                  If your tag says <span className="font-mono">{claim.code}</span>, a person at {company} decides from your photos. You can ask once.
+                </>
+              ) : (
+                `A person at ${company} decides from your photos. You can ask once.`
+              )}
+            </p>
           </form>
         )}
         {!sample && retry && !reviewed && (
@@ -456,48 +395,6 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
       </>
     ),
   };
-}
-
-/**
- * The signature refusal: the claim's code beside what the photo check read on the tag, the differing cell in --stop.
- * The boxes say it; the sentence naming the character is for a screen reader.
- */
-function CodeDiff({ code, seen }: { code: string; seen: string | null | undefined }) {
-  const { cells, caption, readable } = codeDiff(code, seen);
-  const spoken = `Your code ${code.split("").join(", ")}. ${readable ? `Read on the tag ${cells.map((c) => c.seen || "nothing").join(", ")}.` : "Nothing readable on the tag."} ${caption}`;
-  const cell = "flex h-13 w-11 items-center justify-center rounded-control font-mono text-[1.75rem] leading-none font-medium";
-  return (
-    // The tiles on the page, the size of their content: no box around them.
-    <figure className="w-fit">
-      <figcaption className="sr-only">{spoken}</figcaption>
-      <div aria-hidden="true" className="grid grid-cols-[auto_auto] items-center gap-x-5 gap-y-2">
-        <span className="text-ui text-muted">Yours</span>
-        <span className="flex gap-2">
-          {cells.map((c, i) => (
-            <span key={i} className={clsx(cell, "border border-line text-muted")}>
-              {c.yours}
-            </span>
-          ))}
-        </span>
-        <span />
-        <span className="flex gap-2">
-          {cells.map((c, i) => (
-            <span key={i} className="w-11 text-center font-mono text-ui text-faint">
-              {readable ? (c.same ? "=" : "≠") : ""}
-            </span>
-          ))}
-        </span>
-        <span className="text-ui text-muted">On the tag</span>
-        <span className="flex gap-2">
-          {cells.map((c, i) => (
-            <span key={i} className={clsx(cell, !readable ? "border border-dashed border-line-strong text-faint" : c.same ? "border border-line text-muted" : "border-2 border-stop bg-stop-soft text-text")}>
-              {readable ? c.seen || "·" : "?"}
-            </span>
-          ))}
-        </span>
-      </div>
-    </figure>
-  );
 }
 
 /**
@@ -548,7 +445,7 @@ function DemoActions({ sample, slug, againHref, round, unanswered }: { sample: D
       <div className="flex w-full flex-col gap-2">
         {unanswered ? (
           <RunSample slug={slug} sample={sample.id}>
-            Run it again
+            Try this claim again
           </RunSample>
         ) : next ? (
           <RunSample slug={slug} sample={next.id}>

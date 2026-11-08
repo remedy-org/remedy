@@ -1,9 +1,14 @@
-import { Button, ErrorState } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { NotFoundCard } from "./NotFoundCard";
 
-/** The card itself, shared with the dev preview: what happened, that the claim is safe, and two ways on. */
+/**
+ * A claim page that failed to render (shared with the dev preview), on the flow's own column like a missing link: what
+ * happened, that the claim and its money are safe, and two ways on.
+ */
 export function ClaimErrorCard({ recall, id, onRetry }: { recall?: string; id?: string; onRetry?: () => void }) {
   return (
-    <ErrorState
+    <NotFoundCard
+      alert
       title="This page didn't load"
       description={
         <>
@@ -15,23 +20,21 @@ export function ClaimErrorCard({ recall, id, onRetry }: { recall?: string; id?: 
           ) : (
             "Any claim you started is saved"
           )}
-          , and photos already sent are still being checked. Try again in a moment.
+          , and photos already sent are still being checked.
         </>
       }
       action={
-        // Full width, so it's in reach of a thumb; the recall's page is the way out if trying again doesn't help.
-        <div className="flex w-full flex-col gap-2">
-          <Button size="lg" block onClick={onRetry}>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <Button size="lg" onClick={onRetry}>
             Try again
           </Button>
           {recall && (
-            <Button href={`/r/${recall}`} variant="tertiary" size="sm" prefetch={false} className="self-start">
+            <Button href={`/r/${recall}`} variant="tertiary" size="sm" prefetch={false}>
               Back to the recall
             </Button>
           )}
         </div>
       }
-      className="bg-surface"
     />
   );
 }

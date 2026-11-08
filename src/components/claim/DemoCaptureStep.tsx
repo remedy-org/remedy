@@ -2,14 +2,14 @@
 
 import clsx from "clsx";
 import { useState } from "react";
-import { ErrorState } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
-import { sampleTitle } from "@/lib/demo/sampleCopy";
+import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import { rememberAspect } from "./ClaimPhotos";
 import { CodeTag } from "./CodeTag";
 import { photoWidth } from "./Exhibit";
 import styles from "./flow.module.css";
 import type { ClaimView } from "./model";
+import { Notice } from "./Notice";
 import { CAMERA_BACK, CAMERA_FRAME, CameraTopBar, Cutout, Dock, GlassChip, InstructionBar } from "./Viewfinder";
 
 export interface DemoCaptureStepProps {
@@ -63,12 +63,8 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
     }
   }
 
-  // What the photo is, and the code against what its tag reads: the one line a judge needs to read the outcome.
-  const line = (
-    <>
-      Your code <span className="font-mono whitespace-nowrap">{code}</span>. The tag in the photo reads <span className="font-mono whitespace-nowrap">{sample.tagReads}</span>.
-    </>
-  );
+  // The owner's situation in one line: what is in the photo, never what the checks will make of it.
+  const line = SAMPLE_COPY[sample.id]?.line ?? sample.description;
 
   return (
     <section aria-label={title} className="grid w-full max-w-[40rem] items-start gap-5 lg:max-w-none lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:gap-y-6">
@@ -89,7 +85,9 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
             <img src={sample.photos[0]} alt={`Photo 1: ${title.toLowerCase()}`} className="absolute inset-0 size-full object-contain" />
             <Cutout className="inset-x-[4%] inset-y-[5%]">
               <GlassChip className="absolute top-2 left-2">Photo 1</GlassChip>
-              <GlassChip className="absolute top-2 right-2">{code}</GlassChip>
+              <GlassChip mono className="absolute top-2 right-2">
+                {code}
+              </GlassChip>
             </Cutout>
             <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
           </figure>
@@ -99,7 +97,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
           <h1 id="sample-title" tabIndex={-1} className="text-ui font-medium text-balance text-[oklch(0.96_0.006_85)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
             {title}
           </h1>
-          <p className="text-ui text-[oklch(0.86_0.005_80)] [&_.font-mono]:text-[oklch(0.96_0.006_85)]">{line}</p>
+          <p className="text-ui text-[oklch(0.86_0.005_80)]">{line}</p>
         </InstructionBar>
         <Dock
           short
@@ -136,17 +134,20 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
 
       <div className="hidden flex-col gap-6 lg:col-start-2 lg:flex">
         <div className="flex flex-col gap-3">
-          <h1 id="sample-title-wide" tabIndex={-1} className="text-title font-semibold text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+          <h1 id="sample-title-wide" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
             {title}
           </h1>
-          <p className="text-body text-muted">{line}</p>
+          <p className="text-body text-pretty text-muted">{line}</p>
         </div>
-        <CodeTag code={code} written={written} />
-        <p className="text-ui text-muted">The shutter sends this photo to the checks.</p>
+        {/* This claim's code, as the owner would have written it: the tag in the photo is checked against it. */}
+        <figure className="flex flex-col gap-3">
+          <CodeTag code={code} written={written} />
+          <figcaption className="text-ui text-muted">This claim&apos;s code. The shutter sends the photo to the five checks.</figcaption>
+        </figure>
       </div>
       {error && (
         <div className="lg:col-start-2">
-          <ErrorState variant="inline" title="The photo didn't send" description={error} />
+          <Notice title="The photo didn't send">{error}</Notice>
         </div>
       )}
     </section>
