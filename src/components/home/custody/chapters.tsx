@@ -87,7 +87,7 @@ export function ConsentChapter({ p }: { p?: Progress }) {
   const product = useGate(p ?? done, (v) => v >= 0.165);
   return (
     <div className="@container">
-      <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
+      <div className="grid items-start gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
         <motion.div className={clsx("hidden flex-col @min-[720px]:flex", compact ? "gap-4" : "gap-6")} style={{ opacity: product }}>
           <span className="text-ui text-faint">
             <span className="font-mono">{CLAIM.recall}</span> · Recalled {CLAIM.recalled}
