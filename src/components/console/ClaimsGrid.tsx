@@ -730,26 +730,73 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
   useLayoutEffect(() => {
     latest.current = { onOpen, onFocusRow, onReady, onDecisionFilter, measure, filterJson, openId, decisionFilter, onStillClick, onPick, picked };
   });
-  // Picking: the row a range starts from (the last row focused or clicked without Shift), the pick as it stood then (a
-  // range adds to it), and whether the focus now moving came from Shift+↑/↓.
+  // Picking: the row a range starts from (the last row focused or clicked without Shift) and the pick as it stood then (a
+  // range adds to it). `now` is the pick as last handed up, so fast keys never read a pick React hasn't drawn yet.
   const anchor = useRef<{ id: string; base: string[] } | null>(null);
-  const shiftNav = useRef(false);
+  const now = useRef<string[]>([]);
+  useLayoutEffect(() => {
+    now.current = [...(picked ?? [])];
+  }, [picked]);
+  // The claims Shift+↑/↓ moved focus to, and when: the grid reports each focus a moment later (after a run of fast keys,
+  // all at once), and onCellFocused leaves the anchor and the open panel where they are for those.
+  const ownMoves = useRef(new Map<string, number>());
+  const pick = useMemo(() => {
+    const hand = (ids: string[]) => {
+      now.current = ids;
+      latest.current.onPick?.(ids);
+    };
+    return {
+      range(grid: GridApi<GridRow>, to: string) {
+        const from = anchor.current ?? { id: to, base: [] };
+        anchor.current = from;
+        hand(ordered(grid, [...from.base, ...between(grid, from.id, to)]));
+      },
+      toggle(grid: GridApi<GridRow>, id: string) {
+        const set = new Set(now.current);
+        if (set.has(id)) set.delete(id);
+        else set.add(id);
+        const next = ordered(grid, set);
+        anchor.current = { id, base: next };
+        hand(next);
+      },
+      from(id: string) {
+        anchor.current = { id, base: [...now.current] };
+      },
+    };
+  }, []);
+  // Shift+↑/↓ in the list: the grid's own arrow handling never sees it. Focus moves one claim (over group headings) and
+  // the pick runs from the anchor to it, one key at a time however fast they come.
   useEffect(() => {
     const el = wrap.current;
     if (!el || still) return;
-    const note = (e: KeyboardEvent) => {
-      shiftNav.current = e.shiftKey && (e.key === "ArrowDown" || e.key === "ArrowUp");
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.shiftKey || (e.key !== "ArrowDown" && e.key !== "ArrowUp") || e.metaKey || e.ctrlKey || e.altKey) return;
+      const grid = api.current;
+      const target = e.target as Element | null;
+      if (!grid || !latest.current.onPick || !target?.closest(".ag-row") || target.closest(".ag-popup")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const at = grid.getFocusedCell();
+      if (!at || at.rowPinned) return;
+      const step = e.key === "ArrowDown" ? 1 : -1;
+      let i = at.rowIndex + step;
+      while (i >= 0 && i < grid.getDisplayedRowCount() && !isClaim(grid.getDisplayedRowAtIndex(i))) i += step;
+      const node = grid.getDisplayedRowAtIndex(i);
+      const here = grid.getDisplayedRowAtIndex(at.rowIndex);
+      if (!anchor.current && isClaim(here)) pick.from(here!.data!.id);
+      if (!isClaim(node)) {
+        // The list's end: the claim already focused is picked, so the key is never silent.
+        if (isClaim(here)) pick.range(grid, here!.data!.id);
+        return;
+      }
+      ownMoves.current.set(node!.data!.id, performance.now());
+      grid.ensureIndexVisible(i);
+      grid.setFocusedCell(i, "createdAt");
+      pick.range(grid, node!.data!.id);
     };
-    const off = () => {
-      shiftNav.current = false;
-    };
-    el.addEventListener("keydown", note, true);
-    el.addEventListener("pointerdown", off, true);
-    return () => {
-      el.removeEventListener("keydown", note, true);
-      el.removeEventListener("pointerdown", off, true);
-    };
-  }, [still]);
+    el.addEventListener("keydown", onKey, true);
+    return () => el.removeEventListener("keydown", onKey, true);
+  }, [still, pick]);
 
   const getRowHeight = useMemo(() => (p: RowHeightParams<GridRow>) => (p.node.rowPinned ? 36 : p.data?.group ? 40 : cards ? 88 : 52), [cards]);
   const isFullWidthRow = useMemo(() => (p: IsFullWidthRowParams<GridRow>) => cards || Boolean(p.rowNode.data?.group) || Boolean(p.rowNode.rowPinned), [cards]);
@@ -788,20 +835,6 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     grid.refreshClientSideRowModel("sort");
   };
   const handlers = useMemo(() => {
-    // A range from the anchor to `to`, added to the pick as it stood at the anchor; or one claim in or out.
-    const pickRange = (grid: GridApi<GridRow>, to: string) => {
-      const from = anchor.current ?? { id: to, base: [] };
-      anchor.current = from;
-      latest.current.onPick?.(ordered(grid, [...from.base, ...between(grid, from.id, to)]));
-    };
-    const pickToggle = (grid: GridApi<GridRow>, id: string) => {
-      const now = new Set(latest.current.picked ?? []);
-      if (now.has(id)) now.delete(id);
-      else now.add(id);
-      const next = ordered(grid, now);
-      anchor.current = { id, base: next };
-      latest.current.onPick?.(next);
-    };
     return {
       onGridReady(e: GridReadyEvent<GridRow>) {
         api.current = e.api;
@@ -843,10 +876,13 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         // Shift-click picks the claims from the last row to this one; Cmd- or Ctrl-click adds or drops one. A plain click
         // opens the claim and lets the pick go.
         const m = e.event as MouseEvent | null;
-        if (m?.shiftKey && latest.current.onPick) return pickRange(e.api, id);
-        if ((m?.metaKey || m?.ctrlKey) && latest.current.onPick) return pickToggle(e.api, id);
+        if (m?.shiftKey && latest.current.onPick) return pick.range(e.api, id);
+        if ((m?.metaKey || m?.ctrlKey) && latest.current.onPick) return pick.toggle(e.api, id);
         anchor.current = { id, base: [] };
-        if (latest.current.picked?.size) latest.current.onPick?.([]);
+        if (now.current.length) {
+          now.current = [];
+          latest.current.onPick?.([]);
+        }
         latest.current.onOpen(id);
       },
       onCellKeyDown(e: CellKeyDownEvent<GridRow>) {
@@ -873,7 +909,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
           const node = e.api.getDisplayedRowAtIndex(here);
           if (isClaim(node)) {
             e.event?.preventDefault();
-            pickToggle(e.api, node!.data!.id);
+            pick.toggle(e.api, node!.data!.id);
           }
         }
         // j and k walk the claims like ↓ and ↑, skipping group headings (the ? sheet lists them).
@@ -893,13 +929,11 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         const node = e.api.getDisplayedRowAtIndex(e.rowIndex);
         if (!isClaim(node)) return;
         keepInView(wrap.current, node!.data!.id);
-        // Shift+↑/↓ picks as it moves, and the open panel stays on its claim; any other move starts a new range here.
-        if (shiftNav.current && latest.current.onPick) {
-          shiftNav.current = false;
-          pickRange(e.api, node!.data!.id);
-          return;
-        }
-        anchor.current = { id: node!.data!.id, base: [...(latest.current.picked ?? [])] };
+        // Shift+↑/↓ picks as it moves (above), and the open panel stays on its claim; any other move starts a new range here.
+        const moved = ownMoves.current.get(node!.data!.id);
+        if (moved !== undefined && performance.now() - moved < 1000) return;
+        ownMoves.current.clear();
+        pick.from(node!.data!.id);
         const onFocus = latest.current.onFocusRow;
         if (!onFocus) return;
         const id = node!.data!.id;
@@ -916,7 +950,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         return true;
       },
     };
-  }, [still]);
+  }, [still, pick]);
 
   return (
     // While loading, a filled grid clips its skeleton: 12 skeleton rows outgrow a short panel and covered the footer below.
