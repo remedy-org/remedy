@@ -569,7 +569,7 @@
   }
 
   /*
-   * A nav link (the homepage nav's exhibits and "Company sign in"): muted text that lifts onto a 32px --surface-2 chip
+   * A nav link (the homepage nav's "Company sign in", and the chip its section links share): muted text that lifts onto a 32px --surface-2 chip
    * on hover and keyboard focus, 120ms in and 200ms out. The visible chip is 32px; ::after keeps the hit area at 44px.
    * In a row, set gap 4px and pull the row 10px left so the first label, not its chip, sits on the grid line.
    */

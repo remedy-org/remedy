@@ -7,7 +7,7 @@ import { CLAIM } from "./custody/claim";
 // What the laptop in the hero shows: claim RM-0442, the judges' genuine demo claim (DEMO_SAMPLES "genuine": photo c02,
 // code M4T) on the Kikea X-VESOLJE recall, mid-check. Sizes are in em so the screen scales with the device.
 
-// The five checks in the order "What stops a fake" lists them (Checks.tsx): three without AI, then the model's two.
+// The five checks in the order Fraud checks lists them (Checks.tsx): three without AI, then the model's two.
 export const CHECKS = ["Live camera session", "Photo not seen before", "Verified PayPal account", "Label and code M4T", "Cut fully in half"] as const;
 /** phase: how many checks have passed; CHECKS.length + 1 means the payout has landed. */
 export const FINAL_PHASE = CHECKS.length + 1;

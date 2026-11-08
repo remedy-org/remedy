@@ -11,7 +11,7 @@ type SectionId = "how" | "problem" | "checks" | "proof" | "companies";
 // In page order, in plain words; each section's eyebrow says the same. Problem is in the sheet always, and in the bar
 // from xl only: at 1024 the four others and the right side fill it.
 const NAV_LINKS: readonly NavMenuLink<SectionId>[] = [
-  { id: "how", label: "How it works", note: "One real claim, photo to PayPal payout" },
+  { id: "how", label: "How it works", note: "One claim, photo to PayPal payout" },
   { id: "problem", label: "Problem", note: "Refunds run on an inbox of photos, and AI broke it", bar: "xl" },
   { id: "checks", label: "Fraud checks", note: "The five checks a fake has to beat, and four claims to try" },
   { id: "proof", label: "Results", note: "Every genuine claim paid, every stolen photo stopped" },
@@ -146,12 +146,14 @@ function useTryInView() {
 }
 
 // The link's box is the chip: 32px tall and 8px past the text each side (the negative margin keeps the row where it
-// was), with a 44px hit area around it, so the focus ring and the current chip are one shape. The current link is
-// --text on --surface-2 (with the light theme's --line-2 hairline); only the chip's opacity moves, and it is never amber.
+// was), with a 44px hit area around it, so the focus ring and the current chip are one shape. The current link, and a
+// link under the pointer or keyboard focus (the shared .nav-link behaviour, globals.css), is --text on --surface-2 (with
+// the light theme's --line-2 hairline); only the chip's opacity moves, 120ms in, and it is never amber.
 const linkClass = clsx(
   "relative isolate -mx-2 inline-flex h-8 items-center rounded-control px-2 text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text",
   "after:absolute after:inset-x-0 after:-inset-y-1.5",
   "before:absolute before:inset-0 before:-z-10 before:rounded-control before:bg-surface-2 before:shadow-(--nav-chip-ring) before:opacity-0 before:transition-opacity before:duration-160 before:ease-snap",
+  "hover:before:opacity-100 hover:before:duration-120 focus-visible:text-text focus-visible:before:opacity-100",
   "aria-[current=location]:text-text aria-[current=location]:before:opacity-100",
 );
 
@@ -196,10 +198,8 @@ export function Nav() {
             <ThemeToggle />
             <span aria-hidden="true" className="-mr-2 ml-3 h-4 w-px bg-line-2" />
           </div>
-          <Link
-            href="/signin"
-            className="hidden min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text sm:inline-flex"
-          >
+          {/* The shared nav link: the same chip on hover and focus, pulled out by its padding so the text stays put. */}
+          <Link href="/signin" className="nav-link -mx-2.5 hidden sm:inline-flex">
             Company sign in
           </Link>
           {/* Hidden, not removed, so the bar never shifts; hidden also takes it out of the Tab order. Server-rendered

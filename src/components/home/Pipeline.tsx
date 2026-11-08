@@ -117,7 +117,7 @@ const GATE = "col-span-6 grid grid-cols-[3rem_minmax(0,1fr)]";
 const LANES = "col-span-6 grid grid-cols-4";
 
 /**
- * "What stops a fake" as a pipeline (laptops): five gates as hairlines across the page, each marked No AI or Model
+ * Fraud checks as a pipeline (laptops): five gates as hairlines across the page, each marked No AI or Model
  * reads, and the four demo claims falling down their lanes on scroll until the gate that stops them. Every resting state is in the markup; the drop only plays when motion is allowed.
  */
 /**

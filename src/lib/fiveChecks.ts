@@ -1,4 +1,4 @@
-// The five checks every claim goes through, as the homepage's "What stops a fake" names and numbers them. The pipeline
+// The five checks every claim goes through, as the homepage's Fraud checks section names and numbers them. The pipeline
 // records finer answers (the model reads the label, the code, each step the notice asks for and whether the photo is
 // real); every count a person reads groups them under these five, so the homepage, the receipt and the console say one
 // number. Wording and grouping only: the checks and the rule are untouched.
