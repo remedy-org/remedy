@@ -13,21 +13,25 @@ export interface NavMenuLink<Id extends string> {
   label: string;
   /** One line under the label, in the sheet only. */
   note: string;
+  /** "xl": in the bar from xl only (it is always in the sheet). */
+  bar?: "xl";
 }
 
 const noop = () => () => {};
 const lockScroll = (locked: boolean) => window.dispatchEvent(new CustomEvent(SCROLL_LOCK_EVENT, { detail: { locked } }));
 
-// Menu and Close are the same word button, in the same spot: 36px, as "Try the demo" beside it, with a 44px hit area.
+// Menu and Close are the same word button, in the same spot: 36px, as "Try a sample claim" beside it, with a 44px hit
+// area.
 const wordButton =
   "relative inline-flex h-9 shrink-0 items-center gap-1.5 rounded-control border border-line-2 px-3 text-ui font-medium whitespace-nowrap text-text transition-colors duration-160 after:absolute after:-inset-x-px after:-inset-y-1.5 hover:bg-surface-2";
 
 /**
  * Below lg the nav's links live behind a Menu word button that opens a full-screen sheet: a native modal <dialog>, as
  * JudgesSheet, so the top layer, the focus trap, Esc and the inert page come for free. The sheet repeats the 64px bar
- * (Close where Menu was), then the four links with a line each, then the two paths: the owner's amber "Try a claim"
- * (the sheet covers the page, so it is that screen's one amber) and the companies' quiet sign-in. Without JS, Menu is
- * a link to the footer's sitemap. The sheet renders into <body>, outside the header, so the header's scroll margin
+ * (Close where Menu was), then the links with a line each, then the paths: a line for an owner with a real recall
+ * (the claim link is on the company's notice), the amber "Try a claim with sample photos" (the sheet covers the page,
+ * so it is that screen's one amber), the companies' quiet sign-in, and the theme. Without JS, Menu is a link to the
+ * footer's sitemap. The sheet renders into <body>, outside the header, so the header's scroll margin
  * (globals.css) stays off its rows.
  */
 export function NavMenu<Id extends string>({ links, current, onPick }: { links: readonly NavMenuLink<Id>[]; current: Id | null; onPick: (id: Id) => void }) {
@@ -45,7 +49,9 @@ export function NavMenu<Id extends string>({ links, current, onPick }: { links: 
     if (!d || d.open) return;
     returnFocus.current = true;
     d.showModal();
-    closer.current?.focus();
+    closer.current?.focus({ preventScroll: true });
+    // A sheet scrolled last time would reopen with its first rows under its own bar. Only an open dialog scrolls.
+    d.scrollTop = 0;
     setOpen(true);
     lockScroll(true);
   };
@@ -115,13 +121,17 @@ export function NavMenu<Id extends string>({ links, current, onPick }: { links: 
                   className="-mx-3 flex min-h-16 flex-col justify-center rounded-control px-3 py-3 focus-visible:-outline-offset-2 aria-[current=location]:bg-surface-2"
                 >
                   <span className="text-head-sm font-medium text-text">{l.label}</span>
-                  <span className="text-ui text-muted">{l.note}</span>
+                  <span className="text-ui text-pretty text-muted">{l.note}</span>
                 </a>
               </li>
             ))}
           </ul>
-          {/* Pinned to the foot on a tall screen; after the rows when there is no room (200% zoom). */}
+          {/* Pinned to the foot on a tall screen; after the rows when there is no room (200% zoom). An owner with a real
+              recall claims through the company's notice, so the demo is never mistaken for her claim. */}
           <div data-sheet-empty="" className="mt-auto flex flex-col pt-8">
+            <p className="mb-4 max-w-[52ch] text-ui text-pretty text-muted">
+              <span className="text-text">Own a recalled product?</span> Claim through the link or QR code on its recall notice.
+            </p>
             <Button
               href="/r/kikea-x-vesolje/try"
               size="lg"
@@ -135,8 +145,8 @@ export function NavMenu<Id extends string>({ links, current, onPick }: { links: 
               Company sign in
             </Button>
           </div>
-          {/* Below sm the bar has no room for the theme toggle, so it is here. */}
-          <div className="mt-6 flex min-h-16 items-center justify-between border-t border-line sm:hidden">
+          {/* Below lg the bar keeps its room for the current section's name, so the theme toggle is here. */}
+          <div className="mt-6 flex min-h-16 items-center justify-between border-t border-line">
             <span className="text-ui text-text">Appearance</span>
             <span className="flex items-center gap-3">
               <span className="text-ui text-muted">{theme === "light" ? "Light" : "Dark"}</span>

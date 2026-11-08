@@ -34,7 +34,8 @@ export function Hero() {
         <span className="block sm:inline">Remedy checks the photo and pays the refund through PayPal.</span>
       </p>
       <div className={clsx("mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 lg:mt-10", styles.focusIn)} style={line(2)}>
-        {/* The owner's path is the screen's one amber action; companies get a labelled, quieter link. */}
+        {/* The owner's path is the screen's one amber action; companies get a labelled, quieter link to their section,
+            the nav's "For companies" (its sign-in is in the bar). */}
         {/* Full width inside the gutters on phones; at 320px it fits on one line with tighter padding, or wraps. */}
         <Button
           href="/r/kikea-x-vesolje/try"
@@ -44,11 +45,15 @@ export function Hero() {
         >
           Try a claim with sample photos
         </Button>
-        <Button href="/signin" variant="tertiary" size="lg">
+        <Button href="#companies" variant="tertiary" size="lg">
           For companies: run a recall
         </Button>
       </div>
-      <TryNote className={clsx("mt-4", styles.focusIn)} style={line(3)} />
+      <div className={clsx("mt-4", styles.focusIn)} style={line(3)}>
+        <TryNote />
+        {/* An owner with a real recall: the demo above is not her claim, and this is where hers is. */}
+        <p className="mt-1.5 text-ui text-pretty text-muted">Own a recalled product? Claim through the link on its recall notice.</p>
+      </div>
     </>
   );
   const facts = (

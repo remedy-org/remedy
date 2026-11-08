@@ -5,7 +5,7 @@ import { Reveal } from "./Reveal";
 
 export interface SectionProps {
   id: string;
-  /** The exhibit's name, e.g. "The problem": the eyebrow reads "Exhibit · The problem", in the nav's words. */
+  /** The section's name, e.g. "The problem": the eyebrow, in the nav's words, so a nav link lands on its own name. */
   exhibit: string;
   /** Two-tone heading: the claim, then the explanation in muted. */
   title: ReactNode;
@@ -35,10 +35,11 @@ export function Section({ id, exhibit, title, muted, lead, tone = "dark", childr
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
           <div className="col-span-12 lg:col-span-7">
             <p className={clsx(styles.line, "micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
-              Exhibit · <span className={paper ? "text-ink" : "text-text-2"}>{exhibit}</span>
+              <span className={paper ? "text-ink" : "text-text-2"}>{exhibit}</span>
             </p>
-            {/* tabIndex -1: the nav's links focus the heading after the jump, so the next Tab goes on from here. */}
-            <h2 id={headingId} tabIndex={-1} className="mt-5 text-title-lg font-medium text-balance outline-none">
+            {/* tabIndex -1: the nav's links focus the heading after the jump, so the next Tab goes on from here; a keyboard
+                user sees the ring on it (focus-visible), a mouse user does not. */}
+            <h2 id={headingId} tabIndex={-1} className="mt-5 text-title-lg font-medium text-balance">
               <span className={clsx(styles.line, "block")} style={line(1)}>
                 {title}
               </span>{" "}

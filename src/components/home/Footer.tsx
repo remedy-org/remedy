@@ -3,14 +3,14 @@ import { ArrowRightIcon, Button, Paper, Wordmark } from "@/components/ui";
 import styles from "./home.module.css";
 import { Enter } from "./Reveal";
 
-// In page order, in the nav's words; The problem is here though the nav leaves it out.
+// In page order, in the nav's words, then the two pages, named as the nav names them.
 const PRODUCT = [
   { href: "#how", label: "How it works" },
   { href: "#problem", label: "The problem" },
-  { href: "#checks", label: "Fraud checks" },
+  { href: "#checks", label: "Stopping fakes" },
   { href: "#proof", label: "Test results" },
   { href: "#companies", label: "For companies" },
-  { href: "/r/kikea-x-vesolje/try", label: "Try a demo claim" },
+  { href: "/r/kikea-x-vesolje/try", label: "Try a sample claim" },
   { href: "/signin", label: "Company sign in" },
 ];
 
@@ -27,7 +27,7 @@ const linkClass = "inline-flex min-h-11 items-center text-ui text-muted transiti
 
 /**
  * The closing call to action, as the brand's object: a large paper tag hanging on its string. As in the hero, the
- * owner's path is the amber action and companies get a labelled, quieter link under it.
+ * owner's path is the amber action and companies get their sign-in, a quieter link, under it.
  */
 function CtaTag() {
   return (
@@ -55,7 +55,7 @@ function CtaTag() {
               href="/signin"
               className="group inline-flex min-h-11 items-center gap-2 rounded-control text-ui text-ink underline-offset-4 decoration-paper-line hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
-              For companies: run a recall
+              Company sign in
               <ArrowRightIcon className="shrink-0 transition-transform duration-160 ease-snap group-hover:translate-x-[3px]" />
             </Link>
           </div>

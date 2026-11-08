@@ -6,13 +6,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ThemeToggle, Wordmark } from "@/components/ui";
 import { NavMenu, type NavMenuLink } from "./NavMenu";
 
-type SectionId = "how" | "checks" | "proof" | "companies";
+type SectionId = "how" | "problem" | "checks" | "proof" | "companies";
 
-// In page order, in plain words. The problem (#problem) is left out: it does not fit at 1024px, and the footer's
-// sitemap keeps it. While it is in view, no link is current.
+// In page order, in plain words; each section's eyebrow says the same. The problem is in the sheet always, and in the bar
+// from xl only: at 1024 the four others and the right side fill it.
 const NAV_LINKS: readonly NavMenuLink<SectionId>[] = [
   { id: "how", label: "How it works", note: "One real claim, photo to PayPal payout" },
-  { id: "checks", label: "Fraud checks", note: "Five checks. The first three need no AI" },
+  { id: "problem", label: "The problem", note: "Refunds run on an inbox of photos, and AI broke it", bar: "xl" },
+  { id: "checks", label: "Stopping fakes", note: "Each check in detail, with four samples" },
   { id: "proof", label: "Test results", note: "36 claims tested, 0 web photos paid" },
   { id: "companies", label: "For companies", note: "Every claim with its evidence, and the CPSC report" },
 ];
@@ -20,7 +21,7 @@ const NAV_LINKS: readonly NavMenuLink<SectionId>[] = [
 // The header's height, which html's scroll-padding-top matches (globals.css).
 const HEADER = 64;
 // What the spy watches, in page order: the hero's whole runway for How it works (its #how marker is a 0px span in the
-// pinned form), and the problem, which maps to no link.
+// pinned form), then the four sections.
 const SPIED = ["[data-spy=how]", "#problem", "#checks", "#proof", "#companies"];
 const key = (el: Element) => el.getAttribute("data-spy") ?? el.id;
 
@@ -41,8 +42,7 @@ function useNavSpy() {
     for (const el of els.current) {
       const k = key(el);
       if (!inBand.current.has(k)) continue;
-      if (k === "how") next = (document.getElementById("how")?.getBoundingClientRect().top ?? Infinity) <= HEADER + 2 ? "how" : null;
-      else next = k === "problem" ? null : (k as SectionId);
+      next = k !== "how" || (document.getElementById("how")?.getBoundingClientRect().top ?? Infinity) <= HEADER + 2 ? (k as SectionId) : null;
     }
     setCurrent(next);
   }, []);
@@ -77,14 +77,18 @@ function useNavSpy() {
     };
   }, [apply]);
 
-  // After the jump: focus the target without scrolling (its heading, or the #how marker), so the next Tab goes on from
-  // there; then, a frame later, measure where the page really is, as the observer may not have reported yet.
+  // After the jump: focus the target without scrolling, so the next Tab goes on from there: the section's heading, or
+  // How it works' own heading where it is on screen (the static figures), else the #how marker (the pinned and phone
+  // forms, whose heading is for screen readers only). A keyboard user sees the ring on it. Then, a frame later, measure
+  // where the page really is, as the observer may not have reported yet.
   const pick = useCallback(
     (id: SectionId) => {
       held.current = true;
       setCurrent(id);
       requestAnimationFrame(() => {
-        document.getElementById(id === "how" ? "how" : `${id}-title`)?.focus({ preventScroll: true });
+        const heading = document.getElementById(`${id}-title`);
+        const shown = heading && heading.getBoundingClientRect().height > 1;
+        (id === "how" && !shown ? document.getElementById("how") : heading)?.focus({ preventScroll: true });
         requestAnimationFrame(() => {
           const bottom = window.innerHeight * 0.35;
           inBand.current = new Set(
@@ -106,13 +110,13 @@ function useNavSpy() {
 
 /**
  * Whether an on-page "try" button ([data-try-cta]: the hero's, Checks' and the footer tag's) is at least half in view,
- * on phones only; null until known. From sm the bar's button always shows: the pinned hero's button never leaves the
+ * below lg only; null until known. From lg the bar's button always shows: the pinned hero's button never leaves the
  * viewport, it only fades, so watching it there would hide the bar's for the whole pin.
  */
 function useTryInView() {
   const [inView, setInView] = useState<boolean | null>(null);
   useEffect(() => {
-    const phone = window.matchMedia("(max-width: 39.99rem)");
+    const phone = window.matchMedia("(max-width: 63.99rem)");
     const seen = new Set<Element>();
     let io: IntersectionObserver | undefined;
     const watch = () => {
@@ -141,34 +145,37 @@ function useTryInView() {
   return inView;
 }
 
-// The current link: --text on a --surface-2 chip, 32px tall in the 44px hit area and 10px wider on each side, so the
-// row never reflows. Only its opacity moves, and it is never amber.
+// The link's box is the chip: 32px tall and 8px past the text each side (the negative margin keeps the row where it
+// was), with a 44px hit area around it, so the focus ring and the current chip are one shape. The current link is
+// --text on --surface-2; only the chip's opacity moves, and it is never amber.
 const linkClass = clsx(
-  "relative isolate inline-flex min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text",
-  "before:absolute before:inset-x-[-10px] before:inset-y-1.5 before:-z-10 before:rounded-control before:bg-surface-2 before:opacity-0 before:transition-opacity before:duration-160 before:ease-snap",
+  "relative isolate -mx-2 inline-flex h-8 items-center rounded-control px-2 text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text",
+  "after:absolute after:inset-x-0 after:-inset-y-1.5",
+  "before:absolute before:inset-0 before:-z-10 before:rounded-control before:bg-surface-2 before:opacity-0 before:transition-opacity before:duration-160 before:ease-snap",
   "aria-[current=location]:text-text aria-[current=location]:before:opacity-100",
 );
 
 /**
  * The homepage nav on the page frame: the wordmark on the first grid line, a flat table of contents in plain words
- * beside it (the current one chipped), then the theme, a hairline, the companies' sign-in as quiet text and "Try the
- * demo" as the quiet button (the hero's amber "Try a claim with sample photos" is the screen's one action, and the
- * nav's never turns amber: below the hero, amber is already on almost every screen). Below lg a Menu sheet holds the
- * links; below sm the theme and sign-in move into it, and on phones "Try the demo" steps aside while an on-page try
- * button is in view.
+ * beside it (the current one chipped), then the theme, a hairline, the companies' sign-in as quiet text and "Try a
+ * sample claim" as the quiet button: the short form of the hero's amber "Try a claim with sample photos", the screen's
+ * one action (the nav's never turns amber: below the hero, amber is already on almost every screen). Below lg a Menu
+ * sheet holds the links and the theme, and the bar names the current section where it has room; "Try a sample claim"
+ * steps aside while an on-page try button is in view.
  * No rule under it, a solid page tone (a translucent bar turned grey-brown over the cream paper band), and it never
  * hides: the pinned stage is laid out against a constant 64px header.
  */
 export function Nav() {
   const { current, pick } = useNavSpy();
   const tryInView = useTryInView();
+  const here = NAV_LINKS.find((l) => l.id === current);
   return (
     <header data-home-nav="" className="sticky top-0 z-30 bg-bg">
       <nav aria-label="Main" data-current={current ?? undefined} className="page flex h-16 items-center gap-3 sm:gap-4">
         <Wordmark size="md" href="/" nameClassName="max-[359px]:sr-only" />
-        <ul className="ml-6 hidden items-center gap-5 lg:flex xl:gap-7">
+        <ul className="ml-6 hidden items-center gap-4 lg:flex xl:gap-7">
           {NAV_LINKS.map((l) => (
-            <li key={l.id}>
+            <li key={l.id} className={clsx(l.bar === "xl" && "hidden xl:block")}>
               {/* A native, instant jump (Lenis leaves anchors alone): a smooth one would scrub the pinned sequence. */}
               <a href={`#${l.id}`} onClick={() => pick(l.id)} aria-current={current === l.id ? "location" : undefined} className={linkClass}>
                 {l.label}
@@ -176,23 +183,38 @@ export function Nav() {
             </li>
           ))}
         </ul>
+        {/* Below lg, where the links are in the sheet: the current section's name after a hairline, as a breadcrumb, from
+            about 720px (the slot has to hold the longest name, or it shows none, so it never comes and goes by
+            section). Text, not a chip, so it never reads as a button. Visual only; the sheet's rows carry aria-current. */}
+        <div aria-hidden="true" className="@container hidden min-w-0 flex-1 sm:block lg:hidden">
+          <span className={clsx("hidden items-center gap-3 text-ui whitespace-nowrap text-text-2 transition-opacity duration-160 ease-snap @min-[8rem]:flex", !here && "opacity-0")}>
+            <span className="h-4 w-px bg-line-2" />
+            {here?.label}
+          </span>
+        </div>
         <div className="ml-auto flex items-center gap-3 sm:gap-5">
-          <div className="hidden items-center sm:flex">
+          <div className="hidden items-center lg:flex">
             <ThemeToggle />
-            <span aria-hidden="true" className="mx-4 h-4 w-px bg-line-2" />
-            <Link href="/signin" className="inline-flex min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text">
-              Company sign in
-            </Link>
+            <span aria-hidden="true" className="-mr-2 ml-3 h-4 w-px bg-line-2" />
           </div>
+          <Link
+            href="/signin"
+            className="hidden min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text sm:inline-flex"
+          >
+            Company sign in
+          </Link>
           {/* Hidden, not removed, so the bar never shifts; hidden also takes it out of the Tab order. Server-rendered
-              hidden on phones until the observer says no try button is in view. */}
+              hidden below lg until the observer says no try button is in view. */}
           <Button
             href="/r/kikea-x-vesolje/try"
             variant="secondary"
             size="sm"
-            className={clsx("max-sm:transition-[background-color,color,transform,opacity,visibility]", tryInView !== false && "max-sm:invisible max-sm:opacity-0")}
+            className={clsx(
+              "max-lg:transition-[background-color,color,transform,opacity,visibility]",
+              tryInView !== false && "max-lg:invisible max-lg:opacity-0",
+            )}
           >
-            Try the demo
+            Try a sample claim
           </Button>
           <NavMenu links={NAV_LINKS} current={current} onPick={pick} />
         </div>

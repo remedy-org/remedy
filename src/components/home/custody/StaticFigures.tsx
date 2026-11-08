@@ -58,7 +58,8 @@ export function StaticFigures() {
         <div className="grid-12 gap-y-5 lg:items-end">
           <div className="col-span-12 lg:col-span-7">
             <p className="micro text-faint">How it works</p>
-            <h2 id="how-title" className="mt-5 text-title-lg font-medium text-balance">
+            {/* tabIndex -1: the nav's How it works focuses it after the jump. */}
+            <h2 id="how-title" tabIndex={-1} className="mt-5 text-title-lg font-medium text-balance">
               One real claim, start to finish. <span className="text-muted">Paid {CLAIM.seconds}&nbsp;s after the photo.</span>
             </h2>
           </div>
