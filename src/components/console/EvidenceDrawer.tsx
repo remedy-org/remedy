@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Button, CrossIcon, ErrorState, Skeleton, SkeletonText, type CheckState } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
+// The model's words set as the owner's pages set them: curly quotes, codes in mono.
+import { ModelQuote } from "@/components/claim/EvidenceText";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { duration, type PreCheckState } from "@/app/console/_lib/view";
 import { api } from "./api";
@@ -488,7 +490,7 @@ function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: string)
           <LinkedIds text={d.detail} onOpen={onOpen} self={claim.id} />
         </p>
       )}
-      {d.evidence && <q className="block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">{d.evidence}</q>}
+      {d.evidence && <q className="block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted"><ModelQuote>{d.evidence}</ModelQuote></q>}
       {claim.five && <p className="mt-1 text-micro text-muted">{claim.five}</p>}
     </section>
   );
@@ -622,7 +624,7 @@ function Evidence({
                   (c.outcome === "pass" && !open.model) || (d && c.rule === d.title && (c.evidence ?? null) === d.evidence) ? undefined : (
                     <>
                       {link(c.rule)}
-                      {c.evidence && <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">{c.evidence}</q>}
+                      {c.evidence && <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted"><ModelQuote>{c.evidence}</ModelQuote></q>}
                     </>
                   ),
               }))}
@@ -631,7 +633,7 @@ function Evidence({
             {summary && (
               <div className="flex flex-col gap-1 border-t border-line pt-3">
                 <p className="text-ui font-medium text-text">What the photo check saw</p>
-                <q className="block font-sans text-ui leading-[1.55] text-muted">{summary}</q>
+                <q className="block font-sans text-ui leading-[1.55] text-muted"><ModelQuote>{summary}</ModelQuote></q>
               </div>
             )}
           </>

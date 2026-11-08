@@ -9,6 +9,8 @@
 //   eval/out/runs/spike2-gpt-6.1-sol-r1.json (case c02-pillow-cut-lamplight): verdict.challenge_code.evidence and the
 //   first sentence of verdict.steps[0].evidence. Only the typography changed (straight quotes set as curly ones).
 
+import { CHECK_NAMES } from "@/lib/fiveChecks";
+
 export const EXHIBIT = {
   id: "RM-0442",
   code: "M4T",
@@ -48,28 +50,28 @@ export const CHECKS: readonly Check[] = [
   {
     id: "live",
     n: "01",
-    label: "Live camera session",
+    label: CHECK_NAMES.session,
     ai: false,
     note: "Taken in this claim’s 10-minute camera session, in the page’s own camera. There is no upload button.",
   },
   {
     id: "fp",
     n: "02",
-    label: "Photo not seen before",
+    label: CHECK_NAMES.duplicate,
     ai: false,
     note: "Its fingerprint matches no photo on any earlier claim. A reposted or lightly edited copy would match.",
   },
   {
     id: "acct",
     n: "03",
-    label: "Verified PayPal account",
+    label: CHECK_NAMES.account,
     ai: false,
     note: "PayPal reports the account as verified. One claim per account, per recall.",
   },
   {
     id: "code",
     n: "04",
-    label: "Label and code M4T",
+    label: CHECK_NAMES.code("M4T", "X-VESOLJE"),
     ai: true,
     note: "The model reads the tag.",
     quote: "The handwritten code on the attached paper tag reads “M4T”, matching the expected code character by character.",
@@ -77,7 +79,7 @@ export const CHECKS: readonly Check[] = [
   {
     id: "torn",
     n: "05",
-    label: "Cut fully in half",
+    label: CHECK_NAMES.destroyed("Pillow", true),
     ai: true,
     note: "The model looks for the cut.",
     quote: "Two separated pillow halves are visible, with exposed cut edges and stuffing spilling out.",

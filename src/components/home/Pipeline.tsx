@@ -4,28 +4,29 @@ import clsx from "clsx";
 import Image from "next/image";
 import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { Money } from "@/components/ui";
+import { CHECK_NAMES } from "@/lib/fiveChecks";
 import styles from "./home.module.css";
 
 // The checks in the order they run (src/lib/rule.ts): preCheck's three need no model; then the model describes and a
 // fixed rule decides.
 const GATES: { title: string; text: string; ai: boolean }[] = [
   {
-    title: "Live camera session",
+    title: CHECK_NAMES.session,
     text: "Photos must arrive inside this claim's 10-minute camera session. An image made anywhere else is refused before the model sees it.",
     ai: false,
   },
   {
-    title: "Never seen before",
+    title: CHECK_NAMES.duplicate,
     text: "Every photo is fingerprinted and compared with every earlier claim. A reposted or lightly edited photo is refused.",
     ai: false,
   },
   {
-    title: "One claim per verified PayPal account",
+    title: CHECK_NAMES.account,
     text: "PayPal must report the account as verified, and it gets one claim per recall. A claim farm would need a verified PayPal account for every claim.",
     ai: false,
   },
   {
-    title: "The code, character by character",
+    title: "Tag shows the label and the code",
     text: "The model reads the hand-written code and the product label. K7Q written on a claim issued K7P is a reject.",
     ai: true,
   },

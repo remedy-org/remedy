@@ -12,8 +12,8 @@ const fullSize = (src: string) => (src.startsWith("/_next/image?") ? (new URLSea
 
 /**
  * One claim photo from the private photo route, at 880px (the panel at 2x). With onOpen (the console) it's a button
- * that opens the in-app viewer, and shows the whole photo, uncropped (tall: a portrait frame, for two side by side);
- * without, a link that opens it full size. Loads over a
+ * that opens the in-app viewer, and shows the whole photo, uncropped; tall is a portrait frame for two side by side,
+ * filled edge to edge (the viewer has it whole). Without onOpen, a link that opens it full size. Loads over a
  * skeleton tint and fades in (which is also the cross-fade when the panel follows ↑/↓); a failed load says so in place.
  * sized: src is already the size to show (the homepage preview).
  */
@@ -73,7 +73,8 @@ export function EvidencePhoto({
           }}
           onLoad={() => setState("ready")}
           onError={() => setState("error")}
-          className={clsx("size-full transition-opacity duration-120 ease-snap", onOpen ? "object-contain" : "object-cover", state === "ready" ? "opacity-100" : "opacity-0")}
+          // A tall frame (a repost's pair) is filled edge to edge, never letterboxed in grey: the viewer shows it whole.
+          className={clsx("size-full transition-opacity duration-120 ease-snap", onOpen && !tall ? "object-contain" : "object-cover", state === "ready" ? "opacity-100" : "opacity-0")}
         />
       )}
     </>

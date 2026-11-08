@@ -1,5 +1,6 @@
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
+import { CHECK_NAMES } from "@/lib/fiveChecks";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
@@ -81,9 +82,9 @@ export interface ClaimRow {
 
 // The pre-checks every claim goes through before the model, in order, and their labels.
 const PRE_CHECKS: [string, string][] = [
-  ["session", "Live camera session"],
-  ["duplicate_photo", "Photo not seen before"],
-  ["payer", "One claim per account"],
+  ["session", CHECK_NAMES.session],
+  ["duplicate_photo", CHECK_NAMES.duplicate],
+  ["payer", CHECK_NAMES.account],
   ["payer_verified", "Verified PayPal account"],
 ];
 const PRE_IDS = new Set(PRE_CHECKS.map(([id]) => id));
@@ -521,26 +522,26 @@ function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerV
     return ran ? { id, label, state: "pass", detail: pass } : { id, label, state: "waiting", detail: "" };
   };
   return [
-    row("session", "Live camera session", "Taken in this claim's camera session, before it expired"),
+    row("session", CHECK_NAMES.session, "Taken in this claim's camera session, before it expired"),
     // Seeded claims share a handful of reference photos, so the fingerprint check was never run on them: it is left out
     // rather than shown as a pass next to another claim with the same photo.
     c.seeded && ran
-      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "" }
+      ? { id: "duplicate_photo", label: CHECK_NAMES.duplicate, state: "skipped", detail: "" }
       : // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the
         // same sample photo once: say that, next to the other rounds' claims with the same photo and code. The company
         // reads a round as a demo session.
         c.demo
-        ? row("duplicate_photo", "Photo not seen before", "No other claim in this session used these photos")
-        : row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
+        ? row("duplicate_photo", CHECK_NAMES.duplicate, "No other claim in this session used these photos")
+        : row("duplicate_photo", CHECK_NAMES.duplicate, "No other claim used these photos"),
     // In the demo only the genuine sample is held to one claim, within its round (pipeline.ts receivePhotos). A person's
     // approve checks every sample (review.ts), and a conflict it found shows here.
     !c.demo
-      ? row("payer", "One claim per account", "No other paid or open claim for this recall from this PayPal account")
+      ? row("payer", CHECK_NAMES.account, "No other paid or open claim for this recall from this PayPal account")
       : oneClaimChecked(c) || failed("payer")
-        ? row("payer", "One claim per account", "Checked within this session: no other paid or open claim from this PayPal account")
+        ? row("payer", CHECK_NAMES.account, "Checked within this session: no other paid or open claim from this PayPal account")
         : ran
-          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "" }
-          : row("payer", "One claim per account", ""),
+          ? { id: "payer", label: CHECK_NAMES.account, state: "skipped", detail: "" }
+          : row("payer", CHECK_NAMES.account, ""),
     row("payer_verified", "Verified PayPal account", "PayPal says the account is verified"),
   ];
 }

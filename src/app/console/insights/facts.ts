@@ -1,6 +1,7 @@
 import { toDrawerClaim } from "@/app/console/_lib/drawer";
 import { amountOf, cents, reasonOf, refusalLabel } from "@/app/console/_lib/view";
 import { APPEAL_CHECK } from "@/lib/appeal";
+import { CHECK_NAMES } from "@/lib/fiveChecks";
 import { summarize } from "@/lib/store/store";
 import type { Claim, Decision, Recall } from "@/lib/types";
 import type { Stage } from "@/components/insights/funnel";
@@ -190,9 +191,9 @@ export function checkFacts(c: Claim): CheckFact[] {
 }
 
 const CHECK_NAME: Record<string, string> = {
-  session: "Live camera session",
-  duplicate_photo: "Photo not seen before",
-  payer: "One claim per account",
+  session: CHECK_NAMES.session,
+  duplicate_photo: CHECK_NAMES.duplicate,
+  payer: CHECK_NAMES.account,
   payer_verified: "Verified PayPal account",
   label: "Label",
   code: "One-time code",

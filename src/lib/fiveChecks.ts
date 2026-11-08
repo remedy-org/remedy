@@ -14,6 +14,19 @@ export const FIVE_CHECKS = [
 
 export type CheckNumber = (typeof FIVE_CHECKS)[number]["n"];
 
+/**
+ * Each check's one name, as a list row says it: the homepage's laptop, the owner's check list and the company's console
+ * all read these. The fourth and fifth name the recall's own tag and product ("Tag shows X-VESOLJE and M4T", "Pillow cut
+ * in half").
+ */
+export const CHECK_NAMES = {
+  session: "Taken in Remedy's camera",
+  duplicate: "Photo not used before",
+  account: "One claim per PayPal account",
+  code: (code: string, written?: string | null) => (written ? `Tag shows ${written} and ${code}` : `Label and code ${code}`),
+  destroyed: (noun: string, cut: boolean) => `${noun} ${cut ? "cut in half" : "destroyed"}`,
+} as const;
+
 /** Which of the five a recorded check belongs to; null for a hold that comes from the process (the model down, PayPal). */
 export function checkOf(id: string): CheckNumber | null {
   if (id === "session") return 1;

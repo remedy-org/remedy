@@ -2,12 +2,14 @@ import clsx from "clsx";
 import Image from "next/image";
 import { motion } from "motion/react";
 import { CheckIcon, NoBreakHyphens } from "@/components/ui";
+import { CHECK_NAMES } from "@/lib/fiveChecks";
 
 // What the laptop in the hero shows: claim RM-0442, the judges' genuine demo claim (DEMO_SAMPLES "genuine": photo c02,
 // code M4T) on the Kikea X-VESOLJE recall, mid-check. Sizes are in em so the screen scales with the device.
 
-// The five checks in the order Fraud checks lists them (Checks.tsx): three without AI, then the model's two.
-export const CHECKS = ["Live camera session", "Photo not seen before", "Verified PayPal account", "Label and code M4T", "Cut fully in half"] as const;
+// The five checks in the order Fraud checks lists them (Checks.tsx): three without AI, then the model's two. Named as the
+// claim's own check list and the console name them (src/lib/fiveChecks.ts).
+export const CHECKS = [CHECK_NAMES.session, CHECK_NAMES.duplicate, CHECK_NAMES.account, CHECK_NAMES.code("M4T", "X-VESOLJE"), CHECK_NAMES.destroyed("Pillow", true)] as const;
 /** phase: how many checks have passed; CHECKS.length + 1 means the payout has landed. */
 export const FINAL_PHASE = CHECKS.length + 1;
 
@@ -37,7 +39,7 @@ function CheckRow({ label, state }: { label: string; state: "waiting" | "running
           <CheckIcon size={16} className="size-[1.25em]" />
         </motion.span>
       </span>
-      <span className={clsx("text-[1.35em] leading-tight transition-colors duration-160", state === "waiting" ? "text-faint" : "text-text")}>{label}</span>
+      <span className={clsx("text-[1.25em] leading-tight transition-colors duration-160", state === "waiting" ? "text-faint" : "text-text")}>{label}</span>
     </li>
   );
 }
@@ -61,7 +63,7 @@ export function ClaimScreen({ phase }: { phase: number }) {
               src="/demo/c02-1.jpg"
               alt=""
               fill
-              preload
+              loading="eager"
               sizes="(max-width: 640px) 60vw, 420px"
               className="object-cover"
               style={{ objectPosition: "50% 75%" }}
@@ -79,7 +81,7 @@ export function ClaimScreen({ phase }: { phase: number }) {
             </span>
           </div>
           <div className="flex flex-1 items-center justify-between">
-            <span className="w-[8em] text-[1.15em] text-muted">Photo 1 of 3</span>
+            <span className="w-[8em] text-[1.15em] text-muted">Photo 1</span>
             <span className="flex size-[3.4em] items-center justify-center rounded-full border-2 border-text/80">
               <span className="size-[2.5em] rounded-full bg-text/90" />
             </span>
@@ -88,7 +90,7 @@ export function ClaimScreen({ phase }: { phase: number }) {
         </div>
 
         {/* Checks and result. */}
-        <div className="flex w-[21.5em] shrink-0 flex-col border-l border-line px-[1.6em] pt-[1.3em] pb-[1.4em]">
+        <div className="flex w-[24em] shrink-0 flex-col border-l border-line px-[1.6em] pt-[1.3em] pb-[1.4em]">
           <ChecksPanel phase={phase} />
         </div>
       </div>
