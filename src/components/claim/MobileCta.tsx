@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui";
 
-/** Something the reader must see before the bar's action makes sense, such as the sandbox login the PayPal page asks for. */
+/** Something the reader must see before the bar's action makes sense, such as the demo account the PayPal page asks for. */
 export interface CtaFirst {
   /** The element's id; it takes focus when the bar brings it into view. */
   target: string;
@@ -12,7 +12,7 @@ export interface CtaFirst {
 }
 
 /**
- * Phones only: whenever the step's own button is off screen, above (scrolled past) or below (not reached yet), the same
+ * Phones and short screens (a laptop at 200% zoom): whenever the step's own button is off screen, above (scrolled past) or below (not reached yet), the same
  * action waits in a 72px bar at the bottom (above the home indicator), so it is always on the first screen and reading
  * never means scrolling for it. The bottom 90px count as off screen: iOS Safari's toolbar covers them. `note`: a line the
  * bar carries above the button when the step's own line beside its button would be hidden, such as time running out.
@@ -58,7 +58,7 @@ export function MobileCta({
       data-mobile-cta=""
       data-cta-shown={show ? "" : undefined}
       className={clsx(
-        "fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg/92 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md transition-[translate,opacity] duration-160 ease-snap sm:hidden",
+        "fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-160 ease-snap sm:[@media(min-height:601px)]:hidden",
         show ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0",
       )}
     >
