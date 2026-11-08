@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { frame as motionFrame, motion, useMotionValueEvent, useTransform } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { BEATS as EXHIBIT_BEATS, holdOf } from "../teardown/model";
-import { CHAPTERS, CLAIM, CONSENT_AT, SHOT_AT } from "./claim";
+import { CHAPTERS, CONSENT_AT, SHOT_AT } from "./claim";
 import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, type Progress } from "./chapters";
 import { ExhibitSlot } from "./ExhibitSlot";
 import { useBeatPaging } from "./paging";
@@ -86,7 +86,7 @@ function RailCaption({ p, i }: { p: Progress; i: number }) {
 function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
   if (!el || !st) return;
   // Opacity and pointer events as well as visibility: a chapter layer sets its own visibility, which would show through
-  // a hidden parent and catch the hero's clicks and pointer (its Replay and the laptop's tilt) while invisible.
+  // a hidden parent and catch the hero's clicks and pointer (the laptop's tilt) while invisible.
   if (v < HANDOFF[0]) {
     el.style.visibility = "hidden";
     el.style.opacity = "0";
@@ -205,7 +205,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
 
       <div className={clsx(styles.rail, "pointer-events-none")}>
         <motion.div className="flex min-h-0 flex-1 flex-col" style={{ opacity: railHead }} aria-hidden="true">
-          <span className="micro text-faint">Exhibit · Claim {CLAIM.id}</span>
+          <span className="micro text-faint">How it works</span>
           <ol className="mt-5">
             {CHAPTERS.map((c, i) => (
               <RailItem key={c.n} p={p} i={i} />

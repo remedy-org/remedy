@@ -1,10 +1,10 @@
 import type { Status } from "@/components/ui";
 
-// The one claim the homepage stages, start to finish: RM-0442, filed through the judges' demo on 7 Nov 2026 with the
-// "genuine" sample (src/lib/demo/samples.ts: photo c02, code M4T) on the Kikea X-VESOLJE recall (CPSC 27-071). It took
-// 15 s from photos received to the PayPal payout. Its photo is AI-made (eval case c02-pillow-cut-lamplight), so every
-// place it shows carries an AI-MADE TEST PHOTO label. These are presentational copies of the claim screens: nothing
-// here imports src/components/claim/*.
+// The one claim the homepage stages, start to finish: RM-0442, filed through the demo on 7 Nov 2026 with the genuine
+// claim (src/lib/demo/samples.ts: photo c02, code M4T) on the X-VESOLJE recall (CPSC 27-071). It took 15 s from photos
+// received to the PayPal payout. Its photo is generated (benchmark case c02-pillow-cut-lamplight, docs/EVAL.md), and it
+// carries no label (owner rule: no internal labels; the site's one sandbox line is in /terms). These are presentational
+// copies of the claim screens: nothing here imports src/components/claim/*.
 export const CLAIM = {
   id: "RM-0442",
   code: "M4T",
@@ -26,7 +26,7 @@ export const CHAPTERS = [
   {
     n: "01",
     title: "Log in with PayPal",
-    text: "The owner opens Kikea Store's claim link and logs in with PayPal. Remedy sees the PayPal account ID, whether it's verified, and the photos; never the password, balance or cards.",
+    text: "The owner opens the recall's claim link and logs in with PayPal. Remedy sees the PayPal account ID, whether it's verified, and the photos; never the password, balance or cards.",
   },
   {
     n: "02",
@@ -46,12 +46,12 @@ export const CHAPTERS = [
   {
     n: "05",
     title: "Paid",
-    text: "A fixed rule decides: any failed check rejects, any unclear one holds for a person. Every check passed, so $29.99 went to the owner's PayPal account 15 seconds after the photo.",
+    text: "Every check passed, so the rule paid $29.99 to the owner's PayPal account, 15 seconds after the photo.",
   },
   {
     n: "06",
-    title: "Kikea Store sees it",
-    text: "The paid claim lands in Kikea Store's console with its photo, its checks and the time from photo to PayPal.",
+    title: "The recall team sees it",
+    text: "The paid claim lands in the recall team's console with its photo, its checks and the time from photo to PayPal.",
   },
 ] as const;
 
@@ -67,12 +67,13 @@ export const WRITE_AT = [0.398, 0.436] as const;
 /** Then what the photo must show lights in turn, leading into 03. */
 export const SHOT_AT = [0.432, 0.444, 0.456];
 
-// The console replica after the payout: the M4T claim slides in over sample claims the demo workspace starts with, with
+// The console replica after the payout: the M4T claim slides in over the claims the demo workspace starts with, with
 // the ids, codes, photos and reasons buildSeedClaims gives them (src/lib/demo/seed.ts, seed 27071), as in the "For
-// companies" replica (ConsoleReplica.tsx). Seeded claims are eval samples and were never paid.
-export const CONSOLE_ROWS: { photo: string; code: string; id: string; status: Status; reason: string; time?: string; amount?: number; sample?: boolean }[] = [
-  { photo: "/demo/c01-1.jpg", code: "K7Q", id: "RM-7581", status: "paid", reason: "Every check passed", amount: 29.99, sample: true },
-  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-9629", status: "held", reason: "Couldn't tell if both photos show the same item", sample: true },
-  { photo: "/demo/c10-1.jpg", code: "K7Q", id: "RM-9545", status: "rejected", reason: "Looks like a photo of a screen or a print", sample: true },
-  { photo: "/demo/c01-1.jpg", code: "R8D", id: "RM-0120", status: "blocked", reason: "Photo 1 was already used in another claim", sample: true },
+// companies" replica (ConsoleReplica.tsx). Seeded claims are decided but never paid out, so an approved one's amount
+// reads "Approved", not sent.
+export const CONSOLE_ROWS: { photo: string; code: string; id: string; status: Status; reason: string; time?: string; amount?: number; approved?: boolean }[] = [
+  { photo: "/demo/c01-1.jpg", code: "K7Q", id: "RM-7581", status: "paid", reason: "Every check passed", amount: 29.99, approved: true },
+  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-9629", status: "held", reason: "Couldn't tell if both photos show the same item" },
+  { photo: "/demo/c10-1.jpg", code: "K7Q", id: "RM-9545", status: "rejected", reason: "Looks like a photo of a screen or a print" },
+  { photo: "/demo/c01-1.jpg", code: "R8D", id: "RM-0120", status: "blocked", reason: "Photo 1 was already used in another claim" },
 ];

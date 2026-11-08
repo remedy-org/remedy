@@ -109,11 +109,13 @@ export function ConsentChapter({ p }: { p?: Progress }) {
                 <RemedyMark className="h-4 w-6" />
               </span>
             </div>
-            <span className="text-ui text-muted">Kikea Store works with Remedy to pay this recall.</span>
+            <span className="text-ui text-muted">
+              CPSC recall 27-071 · Kikea Store <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow
+            </span>
           </div>
           <p className="text-title font-medium text-pretty">
             Get $29.99 back for your <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> pillow.{" "}
-            <span className="text-muted">Remedy sends it through PayPal for Kikea Store once your photo shows it&rsquo;s destroyed.</span>
+            <span className="text-muted">Remedy sends it through PayPal once your photo shows it&rsquo;s destroyed.</span>
           </p>
           <ol
             className={clsx(
@@ -284,7 +286,7 @@ function Thumb({ src }: { src: string }) {
 
 const GRID = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[11rem_minmax(0,1fr)_6rem_6.5rem_5rem]";
 
-/** Claim RM-0442 as Kikea Store's console lists it, paid. */
+/** Claim RM-0442 as the recall team's console lists it, paid. */
 const M4T_ROW = {
   photo: CLAIM.photo,
   code: CLAIM.code,
@@ -293,14 +295,7 @@ const M4T_ROW = {
   reason: "Every check passed",
   time: `0:${String(CLAIM.seconds).padStart(2, "0")}`,
   amount: CLAIM.amount,
-  // A judges' demo claim: its refund was sandbox money.
-  sandbox: true,
 };
-
-/** Marks a sample claim (an eval case the demo workspace starts with), as the SAMPLE DATA badge does in the console. */
-function SampleBadge() {
-  return <span className="micro inline-flex h-[18px] items-center rounded-control border border-line-2 px-1 text-[10px] text-muted">Sample</span>;
-}
 
 function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?: boolean }) {
   const compact = useContext(Compact);
@@ -310,15 +305,13 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
         <Thumb src={row.photo} />
         <span className="flex min-w-0 flex-col leading-tight">
           {/* The console's own convention: the claim id first, its one-time code under it. */}
-          <span className="flex items-center gap-1.5 font-mono font-medium">
-            {row.id}
-            {row.sample && <SampleBadge />}
-          </span>
+          <span className="font-mono font-medium">{row.id}</span>
           <span className="truncate font-mono text-micro text-faint">Code {row.code}</span>
         </span>
       </span>
-      <span className="hidden min-w-0 items-center gap-3 @min-[720px]:flex">
-        <StatusPill status={row.status} />
+      {/* The pill sits in a track as wide as the widest pill (Rejected), so every reason starts on one line. */}
+      <span className="hidden min-w-0 grid-cols-[5.25rem_minmax(0,1fr)] items-center gap-3 @min-[720px]:grid">
+        <StatusPill status={row.status} className="justify-self-start" />
         <span className={clsx("truncate", first ? "text-text" : "text-muted")}>{row.reason}</span>
       </span>
       <span className="hidden @min-[720px]:block">
@@ -330,11 +323,9 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
           <StatusPill status={row.status} />
         </span>
         {row.amount ? (
-          // A sample's amount was decided, never sent: muted, and said so. RM-0442's went out in sandbox money.
-          <span className={clsx("flex flex-col items-end leading-tight", row.sample && "text-faint")}>
+          <span className="flex flex-col items-end leading-tight">
             <Money value={row.amount} size="grid" />
-            {"sandbox" in row && row.sandbox === true ? <span className="micro text-[10px] text-faint">Sandbox</span> : null}
-            {row.sample && <span className="micro text-[10px] text-faint">Not sent</span>}
+            {row.approved && <span className="micro text-[10px] text-faint">Approved</span>}
           </span>
         ) : (
           <span className="text-faint">—</span>
@@ -354,12 +345,8 @@ export function ConsoleChapter({ p }: { p: Progress }) {
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
           <p className="text-head-sm font-medium">
-            And Kikea Store sees it here. <span className="text-muted">Every claim, with its evidence.</span>
+            And the recall team sees it here. <span className="text-muted">Photo, checks and payout in one row.</span>
           </p>
-          <span className="flex items-center gap-2 text-micro text-faint">
-            <SampleBadge />
-            eval claims, never paid
-          </span>
         </div>
         <div className="overflow-hidden rounded-card bg-surface shadow-card">
           <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-3">

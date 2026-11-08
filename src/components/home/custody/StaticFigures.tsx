@@ -12,7 +12,7 @@ import { CodeTag, ConsentChapter } from "./chapters";
 // full-page screenshot shows. The pinned sequence replaces it after hydration only when the viewport and the visitor's
 // motion setting allow (HeroRunway). Chapter 01 is the real consent screen at 1:1 and chapter 02 the code tag beside
 // it; chapters 03 to 05 are the Opened Exhibit's static form (the evidence still, every check with its quote, and the
-// sandbox receipt); then the console row the claim lands in. The screens are pictures (aria-hidden); each caption
+// paid receipt); then the console row the claim lands in. The screens are pictures (aria-hidden); each caption
 // carries the chapter in words.
 
 function Caption({ n, title, text }: { n: string; title: string; text: string }) {
@@ -60,11 +60,11 @@ export function StaticFigures() {
             <p className="micro text-faint">How it works</p>
             {/* tabIndex -1: the nav's How it works focuses it after the jump. */}
             <h2 id="how-title" tabIndex={-1} className="mt-5 text-title-lg font-medium text-balance">
-              One real claim, start to finish. <span className="text-muted">Paid {CLAIM.seconds}&nbsp;s after the photo.</span>
+              Paid {CLAIM.seconds} seconds after the photo. <span className="text-muted">One claim, start to finish.</span>
             </h2>
           </div>
           <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8 lg:pb-1">
-            Claim {CLAIM.id} ran through the judges&rsquo; demo on 7 Nov, on the Kikea <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> recall, in PayPal sandbox money.
+            From PayPal login to payout, on the <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall.
           </p>
         </div>
         {/* 01 beside 02: the tall consent screen, and the code tag centred beside it like a thing laid on the table. */}
@@ -100,7 +100,6 @@ export function StaticFigures() {
                   <span className="font-mono text-ui">
                     <Money value={CLAIM.amount} size="grid" />
                   </span>
-                  <span className="micro text-[10px] text-faint">Sandbox</span>
                 </span>
               </div>
             </div>

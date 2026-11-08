@@ -10,16 +10,17 @@ import { CLAIM } from "./claim";
 export function ScreenBar({ step, console: isConsole, compact }: { step: number; console?: boolean; compact?: boolean }) {
   return (
     <div className={clsx("flex h-12 shrink-0 items-center gap-4 border-b border-line", compact ? "px-4" : "px-6")}>
-      <span className="flex items-center gap-2 text-ui font-medium">
-        <RemedyMark className="h-3 w-[1.125rem]" />
+      {/* The app chrome's lockup (Wordmark sm): 600 at -0.025em, the mark 0.25em from the name on the 18 x 12 pixel grid. */}
+      <span className="inline-flex items-baseline gap-[0.25em] text-body font-semibold tracking-[-0.025em]">
+        <RemedyMark className="relative top-[0.172px] h-3 w-[1.125rem]" />
         {isConsole ? "Console" : "Remedy"}
       </span>
-      {!compact && <span className="truncate text-ui text-muted">{isConsole ? CLAIM.company : "Kikea X-VESOLJE nursing pillow"}</span>}
+      {!compact && <span className="truncate text-ui text-muted">Kikea X-VESOLJE nursing pillow</span>}
       <span className="ml-auto flex items-center gap-3">
         {!isConsole && (
           <span className="flex gap-1" aria-hidden="true">
             {[1, 2, 3, 4].map((s) => (
-              <span key={s} className={clsx("h-0.5 rounded-full transition-colors duration-160", compact ? "w-3" : "w-5", s <= step ? "bg-accent" : "bg-line-strong/50")} />
+              <span key={s} className={clsx("h-0.5 rounded-full transition-colors duration-160", compact ? "w-3" : "w-5", s === step ? "bg-accent" : s < step ? "bg-muted" : "bg-line-strong/50")} />
             ))}
           </span>
         )}

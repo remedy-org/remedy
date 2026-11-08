@@ -25,7 +25,7 @@ const easeInOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 /
 function SkipLink() {
   return (
     <a href="#checks" className="inline-flex min-h-11 items-center rounded-control text-ui text-muted underline decoration-line-2 underline-offset-4 transition-colors duration-160 hover:text-text">
-      Skip to what stops a fake&nbsp;&darr;
+      Skip to Fraud checks&nbsp;&darr;
     </a>
   );
 }
@@ -34,7 +34,7 @@ function SkipLink() {
 function ChapterList() {
   return (
     <div className="sr-only">
-      <h2 id="how-title">How it works: one real claim, start to finish</h2>
+      <h2 id="how-title">How it works: one claim, start to finish</h2>
       <ol>
         {CHAPTERS.map((c) => (
           <li key={c.n}>
