@@ -89,14 +89,11 @@ function readColors(el: HTMLElement): Colors {
 }
 
 /** One check in the row along the foot: number, name, who reads it, and a tick once passed. */
-/** In the Chain of Custody the five checks are chapter 04's, numbered under it (04.1 to 04.5). */
-const checkNo = (i: number, chain: boolean) => (chain ? `04.${i + 1}` : CHECKS[i].n);
-
-function CheckCell({ i, done, active, chain, onSeek }: { i: number; done: boolean; active: boolean; chain: boolean; onSeek?: (i: number) => void }) {
+function CheckCell({ i, done, active, onSeek }: { i: number; done: boolean; active: boolean; onSeek?: (i: number) => void }) {
   const c = CHECKS[i];
   const body = (
     <>
-      <span className={clsx("font-mono text-micro whitespace-nowrap", active ? "text-accent-text" : "text-faint")}>{checkNo(i, chain)}</span>
+      <span className={clsx("font-mono text-micro whitespace-nowrap", active ? "text-accent-text" : "text-faint")}>{c.n}</span>
       <span className="min-w-0">
         <span className={clsx("block truncate text-ui font-medium", done || active ? "text-text" : "text-muted")}>{c.label}</span>
         <span className="block text-micro text-faint">{c.ai ? "The model reads" : "No AI"}</span>
@@ -171,20 +168,13 @@ function ScreenReaderSummary() {
   );
 }
 
-/** The Chain of Custody chapter a beat belongs to: 03 the photo, 04 the five checks, 05 the payout, of `total`. */
-function chapterOf(beat: BeatId, total: number) {
-  const of = ` / ${String(total).padStart(2, "0")} · `;
-  if (beat === "intro") return `03${of}Live photo`;
-  if (beat === "paid") return `05${of}Paid`;
-  return `04${of}Five checks`;
-}
-
 function Header({ compact, chapter }: { compact?: boolean; chapter?: string }) {
   return (
     <div className="min-w-0">
       <p className="micro text-faint whitespace-nowrap">{chapter ?? "How it works"}</p>
-      <h2 className={clsx("mt-3 max-w-[26ch] text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>
-        Five checks passed. <span className="text-muted">Then PayPal paid ${EXHIBIT.amount}.</span>
+      {/* Each half its own block on one column start, as the section headings set them, so both lines start alike. */}
+      <h2 className={clsx("mt-3 text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>
+        <span className="block max-w-[26ch]">Five checks passed.</span> <span className="block max-w-[26ch] text-muted">Then PayPal paid ${EXHIBIT.amount}.</span>
       </h2>
     </div>
   );
@@ -218,7 +208,7 @@ function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done"
           <Money value={EXHIBIT.amount} />
         </span>
       ) : (
-        "Not sent"
+        "Waiting"
       ),
     ],
   ];
@@ -241,7 +231,7 @@ const FRAME_LIST = [`The ${EXHIBIT.label} tag`, "The pillow cut fully in half", 
 function IntroCallout({ framed }: { framed: number }) {
   return (
     <div className={styles.callout}>
-      <p className="micro text-accent-text">In the claim page&rsquo;s camera</p>
+      <p className="text-ui text-muted">In the claim page&rsquo;s camera</p>
       <p className="mt-2 text-body font-medium text-text">The owner cuts the pillow and frames it, tag and all.</p>
       <p className="mt-1 text-ui text-muted">Nothing is checked or paid until the photo is taken.</p>
       <ol className="mt-4 flex flex-col gap-1.5">
@@ -264,9 +254,7 @@ function Callout({ s }: { s: ExhibitState }) {
   const c = CHECKS[i];
   return (
     <div className={styles.callout}>
-      <p className="micro text-accent-text">
-        Check {i + 1} of 5 · {c.ai ? "the model reads" : "no AI"}
-      </p>
+      <p className="text-ui text-muted">Check {i + 1} of 5</p>
       <p className="mt-2 text-body font-medium text-text">{c.label}</p>
       <p className="mt-1 text-ui text-muted">{c.note}</p>
       {c.quote && (
@@ -286,8 +274,6 @@ interface StageProps {
   mode: "live" | "poster";
   small: boolean;
   onSeek?: (i: number) => void;
-  /** Mounted in the Chain of Custody: the eyebrow names the chapter (of this many), the checks number under 04. */
-  chain?: number;
   /** A skip link for the foot of the stage, so the pin is never without one. */
   skip?: ReactNode;
   /** Dev and capture only: draw at this p and keep the drawing buffer for screenshots. */
@@ -298,7 +284,7 @@ function discreteKey(s: ExhibitState) {
   return [s.beat, s.active, s.framed, s.done, s.chars, s.charNow, clock(s.seconds), s.decision, s.sent, s.stamped, s.receipt > 0].join("|");
 }
 
-function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
+function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const subject = useRef<HTMLDivElement>(null);
@@ -613,7 +599,7 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
 
       <div className={styles.layout}>
         <header className={styles.head}>
-          <Header compact={small} chapter={chain ? chapterOf(s.beat, chain) : undefined} />
+          <Header compact={small} />
           <Readouts s={s} />
         </header>
         <div className={styles.main}>
@@ -638,7 +624,7 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
           </div>
           <ol className={styles.row}>
             {CHECKS.map((c, i) => (
-              <CheckCell key={c.id} i={i} done={i < s.done} active={i === s.active} chain={!!chain} onSeek={onSeek} />
+              <CheckCell key={c.id} i={i} done={i < s.done} active={i === s.active} onSeek={onSeek} />
             ))}
           </ol>
         </footer>
@@ -705,8 +691,8 @@ export interface OpenedExhibitProps {
   /** With `progress`: the pin's skip link, shown in the exhibit's own foot (it covers the pin's rail). */
   skip?: ReactNode;
   /**
-   * Mounted in a numbered sequence (the Chain of Custody): how many chapters it counts, for the eyebrow ("03 / 06").
-   * The static form, which the sequence's static figures number around, names its chapters 03 to 05.
+   * Mounted in a numbered sequence (the Chain of Custody). The static form, which the sequence's static figures number
+   * around, names its chapters 03 to 05; the pinned and phone forms' eyebrow is the section's name, as the rail's is.
    */
   chapters?: number;
   /** Dev and capture only (the /dev/teardown page). */
@@ -768,7 +754,6 @@ export function OpenedExhibit({ progress, onSeek, skip, chapters, capture }: Ope
           mode={mode}
           small={small && !capture}
           capture={capture}
-          chain={chapters ?? 5}
           skip={skip}
           onSeek={onSeek ? (i) => onSeek(holdOf(CHECKS[i].id)) : undefined}
         />
