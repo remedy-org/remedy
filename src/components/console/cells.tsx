@@ -125,6 +125,7 @@ const BAR_WORD: Record<BarState, string> = { pass: "passed", hold: "unclear, hel
 function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
   return (
     <span
+      data-state={bar.state}
       className={clsx(
         "relative h-4 w-2 shrink-0 overflow-hidden rounded-[1.5px]",
         bar.state === "pass" && "bg-pay/70",

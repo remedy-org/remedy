@@ -247,3 +247,46 @@ export const insightsReport = (data: InsightsData): AgReportState<InsightsRegist
     data: { collapsed: true },
   },
 });
+
+/**
+ * The homepage's Insights, as Studio state (InsightsPreview.tsx): five widgets on one page, no exhibit letters. Units
+ * remedied and Refused are Studio's own value KPI tiles; the median is Remedy's tile (Studio's can only average); the
+ * funnel and the refusal reasons are the console's own widgets. `rows` is the canvas height in 16px tracks, measured
+ * from the tour's fixed frame, so the page fills it with nothing cut off.
+ */
+export function homeInsightsReport(data: InsightsData, rows = 40): AgReportState<InsightsRegistry> {
+  const say = captions(provenance(data.claims));
+  const widgets = overview(data).widgets!;
+  const kpiRows = 6;
+  const median = widgets["kpi-median"];
+  return {
+    selectedPageId: "overview",
+    pages: [
+      {
+        id: "overview",
+        widgets: {
+          "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), `of ${data.recall.unitsSold.toLocaleString("en-US")} sold`),
+          "kpi-median": { ...median, format: { title: { enabled: true, text: say.timeTitle }, caption: { enabled: true, text: kpiCaption(data) } } },
+          "kpi-refused": kpi("Refused", sum("claims.refused"), "stopped before any money moved"),
+          funnel: { ...widgets.funnel, format: titled("Check funnel") },
+          refusals: { ...widgets.refusals, format: titled("Why claims were refused") },
+        } as AgPageState<InsightsRegistry>["widgets"],
+        widgetLayout: {
+          "kpi-remedied": at(0, 0, 8, kpiRows),
+          "kpi-median": at(8, 0, 8, kpiRows),
+          "kpi-refused": at(16, 0, 8, kpiRows),
+          funnel: at(0, kpiRows, 14, Math.max(16, rows - kpiRows)),
+          refusals: at(14, kpiRows, 10, Math.max(16, rows - kpiRows)),
+        },
+      },
+    ],
+    panels: { filters: { collapsed: true }, edit: { collapsed: true }, data: { collapsed: true }, ai: { collapsed: true } },
+  };
+}
+
+// "35 claims checked": how many claims the median tile's time covers.
+const kpiCaption = (data: InsightsData) => {
+  const { timeField } = captions(provenance(data.claims));
+  const n = data.claims.filter((c) => c[timeField] !== null).length;
+  return `${n} ${n === 1 ? "claim" : "claims"} checked`;
+};

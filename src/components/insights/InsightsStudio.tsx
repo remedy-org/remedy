@@ -7,6 +7,7 @@ import type { InsightsData } from "@/app/console/insights/facts";
 import { buildAnalyst } from "./analyst";
 import { captions, filterClaims, filterLabel, filterPicks, insightsReport, kpiCaptions, panelName, provenance, type FilterPick } from "./report";
 import { buildSources } from "./sources";
+import { colorResolver, fonts, onThemeChange, readTheme } from "./studio-setup";
 import lib from "./studio-lib";
 import { buildTheme } from "./theme";
 import { toolDisplay } from "./ToolCards";
@@ -26,39 +27,6 @@ const LOCALE = { panelTitleAi: "Recall analyst", aiMessageInputPlaceholder: "Ask
 
 // The analyst's rail lives in Studio's edit-mode panels; the report opens there with only that panel shown.
 const PANELS = { edit: { right: ["ai" as const] }, view: { right: ["filters" as const] } };
-
-const readTheme = () => (document.documentElement.dataset.theme === "light" ? "light" : "dark");
-function onThemeChange(onChange: () => void) {
-  const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  return () => observer.disconnect();
-}
-
-/** Any CSS colour, tokens and color-mix() included, as the sRGB the browser paints: what Studio and its charts need. */
-function colorResolver() {
-  const probe = document.createElement("span");
-  probe.style.display = "none";
-  document.body.appendChild(probe);
-  const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
-  const resolve = (css: string) => {
-    probe.style.color = css;
-    ctx.clearRect(0, 0, 1, 1);
-    ctx.fillStyle = getComputedStyle(probe).color;
-    ctx.fillRect(0, 0, 1, 1);
-    const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
-    return a === 255 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${Math.round((a / 255) * 1000) / 1000})`;
-  };
-  return { resolve, done: () => probe.remove() };
-}
-
-function fonts() {
-  const root = getComputedStyle(document.documentElement);
-  const stack = (name: string, fallback: string) => {
-    const family = root.getPropertyValue(name).trim();
-    return family ? `${family}, ${fallback}` : fallback;
-  };
-  return { sans: stack("--font-schibsted", "ui-sans-serif, system-ui, sans-serif"), mono: stack("--font-jetbrains", "ui-monospace, Menlo, monospace") };
-}
 
 // Studio's keyboard model for the canvas: Tab goes from panel to panel, Enter goes into a panel's controls and Esc comes
 // back out. Studio leaves those stops unnamed, so each is named for its panel ("Decisions, Exhibit B") and says the

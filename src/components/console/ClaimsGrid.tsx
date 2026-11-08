@@ -2,7 +2,9 @@
 
 import {
   CellStyleModule,
+  ClientSideRowModelApiModule,
   ClientSideRowModelModule,
+  ExternalFilterModule,
   HighlightChangesModule,
   ModuleRegistry,
   RowApiModule,
@@ -15,6 +17,8 @@ import {
   type CellKeyDownEvent,
   type ColDef,
   type GridApi,
+  type IRowNode,
+  type Module,
   type RowClickedEvent,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
@@ -40,6 +44,11 @@ ModuleRegistry.registerModules([
   HighlightChangesModule,
   ...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
+
+// The homepage's still filters its rows in place (the tour's Held step) and takes a claim's arrival as a transaction, so
+// AG Grid's row animation shows the queue narrowing and the row coming in. Registered on that grid only, through its
+// own `modules`: the console's queue filters before the grid and replaces its rows.
+const STILL_MODULES: Module[] = [ExternalFilterModule, ClientSideRowModelApiModule];
 
 // Below this width the grid shows one card per claim (phones, narrow windows).
 export const CARD_BELOW = 720;
@@ -72,6 +81,15 @@ export interface ClaimsGridHandle {
   focusFirst(): void;
   /** The claim whose row has keyboard focus, if any (A and R act on it). */
   focusedRowId(): string | null;
+  /** The homepage's still: a claim arrives at `index` as `interim`, then becomes `final` after `after` ms (its changed
+   * cells flash). Returns settle(), which applies the final row at once. */
+  arrive(interim: ClaimRow, final: ClaimRow, index: number, after?: number): () => void;
+  /** The homepage's still: takes a row out (to replay its arrival). */
+  remove(id: string): void;
+  /** The homepage's still: shows only the rows that pass (null for all), animating the change. */
+  setFilter(pass: ((row: ClaimRow) => boolean) | null): void;
+  /** The homepage's still: selects a claim's row (the open row's tint and edge) and scrolls it into view; null clears. */
+  open(id: string | null): void;
 }
 
 export interface ClaimsGridProps {
@@ -105,6 +123,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
   // AG Grid paints nothing until its script runs; the skeleton holds the grid's footprint until the first rows.
   const [ready, setReady] = useState(false);
   const [animate] = useState(() => !reducedMotion());
+  const filter = useRef<((row: ClaimRow) => boolean) | null>(null);
+  const timers = useRef<number[]>([]);
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
   useLayoutEffect(() => {
     const el = wrap.current;
@@ -136,6 +157,38 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       const cell = api.current?.getFocusedCell();
       if (!cell || cell.rowPinned) return null;
       return api.current?.getDisplayedRowAtIndex(cell.rowIndex)?.data?.id ?? null;
+    },
+    arrive(interim, final, index, after = 900) {
+      const grid = api.current;
+      if (!grid) return () => {};
+      if (!grid.getRowNode(final.id)) grid.applyTransaction({ add: [interim], addIndex: index });
+      let done = false;
+      const settle = () => {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timer);
+        if (api.current?.getRowNode(final.id)) api.current.applyTransaction({ update: [final] });
+        else api.current?.applyTransaction({ add: [final], addIndex: index });
+      };
+      const timer = window.setTimeout(settle, after);
+      timers.current.push(timer);
+      return settle;
+    },
+    remove(id) {
+      const node = api.current?.getRowNode(id);
+      if (node?.data) api.current?.applyTransaction({ remove: [node.data] });
+    },
+    setFilter(pass) {
+      filter.current = pass;
+      api.current?.onFilterChanged();
+    },
+    open(id) {
+      const grid = api.current;
+      if (!grid) return;
+      if (!id) return grid.deselectAll();
+      const node = grid.getRowNode(id);
+      node?.setSelected(true, true);
+      if (node?.rowIndex != null) grid.ensureIndexVisible(node.rowIndex);
     },
   }));
 
@@ -226,7 +279,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         cellRenderer: PayoutCell,
         width: 112,
         enableCellChangeFlash: true,
-        cellClass: (p) => (p.data?.payoutStatus === "SUCCESS" ? undefined : "flash-neutral"),
+        // A sample claim the rule decided to pay flashes paid too (the homepage's arrival): the verdict beside it says
+        // paid, and the cell itself says "Sample / not sent".
+        cellClass: (p) => (p.data?.payoutStatus === "SUCCESS" || (p.data?.seeded && p.data.decision === "paid") ? undefined : "flash-neutral"),
       },
       {
         colId: "amount",
@@ -265,6 +320,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
           {/* Remounted when the layout switches between cards and columns: AG Grid keeps a rendered row's full-width state. */}
           <AgGridReact<ClaimRow>
             key={cards ? "cards" : "columns"}
+            modules={still ? STILL_MODULES : undefined}
+            isExternalFilterPresent={still ? () => filter.current !== null : undefined}
+            doesExternalFilterPass={still ? (node: IRowNode<ClaimRow>) => (node.data ? (filter.current?.(node.data) ?? true) : true) : undefined}
             theme={gridTheme}
             rowData={rows}
             columnDefs={columns}

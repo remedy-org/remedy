@@ -35,7 +35,20 @@ const cpscUnits = (recall: Recall, sold: number) => (recall.units && recall.unit
  * The CPSC progress-report draft as a paper sheet: always the light tokens, on screen and in print, so what the
  * company sees is what it files. Every number comes from the claim records.
  */
-export function ProgressReport({ recall, report, generated, sandbox = false }: { recall: Recall; report: Report; generated: string; sandbox?: boolean }) {
+export function ProgressReport({
+  recall,
+  report,
+  generated,
+  sandbox = false,
+  stamp,
+}: {
+  recall: Recall;
+  report: Report;
+  generated: string;
+  sandbox?: boolean;
+  /** Beside the draft label (the homepage's DRAFT stamp). */
+  stamp?: ReactNode;
+}) {
   const s = report.stats;
   const refused = s.rejected + s.blocked;
   const each = report.paidEachCents === null ? "" : ` at ${formatCents(report.paidEachCents)}`;
@@ -46,7 +59,14 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
     <article data-theme="light" className="mx-auto w-full max-w-[52rem] rounded-card bg-paper px-6 py-8 text-text shadow-paper sm:px-12 sm:py-12 print:max-w-none print:rounded-none print:bg-white print:p-0 print:shadow-none">
       <header className="flex flex-col gap-3 border-b border-line pb-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <ExhibitLabel leader="none">Recall progress report · Draft</ExhibitLabel>
+          {stamp ? (
+            <span className="flex items-center gap-4">
+              <ExhibitLabel leader="none">Recall progress report · Draft</ExhibitLabel>
+              {stamp}
+            </span>
+          ) : (
+            <ExhibitLabel leader="none">Recall progress report · Draft</ExhibitLabel>
+          )}
           <span className="font-mono text-micro text-muted">Generated {generated}</span>
         </div>
         <h1 className="text-h2 font-medium text-balance">

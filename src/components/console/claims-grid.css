@@ -89,3 +89,38 @@
 .claims-grid .ag-cell.flash-neutral {
   --ag-value-change-value-highlight-background-color: color-mix(in oklch, var(--text) 10%, transparent);
 }
+
+/* The homepage tour's arriving claim (components/console/preview.ts ARRIVE_ID): as its checks come back, the five
+   check groups of its barcode fill left to right, 160ms each, 120ms apart. Scoped to the tour's still while the arrival
+   plays (data-live), so /console keeps its near-zero motion. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span > [data-state="pass"] {
+    transform-origin: bottom;
+    animation: bar-fill var(--dur-ui) var(--ease-snap) both;
+  }
+
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(2) > [data-state="pass"] {
+    animation-delay: 120ms;
+  }
+
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(3) > [data-state="pass"] {
+    animation-delay: 240ms;
+  }
+
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(4) > [data-state="pass"] {
+    animation-delay: 360ms;
+  }
+
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(5) > [data-state="pass"] {
+    animation-delay: 480ms;
+  }
+}
+
+@keyframes bar-fill {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}

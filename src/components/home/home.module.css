@@ -121,17 +121,6 @@
     transition: opacity 200ms ease-out calc(var(--go-at, 0ms) + var(--stamp-at, 500ms));
   }
 
-  /* The console's evidence panel slides in: x 40px to 0 and fade, 360ms --ease-snap. */
-  .enter[data-enter="armed"] .panel {
-    translate: 40px 0;
-    opacity: 0;
-  }
-
-  .enter[data-enter="play"] .panel {
-    transition:
-      translate var(--dur-move) var(--ease-snap) 200ms,
-      opacity var(--dur-move) var(--ease-snap) 200ms;
-  }
 }
 
 /* The highlighter itself, drawn under the ink: --highlight on a band through the lower x-height. */
@@ -188,4 +177,197 @@
   z-index: -1;
   pointer-events: none;
   background: var(--table-glow);
+}
+
+/*
+ * The console tour (ConsoleTour.tsx, Exhibit D). Inside a product frame the product's own motions (row insert, cell
+ * flash, row animation, the 160ms panel) may run once on entering view or on a visitor's pick; they are not a fifth
+ * homepage move. Each runs only when motion is allowed, and the resting state is always the final one.
+ */
+
+/* The rail's 2px bar under the active tab (never amber): four equal tabs on the 12-column grid's gap. */
+.railBar {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: calc((100% - 3 * var(--col-gap)) / 4);
+  height: 2px;
+  background: var(--text);
+  transform: translateX(calc(var(--i, 0) * (100% + var(--col-gap))));
+}
+
+/* A measured underline (useSlider): a 100px bar placed by translateX and scaleX. Until it is measured (no JS), the
+   active item draws its own. */
+.slider {
+  position: absolute;
+  left: 0;
+  width: 100px;
+  height: 1px;
+  background: var(--text);
+  transform-origin: left;
+  opacity: 0;
+}
+
+.slideRow[data-measured] .slider {
+  opacity: 1;
+}
+
+.slideRow:not([data-measured]) .chromePage[data-on] {
+  text-decoration: underline;
+  text-underline-offset: 15px;
+  text-decoration-thickness: 1px;
+}
+
+/* The frame's bodies, stacked in its fixed slot: the active one shown, the rest hidden (and out of the AT tree). */
+.body {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.body[data-on] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.studio {
+  opacity: 0;
+}
+
+.studio[data-on] {
+  opacity: 1;
+}
+
+/* The report's sheet fades into the frame's foot over 64px. */
+.reportBody {
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+}
+
+/* Step 02's quote: a 1px neutral ink line under the unclear answer (never the amber highlighter). */
+.inkUnder {
+  background-image: linear-gradient(var(--text-2), var(--text-2));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 1px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding-bottom: 1px;
+}
+
+.stage {
+  --drop: linear(0, 0.058, 0.185, 0.342, 0.5, 0.643, 0.763, 0.858, 0.928, 0.977, 1.008, 1.026, 1.034, 1.035, 1.032, 1.028, 1.022, 1.016, 1.012, 1.008, 1.004, 1.002, 1.001, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* E1, E3: the rail bar and the measured underlines glide, 160ms. */
+  .railBar,
+  .slider {
+    transition: transform var(--dur-ui) var(--ease-snap);
+  }
+
+  .chromePage {
+    transition: color var(--dur-ui) var(--ease-snap);
+  }
+
+  /* E2: bodies crossfade, opacity only; the outgoing one is hidden once it has faded. */
+  .body {
+    transition:
+      opacity var(--dur-ui) var(--ease-snap),
+      visibility 0s linear var(--dur-ui);
+  }
+
+  .body[data-on] {
+    transition:
+      opacity var(--dur-ui) var(--ease-snap),
+      visibility 0s;
+  }
+
+  /* E7: the still gives way to Studio once Studio has drawn. */
+  .studio {
+    transition: opacity var(--dur-ui) var(--ease-snap);
+  }
+
+  /* E5: the evidence docks (x 24px to 0 and fade, 160ms), and fades out when the step is left. */
+  .dock {
+    animation: dock-in var(--dur-ui) var(--ease-out-expo) both;
+  }
+
+  .dock[data-out] {
+    animation: dock-out var(--dur-ui) var(--ease-snap) both;
+  }
+
+  .dock .inkUnder {
+    animation: ink-under 700ms var(--ease-out-quart) 700ms both;
+  }
+
+  /* E6: where claims stop. The funnel's bars grow (Paid last), then the refusal bars; the analyst's answer focuses in. */
+  .stage[data-step="2"] [data-still] [data-bar],
+  .stage[data-step="2"][data-studio-pick] [data-studio] [data-bar] {
+    transform-origin: left;
+    animation: bar-grow 600ms var(--ease-out-quart) both;
+  }
+
+  .stage[data-step="2"] [data-bar="funnel"] {
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+
+  .stage[data-step="2"] [data-bar="refusal"] {
+    animation-delay: calc(300ms + var(--i, 0) * 80ms);
+  }
+
+  .stage[data-step="2"] .answerLine {
+    animation: focus-in var(--dur-reveal) var(--ease-out-expo) both;
+    animation-delay: calc(300ms + var(--line, 0) * 80ms);
+  }
+
+  /* E8: the draft drops onto the table (SPRING.drop, a 2deg settle), then its DRAFT stamp lands. */
+  .stage[data-step="3"] .sheet {
+    animation: sheet-drop 460ms var(--drop) both;
+  }
+
+  .stage[data-step="3"] .draftStamp {
+    animation: stamp-land 200ms var(--ease-back) 500ms both;
+  }
+}
+
+@keyframes dock-in {
+  from {
+    opacity: 0;
+    translate: 24px 0;
+  }
+}
+
+@keyframes dock-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes ink-under {
+  from {
+    background-size: 0% 1px;
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes focus-in {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    translate: 0 12px;
+  }
+}
+
+@keyframes sheet-drop {
+  from {
+    translate: 0 -16px;
+    rotate: 2deg;
+  }
 }

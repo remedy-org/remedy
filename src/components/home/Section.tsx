@@ -16,6 +16,10 @@ export interface SectionProps {
   tone?: "dark" | "paper";
   children: ReactNode;
   className?: string;
+  /** Laptop columns for the heading: 7 (with a lead beside it) or 9 (no lead, a longer two-tone line). */
+  headingSpan?: 7 | 9;
+  /** The space between the heading and the section's content, replacing 48px (64px on laptops). */
+  bodyClassName?: string;
 }
 
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
@@ -26,7 +30,7 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
  * phones). The heading takes columns 1 to 7 and the lead columns 8 to 12, bottom-aligned, so every section's text
  * starts on the same two grid lines. The heading is 40px, two-tone, and focuses in.
  */
-export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className }: SectionProps) {
+export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className, headingSpan = 7, bodyClassName = "mt-12 lg:mt-16" }: SectionProps) {
   const headingId = `${id}-title`;
   const paper = tone === "paper";
   const [letter, name] = exhibit.split(" · ");
@@ -34,7 +38,7 @@ export function Section({ id, exhibit, title, muted, lead, tone = "dark", childr
     <section id={id} aria-labelledby={headingId} className={clsx("scroll-mt-16", paper ? "bg-band text-ink" : styles.fade, className)}>
       <div className="page py-18 lg:py-32">
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
-          <div className="col-span-12 lg:col-span-7">
+          <div className={clsx("col-span-12", headingSpan === 9 ? "lg:col-span-9" : "lg:col-span-7")}>
             <p className={clsx(styles.line, "micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
               Exhibit <span className={paper ? "text-ink" : "text-text-2"}>{letter}</span>
               {name && <> · {name}</>}
@@ -59,7 +63,7 @@ export function Section({ id, exhibit, title, muted, lead, tone = "dark", childr
             </p>
           )}
         </Reveal>
-        <div className="mt-12 lg:mt-16">{children}</div>
+        <div className={bodyClassName}>{children}</div>
       </div>
     </section>
   );

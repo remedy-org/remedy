@@ -54,6 +54,10 @@ export function EvidencePhoto({
         <img
           src={sized ? src : atWidth(src, 880)}
           alt={label}
+          // A photo that finished loading before hydration fired its load event too early for onLoad to see it.
+          ref={(img) => {
+            if (img?.complete && img.naturalWidth) setState("ready");
+          }}
           onLoad={() => setState("ready")}
           onError={() => setState("error")}
           className={clsx("size-full transition-opacity duration-120 ease-snap", onOpen ? "object-contain" : "object-cover", state === "ready" ? "opacity-100" : "opacity-0")}

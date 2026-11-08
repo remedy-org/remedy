@@ -6,8 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ClaimsGridPreviewProps } from "./ClaimsGridPreview";
 
 // The grid's JS (AG Grid, about 240KB) loads only when the preview is a viewport away, never with the homepage, and
-// never below 720px.
-const GRID_FROM = "(min-width: 720px)";
+// never below `from` px (720 by default; the homepage's tour, whose phones get a story instead, passes 1024).
 const Preview = dynamic(() => import("./ClaimsGridPreview").then((m) => m.ClaimsGridPreview), { ssr: false });
 
 /**
@@ -18,7 +17,19 @@ const Preview = dynamic(() => import("./ClaimsGridPreview").then((m) => m.Claims
  * Mount it from a server component with previewProps() (components/console/preview.ts):
  *   <ClaimsGridPreviewLazy {...previewProps()} fallback={<StaticStill />} />
  */
-export function ClaimsGridPreviewLazy({ fallback, ...props }: ClaimsGridPreviewProps & { fallback?: ReactNode }) {
+export function ClaimsGridPreviewLazy({
+  fallback,
+  from = 720,
+  onSwap,
+  className,
+  ...props
+}: ClaimsGridPreviewProps & {
+  fallback?: ReactNode;
+  from?: number;
+  /** The grid has taken the fallback's place. */
+  onSwap?: () => void;
+  className?: string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
   // The grid replaces the still once it has drawn and the frame is out of view; once swapped, the grid stays.
@@ -27,12 +38,19 @@ export function ClaimsGridPreviewLazy({ fallback, ...props }: ClaimsGridPreviewP
   const settle = () => {
     if (seen.current.ready && !seen.current.inView) setSwapped(true);
   };
+  const swapNotice = useRef(onSwap);
+  useEffect(() => {
+    swapNotice.current = onSwap;
+  }, [onSwap]);
+  useEffect(() => {
+    if (swapped) swapNotice.current?.();
+  }, [swapped]);
 
   useEffect(() => {
     const el = ref.current;
     // Phones keep the static replica (its card form): the grid would only draw four still cards there, not worth
     // AG Grid's 240KB.
-    if (!el || !window.matchMedia(GRID_FROM).matches) return;
+    if (!el || !window.matchMedia(`(min-width: ${from}px)`).matches) return;
     const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "100% 0px" });
     const view = new IntersectionObserver(([e]) => {
       seen.current.inView = e.isIntersecting;
@@ -44,14 +62,16 @@ export function ClaimsGridPreviewLazy({ fallback, ...props }: ClaimsGridPreviewP
       io.disconnect();
       view.disconnect();
     };
+    // Measured once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div ref={ref} className="relative" inert>
+    <div ref={ref} className={clsx("relative", className)} inert>
       {!swapped && (fallback ?? <Placeholder height={props.height} />)}
       {near && (
         // Opacity as well as visibility: AG Grid's scrollbars set their own visibility, which shows through a hidden parent.
-        <div className={clsx(!swapped && "invisible absolute inset-x-0 top-0 opacity-0")}>
+        <div className={clsx(props.bare && "h-full", !swapped && "invisible absolute inset-x-0 top-0 opacity-0", !swapped && props.bare && "bottom-0")}>
           <Preview
             {...props}
             onReady={() => {

@@ -1,12 +1,11 @@
 "use client";
 
 import clsx from "clsx";
-import { useMemo, useSyncExternalStore } from "react";
-import { CheckProgress, ExhibitLabel, StatusPill } from "@/components/ui";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { ledgerOf, type ClaimRow, type Ledger as LedgerData } from "@/app/console/_lib/view";
-import { ClaimsGrid } from "./ClaimsGrid";
-import { EvidencePhoto } from "./EvidencePhoto";
+import { ClaimsGrid, type ClaimsGridHandle } from "./ClaimsGrid";
+import { EvidenceStill } from "./EvidenceStill";
 import { Ledger } from "./Ledger";
 import { StatusTabs, TABS, type Tab } from "./StatusTabs";
 
@@ -15,8 +14,8 @@ export type PreviewRow = ClaimRow & { evidence?: DrawerClaim };
 
 export interface ClaimsGridPreviewProps {
   rows: PreviewRow[];
-  /** The claim whose evidence panel is open (laptops). */
-  openId?: string;
+  /** The claim whose evidence panel is open (laptops); bare: whose row is selected. */
+  openId?: string | null;
   /** The frame's grid area height, in px. */
   height: number;
   /** Totals over every sample claim, when rows are only the first few. */
@@ -26,6 +25,93 @@ export interface ClaimsGridPreviewProps {
   panelClassName?: string;
   /** The grid has drawn its first rows. */
   onReady?: () => void;
+  /**
+   * The grid area alone (the homepage's console tour draws the frame, ledger and tabs around it), driven by the props
+   * below through the grid's API, so a change never resets the rows. Without it, the whole frame as before.
+   */
+  bare?: boolean;
+  /** bare: show only the held claims (AG Grid's own filter, so the rows animate). */
+  filter?: "held" | null;
+  /** bare: where the arriving claim is: "before" (not in the grid), "interim" (just in, being checked) or "final". */
+  arrival?: { id: string; phase: "before" | "interim" | "final" };
+  /** bare: the arrival is playing (claims-grid.css fills its barcode). */
+  live?: boolean;
+  /** bare: what sits beside the grid (the tour's evidence panel). */
+  aside?: ReactNode;
+}
+
+// A claim still being checked, as the queue shows one the moment its photos arrive: in progress, its checks waiting,
+// no answer, no amount and no payout yet.
+function interimOf(row: ClaimRow): ClaimRow {
+  return {
+    ...row,
+    decision: "pending",
+    note: "Checking photos",
+    payoutStatus: null,
+    amount: null,
+    cents: null,
+    bars: row.bars?.map((b) => ({ ...b, state: "waiting" })) ?? null,
+    timeline: null,
+    modelSec: null,
+  };
+}
+
+const HELD = (r: ClaimRow) => r.decision === "held";
+
+/** The grid area of the homepage's console tour: the real grid, filtered, opened and arriving through its API. */
+function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady }: ClaimsGridPreviewProps) {
+  const grid = useRef<ClaimsGridHandle>(null);
+  // The rows the grid starts with, once: the arriving claim held back while it is still to arrive.
+  const [initial] = useState(() => (arrival?.phase === "before" ? rows.filter((r) => r.id !== arrival.id) : rows));
+  const [ready, setReady] = useState(false);
+  const final = arrival ? rows.find((r) => r.id === arrival.id) : undefined;
+  const phase = useRef(arrival?.phase);
+  const settle = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    if (!ready || !arrival || !final) return;
+    const from = phase.current;
+    phase.current = arrival.phase;
+    if (from === arrival.phase) return;
+    const handle = grid.current;
+    if (!handle) return;
+    if (arrival.phase === "before") {
+      settle.current = () => {};
+      handle.remove(final.id);
+    } else if (arrival.phase === "interim") {
+      // The tour moves it to "final" itself; the long fallback only guards a lost update.
+      settle.current = handle.arrive(interimOf(final), final, Math.max(0, rows.indexOf(final)), 60_000);
+    } else if (from === "interim") settle.current();
+    else handle.arrive(final, final, Math.max(0, rows.indexOf(final)), 0)();
+  }, [ready, arrival, final, rows]);
+
+  useEffect(() => {
+    if (ready) grid.current?.setFilter(filter === "held" ? HELD : null);
+  }, [ready, filter]);
+
+  useEffect(() => {
+    if (ready) grid.current?.open(openId ?? null);
+  }, [ready, openId]);
+
+  return (
+    <div className="flex h-full gap-3" data-live={live ? "arrive" : undefined}>
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <ClaimsGrid
+          ref={grid}
+          rows={initial}
+          openId={null}
+          onOpen={() => {}}
+          onReady={() => {
+            setReady(true);
+            onReady?.();
+          }}
+          fill
+          still
+        />
+      </div>
+      {aside}
+    </div>
+  );
 }
 
 /**
@@ -44,7 +130,11 @@ const subscribe = (on: () => void) => {
 };
 const PHONE_SET: ClaimRow["decision"][] = ["paid", "held", "rejected", "blocked"];
 
-export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelClassName, onReady }: ClaimsGridPreviewProps) {
+export function ClaimsGridPreview(props: ClaimsGridPreviewProps) {
+  return props.bare ? <BareGrid {...props} /> : <FramedPreview {...props} />;
+}
+
+function FramedPreview({ rows, openId, height, ledger, counts, panelClassName, onReady }: ClaimsGridPreviewProps) {
   const wide = useSyncExternalStore(subscribe, () => window.matchMedia(WIDE).matches, () => true);
   const tally = useMemo(() => {
     if (counts) return counts;
@@ -103,50 +193,5 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
         {tally.all} sample claims from the eval set · AI-made test photos · no money moved
       </p>
     </div>
-  );
-}
-
-/** The open claim's evidence as a still: the photos, the model's quoted answers (the unclear one first), the rule. */
-function EvidenceStill({ claim }: { claim: DrawerClaim }) {
-  const checks = [...claim.checks].sort((a, b) => Number(a.outcome === "pass") - Number(b.outcome === "pass"));
-  return (
-    <aside aria-label={`Evidence for ${claim.id}`} className="flex h-full w-[380px] shrink-0 flex-col overflow-hidden rounded-card bg-surface shadow-float">
-      <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <span className="flex items-center gap-3">
-          <span className="font-mono text-ui font-medium">{claim.id}</span>
-          <StatusPill status={claim.decision} />
-        </span>
-        <span className="font-mono text-micro text-faint">
-          {claim.payer} · Code {claim.code}
-        </span>
-      </div>
-      <div className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="flex flex-col gap-4 px-4 py-3">
-          <ExhibitLabel leader="right" leaderLength={20}>
-            {claim.photos.length === 1 ? "Photo 1" : `Photos 1 to ${claim.photos.length}`} · sample
-          </ExhibitLabel>
-          <div className="grid grid-cols-2 gap-2">
-            {claim.photos.map((src, i) => (
-              <EvidencePhoto key={src} src={src} n={i + 1} of={claim.photos.length} sample sized />
-            ))}
-          </div>
-          <CheckProgress
-            label={`Model answers for ${claim.id}`}
-            steps={checks.slice(0, 3).map((c) => ({
-              id: c.id,
-              label: c.label,
-              state: c.outcome === "reject" ? "reject" : c.outcome,
-              detail: c.evidence ? <q className="block text-ui leading-[1.55] text-muted">{c.evidence}</q> : c.rule,
-            }))}
-          />
-        </div>
-        <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-surface to-transparent" />
-      </div>
-      <div className="border-t border-line px-4 py-3">
-        <p className="text-ui">{claim.sentence}</p>
-        {/* A caption, not buttons: the still has no actions to press. */}
-        {claim.review && <p className="mt-2 text-ui text-muted">A person approves or rejects it here. Approving sends {claim.amount} through PayPal.</p>}
-      </div>
-    </aside>
   );
 }

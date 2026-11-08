@@ -1,64 +1,67 @@
 import clsx from "clsx";
-import type { CSSProperties } from "react";
-import { Button } from "@/components/ui";
-import { CompaniesPreview } from "./CompaniesPreview";
+import { ARRIVE_ID, PREVIEW_OPEN_ID, previewProps, replicaRows, reportPreview } from "@/components/console/preview";
+import { ProgressReport } from "@/components/console/ProgressReport";
+import { STUDIO_ON_HOME } from "@/components/insights/InsightsPreviewLazy";
+import { InsightsStill } from "@/components/insights/InsightsStill";
+import { insightsPreview, insightsPreviewForStudio } from "@/components/insights/preview";
+import { insightsStill } from "@/components/insights/still";
+import { Button, Stamp } from "@/components/ui";
+import { AnalystRail, RECORDING } from "./AnalystRail";
+import { ConsoleStory } from "./ConsoleStory";
+import { ConsoleTour } from "./ConsoleTour";
+import styles from "./home.module.css";
 import { Section } from "./Section";
+import { describe, TOUR } from "./tour-copy";
+
+// The Insights canvas in Studio's 16px rows: the frame's body (809px less chrome, title row and foot) less its padding.
+const STUDIO_ROWS = 40;
+
+// Without JS the tour's tabs can't work: the story shows at every width instead (the HeroDevice.tsx pattern), its
+// photos shown (they fade in on load, which needs JS).
+const NOSCRIPT = `<style>[data-tour]{display:none!important}[data-story]{display:block!important}[data-story] img{opacity:1!important}</style>`;
 
 /**
- * An exhibit label pinned to the console frame: mono text in --faint and a hairline leader that runs into the frame to a
- * dot on what it names. Laptops only; the positions follow the console preview's chrome and panel at 1440 (the
- * static replica that stands in while it loads has the same chrome).
+ * Exhibit D, for companies: a four-step tour of the console on laptops (ConsoleTour), the same four steps as a story on
+ * phones and without JS (ConsoleStory). Everything in both comes from one seed (components/console/preview.ts): the 40
+ * sample claims, their Insights and their CPSC report draft. The server renders both; CSS shows one by breakpoint.
  */
-function FrameTag({ children, side, style, reach }: { children: string; side: "top" | "bottom"; style: CSSProperties; reach: number }) {
-  return (
-    <span aria-hidden="true" className={clsx("pointer-events-none absolute z-10 hidden flex-col items-center lg:flex", side === "top" ? "bottom-full" : "top-full flex-col-reverse")} style={style}>
-      <span className="micro whitespace-nowrap text-faint">{children}</span>
-      <span className={clsx("relative w-px bg-line-2", side === "top" ? "mt-2" : "mb-2")} style={{ height: 20 + reach, marginBottom: side === "top" ? -reach : undefined, marginTop: side === "bottom" ? -reach : undefined }}>
-        <span className={clsx("absolute left-1/2 size-[5px] -translate-x-1/2 rounded-full bg-text-2", side === "top" ? "-bottom-0.5" : "-top-0.5")} />
-      </span>
-    </span>
-  );
-}
-
 export function Companies() {
-  return (
-    <Section
-      id="companies"
-      exhibit="D · For companies"
-      title="Every claim, with its evidence."
-      muted="Paid, held or refused, in one queue."
-    >
-      <figure className="relative m-0 lg:mt-8">
-        <FrameTag side="top" reach={10} style={{ left: 265, transform: "translateX(-50%)" }}>
-          CPSC report draft · in your console
-        </FrameTag>
-        {/* Down past the empty end of the chrome and title rows, ending just above the ledger's "paid through PayPal"
-            figure, never on its text. The ledger sizes to its text from the frame's left padding, so one place holds
-            at every laptop width, and x 520 is over that figure in both the grid and the narrower static replica that
-            stands in while it loads. */}
-        <FrameTag side="top" reach={88} style={{ left: 520, transform: "translateX(-50%)" }}>
-          PayPal Payouts batch
-        </FrameTag>
-        {/* This one hangs below the frame and points up into the grid area's foot: a short leader, nothing crossed. */}
-        <FrameTag side="bottom" reach={46} style={{ right: 210, transform: "translateX(50%)" }}>
-          Evidence panel
-        </FrameTag>
-        <CompaniesPreview />
-        {/* The ledger's $0.00 beside the hero's paid RM-0442: say which claim was paid, and where, without a new figure. */}
-        <figcaption className="mt-4 max-w-[68ch] text-ui text-pretty text-muted lg:mt-5">
-          <span className="sr-only">Remedy&rsquo;s console on the Kikea demo recall. </span>A sample workspace: its 40 claims are from the eval, with AI-made
-          test photos, and were decided but never paid, so it shows $0.00 paid. Claim RM-0442, above, was paid in PayPal sandbox.
-        </figcaption>
-      </figure>
+  const grid = previewProps();
+  const replica = replicaRows(grid.rows);
+  const still = insightsStill(insightsPreview());
+  const { recall, report, sandbox, generated } = reportPreview();
+  const evidence = grid.rows.find((r) => r.id === PREVIEW_OPEN_ID)?.evidence ?? null;
+  const descriptions = describe(still.totals, { id: PREVIEW_OPEN_ID, amount: evidence?.amount ?? "" }, RECORDING);
+  const sheet = (stamp: boolean) => (
+    <ProgressReport recall={recall} report={report} sandbox={sandbox} generated={generated} stamp={stamp ? <Stamp className={styles.draftStamp}>Draft</Stamp> : undefined} />
+  );
 
-      {/* The remedied count lives in the frame's ledger (26 of 19,596, sample data); the CTA sits in one row under it. */}
-      <div className="mt-10 grid-12 gap-y-6 lg:mt-20 lg:items-center">
-        <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-7">
-          Log in with PayPal; there is no separate sign-up. Your workspace starts with the Kikea demo recall and 40 sample claims, so you can see claims
-          arrive before you import your own. Refunds run in PayPal&rsquo;s sandbox until launch.
-        </p>
-        <Button href="/signin" variant="secondary" size="lg" className="col-span-12 justify-self-start lg:col-span-5 lg:col-start-8">
-          Log in with PayPal
+  return (
+    <Section id="companies" exhibit={TOUR.eyebrow} title={TOUR.title} muted={TOUR.muted} headingSpan={9} bodyClassName="mt-12">
+      <noscript dangerouslySetInnerHTML={{ __html: NOSCRIPT }} />
+      <div data-tour className="hidden lg:block">
+        <ConsoleTour
+          rows={grid.rows}
+          replica={replica}
+          ledger={grid.ledger!}
+          counts={grid.counts!}
+          openId={PREVIEW_OPEN_ID}
+          arriveId={ARRIVE_ID}
+          descriptions={descriptions}
+          insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail /> : undefined} refusalNote={TOUR.refusalNote} />}
+          report={sheet(true)}
+          studio={STUDIO_ON_HOME ? { data: insightsPreviewForStudio(), rows: STUDIO_ROWS } : null}
+        />
+      </div>
+      <div data-story className="max-w-[720px] lg:hidden">
+        <ConsoleStory replica={replica} evidence={evidence} insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" />} report={sheet(false)} />
+        <p className="mt-10 font-mono text-micro text-muted">{TOUR.money}</p>
+      </div>
+
+      <div className={clsx("mt-10 grid-12 gap-y-6 lg:mt-16 lg:items-center")}>
+        <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-7">{TOUR.cta.body}</p>
+        <Button href="/signin" variant="secondary" size="lg" className="col-span-12 w-full justify-center sm:w-auto sm:justify-self-start lg:col-span-5 lg:col-start-8">
+          {TOUR.cta.button}
         </Button>
       </div>
     </Section>
