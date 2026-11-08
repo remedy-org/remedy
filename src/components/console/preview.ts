@@ -7,7 +7,7 @@ import { buildSeedClaims, SEED_PHOTO_PREFIX, SEED_PHOTOS } from "@/lib/demo/seed
 import { summarize } from "@/lib/store/store";
 import type { Claim, Recall } from "@/lib/types";
 import type { ClaimsGridPreviewProps, PreviewRow } from "./ClaimsGridPreview";
-import { formatDayET } from "./format";
+import { formatDay } from "./format";
 
 // The homepage's console preview, built on the server from the seed every workspace starts with (lib/demo/seed.ts,
 // seed 27071): real stored model answers, the app's own rule. No store, no network: buildSeedClaims is pure. Photos are
@@ -128,7 +128,7 @@ function evidenceOf(claim: Claim, recall: Recall): DrawerClaim {
 export function reportPreview() {
   const { recall, claims } = previewSeed();
   const daysIn = Math.floor((PREVIEW_NOW.getTime() - Date.parse(recall.recallDate)) / 86_400_000);
-  return { recall, report: typeset(buildReport(claims.map(summarize), recall)), generated: formatDayET(PREVIEW_NOW.toISOString()), daysIn };
+  return { recall, report: typeset(buildReport(claims.map(summarize), recall)), generated: formatDay(PREVIEW_NOW.toISOString()), daysIn };
 }
 
 /**

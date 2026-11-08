@@ -7,11 +7,19 @@ const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short
 /** "2026-11-05" -> "5 Nov 2026". */
 export const formatDate = (isoDate: string) => dateFmt.format(new Date(`${isoDate.slice(0, 10)}T00:00:00Z`));
 
-const etFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "America/New_York" });
+/** The day a moment fell on in UTC, the console's one zone: "6 Nov 2026". The report says so once, so a day in it is
+ * the same day as in the grid, the CSV and Insights, whatever the server's or the viewer's zone. */
+export const formatDay = (iso: string) => dateFmt.format(new Date(iso));
 
-/** The day a moment fell on in US Eastern time, CPSC's zone: "6 Nov 2026". The report labels it "(ET)", so server
- * and viewer agree whatever their own zones. */
-export const formatDayET = (iso: string) => etFmt.format(new Date(iso));
+/** A reporting period from the recall's date to the draft's day, as short as it reads: "5–8 Nov 2026",
+ * "28 Nov – 3 Dec 2026", "20 Dec 2026 – 4 Jan 2027". Both ends are formatDate's "5 Nov 2026". */
+export function formatPeriod(from: string, to: string): string {
+  const [d1, m1, y1] = from.split(" ");
+  const [d2, m2, y2] = to.split(" ");
+  if (from === to) return to;
+  if (y1 !== y2) return `${from} – ${to}`;
+  return m1 === m2 ? `${d1}–${d2} ${m2} ${y2}` : `${d1} ${m1} – ${d2} ${m2} ${y2}`;
+}
 
 const timeFmt = new Intl.DateTimeFormat("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC", timeZoneName: "short" });
 

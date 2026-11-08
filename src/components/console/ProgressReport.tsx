@@ -1,10 +1,10 @@
 import clsx from "clsx";
 import type { CSSProperties, ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
-import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
+import { formatCents, formatMoney, noPayout, percent } from "@/app/console/_lib/view";
 import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
-import { formatCount, formatDate, keepHyphens, plural } from "./format";
+import { formatCount, formatDate, formatPeriod, keepHyphens, plural } from "./format";
 import { VerdictMark } from "./VerdictMark";
 
 function H({ children }: { children: ReactNode }) {
@@ -91,7 +91,7 @@ export function ProgressReport({
             ["Remedy", "Refund for destroyed units"],
             ["Refund per unit", formatMoney(recall.refund)],
             // The period the report covers: from the recall's date to the day it was drawn up, as CPSC's monthly report reads.
-            ["Reporting period", `${formatDate(recall.recallDate)} to ${generated}${daysIn ? `, ${plural(daysIn, "day")} in` : ""}`],
+            ["Reporting period", `${formatPeriod(formatDate(recall.recallDate), generated)}${daysIn ? `, ${plural(daysIn, "day")} in` : ""}`],
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="text-muted">{k}</dt>
@@ -149,21 +149,53 @@ export function ProgressReport({
         </table>
       </section>
 
+      {/* The money: what PayPal sent, and, on a row of their own, the approved claims that came with the workspace and moved
+          none, so no approved claim reads as an owner left unpaid. Sent plus that row is every approved claim. */}
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
         <H>Refunds</H>
         <div className="grid gap-6 sm:grid-cols-3">
-          <Figure label="Approved" value={formatCents(report.sentCents + report.sampleCents)} note={plural(s.remedied, "refund")} home={home} />
           <Figure
             home={home}
-            label="Sent"
+            label="Sent through PayPal"
             value={formatCents(report.sentCents)}
             note={`${plural(report.sent, "payout")}${report.sent ? each : ""}${report.settling ? ` · ${formatCount(report.settling)} settling` : report.sent ? " · all settled" : ""}`}
-            // Approved less sent, on the page: the refunds approved before PayPal Payouts was connected.
-            more={report.samplesPaid ? `${plural(report.samplesPaid, "approved refund")} not sent (${formatCents(report.sampleCents)}): filed before PayPal Payouts was connected` : undefined}
           />
+          {report.samplesPaid > 0 && <Figure label="Recorded without a payout" value={plural(report.samplesPaid, "claim")} note={noPayout(report.samplesPaid)} home={home} />}
           <Figure label="Method" value="PayPal" note="Payouts to each owner's verified PayPal account" home={home} />
         </div>
       </section>
+
+      {/* The figures CPSC's Monthly Progress Report asks for, from the claims alone; what Remedy can't know is named, not
+          guessed. */}
+      {!home && (
+        <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
+          <H>For the monthly progress report</H>
+          <table className="w-full text-ui">
+            <tbody>
+              {(
+                [
+                  ["Units corrected by refund", formatCount(s.remedied), "Destroyed on camera and approved"],
+                  ["Units corrected by repair or replacement", "0", "The remedy is a refund"],
+                  ["Units remaining at consumer level", s.unitsSold ? formatCount(Math.max(0, s.unitsSold - s.remedied)) : "Not given", "Units sold less units corrected"],
+                  ["Claims in progress or held", formatCount(s.pending + s.held), "Not yet counted as corrected"],
+                ] as const
+              ).map(([k, v, note]) => (
+                <tr key={k}>
+                  <td className={`${td} text-text`}>
+                    {k}
+                    <span className="mt-1 block text-muted sm:hidden">{note}</span>
+                  </td>
+                  <td className={`${td} w-24 text-right font-mono`}>{v}</td>
+                  <td className={`${td} hidden text-muted sm:table-cell`}>{note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="max-w-read text-ui text-muted">
+            Units still with manufacturers, distributors or retailers, and your notices, posters and posts, come from your own records: Remedy sees claims only.
+          </p>
+        </section>
+      )}
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
         <H>Why claims were refused</H>
@@ -197,7 +229,7 @@ export function ProgressReport({
       </section>
 
       <footer className="mt-12 border-t border-line pt-4 text-micro text-muted">
-        Draft for your review before filing.
+        Draft for your review before filing.{home ? "" : " Days are in UTC, as in the console."}
       </footer>
     </article>
   );

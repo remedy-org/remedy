@@ -1,4 +1,4 @@
-import { formatDayET } from "@/components/console/format";
+import { formatDay } from "@/components/console/format";
 import { PrintButton } from "@/components/console/PrintButton";
 import { ProgressReport } from "@/components/console/ProgressReport";
 import { RecallPicker } from "@/components/console/RecallPicker";
@@ -32,7 +32,9 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
   const report = buildReport(claims, recall);
   // The filed copy's foot on every printed page: who files it, which recall, and the page of how many.
   const css = (t: string) => JSON.stringify(t).replace(/</g, "\\3c ");
-  const page = `@page{margin:16mm 16mm 18mm;@bottom-left{content:${css(`${session.name ? `${session.name} · ` : ""}CPSC ${recall.id} progress report`)};font:10px/1.4 system-ui,sans-serif;color:#555}@bottom-right{content:"Page " counter(page) " of " counter(pages);font:10px/1.4 system-ui,sans-serif;color:#555}}`;
+  // Printed, the sheet is white paper edge to edge: the page's own tint never shows around or under it, background
+  // graphics on or off (the ruler keeps its colours, print-color-adjust in ProgressReport).
+  const page = `@media print{html,body{background:#fff!important}}@page{margin:16mm 16mm 18mm;@bottom-left{content:${css(`${session.name ? `${session.name} · ` : ""}CPSC ${recall.id} progress report`)};font:10px/1.4 system-ui,sans-serif;color:#555}@bottom-right{content:"Page " counter(page) " of " counter(pages);font:10px/1.4 system-ui,sans-serif;color:#555}}`;
 
   return (
     // The title and its actions on one row, as the claims page has them (print, and the recall picker), then the sheet
@@ -43,14 +45,14 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 print:hidden">
           <div className="min-w-0">
             <h1 className="text-h2 font-medium">CPSC progress report</h1>
-            <p className="mt-1 text-ui text-muted">Drafted from your claim records, laid out for the monthly report.</p>
+            <p className="mt-1 text-ui text-muted">Drafted from your claim records, with the figures the monthly progress report asks for.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/report" />}
             <PrintButton />
           </div>
         </div>
-        <ProgressReport recall={recall} report={report} generated={`${formatDayET(new Date().toISOString())} (ET)`} />
+        <ProgressReport recall={recall} report={report} generated={formatDay(new Date().toISOString())} />
       </div>
     </main>
   );
