@@ -147,11 +147,9 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
   const screen = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const [chapter, setChapter] = useState(0);
-  useBeatPaging(
-    () => stage.current?.parentElement,
-    PAGE_STOPS,
-    () => stage.current?.parentElement?.nextElementSibling as HTMLElement | null,
-  );
+  // The page-wide pager (scroll/keys.ts) pages these same beats wherever it runs, and from the console steps out of the
+  // pin onto the Problem sheet open; this one is the pin's own, for when it doesn't.
+  useBeatPaging(() => stage.current?.parentElement, PAGE_STOPS);
 
   useMotionValueEvent(p, "change", (v) => {
     // After Motion has written this frame's styles, so the laptop is measured where it is now, not a frame ago.

@@ -21,10 +21,12 @@ function setup(at = 1410, stops = STOPS, slow: Slow[] = []) {
     landed: [] as number[],
     stops: 0,
     easing: null as ((t: number) => number) | null,
+    duration: 0,
     complete: null as (() => void) | null,
-    scrollTo(to: number, o: { easing: (t: number) => number; onComplete: () => void }) {
+    scrollTo(to: number, o: { duration: number; easing: (t: number) => number; onComplete: () => void }) {
       this.landed.push(to);
       this.easing = o.easing;
+      this.duration = o.duration;
       this.complete = o.onComplete;
       this.isScrolling = "smooth";
     },
@@ -68,6 +70,8 @@ function setup(at = 1410, stops = STOPS, slow: Slow[] = []) {
 }
 
 const power = (dir = 1) => Array(40).fill(120 * dir);
+/** A trackpad's power fling: as fast, in fractional px. */
+const swipe = (dir = 1) => Array(40).fill(119.5 * dir);
 
 /** A trackpad fling: ramps to 140 px an event, then momentum decaying by 0.955 an event. */
 function trackpad() {
@@ -204,9 +208,9 @@ describe("wheel stops", () => {
 
   it("gives a slow stretch on the way more of the landing, and enters it at the page's speed all the same", () => {
     const plain = setup(0);
-    plain.send(power(), 8);
+    plain.send(swipe(), 8);
     const slowed = setup(0, STOPS, [[207, 670, 5]]);
-    slowed.send(power(), 8);
+    slowed.send(swipe(), 8);
     const e0 = plain.lenis.easing!;
     const e1 = slowed.lenis.easing!;
     // Both land on 01, and from rest they start alike.
@@ -225,5 +229,56 @@ describe("wheel stops", () => {
       return lo;
     };
     expect(time(e1, 492) - time(e1, 207)).toBeGreaterThan(1.8 * (time(e0, 492) - time(e0, 207)));
+  });
+
+  it("keeps a notched wheel's landing short, the hero's dolly excepted, and crosses the dolly lighter", () => {
+    const wheel = setup(2144);
+    wheel.send(power(), 8);
+    expect(wheel.lenis.landed).toEqual([2821]);
+    expect(wheel.lenis.duration).toBeLessThanOrEqual(1.1);
+    const pad = setup(2144);
+    pad.send(swipe(), 8);
+    expect(pad.lenis.duration).toBeGreaterThan(wheel.lenis.duration);
+    // Across the dolly: no cap, and a lighter weight than a trackpad's.
+    const notched = setup(0, STOPS, [[207, 670, 5]]);
+    notched.send(power(), 8);
+    const flung = setup(0, STOPS, [[207, 670, 5]]);
+    flung.send(swipe(), 8);
+    expect(notched.lenis.landed).toEqual([1410]);
+    expect(notched.lenis.duration).toBeGreaterThan(1.1);
+    // The share of the landing spent on the dolly.
+    const share = (e: (t: number) => number) => {
+      const at = (y: number) => {
+        let lo = 0;
+        let hi = 1;
+        for (let i = 0; i < 40; i++) {
+          const m = (lo + hi) / 2;
+          if (e(m) * 1410 < y) lo = m;
+          else hi = m;
+        }
+        return lo;
+      };
+      return at(670) - at(207);
+    };
+    expect(share(notched.lenis.easing!)).toBeLessThan(share(flung.lenis.easing!));
+  });
+
+  it("chains a wheel spun on hard after its landing to the next stop, rather than holding the page", () => {
+    const { lenis, send, finish } = setup();
+    send(power(), 8);
+    finish();
+    // The same gesture, no pause: still fast 300 ms after the landing finished.
+    send(Array(40).fill(120), 8);
+    expect(lenis.landed).toEqual([2144, 2821]);
+  });
+
+  it("takes a swipe laid on a fading momentum, each window faster than the last, as a fresh fling", () => {
+    const { lenis, send, finish } = setup();
+    const d = trackpad();
+    send(d.slice(0, 30));
+    finish();
+    // No pause: the momentum is about half its peak, and a new swipe ramps up on top of it.
+    send([40, 44, 48, 52, 60, 70, 80, 92, 104, 118, 132, 140, 140, 140, 140, 140, 140, 140]);
+    expect(lenis.landed).toEqual([2144, 2821]);
   });
 });

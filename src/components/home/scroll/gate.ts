@@ -27,6 +27,17 @@ const PACE = 80;
 const STEADY = 400;
 /** A fling is taken to the next stop only within this many windows of the page; farther, it runs on. */
 const REACH = 2;
+/** ms of input held at FAST or more, after a landing has finished, that reads as a fresh fling rather than its tail (a
+ * wheel spun on hard, a swipe laid straight on top of the last). */
+const SUSTAIN = 250;
+/** A wheel's notches (|deltaY| this big or more, whole px): no momentum to play out, so its landings stay short. */
+const NOTCH = 50;
+/** Seconds a notched wheel's landing takes at most (the hero's dolly excepted), so the page never drives on long after
+ * the hand has stopped. */
+const NOTCH_TIME = 1.1;
+/** The slow stretch's weight that marks the hero's dolly (stops.ts SLOW), and the weight a notched wheel crosses it at. */
+const DOLLY_WEIGHT = 5;
+const NOTCH_DOLLY = 3.5;
 /** A stop closer than this many windows to where the gesture began is where the reader already is: it goes on past. */
 const NEAR = 0.15;
 /**
@@ -94,6 +105,12 @@ export function createGate(read: () => Course) {
   let yielded = false;
   /** Where the page was when this gesture began. */
   let origin = 0;
+  /** This gesture began over something that scrolls on its own: only then may its input reach that inner scroller. */
+  let startedInner = false;
+  /** Every event of this gesture so far was a wheel's notch. */
+  let notched = false;
+  /** Since when input has run at FAST or more with the page held after a landing. */
+  let fastSince: number | null = null;
   /** The page's own speed, px/ms, from Lenis's last two frames. */
   let speed = 0;
   let prev: { t: number; y: number } | null = null;
@@ -129,12 +146,16 @@ export function createGate(read: () => Course) {
 
   function land(l: GateLenis, to: number, dir: Dir, now: number) {
     // The landing curve runs along the way with its slow stretches weighted, so each pinned transition on it gets its
-    // share of the time; it enters at the page's own speed.
-    const way = warp(l.animatedScroll, to, slow);
-    const duration = landingTime(way.length / innerHeight);
+    // share of the time; it enters at the page's own speed. A notched wheel's landing is short (NOTCH_TIME): it has no
+    // momentum, so a longer one drives on alone after the hand has stopped; across the dolly it is slowed less instead.
+    const from = l.animatedScroll;
+    const dolly = slow.some(([a, b, k]) => k >= DOLLY_WEIGHT && Math.max(a, b) > Math.min(from, to) && Math.min(a, b) < Math.max(from, to));
+    const way = warp(from, to, notched ? slow.map(([a, b, k]) => [a, b, k >= DOLLY_WEIGHT ? NOTCH_DOLLY : k] as const) : slow);
+    const duration = notched && !dolly ? Math.min(NOTCH_TIME, landingTime(way.length / innerHeight)) : landingTime(way.length / innerHeight);
     const v = Math.max(0, pageSpeed(l, dir));
     const curve = glide(way.length < 1 ? 0 : (v * duration * way.entry) / way.length);
     landing = { to, dir };
+    fastSince = null;
     hold = { dir, peak: sum(now - PACE, now), low: Infinity, rising: 0, paced: now };
     l.scrollTo(to, {
       duration,
@@ -155,6 +176,12 @@ export function createGate(read: () => Course) {
       else h.rising = 0;
       h.low = Math.min(h.low, pace);
       if (h.rising >= 2) return true;
+    } else if (now - 3 * PACE >= h.paced) {
+      // A swipe laid on before the last one's momentum fell to its tail: three whole windows since the hold began, each
+      // a quarter faster than the one before (a tail only ever slows, a held spin keeps its pace).
+      const before = sum(now - 2 * PACE, now - PACE);
+      const first = sum(now - 3 * PACE, now - 2 * PACE);
+      if (pace > 40 && pace >= 1.25 * before && before >= 1.25 * first) return true;
     }
     if (now - h.paced < STEADY || rate(now) >= FAST) return false;
     // A hand scrolling on keeps its pace; a tail keeps slowing (to about half every 200 ms).
@@ -184,6 +211,10 @@ export function createGate(read: () => Course) {
         hold = null;
         samples = [];
         yielded = false;
+        // Whether this gesture may scroll an inner scroller is decided once, where it began: a fling that began on the
+        // page and lands with the pointer over the console never scrolls the console with its momentum.
+        startedInner = nested(event, dir);
+        notched = true;
       } else if (hold) {
         hold.paced = now + PACE;
         hold.low = Infinity;
@@ -196,6 +227,7 @@ export function createGate(read: () => Course) {
     lastT = now;
     lastA = a;
     lastDir = dir;
+    if (a < NOTCH || !Number.isInteger(deltaY)) notched = false;
     samples.push({ t: now, a });
     while (samples[0].t < now - 500) samples.shift();
     if (yielded) return true;
@@ -208,15 +240,25 @@ export function createGate(read: () => Course) {
     }
     if (hold && released(hold, now)) hold = null;
     const fast = rate(now) >= FAST;
+    // Input kept at FAST for SUSTAIN ms once the landing has finished is a fresh fling (a wheel spun on, a swipe laid on
+    // top of the last), not the landing's tail: it goes on to the next stop rather than leaving the page held.
+    if (hold && !landing && fast) {
+      fastSince ??= now;
+      if (now - fastSince >= SUSTAIN) {
+        hold = null;
+        fastSince = null;
+      }
+    } else if (!fast) fastSince = null;
+    const inner = startedInner && nested(event, dir);
 
     if (landing) {
-      if (nested(event, dir)) return true;
+      if (inner) return true;
       // A fresh fling while the page is still landing heads on from the stop it is landing on.
       const next = !hold && fast ? ahead(landing.to, landing.to, dir) : undefined;
       if (next !== undefined && carries(l, next, dir, now)) land(l, next, dir, now);
       return swallow(event);
     }
-    if (hold) return nested(event, dir) ? true : swallow(event);
+    if (hold) return inner ? true : swallow(event);
     if (!fast) return true;
     const next = ahead(origin, l.animatedScroll, dir, pageSpeed(l, dir));
     if (next === undefined || !carries(l, next, dir, now) || nested(event, dir)) return true;

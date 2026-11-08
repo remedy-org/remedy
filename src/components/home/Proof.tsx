@@ -33,6 +33,9 @@ export function Proof() {
   return (
     <Section
       id="proof"
+      // On a tall laptop screen Results is a screen of its own, so its stop never shares the frame with For companies'
+      // heading and steps (scroll/stops.ts).
+      className="lg:[@media(min-height:1000px)]:min-h-[calc(100svh-4rem)]"
       exhibit="Results"
       title="Every genuine claim paid."
       muted="Every stolen photo stopped."

@@ -236,10 +236,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const played = useRef(false);
   const gridGate = useRef<HTMLDivElement>(null);
   const reportEl = useRef<HTMLDivElement>(null);
-  const now = useRef({ step, swapped, arrival, studioState });
+  const now = useRef({ step, swapped, arrival, studioState, engaged });
   useEffect(() => {
-    now.current = { step, swapped, arrival, studioState };
-  }, [step, swapped, arrival, studioState]);
+    now.current = { step, swapped, arrival, studioState, engaged };
+  }, [step, swapped, arrival, studioState, engaged]);
 
   const later = (list: number[], ms: number, fn: () => void) => list.push(window.setTimeout(fn, ms));
   const clear = (list: number[]) => list.splice(0).forEach((t) => window.clearTimeout(t));
@@ -368,9 +368,25 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       };
     };
     const off = [on(grid, "grid"), on(report, "report")];
+    // AG Grid scrolls the queue itself from a wheel over its header (the header rides in its sticky top rows), before
+    // the page's scroll ever sees the event: a fling that landed on this section with the pointer over the header ran
+    // its momentum into the list. Until a visitor has engaged the grid, a wheel over it goes to the page alone, handed
+    // on as the page's own (SmoothScroll.tsx: only while it runs, so the page always scrolls).
+    const toPage = (e: WheelEvent) => {
+      if (now.current.engaged === "grid" || !document.documentElement.classList.contains("lenis")) return;
+      e.stopPropagation();
+      if (e.cancelable) e.preventDefault();
+      const { deltaX, deltaY, deltaZ, deltaMode, clientX, clientY, screenX, screenY, ctrlKey, shiftKey, altKey, metaKey } = e;
+      const own = new WheelEvent("wheel", { deltaX, deltaY, deltaZ, deltaMode, clientX, clientY, screenX, screenY, ctrlKey, shiftKey, altKey, metaKey, bubbles: true, cancelable: true });
+      // The input's own time, so the gate paces the gesture as the hand made it, not as the page got to it.
+      Object.defineProperty(own, "timeStamp", { value: e.timeStamp });
+      window.dispatchEvent(own);
+    };
+    grid.addEventListener("wheel", toPage, { capture: true, passive: false });
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       off.forEach((f) => f());
+      grid.removeEventListener("wheel", toPage, { capture: true });
       window.removeEventListener("scroll", onScroll);
       window.clearTimeout(idle);
     };

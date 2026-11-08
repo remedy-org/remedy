@@ -277,6 +277,16 @@ export function readPage(): Page {
   };
 }
 
+/** The pinned stretches as laid out now, [from, to] in scrollY: the Chain of Custody (the laptop's runway or the phone's)
+ * and the Problem sheet. Their stops are paced for the keys, however far apart (keys.ts). */
+export function pinnedStretches(): [number, number][] {
+  const els = [visible("section[data-runway]"), visible("div[data-runway][data-scroll-stops]"), document.getElementById("problem")];
+  return els.flatMap((el) => {
+    const pin = pinned(el ?? null);
+    return pin ? [[pin.top, pin.top + pin.travel] as [number, number]] : [];
+  });
+}
+
 const warned = new Set<string>();
 
 /** Each entry's value on this page; one that can't be read is skipped, never thrown inside Lenis's wheel callback. */
