@@ -1,0 +1,114 @@
+// Exhibit A's timeline (Problem.tsx). Every beat is a range of t, in vh of scroll from the moment the section's top
+// enters the bottom of the viewport (t = 0). On a pinned laptop the section is SECTION_VH tall: it scrolls into place
+// over t 0 to 100, holds from 100 to SECTION_VH, and its last OVERLAP_VH run under section B, which slides over it.
+// problem.module.css mirrors SECTION_VH, OVERLAP_VH and the anchor offset (t = ANCHOR_AT).
+
+export type Range = readonly [number, number];
+
+export const SECTION_VH = 320;
+export const OVERLAP_VH = 50;
+/** Where the nav's "A Problem" link lands: the sheet open, before the first card. */
+export const ANCHOR_AT = 131;
+
+export const T = {
+  // Entrance (about 100vh): out of the dark, rising 30vh, leaning back 14deg, tilted -5.5deg, the lower half folded
+  // up over the heading. It settles at -1.2deg, flat and open, on the site's entrance curve.
+  rise: [30, 118],
+  shade: [30, 108],
+  lean: [30, 122],
+  tilt: [30, 130],
+  fold: [48, 128],
+  sources: [124, 134],
+  // The read (about 90vh): cards land clockwise and the string draws between them in reading order.
+  card1: [132, 142],
+  fig: [136, 145],
+  span1: [143, 151],
+  card2: [149, 159],
+  hl: [157, 165],
+  stamp: [165, 170],
+  line2: [169, 176],
+  span2: [176, 183],
+  card3: [181, 190],
+  span3: [189, 197],
+  card4: [195, 203],
+  ret: [203, 213],
+  ring: [211, 221],
+  // The closed loop holds for 15vh, then the cut and the payoff (the sheet dims toward the room, the payoff prints
+  // over the gap and holds until section B covers it).
+  snip: [236, 246],
+  dim: [242, 262],
+  payoff: [246, 264],
+  cover: [SECTION_VH - OVERLAP_VH, SECTION_VH],
+} as const satisfies Record<string, Range>;
+
+/** The finished state: everything printed, the string cut, the payoff shown. */
+export const REST = T.payoff[1];
+
+export const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+export const seg = (t: number, [a, b]: Range) => clamp((t - a) / (b - a));
+
+/** A CSS cubic-bezier as a function of x (Newton, then bisection), so scrubbed beats keep DESIGN.md's curves. */
+export function bezier(x1: number, y1: number, x2: number, y2: number) {
+  const ax = 3 * x1 - 3 * x2 + 1;
+  const bx = 3 * x2 - 6 * x1;
+  const cx = 3 * x1;
+  const ay = 3 * y1 - 3 * y2 + 1;
+  const by = 3 * y2 - 6 * y1;
+  const cy = 3 * y1;
+  const fx = (s: number) => ((ax * s + bx) * s + cx) * s;
+  const fy = (s: number) => ((ay * s + by) * s + cy) * s;
+  return (x: number) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let s = x;
+    for (let i = 0; i < 8; i++) {
+      const d = (3 * ax * s + 2 * bx) * s + cx;
+      if (Math.abs(d) < 1e-6) break;
+      s -= (fx(s) - x) / d;
+    }
+    if (s < 0 || s > 1 || Math.abs(fx(s) - x) > 1e-4) {
+      let lo = 0;
+      let hi = 1;
+      for (let i = 0; i < 30; i++) {
+        s = (lo + hi) / 2;
+        if (fx(s) < x) lo = s;
+        else hi = s;
+      }
+    }
+    return fy(s);
+  };
+}
+
+/** Entrances (--ease-out-expo); objects, lines and strings (--ease-out-quart); the hinge's turn (--ease-in-out-quart). */
+export const outExpo = bezier(0.16, 1, 0.3, 1);
+export const outQuart = bezier(0.165, 0.84, 0.44, 1);
+export const inOutQuart = bezier(0.76, 0, 0.24, 1);
+
+/** A stamp landing: 1.4 to 0.96 (4% past rest), then settling at 1. No bounce. */
+export function stampScale(x: number) {
+  const k = clamp(x);
+  return k < 0.7 ? 1.4 - 0.44 * outQuart(k / 0.7) : 0.96 + 0.04 * outQuart((k - 0.7) / 0.3);
+}
+
+/**
+ * The visible piece [from, to] of a path drawn with pathLength 1, as a dash and an offset. A gap-first pattern would
+ * leave a round cap's dot at the path's start; a negative offset never does. Nothing to show returns null (hide it).
+ */
+export function dash(from: number, to: number): { array: string; offset: string } | null {
+  if (to - from <= 0.002) return null;
+  return { array: `${(to - from).toFixed(4)} 3`, offset: `${(-from).toFixed(4)}` };
+}
+
+/** Linear between knots [x, t], clamped at both ends. Knots are forced to rise in x so the map never runs backwards. */
+export function piecewise(knots: readonly (readonly [number, number])[], x: number) {
+  if (!knots.length) return REST;
+  const k: [number, number][] = [];
+  for (const [kx, kt] of knots) k.push([k.length ? Math.max(kx, k[k.length - 1][0] + 1) : kx, kt]);
+  if (x <= k[0][0]) return k[0][1];
+  for (let i = 1; i < k.length; i++) {
+    const [x0, t0] = k[i - 1];
+    const [x1, t1] = k[i];
+    if (x <= x1) return t0 + ((x - x0) / (x1 - x0)) * (t1 - t0);
+  }
+  return k[k.length - 1][1];
+}

@@ -1,0 +1,984 @@
+/*
+ * Exhibit A, the aged evidence sheet (Problem.tsx). Every moving value is a custom property the timeline writes on the
+ * section; each one defaults to the finished sheet, so no JS, reduced motion and screenshots show it open, the cards
+ * pinned, the string cut and the payoff printed under it.
+ *
+ * The paper ages by light, never by stains (the paper research's recipe): near-neutral stock, a lamp hotspot at
+ * 32% / 28%, lit grain compressed to 0.84-1 so the multiply never browns it, a warm falloff and faint foxing only in
+ * the corners and along the cut edges, and creases at thirds and half height. Text sits only where the paper is at
+ * L 0.85 or lighter (scripts/contrast.ts checks these tokens). Lifted corners after Nicolas Gallagher's "CSS drop
+ * shadows without images".
+ *
+ * Tokens are local to the section and new; none redefines a global one.
+ */
+
+.section {
+  --aged: oklch(0.925 0.022 84);
+  --aged-back: oklch(0.895 0.022 82);
+  --aged-burn: oklch(0.6 0.06 68);
+  --aged-edge: oklch(0.55 0.07 62);
+  /* Muted ink for text printed straight on the aged sheet (the sub-line, the sources, the docket): a step darker than
+     --ink-muted, so it holds 4.5:1 on the grain's darkest and the warm edge band. */
+  --sheet-muted: oklch(0.36 0.012 65);
+  --crease-dark: oklch(0.23 0.01 65 / 0.085);
+  --crease-light: oklch(1 0 0 / 0.5);
+  --evidence-card: oklch(0.962 0.009 88);
+  --evidence-clip: oklch(0.975 0.005 95);
+  --brass: oklch(0.74 0.075 82);
+  --brass-deep: oklch(0.52 0.06 75);
+  --desk-shadow: oklch(0 0 0 / 0.55);
+  /* The darkest the grain gets (it multiplies by 0.84 at most): black at 16%, for the contrast check. */
+  --grain-floor: oklch(0 0 0 / 0.16);
+  /* Lit fractal noise, compressed to 0.84-1. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeDiffuseLighting lighting-color='white' surfaceScale='1.4'%3E%3CfeDistantLight azimuth='45' elevation='60'/%3E%3C/feDiffuseLighting%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='0.16' intercept='0.86'/%3E%3CfeFuncG type='linear' slope='0.16' intercept='0.855'/%3E%3CfeFuncB type='linear' slope='0.16' intercept='0.84'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  /* Foxing: sparse warm blotches from thresholded low-frequency noise. Masked to the corners below. */
+  --foxing: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.06' numOctaves='3' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.29 0 0 0 0 0.13 -16 0 0 0 5.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  --tilt-rest: -0.6deg;
+
+  position: relative;
+  background: var(--bg);
+  color: var(--text);
+}
+
+:global([data-theme="light"]) .section {
+  --desk-shadow: oklch(0.23 0.01 65 / 0.28);
+}
+
+.stage {
+  position: relative;
+  isolation: isolate;
+  padding-block: 72px 88px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+/* The light table: one warm pool under the sheet. */
+.pool {
+  position: absolute;
+  z-index: -1;
+  inset: 8% 6%;
+  pointer-events: none;
+  background: var(--table-glow);
+}
+
+/* The sheet's width is the container, so everything printed on it scales with it, as one object. */
+.board {
+  position: relative;
+  container-type: inline-size;
+}
+
+/* ---------- the sheet as an object on the desk ---------- */
+
+/* The camera stays centred on the sheet as it rises, so the turning half reads as lifting toward the viewer. */
+.persp {
+  perspective: 2400px;
+  perspective-origin: 50% calc(50% + var(--y, 0px));
+}
+
+.lift {
+  position: relative;
+  transform-origin: 50% 40%;
+  transform: translate3d(0, var(--y, 0px), 0) rotateX(var(--lean, 0deg)) rotate(var(--tilt, var(--tilt-rest))) scale(var(--sc, 1));
+}
+
+/* Lifted bottom corners: two skewed shadows under the sheet. */
+.lift::before,
+.lift::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  bottom: 14px;
+  width: 46%;
+  height: 18%;
+  box-shadow: 0 16px 14px var(--desk-shadow);
+  opacity: var(--open, 1);
+  transform: translateZ(-2px);
+}
+
+.lift::before {
+  left: 12px;
+  rotate: -2.5deg;
+}
+
+.lift::after {
+  right: 12px;
+  rotate: 2.5deg;
+}
+
+/* The sheet's own shadow on the desk, sized to the part of it that lies open. */
+.floor {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  transform-origin: 50% 0;
+  transform: translateZ(-1px) scaleY(var(--fsy, 1));
+  box-shadow:
+    0 1px 1px oklch(0 0 0 / 0.35),
+    0 2px 4px oklch(0 0 0 / 0.25),
+    0 30px 60px -20px var(--desk-shadow);
+}
+
+.sheet {
+  position: relative;
+  border-radius: 3px;
+  color: var(--ink);
+  padding: 28px 20px 26px;
+}
+
+/* ---------- the paper ---------- */
+
+.paper {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background-color: var(--aged);
+  background-image:
+    /* the lamp: one soft hotspot, upper left */
+    radial-gradient(70% 60% at 32% 28%, oklch(1 0.01 85 / 0.24), transparent 70%),
+    /* age: a warm falloff into each corner, strongest where the sheet was handled (lower right) */
+    radial-gradient(circle at 100% 100%, color-mix(in oklch, var(--aged-burn) 42%, transparent), transparent max(150px, 17cqw)),
+    radial-gradient(circle at 0 100%, color-mix(in oklch, var(--aged-burn) 30%, transparent), transparent max(110px, 12cqw)),
+    radial-gradient(circle at 100% 0, color-mix(in oklch, var(--aged-burn) 34%, transparent), transparent max(130px, 14cqw)),
+    radial-gradient(circle at 0 0, color-mix(in oklch, var(--aged-burn) 26%, transparent), transparent max(110px, 12cqw)),
+    var(--grain);
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    220px 220px;
+  background-blend-mode: screen, multiply, multiply, multiply, multiply, multiply;
+  /* the cut edges: a hair of white, then a warm band that fades in 28px */
+  box-shadow:
+    inset 0 0 0 1px oklch(1 0 0 / 0.32),
+    inset 0 0 2px 1px color-mix(in oklch, var(--aged-edge) 30%, transparent),
+    inset 0 0 28px color-mix(in oklch, var(--aged-edge) 18%, transparent);
+}
+
+/* Foxing, only in the corners, never under text. */
+.paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--foxing) 0 0 / 300px 300px;
+  opacity: 0.3;
+  mask-image:
+    radial-gradient(circle at 100% 100%, #000, transparent max(130px, 14cqw)),
+    radial-gradient(circle at 100% 0, #000, transparent max(110px, 11cqw)),
+    radial-gradient(circle at 0 0, #000, transparent max(70px, 6cqw));
+}
+
+/* Creases: a shadow ramp into the fold and a 1-3px highlight just past it. One across on phones. */
+.paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 50%, var(--crease-light) calc(50% + 1px), transparent calc(50% + 3px)),
+    linear-gradient(180deg, transparent calc(50% - 14px), var(--crease-dark) calc(50% - 1px), transparent 50%);
+}
+
+/* ---------- the fold: only while it opens (data-phase="fold"); otherwise one flat sheet ---------- */
+
+.flap,
+.hinge {
+  display: none;
+}
+
+.flapFront,
+.flapBack {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 0 0 3px 3px;
+  backface-visibility: hidden;
+}
+
+/* The lower half's face is a window onto a full sheet of the same paper, so grain, age and creases run on unbroken. */
+.flapFront > .paper {
+  inset: auto 0 0;
+  top: -100%;
+}
+
+.flapBack {
+  transform: rotateX(180deg);
+  border-radius: 3px 3px 0 0;
+  background-color: var(--aged-back);
+  background-image:
+    radial-gradient(90% 80% at 30% 30%, oklch(1 0.01 85 / 0.18), transparent 70%),
+    radial-gradient(130% 120% at 50% 60%, transparent 55%, color-mix(in oklch, var(--aged-burn) 26%, transparent)),
+    var(--grain);
+  background-size:
+    100% 100%,
+    100% 100%,
+    220px 220px;
+  background-blend-mode: screen, multiply, multiply;
+  box-shadow:
+    inset 0 0 0 1px oklch(1 0 0 / 0.28),
+    inset 0 0 28px color-mix(in oklch, var(--aged-edge) 18%, transparent);
+}
+
+/* The outside of the folded sheet: filed and labelled, like an exhibit in a box. */
+.docket {
+  position: absolute;
+  left: 6%;
+  top: 13%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6cqw;
+  padding-top: 0.9cqw;
+  border-top: 1px solid var(--paper-line);
+  width: 40%;
+  font-family: var(--font-mono);
+  font-size: clamp(0.75rem, 1cqw, 0.875rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sheet-muted);
+}
+
+.docket > span:first-child {
+  font-size: 1.6em;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+}
+
+/* A turning face darkens most along its hinge, where the paper bends away from the lamp. */
+.turn {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, oklch(0.2 0.02 60 / 0.95), oklch(0.2 0.02 60 / 0.45));
+}
+
+.flapFront > .turn {
+  opacity: var(--sf, 0);
+}
+
+.flapBack > .turn {
+  background: linear-gradient(0deg, oklch(0.2 0.02 60 / 0.95), oklch(0.2 0.02 60 / 0.45));
+  opacity: var(--sb, 0);
+}
+
+/* The room's dark over a face as the sheet rises out of it. */
+.faceShade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--bg);
+  opacity: var(--shade, 0);
+}
+
+/* The raised half's shadow on the top half, just above the fold. */
+.hinge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 28%;
+  bottom: 50%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, oklch(0.2 0.02 60 / 0.38));
+  opacity: var(--hinge, 0);
+}
+
+/* ---------- printed on the sheet ---------- */
+
+.head {
+  position: relative;
+  max-width: 34rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.08;
+  letter-spacing: -0.026em;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+.sub {
+  margin: 10px 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.4;
+  color: var(--sheet-muted);
+  text-wrap: pretty;
+}
+
+.sources {
+  position: relative;
+  margin: 28px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--sheet-muted);
+  opacity: var(--src, 1);
+}
+
+.sources a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--paper-line);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 160ms var(--ease-snap);
+}
+
+.sources a:hover {
+  text-decoration-color: var(--ink);
+}
+
+.sources a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* ---------- cards ---------- */
+
+.cards {
+  position: relative;
+  isolation: isolate;
+  margin: 28px 0 0;
+  padding: 0 0 0 30px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.slot {
+  position: relative;
+  z-index: 2;
+}
+
+/* A card dropping onto the sheet: 18px above, turned 2deg, settling as --c goes 0 to 1. */
+.land {
+  opacity: clamp(0, calc(var(--c, 1) * 2.5), 1);
+  translate: 0 calc((1 - var(--c, 1)) * -18px);
+  rotate: calc((1 - var(--c, 1)) * 2deg);
+}
+
+/* Card 3 slides out from under its pin instead. */
+.slide {
+  translate: calc((1 - var(--c, 1)) * -24px) calc((1 - var(--c, 1)) * -10px);
+  rotate: calc((1 - var(--c, 1)) * -1.4deg);
+}
+
+.card {
+  position: relative;
+  border-radius: 2px;
+  background: var(--evidence-card);
+  padding: 14px 16px 16px;
+  box-shadow:
+    0 0 0 1px oklch(0.23 0.01 65 / 0.1),
+    inset 0 1px 0 oklch(1 0 0 / 0.7),
+    0 1px 1px oklch(0.23 0.01 65 / 0.18),
+    0 8px 14px -8px oklch(0.23 0.01 65 / 0.35);
+}
+
+.cardLabel {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.cardLine {
+  margin: 6px 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
+
+.quote {
+  color: var(--ink);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  letter-spacing: 0;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+/* Card 1's figure, with room on both sides for the ring drawn round it. */
+.figLine {
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+.figure {
+  position: relative;
+  display: inline-block;
+  margin-inline: 0.5em;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* 6-10% prints with a 2px ink spread that settles to a hair. */
+.print {
+  opacity: var(--f1, 1);
+  text-shadow: 0 0 calc(0.4px + var(--ink1, 0) * 2px) color-mix(in oklch, var(--ink) 40%, transparent);
+}
+
+/* A loose hand-drawn oval, a little more than one turn, clear of the glyphs. */
+.ring {
+  position: absolute;
+  left: -0.55em;
+  right: -0.55em;
+  top: -0.3em;
+  bottom: -0.3em;
+  width: calc(100% + 1.1em);
+  height: calc(100% + 0.6em);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ring path {
+  fill: none;
+  stroke: var(--stop-ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: calc(1 - var(--ring, 1));
+}
+
+/* Card 2, the notice: twice the others, a real recall notice shot close. */
+.notice {
+  padding: 0;
+}
+
+.notice .cardLabel {
+  padding: 14px 16px 0;
+}
+
+.doc {
+  margin: 10px 12px 0;
+  background: var(--evidence-clip);
+  box-shadow:
+    0 0 0 1px var(--paper-line),
+    0 1px 2px oklch(0.23 0.01 65 / 0.1);
+}
+
+.docMeta {
+  margin: 0;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--paper-line);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+.docMeta > span {
+  white-space: nowrap;
+}
+
+.excerpt {
+  position: relative;
+  margin: 0;
+  padding: 10px 10px 44px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.address {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+/* The highlighter, drawn left to right under the ink. */
+.highlight {
+  background-image: linear-gradient(var(--highlight), var(--highlight));
+  background-repeat: no-repeat;
+  background-position: 0 80%;
+  background-size: calc(var(--hl, 1) * 100%) 0.7em;
+  padding-inline: 0.12em;
+  margin-inline: -0.12em;
+}
+
+/* RECEIVED, below the address line: the inbox took it and nobody checked it. */
+.stamp {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  opacity: var(--sto, 1);
+  scale: var(--sts, 1);
+  transform-origin: 30% 50%;
+}
+
+/* The full stop ink on the clipping (the shared Stamp's 85% is for --paper). */
+.stampInk {
+  color: var(--stop-ink);
+}
+
+.after {
+  opacity: clamp(0, calc(var(--l2, 1) * 2), 1);
+  translate: 0 calc((1 - var(--l2, 1)) * 6px);
+}
+
+.notice .cardLine {
+  padding: 10px 16px 14px;
+  margin: 0;
+}
+
+/* Card 3: a torn strip of the Federal Register page, turned against the sheet. */
+.strip {
+  position: relative;
+  filter: drop-shadow(0 0 0.5px oklch(0.23 0.01 65 / 0.35)) drop-shadow(0 6px 8px oklch(0.23 0.01 65 / 0.2));
+}
+
+.stripPaper {
+  background: var(--evidence-clip);
+  padding: 18px 16px 20px;
+  clip-path: polygon(
+    0 6px,
+    6% 2px,
+    11% 5px,
+    17% 1px,
+    24% 4px,
+    31% 0,
+    38% 5px,
+    46% 2px,
+    53% 6px,
+    61% 1px,
+    68% 4px,
+    76% 0,
+    83% 5px,
+    90% 2px,
+    96% 5px,
+    100% 1px,
+    100% calc(100% - 4px),
+    94% calc(100% - 1px),
+    87% calc(100% - 6px),
+    80% calc(100% - 2px),
+    72% 100%,
+    65% calc(100% - 5px),
+    57% calc(100% - 1px),
+    49% calc(100% - 6px),
+    42% calc(100% - 2px),
+    34% 100%,
+    27% calc(100% - 5px),
+    19% calc(100% - 1px),
+    12% calc(100% - 5px),
+    5% calc(100% - 2px),
+    0 calc(100% - 6px)
+  );
+}
+
+.stripHead {
+  margin: 8px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+/* The filing's own words in a Times face: a facsimile of the page, not site type. */
+.stripText {
+  margin: 4px 0 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* ---------- pins and string ---------- */
+
+.pin {
+  position: absolute;
+  z-index: 4;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, oklch(0.86 0.05 88) 0, var(--brass) 34%, var(--brass-deep) 80%);
+  box-shadow:
+    inset 0 0 0 0.5px oklch(0.3 0.03 70 / 0.6),
+    1px 2px 1.5px oklch(0.23 0.01 65 / 0.4),
+    3px 6px 5px oklch(0.23 0.01 65 / 0.15);
+  pointer-events: none;
+}
+
+.string {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.string path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.thread {
+  stroke: var(--stop-ink);
+  stroke-width: 1.6px;
+}
+
+.threadShadow {
+  stroke: oklch(0.23 0.01 65 / 0.24);
+  stroke-width: 1.6px;
+  transform: translate(2px, 4px);
+}
+
+/* ---------- the payoff ---------- */
+
+.payoff {
+  position: relative;
+  margin: 24px 0 0;
+  max-width: 34ch;
+  color: var(--text);
+  text-wrap: balance;
+  opacity: var(--po, 1);
+  filter: blur(calc((1 - var(--po, 1)) * 10px));
+  translate: 0 calc((1 - var(--po, 1)) * 12px);
+}
+
+.payoffLead {
+  display: block;
+  font-size: var(--text-title-lg);
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  font-weight: 500;
+}
+
+.payoffRest {
+  display: block;
+  margin-top: 10px;
+  font-size: var(--text-head-sm);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+
+/* Over the sheet: the room's colour, as the lamp goes down after the cut. */
+.shadeTop,
+.dim {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  pointer-events: none;
+  background: var(--bg);
+}
+
+.shadeTop {
+  opacity: var(--shade, 0);
+}
+
+.dim {
+  opacity: var(--dim, 0);
+}
+
+/* Phones keep the figure and lose the excerpt's meta row and first clause. */
+@media (max-width: 1023.98px) {
+  .docMeta,
+  .clause {
+    display: none;
+  }
+}
+
+/* ---------- board: from 1024px the sheet is one 5:3 object with the cards in a loose diamond ---------- */
+
+@media (min-width: 1024px) {
+  .section {
+    --tilt-rest: -1.2deg;
+  }
+
+  .stage {
+    padding-block: 96px 120px;
+  }
+
+  .column {
+    width: min(1440px, 100%);
+  }
+
+  .sheet {
+    aspect-ratio: 5 / 3;
+    padding: 0;
+  }
+
+  .paper::after {
+    background:
+      linear-gradient(90deg, transparent calc(33.333% - 18px), var(--crease-dark) calc(33.333% - 1px), transparent 33.333%),
+      linear-gradient(90deg, transparent 33.333%, var(--crease-light) calc(33.333% + 1px), transparent calc(33.333% + 3px)),
+      linear-gradient(90deg, transparent 66.666%, var(--crease-dark) calc(66.666% + 1px), transparent calc(66.666% + 18px)),
+      linear-gradient(90deg, transparent calc(66.666% - 2px), var(--crease-light) 66.666%, transparent calc(66.666% + 1px)),
+      linear-gradient(180deg, transparent calc(50% - 14px), var(--crease-dark) calc(50% - 1px), transparent 50%),
+      linear-gradient(180deg, transparent 50%, var(--crease-light) calc(50% + 1px), transparent calc(50% + 3px)),
+      /* the panels between the folds catch the lamp a little differently */
+      linear-gradient(90deg, oklch(0.23 0.01 65 / 0.035), transparent 33.333%, transparent 66.666%, oklch(0.23 0.01 65 / 0.02));
+  }
+
+  .head {
+    position: absolute;
+    left: 6%;
+    top: 7.5%;
+    width: 52%;
+    max-width: none;
+  }
+
+  .title {
+    font-size: clamp(1.9rem, 3.9cqw, 3.5rem);
+  }
+
+  .sub {
+    margin-top: 1.1cqw;
+    font-size: clamp(1rem, 1.65cqw, 1.3rem);
+  }
+
+  .cards {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    display: block;
+    pointer-events: none;
+  }
+
+  .slot {
+    position: absolute;
+    pointer-events: auto;
+  }
+
+  .slot1 {
+    left: 6%;
+    top: 37%;
+    width: 25.5%;
+    rotate: -0.8deg;
+  }
+
+  .slot2 {
+    left: 61.5%;
+    top: 8%;
+    width: 34%;
+    rotate: 0.6deg;
+  }
+
+  .slot3 {
+    left: 67.5%;
+    top: 63%;
+    width: 25.5%;
+    rotate: 1.8deg;
+  }
+
+  .slot4 {
+    left: 7%;
+    top: 67.5%;
+    width: 25%;
+    rotate: 0.7deg;
+  }
+
+  .card {
+    padding: 1.3cqw 1.45cqw 1.45cqw;
+  }
+
+  .notice {
+    padding: 0;
+  }
+
+  .notice .cardLabel {
+    padding: 1.3cqw 1.45cqw 0;
+  }
+
+  .doc {
+    margin: 0.9cqw 1.1cqw 0;
+  }
+
+  .docMeta {
+    padding: 0.55cqw 0.85cqw;
+    font-size: clamp(0.625rem, 0.95cqw, 0.75rem);
+  }
+
+  .excerpt {
+    padding: 0.85cqw 0.85cqw max(40px, 3.6cqw);
+  }
+
+  .notice .cardLine {
+    padding: 0.9cqw 1.45cqw 1.3cqw;
+  }
+
+  .stripPaper {
+    padding: 1.6cqw 1.45cqw 1.8cqw;
+  }
+
+  .cardLabel {
+    font-size: clamp(0.875rem, 1.42cqw, 1.0625rem);
+  }
+
+  .cardLine,
+  .excerpt {
+    font-size: clamp(0.8125rem, 1.28cqw, 0.9688rem);
+  }
+
+  .stripText {
+    font-size: clamp(1.05rem, 1.9cqw, 1.4rem);
+  }
+
+  .stripHead {
+    font-size: clamp(0.6875rem, 0.95cqw, 0.75rem);
+  }
+
+  .sources {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: 5.4%;
+    margin: 0;
+    font-size: clamp(0.6875rem, 0.98cqw, 0.8125rem);
+  }
+
+  .payoff {
+    margin-top: 32px;
+  }
+}
+
+/* ---------- pinned: laptops of at least 1024 x 700 with motion allowed ---------- */
+
+@media (min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference) {
+  .section {
+    /* problemTimeline.ts: SECTION_VH tall, the last OVERLAP_VH under section B; the anchor lands at t = ANCHOR_AT. */
+    height: 320vh;
+    margin-bottom: -50vh;
+    scroll-margin-top: -31vh;
+  }
+
+  .stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100svh;
+    padding-block: 64px 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* The label, the sheet and (without JS) the payoff under it, all under the 64px nav. */
+  .column {
+    width: min(1440px, 100%, (100svh - 64px - 196px) * 5 / 3);
+  }
+
+  .section[data-armed] .column {
+    width: min(1440px, 100%, (100svh - 64px - 104px) * 5 / 3);
+  }
+
+  .lift {
+    will-change: transform;
+  }
+
+  /* With the timeline running, the payoff prints over the cut, centred in the loop, once the lamp is down. */
+  .section[data-armed] .payoff {
+    position: absolute;
+    z-index: 2;
+    left: var(--loop-x, 50%);
+    top: var(--loop-y, 57%);
+    margin: 0;
+    width: 42cqw;
+    max-width: none;
+    text-align: center;
+    pointer-events: none;
+    translate: -50% calc(-50% + (1 - var(--po, 1)) * 12px);
+  }
+
+  .section[data-armed] .payoffLead {
+    font-size: clamp(1.75rem, 3.15cqw, 2.75rem);
+  }
+
+  .section[data-armed] .payoffRest {
+    margin-top: 0.9cqw;
+    font-size: clamp(0.9375rem, 1.45cqw, 1.25rem);
+  }
+
+  .section[data-armed] .land,
+  .section[data-armed] .stamp {
+    will-change: transform, opacity;
+  }
+
+  .section[data-armed] .shadeTop,
+  .section[data-armed] .dim,
+  .section[data-armed] .string {
+    will-change: opacity;
+  }
+
+  /* While it opens: the lower half is its own pane on a hinge at half height, turning toward the viewer. */
+  .section[data-phase="fold"] .lift,
+  .section[data-phase="fold"] .sheet {
+    transform-style: preserve-3d;
+  }
+
+  .section[data-phase="fold"] .sheet > .paper {
+    /* 1px past the hinge, under the turning half, so no seam opens between them */
+    clip-path: inset(0 0 calc(50% - 1px) 0 round 3px 3px 0 0);
+  }
+
+  .section[data-phase="fold"] .shadeTop {
+    bottom: 50%;
+  }
+
+  .section[data-phase="fold"] .flap {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    bottom: 0;
+    transform-style: preserve-3d;
+    transform-origin: 50% 0;
+    transform: translateZ(0.5px) rotateX(var(--fold, 0deg));
+    will-change: transform;
+  }
+
+  .section[data-phase="fold"] .hinge {
+    display: block;
+  }
+
+  /* Section B is a page laid over this one: opaque, above, its edge's shadow falling on the sheet. */
+  .section + section {
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 -24px 60px -10px oklch(0 0 0 / 0.55);
+  }
+
+  :global([data-theme="light"]) .section + section {
+    box-shadow: 0 -24px 60px -10px oklch(0.23 0.01 65 / 0.22);
+  }
+}
+
+/* Reduced motion: the document lies flat, open and finished. */
+@media (prefers-reduced-motion: reduce) {
+  .lift {
+    transform: none;
+  }
+
+  .slot {
+    rotate: none !important;
+  }
+}
