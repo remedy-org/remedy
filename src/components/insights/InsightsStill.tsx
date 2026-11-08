@@ -2,6 +2,7 @@ import clsx from "clsx";
 import type { CSSProperties, ReactNode } from "react";
 import { PAID_BY_DAY } from "./report";
 import type { InsightsStillData, PaidDay } from "./still";
+import { StillRefusals } from "./StillRefusals";
 import { CheckFunnelView } from "./widgets/CheckFunnelView";
 import { RefusalReasonsView } from "./widgets/RefusalReasonsView";
 
@@ -23,25 +24,30 @@ function Card({ title, children, flat, className }: { title: string; children: R
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-/** Dollars paid through PayPal per day, as columns: each day's dollars just over its column, the day and the claims paid
- * that day under it. */
-function PaidByDay({ days, className }: { days: PaidDay[]; className?: string }) {
+/** Dollars paid through PayPal per day, as Studio's chart draws them: each day's dollars inside its column, in the page's
+ * own colour on the green, the day under it, and no column or label for a day nothing was sent. Laptops; a phone (form
+ * "phone") keeps the claims paid under each day, read as text. */
+function PaidByDay({ days, className, counts = false }: { days: PaidDay[]; className?: string; counts?: boolean }) {
   const max = Math.max(1, ...days.map((d) => d.dollars));
   return (
     <ol className={clsx("grid min-h-0 flex-1 auto-cols-fr grid-flow-col gap-3", className)}>
       {days.map((d, i) => {
-        const h = `max(3px, ${(d.dollars / max) * 80}%)`;
+        const h = `${(d.dollars / max) * 80}%`;
         return (
           <li key={d.day} className="flex min-h-0 min-w-0 flex-col items-stretch">
             <span className="relative min-h-12 flex-1">
-              <span data-bar="day" aria-hidden="true" className="absolute inset-x-0 bottom-0 rounded-t-[3px] bg-pay" style={{ height: h, "--i": i } as CSSProperties} />
-              <span className="absolute inset-x-0 text-center text-micro whitespace-nowrap text-text" style={{ bottom: `calc(${h} + 4px)` }}>
-                {usd(d.dollars)}
-              </span>
+              {d.dollars > 0 && (
+                <span data-bar="day" aria-hidden="true" className="absolute inset-x-0 bottom-0 flex justify-center rounded-t-[3px] bg-pay pt-1.5" style={{ height: h, "--i": i } as CSSProperties}>
+                  {/* The label waits for its column to finish growing (tour.module.css), so it never floats over nothing. */}
+                  <span data-bar-label className="text-micro whitespace-nowrap text-bg">
+                    {usd(d.dollars)}
+                  </span>
+                </span>
+              )}
             </span>
             <span className="flex flex-col items-center border-t border-line pt-1.5 text-micro whitespace-nowrap">
               <span className="text-text-2">{d.label}</span>
-              <span className="text-muted">{d.paid} paid</span>
+              {counts && <span className="text-muted">{d.paid} paid</span>}
             </span>
           </li>
         );
@@ -95,7 +101,7 @@ export function InsightsStill({
             <CheckFunnelView steps={data.steps} compact flush />
           </Card>
           <Card title={PAID_BY_DAY} flat={flat}>
-            <PaidByDay days={data.days} className="h-36" />
+            <PaidByDay days={data.days} className="h-36" counts />
           </Card>
           {rail}
         </div>
@@ -127,10 +133,12 @@ export function InsightsStill({
             </div>
           </Card>
           <div className="flex flex-col gap-3">
-            {/* Left out where Studio leaves it out (report.ts HOME_DAY_ROWS): the day chart needs the room. */}
-            <Card title="Why claims were refused" flat={flat} className="shrink-0 [@container(max-height:619px)]:hidden">
-              <RefusalReasonsView items={data.refusals} flush />
-            </Card>
+            {/* Shown exactly where Studio shows it at this frame's height (report.ts homeShowsRefusals). */}
+            <StillRefusals reasons={data.refusals.length}>
+              <Card title="Why claims were refused" flat={flat} className="shrink-0">
+                <RefusalReasonsView items={data.refusals} flush />
+              </Card>
+            </StillRefusals>
             <Card title={PAID_BY_DAY} flat={flat} className="min-h-[144px] flex-1">
               <PaidByDay days={data.days} />
             </Card>

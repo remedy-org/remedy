@@ -265,6 +265,13 @@ export const homeRefusalRows = (reasons: number) => Math.ceil((76 + reasons * 34
  * dollars inside its column). The still leaves the refusal reasons out at the same frame height (InsightsStill.tsx). */
 export const HOME_DAY_ROWS = 13;
 
+/** The tour's Studio canvas rows for its frame's body height (16px rows under 28px of padding, 24 at least): the tour
+ * sizes Studio with it, and the still decides from it what Studio will show, so the handover moves nothing. */
+export const homeRowsFor = (bodyHeight: number) => Math.max(24, Math.floor((bodyHeight - 28) / 16));
+
+/** Whether the homepage's Studio lists the refusal reasons at this many rows (homeInsightsReport's rule). */
+export const homeShowsRefusals = (rows: number, reasons: number) => Math.max(16, rows - 8) - homeRefusalRows(reasons) >= HOME_DAY_ROWS;
+
 /**
  * The homepage's Insights, as Studio state (InsightsPreview.tsx): six widgets on one page. Units remedied and Refused
  * are Studio's own value KPI tiles; the median is Remedy's tile (Studio's can only average); the funnel and the refusal
@@ -281,7 +288,7 @@ export function homeInsightsReport(data: InsightsData, rows = 40, labelColor?: s
   const home = homeKpiCaptions(data.claims);
   const reasons = new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size;
   const body = Math.max(16, rows - kpiRows);
-  const refusalRows = body - homeRefusalRows(reasons) >= HOME_DAY_ROWS ? homeRefusalRows(reasons) : 0;
+  const refusalRows = homeShowsRefusals(rows, reasons) ? homeRefusalRows(reasons) : 0;
   return {
     selectedPageId: "overview",
     pages: [

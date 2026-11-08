@@ -11,7 +11,7 @@ import { formatCount } from "@/components/console/format";
 import { GridStill } from "@/components/console/GridStill";
 import { TABS, type Tab } from "@/components/console/StatusTabs";
 import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME, type StudioFilter } from "@/components/insights/InsightsPreviewLazy";
-import { spokenTime } from "@/components/insights/report";
+import { homeRowsFor, spokenTime } from "@/components/insights/report";
 import { ConsoleFrame, type FramePage } from "./ConsoleFrame";
 import styles from "./tour.module.css";
 import { PayoutsNote } from "./PayoutsNote";
@@ -48,9 +48,7 @@ const STUDIO_FROM = 1024;
 const IDLE = 150;
 const STUDIO_WAIT = 8000;
 // Studio's canvas rows are 16px, inside 14px of canvas padding and 6px around each panel (InsightsPreview.tsx): its
-// cards sit on the frame's 20px inset with 12px between them, where the still draws its own.
-const STUDIO_ROW = 16;
-const STUDIO_PAD = 28;
+// cards sit on the frame's 20px inset with 12px between them, where the still draws its own (homeRowsFor).
 // The nav's height, and the air the nav jump leaves under it.
 const NAV = 64;
 const AIR = 16;
@@ -415,7 +413,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
     if (window.innerWidth < STUDIO_FROM || saveData) return;
     const h = insightsBody.current?.clientHeight ?? 0;
-    if (h) setStudioRows(Math.max(24, Math.floor((h - STUDIO_PAD) / STUDIO_ROW)));
+    if (h) setStudioRows(homeRowsFor(h));
     void loadInsightsPreview();
     setStudioState("mounted");
     later(studioWait.current, STUDIO_WAIT, () => setStudioState((s) => (s === "mounted" ? "failed" : s)));

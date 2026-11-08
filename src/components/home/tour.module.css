@@ -537,6 +537,12 @@
     animation-delay: calc(640ms + var(--i, 0) * 80ms);
   }
 
+  /* A day's dollars come in only once its column stands (120ms, from the end of its growth), never over empty space. */
+  .stage[data-step="2"] [data-still] [data-bar="day"] [data-bar-label] {
+    animation: flow-in 120ms ease-out both;
+    animation-delay: calc(1240ms + var(--i, 0) * 80ms);
+  }
+
   .stage[data-step="2"] .answerLine {
     animation: focus-in var(--dur-reveal) var(--ease-out-expo) both;
     animation-delay: calc(300ms + var(--line, 0) * 80ms);
