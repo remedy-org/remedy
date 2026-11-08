@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { ConsoleSkeleton, SkeletonGrid } from "@/components/console/ConsoleSkeleton";
@@ -94,9 +95,9 @@ export default async function StatesPage() {
             <ErrorState variant="inline" title="CPSC's recall service didn't answer. Try again in a minute." />
             <p className="text-ui text-text-2">
               <span className="font-mono">27-071</span> is already in your workspace.{" "}
-              <a href="/console/recalls/27-071" className="font-medium text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
+              <Link href="/console/recalls/27-071" className="font-medium text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
                 Open it <span aria-hidden="true">→</span>
-              </a>
+              </Link>
             </p>
           </div>
         </State>

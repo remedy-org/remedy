@@ -107,7 +107,8 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
   );
 }
 
-/** The open claim's evidence as a still: the photos, the model's quoted answers (the unclear one first), the rule. */
+/** The open claim's evidence as a still: the photos, the model's answers (the unclear one first, with its quoted
+ * evidence; a passing answer is its name and icon, as in the console's check rows), the rule. */
 function EvidenceStill({ claim }: { claim: DrawerClaim }) {
   const checks = [...claim.checks].sort((a, b) => Number(a.outcome === "pass") - Number(b.outcome === "pass"));
   return (
@@ -135,7 +136,7 @@ function EvidenceStill({ claim }: { claim: DrawerClaim }) {
               id: c.id,
               label: c.label,
               state: c.outcome === "reject" ? "reject" : c.outcome,
-              detail: c.evidence ? <q className="block text-ui leading-[1.55] text-muted">{c.evidence}</q> : c.rule,
+              detail: c.outcome === "pass" ? undefined : c.evidence ? <q className="block text-ui leading-[1.55] text-muted">{c.evidence}</q> : c.rule,
             }))}
           />
         </div>
