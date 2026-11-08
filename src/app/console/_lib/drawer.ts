@@ -195,11 +195,26 @@ function plainEvents(events: Claim["events"]): DrawerEvent[] {
 
 /** A blocked repost's earlier claim, when it is on the same recall (another company's claim never shows). */
 export function duplicateFor(c: Claim, rows: ClaimSummary[]): DrawerClaim["duplicate"] {
-  if (c.decision !== "blocked" || !c.reasons.some((r) => r.check === "duplicate_photo")) return null;
-  const match = duplicateOf(c, rows);
+  const reason = c.reasons.find((r) => r.check === "duplicate_photo");
+  if (c.decision !== "blocked" || !reason) return null;
+  const match = duplicateOf(c, rows) ?? namedCopy(c, reason.text, rows);
   const row = match && rows.find((r) => r.id === match.id);
   if (!match || !row || row.recallId !== c.recallId) return null;
   return { photo: match.photo, id: match.id, theirs: match.theirs, of: row.photoHashes.length, src: null };
+}
+
+/** A claim that came with the console isn't checked against the others (they share sample photos), so its one repost
+ * names the claim it copied in its reason ("…already used in another claim, RM-2125"): that claim's matching photo. */
+function namedCopy(c: Claim, text: string, rows: ClaimSummary[]): { photo: number; id: string; theirs: number } | null {
+  if (!c.seeded) return null;
+  const id = text.match(/\bRM-\d{4}\b/)?.[0];
+  const row = id ? rows.find((r) => r.id === id && r.seeded) : undefined;
+  if (!row) return null;
+  for (const [i, p] of c.photos.entries()) {
+    const j = row.photoHashes.indexOf(p.hash);
+    if (j >= 0) return { photo: i + 1, id: row.id, theirs: j + 1 };
+  }
+  return null;
 }
 
 // A check that approve would stop the payout on, said on its pre-check row before anyone decides.

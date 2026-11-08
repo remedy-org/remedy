@@ -31,6 +31,16 @@ describe("buildSeedClaims", () => {
     expect(Math.max(...times)).toBeLessThan(now.getTime());
   });
 
+  it("has exactly one repost, and it names the claim it copied", () => {
+    const reposts = claims.filter((c) => c.reasons.some((r) => r.check === "duplicate_photo"));
+    expect(reposts).toHaveLength(1);
+    const named = reposts[0].reasons.find((r) => r.check === "duplicate_photo")!.text.match(/RM-\d{4}/)?.[0];
+    const copied = claims.find((c) => c.id === named);
+    expect(copied?.decision).toBe("paid");
+    expect(copied!.photos.map((p) => p.hash)).toEqual(reposts[0].photos.map((p) => p.hash));
+    expect(Date.parse(copied!.createdAt)).toBeLessThan(Date.parse(reposts[0].createdAt));
+  });
+
   it("issues codes Remedy could issue, except where the photos already carry an eval case's code", () => {
     const evalCodes = new Set(storedVerdicts.map((v) => v.code));
     for (const c of claims) {
