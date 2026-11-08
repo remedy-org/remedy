@@ -90,7 +90,8 @@ function rowsAt(rows: PreviewRow[], id: string, at: Arrival): PreviewRow[] {
 }
 
 /** The status tabs as the console has them: each filters the live grid (AG Grid's own filter, so the rows animate),
- * their counts following the arriving claim. */
+ * their counts following the arriving claim. The console's "Approved" tab also holds claims approved and not yet sent;
+ * every one here was sent, so it reads "Paid", as their pills and the ledger do. */
 function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>; value: Tab; onChange: (t: Tab) => void }) {
   return (
     <div role="group" aria-label="Filter the claims by status" className="relative flex">
@@ -107,7 +108,7 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
               on ? "text-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted hover:text-text",
             )}
           >
-            {t.label}
+            {t.id === "paid" ? "Paid" : t.label}
             <span className={clsx("text-micro tabular-nums", on ? "text-muted" : "text-faint")}>{counts[t.id]}</span>
           </button>
         );
