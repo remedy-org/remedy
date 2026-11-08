@@ -14,7 +14,7 @@ export function PayoutsNote({ amount, id }: { amount: string; id: string }) {
   return (
     <div className={styles.flow}>
       <p className="sr-only">{payoutsLine(amount, id)}</p>
-      <div aria-hidden="true" className="flex items-center gap-2 text-ui whitespace-nowrap">
+      <div aria-hidden="true" className="flex flex-wrap items-center gap-x-2 gap-y-2 text-ui whitespace-nowrap">
         <span data-flow style={at(0)} className="inline-flex h-7 items-center rounded-control bg-surface-2 px-2.5 font-medium shadow-[inset_0_0_0_1px_var(--line-2)]">
           {TOUR.payouts.approve}
         </span>
@@ -22,9 +22,12 @@ export function PayoutsNote({ amount, id }: { amount: string; id: string }) {
         <span data-flow style={at(2)} className="font-medium">
           {TOUR.payouts.via}
         </span>
-        <span data-flow="line" style={at(3)} className={styles.flowLine} />
-        <span data-flow style={at(4)} className="font-mono">
-          {amount}
+        {/* The last leg and the amount wrap together, so a narrow phone's second line still reads "→ $29.99". */}
+        <span className="flex min-w-20 flex-1 items-center gap-2">
+          <span data-flow="line" style={at(3)} className={styles.flowLine} />
+          <span data-flow style={at(4)} className="font-mono">
+            {amount}
+          </span>
         </span>
       </div>
       <p aria-hidden="true" data-flow style={at(5)} className="mt-1.5 font-mono text-micro whitespace-nowrap text-faint">

@@ -6,8 +6,6 @@ import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
 // console's Studio widget (RefusalReasons.tsx) makes each reason a cross-filter button; the homepage's still renders
 // it from the seed with nothing to press.
 
-export const GATE_LABEL: Record<string, string> = { "No AI": "NO AI", "Model reads": "MODEL READS", Person: "PERSON" };
-
 export interface RefusalItem {
   reason: string;
   gate: string;
@@ -21,7 +19,7 @@ export interface RefusalReasonsViewProps {
   onToggle?: (reason: string) => (e: MouseEvent) => void;
   onReset?: () => void;
   onKeyDown?: (e: KeyboardEvent<HTMLElement>) => void;
-  /** Phones: a long reason wraps instead of being cut, its chip after it. */
+  /** Phones: a long reason wraps instead of being cut, its gate after it. */
   compact?: boolean;
 }
 
@@ -52,7 +50,7 @@ export function RefusalReasonsView({ items, selected = new Set(), onToggle, onRe
             >
               <span className={clsx("flex min-w-0 items-center gap-2", compact && "flex-wrap gap-y-1")}>
                 <span className={clsx("text-ui text-text", !compact && "truncate")}>{i.reason}</span>
-                <span className="shrink-0 rounded-[4px] border border-line px-1.5 font-mono text-micro leading-[1.125rem] tracking-[0.06em] text-muted">{GATE_LABEL[i.gate] ?? i.gate.toUpperCase()}</span>
+                <span className="shrink-0 text-micro text-muted">{i.gate}</span>
               </span>
               <span className="text-right font-mono text-ui text-text tabular-nums">{i.count}</span>
               <span aria-hidden="true" className="col-span-2 h-1.5 rounded-full bg-surface-2">

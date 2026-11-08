@@ -22,19 +22,10 @@ describe("tour steps", () => {
     }
   });
 
-  it("says the test-money line on 01 to 03 only (the report sheet says it itself)", () => {
-    expect(STEPS.map((s) => stateAt(s, "final", { openId }).money)).toEqual([true, true, true, false]);
-  });
-
   it("starts 01 before the claim arrives and 02 before the held claim opens", () => {
     expect(stateAt(0, "start", { openId }).arrival).toBe("before");
     expect(stateAt(1, "start", { openId })).toMatchObject({ filter: "held", openId: null });
     expect(stateAt(1, "final", { openId })).toMatchObject({ filter: "held", openId });
-  });
-
-  it("credits Studio only when Studio is on screen", () => {
-    expect(stateAt(2, "final", { openId }).credit).toBe("insightsStill");
-    expect(stateAt(2, "final", { openId, studio: true }).credit).toBe("insights");
   });
 });
 
@@ -57,9 +48,14 @@ describe("tour copy", () => {
     expect(stepSentences(true).filter((s, i) => s !== TOUR.steps[i].sentence)).toHaveLength(1);
   });
 
-  it("says the test-money fact without pointing at a claim outside the frame", () => {
-    expect(TOUR.money).toMatch(/no money moved/);
-    expect(TOUR.money).not.toMatch(/RM-\d|above|sandbox/);
+  it("speaks as the product: no sample, sandbox, test or demo labels in any string", () => {
+    const strings = JSON.stringify(TOUR) + stepSentences(true).join(" ");
+    expect(strings).not.toMatch(/\b(samples?|sandbox|test|demo|never sent|no money moved|AI-made|exhibit)\b/i);
+  });
+
+  it("names the sponsor SDKs where they do the work: AG Grid on the queue, AG Studio on Insights", () => {
+    expect(TOUR.steps[0].sentence).toMatch(/AG Grid/);
+    expect(TOUR.steps[2].sentence).toMatch(/AG Studio/);
   });
 
   it("names a barcode in words, never by colour alone", () => {

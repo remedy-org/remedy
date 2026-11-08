@@ -8,7 +8,7 @@ import { TOUR } from "./tour-copy";
 
 /*
  * The console tour below 1024px, and without JS at any width: the same four steps as a story, top to bottom, each with
- * its still at full width and real text (h3s, the photos' alt text and AI-made labels, the evidence and the report).
+ * its still at full width and real text (h3s, the photos' alt text, the evidence and the report).
  * No AG Grid, no Studio. Server-rendered; Companies.tsx shows it or the tour by breakpoint, so nothing swaps on load.
  */
 
@@ -30,9 +30,9 @@ export function ConsoleStory({
   const cards = OUTCOMES.flatMap((d) => replica.find((r) => r.status === d) ?? []);
   const stills: ReactNode[] = [
     <div key="claims" className="overflow-hidden rounded-frame bg-bg shadow-float">
-      <p className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <span className="micro whitespace-nowrap text-faint">{TOUR.recall.id}</span>
-        <span className="micro inline-flex h-5 items-center rounded-control border border-line-2 px-1.5 whitespace-nowrap text-muted">{TOUR.recall.badge}</span>
+      <p className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3">
+        <span className="min-w-0 text-ui font-medium text-pretty">{TOUR.recall.product}</span>
+        <span className="font-mono text-micro whitespace-nowrap text-faint">{TOUR.recall.id}</span>
       </p>
       <ReplicaCards rows={cards} />
       <BarcodeLegend className="border-t border-line px-4 py-3" />
@@ -51,11 +51,10 @@ export function ConsoleStory({
     </div>,
   ];
   return (
-    <ol className="flex flex-col gap-10">
+    <ol className="flex flex-col gap-14">
       {TOUR.steps.map((s, i) => (
-        <li key={s.n} className="flex min-w-0 flex-col">
-          <span className="font-mono text-micro text-faint">{s.n}</span>
-          <h3 className="mt-1 text-head-sm font-medium">{s.name}</h3>
+        <li key={s.name} className="flex min-w-0 flex-col">
+          <h3 className="text-head-sm font-medium">{s.name}</h3>
           <p className="mt-2 max-w-[60ch] text-body text-pretty text-text-2">{sentences[i]}</p>
           <div className="mt-5 min-w-0">{stills[i]}</div>
         </li>

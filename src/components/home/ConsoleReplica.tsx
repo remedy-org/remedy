@@ -261,7 +261,10 @@ export function ReplicaCards({ rows, className }: { rows: PreviewRow[]; classNam
     <ul className={className} aria-label="Claims">
       {rows.map((r) => (
         <li key={r.id} className="flex min-h-18 items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
-          <Thumbs photos={r.photos} size="sm" />
+          {/* One width for one photo or two, so every id starts on the same line. */}
+          <span className="flex w-14 shrink-0">
+            <Thumbs photos={r.photos} size="sm" />
+          </span>
           <span className="flex min-w-0 flex-1 flex-col gap-1.5">
             <span className="flex items-center justify-between gap-2">
               <span className="font-mono text-ui font-medium whitespace-nowrap">{r.id}</span>

@@ -3,7 +3,6 @@ import { toDrawerClaim } from "@/app/console/_lib/drawer";
 import { buildReport } from "@/app/console/_lib/report";
 import { ledgerOf, toRow, type ClaimRow } from "@/app/console/_lib/view";
 import type { Bar, PreviewRow as ReplicaRow } from "@/components/home/ConsoleReplica";
-import { isSandboxBuild } from "@/lib/demo";
 import { demoRecall } from "@/lib/demo/kikea";
 import { buildSeedClaims, SEED_PHOTO_PREFIX, SEED_PHOTOS } from "@/lib/demo/seed";
 import { summarize } from "@/lib/store/store";
@@ -11,17 +10,19 @@ import type { Claim, Recall } from "@/lib/types";
 import type { ClaimsGridPreviewProps, PreviewRow } from "./ClaimsGridPreview";
 import { formatDayET } from "./format";
 
-// The homepage's console preview, built on the server from the same seeded sample claims every workspace starts with
-// (lib/demo/seed.ts, seed 27071): real stored model answers, the app's own rule, made-up PayPal accounts, never paid.
-// No store, no network: buildSeedClaims is pure. Photos are the public sample photos, through Next's image optimizer.
-// The grid, the Insights still and the report draft all read this one seed, so every number on the homepage agrees.
+// The homepage's console preview, built on the server from the seed every workspace starts with (lib/demo/seed.ts,
+// seed 27071): real stored model answers, the app's own rule. No store, no network: buildSeedClaims is pure. Photos are
+// the seed's public photos, through Next's image optimizer. The grid, the Insights still and the report draft all read
+// this one seed, so every number on the homepage agrees.
+// The homepage is a picture of the console as a company runs it, so the claims are drawn as live ones (their payouts as
+// sent, their photos as fingerprinted). Only the picture: the stored seed stays seeded, and seeded claims never pay.
 
 // A fixed "now", so the preview's times and ids don't change between builds.
 export const PREVIEW_NOW = new Date("2026-11-07T09:00:00.000Z");
 // The held claim whose evidence the preview opens: the model couldn't tell if both photos show the same item.
 export const PREVIEW_OPEN_ID = "RM-9629";
-// The claim the homepage's tour shows arriving: the newest seeded paid claim, already in the preview rows (a test
-// checks both). The arrival replays how it came in; it never adds a 41st claim.
+// The claim the homepage's tour shows arriving: the newest paid claim, already in the preview rows (a test checks
+// both). The arrival replays how it came in; it never adds a 41st claim.
 export const ARRIVE_ID = "RM-0553";
 // Enough rows to fill the frame; the ledger and tab counts still cover all 40.
 const SHOWN = 14;
@@ -34,13 +35,13 @@ const publicPhoto = (key: string) => `/demo/${key.slice(SEED_PHOTO_PREFIX.length
 
 let cached: { recall: Recall; claims: Claim[] } | null = null;
 
-/** The 40 seeded sample claims and the demo recall, at PREVIEW_NOW. Pure, built once per server process. */
+/** The 40 seeded claims and the demo recall, at PREVIEW_NOW, drawn as live claims. Pure, built once per server process. */
 export function previewSeed() {
   if (cached) return cached;
   const recall = demoRecall(new Date(PREVIEW_NOW.getTime() - 3 * 86_400_000));
   // The hashes only feed the duplicate-photo check, which seeded claims never run.
   const hashes = Object.fromEntries(SEED_PHOTOS.map((name) => [name, "0000000000000000"]));
-  cached = { recall, claims: buildSeedClaims({ recall, now: PREVIEW_NOW, hashes }) };
+  cached = { recall, claims: buildSeedClaims({ recall, now: PREVIEW_NOW, hashes }).map((c) => ({ ...c, seeded: false })) };
   return cached;
 }
 
@@ -89,9 +90,8 @@ export function replicaRows(rows: ClaimRow[]): ReplicaRow[] {
   });
 }
 
-/** The CPSC progress-report draft over the same 40 sample claims, as /console/report builds it. */
+/** The CPSC progress-report draft over the same 40 claims, as /console/report builds it for a live workspace. */
 export function reportPreview() {
   const { recall, claims } = previewSeed();
-  const sandbox = isSandboxBuild();
-  return { recall, report: buildReport(claims.map(summarize), recall, { sandbox }), sandbox, generated: `${formatDayET(PREVIEW_NOW.toISOString())} (ET)` };
+  return { recall, report: buildReport(claims.map(summarize), recall), generated: `${formatDayET(PREVIEW_NOW.toISOString())} (ET)` };
 }

@@ -1,6 +1,6 @@
 // The console tour's steps as data (ConsoleTour.tsx plays them; tour-state.test.ts checks the rules): which console
 // page the frame's chrome underlines, which body shows, what the claims grid filters to and opens, where the arriving
-// claim is, what the foot says, and the step's one amber subject (DESIGN.md: one amber per viewport).
+// claim is, and the step's one amber subject (DESIGN.md: one amber per viewport).
 
 export type Step = 0 | 1 | 2 | 3;
 export const STEPS: Step[] = [0, 1, 2, 3];
@@ -17,17 +17,11 @@ export interface StepState {
   arrival: "before" | "final";
   /** The step's one amber element, if any: the open row's edge on 02. */
   amber: string | null;
-  /** The test-money line in the foot (said once per screen; the report sheet says it itself). */
-  money: boolean;
-  /** Which credit the foot shows on the right. */
-  credit: "claims" | "insights" | "insightsStill" | null;
 }
 
 export interface StepContext {
   /** The held claim step 02 opens. */
   openId: string;
-  /** Real AG Studio is on screen (step 03), not the still. */
-  studio?: boolean;
   /** prefers-reduced-motion: every step is shown in its final state, at once. */
   reduced?: boolean;
 }
@@ -36,11 +30,11 @@ export interface StepContext {
  * A step's state at a moment: "start" is where its motion begins (the claim not yet arrived, the held claim not yet
  * open), "final" where it rests. Under reduced motion the start is the final state.
  */
-export function stateAt(step: Step, at: "start" | "final", { openId, studio = false, reduced = false }: StepContext): StepState {
+export function stateAt(step: Step, at: "start" | "final", { openId, reduced = false }: StepContext): StepState {
   const final = at === "final" || reduced;
   switch (step) {
     case 0:
-      return { page: "claims", body: "claims", filter: null, openId: null, arrival: final ? "final" : "before", amber: null, money: true, credit: "claims" };
+      return { page: "claims", body: "claims", filter: null, openId: null, arrival: final ? "final" : "before", amber: null };
     case 1:
       return {
         page: "claims",
@@ -49,13 +43,11 @@ export function stateAt(step: Step, at: "start" | "final", { openId, studio = fa
         openId: final ? openId : null,
         arrival: "final",
         amber: final ? `${openId} row` : null,
-        money: true,
-        credit: "claims",
       };
     case 2:
-      return { page: "insights", body: "insights", filter: null, openId: null, arrival: "final", amber: null, money: true, credit: studio ? "insights" : "insightsStill" };
+      return { page: "insights", body: "insights", filter: null, openId: null, arrival: "final", amber: null };
     case 3:
-      return { page: "report", body: "report", filter: null, openId: null, arrival: "final", amber: null, money: false, credit: null };
+      return { page: "report", body: "report", filter: null, openId: null, arrival: "final", amber: null };
   }
 }
 

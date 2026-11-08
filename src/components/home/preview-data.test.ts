@@ -10,7 +10,7 @@ const { homeInsightsReport } = await import("@/components/insights/report");
 // The homepage's grid, Insights still, Studio report and CPSC draft all read the one seed: their numbers must agree.
 
 describe("homepage console tour data", () => {
-  it("counts the same 40 sample claims everywhere", () => {
+  it("counts the same 40 claims everywhere", () => {
     const counts = previewProps().counts!;
     const { report } = reportPreview();
     const { totals } = insightsStill(insightsPreview());
@@ -26,12 +26,21 @@ describe("homepage console tour data", () => {
     expect([totals.photos, totals.preChecked, totals.photoChecked, totals.paid]).toEqual([38, 35, 26, 26]);
   });
 
-  it("replays an arrival of a seeded paid claim already in the rows, never a 41st", () => {
+  it("replays an arrival of a paid claim already in the rows, never a 41st", () => {
     const { rows } = previewProps();
     const arrive = rows.find((r) => r.id === ARRIVE_ID);
     expect(arrive?.decision).toBe("paid");
-    expect(previewSeed().claims.find((c) => c.id === ARRIVE_ID)?.seeded).toBe(true);
+    expect(previewSeed().claims.filter((c) => c.id === ARRIVE_ID)).toHaveLength(1);
     expect(rows.find((r) => r.id === PREVIEW_OPEN_ID)?.decision).toBe("held");
+  });
+
+  it("draws the claims as a live workspace: paid through PayPal, nothing labelled as a sample", () => {
+    const { ledger } = previewProps();
+    const { report } = reportPreview();
+    expect(ledger!.paidCents).toBeGreaterThan(0);
+    expect(ledger!.sampleCents).toBe(0);
+    expect(report).toMatchObject({ seeded: 0, demo: 0, samplesPaid: 0 });
+    expect(report.sentCents).toBe(ledger!.paidCents);
   });
 
   it("keeps Studio's home report to five widgets, titled, with two value KPIs", () => {

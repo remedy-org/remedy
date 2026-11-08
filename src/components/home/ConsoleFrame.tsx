@@ -38,23 +38,22 @@ export type FramePage = (typeof TOUR.chrome.pages)[number];
 export interface ConsoleFrameProps extends HTMLAttributes<HTMLDivElement> {
   /** The page the frame's chrome underlines. */
   page: FramePage;
-  /** The foot's two ends: the test-money line, and the credit in --faint. */
-  foot: { left?: string | null; right?: string | null };
   /** What the step shows, for screen readers: the frame itself is a picture. Announced on each change. */
   description: string;
   children: ReactNode;
 }
 
 /**
- * The homepage tour's one console window (ConsoleTour.tsx): chrome, the recall's title row, a body slot of fixed height
- * (809px, or less on a short laptop screen: --frame-h, home.module.css .stage) and a one-line mono foot. It never re-mounts and never changes height: only the body inside it changes. The chrome is
- * an echo inside the inert picture: the tour's own tabs above the frame are the controls.
+ * The homepage tour's one console window (ConsoleTour.tsx): chrome, the recall's title row and a body slot, at a fixed
+ * height (776px, or less on a short laptop screen: --frame-h, home.module.css .stage). It never re-mounts and never
+ * changes height: only the body inside it changes. The chrome is an echo inside the inert picture: the tour's own tabs
+ * above the frame are the controls.
  */
-export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(function ConsoleFrame({ page, foot, description, children, className, ...panel }, ref) {
+export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(function ConsoleFrame({ page, description, children, className, ...panel }, ref) {
   const pages = TOUR.chrome.pages;
   const { row, bar } = useSlider<HTMLSpanElement>(pages.indexOf(page));
   return (
-    <div ref={ref} {...panel} className={clsx("flex h-[var(--frame-h,809px)] flex-col overflow-hidden rounded-frame bg-bg text-text shadow-float", className)}>
+    <div ref={ref} {...panel} className={clsx("flex h-[var(--frame-h,776px)] flex-col overflow-hidden rounded-frame bg-bg text-text shadow-float", className)}>
       <p className="sr-only" aria-live="polite">
         {description}
       </p>
@@ -76,18 +75,10 @@ export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(functi
           <span className="text-ui font-medium">
             Kikea <span className="whitespace-nowrap">X-VESOLJE</span> nursing pillows
           </span>
-          <span className="flex items-center gap-3">
-            <span className="micro whitespace-nowrap text-faint">{TOUR.recall.id}</span>
-            <span className="micro inline-flex h-5 items-center rounded-control border border-line-2 px-1.5 whitespace-nowrap text-muted">{TOUR.recall.badge}</span>
-          </span>
+          <span className="font-mono text-micro whitespace-nowrap text-faint">{TOUR.recall.id}</span>
         </div>
         <div className="relative min-h-0 flex-1">{children}</div>
       </div>
-      {/* Read as text: the test-money fact, said once on this screen, and the credit. */}
-      <p className="flex h-[33px] shrink-0 items-center justify-between gap-6 border-t border-line px-5 font-mono text-micro">
-        <span className="truncate text-muted">{foot.left}</span>
-        {foot.right && <span className="shrink-0 text-faint">{foot.right}</span>}
-      </p>
     </div>
   );
 });

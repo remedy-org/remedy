@@ -12,7 +12,6 @@ import { Ledger } from "@/components/console/Ledger";
 import { TABS, type Tab } from "@/components/console/StatusTabs";
 import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME } from "@/components/insights/InsightsPreviewLazy";
 import { ConsoleFrame, useSlider } from "./ConsoleFrame";
-import { CREDIT } from "./credits";
 import styles from "./home.module.css";
 import { PayoutsNote } from "./PayoutsNote";
 import { TOUR } from "./tour-copy";
@@ -21,7 +20,7 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
 /*
  * The homepage's "For companies" tour (DESIGN.md, Screens §6), laptops only (1024px and up; phones get the stacked
  * story in ConsoleStory.tsx). Four tabs over one fixed console frame, a real view on each step:
- *   01 the claims queue, the real AG Grid on the 40 sample claims, where the newest paid claim arrives once on entering
+ *   01 the claims queue, the real AG Grid on the 40 claims, where the newest paid claim arrives once on entering
  *      view (a row insert, then its verdict and payout cells flash as its checks come back);
  *   02 the same grid filtered to Held, with RM-9629's evidence docked;
  *   03 Insights: the still (or real AG Studio, on intent, with a production licence) with the recall analyst's answer;
@@ -205,11 +204,10 @@ export function ConsoleTour({ rows, sentences, ledger, counts, openId, arriveId,
     tabs.current[to]?.focus();
   };
 
-  const state = stateAt(step, "final", { openId, studio: studioState === "shown" });
+  const state = stateAt(step, "final", { openId });
   const evidence = useMemo(() => rows.find((r) => r.id === openId)?.evidence ?? null, [rows, openId]);
   const stillRows = useMemo(() => (filter === "held" ? rows.filter((r) => r.decision === "held") : rows), [filter, rows]);
   const arrivalProp = useMemo(() => ({ id: arriveId, phase: arrival }), [arriveId, arrival]);
-  const credit = state.credit && CREDIT ? CREDIT[state.credit] : null;
   const dock = open !== null || dockOut;
 
   return (
@@ -219,7 +217,7 @@ export function ConsoleTour({ rows, sentences, ledger, counts, openId, arriveId,
           const active = i === step;
           return (
             <button
-              key={s.n}
+              key={s.name}
               ref={(el) => {
                 tabs.current[i] = el;
               }}
@@ -235,13 +233,12 @@ export function ConsoleTour({ rows, sentences, ledger, counts, openId, arriveId,
               onKeyDown={onKey}
               onPointerEnter={i === 2 ? studioIntent : undefined}
               onFocus={i === 2 ? studioIntent : undefined}
-              className={clsx(styles.tab, "group relative flex cursor-pointer flex-col items-start gap-1 rounded-control pb-4 text-left")}
+              className={clsx(styles.tab, "group relative flex cursor-pointer flex-col items-start gap-1.5 rounded-control pb-5 text-left")}
             >
-              <span className={clsx("font-mono text-micro transition-colors", active ? "text-muted" : "text-faint group-hover:text-muted")}>{s.n}</span>
-              <span id={`tour-tab-${i}-name`} className={clsx("text-ui font-medium transition-colors", active ? "text-text" : "text-muted group-hover:text-text")}>
+              <span id={`tour-tab-${i}-name`} className={clsx("text-body font-medium transition-colors", active ? "text-text" : "text-muted group-hover:text-text")}>
                 {s.name}
               </span>
-              <span id={`tour-tab-${i}-sentence`} className={clsx("min-h-[4.35em] text-ui text-pretty transition-colors", active ? "text-text-2" : "text-faint group-hover:text-muted")}>
+              <span id={`tour-tab-${i}-sentence`} className={clsx("min-h-[4.35em] text-ui text-pretty transition-colors", active ? "text-text-2" : "text-muted group-hover:text-text-2")}>
                 {sentences[i]}
               </span>
             </button>
@@ -258,14 +255,14 @@ export function ConsoleTour({ rows, sentences, ledger, counts, openId, arriveId,
         tabIndex={0}
         page={PAGE[state.page]}
         description={descriptions[step]}
-        foot={{ left: state.money ? TOUR.money : null, right: credit }}
         className={styles.stage}
         data-step={step}
         data-studio-pick={studioAtPick || undefined}
       >
         {/* 01 and 02: one grid, never re-mounted; the steps change it through its API. */}
         <div data-on={state.body === "claims" || undefined} className={clsx(styles.body, "flex flex-col px-5 pb-3")}>
-          <Ledger ledger={ledger} samples className="mt-2" />
+          {/* One line at every laptop width: below 1280px the median time (the third figure) gives way. */}
+          <Ledger ledger={ledger} className="mt-2 max-xl:[&>div:nth-child(3)]:hidden" />
           {/* The evidence docks from under the ledger to the frame's foot, beside the status tabs and the grid, from
               1280px (as in the console), and lies over the grid as a sheet below, so the grid keeps its columns at 1024. */}
           <div className="relative flex min-h-0 flex-1 gap-3">
@@ -296,7 +293,7 @@ export function ConsoleTour({ rows, sentences, ledger, counts, openId, arriveId,
                 data-out={dockOut || undefined}
                 className={clsx(styles.dock, "w-[380px] shrink-0 pt-3 max-xl:absolute max-xl:top-[49px] max-xl:right-0 max-xl:bottom-0 max-xl:z-10 xl:pt-1")}
               >
-                <EvidenceStill claim={evidence} note={<PayoutsNote amount={evidence.amount} id={evidence.id} />} quoteClassName={styles.inkUnder} />
+                <EvidenceStill claim={evidence} note={<PayoutsNote amount={evidence.amount} id={evidence.id} />} />
               </div>
             )}
           </div>
@@ -311,7 +308,7 @@ export function ConsoleTour({ rows, sentences, ledger, counts, openId, arriveId,
           )}
         </div>
 
-        <div data-on={state.body === "report" || undefined} className={clsx(styles.body, styles.reportBody, "bg-surface px-12 pt-8 xl:px-0")}>
+        <div data-on={state.body === "report" || undefined} className={clsx(styles.body, styles.reportBody, "px-12 pt-8 xl:px-0")}>
           <div className={styles.sheet}>{report}</div>
         </div>
       </ConsoleFrame>

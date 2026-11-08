@@ -207,12 +207,12 @@
 }
 
 /*
- * The frame fits a laptop screen with its tabs: at most 809px, and never taller than the viewport less the nav (64),
- * the rail (about 123), the 32px between them and 12px of air, so a visitor sees the tab they picked and the whole
- * step at 1440x900. Never below 600px, where a step stops reading. The same height on every step.
+ * The frame fits a laptop screen with its tabs: at most 776px, and never taller than the viewport less the nav (64),
+ * the rail (about 112), the 32px between them and 12px of air, so a visitor sees the tab they picked and the whole
+ * step at 1440x900. Never below 568px, where a step stops reading. The same height on every step.
  */
 .stage {
-  --frame-h: min(809px, max(600px, calc(100svh - 232px)));
+  --frame-h: min(776px, max(568px, calc(100svh - 220px)));
   scroll-margin-top: 80px;
 }
 
@@ -270,10 +270,10 @@
   opacity: 1;
 }
 
-/* The report's sheet fades into the frame's foot over 64px. */
+/* The report's sheet fades into the frame's bottom edge over 96px. */
 .reportBody {
   overflow: hidden;
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 96px), transparent);
 }
 
 /* The phone story's report: its head, fading out, until "Read the whole draft" opens it in place. */
@@ -305,17 +305,6 @@
   display: inline;
 }
 
-/* Step 02's quote: a 1px neutral ink line under the unclear answer (never the amber highlighter). */
-.inkUnder {
-  background-image: linear-gradient(var(--text-2), var(--text-2));
-  background-repeat: no-repeat;
-  background-position: 0 100%;
-  background-size: 100% 1px;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-  padding-bottom: 1px;
-}
-
 /* Step 02's evidence dock: sized, so a short frame (a 900px laptop screen) can trade the photos' captions and some of
    their height for the model's quoted answer, which the step promises. */
 .dock {
@@ -323,8 +312,7 @@
 }
 
 @container (max-height: 540px) {
-  .dock figcaption,
-  .dock :global(.evidence-photos-label) {
+  .dock figcaption {
     display: none;
   }
 
@@ -353,10 +341,6 @@
   border-top: 1px solid var(--faint);
   border-right: 1px solid var(--faint);
   rotate: 45deg;
-}
-
-.stage {
-  --drop: linear(0, 0.058, 0.185, 0.342, 0.5, 0.643, 0.763, 0.858, 0.928, 0.977, 1.008, 1.026, 1.034, 1.035, 1.032, 1.028, 1.022, 1.016, 1.012, 1.008, 1.004, 1.002, 1.001, 1);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -401,13 +385,9 @@
     animation: dock-out var(--dur-ui) var(--ease-snap) both;
   }
 
-  .dock .inkUnder {
-    animation: ink-under 700ms var(--ease-out-quart) 700ms both;
-  }
-
-  /* Then the payout path draws in, part by part, once the underline is done: the way the money would go. */
+  /* Then the payout path draws in, part by part, once the panel has settled: the way the money goes. */
   .dock .flow [data-flow] {
-    animation: flow-in 240ms var(--ease-out-quart) calc(1400ms + var(--at, 0) * 180ms) both;
+    animation: flow-in 240ms var(--ease-out-quart) calc(360ms + var(--at, 0) * 140ms) both;
   }
 
   .dock .flow [data-flow="line"] {
@@ -435,13 +415,9 @@
     animation-delay: calc(300ms + var(--line, 0) * 80ms);
   }
 
-  /* E8: the draft drops onto the table (SPRING.drop, a 2deg settle), then its DRAFT stamp lands. */
+  /* E8: the draft rises into place. */
   .stage[data-step="3"] .sheet {
-    animation: sheet-drop 460ms var(--drop) both;
-  }
-
-  .stage[data-step="3"] .draftStamp {
-    animation: stamp-land 200ms var(--ease-back) 500ms both;
+    animation: sheet-rise 520ms var(--ease-out-expo) both;
   }
 }
 
@@ -455,12 +431,6 @@
 @keyframes dock-out {
   to {
     opacity: 0;
-  }
-}
-
-@keyframes ink-under {
-  from {
-    background-size: 0% 1px;
   }
 }
 
@@ -490,9 +460,9 @@
   }
 }
 
-@keyframes sheet-drop {
+@keyframes sheet-rise {
   from {
-    translate: 0 -16px;
-    rotate: 2deg;
+    opacity: 0;
+    translate: 0 16px;
   }
 }

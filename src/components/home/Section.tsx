@@ -5,8 +5,8 @@ import { Reveal } from "./Reveal";
 
 export interface SectionProps {
   id: string;
-  /** The exhibit letter and name, e.g. "A · The problem". */
-  exhibit: string;
+  /** The exhibit letter and name, e.g. "A · The problem". Without it the heading opens the section on its own. */
+  exhibit?: string;
   /** Two-tone heading: the claim, then the explanation in muted. */
   title: ReactNode;
   muted?: ReactNode;
@@ -33,17 +33,19 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
 export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className, headingSpan = 7, bodyClassName = "mt-12 lg:mt-16" }: SectionProps) {
   const headingId = `${id}-title`;
   const paper = tone === "paper";
-  const [letter, name] = exhibit.split(" · ");
+  const [letter, name] = exhibit?.split(" · ") ?? [];
   return (
     <section id={id} aria-labelledby={headingId} className={clsx("scroll-mt-16", paper ? "bg-band text-ink" : styles.fade, className)}>
       <div className="page py-18 lg:py-32">
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
           <div className={clsx("col-span-12", headingSpan === 9 ? "lg:col-span-9" : "lg:col-span-7")}>
-            <p className={clsx(styles.line, "micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
-              Exhibit <span className={paper ? "text-ink" : "text-text-2"}>{letter}</span>
-              {name && <> · {name}</>}
-            </p>
-            <h2 id={headingId} className="mt-5 text-title-lg font-medium text-balance">
+            {exhibit && (
+              <p className={clsx(styles.line, "mb-5 micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
+                Exhibit <span className={paper ? "text-ink" : "text-text-2"}>{letter}</span>
+                {name && <> · {name}</>}
+              </p>
+            )}
+            <h2 id={headingId} className="text-title-lg font-medium text-balance">
               <span className={clsx(styles.line, "block")} style={line(1)}>
                 {title}
               </span>{" "}

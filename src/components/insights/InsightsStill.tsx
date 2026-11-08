@@ -48,7 +48,17 @@ export function InsightsStill({
   if (form === "phone") {
     return (
       <div className="flex flex-col gap-3">
-        <Kpis data={data} className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 [&>div:last-child]:min-[360px]:col-span-2" />
+        <dl className="flex flex-col divide-y divide-line rounded-card bg-surface shadow-card">
+          {data.kpis.map((k) => (
+            <div key={k.id} className="flex items-center justify-between gap-4 px-4 py-3">
+              <dt className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-ui font-medium">{k.title}</span>
+                <span className="text-micro text-muted">{k.caption}</span>
+              </dt>
+              <dd className={clsx("shrink-0 text-[24px] leading-none", k.id === "median" && "font-mono")}>{k.value}</dd>
+            </div>
+          ))}
+        </dl>
         <Card title="Check funnel">
           <CheckFunnelView steps={data.steps} compact />
         </Card>

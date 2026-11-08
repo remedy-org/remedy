@@ -46,7 +46,7 @@ export function insightsStill(data: InsightsData): InsightsStillData {
   return {
     kpis: [
       { id: "remedied", title: "Units remedied", value: remedied.toLocaleString("en-US"), caption: `of ${data.recall.unitsSold.toLocaleString("en-US")} sold` },
-      { id: "median", title: say.timeTitle, value: mid === null ? "—" : duration(Math.round(mid)), caption: `${times.length} ${times.length === 1 ? "claim" : "claims"} checked` },
+      { id: "median", title: say.timeTitle, value: mid === null ? "—" : duration(Math.round(mid)), caption: say.timeField === "timeToSendSec" ? `across ${times.length} ${times.length === 1 ? "payout" : "payouts"}` : `${times.length} ${times.length === 1 ? "claim" : "claims"} checked` },
       { id: "refused", title: "Refused", value: refused.toLocaleString("en-US"), caption: "stopped before any money moved" },
     ],
     steps,
