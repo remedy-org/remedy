@@ -8,8 +8,8 @@ import { ContinueCard } from "@/components/claim/ContinueCard";
 import { ExpiredCard } from "@/components/claim/ExpiredCard";
 import { FlowShell } from "@/components/claim/FlowShell";
 import { FlowSkeleton } from "@/components/claim/FlowSkeleton";
-import { WithJudges } from "@/components/claim/Judges";
-import { checkRows, toView } from "@/components/claim/model";
+import { ClaimFrame } from "@/components/claim/Exhibit";
+import { checkRows, money, toView } from "@/components/claim/model";
 import { NotFoundCard } from "@/components/claim/NotFoundCard";
 import { RecallView } from "@/components/claim/RecallScreen";
 import { Result, type ResultProps } from "@/components/claim/Result";
@@ -31,7 +31,7 @@ type Render = () => ReactNode | Promise<ReactNode>;
 async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "preview">, claim: Claim = fx.open) {
   const phoneUrl = `http://127.0.0.1:3000/r/${fx.recall.slug}/claim/${claim.id}`;
   return (
-    <FlowShell demo={Boolean(over.sample)} sandbox={isSandboxBuild()} company="Kikea Store">
+    <FlowShell company="Kikea Store">
       <ClaimFlow
         claimId={claim.id}
         code={claim.code}
@@ -39,6 +39,7 @@ async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "previe
         expiresAt={claim.captureSession!.expiresAt}
         startNow={fx.NOW}
         spec={fx.recall.spec}
+        amount={money(fx.recall.refund)}
         view={toView(claim, fx.recall.spec)}
         qrSvg={await QRCode.toString(phoneUrl, { type: "svg", margin: 0, color: { dark: "#15181d", light: "#ffffff" } })}
         phoneUrl={phoneUrl}
@@ -51,12 +52,11 @@ async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "previe
 }
 
 function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultProps> = {}) {
-  const demo = Boolean(over.sample);
-  const steps = demo ? DEMO_STEPS : REAL_STEPS;
+  const steps = over.sample ? DEMO_STEPS : REAL_STEPS;
   // A demo claim shows its sample's own photo, as ClaimScreen does.
   const photoUrls = over.sample ? d.photoUrls.map(() => over.sample!.photos[0]) : d.photoUrls;
   return (
-    <FlowShell demo={demo} sandbox={isSandboxBuild()} company="Kikea Store">
+    <FlowShell company="Kikea Store">
       <Result
         claim={d.claim}
         recall={fx.recall}
@@ -74,20 +74,18 @@ function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultPr
 }
 
 const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug">) => (
-  <FlowShell demo company="Kikea Store">
-    <WithJudges demo step="samples">
-      <div className="flex flex-col gap-6">
-        <StepMeter current={2} steps={DEMO_STEPS} />
-        <SamplePicker slug={fx.recall.slug} {...props} />
-      </div>
-    </WithJudges>
+  <FlowShell company="Kikea Store">
+    <ClaimFrame>
+      <StepMeter current={2} steps={DEMO_STEPS} />
+      <SamplePicker slug={fx.recall.slug} {...props} />
+    </ClaimFrame>
   </FlowShell>
 );
 
-const consent = (over: Partial<Parameters<typeof RecallView>[0]> = {}) => <RecallView recall={fx.recall} href="#" sandbox={isSandboxBuild()} {...over} />;
+const consent = (over: Partial<Parameters<typeof RecallView>[0]> = {}) => <RecallView recall={fx.recall} href="#" {...over} />;
 const genuine = demoSample("genuine")!;
 const handoff = (signedInAs?: string) => (
-  <FlowShell sandbox={isSandboxBuild()} company="Kikea Store">
+  <FlowShell company="Kikea Store">
     <ContinueCard id={fx.open.id} product="X-VESOLJE Nursing Pillow" company="Kikea Store" loginHref="#" expiresAt={new Date(Date.now() + 8 * 60_000 + 12_000).toISOString()} startNow={Date.now()} signedInAs={signedInAs} />
   </FlowShell>
 );
@@ -181,11 +179,11 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     group: "Code",
     note: "Session ended before any photo",
     render: () => (
-      <FlowShell sandbox={isSandboxBuild()} company="Kikea Store">
-        <div className="flex flex-col gap-6">
+      <FlowShell company="Kikea Store">
+        <ClaimFrame>
           <StepMeter current={2} />
           <ExpiredCard code="M4T" againHref="#" />
-        </div>
+        </ClaimFrame>
       </FlowShell>
     ),
   },

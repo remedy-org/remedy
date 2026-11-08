@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { notYet, roundClaims } from "@/app/api/claims/_lib/pipeline";
 import { FlowShell } from "@/components/claim/FlowShell";
-import { WithJudges } from "@/components/claim/Judges";
+import { ClaimFrame } from "@/components/claim/Exhibit";
 import { companyName, noModelAnswer } from "@/components/claim/model";
 import { SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
 import { DEMO_STEPS, StepMeter } from "@/components/claim/StepMeter";
@@ -11,9 +11,9 @@ import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getDemoRound, requireSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
 
-export const metadata: Metadata = { title: "Pick a sample claim" };
+export const metadata: Metadata = { title: "Choose a claim" };
 
-// /r/<slug>/try/samples: after the PayPal login, the judge picks which sample to send. ?sample=<id> (a result's "Next
+// /r/<slug>/try/samples: after the PayPal login, the owner picks which demo claim to send. ?sample=<id> (a result's "Next
 // sample") selects that one when it can run.
 export default async function SamplesPage({ params, searchParams }: PageProps<"/r/[recall]/try/samples">) {
   const store = await getAppStore();
@@ -46,14 +46,11 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   const refusal = parseRefusal(query, now) ?? claimRefusal(all, { payerId: session.payerId, demo: true, now, limits: limits() });
 
   return (
-    <FlowShell demo company={companyName(recall)}>
-      {/* The sample cards show each one's latest outcome, so the rail doesn't repeat them in a scoreboard. */}
-      <WithJudges demo step="samples">
-        <div className="flex flex-col gap-6">
-          <StepMeter current={2} steps={DEMO_STEPS} />
-          <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={refusal} elsewhere={elsewhere} />
-        </div>
-      </WithJudges>
+    <FlowShell company={companyName(recall)}>
+      <ClaimFrame>
+        <StepMeter current={2} steps={DEMO_STEPS} />
+        <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={refusal} elsewhere={elsewhere} />
+      </ClaimFrame>
     </FlowShell>
   );
 }

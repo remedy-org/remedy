@@ -3,7 +3,6 @@
 import { Button, Card, NoBreakHyphens } from "@/components/ui";
 import { TimerPill } from "./CodeStep";
 import { StepTitle } from "./Exhibit";
-import { LockIcon } from "./icons";
 import { useCountdown } from "./useCountdown";
 
 export interface ContinueCardProps {
@@ -25,19 +24,17 @@ export interface ContinueCardProps {
  * account's: a Remedy screen first, so the PayPal login that follows never looks like it came from nowhere. Nothing
  * about the claim's owner is shown; only the code's time left.
  */
-export function ContinueCard({ id, product, company, loginHref, demo, expiresAt, startNow, signedInAs }: ContinueCardProps) {
-  const account = `PayPal ${demo ? "sandbox " : ""}account`;
+export function ContinueCard({ id, product, company, loginHref, expiresAt, startNow, signedInAs }: ContinueCardProps) {
+  const account = "PayPal account";
   // Frozen at zero when there is no session to count down: nothing shows then.
   const left = useCountdown(expiresAt ?? new Date(0).toISOString(), startNow, !expiresAt);
   const ended = Boolean(expiresAt) && left <= 0;
   const carry = ended ? "its code's 10 minutes are up, so you can get a new code there." : "your code and its 10 minutes carry over.";
   return (
-    <Card padding="lg" as="section" aria-labelledby="continue-title" className="mx-auto flex w-full max-w-claim flex-col gap-7">
+    <Card padding="lg" as="section" aria-labelledby="continue-title" className="flex w-full max-w-claim flex-col gap-7">
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
-          <span className="micro text-faint">
-            Claim <span className="font-mono whitespace-nowrap">{id}</span>
-          </span>
+          <span className="font-mono text-micro text-faint">{id}</span>
           {expiresAt && <TimerPill left={left} />}
         </div>
         <StepTitle id="continue-title">{signedInAs ? `Started with another ${account}` : "Continue your claim on this device"}</StepTitle>
@@ -62,13 +59,10 @@ export function ContinueCard({ id, product, company, loginHref, demo, expiresAt,
         </form>
       ) : (
         <Button href={loginHref} size="lg" block prefetch={false}>
-          {demo ? "Log in with PayPal sandbox" : "Log in with PayPal"}
+          Log in with PayPal
         </Button>
       )}
-      <p className="-mt-3 flex gap-2.5 text-ui text-faint">
-        <LockIcon className="mt-0.5 shrink-0" />
-        <span>You log in on PayPal&apos;s own page, then come straight back here. Remedy never sees your password.</span>
-      </p>
+      <p className="-mt-3 text-ui text-faint">You log in on PayPal&apos;s own page, then come straight back here. Remedy never sees your password.</p>
     </Card>
   );
 }

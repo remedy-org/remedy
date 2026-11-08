@@ -1,14 +1,14 @@
 import clsx from "clsx";
 import Link from "next/link";
-import { Button, CheckIcon, StatusPill, statusLabel } from "@/components/ui";
+import { Button } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
+import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import type { Refusal } from "@/lib/limits";
 import type { Decision } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { FocusTitle } from "./FocusTitle";
-import { LockIcon } from "./icons";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
-import { latestRuns, RunResult, scoreLine, type RoundRun } from "./Scoreboard";
+import { latestRuns, ranLine, type RoundRun } from "./Scoreboard";
 
 export interface SampleOption {
   sample: DemoSample;
@@ -21,28 +21,26 @@ export interface DemoRun {
   href: string;
   title: string;
   decision: Decision;
-  /** The sample it ran, for the scoreboard. */
+  /** The sample it ran. */
   sample?: string;
-  /** Held because the model gave no answer (noModelAnswer). */
+  /** Held because the photo check gave no answer (noModelAnswer). */
   unanswered?: boolean;
 }
 
-// What each sample proves, in one line under its title (here and on the try page's preview).
-export const SAMPLE_TESTS: Record<string, string> = {
-  genuine: "the happy path",
-  "wrong-code": "the model reading the code",
-  "ai-no-session": "the live-camera rule",
-  reposted: "the duplicate-photo rule",
-};
-
-/** This round's runs that reached the photos step, as the scoreboard counts them. */
+/** This round's runs that reached the photos step. */
 export const roundRuns = (runs: DemoRun[]): RoundRun[] => runs.flatMap((r) => (r.sample ? [{ sample: r.sample, decision: r.decision, unanswered: r.unanswered }] : []));
 
+const OUTCOME: Partial<Record<Decision, { word: string; tone: string }>> = {
+  paid: { word: "Paid", tone: "text-pay" },
+  rejected: { word: "Not paid", tone: "text-stop" },
+  blocked: { word: "Not paid", tone: "text-stop" },
+  held: { word: "For review", tone: "text-hold" },
+};
+
 /**
- * Demo mode's stand-in for the camera: four case files in a 2x2 grid, the photo the hero of each, with what it tests,
- * what should happen and what its latest run this round got. The next unrun sample is selected. A plain form, no script
- * needed; on a phone "Run this sample" waits in a bar at the bottom of the screen while the cards scroll. Once the round
- * is done the cards are its record, and the one button starts a new round.
+ * The demo's stand-in for the camera: four claims in a list, each a photo, what it is and what happens to it. The next
+ * one not yet run is selected. A plain form, no script needed; on a phone the button waits at the foot of the screen.
+ * Once all four have run, the list is the round's record and the button starts over.
  */
 export function SamplePicker({
   slug,
@@ -58,111 +56,101 @@ export function SamplePicker({
   selected: string;
   /** This round's demo claims. */
   runs: DemoRun[];
-  /** Every sample has run in this round. */
+  /** Every claim has run in this round. */
   roundDone: boolean;
   refusal?: Refusal | null;
-  /** This browser's round is new, and this PayPal login has demo claims in other rounds (another device, or a judge). */
+  /** This browser's round is new, and this PayPal login has demo claims from another device. */
   elsewhere?: boolean;
 }) {
   const scored = roundRuns(runs);
-  // Refused by a limit: the cards stay as a record, and nothing can be run until it resets.
+  // Refused by a limit: the list stays as a record, and nothing can run until it resets.
   const off = Boolean(refusal);
   const latest = latestRuns(scored);
   return (
-    <section aria-labelledby="picker-title" className="mx-auto flex w-full max-w-[40rem] flex-col gap-6">
+    <section aria-labelledby="picker-title" className="flex w-full max-w-[40rem] flex-col gap-6">
       {/* A limit's notice, rendered later, takes focus from the title. */}
       <FocusTitle id="picker-title" />
-      <div className="flex flex-col gap-3">
-        <StepTitle id="picker-title">Pick a sample claim</StepTitle>
-        <p className="text-body text-muted">Each one runs the real checks and the real rule. Only the genuine claim should be paid, and only once per round.</p>
-        {scored.length > 0 && <p className="font-mono text-micro text-muted">{scoreLine(scored).text}</p>}
-        {elsewhere && (
-          <p className="text-ui text-muted">
-            A new round on this device. Runs from other devices on this sandbox login keep their own rounds; the company console shows them all.
-          </p>
-        )}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between gap-4">
+          <StepTitle id="picker-title">Choose a claim</StepTitle>
+          {scored.length > 0 && <span className="shrink-0 text-ui text-muted">{ranLine(scored)}</span>}
+        </div>
+        <p className="text-body text-muted">Each one runs through the real checks.</p>
+        {elsewhere && <p className="text-ui text-muted">This device starts fresh. Claims from your other devices are in the company console.</p>}
       </div>
 
       {refusal && <LimitNotice refusal={refusal} demo />}
 
-      {/* Once every sample has run, the form starts a new round instead: running one sample again in a finished round
-          would only meet its own earlier claim. */}
-      <form action={roundDone ? "/api/claims/round" : "/api/claims"} method="post" className="flex flex-col gap-6">
+      {/* Once all four have run, the form starts over instead: running one again would only meet its own earlier claim. */}
+      <form action={roundDone ? "/api/claims/round" : "/api/claims"} method="post" className="flex flex-col gap-5">
         <input type="hidden" name="recall" value={slug} />
-        <fieldset disabled={off} className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-          <legend className="sr-only">Sample claims</legend>
-          {options.map(({ sample, locked }, i) => {
-            const letter = String.fromCharCode(65 + i);
+        <fieldset disabled={off} className="-mx-3 flex flex-col gap-1">
+          <legend className="sr-only">Claims to run</legend>
+          {options.map(({ sample, locked }) => {
             const run = latest.get(sample.id);
+            const outcome = run && OUTCOME[run.decision];
+            const copy = SAMPLE_COPY[sample.id];
+            const id = `sample-${sample.id}`;
             return (
               <label
                 key={sample.id}
                 aria-disabled={locked || off ? true : undefined}
                 className={clsx(
-                  "group relative flex gap-4 rounded-card border border-line bg-surface p-2 sm:gap-3.5 transition-[border-color,background-color,opacity] duration-160 sm:p-3",
-                  // Selected: a tinted card, a firmer hairline and a check on the photo, never an outline, which is focus's
-                  // alone. The screen's one amber is "Run this sample".
-                  !off && "has-checked:border-line-strong has-checked:bg-surface-2",
-                  "has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-focus",
-                  !roundDone && !off && "cursor-pointer hover:bg-surface-2",
-                  locked && "cursor-not-allowed hover:bg-surface",
-                  // Refused by a limit: the cards are only a record until it resets.
+                  "group relative flex items-center gap-4 rounded-control px-3 py-3 transition-colors duration-160",
+                  // Selected: a 1px ink ring, never an outline, which is focus's alone. The screen's one amber is the button.
+                  !off && !roundDone && "has-checked:ring-1 has-checked:ring-text",
+                  "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus",
+                  !roundDone && !off && !locked && "cursor-pointer hover:bg-surface",
+                  locked && "cursor-not-allowed",
                   off && "opacity-60",
                 )}
               >
-                {!roundDone && <input type="radio" name="sample" value={sample.id} defaultChecked={sample.id === selected} disabled={Boolean(locked)} className="peer sr-only" />}
-                {/* 96px on a phone, 112px beside the text from 640px, so all four cards and the button fit one laptop screen. */}
-                <span className="relative block aspect-[4/5] w-24 shrink-0 overflow-hidden rounded-control bg-surface-2 sm:w-28">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={sample.photos[0]} alt="" className={clsx("absolute inset-0 size-full object-cover object-[50%_65%]", locked && "opacity-50 grayscale")} />
+                {!roundDone && (
+                  <input
+                    type="radio"
+                    name="sample"
+                    value={sample.id}
+                    defaultChecked={sample.id === selected}
+                    disabled={Boolean(locked)}
+                    aria-labelledby={`${id}-title`}
+                    aria-describedby={`${id}-line${locked ? ` ${id}-locked` : ""}`}
+                    className="peer sr-only"
+                  />
+                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={sample.photos[0]} alt="" aria-hidden="true" className={clsx("size-16 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_65%] ring-1 ring-line", locked && "opacity-50")} />
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span id={`${id}-title`} className={clsx("text-body font-medium", locked ? "text-muted" : "text-text")}>
+                    {copy?.title ?? sample.title}
+                  </span>
+                  <span id={`${id}-line`} className="text-ui text-muted">
+                    {locked ? <span id={`${id}-locked`}>Run the first claim before this one.</span> : (copy?.line ?? sample.decidedBy)}
+                  </span>
+                </span>
+                {outcome && <span className={clsx("shrink-0 text-ui font-medium", outcome.tone)}>{outcome.word}</span>}
+                {!roundDone && !off && (
                   <span
                     aria-hidden="true"
-                    className="absolute top-1.5 left-1.5 flex size-7 items-center justify-center rounded-control bg-paper font-mono text-ui font-medium text-ink shadow-paper"
-                  >
-                    {letter}
-                  </span>
-                  {!off && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute top-1.5 right-1.5 hidden size-6 items-center justify-center rounded-full bg-text text-bg shadow-paper group-has-checked:flex"
-                    >
-                      <CheckIcon size={14} />
-                    </span>
-                  )}
-                  {locked && (
-                    <span className="absolute inset-x-1.5 top-1/2 flex -translate-y-1/2 items-center justify-center gap-1.5 rounded-control bg-[oklch(0.12_0.004_75/0.85)] px-2 py-1.5 text-ui text-[oklch(0.96_0.006_85)]">
-                      <LockIcon className="shrink-0" />
-                      After A
-                    </span>
-                  )}
-                  {/* The honest label, on every sample photo at every size. */}
-                  <span className="absolute inset-x-0 bottom-0 bg-[oklch(0.12_0.004_75/0.8)] py-0.5 text-center font-mono text-[10px] leading-4 tracking-[0.06em] text-[oklch(0.96_0.006_85)] uppercase">
-                    AI-made
-                  </span>
-                </span>
-                <span className="flex min-w-0 flex-col gap-1.5 py-1 sm:py-0.5">
-                  <span className="text-ui font-medium text-text">
-                    <span className="sr-only">Sample {letter}: </span>
-                    {sample.title}
-                  </span>
-                  <span className="font-mono text-micro text-faint">Tests: {SAMPLE_TESTS[sample.id] ?? sample.decidedBy}</span>
-                  <StatusPill status={sample.expect} label={`Should be ${statusLabel(sample.expect).toLowerCase()}`} className="mt-1 self-start" />
-                  {run && <RunResult sample={sample} run={run} prefix={<span className="text-ui text-faint">Got</span>} className="flex-wrap gap-y-1" />}
-                  {locked && <span className="sr-only">{locked}</span>}
-                </span>
+                    className={clsx(
+                      "flex size-5 shrink-0 items-center justify-center rounded-full border border-line-strong",
+                      "peer-checked:border-text peer-checked:after:size-2.5 peer-checked:after:rounded-full peer-checked:after:bg-text",
+                      locked && "border-dashed",
+                    )}
+                  />
+                )}
               </label>
             );
           })}
         </fieldset>
-        <p className="text-ui text-faint">All four photos are AI-made samples, not from a camera.</p>
-        {roundDone && <p className="text-ui text-muted">All four samples have run. A new round checks them only against each other, so they reach the same four outcomes.</p>}
-        <div data-action-bar="" className="z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md">
-          {/* Refused by a limit, nothing can run until it resets: the console, where the runs are, takes the button. */}
+        <p className="text-ui text-faint">Sample photos, staged for this demo.</p>
+        {roundDone && <p className="text-ui text-muted">All four have run. Start over to run them again.</p>}
+        <div data-action-bar="" className="z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {/* Refused by a limit, nothing can run until it resets: the console, where the claims are, takes the button. */}
           {off ? (
             <LimitNextStep demo />
           ) : (
             <Button type="submit" size="lg" block>
-              {roundDone ? "Run the samples again" : "Run this sample"}
+              {roundDone ? "Start over" : "Run this claim"}
             </Button>
           )}
         </div>
@@ -170,23 +158,22 @@ export function SamplePicker({
 
       {runs.length > 0 && (
         <div className="flex flex-col gap-2 pt-2">
-          <h3 className="micro text-faint">Your demo claims this round</h3>
-          <ul className="flex flex-col">
+          <h3 className="text-ui font-medium text-muted">Your claims</h3>
+          <ul className="flex flex-col border-t border-line">
             {runs.map((r) => (
-              <li key={r.id} className="border-b border-line last:border-b-0">
-                {/* The outcome is on the sample's card above: this list is the way back to each claim. */}
-                <Link href={r.href} className="flex min-h-11 items-center gap-3 text-ui hover:text-text">
-                  <span className="font-mono text-faint">{r.id}</span>
-                  <span className="truncate text-muted">{r.title}</span>
+              <li key={r.id} className="border-b border-line">
+                <Link href={r.href} className="flex min-h-11 items-center gap-3 text-ui text-muted hover:text-text">
+                  <span className="font-mono text-micro text-faint">{r.id}</span>
+                  <span className="truncate">{sampleTitle(r.sample ?? "", r.title)}</span>
                 </Link>
               </li>
             ))}
           </ul>
           {!roundDone && (
-            <form action="/api/claims/round" method="post" className="flex flex-col gap-3 pt-2">
+            <form action="/api/claims/round" method="post" className="pt-2">
               <input type="hidden" name="recall" value={slug} />
-              <Button type="submit" variant="secondary" block>
-                Start a new round
+              <Button type="submit" variant="tertiary" size="sm">
+                Start over
               </Button>
             </form>
           )}
