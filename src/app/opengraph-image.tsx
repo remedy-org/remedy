@@ -4,7 +4,7 @@ import { ImageResponse } from "next/og";
 
 // The link card for Slack, iMessage and X: the hero's two-tone headline in Schibsted Grotesk on the page colour, beside
 // the genuine demo claim's photo. Colours are the Lamplight dark tokens (wave3 DIRECTION.md), as hex.
-export const alt = "Remedy: proof it's destroyed, paid in a minute. Recall refunds through PayPal.";
+export const alt = "Remedy: recall refunds, paid in a minute through PayPal, once a live camera proves the product destroyed.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -35,11 +35,11 @@ async function googleFont(family: string, weight: number, text: string): Promise
   }
 }
 
-const HEAD = "Proof it’s destroyed.";
-const TAIL = "Paid in a minute.";
+const HEAD = "Recall refunds, paid in a minute.";
+const TAIL = "Proven destroyed on a live camera.";
 const EYEBROW = "RECALL REFUNDS, VERIFIED";
 const LABELS = ["CODE M4T", "CPSC 27-071"] as const;
-const LEAD = "Owners cut the recalled product on a live camera. Remedy checks the photo and pays through PayPal.";
+const LEAD = "Remedy turns any CPSC recall into a live refund program, paid through PayPal.";
 
 export default async function OpengraphImage() {
   const [photo, semibold, medium, regular, mono] = await Promise.all([

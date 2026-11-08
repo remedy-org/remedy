@@ -98,7 +98,7 @@ export function Scoreboard({ runs, complete, className }: { runs: RoundRun[]; co
                   <span className="sr-only">Claim {letter}: </span>
                   {s.title}
                 </span>
-                {run ? <RunResult sample={s} run={run} className="flex-wrap" /> : <span className="text-faint">Not run yet · expected: {statusLabel(s.expect).toLowerCase()}</span>}
+                {run ? <RunResult sample={s} run={run} className="flex-wrap" /> : <span className="text-faint">Not run yet · ends {statusLabel(s.expect).toLowerCase()}</span>}
               </span>
             </li>
           );

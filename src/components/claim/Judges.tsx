@@ -8,8 +8,8 @@ export type JudgeStep = "consent" | "samples" | "code" | "capture" | "checking" 
 const NOTES: Record<JudgeStep, { title: string; note: string }> = {
   consent: {
     title: "Log in",
-    // The card beside it says how to log in; this says what the login does.
-    note: "You log in on PayPal's own page. Remedy gets the account's PayPal ID and verified status for the checks, and pays the genuine claim's refund to it.",
+    // The card beside it says how to log in and what Remedy sees; this says what the one login covers.
+    note: "One login covers all four claims. The genuine one pays out to this account.",
   },
   samples: {
     title: "Pick a claim",
@@ -25,7 +25,7 @@ const NOTES: Record<JudgeStep, { title: string; note: string }> = {
   },
   checking: {
     title: "The checks",
-    note: "Three checks run before any AI. The model (GPT-6.1 Sol) only describes the photo; a fixed rule in code decides.",
+    note: "Three checks run before any AI. The model only describes the photo; a fixed rule in code decides.",
   },
   result: {
     title: "The result",
@@ -33,7 +33,7 @@ const NOTES: Record<JudgeStep, { title: string; note: string }> = {
   },
 };
 
-const REAL = ["PayPal login", "All five checks and the rule", "GPT-6.1 Sol reading the photo", "PayPal Payouts"];
+const REAL = ["PayPal login", "All five checks", "The fixed rule", "PayPal Payouts"];
 
 function Notes({ step, note: own, children }: { step: JudgeStep; note?: string; children?: ReactNode }) {
   const { title, note: base } = NOTES[step];
@@ -47,7 +47,7 @@ function Notes({ step, note: own, children }: { step: JudgeStep; note?: string; 
       {children}
       <dl className="flex flex-col gap-3 border-t border-line pt-4 text-ui">
         <div className="flex flex-col gap-1.5">
-          <dt className="micro text-faint">What each claim runs</dt>
+          <dt className="micro text-faint">Same as an owner&apos;s claim</dt>
           {REAL.map((r) => (
             <dd key={r} className="text-text">
               {r}

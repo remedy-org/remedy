@@ -10,10 +10,10 @@ Every claim runs the same five checks, in this order. The first three run before
 2. Never seen before. A perceptual fingerprint compares every photo with every earlier claim, so a reposted or lightly edited photo is refused.
 3. One claim per verified PayPal account. PayPal must report the account as verified, and it gets one claim per recall. A claim farm would need a verified PayPal account for every claim.
 4. The code, character by character. The model reads the hand-written code and the product label. K7Q written on a claim issued K7P is a reject.
-5. Really destroyed. The model confirms each step the notice asks for, such as "cut fully in half", and that the photo isn't of a screen or a print.
+5. Destroyed as the notice says. The model confirms each step the notice asks for, such as "cut fully in half", and that the photo isn't of a screen or a print.
 
 ## Decision rule
-- The model describes the photo. The rule decides.
+- AI reads the photo. It never moves the money.
 - Any "no" rejects the claim.
 - Any "unclear" holds the claim for a person at the company.
 - Only a claim where every check passes is paid.

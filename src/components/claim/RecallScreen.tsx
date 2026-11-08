@@ -1,6 +1,6 @@
 import "server-only";
 import { claimPath, findOpenClaim } from "@/app/api/claims/_lib/pipeline";
-import { getAppStore, isSandboxBuild } from "@/lib/demo";
+import { getAppStore } from "@/lib/demo";
 import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
@@ -41,7 +41,6 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
       authError={authError}
       unverified={unverified}
       refusal={parseRefusal(query, now) ?? refused}
-      sandbox={isSandboxBuild()}
       judgeLogin={demo ? judgeLogin("personal") : null}
     />
   );
@@ -71,11 +70,11 @@ function claimMeter(c: YourClaim): Pick<StepMeterProps, "current" | "outcome"> {
  * on a laptop, stacked on a phone. Logged in (and verified, for a real claim), the PayPal step is done and the judges'
  * rail moves on to the samples.
  */
-export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?: boolean }) {
+export function RecallView(props: ConsentCardProps) {
   const ready = Boolean(props.signedInAs) && !props.unverified;
   const claim = props.yourClaim;
   return (
-    <FlowShell demo={props.demo} sandbox={sandbox} company={companyName(props.recall)}>
+    <FlowShell demo={props.demo} company={companyName(props.recall)}>
       {/* The demo account is in the card, just before its login button, at every width; from 1200px the four
           samples move to the rail to keep that button on a laptop's first screen (below, the card has them, so the notes'
           sheet doesn't repeat them). */}

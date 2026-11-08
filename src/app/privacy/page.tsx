@@ -29,7 +29,7 @@ export default function PrivacyPage() {
         { title: "Where it is stored", body: "Claims and photos are stored with Vercel, which hosts Remedy." },
         {
           title: "Cookies",
-          body: "Remedy sets cookies only to keep you logged in, to secure the PayPal login and to keep your place in a demo. Your theme choice is saved in your browser.",
+          body: "Remedy sets cookies only to keep you logged in, to secure the PayPal login and to keep your place in a claim. Your theme choice is saved in your browser.",
         },
         { title: "Payouts", body: "Refunds are sent through PayPal Payouts. PayPal's own privacy statement covers your PayPal account." },
       ]}

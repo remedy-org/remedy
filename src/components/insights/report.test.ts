@@ -17,7 +17,7 @@ describe("timing tile", () => {
     expect(captions(provenance([paid("Starter"), paid("Starter", 1)]))).toMatchObject({
       timeTitle: "Median photo check",
       timeField: "modelSec",
-      time: "None sent yet · 2 claims checked",
+      time: "2 claims checked",
       timeChart: "Photo check, by day",
       timeExhibit: "MEDIAN SECONDS · PHOTO CHECK",
     });
@@ -84,8 +84,8 @@ describe("cross-filter", () => {
   });
 
   it("captions the tiles for the picked claims, never the whole recall's under a filtered number", () => {
-    expect(kpiCaptions(claims, claims)).toMatchObject({ remedied: "Paid claims · 1 of 2 are starter claims", paid: "$29.99 approved on starter claims", time: "Median of 1 sent payout" });
-    expect(kpiCaptions(claims, [claims[2]])).toEqual({ remedied: "Paid claims", paid: "USD through PayPal", time: "None sent among these claims" });
+    expect(kpiCaptions(claims, claims)).toMatchObject({ remedied: "Destroyed and verified on camera", paid: "$29.99 approved", time: "Median of 1 sent payout" });
+    expect(kpiCaptions(claims, [claims[2]])).toEqual({ remedied: "Destroyed and verified on camera", paid: "USD through PayPal", time: "None sent among these claims" });
     expect(kpiCaptions(claims, null)).toEqual({ remedied: "Picked claims only", paid: "Picked claims only", time: "Picked claims only" });
   });
 });

@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { money, productNoun } from "@/components/claim/model";
 import { RecallScreen } from "@/components/claim/RecallScreen";
 import { getAppStore } from "@/lib/demo";
 import { getRecallBySlug } from "@/lib/store";
 
 export async function generateMetadata({ params }: PageProps<"/r/[recall]">): Promise<Metadata> {
   const recall = await getRecallBySlug((await params).recall, await getAppStore());
-  return { title: recall ? `Refund for ${recall.product}` : "Recall not found" };
+  if (!recall) return { title: "Recall not found" };
+  const title = `Refund for ${recall.product}`;
+  const description = `Get ${money(recall.refund)} back for your recalled ${productNoun(recall)}. Prove it's destroyed on a live camera and Remedy pays you through PayPal.`;
+  return {
+    title,
+    description,
+    openGraph: { title: `${title} · Remedy`, description, siteName: "Remedy", type: "website" },
+    twitter: { card: "summary_large_image", title: `${title} · Remedy`, description },
+  };
 }
 
 // /r/<slug>: the owner's way in, from the company's recall notice or a QR code on it.

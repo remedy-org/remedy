@@ -49,7 +49,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["payer", "PayPal account", "textFormat", { description: "Last four characters of the PayPal payer id only." }],
           ["verified", "PayPal verified", "booleanFormat"],
           ["amountPaid", "Paid out", "currencyFormat", { ...usd, description: "USD the rule paid for this claim; 0 unless paid. On a starter claim it was approved, never sent." }],
-          ["refund", "Refund", "textFormat", { description: "The refund as the console shows it: the amount, \"· not sent\" on a starter claim or a held one, or — when the claim was refused or is in progress." }],
+          ["refund", "Refund", "textFormat", { description: "The refund as the console shows it: the amount, \"· approved\" on a starter claim, \"· not sent\" on a held one, or — when the claim was refused or is in progress." }],
           ["amountSent", "Paid through PayPal", "currencyFormat", { ...usd, description: "USD sent through PayPal; 0 for starter claims, whose payouts never left." }],
           ["remedied", "Units remedied", "integerFormat", { ...whole, description: "1 when the claim was paid: a unit destroyed and refunded." }],
           ["remediedSample", "Starter units remedied", "integerFormat", { ...whole, hide: true, description: "1 when a starter claim was approved. Its payout was never sent." }],

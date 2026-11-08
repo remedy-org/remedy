@@ -5,19 +5,19 @@ import { JUDGES_DOCK_ID } from "./JudgesSheet";
 
 export interface FlowShellProps {
   children: ReactNode;
-  /** The demo recall: a DEMO chip in the header. The guide rail (WithJudges) says the rest. */
+  /** The demo (/try): a Demo chip in the header, the claim pages' one marker. The guide rail (WithJudges) says the rest. */
   demo?: boolean;
-  /** Payouts go to PayPal's sandbox in this build (isSandboxBuild): the same DEMO chip on every claim page. */
-  sandbox?: boolean;
   /** The company running the recall, for the footer. */
   company?: string;
+  /** No claim on the page (not found, an error): the footer keeps only the copyright row. */
+  bare?: boolean;
 }
 
 /**
  * The claim flow's frame, on the homepage's own page frame (.page: the same gutter, so the wordmark never moves between
  * them): a quiet header, the steps on graphite with the film grain, a plain footer. Each step sets its own width (480px for a card, 640px for the camera and the samples, 960px for the checks).
  */
-export function FlowShell({ children, demo, sandbox, company }: FlowShellProps) {
+export function FlowShell({ children, demo, company, bare }: FlowShellProps) {
   return (
     // A phone's pinned action bar (MobileCta) never covers the end of the page: room for it under the footer.
     <div className="grain flex min-h-dvh flex-col max-sm:has-[[data-mobile-cta]]:pb-24">
@@ -26,7 +26,7 @@ export function FlowShell({ children, demo, sandbox, company }: FlowShellProps) 
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {/* Below 360px the demo's header holds the mark, DEMO, the Guide pill and the theme toggle: the name gives way. */}
             <Wordmark href="/" nameClassName={demo ? "max-[359px]:sr-only" : undefined} />
-            {(demo || sandbox) && (
+            {demo && (
               <span className="micro inline-flex h-6 shrink-0 items-center rounded-control border border-line-strong px-2 whitespace-nowrap text-muted">
                 Demo
               </span>
@@ -42,11 +42,13 @@ export function FlowShell({ children, demo, sandbox, company }: FlowShellProps) 
 
       {/* A phone's camera step fills the screen; the footer would only sit under it. */}
       <footer className="border-t border-line max-sm:[body:has([data-camera])_&]:hidden">
-        <div className="page flex flex-col gap-1 py-6 text-ui text-faint sm:flex-row sm:justify-between">
-          <p>{company ? `Refunds for ${company}'s recall are sent through PayPal Payouts.` : "Refunds are sent through PayPal Payouts."}</p>
-          <p>Your photos are used only to check your claim and are shared only with the company running the recall.</p>
-        </div>
-        <div className="page flex flex-wrap items-center gap-x-2 pb-6 text-ui text-faint">
+        {!bare && (
+          <div className="page flex flex-col gap-1 pt-6 text-ui text-faint sm:flex-row sm:justify-between">
+            <p>{company ? `Refunds for ${company}'s recall are sent through PayPal Payouts.` : "Refunds are sent through PayPal Payouts."}</p>
+            <p>Your photos are used only to check your claim and are shared only with the company running the recall.</p>
+          </div>
+        )}
+        <div className="page flex flex-wrap items-center gap-x-2 pt-6 pb-6 text-ui text-faint">
           <span>&copy; 2026 Remedy</span>
           <span aria-hidden="true">·</span>
           <Link href="/privacy" className="inline-flex min-h-6 items-center underline decoration-line-2 underline-offset-4 transition-colors duration-160 hover:text-text hover:decoration-text">

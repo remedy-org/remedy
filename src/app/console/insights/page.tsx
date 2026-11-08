@@ -1,4 +1,3 @@
-import { analystModel } from "@/app/api/console/ai/guard";
 import { formatDate } from "@/components/console/format";
 import { PartialNotice } from "@/components/console/PartialNotice";
 import { RecallPicker } from "@/components/console/RecallPicker";
@@ -6,22 +5,22 @@ import { InsightsLoader } from "@/components/insights/InsightsLoader";
 import { MobileSummary } from "@/components/insights/MobileSummary";
 import { Button, EmptyState, ExhibitLabel, NoBreakHyphens } from "@/components/ui";
 import { requireSession } from "@/lib/session";
-import { buildInsights } from "./facts";
+import { buildInsights, DECISION_LABEL } from "./facts";
 import { loadInsights } from "./load";
 
 export const metadata = { title: "Insights" };
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 
-// Where the claims came from, every one of them, so the parts add up to the total and no number reads as more than it is.
-function whose(total: number, samples: number, demo: number): string {
-  const parts = [plural(total, "claim")];
-  const live = total - samples - demo;
-  if (samples === total) parts.push("all starter claims, never paid");
-  else if (samples) parts.push(`${samples} ${samples === 1 ? "is a starter claim" : "are starter claims"}, never paid`);
-  if (demo) parts.push(plural(demo, "demo claim"));
-  if (live && live !== total) parts.push(`${plural(live, "live claim")} from ${live === 1 ? "a real owner" : "real owners"}`);
-  return `${parts.join(" · ")}.`;
+// The recall at a glance: every claim, then where they ended. "Approved" covers paid claims and starter claims the rule
+// approved, which never pay out.
+function outcomes(claims: { decision: string }[]): string {
+  const count = (...labels: string[]) => claims.filter((c) => labels.includes(c.decision)).length;
+  const parts = [plural(claims.length, "claim"), `${count(DECISION_LABEL.paid).toLocaleString("en-US")} approved`];
+  const held = count(DECISION_LABEL.held);
+  if (held) parts.push(`${held.toLocaleString("en-US")} held`);
+  parts.push(`${count(DECISION_LABEL.rejected, DECISION_LABEL.blocked).toLocaleString("en-US")} refused`);
+  return parts.join(" · ");
 }
 
 export default async function InsightsPage({ searchParams }: PageProps<"/console/insights">) {
@@ -58,8 +57,6 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
   }
 
   const data = buildInsights(claims, recall, new Date());
-  const samples = data.claims.filter((c) => c.source === "Starter").length;
-  const demo = data.claims.filter((c) => c.source === "Demo").length;
 
   return (
     // On a laptop the report fills the window below the console header (56px and its hairline), so Studio's canvas
@@ -74,16 +71,15 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
           <h1 className="mt-2 text-h2 font-medium text-balance">
             <NoBreakHyphens>{recall.product}</NoBreakHyphens>
           </h1>
-          <p className="mt-1.5 max-w-[100ch] text-ui text-muted">{whose(data.claims.length, samples, demo)}</p>
+          <p className="mt-1.5 max-w-[100ch] text-ui text-muted">{outcomes(data.claims)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/insights" />}
           <p className="flex items-center gap-2 rounded-full border border-line py-1 pr-3 pl-2 text-micro whitespace-nowrap text-muted" title="The analyst reads, charts and drafts. Approving, rejecting and paying stay with a person and the rule.">
             <span aria-hidden="true" className="size-1.5 rounded-full bg-faint" />
             <span className="text-text">Recall analyst</span>
-            <span className="hidden font-mono text-faint sm:inline">{analystModel()}</span>
             <span aria-hidden="true" className="text-faint">·</span>
-            <span>can&rsquo;t approve or pay</span>
+            <span>read-only, never moves money</span>
           </p>
         </div>
       </div>

@@ -17,17 +17,6 @@ function H({ n, children }: { n: number; children: ReactNode }) {
 const th = "py-2 pr-4 text-left font-mono text-micro font-medium uppercase tracking-[0.06em] text-muted last:pr-0";
 const td = "border-t border-line py-2.5 pr-4 align-top last:pr-0";
 
-// Where every claim in the totals came from, in Insights' words: the starter claims, the demo claims and the
-// real owners' live claims, so the parts add up to the claim records the report is prepared from.
-function provenance({ seeded, demo }: Pick<Report, "seeded" | "demo">, total: number) {
-  const parts = [];
-  const live = total - seeded - demo;
-  if (seeded) parts.push(`${plural(seeded, "starter claim")} (never paid)`);
-  if (demo) parts.push(plural(demo, "demo claim"));
-  if (live) parts.push(`${plural(live, "live claim")} from ${live === 1 ? "a real owner" : "real owners"}`);
-  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0];
-}
-
 // CPSC's own wording of units sold, only when it says more than the figure above it (a range, several products).
 const cpscUnits = (recall: Recall, sold: number) => (recall.units && recall.units.replace(/[^\d]/g, "") !== String(sold) ? `CPSC: ${recall.units}` : undefined);
 
@@ -39,7 +28,7 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
   const s = report.stats;
   const refused = s.rejected + s.blocked;
   const each = report.paidEachCents === null ? "" : ` at ${formatCents(report.paidEachCents)}`;
-  const sampleNote = report.samplesPaid ? ` · ${formatCents(report.sampleCents)} approved on starter claims` : "";
+  const sampleNote = report.samplesPaid ? ` · ${formatCents(report.sampleCents)} approved` : "";
   return (
     // On screen it is a paper document, like every receipt, tag and notice (light-theme tokens inside, which pass on
     // --paper); printed, plain white.
@@ -68,17 +57,11 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
         </dl>
       </header>
 
-      {(report.seeded > 0 || report.demo > 0) && (
-        <p className="mt-8 rounded-control border border-line bg-surface-2 px-4 py-3 text-ui text-text">
-          The {plural(s.total, "claim record")}: {provenance(report, s.total)}. Do not file these numbers with CPSC.
-        </p>
-      )}
-
       <section className="mt-8 flex flex-col gap-4 break-inside-avoid">
         <H n={1}>Units remedied</H>
         <div className="grid gap-6 sm:grid-cols-3">
           <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={cpscUnits(recall, s.unitsSold)} />
-          <Figure label="Units remedied" value={formatCount(s.remedied)} note={report.samplesPaid ? `Destroyed on camera; ${plural(report.samplesPaid, "starter claim")} never refunded` : "Destroyed on camera and refunded"} />
+          <Figure label="Units remedied" value={formatCount(s.remedied)} note={report.samplesPaid ? "Destroyed on camera" : "Destroyed on camera and refunded"} />
           <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} />
         </div>
         {s.unitsSold > 0 && <Meter value={s.remedied} max={s.unitsSold} label="Units remedied of units sold" />}

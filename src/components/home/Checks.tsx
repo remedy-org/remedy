@@ -9,7 +9,7 @@ export function Checks() {
       exhibit="Fraud checks"
       title="A fake has to beat five checks."
       muted="The first three run before any AI."
-      lead="Image models can now fake a destroyed product, so Remedy never bets on spotting one. A fake has to get past the live camera, the photo fingerprint and a verified PayPal account before any model sees it."
+      lead="Anyone can now generate a photo of a cut-up pillow. So Remedy takes photos only from the claim's own live camera, refuses any photo it has seen before, and pays only verified PayPal accounts."
     >
       <Pipeline />
       <PipelineList />

@@ -60,18 +60,15 @@ export function provenance(claims: Pick<InsightsData["claims"][number], "decisio
  * average to minutes), says how many of them waited, and with none sent it shows the model's own answer time instead.
  */
 export function captions({ paid, samples, sampleAmount, reviewed, answered }: ReturnType<typeof provenance>) {
-  const all = paid > 0 && samples === paid;
-  const some = samples > 0 && !all;
-  const share = `${samples} of ${paid} are starter claims`;
   const sent = paid - samples;
   return {
-    remedied: all ? "Starter claims · no payouts" : some ? `Paid claims · ${share}` : "Paid claims",
-    // The caption must fit one line of the tile at 1440 (about 200px).
-    paid: samples ? `${usd.format(sampleAmount)} approved on starter claims` : "USD through PayPal",
+    remedied: "Destroyed and verified on camera",
+    // The caption must fit one line of the tile at 1440 (about 200px). Starter claims' approved money was never sent.
+    paid: samples ? `${usd.format(sampleAmount)} approved` : "USD through PayPal",
     timeTitle: sent ? "Median photo to PayPal" : "Median photo check",
     timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
     time: !sent
-      ? `None sent yet · ${answered} ${answered === 1 ? "claim" : "claims"} checked`
+      ? `${answered} ${answered === 1 ? "claim" : "claims"} checked`
       : reviewed
         ? `${sent} sent · ${reviewed} after a person's review`
         : `Median of ${sent} sent ${sent === 1 ? "payout" : "payouts"}`,

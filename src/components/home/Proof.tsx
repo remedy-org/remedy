@@ -4,12 +4,12 @@ import styles from "./home.module.css";
 import { Reveal } from "./Reveal";
 import { Section } from "./Section";
 
-// Figures: docs/EVAL.md (7 Nov 2026), GPT-6.1 Sol. Full table in public/llms-full.txt.
+// Figures: docs/EVAL.md (7 Nov 2026), GPT-6.1 Sol, the model Remedy runs. Full table and method in public/llms-full.txt.
 // short: the same fact in fewer words, for a phone's three narrow columns.
 const FIGURES: { figure: string; text: string; short: string }[] = [
   { figure: "100%", text: "of wrong codes and wrong products rejected", short: "wrong codes rejected" },
   { figure: "16 s", text: "to check a claim", short: "to check a claim" },
-  { figure: "1.1¢", text: "per claim checked", short: "per claim" },
+  { figure: "1.1¢", text: "Remedy's cost to check a claim", short: "cost per claim" },
 ];
 
 /** The footnote mark: a 24px hit area around the small figure, jumping to the method line at the section's foot. */
@@ -34,7 +34,7 @@ export function Proof() {
       exhibit="Results"
       title="Every genuine claim paid."
       muted="Every stolen photo stopped."
-      lead="Remedy faced real owner photos, official recall photos, wrong codes and deliberate fakes. A good fake can fool any model, so photos only enter through the claim's live camera, and a fixed rule moves the money."
+      lead="Remedy was tested against real owner photos, official recall photos, wrong codes and deliberate fakes. Photos get in only through the claim's live camera, and a fixed rule, never the model, moves the money."
     >
       {/* The one number that matters, at the section's title size and the only full-contrast figure, on the heading's
           grid line; the three supporting figures sit on the lead's (column 8), smaller and muted. */}
@@ -64,8 +64,8 @@ export function Proof() {
       </div>
 
       <p id="proof-note" className="mt-12 max-w-[68ch] scroll-mt-24 text-[0.75rem]/[1.5] text-pretty text-faint sm:mt-16">
-        ¹ Remedy benchmark, 7 Nov 2026: 36 claims, from real owner photos and official recall photos to deliberate fakes. Figures
-        for GPT-6.1 Sol, the model Remedy runs. Photos showing a claim code were generated, since no public photo carries one.
+        ¹ Remedy fraud benchmark, 7 Nov 2026: real owner photos, official recall photos, wrong codes, photos of screens and
+        deliberate fakes.
       </p>
     </Section>
   );

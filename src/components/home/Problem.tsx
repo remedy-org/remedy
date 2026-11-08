@@ -88,7 +88,7 @@ export function Problem() {
           </Document>
           <blockquote className="order-last max-w-[44ch] border-l-2 border-ink pl-6 text-head-sm font-medium text-balance lg:order-none">
             The same request warns that fraud controls can &ldquo;reduce recall participation&rdquo;.{" "}
-            <span className="text-ink-muted">Remedy keeps the refund easy for a real owner and expensive for a fake.</span>
+            <span className="text-ink-muted">Remedy makes the refund fast for a real owner and a dead end for a fake.</span>
           </blockquote>
         </div>
         <Document

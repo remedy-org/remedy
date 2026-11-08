@@ -24,10 +24,10 @@ const ERRORS: Record<string, { title: string; description: string }> = {
 
 const FACTS = [
   <>
-    Your workspace opens with the Kikea <span className="whitespace-nowrap">X-VESOLJE</span> demo recall and 40 starter claims to explore.
+    Your console opens on the <span className="whitespace-nowrap">X-VESOLJE</span> pillow recall, with 40 claims already in the queue.
   </>,
-  "Refunds go straight to each owner's PayPal account through PayPal Payouts. Paying from your own PayPal business account is next.",
-  "Remedy reads your PayPal name, email and account id to open your workspace. Nothing else.",
+  "Refunds land in each owner's PayPal account through PayPal Payouts. Next: fund them straight from your PayPal business account.",
+  "Remedy reads your PayPal name, email and account ID to open your console. Nothing else.",
 ];
 
 export default async function SignInPage({ searchParams }: PageProps<"/signin">) {

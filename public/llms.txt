@@ -18,7 +18,7 @@
 ## Why Remedy wins
 - Proof instead of paperwork: a live photo with a one-time code replaces mail-in coupons, receipts and inbox review.
 - A fake has to beat the camera first. A stolen, reposted or uploaded photo is refused before any model sees it.
-- Benchmark, 7 Nov 2026, 36 claims ([details](https://remedy-recalls.vercel.app/llms-full.txt)): no web photo was ever paid with the code check on; every genuine claim was paid; every wrong code, label and product was rejected; about 1.1¢ and 16 s to check a claim.
+- Fraud benchmark, 7 Nov 2026, on real owner photos, official recall photos, wrong codes and deliberate fakes: every genuine claim paid, no stolen web photo paid, every wrong code, label and product rejected, 16 seconds and about 1¢ to check a claim ([details](https://remedy-recalls.vercel.app/llms-full.txt)).
 - Built for the recall team: a claims queue on AG Grid with the photos, checks and payout for every claim; Insights on AG Studio with a recall analyst; a CPSC progress report drafted from the claim records; import a recall straight from its CPSC notice; approve or reject held claims and pay in one step.
 - PayPal end to end: Log in with PayPal for identity, PayPal Payouts for the money.
 

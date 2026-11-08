@@ -380,7 +380,7 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
   switch (c.decision) {
     case "paid":
       // A seeded sample was decided by the rule like any claim, but its PayPal account is made up and nothing was sent.
-      if (c.seeded) return `Every check passed, so the rule approved ${amount}. Starter claims don't pay out.`;
+      if (c.seeded) return `Every check passed, so the rule approved ${amount}.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `Every check passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
       // The rule refused it and the owner asked a person to look (src/lib/appeal.ts): the rule's reason stands beside it.
@@ -439,7 +439,7 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
     // Seeded claims share a handful of sample photos, so the fingerprint check was never run on them: say so rather
     // than show a pass next to another claim with the same photo.
     c.seeded
-      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Not run on starter claims, which share their photos" }
+      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Not run on this claim" }
       : // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the
         // same sample photo once: say that, next to the other rounds' claims with the same photo and code. The company
         // reads a round as a demo session.

@@ -30,7 +30,7 @@ const GATES: { title: string; text: string; ai: boolean }[] = [
     ai: true,
   },
   {
-    title: "Really destroyed",
+    title: "Destroyed as the notice says",
     text: "The model confirms each step the notice asks for, such as “cut fully in half”, and that the photo isn't of a screen or a print.",
     ai: true,
   },
@@ -186,7 +186,7 @@ export function Pipeline() {
                 <div className={GATE}>
                   <div className="col-start-2 py-6 pr-12">
                     <h3 className="text-head-sm font-medium">Then a fixed rule decides.</h3>
-                    <p className="mt-1 max-w-[52ch] text-ui text-muted">The model describes the photo. The rule decides.</p>
+                    <p className="mt-1 max-w-[52ch] text-ui text-muted">AI reads the photo. It never moves the money.</p>
                     <p className="mt-4 inline-block rounded-control bg-surface px-3 py-2 font-mono text-micro leading-relaxed text-text shadow-ring">{RULE}</p>
                   </div>
                 </div>
@@ -307,7 +307,7 @@ export function PipelineList() {
       })}
       <li className="border-t border-line py-6">
         <h3 className="text-body font-medium">Then a fixed rule decides.</h3>
-        <p className="mt-1 text-ui text-muted">The model describes the photo. The rule decides.</p>
+        <p className="mt-1 text-ui text-muted">AI reads the photo. It never moves the money.</p>
         <p className="mt-3 rounded-control bg-surface px-3 py-2 font-mono text-micro leading-relaxed shadow-ring">{RULE}</p>
         {rows(5, "Passed every gate")}
       </li>

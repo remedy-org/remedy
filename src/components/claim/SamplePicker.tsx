@@ -28,11 +28,11 @@ export interface DemoRun {
 }
 
 // What each sample proves, in one line under its title (here and on the try page's preview).
-export const SAMPLE_TESTS: Record<string, string> = {
-  genuine: "the payout through PayPal",
-  "wrong-code": "the model reading the code",
-  "ai-no-session": "the live-camera rule",
-  reposted: "the duplicate-photo rule",
+export const SAMPLE_OUTCOME: Record<string, string> = {
+  genuine: "Passes every check",
+  "wrong-code": "Caught by the code check",
+  "ai-no-session": "Caught by the live camera",
+  reposted: "Caught by the photo fingerprint",
 };
 
 /** This round's runs that reached the photos step, as the scoreboard counts them. */
@@ -141,8 +141,8 @@ export function SamplePicker({
                     <span className="sr-only">Claim {letter}: </span>
                     {sample.title}
                   </span>
-                  <span className="font-mono text-micro text-faint">Tests: {SAMPLE_TESTS[sample.id] ?? sample.decidedBy}</span>
-                  <StatusPill status={sample.expect} label={`Expected: ${statusLabel(sample.expect).toLowerCase()}`} className="mt-1 self-start" />
+                  <span className="text-ui text-muted">{SAMPLE_OUTCOME[sample.id] ?? sample.decidedBy}</span>
+                  <StatusPill status={sample.expect} label={`Ends ${statusLabel(sample.expect).toLowerCase()}`} className="mt-1 self-start" />
                   {run && <RunResult sample={sample} run={run} prefix={<span className="text-ui text-faint">Got</span>} className="flex-wrap gap-y-1" />}
                   {locked && <span className="sr-only">{locked}</span>}
                 </span>

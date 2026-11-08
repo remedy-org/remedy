@@ -8,11 +8,11 @@ import { Problem } from "@/components/home/Problem";
 import { Proof } from "@/components/home/Proof";
 
 const description =
-  "Recall refunds paid through PayPal within a minute. Owners prove the product destroyed on a live camera, and five checks stop fakes before any money moves.";
-const share = "Remedy · Proof it's destroyed. Paid in a minute.";
+  "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera, five checks stop the fakes, and PayPal pays the refund within a minute.";
+const share = "Remedy · Recall refunds, paid in a minute";
 
 export const metadata: Metadata = {
-  title: { absolute: "Remedy · Recall refunds, proven and paid through PayPal" },
+  title: { absolute: share },
   openGraph: { title: share, description, siteName: "Remedy", type: "website" },
   twitter: { card: "summary_large_image", title: share, description },
 };
@@ -39,7 +39,7 @@ const JSON_LD = {
       operatingSystem: "Web",
       publisher: { "@id": `${SITE}/#organization` },
       description:
-        "Remedy turns a CPSC recall into a live refund program. Owners prove the product destroyed on a live camera with a one-time code, five fraud checks and a fixed rule decide, and PayPal Payouts sends the refund within a minute. Companies get a claims console, recall analytics and a CPSC progress report.",
+        "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera with a one-time code, five fraud checks and a fixed rule decide, and PayPal Payouts sends the refund within a minute. Companies get a claims console, recall analytics and a CPSC progress report.",
       featureList: [
         "Live-camera proof of destruction with a one-time code",
         "Five fraud checks, the first three before any AI",

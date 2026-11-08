@@ -46,7 +46,7 @@ function CtaTag() {
             <p className="micro text-ink-muted">Try it</p>
             <h2 className="mt-4 text-title-lg font-medium text-balance">See a refund land in a minute.</h2>
             <p className="mt-3 max-w-[40ch] text-body text-pretty text-ink-muted">
-              Four claims, one genuine. Watch Remedy pay it and stop the three fakes. It takes two minutes.
+              Run four claims, one of them genuine. Remedy pays it through PayPal and stops the three fakes.
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-3">

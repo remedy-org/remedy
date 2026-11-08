@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 import { duration, formatCents, percent, type Ledger as LedgerData } from "@/app/console/_lib/view";
 import { formatCount } from "./format";
 
-function Item({ value, label, title, className, children }: { value: ReactNode; label: ReactNode; title?: string; className?: string; children?: ReactNode }) {
+function Item({ value, label, className, children }: { value: ReactNode; label: ReactNode; className?: string; children?: ReactNode }) {
   return (
-    <div className={clsx("flex min-w-0 flex-wrap items-baseline gap-x-2 sm:flex-nowrap sm:whitespace-nowrap", className)} title={title}>
+    <div className={clsx("flex min-w-0 flex-wrap items-baseline gap-x-2 sm:flex-nowrap sm:whitespace-nowrap", className)}>
       <dd className="order-1 text-[20px] leading-7 font-semibold">{value}</dd>
       {children}
       <dt className="order-3 text-micro text-muted">{label}</dt>
@@ -15,7 +15,8 @@ function Item({ value, label, title, className, children }: { value: ReactNode; 
 
 /**
  * The 48px ledger strip over the grid: units remedied of units sold with a 64x4 meter, money sent through PayPal, the
- * median time from photos to PayPal, held and refused. Starter claims' money is shown apart: it was never sent.
+ * median time from photos to PayPal, held and refused. Money the rule approved on starter claims is shown apart as
+ * "approved": it was never sent.
  */
 export function Ledger({ ledger, className }: { ledger: LedgerData; className?: string }) {
   const known = ledger.unitsSold > 0;
@@ -29,8 +30,7 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
             <span className="text-ui font-normal text-muted"> of {known ? formatCount(ledger.unitsSold) : "unknown"}</span>
           </>
         }
-        label={ledger.sampleRemedied ? `remedied · ${formatCount(ledger.sampleRemedied)} starter` : "remedied"}
-        title={ledger.sampleRemedied ? `${ledger.sampleRemedied} of these are starter claims the rule approved; starter claims don't pay out.` : undefined}
+        label="remedied"
         className="col-span-2"
       >
         {known && (
@@ -51,7 +51,7 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
             {ledger.sampleCents > 0 && (
               <span className="text-faint">
                 {" "}
-                · {formatCents(ledger.sampleCents)} approved on starter claims
+                · {formatCents(ledger.sampleCents)} approved
               </span>
             )}
           </>

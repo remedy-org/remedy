@@ -23,7 +23,7 @@ export default function TermsPage() {
         },
         {
           title: "Payouts",
-          body: "Refunds paid on remedy-recalls.vercel.app are made in PayPal's sandbox environment, so no real money moves.",
+          body: "During the pilot, payouts on remedy-recalls.vercel.app run in PayPal's sandbox, so no real money moves.",
         },
         {
           title: "PayPal",

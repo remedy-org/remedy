@@ -10,7 +10,7 @@ import { InfoIcon, LockIcon } from "./icons";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
 import { companyName, cutInHalf, handWrittenLabel, money, productNoun, SANDBOX_ACCOUNTS_URL } from "./model";
-import { SAMPLE_TESTS } from "./SamplePicker";
+import { SAMPLE_OUTCOME } from "./SamplePicker";
 
 export type AuthError = "denied" | "state" | "paypal" | "refused";
 
@@ -101,7 +101,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
           </StepTitle>
           <p className="text-body text-pretty text-muted">
             {demo
-              ? `Remedy pays the genuine one ${amount} through PayPal and stops the three fakes. Each runs the same five checks. About two minutes.`
+              ? `Remedy pays the genuine one ${amount} through PayPal and stops the three fakes. Each runs the same five checks.`
               : recall.autoPay
                 ? `Remedy sends it through PayPal${forCompany} once your photo shows it's destroyed.`
                 : `Remedy sends it through PayPal${forCompany} once your photo is checked and ${company} approves it.`}
@@ -201,8 +201,8 @@ export function SampleList({ rail, className }: { rail?: boolean; className?: st
             <SampleTag src={s.photos[0]} />
             <span className="flex min-w-0 flex-col items-start gap-1.5">
               <span className="text-ui leading-tight font-medium text-text">{s.title}</span>
-              <span className="text-ui leading-tight text-muted">Tests {SAMPLE_TESTS[s.id] ?? s.decidedBy}</span>
-              <StatusPill status={s.expect} label={`Expected: ${statusLabel(s.expect).toLowerCase()}`} />
+              <span className="text-ui leading-tight text-muted">{SAMPLE_OUTCOME[s.id] ?? s.decidedBy}</span>
+              <StatusPill status={s.expect} label={`Ends ${statusLabel(s.expect).toLowerCase()}`} />
             </span>
           </li>
         ))}

@@ -325,20 +325,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
             </div>
           </div>
 
-          {/* The legend for the marks after claim ids, naming every claim in All, on one line so opening a claim never
-              moves the grid (the full text is in its title when the panel narrows it); on a phone, where the evidence is
-              a sheet, it wraps. */}
-          {(samples > 0 || demos > 0) && (
-            <p
-              className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 py-2.5 font-mono text-micro text-faint sm:flex-nowrap sm:overflow-hidden sm:whitespace-nowrap"
-              title={[
-                samples > 0 && `${plural(samples, "starter claim")} come with every workspace and never pay out.`,
-                demos > 0 && `${plural(demos, "demo claim")} come from the try page. Every demo session sends the same photos, so each session's duplicate check runs on its own.`,
-                live > 0 && `${plural(live, "live claim")} from a real owner's PayPal account.`,
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
+          {/* The legend for the marks after claim ids, only once the queue mixes kinds of claim (a workspace's own 40 need
+              none), on one line so opening a claim never moves the grid; on a phone, where the evidence is a sheet, it
+              wraps. */}
+          {[samples, demos, live].filter((n) => n > 0).length > 1 && (
+            <p className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 py-2.5 font-mono text-micro text-faint sm:flex-nowrap sm:overflow-hidden sm:whitespace-nowrap">
               {samples > 0 && (
                 <span className="inline-flex min-w-0 items-center gap-2 sm:shrink-0">
                   <SampleDiamond />

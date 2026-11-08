@@ -8,7 +8,7 @@ import { FlowShell } from "@/components/claim/FlowShell";
 export default function ClaimError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
   const { recall, id } = useParams<{ recall?: string; id?: string }>();
   return (
-    <FlowShell>
+    <FlowShell bare>
       <ClaimErrorCard recall={recall} id={id} onRetry={() => retry()} />
     </FlowShell>
   );

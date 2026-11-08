@@ -12,7 +12,7 @@ import { formatClock, formatTime } from "./format";
 
 type Cell = CustomCellRendererProps<ClaimRow>;
 
-const SAMPLE_TITLE = { seeded: "Starter claim: comes with every workspace, never pays out", demo: "Demo claim, filed from the try page" };
+const DEMO_TITLE = "Demo claim, filed from the try page";
 
 /** The 6px diamond itself, neutral (amber is the one action's): hollow for a sample claim, filled for a judges' demo
  * claim. The note over the grid shows both, labelled. */
@@ -20,14 +20,14 @@ export function SampleDiamond({ demo }: { demo?: boolean }) {
   return <span aria-hidden="true" className={clsx("size-1.5 shrink-0 rotate-45 border", demo ? "border-muted bg-muted" : "border-faint")} />;
 }
 
-/** A diamond after a sample or demo claim's id. */
+/** A diamond after a starter or demo claim's id: a silent tag on a starter claim, named on a demo one. */
 export function SampleMark({ row }: { row: Pick<ClaimRow, "seeded" | "demo"> }) {
   if (!row.seeded && !row.demo) return null;
-  const title = row.seeded ? SAMPLE_TITLE.seeded : SAMPLE_TITLE.demo;
+  const demo = !row.seeded;
   return (
-    <span title={title} className="inline-flex size-3 shrink-0 items-center justify-center">
-      <SampleDiamond demo={!row.seeded} />
-      <span className="sr-only">{title}</span>
+    <span title={demo ? DEMO_TITLE : undefined} className="inline-flex size-3 shrink-0 items-center justify-center">
+      <SampleDiamond demo={demo} />
+      {demo && <span className="sr-only">{DEMO_TITLE}</span>}
     </span>
   );
 }
@@ -207,8 +207,8 @@ function timelineSentence(d: ClaimRow): string {
   const t = d.timeline;
   if (!t) return d.photoCount ? "No times recorded on this row" : "Waiting for photos";
   const at = (label: string, v: number | null) => (v === null ? [] : [`${label} at ${duration(v)}`]);
-  const steps = [...at("model answered", t.answered), ...at("rule decided", t.decided), ...at("PayPal sent", t.sent), ...at("PayPal settled", t.settled)];
-  const tail = d.seeded && d.decision === "paid" ? "; a starter claim, no payout" : t.end === "held" ? "; waiting for a person" : "";
+  const steps = [...at("photo checked", t.answered), ...at("rule decided", t.decided), ...at("PayPal sent", t.sent), ...at("PayPal settled", t.settled)];
+  const tail = t.end === "held" ? "; waiting for a person" : "";
   return `From the photos: ${steps.join(", ") || "checking"}${tail}`;
 }
 
@@ -265,7 +265,7 @@ export function PayoutCell({ data }: Cell) {
   }
   if (data.seeded && data.decision === "paid") {
     return (
-      <span className="flex h-full flex-col justify-center leading-tight" title="A starter claim: the rule approved it, and starter claims don't pay out">
+      <span className="flex h-full flex-col justify-center leading-tight" title="Approved by the rule">
         <span className="inline-flex items-center gap-1.5 text-ui text-muted">
           <span className="size-1.5 shrink-0 rounded-full border border-muted" aria-hidden="true" />
           Approved
@@ -331,7 +331,7 @@ export function CardRow({ data }: Cell) {
 
 // A starter claim's fingerprint check (why it's dotted), and the photo check that never answered.
 function barNote(row: ClaimRow, b: CheckBar): string {
-  if (b.id === "duplicate_photo" && b.state === "skipped" && row.seeded) return "not run on starter claims";
+  if (b.id === "duplicate_photo" && b.state === "skipped" && row.seeded) return "not run on this claim";
   if (b.id === "model" && b.state === "hold") return "no answer, held";
   return BAR_WORD[b.state];
 }
@@ -375,7 +375,7 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Cl
   if (!data || !t) return null;
   const steps: [string, number | null][] = [
     ["Photos in", 0],
-    ["Model answered", t.answered],
+    ["Photo checked", t.answered],
     ["Rule decided", t.decided],
     ...(data.seeded
       ? []
@@ -384,7 +384,7 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Cl
           ["PayPal settled", t.settled],
         ] as [string, number | null][])),
   ];
-  const tail = data.seeded && data.decision === "paid" ? "A starter claim: the rule approved it, and starter claims don't pay out." : t.end === "held" ? "Waiting for a person to approve or reject." : null;
+  const tail = t.end === "held" ? "Waiting for a person to approve or reject." : null;
   return (
     <div className="w-[240px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <p className="micro text-faint">After the photos arrived</p>

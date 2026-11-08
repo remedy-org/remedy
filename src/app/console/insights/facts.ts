@@ -170,9 +170,12 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     verified: c.payerVerified,
     amountPaid: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
     amountSent: c.decision === "paid" && !c.seeded ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
-    // As the queue's amount column: what a paid or held claim pays, and "not sent" while nothing has gone through PayPal.
+    // As the queue's payout column: what a paid or held claim pays; "approved" on a starter claim (the rule approved it, and
+    // starter claims never pay out) and "not sent" on a held one.
     refund:
-      c.decision !== "paid" && c.decision !== "held" ? "—" : `${dollars.format(cents(amountOf(c.payout?.amount, recall)) / 100)}${c.seeded || c.decision === "held" ? " · not sent" : ""}`,
+      c.decision !== "paid" && c.decision !== "held"
+        ? "—"
+        : `${dollars.format(cents(amountOf(c.payout?.amount, recall)) / 100)}${c.decision === "held" ? " · not sent" : c.seeded ? " · approved" : ""}`,
     remedied: c.decision === "paid" ? 1 : 0,
     remediedSample: c.decision === "paid" && c.seeded ? 1 : 0,
     refused: refused ? 1 : 0,

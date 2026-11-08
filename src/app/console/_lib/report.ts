@@ -56,7 +56,8 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const sent = paid.filter((c) => !c.seeded);
   const samples = paid.filter((c) => c.seeded);
   const sum = (list: ClaimSummary[]) => list.reduce((s, c) => s + cents(amountOf(c.payoutAmount, recall)), 0);
-  const paidNote = `Refund sent through PayPal; the unit is destroyed${samples.length ? ". Starter claims were approved, never paid" : ""}`;
+  // Starter claims are approved by the rule and never pay out, so with any among them the row says approved, not sent.
+  const paidNote = samples.length ? "Approved by the rule; the unit is destroyed" : "Refund sent through PayPal; the unit is destroyed";
   const rows: [Decision, string, number, string][] = [
     ["paid", "Paid", stats.remedied, paidNote],
     ["held", "Held for review", stats.held, "An answer was unclear, a check couldn't run, PayPal didn't take the payout, or auto-pay was off"],
