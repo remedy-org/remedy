@@ -33,9 +33,9 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/
     let sessionId: string;
     if (claim.demo) {
       const recall = await deps.store.getRecall(claim.recallId);
-      if (!recall || !isDemoAllowed(recall)) return json(404, "Demo claims run only on the demo recall, in PayPal's sandbox");
+      if (!recall || !isDemoAllowed(recall)) return json(404, "Demo claims run only on the demo recall");
       const sample = demoSample(demoSampleOf(claim) ?? "");
-      if (!sample) throw new ClaimError(400, "This demo claim has no sample");
+      if (!sample) throw new ClaimError(400, "This demo claim has no photos");
       photos = await samplePhotos(sample, request.nextUrl.origin);
       sessionId = sample.liveSession ? (claim.captureSession?.id ?? "") : OUTSIDE_SESSION;
     } else {

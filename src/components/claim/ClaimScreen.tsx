@@ -77,7 +77,6 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           product={productNoun(recall)}
           company={companyName(recall)}
           loginHref={loginPath("owner", here)}
-          demo={demo}
           expiresAt={expiresAt}
           startNow={requestTime()}
           signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : undefined}

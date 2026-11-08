@@ -188,7 +188,7 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
   useEffect(() => {
     const base = captions(provenance(data.claims));
     const say = kpiCaptions(data.claims, picks.length ? shown : data.claims);
-    tileCaptions.current = { "Units remedied": say.remedied, "Paid through PayPal (sandbox)": say.paid, [base.timeTitle]: say.time };
+    tileCaptions.current = { "Units remedied": say.remedied, "Paid through PayPal": say.paid, [base.timeTitle]: say.time };
     if (host.current) followCaptions(host.current, tileCaptions.current);
   }, [data, picks, shown]);
 

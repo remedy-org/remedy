@@ -129,7 +129,7 @@ export { demoSampleOf };
 
 /** The note the owner reads on the payout in PayPal, whether the rule or a person sent it. */
 export const payoutNote = (recall: Pick<Recall, "id" | "product">, claim: Pick<Claim, "id" | "demo">) =>
-  `Recall refund for ${recall.product} (CPSC ${recall.id}), claim ${claim.id}${claim.demo ? ", demo mode" : ""}`;
+  `Recall refund for ${recall.product} (CPSC ${recall.id}), claim ${claim.id}`;
 
 /**
  * A payout that failed, for the claim's history: whether Remedy couldn't reach PayPal (a network error, so nothing left)
@@ -232,14 +232,14 @@ export async function receivePhotos(
   const keys = photos.map((_, i) => `${claim.payoutKey}/${i + 1}.jpg`);
   for (let i = 0; i < photos.length; i++) await deps.store.putPhoto(keys[i], photos[i]);
   claim.photos = keys.map((key, i) => ({ key, hash: hashes[i] }));
-  claim.events.push(event(now, "photos_received", claim.demo ? `${plural(photos.length, "sample photo")} (demo mode)` : `${plural(photos.length, "photo")} from the live camera`));
+  claim.events.push(event(now, "photos_received", claim.demo ? `${plural(photos.length, "photo")} from the demo` : `${plural(photos.length, "photo")} from the live camera`));
 
   if (reasons.length) {
     claim.decision = "blocked";
     claim.reasons = reasons;
     claim.events.push(event(now, "blocked", `Blocked before the photo check: ${reasons.map((r) => r.text).join("; ")}`));
   } else {
-    claim.events.push(event(now, "prechecked", oneClaimChecked(claim) ? "Live session, new photos, no other paid or open claim from this account" : "Live session, new photos; one-claim check not run on this sample"));
+    claim.events.push(event(now, "prechecked", oneClaimChecked(claim) ? "Live session, new photos, no other paid or open claim from this account" : "Live session, new photos; one-claim check not run on this demo claim"));
   }
   await deps.store.putClaim(claim);
   return claim;

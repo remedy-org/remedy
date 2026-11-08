@@ -1,0 +1,59 @@
+# Remedy
+
+> Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera with a one-time code, five checks stop stolen and generated photos, a fixed rule decides, and PayPal Payouts sends the refund within a minute. Companies get a claims console, recall analytics and a CPSC report drafted from the claims.
+
+This is the long version of https://remedy-recalls.vercel.app/llms.txt.
+
+## Checks
+Every claim runs the same five checks, in this order. The first three run before any AI.
+1. Live camera session. Photos must arrive inside this claim's 10-minute camera session. An image made anywhere else is refused before the model sees it.
+2. Never seen before. A perceptual fingerprint compares every photo with every earlier claim, so a reposted or lightly edited photo is refused.
+3. One claim per verified PayPal account. PayPal must report the account as verified, and it gets one claim per recall. A claim farm would need a verified PayPal account for every claim.
+4. The code, character by character. The model reads the hand-written code and the product label. K7Q written on a claim issued K7P is a reject.
+5. Really destroyed. The model confirms each step the notice asks for, such as "cut fully in half", and that the photo isn't of a screen or a print.
+
+## Decision rule
+- The model describes the photo. The rule decides.
+- Any "no" rejects the claim.
+- Any "unclear" holds the claim for a person at the company.
+- Only a claim where every check passes is paid.
+- The model never moves money.
+
+## Benchmark (7 Nov 2026)
+Remedy's photo check was run on 36 claims, three times each, with four vision models. The figures below are for GPT-6.1 Sol, the model Remedy runs.
+- The set: 17 real owner photos, official recall photos and traps from the web (other pillows, AI fakes from news coverage, a screenshot, a photo of a monitor, a photo against the wrong recall); 14 claims with a hand-written code; 5 held-out claims written after the first round of fixes.
+- Genuine claims paid: 21 of 21 and 6 of 6 held out. These are totals across 3 runs: 7 genuine claims × 3 runs, and 2 held-out genuine claims × 3 runs.
+- Wrong codes: all 12 wrong-code attempts were rejected by every model. That is 4 cases × 3 runs.
+- Web photos: with the code check on, no web photo was paid by any model in any run. No public photo carries a claim's one-time code.
+- Wrong labels and wrong products: every one rejected, including a misspelt X-VESOLIE label and a model that isn't recalled.
+- Decisions right: 29 to 30 of 31 per run, and 5 of 5 held out. Answers right: 91%, and 96% held out.
+- Speed and cost: about 16 seconds a claim (40 at most) and about 1.1¢ a claim.
+
+### The one fake every model paid
+- c14 is a generated photo of a pillow with three cut ends on two pieces. Every model paid it at least once. Sol paid it in all 3 runs.
+- A good fake can fool any model. That is why Remedy's defence is the capture path: photos only enter through the claim's live camera, inside a 10-minute session, with a one-time code, from a verified PayPal account, and a fixed rule moves the money.
+
+### The other models
+- GPT-6 Astra paid every genuine claim and caught the c14 flaw more often, at about six times the cost and 26 seconds a claim.
+- GPT-6.1 Terra held two-photo claims because it couldn't confirm both photos showed the same pillow: 18 of 21 genuine claims paid.
+- GPT-6 Luna read "R8D" as "R&D" every time, paid 16 of 21 genuine claims, and paid the held-out h03 fake (the misspelt X-VESOLIE tag) twice.
+
+### Why Sol
+- It paid every genuine claim in every run, held out or not, at about a cent and 16 seconds a claim.
+
+### Method
+- Photos showing a claim code were generated, since no public photo carries one. The rest are real web photos and official recall photos.
+- The answer keys were written by hand, and every image was reviewed by eye before its key was trusted.
+- Each claim is scored on every answer (label, each step, code, screen), not only on the decision.
+
+## Console features
+- Claims queue on AG Grid: every claim with its photos, each check's result, the model's quoted answers and the payout.
+- Evidence panel: the photos at full size, the code the tag must read, and what decided a held or refused claim.
+- Review: approve or reject a held claim. Approving runs the duplicate and account checks again, then pays through PayPal Payouts in one step.
+- Insights on AG Studio: recall progress against units sold, where claims stop, why claims were refused, time from photo to PayPal, and a recall analyst that answers from the claim records.
+- CPSC progress report: a draft built from the claim records, ready to print or save as a PDF.
+- Import a recall from its CPSC notice: Remedy drafts the checks from the notice, and the company publishes one claim link.
+
+## Payouts
+- Refunds go to each owner's verified PayPal account through PayPal Payouts.
+- Terms, including how payouts run on this site: https://remedy-recalls.vercel.app/terms

@@ -17,9 +17,9 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString
 function whose(total: number, samples: number, demo: number): string {
   const parts = [plural(total, "claim")];
   const live = total - samples - demo;
-  if (samples === total) parts.push("all samples from the eval set, never paid to a real owner");
-  else if (samples) parts.push(`${samples} ${samples === 1 ? "is a sample" : "are samples"} from the eval set, never paid to a real owner`);
-  if (demo) parts.push(`${plural(demo, "judges’ demo claim")} in sandbox money`);
+  if (samples === total) parts.push("all starter claims, never paid");
+  else if (samples) parts.push(`${samples} ${samples === 1 ? "is a starter claim" : "are starter claims"}, never paid`);
+  if (demo) parts.push(plural(demo, "demo claim"));
   if (live && live !== total) parts.push(`${plural(live, "live claim")} from ${live === 1 ? "a real owner" : "real owners"}`);
   return `${parts.join(" · ")}.`;
 }
@@ -58,8 +58,8 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
   }
 
   const data = buildInsights(claims, recall, new Date());
-  const samples = data.claims.filter((c) => c.source === "Sample").length;
-  const demo = data.claims.filter((c) => c.source === "Judges' demo").length;
+  const samples = data.claims.filter((c) => c.source === "Starter").length;
+  const demo = data.claims.filter((c) => c.source === "Demo").length;
 
   return (
     // On a laptop the report fills the window below the console header (56px and its hairline), so Studio's canvas

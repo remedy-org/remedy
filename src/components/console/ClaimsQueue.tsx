@@ -75,8 +75,6 @@ export interface ClaimsQueueProps {
   rows: ClaimRow[];
   // When the server read these rows (ISO).
   at: string;
-  // Payouts in this build go to PayPal's sandbox: the ledger's money says so.
-  sandbox?: boolean;
   // From the URL (?tab=held&q=pillow&claim=RM-1460), which the queue keeps in step, so a view can be reloaded or shared.
   initialTab?: string;
   initialSearch?: string;
@@ -89,7 +87,7 @@ export interface ClaimsQueueProps {
  * outside the list goes into it, ↑/↓ walks the queue with the panel open, Enter opens, Esc closes, A and R open approve
  * or reject on a held claim, ? lists them.
  */
-export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = false, initialTab, initialSearch = "", initialOpen }: ClaimsQueueProps) {
+export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, initialSearch = "", initialOpen }: ClaimsQueueProps) {
   const [open, setOpen] = useState<string | null>(() => (initialOpen && initial.some((r) => r.id === initialOpen) ? initialOpen : null));
   // The pointer or keyboard focus in the grid: new claims wait rather than shift the rows (useQueuePoll).
   const [pointerIn, setPointerIn] = useState(false);
@@ -277,7 +275,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
 
   return (
     <section aria-label="Claims" className="flex min-h-0 flex-1 flex-col">
-      <Ledger ledger={ledger} sandbox={sandbox} />
+      <Ledger ledger={ledger} />
 
       {/* From 1280px the open claim's panel is a column beside the tabs, grid and footer, from under the ledger to the
           foot of the window: the evidence has the height, and the search, the heading's actions and the footer stay in
@@ -334,8 +332,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
             <p
               className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 py-2.5 font-mono text-micro text-faint sm:flex-nowrap sm:overflow-hidden sm:whitespace-nowrap"
               title={[
-                samples > 0 && `${plural(samples, "sample claim")} from the eval set: AI-made test photos, never paid.`,
-                demos > 0 && `${plural(demos, "judges' demo claim")}: sample photos and sandbox money. Every demo session sends the same sample photos, so each session's duplicate check runs on its own.`,
+                samples > 0 && `${plural(samples, "starter claim")} come with every workspace and never pay out.`,
+                demos > 0 && `${plural(demos, "demo claim")} come from the try page. Every demo session sends the same photos, so each session's duplicate check runs on its own.`,
                 live > 0 && `${plural(live, "live claim")} from a real owner's PayPal account.`,
               ]
                 .filter(Boolean)
@@ -344,13 +342,13 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
               {samples > 0 && (
                 <span className="inline-flex min-w-0 items-center gap-2 sm:shrink-0">
                   <SampleDiamond />
-                  <span className="truncate">{plural(samples, "sample")}: AI-made photos, never paid</span>
+                  <span className="truncate">{plural(samples, "starter claim")}</span>
                 </span>
               )}
               {demos > 0 && (
                 <span className="inline-flex min-w-0 items-center gap-2">
                   <SampleDiamond demo />
-                  <span className="truncate">{formatCount(demos)} judges&apos; demo: sandbox money</span>
+                  <span className="truncate">{plural(demos, "demo claim")}</span>
                 </span>
               )}
               {live > 0 && <span className="shrink-0">+ {plural(live, "live claim")}</span>}

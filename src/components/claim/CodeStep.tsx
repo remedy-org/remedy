@@ -101,7 +101,8 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
       <p className="text-ui text-muted">One photo with all of it is fine, or up to three.</p>
       {acceptsStandIn(spec) && (
         <p className="text-ui text-muted">
-          This is a demo recall: a plain {tagged?.split(" ").pop() ?? "product"} with the <NoBreakHyphens>{written ?? "hand-written"}</NoBreakHyphens> tag stands in for the real one.
+          No recalled {tagged?.split(" ").pop() ?? "product"} at hand? On the demo recall, any plain {tagged?.split(" ").pop() ?? "product"} with the{" "}
+          <NoBreakHyphens>{written ?? "hand-written"}</NoBreakHyphens> tag works.
         </p>
       )}
     </div>

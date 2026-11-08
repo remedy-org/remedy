@@ -3,7 +3,7 @@ import type { InsightsData } from "@/app/console/insights/facts";
 import type { InsightsRegistry } from "./widgets";
 
 // The Insights report as Studio state: one page on the 24-column canvas (rows of 16px). Field ids refer to the data
-// sources in ./sources.ts. Subtitles are exhibit labels, lettered in reading order.
+// sources in ./sources.ts. Subtitles are short labels under each title.
 
 /** A panel's name for the keyboard: its title and exhibit letter ("Decisions, Exhibit B"), or its title alone. */
 export function panelName(title: string, subtitle: string) {
@@ -43,12 +43,12 @@ const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" 
  */
 export function provenance(claims: Pick<InsightsData["claims"][number], "decision" | "source" | "amountPaid" | "modelSec" | "paidOnReview">[]) {
   const paid = claims.filter((c) => c.decision === "Paid");
-  const samples = paid.filter((c) => c.source === "Sample");
+  const samples = paid.filter((c) => c.source === "Starter");
   return {
     paid: paid.length,
     samples: samples.length,
     sampleAmount: samples.reduce((n, c) => n + c.amountPaid, 0),
-    reviewed: paid.filter((c) => c.source !== "Sample" && c.paidOnReview).length,
+    reviewed: paid.filter((c) => c.source !== "Starter" && c.paidOnReview).length,
     answered: claims.filter((c) => c.modelSec !== null).length,
   };
 }
@@ -62,12 +62,12 @@ export function provenance(claims: Pick<InsightsData["claims"][number], "decisio
 export function captions({ paid, samples, sampleAmount, reviewed, answered }: ReturnType<typeof provenance>) {
   const all = paid > 0 && samples === paid;
   const some = samples > 0 && !all;
-  const share = `${samples} of ${paid} are samples`;
+  const share = `${samples} of ${paid} are starter claims`;
   const sent = paid - samples;
   return {
-    remedied: all ? "Sample claims · never sent" : some ? `Paid claims · ${share}` : "Paid claims",
-    // The tile title already says sandbox; the caption must fit one line of the tile at 1440 (about 200px).
-    paid: samples ? `${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
+    remedied: all ? "Starter claims · no payouts" : some ? `Paid claims · ${share}` : "Paid claims",
+    // The caption must fit one line of the tile at 1440 (about 200px).
+    paid: samples ? `${usd.format(sampleAmount)} approved on starter claims` : "USD through PayPal",
     timeTitle: sent ? "Median photo to PayPal" : "Median photo check",
     timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
     time: !sent
@@ -78,7 +78,7 @@ export function captions({ paid, samples, sampleAmount, reviewed, answered }: Re
     // Exhibit E charts the tile's own number by day: the same claims and the same field, so the two always agree. Its
     // axis counts plain seconds; its tooltip reads "0:03".
     timeChart: sent ? "Photo to PayPal, by day" : "Photo check, by day",
-    timeExhibit: sent ? "EXHIBIT E · MEDIAN SECONDS · PAYOUTS SENT" : "EXHIBIT E · MEDIAN SECONDS · PHOTO CHECK",
+    timeExhibit: sent ? "MEDIAN SECONDS · PAYOUTS SENT" : "MEDIAN SECONDS · PHOTO CHECK",
   };
 }
 
@@ -158,7 +158,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
     id: "overview",
     widgets: {
       "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), say.remedied),
-      "kpi-paid": kpi("Paid through PayPal (sandbox)", sum("claims.amountSent"), say.paid),
+      "kpi-paid": kpi("Paid through PayPal", sum("claims.amountSent"), say.paid),
       // Studio's value tile can only average; the ledger's median comes from a widget of Remedy's own.
       "kpi-median": {
         type: "median-time",
@@ -173,12 +173,12 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
           sold: [{ id: "recall.unitsSold", aggregation: "max" }],
           samples: [sum("claims.remediedSample")],
         },
-        format: titled("Recall progress", "EXHIBIT A · REMEDIED AGAINST SOLD"),
+        format: titled("Recall progress", "REMEDIED AGAINST SOLD"),
       },
       decisions: {
         type: "decision-mix",
         dataMapping: { decision: [{ id: "claims.decision" }], count: [count] },
-        format: titled("Decisions", "EXHIBIT B · DECIDED BY THE RULE"),
+        format: titled("Decisions", "DECIDED BY THE RULE"),
       },
       funnel: {
         type: "check-funnel",
@@ -188,7 +188,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
           decision: [{ id: "claims.decision" }],
           count: [count],
         },
-        format: titled("Check funnel", "EXHIBIT C · WHERE CLAIMS STOP"),
+        format: titled("Check funnel", "WHERE CLAIMS STOP"),
       },
       refusals: {
         type: "refusal-reasons",
@@ -197,7 +197,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
           gate: [{ id: "claims.refusalGate" }],
           count: [count],
         },
-        format: titled("Why claims were refused", "EXHIBIT D · REFUSALS BY REASON"),
+        format: titled("Why claims were refused", "REFUSALS BY REASON"),
       },
       "time-to-pay": {
         type: "column-chart-grouped",
@@ -218,7 +218,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
         },
         sort: [{ field: { id: "claims.filedAt" }, direction: "desc" }],
         // No grand total: a sum under a column of decisions and reasons says nothing.
-        format: { ...titled("Every claim", "EXHIBIT F · NEWEST FIRST"), style: { grandTotalRow: { enabled: false } } },
+        format: { ...titled("Every claim", "NEWEST FIRST"), style: { grandTotalRow: { enabled: false } } },
       },
     },
     widgetLayout: {

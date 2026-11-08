@@ -12,7 +12,7 @@ const SOURCES = [
   { n: 1, label: "PIRG, Too Much to Recall, January 2024", href: "https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf" },
   {
     n: 2,
-    label: "CPSC recalls API, 1 October to 5 November 2026, our count",
+    label: "Remedy analysis of the CPSC recalls API, 1 October to 5 November 2026",
     href: "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2026-10-01&RecallDateEnd=2026-11-05",
   },
   {
@@ -25,7 +25,7 @@ const SOURCES = [
 
 const STATS: { figure: string; text: string; note: number }[] = [
   { figure: "6–10%", text: "of recalled products are ever returned or destroyed. The rest stay in homes.", note: 1 },
-  { figure: "20 of 27", text: "refund recalls that asked for a photo from 1 October to 5 November 2026 had owners email it to an inbox.", note: 2 },
+  { figure: "20 of 27", text: "refund recalls that asked for a photo had owners email it to an inbox, where a person checks it by hand.", note: 2 },
 ];
 
 const link = "underline decoration-paper-line underline-offset-4 transition-colors duration-160 hover:decoration-ink focus-visible:outline-ink";
@@ -61,7 +61,7 @@ export function Problem() {
   return (
     <Section
       id="problem"
-      exhibit="A · The problem"
+      exhibit="Problem"
       tone="paper"
       title="Recall refunds run on an inbox."
       muted="AI broke the inbox."

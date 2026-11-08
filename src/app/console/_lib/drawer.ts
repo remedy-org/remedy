@@ -178,7 +178,7 @@ function plainEvents(events: Claim["events"]): DrawerEvent[] {
   return events.map((e) => {
     if (e.type === "demo_sample") {
       const title = demoSample(e.detail)?.title;
-      return { ...e, detail: title ? `Filed with the judges' sample "${title}"` : "Filed with a judges' sample" };
+      return { ...e, detail: title ? `Filed from the demo: "${title}"` : "Filed from the demo" };
     }
     const failed = e.type === "payout_failed" ? payoutFailureWords(e.detail) : null;
     if (failed) {
@@ -245,7 +245,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     review:
       c.decision === "held"
         ? c.seeded
-          ? { sample: true, note: "Seeded sample, in every company's console, with a made-up PayPal account. Approve or reject shows what each does; no money moves and nothing is saved." }
+          ? { sample: true, note: "This starter claim came with your workspace. Approve or reject it to see what each does. Nothing is paid or saved." }
           : { sample: false, note: null }
         : null,
     recall: { id: recall.id, autoPay: recall.autoPay },

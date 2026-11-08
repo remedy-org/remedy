@@ -32,7 +32,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
   const share = total > 0 ? done / total : 0;
   // Sample claims count as remedied in the console, but no money reached a real owner: say how many of them there are.
   const fromSamples = samples ? num(rows[2]?.[0]?.[samples.key]) : 0;
-  const sampleNote = !fromSamples ? null : fromSamples === done ? "all samples" : `${fromSamples} of ${done} are samples`;
+  const sampleNote = !fromSamples ? null : fromSamples === done ? "all starter claims" : `${fromSamples} of ${done} are starter claims`;
 
   return (
     <div className="flex h-full min-h-0 flex-col justify-between gap-4 px-1.5 pb-1">

@@ -10,7 +10,7 @@ export const JUDGES_DOCK_ID = "judges-dock";
 const noop = () => () => {};
 
 /**
- * Below 1200px the judges' notes live behind a 32px pill in the header that opens them as a bottom sheet (a modal
+ * Below 1200px the guide lives behind a 32px pill in the header that opens them as a bottom sheet (a modal
  * dialog). The pill renders into the header's slot once the page has hydrated.
  */
 export function JudgesSheet({ children }: { children: ReactNode }) {
@@ -35,8 +35,7 @@ export function JudgesSheet({ children }: { children: ReactNode }) {
       className="micro inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 whitespace-nowrap text-text transition-colors duration-160 after:absolute after:-inset-y-1.5 after:inset-x-0 after:content-[''] hover:bg-surface-2 relative"
     >
       <span className="size-1.5 rounded-full bg-faint" aria-hidden="true" />
-      <span className="max-[399px]:hidden">For judges</span>
-      <span className="min-[400px]:hidden">Judges</span>
+      <span>Guide</span>
     </button>
   );
   return (
@@ -47,7 +46,7 @@ export function JudgesSheet({ children }: { children: ReactNode }) {
         ref={ref}
         id={id}
         tabIndex={-1}
-        aria-label="Notes for judges"
+        aria-label="Guide"
         onClick={(e) => e.target === ref.current && ref.current?.close()}
         onClose={() => setOpen(false)}
         className="fixed inset-x-0 top-auto bottom-0 m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-[16px] bg-surface p-0 text-text shadow-float outline-none backdrop:bg-[oklch(0_0_0/0.5)]"

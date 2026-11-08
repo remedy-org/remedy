@@ -13,7 +13,6 @@ export interface PhotoViewerProps {
   photos: string[];
   /** The photo that was clicked (0-based). */
   start: number;
-  sample: boolean;
   /** The one-time code the tag must read: on top, beside the photos it is checked against. */
   code?: string;
   /** What decided a held or refused claim, as the panel's callout says it: the question to look at the photos with. */
@@ -32,7 +31,7 @@ export interface PhotoViewerProps {
  * question that held it on top. ← and → move between the photos, Esc goes back to the panel (the dialog returns focus
  * to the thumbnail that opened it). On a phone it shows one photo at a time.
  */
-export function PhotoViewer({ claimId, photos, start, sample, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
+export function PhotoViewer({ claimId, photos, start, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const figures = useRef<(HTMLElement | null)[]>([]);
   const [current, setCurrent] = useState(start);
@@ -75,7 +74,6 @@ export function PhotoViewer({ claimId, photos, start, sample, code, question, on
             <span className="font-mono text-body font-medium">{claimId}</span>
             <span className="micro text-faint">
               {photos.length === 1 ? "Photo 1" : `Photos 1 to ${photos.length}`}
-              {sample ? " · AI-made test photos" : ""}
             </span>
           </h2>
           {question && (
@@ -107,7 +105,7 @@ export function PhotoViewer({ claimId, photos, start, sample, code, question, on
               figures.current[i] = el;
             }}
             tabIndex={-1}
-            aria-label={`Photo ${i + 1} of ${photos.length}${sample ? ", an AI-made test photo" : ""}`}
+            aria-label={`Photo ${i + 1} of ${photos.length}`}
             // A phone shows the current photo alone; wider screens show them all.
             className={clsx("flex min-h-0 min-w-0 flex-col gap-2 rounded-control outline-none max-sm:col-span-full", i !== current && "max-sm:hidden")}
           >
@@ -115,9 +113,6 @@ export function PhotoViewer({ claimId, photos, start, sample, code, question, on
               {/* A private, session-checked route at full size: next/image's optimizer can't fetch it with the cookie. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt={`Photo ${i + 1} of ${photos.length} for ${claimId}`} className="absolute inset-0 size-full object-contain" />
-              {sample && (
-                <span className="micro absolute inset-x-0 bottom-0 bg-[oklch(0.155_0.004_75/0.78)] px-2 py-1 text-[oklch(0.96_0.006_85)]">AI-made test photo</span>
-              )}
             </div>
             <figcaption className={clsx("font-mono text-micro", i === current ? "text-text" : "text-muted")}>
               Photo {i + 1} of {photos.length}

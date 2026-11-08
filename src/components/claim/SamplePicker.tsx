@@ -29,7 +29,7 @@ export interface DemoRun {
 
 // What each sample proves, in one line under its title (here and on the try page's preview).
 export const SAMPLE_TESTS: Record<string, string> = {
-  genuine: "the happy path",
+  genuine: "the payout through PayPal",
   "wrong-code": "the model reading the code",
   "ai-no-session": "the live-camera rule",
   reposted: "the duplicate-photo rule",
@@ -41,7 +41,7 @@ export const roundRuns = (runs: DemoRun[]): RoundRun[] => runs.flatMap((r) => (r
 /**
  * Demo mode's stand-in for the camera: four case files in a 2x2 grid, the photo the hero of each, with what it tests,
  * what should happen and what its latest run this round got. The next unrun sample is selected. A plain form, no script
- * needed; on a phone "Run this sample" waits in a bar at the bottom of the screen while the cards scroll. Once the round
+ * needed; on a phone "Run this claim" waits in a bar at the bottom of the screen while the cards scroll. Once the round
  * is done the cards are its record, and the one button starts a new round.
  */
 export function SamplePicker({
@@ -73,12 +73,12 @@ export function SamplePicker({
       {/* A limit's notice, rendered later, takes focus from the title. */}
       <FocusTitle id="picker-title" />
       <div className="flex flex-col gap-3">
-        <StepTitle id="picker-title">Pick a sample claim</StepTitle>
-        <p className="text-body text-muted">Each one runs the real checks and the real rule. Only the genuine claim should be paid, and only once per round.</p>
+        <StepTitle id="picker-title">Pick a claim to run</StepTitle>
+        <p className="text-body text-muted">Each one runs the same checks and rule as an owner&apos;s claim. Only the genuine one is paid, once per round.</p>
         {scored.length > 0 && <p className="font-mono text-micro text-muted">{scoreLine(scored).text}</p>}
         {elsewhere && (
           <p className="text-ui text-muted">
-            A new round on this device. Runs from other devices on this sandbox login keep their own rounds; the company console shows them all.
+            A new round on this device. Runs from other devices on this account keep their own rounds; the company console shows them all.
           </p>
         )}
       </div>
@@ -90,7 +90,7 @@ export function SamplePicker({
       <form action={roundDone ? "/api/claims/round" : "/api/claims"} method="post" className="flex flex-col gap-6">
         <input type="hidden" name="recall" value={slug} />
         <fieldset disabled={off} className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-          <legend className="sr-only">Sample claims</legend>
+          <legend className="sr-only">Demo claims</legend>
           {options.map(({ sample, locked }, i) => {
             const letter = String.fromCharCode(65 + i);
             const run = latest.get(sample.id);
@@ -101,7 +101,7 @@ export function SamplePicker({
                 className={clsx(
                   "group relative flex gap-4 rounded-card border border-line bg-surface p-2 sm:gap-3.5 transition-[border-color,background-color,opacity] duration-160 sm:p-3",
                   // Selected: a tinted card, a firmer hairline and a check on the photo, never an outline, which is focus's
-                  // alone. The screen's one amber is "Run this sample".
+                  // alone. The screen's one amber is "Run this claim".
                   !off && "has-checked:border-line-strong has-checked:bg-surface-2",
                   "has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-focus",
                   !roundDone && !off && "cursor-pointer hover:bg-surface-2",
@@ -135,18 +135,14 @@ export function SamplePicker({
                       After A
                     </span>
                   )}
-                  {/* The honest label, on every sample photo at every size. */}
-                  <span className="absolute inset-x-0 bottom-0 bg-[oklch(0.12_0.004_75/0.8)] py-0.5 text-center font-mono text-[10px] leading-4 tracking-[0.06em] text-[oklch(0.96_0.006_85)] uppercase">
-                    AI-made
-                  </span>
                 </span>
                 <span className="flex min-w-0 flex-col gap-1.5 py-1 sm:py-0.5">
                   <span className="text-ui font-medium text-text">
-                    <span className="sr-only">Sample {letter}: </span>
+                    <span className="sr-only">Claim {letter}: </span>
                     {sample.title}
                   </span>
                   <span className="font-mono text-micro text-faint">Tests: {SAMPLE_TESTS[sample.id] ?? sample.decidedBy}</span>
-                  <StatusPill status={sample.expect} label={`Should be ${statusLabel(sample.expect).toLowerCase()}`} className="mt-1 self-start" />
+                  <StatusPill status={sample.expect} label={`Expected: ${statusLabel(sample.expect).toLowerCase()}`} className="mt-1 self-start" />
                   {run && <RunResult sample={sample} run={run} prefix={<span className="text-ui text-faint">Got</span>} className="flex-wrap gap-y-1" />}
                   {locked && <span className="sr-only">{locked}</span>}
                 </span>
@@ -154,15 +150,14 @@ export function SamplePicker({
             );
           })}
         </fieldset>
-        <p className="text-ui text-faint">All four photos are AI-made samples, not from a camera.</p>
-        {roundDone && <p className="text-ui text-muted">All four samples have run. A new round checks them only against each other, so they reach the same four outcomes.</p>}
+        {roundDone && <p className="text-ui text-muted">All four claims have run. A new round checks them only against each other, so they reach the same four outcomes.</p>}
         <div data-action-bar="" className="z-10 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg/92 max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md">
           {/* Refused by a limit, nothing can run until it resets: the console, where the runs are, takes the button. */}
           {off ? (
             <LimitNextStep demo />
           ) : (
             <Button type="submit" size="lg" block>
-              {roundDone ? "Run the samples again" : "Run this sample"}
+              {roundDone ? "Run all four again" : "Run this claim"}
             </Button>
           )}
         </div>

@@ -11,7 +11,7 @@ import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getDemoRound, requireSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
 
-export const metadata: Metadata = { title: "Pick a sample claim" };
+export const metadata: Metadata = { title: "Pick a claim" };
 
 // /r/<slug>/try/samples: after the PayPal login, the judge picks which sample to send. ?sample=<id> (a result's "Next
 // sample") selects that one when it can run.
@@ -29,7 +29,7 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   const rows = round ? roundClaims(all, recall.id, round, session.payerId) : [];
   const runs: DemoRun[] = rows
     .slice(0, 12)
-    .map((r) => ({ id: r.id, href: `/r/${recall.slug}/try/${r.id}`, title: demoSample(r.sample ?? "")?.title ?? "Sample claim", decision: r.decision, sample: r.photoHashes.length ? r.sample : undefined, unanswered: noModelAnswer(r.decision, [r.reason]) }));
+    .map((r) => ({ id: r.id, href: `/r/${recall.slug}/try/${r.id}`, title: demoSample(r.sample ?? "")?.title ?? "Demo claim", decision: r.decision, sample: r.photoHashes.length ? r.sample : undefined, unanswered: noModelAnswer(r.decision, [r.reason]) }));
   const ran = new Set(rows.filter((r) => r.photoHashes.length > 0).map((r) => r.sample));
   // Rounds are per browser, so judges sharing the sandbox login each get the four outcomes: a fresh round here while
   // this login has runs elsewhere says so, rather than look like those runs were lost.

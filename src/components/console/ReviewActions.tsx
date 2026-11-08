@@ -47,9 +47,9 @@ export function payoutFailure(claim: Pick<DrawerClaim, "decision" | "events">): 
 const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 
 /**
- * One name for each review action, the same on the panel's buttons, the photo viewer's and the key hints: "Pay $29.99
- * (sandbox)…" (or "Try again: pay…" after a payout that failed on the way to PayPal), "Reject…"; a seeded sample's are
- * "Approve the sample…" and "Reject the sample…", since nothing is paid. blocked: approve's checks would stop the payout
+ * One name for each review action, the same on the panel's buttons, the photo viewer's and the key hints: "Pay $29.99…"
+ * (or "Try again: pay…" after a payout that failed on the way to PayPal), "Reject…"; a starter claim's are "Approve…"
+ * and "Reject…", since nothing is paid. blocked: approve's checks would stop the payout
  * now (DrawerClaim.stops), so Reject leads and approve isn't offered as a button.
  */
 export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "sandbox" | "decision" | "events" | "stops">) {
@@ -58,9 +58,9 @@ export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "san
   const blocked = !sample && claim.stops.length > 0;
   return {
     blocked,
-    approve: sample ? "Approve the sample…" : `${failure ? "Try again: pay" : "Pay"} ${claim.amount}${claim.sandbox ? " (sandbox)" : ""}…`,
+    approve: sample ? "Approve…" : `${failure ? "Try again: pay" : "Pay"} ${claim.amount}…`,
     approveKey: sample ? "Approve" : "Pay",
-    reject: sample ? "Reject the sample…" : "Reject…",
+    reject: "Reject…",
   };
 }
 
@@ -219,7 +219,7 @@ export function ReviewActions({
               above them. A seeded claim's note is in the evidence (EvidenceDrawer). */}
           {sample ? (
             <p role="status" className="text-ui text-muted">
-              <span className="micro mr-2 text-text-2">Sample result</span>
+              <span className="micro mr-2 text-text-2">Starter claim</span>
               {sample}
             </p>
           ) : notPaid ? (
@@ -304,14 +304,13 @@ export function ReviewActions({
         <>
           {review.sample ? (
             <p className="text-ui text-muted">
-              On a real claim, this sends <span className="font-mono text-text">{claim.amount}</span> through PayPal Payouts. This sample&apos;s account,{" "}
-              <span className="font-mono text-text">{claim.payer}</span>, is made up, so Remedy sends nothing and the claim stays held.
+              Starter claims don&apos;t pay out, so this sends nothing and the claim stays held. On an owner&apos;s claim, this sends{" "}
+              <span className="font-mono text-text">{claim.amount}</span> through PayPal Payouts.
             </p>
           ) : (
             <p className="text-ui text-muted">
               Remedy runs the duplicate and account checks again, then sends <span className="font-mono text-text">{claim.amount}</span> to{" "}
-              <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts, from Remedy&apos;s PayPal {claim.sandbox ? "sandbox " : ""}account in
-              this build{claim.sandbox ? ": sandbox money, not real" : ""}.
+              <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts.
             </p>
           )}
           {dropped && (
@@ -321,13 +320,12 @@ export function ReviewActions({
           )}
           <div className="flex flex-wrap items-center gap-3">
             {review.sample ? (
-              <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Approving the sample" autoFocus className="flex-1 sm:flex-none">
-                Approve the sample
+              <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Approving" autoFocus className="flex-1 sm:flex-none">
+                Approve
               </Button>
             ) : (
               <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Paying through PayPal" autoFocus className="flex-1 sm:flex-none">
                 Pay {claim.amount}
-                {claim.sandbox ? " (sandbox)" : ""}
               </Button>
             )}
             <Button variant="secondary" onClick={reset} disabled={busy} className="flex-1 sm:flex-none">
@@ -384,7 +382,7 @@ export function ReviewActions({
           </div>
           <div className="flex flex-wrap gap-3">
             <Button type="submit" variant="secondary" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
-              {review.sample ? "Reject the sample" : "Reject claim"}
+              Reject claim
             </Button>
             <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>
               Cancel

@@ -19,8 +19,8 @@ const secs = { createValueFormatter: () => (v: number | null | undefined) => (ty
 const whole = { formatOptions: { format: new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }) } };
 
 const HONESTY =
-  "Sample claims (source = Sample) are eval samples shown in every company's console; they were never paid to a real owner. " +
-  "Judges' demo claims used sample photos and PayPal sandbox money. Amounts are USD sent from Remedy's PayPal sandbox account for the company.";
+  "Starter claims (source = Starter) come with every company's console and are never paid. " +
+  "Demo claims (source = Demo) come from the try page. Amounts are USD sent through PayPal.";
 
 export function buildSources(data: InsightsData): AgDataSourcesDefinition<InsightsRegistry> {
   const days = data.claims.map((c) => c.filedAt.slice(0, 10)).sort();
@@ -45,18 +45,18 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["refusalGate", "Refused by", "textFormat", { description: "The kind of check that refused the claim: No AI (a pre-check), Model reads (the photo check) or Person (a review). Blank unless refused." }],
           ["failedCheck", "Deciding check", "textFormat", { description: "The check that refused or held the claim (code, label, same_item, screen, step_N, session, duplicate_photo, payer, payer_verified, review)." }],
           ["reason", "Reason", "textFormat"],
-          ["source", "Source", "textFormat", { description: "Sample, Judges' demo or Owner." }],
+          ["source", "Source", "textFormat", { description: "Starter, Demo or Owner." }],
           ["payer", "PayPal account", "textFormat", { description: "Last four characters of the PayPal payer id only." }],
           ["verified", "PayPal verified", "booleanFormat"],
-          ["amountPaid", "Paid out", "currencyFormat", { ...usd, description: "USD the rule paid for this claim; 0 unless paid. On a sample claim it was decided, never sent." }],
-          ["refund", "Refund", "textFormat", { description: "The refund as the console shows it: the amount, \"· not sent\" on a sample claim or a held one, or — when the claim was refused or is in progress." }],
-          ["amountSent", "Paid through PayPal", "currencyFormat", { ...usd, description: "USD really sent through PayPal (sandbox in this build); 0 for sample claims, whose payouts never left." }],
+          ["amountPaid", "Paid out", "currencyFormat", { ...usd, description: "USD the rule paid for this claim; 0 unless paid. On a starter claim it was approved, never sent." }],
+          ["refund", "Refund", "textFormat", { description: "The refund as the console shows it: the amount, \"· not sent\" on a starter claim or a held one, or — when the claim was refused or is in progress." }],
+          ["amountSent", "Paid through PayPal", "currencyFormat", { ...usd, description: "USD sent through PayPal; 0 for starter claims, whose payouts never left." }],
           ["remedied", "Units remedied", "integerFormat", { ...whole, description: "1 when the claim was paid: a unit destroyed and refunded." }],
-          ["remediedSample", "Sample units remedied", "integerFormat", { ...whole, hide: true, description: "1 when a sample claim was decided paid. Its payout was never sent to a real owner." }],
+          ["remediedSample", "Starter units remedied", "integerFormat", { ...whole, hide: true, description: "1 when a starter claim was approved. Its payout was never sent." }],
           ["refused", "Refused", "integerFormat", { ...whole, description: "1 when the claim was rejected or blocked." }],
           ["held", "Held", "integerFormat", { ...whole, description: "1 when the claim waits for a person." }],
-          ["timeToPaySec", "Photo to PayPal", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the payout being sent. Paid claims only; a sample claim's are sample timings." }],
-          ["timeToSendSec", "Photo to PayPal, sent", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to a payout really sent through PayPal. Blank for sample claims." }],
+          ["timeToPaySec", "Photo to PayPal", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the payout being sent. Paid claims only; a starter claim's are its seeded timings." }],
+          ["timeToSendSec", "Photo to PayPal, sent", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to a payout really sent through PayPal. Blank for starter claims." }],
           ["paidOnReview", "Paid on review", "integerFormat", { ...whole, description: "1 when the claim was paid only after a person approved it on review; its time to pay includes that wait." }],
           ["modelSec", "Photo check time", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the model's answer." }],
           ["photoCount", "Photos", "integerFormat"],
@@ -106,7 +106,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
         id: "medianToPaySec",
         name: sent ? "Median photo to PayPal" : "Median photo check",
         description: sent
-          ? "Median seconds from photos to a payout really sent through PayPal; sample claims, whose payouts never left, are not in it. Use it grouped, by day or by source; for one overall figure use the Median time widget."
+          ? "Median seconds from photos to a payout really sent through PayPal; starter claims, whose payouts never left, are not in it. Use it grouped, by day or by source; for one overall figure use the Median time widget."
           : "No payout has been sent yet, so this is the median seconds from photos to the model's answer. Use it grouped, by day or by source; for one overall figure use the Median time widget.",
         isMeasure: true,
         format: "decimalFormat",

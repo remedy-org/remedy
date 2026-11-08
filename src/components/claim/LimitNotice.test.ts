@@ -6,10 +6,10 @@ const now = new Date("2026-11-07T18:30:00.000Z");
 const tomorrow = new Date("2026-11-08T00:00:00.000Z");
 
 describe("limitCopy", () => {
-  it("tells a real owner nothing was started, as an honest sandbox limit, and when to come back", () => {
+  it("tells a real owner nothing was started, and when to come back", () => {
     expect(limitCopy({ kind: "account", limit: 5, until: tomorrow }, { demo: false, now })).toEqual({
       title: "This PayPal account has started today's claims",
-      description: "Each PayPal account can start 5 claims a day in this sandbox, to keep its costs down. Nothing was started and nothing is lost.",
+      description: "Each PayPal account can start 5 claims a day. Nothing was started and nothing is lost.",
       retry: "in about 6 hours",
     });
   });
@@ -19,21 +19,20 @@ describe("limitCopy", () => {
       for (const demo of [true, false]) expect(limitCopy({ kind, limit: 60, until: tomorrow }, { demo, now }).description).not.toMatch(/live demo/);
     }
     expect(limitCopy({ kind: "daily", limit: 60, until: tomorrow }, { demo: false, now }).description).toBe(
-      "This sandbox starts at most 60 claims a day, to keep its costs down. Nothing was started and nothing is lost.",
+      "Remedy starts at most 60 claims a day. Nothing was started and nothing is lost.",
     );
-    expect(limitCopy({ kind: "daily", limit: 60, until: tomorrow }, { demo: false, now, sandbox: false }).description).toMatch(/^Remedy starts at most 60 claims a day/);
   });
 
-  it("speaks of sample claims in demo mode", () => {
+  it("speaks of demo claims in demo mode", () => {
     expect(limitCopy({ kind: "checks", limit: 100, until: tomorrow }, { demo: true, now }).description).toBe(
-      "This sandbox runs at most 100 photo checks a day, to keep its costs down. No sample claim was started and nothing was paid.",
+      "Remedy runs at most 100 photo checks a day. No demo claim was started and nothing was paid.",
     );
   });
 
-  it("tells a judge whose account ran its sample claims what happened, that nothing was paid, and when it resets", () => {
+  it("tells an account that ran its demo claims what happened, that nothing was paid, and when it resets", () => {
     expect(limitCopy({ kind: "account", limit: 60, until: tomorrow }, { demo: true, now })).toEqual({
-      title: "This PayPal account has run today's sample claims",
-      description: "Each PayPal account can run 60 sample claims a day in this sandbox, to keep its costs down. No sample claim was started and nothing was paid.",
+      title: "This PayPal account has run today's demo claims",
+      description: "Each PayPal account can run 60 demo claims a day. No demo claim was started and nothing was paid.",
       retry: "in about 6 hours",
     });
   });

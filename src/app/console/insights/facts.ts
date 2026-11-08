@@ -39,7 +39,7 @@ export const refusalLabel = (check: string) => REFUSAL[check.startsWith("step_")
 
 const PRE_CHECKS = new Set(["session", "duplicate_photo", "payer", "payer_verified"]);
 
-export type Source = "Sample" | "Judges' demo" | "Owner";
+export type Source = "Starter" | "Demo" | "Owner";
 
 export interface ClaimFact {
   id: string;
@@ -131,7 +131,7 @@ export interface InsightsData {
 const seconds = (from: string | undefined, to: string | undefined) => (from && to ? Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 1000)) : null);
 const at = (c: Claim, type: string) => c.events.find((e) => e.type === type)?.at;
 
-export const sourceOf = (c: Pick<Claim, "seeded" | "demo">): Source => (c.seeded ? "Sample" : c.demo ? "Judges' demo" : "Owner");
+export const sourceOf = (c: Pick<Claim, "seeded" | "demo">): Source => (c.seeded ? "Starter" : c.demo ? "Demo" : "Owner");
 
 function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
   if (c.decision === "paid") return { stage: "Paid", stopReason: null };

@@ -5,7 +5,7 @@ import { Reveal } from "./Reveal";
 
 export interface SectionProps {
   id: string;
-  /** The exhibit letter and name, e.g. "A · The problem". */
+  /** The eyebrow, e.g. "Problem". */
   exhibit: string;
   /** Two-tone heading: the claim, then the explanation in muted. */
   title: ReactNode;
@@ -24,27 +24,26 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
  * A homepage section on the one 12-column grid. No rules between sections: each one opens with a fade from
  * --section-lift into the page over 288px (the paper band is its own boundary), then 128px of air on laptops (72px on
  * phones). The heading takes columns 1 to 7 and the lead columns 8 to 12, bottom-aligned, so every section's text
- * starts on the same two grid lines. The heading is 40px, two-tone, and focuses in.
+ * starts on the same two grid lines. The heading is 40px, two-tone, and focuses in: the promise in --text, the support in
+ * --muted, each half its own block on the same column start and capped at the same 34ch, so both lines start and wrap alike.
  */
 export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className }: SectionProps) {
   const headingId = `${id}-title`;
   const paper = tone === "paper";
-  const [letter, name] = exhibit.split(" · ");
   return (
     <section id={id} aria-labelledby={headingId} className={clsx("scroll-mt-16", paper ? "bg-band text-ink" : styles.fade, className)}>
       <div className="page py-18 lg:py-32">
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
           <div className="col-span-12 lg:col-span-7">
-            <p className={clsx(styles.line, "micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
-              Exhibit <span className={paper ? "text-ink" : "text-text-2"}>{letter}</span>
-              {name && <> · {name}</>}
+            <p className={clsx(styles.line, "micro", paper ? "text-ink-muted" : "text-muted")} style={line(0)}>
+              {exhibit}
             </p>
             <h2 id={headingId} className="mt-5 text-title-lg font-medium text-balance">
-              <span className={clsx(styles.line, "block")} style={line(1)}>
+              <span className={clsx(styles.line, "block max-w-[34ch]")} style={line(1)}>
                 {title}
               </span>{" "}
               {muted && (
-                <span className={clsx(styles.line, "block", paper ? "text-ink-muted" : "text-muted")} style={line(2)}>
+                <span className={clsx(styles.line, "block max-w-[34ch]", paper ? "text-ink-muted" : "text-muted")} style={line(2)}>
                   {muted}
                 </span>
               )}

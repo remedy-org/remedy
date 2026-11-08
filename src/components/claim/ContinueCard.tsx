@@ -11,7 +11,6 @@ export interface ContinueCardProps {
   product: string;
   company: string;
   loginHref: string;
-  demo?: boolean;
   /** The code's camera session, while it is still the next step: the time left shows beside the title. */
   expiresAt?: string;
   /** The server's clock at render, for the countdown's first paint. */
@@ -25,8 +24,8 @@ export interface ContinueCardProps {
  * account's: a Remedy screen first, so the PayPal login that follows never looks like it came from nowhere. Nothing
  * about the claim's owner is shown; only the code's time left.
  */
-export function ContinueCard({ id, product, company, loginHref, demo, expiresAt, startNow, signedInAs }: ContinueCardProps) {
-  const account = `PayPal ${demo ? "sandbox " : ""}account`;
+export function ContinueCard({ id, product, company, loginHref, expiresAt, startNow, signedInAs }: ContinueCardProps) {
+  const account = "PayPal account";
   // Frozen at zero when there is no session to count down: nothing shows then.
   const left = useCountdown(expiresAt ?? new Date(0).toISOString(), startNow, !expiresAt);
   const ended = Boolean(expiresAt) && left <= 0;
@@ -62,7 +61,7 @@ export function ContinueCard({ id, product, company, loginHref, demo, expiresAt,
         </form>
       ) : (
         <Button href={loginHref} size="lg" block prefetch={false}>
-          {demo ? "Log in with PayPal sandbox" : "Log in with PayPal"}
+          Log in with PayPal
         </Button>
       )}
       <p className="-mt-3 flex gap-2.5 text-ui text-faint">

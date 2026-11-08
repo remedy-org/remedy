@@ -15,9 +15,9 @@ export interface ReceiptLiveProps {
   live: boolean;
   /** "$29.99", for the sentence read out when it lands. */
   amount: string;
-  /** A judges' sample: sandbox money, which reaches no real inbox. */
+  /** A sandbox build or a demo claim: the note points to the PayPal activity page instead of an email. */
   sandbox?: boolean;
-  /** PayPal's sandbox activity page, linked from the sandbox note (a quiet ink link: the receipt has no amber). */
+  /** PayPal's activity page, linked from the note (a quiet ink link: the receipt has no amber). */
   activityUrl?: string;
 }
 
@@ -82,13 +82,13 @@ export function ReceiptLive({ claimId, status: initial, live, amount, sandbox, a
         {/* While it's processing, the note says why the PAID stamp sits above it: Remedy sent it, PayPal is finishing. */}
         {sandbox ? (
           <>
-            {settled ? "" : `${words.note} `}Sandbox money shows in your{" "}
+            {settled ? "" : `${words.note} `}See it in your{" "}
             {activityUrl ? (
               <a href={activityUrl} target="_blank" rel="noreferrer" className="rounded-control text-ink underline decoration-paper-line underline-offset-4 hover:decoration-ink">
-                PayPal sandbox account&apos;s activity<span className="sr-only"> (opens PayPal&apos;s sandbox site in a new tab)</span>
+                PayPal activity<span className="sr-only"> (opens PayPal in a new tab)</span>
               </a>
             ) : (
-              "PayPal sandbox account's activity"
+              "PayPal activity"
             )}
             .
           </>
@@ -97,7 +97,7 @@ export function ReceiptLive({ claimId, status: initial, live, amount, sandbox, a
         )}
       </p>
       <p className="sr-only" aria-live="polite">
-        {changed && words.tone === "pay" ? `Received. ${amount} is in your PayPal ${sandbox ? "sandbox " : ""}account.` : changed ? `Payout status: ${words.label}.` : ""}
+        {changed && words.tone === "pay" ? `Received. ${amount} is in your PayPal account.` : changed ? `Payout status: ${words.label}.` : ""}
       </p>
     </div>
   );

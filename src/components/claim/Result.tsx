@@ -3,12 +3,12 @@ import type { CSSProperties, ReactNode } from "react";
 import { Button, CheckIcon, CrossIcon, Money, NoBreakHyphens, Paper, Stamp, StatusPill, statusLabel } from "@/components/ui";
 import { canAskForReview, reviewAsked } from "@/lib/appeal";
 import { fiveSummary } from "@/lib/fiveChecks";
-import type { DemoSample } from "@/lib/demo";
+import { DEMO_RECALL_ID, type DemoSample } from "@/lib/demo";
 import type { Claim, Recall } from "@/lib/types";
 import { CheckList } from "./CheckList";
 import { CopyPageLink } from "./CopyPageLink";
 import { EvidenceText, ModelQuote } from "./EvidenceText";
-import { ExhibitPhoto, SampleChip, StepTitle } from "./Exhibit";
+import { ExhibitPhoto, StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
 import { FocusTitle } from "./FocusTitle";
 import { WithJudges } from "./Judges";
@@ -73,7 +73,7 @@ export interface ResultProps {
   now?: number;
   /** The step meter, above the result. */
   meter?: ReactNode;
-  /** Payouts go to PayPal's sandbox in this build: every amount is labelled sandbox money, sample or not. */
+  /** Payouts go to PayPal's sandbox in this build: the receipt points to PayPal activity rather than an email. */
   sandbox?: boolean;
   /** A sandbox build's paid receipt: PayPal's sandbox activity page, where the sandbox money shows. */
   activityUrl?: string;
@@ -81,9 +81,9 @@ export interface ResultProps {
   account?: string | null;
 }
 
-// The judges' rail on a result, one note per outcome: what the rule did with this claim and whether money moved.
+// The demo guide on a result, one note per outcome: what the rule did with this claim and whether money moved.
 const RESULT_NOTES: Partial<Record<Claim["decision"], string>> = {
-  paid: "Every check passed, so the rule paid it: PayPal Payouts sent the refund in sandbox money.",
+  paid: "Every check passed, so the rule paid it through PayPal Payouts.",
   held: "The rule held it for a person at the company. No payout is sent unless they approve it.",
   rejected: "The rule refused it on the model's quoted reading. No payout was attempted.",
   blocked: "A check with no AI stopped it before the model saw the photo. No payout was attempted.",
@@ -129,7 +129,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
   return (
     <section aria-labelledby="result-title" className="mx-auto flex w-full max-w-claim flex-col gap-8">
       <h2 id="result-title" tabIndex={-1} className="sr-only">
-        Refund receipt: {money(amount)} paid{sb ? " in PayPal sandbox money" : ""}
+        Refund receipt: {money(amount)} paid
       </h2>
       <Paper variant="receipt" perforated padding="lg" className={clsx(arrive && styles.print)}>
         <div className="flex items-baseline justify-between gap-4 font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">
@@ -154,8 +154,8 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
           </span>
           <Money value={Number(amount.value)} currency={amount.currency} size="amount" className="text-ink" />
           <p className="text-body text-ink-muted">
-            Refunded to your PayPal account through Remedy for {company}
-            {sb ? ", in PayPal sandbox money" : ""}.
+            {/* The demo recall is built on a public CPSC notice: its company is never named as working with Remedy. */}
+            Refunded to your PayPal account through Remedy{recall.id === DEMO_RECALL_ID ? "" : ` for ${company}`}.
           </p>
           {took !== null && (
             <span className="inline-flex h-7 items-center self-start rounded-control bg-paper-2 px-2.5 font-mono text-ui text-ink tabular-nums">
@@ -164,7 +164,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
           )}
           <span className="absolute top-1 right-0">
             <Stamp tone="pay" land={arrive ? 1060 : undefined}>
-              {sb ? "Paid · sandbox" : "Paid"}
+              Paid
             </Stamp>
           </span>
         </div>
@@ -206,7 +206,7 @@ function Paid({ claim, recall, rows, photoUrls, payout, againHref, sample, round
       </Paper>
 
       {sample && <DemoActions sample={sample} slug={recall.slug} company={companyName(recall)} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
-      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={fiveSummary(rows)} open={false} code={claim.code} />
+      <Evidence rows={rows} photoUrls={photoUrls} summary={fiveSummary(rows)} open={false} code={claim.code} />
     </section>
   );
 }
@@ -235,8 +235,7 @@ function ReceiptRow({ label, mono, children }: { label: string; mono?: boolean; 
 
 /* ------------------------------------------------------------------------------------------------ Held */
 
-function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbox }: ResultProps) {
-  const sb = Boolean(sample) || Boolean(sandbox);
+function Held({ claim, recall, rows, photoUrls, againHref, sample, round }: ResultProps) {
   const reasons = decidingReasons(claim);
   const submitted = claim.events.find((e) => e.type === "photos_received")?.at ?? claim.createdAt;
   const checked = claim.events.find((e) => e.type === "decided")?.at ?? claim.events.find((e) => e.type === "checked")?.at;
@@ -246,10 +245,10 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
   // The photos passed and only the payout failed: nothing waits on the photos, a person sends the refund.
   const payout = asked ? null : payoutHold(claim);
   const by = businessDaysAfter(asked ?? submitted, 2);
-  const refund = `${money(recall.refund)}${sb ? " in sandbox money" : ""}`;
+  const refund = money(recall.refund);
   return (
     <section aria-labelledby="result-title" className="mx-auto flex w-full max-w-claim flex-col gap-6">
-      <Top status={<StatusPill status="held" label={sb ? "Held · sandbox" : "Held"} />} id={claim.id} />
+      <Top status={<StatusPill status="held" label="Held" />} id={claim.id} />
       <StepTitle id="result-title">
         {payout ? `Your photos passed. ${company} will send your refund` : <>A person at {company.replace(/ /g, "\u00a0")} will look at this</>}
       </StepTitle>
@@ -272,7 +271,7 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
           ) : (
             <>
               {asked ? `A person at ${company} will look at your photos themselves. ` : "Your claim is saved. "}
-              If {company} approves it, {money(recall.refund)} goes to your PayPal account{sb ? " in sandbox money" : " and PayPal emails you"}.
+              If {company} approves it, {money(recall.refund)} goes to your PayPal account and PayPal emails you.
               {asked ? " If they refuse it, their reason shows here." : ""}
             </>
           )}
@@ -304,7 +303,6 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
         <dl className="mt-6 border-t border-dashed border-paper-line">
           <ReceiptRow label={payout ? "Refund to send" : "Refund if approved"}>
             {money(recall.refund)}
-            {sb ? " sandbox" : ""}
           </ReceiptRow>
           <ReceiptRow label="Photos sent">
             <ClaimTime iso={submitted} format="stamp" />
@@ -318,7 +316,7 @@ function Held({ claim, recall, rows, photoUrls, againHref, sample, round, sandbo
       {sample && (
         <DemoActions sample={sample} slug={recall.slug} company={companyName(recall)} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} unanswered={noModelAnswer(claim.decision, claim.reasons)} />
       )}
-      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={fiveSummary(rows)} open={Boolean(sample)} code={claim.code} />
+      <Evidence rows={rows} photoUrls={photoUrls} summary={fiveSummary(rows)} open={Boolean(sample)} code={claim.code} />
     </section>
   );
 }
@@ -418,7 +416,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
 
       {lead === "code" && <CodeDiff code={claim.code} seen={claim.verdict?.challenge_code.text_seen} />}
       {lead === "session" && <Provenance claim={claim} />}
-      {lead === "duplicate_photo" && photoUrls[0] && <DuplicatePair claimId={claim.id} photoUrls={photoUrls} duplicate={duplicate ?? null} sample={Boolean(sample)} />}
+      {lead === "duplicate_photo" && photoUrls[0] && <DuplicatePair claimId={claim.id} photoUrls={photoUrls} duplicate={duplicate ?? null} />}
 
       <Paper variant="sheet" padding="lg">
         <div className="flex items-start justify-between gap-4">
@@ -429,15 +427,13 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
         </div>
         <div className="mt-6 grid gap-6 sm:grid-cols-[8.5rem_minmax(0,1fr)]">
           {photoUrls[0] && lead !== "duplicate_photo" && (
-            <ExhibitPhoto src={photoUrls[0]} alt={`Photo 1: the ${sample ? "sample" : "first"} photo of claim ${claim.id}`} sample={false} fit="contain" frame="aspect-[3/4]" className="w-32 self-start sm:w-auto" />
+            <ExhibitPhoto src={photoUrls[0]} alt={`Photo 1 of claim ${claim.id}`} fit="contain" frame="aspect-[3/4]" className="w-32 self-start sm:w-auto" />
           )}
           <div className={clsx("flex min-w-0 flex-col gap-3", (lead === "duplicate_photo" || !photoUrls[0]) && "sm:col-span-2")}>
             <h3 className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">{reasons.length > 1 ? "The reasons" : "The reason"}</h3>
             <Reasons reasons={reasons} rows={rows} />
-            {/* Every sample photo is AI-made, the paid one too: the live-camera refusal is about how it was sent. */}
-            {sample && photoUrls[0] && lead !== "duplicate_photo" && (
-              <p className="text-ui text-ink-muted">{lead === "session" ? "Photo 1 is an AI-made sample like all four; only this one was sent from outside the camera." : "Photo 1 is an AI-made sample photo."}</p>
-            )}
+            {/* The live-camera refusal is about how the photo was sent, not what it shows. */}
+            {sample && photoUrls[0] && lead === "session" && <p className="text-ui text-ink-muted">Only this photo was sent from outside the camera.</p>}
           </div>
         </div>
         <div className="mt-6 flex flex-col gap-1.5 border-t border-dashed border-paper-line pt-4">
@@ -487,7 +483,7 @@ function Refused({ claim, recall, rows, photoUrls, againHref, sample, round, dup
 
       {sample && <DemoActions sample={sample} slug={recall.slug} company={companyName(recall)} againHref={againHref} claimId={claim.id} decision={claim.decision} round={round} />}
       {/* The verdict sheet above already shows photo 1 and the deciding quote; the rest of the checks wait folded. */}
-      <Evidence rows={rows} photoUrls={photoUrls} sample={Boolean(sample)} summary={fiveSummary(rows)} open={false} code={claim.code} />
+      <Evidence rows={rows} photoUrls={photoUrls} summary={fiveSummary(rows)} open={false} code={claim.code} />
     </section>
   );
 }
@@ -573,7 +569,7 @@ function Provenance({ claim }: { claim: Pick<Claim, "code" | "events"> }) {
  * A repost: this claim's photo beside the earlier claim's matching photo, each with its own claim id. Another
  * account's claim shows neither its photo nor its id: only that it exists.
  */
-function DuplicatePair({ claimId, photoUrls, duplicate, sample }: { claimId: string; photoUrls: string[]; duplicate: Duplicate | null; sample: boolean }) {
+function DuplicatePair({ claimId, photoUrls, duplicate }: { claimId: string; photoUrls: string[]; duplicate: Duplicate | null }) {
   const n = duplicate?.photo ?? 1;
   const earlier = duplicate?.earlier;
   return (
@@ -602,7 +598,6 @@ function DuplicatePair({ claimId, photoUrls, duplicate, sample }: { claimId: str
         <span>
           {earlier ? `Photo ${n} is the same picture as one in claim ${earlier.id}` : `Photo ${n} is the same picture as one in another claim`}, so a second refund can&apos;t be paid for it.
         </span>
-        {sample && <SampleChip className="self-start" />}
       </figcaption>
     </figure>
   );
@@ -620,7 +615,7 @@ function Top({ status, id }: { status: ReactNode; id: string }) {
 }
 
 /** The photos and every check: open beside a refusal or a demo result, folded on a real owner's receipt. */
-function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { rows: CheckRow[]; photoUrls: string[]; sample: boolean; summary: string; open?: boolean; code: string }) {
+function Evidence({ rows, photoUrls, summary, open = false, code }: { rows: CheckRow[]; photoUrls: string[]; summary: string; open?: boolean; code: string }) {
   return (
     <RevealDetails className="group rounded-card border border-line bg-surface" open={open}>
       <summary className="flex min-h-16 cursor-pointer list-none items-center gap-4 px-4 py-3 text-ui font-medium text-text sm:px-5 [&::-webkit-details-marker]:hidden">
@@ -639,9 +634,8 @@ function Evidence({ rows, photoUrls, sample, summary, open = false, code }: { ro
         {photoUrls.length > 0 && (
           <div className={clsx("grid gap-5", photoUrls.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
             {photoUrls.map((src, i) => (
-              // /demo holds only AI-made samples (a dev preview's stand-ins too): any photo from there carries the label.
-              // Numbered as the camera numbers them: letters are the judges' samples (A to D).
-              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} n={i + 1} sample={sample || src.startsWith("/demo/")} fit="contain" frame="aspect-[3/4]" />
+              // Numbered as the camera numbers them: letters are the demo claims (A to D).
+              <ExhibitPhoto key={`${src}-${i}`} src={src} alt={`Photo ${i + 1} of this claim`} n={i + 1} fit="contain" frame="aspect-[3/4]" />
             ))}
           </div>
         )}
@@ -683,7 +677,7 @@ interface DemoActionsProps {
 const consoleHref = (claimId: string) => `/console?claim=${claimId}`;
 // The console link's words wherever it shows: the claim's place there, and the login it takes.
 const consoleWords = (company: string) => `See it in ${company}\u2019s console`;
-const CONSOLE_LOGIN = "Business sandbox login";
+const CONSOLE_LOGIN = "Demo business account";
 
 /** The round is over: every sample has run and this one got the model's answer, so the console is what's left to see. */
 const roundOver = (runs: RoundRun[], sample: DemoSample, unanswered?: boolean) => !unanswered && !nextSample(runs, sample.id);
@@ -720,15 +714,15 @@ function DemoActions({ sample, slug, company, againHref, claimId, decision, roun
   const over = roundOver(runs, sample, unanswered);
   const primary = unanswered ? (
     <RunSample slug={slug} sample={sample.id} rail={rail}>
-      Run this sample again
+      Run this claim again
     </RunSample>
   ) : next ? (
     <RunSample slug={slug} sample={next.id} rail={rail}>
-      Next sample: {next.title}
+      Next claim: {next.title}
     </RunSample>
   ) : (
     <Button href={consoleHref(claimId)} size={rail ? "md" : "lg"} block prefetch={false} className={clsx("h-auto! py-2 text-center whitespace-normal!", rail ? "min-h-11" : "min-h-12")}>
-      {/* The same words on every screen, and up front that it's a second login: the company's, PayPal's business sandbox. */}
+      {/* The same words on every screen, and up front that it's a second login: the company's demo business account. */}
       <span className="flex flex-col items-center gap-0.5">
         <span>{consoleWords(company)}</span>
         <span className="sr-only">, </span>
@@ -742,11 +736,11 @@ function DemoActions({ sample, slug, company, againHref, claimId, decision, roun
   const secondary =
     unanswered && next ? (
       <RunSample slug={slug} sample={next.id} rail={rail} secondary>
-        Next sample: {next.title}
+        Next claim: {next.title}
       </RunSample>
     ) : (
       <Button href={againHref} variant="secondary" size={rail ? "sm" : "md"} block prefetch={false}>
-        {next ? "Choose another sample" : "Back to the samples"}
+        {next ? "Choose another claim" : "Back to the four claims"}
       </Button>
     );
   if (rail) {
@@ -785,7 +779,7 @@ function DemoActions({ sample, slug, company, againHref, claimId, decision, roun
   );
 }
 
-/** The judges' rail on a demo result: what should have happened, what did, the next action, this round's score, the console. */
+/** The demo guide on a demo result: what should have happened, what did, the next action, this round's score, the console. */
 function JudgeVerdict({ sample, run, round, claimId, slug, company, againHref }: { sample: DemoSample; run: RoundRun; round?: DemoRound | null; claimId: string; slug: string; company: string; againHref: string }) {
   const over = roundOver(round?.runs ?? [], sample, run.unanswered);
   return (

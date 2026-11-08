@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   const now = new Date();
   const { draft: limit } = limits();
   if (!(await (await getAppStore()).takeUsage(utcDay(now), "draft", limit))) {
-    return fail(429, `Remedy drafts at most ${plural(limit, "recall")} a day to keep this live demo affordable, and today's are used up. Write the checks yourself, or try the draft again ${retryIn(nextUtcDay(now), now)}.`);
+    return fail(429, `Remedy drafts up to ${plural(limit, "recall")} a day, and today's are used up. Write the checks yourself, or try the draft again ${retryIn(nextUtcDay(now), now)}.`);
   }
   try {
     return NextResponse.json(await draftSpec(record));

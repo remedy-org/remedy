@@ -102,7 +102,7 @@ describe("console view", () => {
 
   it("offers review only on held claims, and only a sample review on a seeded one", () => {
     expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false, note: null });
-    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toMatchObject({ sample: true, note: expect.stringContaining("nothing is saved") });
+    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toMatchObject({ sample: true, note: expect.stringContaining("Nothing is paid or saved") });
     expect(toDrawerClaim(sampleClaim({ decision: "paid" }), recall).review).toBeNull();
     expect(toDrawerClaim(sampleClaim(), recall).photos).toEqual(["/api/console/claims/RM-0412/photos/0"]);
   });
@@ -202,7 +202,7 @@ describe("console view", () => {
     const d = toDrawerClaim(rejected, recall);
     expect(d.rejected).toEqual({ at: "2026-11-07T10:03:00.000Z", by: "Kikea Store", reason: "The tag reads K7Q." });
     expect(d.events.map((e) => e.detail)).toEqual([
-      'Filed with the judges\' sample "The wrong code"',
+      'Filed from the demo: "The wrong code"',
       "Held for a person: the photo check service didn't answer",
       "Remedy couldn't reach PayPal (a network error). Nothing was sent, so it's safe to try again.",
       "Rejected on review: The tag reads K7Q. (by Kikea Store)",

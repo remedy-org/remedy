@@ -76,7 +76,7 @@ export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?:
   const claim = props.yourClaim;
   return (
     <FlowShell demo={props.demo} sandbox={sandbox} company={companyName(props.recall)}>
-      {/* The judges' sandbox login is in the card, just before its login button, at every width; from 1200px the four
+      {/* The demo account is in the card, just before its login button, at every width; from 1200px the four
           samples move to the rail to keep that button on a laptop's first screen (below, the card has them, so the notes'
           sheet doesn't repeat them). */}
       <WithJudges demo={Boolean(props.demo)} step={ready ? "samples" : "consent"} extra={props.demo ? <SampleList rail className="border-t border-line pt-4 max-[1199px]:hidden" /> : undefined}>
@@ -86,20 +86,20 @@ export function RecallView({ sandbox, ...props }: ConsentCardProps & { sandbox?:
           <StepMeter {...(claim ? claimMeter(claim) : { current: ready && !props.refusal ? 2 : 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} span />
           {/* One bounded track on a phone, so the card's widest line can never widen the page. */}
           <div className="grid grid-cols-[minmax(0,1fr)] gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
-            <RecallBrief recall={props.recall} sandbox={sandbox || props.demo} demo={props.demo} />
-            <ConsentCard {...props} sandbox={sandbox} />
+            <RecallBrief recall={props.recall} demo={props.demo} />
+            <ConsentCard {...props} />
           </div>
         </div>
       </WithJudges>
       {/* Refused by a limit, there's nothing to tap until it resets: the notice in the card says when. On the demo, the
-          judges' sandbox login sits under the four samples on a phone: the bar's first tap brings it up, so nobody reaches
+          demo account sits under the four demo claims on a phone: the bar's first tap brings it up, so nobody reaches
           PayPal's page without the login it asks for. */}
       {!(props.refusal && !claim) && (
         <MobileCta
           target="consent-cta"
           href={claim?.href ?? props.href}
           label={consentAction(props)}
-          first={props.demo && !props.signedInAs && props.judgeLogin && !claim ? { target: JUDGE_LOGIN_ID, label: "Show the sandbox login" } : undefined}
+          first={props.demo && !props.signedInAs && props.judgeLogin && !claim ? { target: JUDGE_LOGIN_ID, label: "Show the demo account" } : undefined}
         />
       )}
     </FlowShell>

@@ -54,7 +54,7 @@ export const insightsWidgets =
             type: "field",
             supportedRoles: ["numeric"],
             requires: { cardinality: "one" },
-            aiDescription: "Units remedied by sample claims, which never paid a real owner: sum of claims.remediedSample.",
+            aiDescription: "Units remedied by starter claims, which never pay out: sum of claims.remediedSample.",
           },
         },
         formatShape,
@@ -62,7 +62,7 @@ export const insightsWidgets =
           titles(params, [
             { key: "remedied", label: "Units remedied" },
             { key: "sold", label: "Units sold" },
-            { key: "samples", label: "Of which samples" },
+            { key: "samples", label: "Of which starter claims" },
           ]),
         comp: reactComp(RecallProgress),
         defaultSize: { width: 640, height: 200 },

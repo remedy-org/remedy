@@ -15,9 +15,9 @@ function Item({ value, label, title, className, children }: { value: ReactNode; 
 
 /**
  * The 48px ledger strip over the grid: units remedied of units sold with a 64x4 meter, money sent through PayPal, the
- * median time from photos to PayPal, held and refused. Sample claims' money is shown apart: it was never sent.
+ * median time from photos to PayPal, held and refused. Starter claims' money is shown apart: it was never sent.
  */
-export function Ledger({ ledger, className, sandbox = false }: { ledger: LedgerData; className?: string; sandbox?: boolean }) {
+export function Ledger({ ledger, className }: { ledger: LedgerData; className?: string }) {
   const known = ledger.unitsSold > 0;
   const share = known ? ledger.remedied / ledger.unitsSold : 0;
   return (
@@ -29,8 +29,8 @@ export function Ledger({ ledger, className, sandbox = false }: { ledger: LedgerD
             <span className="text-ui font-normal text-muted"> of {known ? formatCount(ledger.unitsSold) : "unknown"}</span>
           </>
         }
-        label={ledger.sampleRemedied ? `remedied · ${formatCount(ledger.sampleRemedied)} sample` : "remedied"}
-        title={ledger.sampleRemedied ? `${ledger.sampleRemedied} of these are sample claims the rule decided to pay; none was paid.` : undefined}
+        label={ledger.sampleRemedied ? `remedied · ${formatCount(ledger.sampleRemedied)} starter` : "remedied"}
+        title={ledger.sampleRemedied ? `${ledger.sampleRemedied} of these are starter claims the rule approved; starter claims don't pay out.` : undefined}
         className="col-span-2"
       >
         {known && (
@@ -47,11 +47,11 @@ export function Ledger({ ledger, className, sandbox = false }: { ledger: LedgerD
         value={<AmountValue cents={ledger.paidCents} />}
         label={
           <>
-            {sandbox ? "paid in PayPal sandbox" : "paid through PayPal"}
+            paid through PayPal
             {ledger.sampleCents > 0 && (
               <span className="text-faint">
                 {" "}
-                · {formatCents(ledger.sampleCents)} sample, never sent
+                · {formatCents(ledger.sampleCents)} approved on starter claims
               </span>
             )}
           </>

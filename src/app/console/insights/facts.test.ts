@@ -28,7 +28,7 @@ describe("buildInsights", () => {
   });
 
   it("marks every seeded claim as a sample and never exposes a full payer id", () => {
-    expect(data.claims.every((c) => c.source === "Sample")).toBe(true);
+    expect(data.claims.every((c) => c.source === "Starter")).toBe(true);
     for (const c of data.claims) expect(c.payer).toMatch(/^•••• .{4}$/);
     expect(JSON.stringify(data)).not.toContain(claims[0].payerId);
   });

@@ -58,7 +58,7 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
     return {
       ok: true,
       claim,
-      sample: `Sample only, nothing saved: its PayPal account is made up, so Remedy sent no money and it stays held. A real approve sends ${amount} through PayPal Payouts.`,
+      sample: `Starter claim, nothing saved: Remedy sent nothing and it stays held. On an owner's claim, approving sends ${amount} through PayPal Payouts.`,
     };
   }
 
@@ -115,7 +115,7 @@ export async function rejectClaim({ store, claim: stale, by, reason, now = new D
     return {
       ok: true,
       claim,
-      sample: `Sample only, nothing saved: it stays held for the next reviewer. On a real claim, the owner would read: "${/[.!?]$/.test(text) ? text : `${text}.`}"`,
+      sample: `Starter claim, nothing saved: it stays held for the next reviewer. On an owner's claim, the owner would read: "${/[.!?]$/.test(text) ? text : `${text}.`}"`,
     };
   }
   const rejected = await store.updateClaim(claim.id, (c) =>

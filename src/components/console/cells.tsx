@@ -12,7 +12,7 @@ import { formatClock, formatTime } from "./format";
 
 type Cell = CustomCellRendererProps<ClaimRow>;
 
-const SAMPLE_TITLE = { seeded: "Sample claim from the eval set: never paid", demo: "Filed through the judges' demo with sandbox money" };
+const SAMPLE_TITLE = { seeded: "Starter claim: comes with every workspace, never pays out", demo: "Demo claim, filed from the try page" };
 
 /** The 6px diamond itself, neutral (amber is the one action's): hollow for a sample claim, filled for a judges' demo
  * claim. The note over the grid shows both, labelled. */
@@ -208,7 +208,7 @@ function timelineSentence(d: ClaimRow): string {
   if (!t) return d.photoCount ? "No times recorded on this row" : "Waiting for photos";
   const at = (label: string, v: number | null) => (v === null ? [] : [`${label} at ${duration(v)}`]);
   const steps = [...at("model answered", t.answered), ...at("rule decided", t.decided), ...at("PayPal sent", t.sent), ...at("PayPal settled", t.settled)];
-  const tail = d.seeded && d.decision === "paid" ? "; a sample claim, never paid" : t.end === "held" ? "; waiting for a person" : "";
+  const tail = d.seeded && d.decision === "paid" ? "; a starter claim, no payout" : t.end === "held" ? "; waiting for a person" : "";
   return `From the photos: ${steps.join(", ") || "checking"}${tail}`;
 }
 
@@ -265,12 +265,11 @@ export function PayoutCell({ data }: Cell) {
   }
   if (data.seeded && data.decision === "paid") {
     return (
-      <span className="flex h-full flex-col justify-center leading-tight" title="A sample claim: the rule decided to pay, and no money moved">
+      <span className="flex h-full flex-col justify-center leading-tight" title="A starter claim: the rule approved it, and starter claims don't pay out">
         <span className="inline-flex items-center gap-1.5 text-ui text-muted">
           <span className="size-1.5 shrink-0 rounded-full border border-muted" aria-hidden="true" />
-          Sample
+          Approved
         </span>
-        <span className="font-mono text-micro text-faint">not sent</span>
       </span>
     );
   }
@@ -330,9 +329,9 @@ export function CardRow({ data }: Cell) {
   );
 }
 
-// A seeded sample's fingerprint check (why it's dotted), and the photo check that never answered.
+// A starter claim's fingerprint check (why it's dotted), and the photo check that never answered.
 function barNote(row: ClaimRow, b: CheckBar): string {
-  if (b.id === "duplicate_photo" && b.state === "skipped" && row.seeded) return "not run: shared sample photo";
+  if (b.id === "duplicate_photo" && b.state === "skipped" && row.seeded) return "not run on starter claims";
   if (b.id === "model" && b.state === "hold") return "no answer, held";
   return BAR_WORD[b.state];
 }
@@ -385,7 +384,7 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Cl
           ["PayPal settled", t.settled],
         ] as [string, number | null][])),
   ];
-  const tail = data.seeded && data.decision === "paid" ? "A sample claim: the rule decided to pay, and no money was sent." : t.end === "held" ? "Waiting for a person to approve or reject." : null;
+  const tail = data.seeded && data.decision === "paid" ? "A starter claim: the rule approved it, and starter claims don't pay out." : t.end === "held" ? "Waiting for a person to approve or reject." : null;
   return (
     <div className="w-[240px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <p className="micro text-faint">After the photos arrived</p>
@@ -420,17 +419,12 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Cl
 export function PhotoTooltip({ data }: CustomTooltipProps<ClaimRow>) {
   const photo = data?.photos[0];
   if (!data || !photo) return null;
-  const sample = data.seeded || data.demo;
   return (
     <div className="w-[256px] overflow-hidden rounded-card bg-surface p-2 pb-2.5 shadow-float">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={photo.large} alt={`Photo 1 of ${data.photoCount} for ${data.id}`} width={240} height={180} className="block h-[180px] w-[240px] rounded-control bg-surface-2 object-cover" />
       <p className="micro mt-2 px-0.5 text-accent-text">Photo 1 of {data.photoCount}</p>
-      <p className="mt-0.5 px-0.5 font-mono text-micro text-faint">
-        {data.code ? `Code ${data.code}` : ""}
-        {data.code && sample ? " · " : ""}
-        {sample ? "AI-made test photo" : ""}
-      </p>
+      {data.code && <p className="mt-0.5 px-0.5 font-mono text-micro text-faint">Code {data.code}</p>}
     </div>
   );
 }
