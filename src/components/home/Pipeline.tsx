@@ -204,7 +204,7 @@ export function Pipeline() {
                   <div className="py-6 pr-12">
                     <h3 className="flex items-center gap-3 text-head-sm font-medium">
                       {g.title}
-                      <span className="inline-flex h-6 items-center rounded-control px-2 font-mono text-micro tracking-[0.04em] whitespace-nowrap text-muted uppercase shadow-[inset_0_0_0_1px_var(--line-2)]">
+                      <span className="text-ui font-normal whitespace-nowrap text-muted">
                         {g.ai ? "Model reads" : "No AI"}
                       </span>
                     </h3>
@@ -301,7 +301,7 @@ export function PipelineList() {
         const bandStart = i === 0 || g.ai !== GATES[i - 1].ai;
         return (
           <li key={g.title} className={clsx("border-t py-6", bandStart && i > 0 ? "border-line-2" : "border-line")}>
-            {bandStart && <p className="micro mb-4 text-faint">{g.ai ? "Model reads" : "No AI"}</p>}
+            {bandStart && <p className="eyebrow mb-4 text-muted">{g.ai ? "Model reads" : "No AI"}</p>}
             <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2">
               <span className="pt-0.5 font-mono text-ui text-faint tabular-nums">{String(i + 1).padStart(2, "0")}</span>
               <div>

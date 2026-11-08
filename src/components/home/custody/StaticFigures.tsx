@@ -18,8 +18,8 @@ import { CodeTag, ConsentChapter } from "./chapters";
 function Caption({ n, title, text }: { n: string; title: string; text: string }) {
   return (
     <figcaption className="flex flex-col gap-1.5">
-      <span className="micro text-faint">
-        {n} · <span className="text-text-2">{title}</span>
+      <span className="eyebrow text-muted">
+        <span className="font-mono">{n}</span> · <span className="text-text-2">{title}</span>
       </span>
       <span className="max-w-[60ch] text-ui text-pretty text-muted">{text}</span>
     </figcaption>
@@ -57,7 +57,7 @@ export function StaticFigures() {
       <div className="page pt-18 lg:pt-24">
         <div className="grid-12 gap-y-5 lg:items-end">
           <div className="col-span-12 lg:col-span-7">
-            <p className="micro text-faint">How it works</p>
+            <p className="eyebrow text-muted">How it works</p>
             {/* tabIndex -1: the nav's How it works focuses it after the jump. */}
             <h2 id="how-title" tabIndex={-1} className="mt-5 text-title-lg font-medium text-balance">
               Paid {CLAIM.seconds} seconds after the photo. <span className="text-muted">One claim, start to finish.</span>

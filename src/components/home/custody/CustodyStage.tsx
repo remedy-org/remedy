@@ -224,7 +224,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
 
       <div className={clsx(styles.rail, "pointer-events-none")}>
         <motion.div className="flex min-h-0 flex-1 flex-col" style={{ opacity: railHead }} aria-hidden="true">
-          <span className="micro text-faint">How it works</span>
+          <span className="eyebrow text-muted">How it works</span>
           <ol className="mt-5">
             {CHAPTERS.map((c, i) => (
               <RailItem key={c.n} p={p} i={i} />

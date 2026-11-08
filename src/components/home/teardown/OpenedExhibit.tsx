@@ -171,7 +171,7 @@ function ScreenReaderSummary() {
 function Header({ compact, chapter }: { compact?: boolean; chapter?: string }) {
   return (
     <div className="min-w-0">
-      <p className="micro text-faint whitespace-nowrap">{chapter ?? "How it works"}</p>
+      <p className="eyebrow text-muted whitespace-nowrap">{chapter ?? "How it works"}</p>
       {/* Each half its own block on one column start, as the section headings set them, so both lines start alike. */}
       <h2 className={clsx("mt-3 text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>
         <span className="block max-w-[26ch]">Five checks passed.</span> <span className="block max-w-[26ch] text-muted">Then PayPal paid ${EXHIBIT.amount}.</span>

@@ -56,8 +56,8 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
     <div ref={ref} className={styles.phoneRunway} style={{ "--scroll": `${2 * CHAPTER_VH + exhibitVh}vh` } as CSSProperties} data-runway>
       <div className={styles.phoneStage}>
         <div className="flex w-80 max-w-full items-baseline justify-between gap-4 px-1" aria-hidden="true">
-          <span key={c.n} className={`micro text-faint ${styles.chapterIn}`}>
-            {c.n} · {c.title}
+          <span key={c.n} className={`eyebrow text-muted ${styles.chapterIn}`}>
+            <span className="font-mono">{c.n}</span> · {c.title}
           </span>
           <span className="font-mono text-micro text-faint tabular-nums">
             {c.n} / {String(PHONE_CHAPTERS).padStart(2, "0")}

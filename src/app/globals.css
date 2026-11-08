@@ -155,7 +155,7 @@
   --highlight: color-mix(in oklch, var(--accent) 55%, transparent);
   /* The light table's pool, as a background: a radial falloff to nothing, no hard edge. */
   --table-glow: radial-gradient(closest-side, var(--pool), transparent);
-  /* The backing for the "AI-made test photo" label on photos, and its text. */
+  /* The backing for the chips on photos (the photo number), and its text. */
   --photo-scrim: oklch(0.155 0.004 75 / 0.78);
   --photo-scrim-text: oklch(0.96 0.006 85);
 
@@ -421,13 +421,21 @@
 }
 
 @layer components {
-  /* Exhibit and eyebrow text: mono, micro, uppercase. */
+  /* Data labels (codes, ids, recall numbers, times) and stamps: mono, micro, uppercase. Never a section name. */
   .micro {
     font-family: var(--font-mono);
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
     letter-spacing: var(--text-micro--letter-spacing);
     text-transform: uppercase;
+  }
+
+  /* A section's or chapter's name above its heading: the sans at 14px, 500, in sentence case. Colour comes from the
+     caller (--muted on the page, --ink-muted on paper). */
+  .eyebrow {
+    font-size: var(--text-ui);
+    line-height: var(--text-ui--line-height);
+    font-weight: 500;
   }
 
   /*

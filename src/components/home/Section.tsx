@@ -36,7 +36,7 @@ export function Section({ id, exhibit, title, muted, lead, tone = "dark", childr
       <div className="page py-18 lg:py-32">
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
           <div className="col-span-12 lg:col-span-7">
-            <p className={clsx(styles.line, "micro", paper ? "text-ink-muted" : "text-muted")} style={line(0)}>
+            <p className={clsx(styles.line, "eyebrow", paper ? "text-ink-muted" : "text-muted")} style={line(0)}>
               {exhibit}
             </p>
             {/* tabIndex -1: the nav's links focus the heading after the jump, so the next Tab goes on from here; a keyboard

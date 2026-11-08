@@ -116,7 +116,7 @@ export function Footer() {
           <nav id="footer-nav" aria-label="Footer" className="col-span-12 grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:col-span-7 lg:col-span-5 lg:col-start-8">
             {COLUMNS.map((c) => (
               <div key={c.title}>
-                <h2 className="micro text-faint">{c.title}</h2>
+                <h2 className="eyebrow text-faint">{c.title}</h2>
                 <ul className="mt-2 flex flex-col">
                   {c.links.map((l) => (
                     <li key={l.href}>
