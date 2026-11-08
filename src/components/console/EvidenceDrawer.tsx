@@ -141,7 +141,7 @@ export function EvidenceDrawer({ claimId, version, filedAt, onClose, intent, onO
       // A click on the backdrop lands on the dialog itself.
       onClick={(e) => e.target === e.currentTarget && e.currentTarget.close()}
       aria-labelledby="drawer-title"
-      className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-none overflow-hidden bg-surface p-0 text-text shadow-float transition-[translate,opacity] duration-240 ease-snap backdrop:bg-[oklch(0.1_0.004_75/0.6)] starting:translate-x-6 starting:opacity-0 sm:w-[min(36rem,100vw)] sm:rounded-l-card"
+      className="evidence-panel evidence-sheet fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-none overflow-hidden bg-surface p-0 text-text shadow-float transition-[translate,opacity] duration-240 ease-snap backdrop:bg-[oklch(0.1_0.004_75/0.6)] starting:translate-x-6 starting:opacity-0 sm:w-[min(36rem,100vw)] sm:rounded-l-card"
     >
       {claimId && (
         <EvidenceContent

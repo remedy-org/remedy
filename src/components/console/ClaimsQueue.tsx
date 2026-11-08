@@ -308,8 +308,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      // An open dialog (the ? sheet) handles its own keys, Esc included: closing the panel behind it would be the wrong layer.
-      if (help || (e.target instanceof Element && e.target.closest("dialog[open]"))) return;
+      // An open dialog (the ? sheet, the photo viewer) handles its own keys, Esc included: closing the panel behind it
+      // would be the wrong layer. The evidence sheet (below 1280px) is the panel itself: A and R work in it as beside the grid.
+      if (help || (e.target instanceof Element && e.target.closest("dialog[open]:not(.evidence-sheet)"))) return;
+      const inSheet = e.target instanceof Element && Boolean(e.target.closest(".evidence-sheet"));
+      if (inSheet && e.key !== "a" && e.key !== "r") return;
       // A column's filter is open: Esc closes it (focus back on its header), / closes it and goes to search, and no other
       // single key reaches the queue's shortcuts while it is up.
       if (document.querySelector(".ag-popup .ag-filter, .ag-popup .ag-menu")) {
