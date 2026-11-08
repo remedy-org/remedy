@@ -288,9 +288,10 @@ export function stateAt(pIn: number): ExhibitState {
   const active = CHECK_IDS.indexOf(beat as CheckId);
   const done = CHECK_IDS.filter((id) => p >= tickAt(id)).length;
   const codeT = local("code", p);
-  // The characters are read once the camera has arrived on the tag (code ARRIVE, 36%), M then 4 then T.
-  const chars = p < RANGES.code[0] ? 0 : p > RANGES.code[1] ? 3 : [0.4, 0.52, 0.64].filter((t) => codeT >= t).length;
-  const charNow = p >= RANGES.code[0] && p <= RANGES.code[1] && codeT < 0.8 ? chars - 1 : -1;
+  // The characters are read once the camera has arrived on the tag (code ARRIVE, 36%), M then 4 then T, and the read is
+  // finished before the beat's hold (60%): at rest all three are underlined alike, none still being read.
+  const chars = p < RANGES.code[0] ? 0 : p > RANGES.code[1] ? 3 : [0.4, 0.47, 0.54].filter((t) => codeT >= t).length;
+  const charNow = p >= RANGES.code[0] && p <= RANGES.code[1] && codeT < 0.58 ? chars - 1 : -1;
   const paidT = local("paid", p);
   const ruled = p >= RANGES.paid[0] + 0.12 * (RANGES.paid[1] - RANGES.paid[0]);
   return {

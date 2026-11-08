@@ -67,13 +67,18 @@ export const WRITE_AT = [0.398, 0.436] as const;
 /** Then what the photo must show lights in turn, leading into 03. */
 export const SHOT_AT = [0.432, 0.444, 0.456];
 
-// The console replica after the payout: the M4T claim slides in over the claims the demo workspace starts with, with
-// the ids, photos and reasons buildSeedClaims gives them (src/lib/demo/seed.ts, seed 27071). Every claim shows its own
-// one-time code, and the one deliberate duplicate (RM-0120, a repost of RM-7581's photo) names the claim it copied.
-// Seeded claims are decided but never paid out, so an approved one reads "Approved", never "Paid", its amount muted.
-export const CONSOLE_ROWS: { photo: string; code: string; id: string; status: Status; reason: string; time?: string; amount?: number; approved?: boolean }[] = [
-  { photo: "/demo/c01-1.jpg", code: "K7Q", id: "RM-7581", status: "paid", reason: "Every check passed", amount: 29.99, approved: true },
-  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-9629", status: "held", reason: "Couldn't tell if both photos show the same item" },
-  { photo: "/demo/c10-1.jpg", code: "C3W", id: "RM-9545", status: "rejected", reason: "Looks like a photo of a screen or a print" },
-  { photo: "/demo/c01-1.jpg", code: "T6H", id: "RM-0120", status: "blocked", reason: "Same photo as RM-7581" },
+// The console replica after the payout: the M4T claim slides in over the recall's other claims, as the homepage's
+// console tour draws them (components/console/preview.ts, the seed's claims drawn live: src/lib/demo/seed.ts, seed
+// 27071): the same ids, codes, photos, verdicts, reasons and times, so a claim reads the same in both pictures. Rows past
+// the panel's foot are cut by it, as a list is: a tall screen shows more of the queue, never an empty well.
+// `fails`: which of the five checks (0 to 4) stopped a rejected or blocked claim.
+export const CONSOLE_ROWS: { photo: string; code: string; id: string; status: Status; reason: string; time?: string; amount?: number; fails?: number }[] = [
+  { photo: "/demo/c01-1.jpg", code: "K7Q", id: "RM-7581", status: "paid", reason: "Every check passed", time: "12 s", amount: 29.99 },
+  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-9629", status: "held", reason: "Couldn’t tell if both photos show the same item" },
+  { photo: "/demo/c10-1.jpg", code: "K7Q", id: "RM-9545", status: "rejected", reason: "Photo of a screen or a print", fails: 4 },
+  { photo: "/demo/c01-1.jpg", code: "R8D", id: "RM-0120", status: "blocked", reason: "Second claim from one PayPal account", fails: 2 },
+  { photo: "/demo/c05-1.jpg", code: "K7Q", id: "RM-6276", status: "paid", reason: "Every check passed", time: "12 s", amount: 29.99 },
+  { photo: "/demo/c09-1.jpg", code: "K7Q", id: "RM-0118", status: "rejected", reason: "Code missing or wrong", fails: 3 },
+  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-9475", status: "blocked", reason: "PayPal account not verified", fails: 2 },
+  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-2125", status: "paid", reason: "Every check passed", time: "12 s", amount: 29.99 },
 ];

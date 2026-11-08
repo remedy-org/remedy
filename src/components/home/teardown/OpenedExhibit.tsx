@@ -225,6 +225,25 @@ function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done"
   );
 }
 
+/**
+ * Check 3's object: the owner's PayPal account as Remedy reads it when PayPal logs them in (verified, and this its one
+ * claim on the recall). Flat UI on a hairline, eased in and out with the check's callout (the frame toggles data-on).
+ */
+function AccountCard({ ref }: { ref: RefObject<HTMLDivElement | null> }) {
+  return (
+    <div ref={ref} className={styles.account}>
+      <p className="text-ui text-muted">PayPal account</p>
+      <p className="flex items-center gap-2 text-body font-medium">
+        <CheckIcon size={16} className="text-pay" />
+        Verified
+      </p>
+      <p className="text-ui text-text-2">
+        1 claim on <span className="font-mono">{EXHIBIT.recall}</span>
+      </p>
+    </div>
+  );
+}
+
 /** What the owner's photo must show, as the claim page's camera lists it (the code chapter's shot list). */
 const FRAME_LIST = [`The ${EXHIBIT.label} tag`, "The pillow cut fully in half", `The code ${EXHIBIT.code}, on the tag`];
 
@@ -293,6 +312,7 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const subject = useRef<HTMLDivElement>(null);
   const calloutBox = useRef<HTMLDivElement>(null);
+  const account = useRef<HTMLDivElement>(null);
   const leader = useRef<SVGPathElement>(null);
   const dot = useRef<SVGCircleElement>(null);
   const receipt = useRef<HTMLDivElement>(null);
@@ -355,6 +375,15 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
           : { x0: 0.05, y0: 0.2, x1: 0.65, y1: 0.8 });
       anchor = ex.render(st, rect).anchor;
       watchFrames(ex);
+    }
+    // Check 3 has an object of its own, the owner's PayPal account as Remedy reads it: its leader runs from there.
+    const acct = st.beat === "acct" && st.callout > 0;
+    if (account.current) {
+      account.current.toggleAttribute("data-on", acct);
+      if (acct) {
+        const a = account.current.getBoundingClientRect();
+        anchor = { x: a.right - stage.left, y: a.top - stage.top + a.height / 2 };
+      }
     }
     // Leader: from the part to the callout's first line, drawn on like ink as the camera arrives on the part, and faded
     // out (never retracted, which left a segment hanging in mid-air) as the camera leaves it (model.ts), so it never
@@ -610,6 +639,7 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
         <div className={styles.main}>
           <div ref={subject} className={styles.subject} aria-hidden="true">
             {small && postersEl}
+            {!small && <AccountCard ref={account} />}
           </div>
           <div className={styles.side} aria-hidden="true">
             {/* A new check's words mount fresh and rise in; check 5's hold on into the payout. */}

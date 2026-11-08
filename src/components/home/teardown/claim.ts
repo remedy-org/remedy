@@ -95,6 +95,7 @@ export const RECEIPT_ROWS: readonly [string, string, boolean][] = [
   ["Code", EXHIBIT.code, true],
   ["Checks", "All 5 passed", false],
   ["Decision", "Approved by the rule", false],
-  ["Photo to payout", `${EXHIBIT.seconds} s`, true],
+  // The time in the sans, as the console sets "15 s": in mono its space read as two.
+  ["Photo to payout", `${EXHIBIT.seconds} s`, false],
   ["Paid to", "Verified PayPal account", false],
 ];

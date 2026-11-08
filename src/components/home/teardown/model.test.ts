@@ -133,6 +133,11 @@ describe("Opened Exhibit model", () => {
     expect([...seen].sort()).toEqual([0, 1, 2, 3]);
   });
 
+  it("has read all three characters by the code beat's hold, none still being read", () => {
+    expect(stateAt(holdOf("code")).chars).toBe(3);
+    expect(stateAt(holdOf("code")).charNow).toBe(-1);
+  });
+
   it("never runs the clock backwards, and stays inside 0:00 to 0:15", () => {
     let last = -1;
     for (let p = 0; p <= 1; p += 0.002) {

@@ -6,7 +6,6 @@ import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionV
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { VerdictMark } from "@/components/console/VerdictMark";
 import { AlertIcon, ClockIcon, DURATION, EASE, Money, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
-import { RemedyMark } from "@/components/ui/Wordmark";
 import { CLAIM, CODE_AT, CONSENT_AT, CONSOLE_ROWS, SHOT_AT, WRITE_AT } from "./claim";
 import { useGate } from "./gate";
 
@@ -81,11 +80,11 @@ const CONSENT_STEPS = ["Cut it in half, as the notice says", "Write your one-tim
 /** `p` lights the steps in turn (the pinned laptop); without it they are all lit. */
 export function ConsentChapter({ p }: { p?: Progress }) {
   const compact = useContext(Compact);
-  // In the pinned sequence the product column comes in only once the screen's clip has grown to the grid (0.165,
-  // CustodyStage's ON_GRID), so while it grows from the laptop's screen the clip holds the consent card alone, and never slices this column's words.
-  // It comes in time, so a stop there never rests on it half drawn.
+  // In the pinned sequence the product column comes in with the consent card as the screen takes over the laptop's glass
+  // (0.12, CustodyStage's HANDOFF): the glass spans the window's width from the top, so the clip, growing only down to
+  // the window's foot, never slices this column's words. It comes in time, so a stop there never rests on it half drawn.
   const done = useDone();
-  const product = useGate(p ?? done, (v) => v >= 0.165);
+  const product = useGate(p ?? done, (v) => v >= 0.12);
   return (
     <div className="@container">
       <div className="grid items-start gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
@@ -119,29 +118,19 @@ export function ConsentChapter({ p }: { p?: Progress }) {
             compact ? "@min-[720px]:gap-5 @min-[720px]:p-6" : "@min-[720px]:gap-6 @min-[720px]:p-8",
           )}
         >
-          {/* On a short phone the marks and the steps give way, so the button stays in the frame. */}
-          <div className={clsx("flex flex-col gap-3", compact && "@max-[719px]:hidden")}>
-            <div className="flex">
-              <span className="flex size-11 items-center justify-center rounded-card bg-surface-2 text-body font-medium text-text">KS</span>
-              <span className="-ml-2.5 flex size-11 items-center justify-center rounded-card bg-bg ring-2 ring-surface">
-                <RemedyMark className="h-4 w-6" />
-              </span>
-            </div>
-            {/* The recall, said once: beside the brief it already names it. */}
-            <span className="text-ui text-muted @min-[720px]:hidden">
-              Kikea Store <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow · <span className="font-mono">{CLAIM.recall}</span>
-            </span>
-          </div>
+          {/* The offer heads the card, as the claim page's does: no company badge (the seller is in the recall's facts).
+              On a phone, where the brief is hidden, the recall is said once above it; a short phone gives it way. */}
+          <span className={clsx("text-ui text-muted @min-[720px]:hidden", compact && "@max-[719px]:hidden")}>
+            <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall · <span className="font-mono">{CLAIM.recall}</span>
+          </span>
           <p className="text-title font-medium text-pretty">
             Get $29.99 back for your <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> pillow.{" "}
             <span className="text-muted">Remedy sends it through PayPal once your photo shows it&rsquo;s destroyed.</span>
           </p>
           <StepLine p={p} at={CONSENT_AT} steps={CONSENT_STEPS} card className={clsx("font-medium", compact && "@max-[719px]:hidden")} />
-          {/* A picture of the claim page's button, drawn as a wireframe (a dashed hairline, no fill, faint text) so it never
-              reads as a button on this page: the amber and the real buttons stay on the page's own actions. */}
-          <span className="flex h-12 items-center justify-center rounded-control border border-dashed border-line-2 text-ui text-faint">
-            Log in with PayPal
-          </span>
+          {/* The claim page's own button, as it looks there: brass, the screen's one amber. A picture, so it is no control
+              (the whole screen is hidden from screen readers and takes no pointer). */}
+          <span className="btn-primary flex h-12 items-center justify-center rounded-button-lg text-body font-medium select-none">Log in with PayPal</span>
         </div>
       </div>
     </div>
@@ -228,8 +217,9 @@ export function CodeChapter({ p }: { p: Progress }) {
 export function CodeTag({ wipe, short, className }: { wipe?: MotionValue<string>; short?: boolean; className?: string }) {
   return (
     <Paper variant="tag" hole padding="lg" className={clsx("w-full", className)}>
+      {/* Headed by the recall it answers, never by the seller's name: the seller isn't Remedy's customer here. */}
       <p className="flex items-baseline justify-between gap-3 text-ui text-ink-muted">
-        {CLAIM.company}
+        Recall
         <span className="font-mono text-micro">{CLAIM.recall}</span>
       </p>
       <motion.p className="mt-5 font-mono leading-none font-medium tracking-[0.08em]" style={wipe ? { clipPath: wipe } : undefined}>
@@ -247,12 +237,17 @@ export function CodeTag({ wipe, short, className }: { wipe?: MotionValue<string>
 /* -------------------------------------------------------------------------------------- Handoff: the console */
 
 type Bar = "pass" | "hold" | "reject" | "skip";
-const BARS: Record<string, Bar[]> = {
-  paid: ["pass", "pass", "pass", "pass", "pass"],
-  held: ["pass", "pass", "pass", "hold", "pass"],
-  rejected: ["pass", "pass", "pass", "reject", "pass"],
-  blocked: ["reject", "skip", "skip", "skip", "skip"],
-};
+/**
+ * The five checks' bars for a row: paid, every one passed; held at the fifth (the same item in both photos); rejected or
+ * blocked at the check that stopped it (`fails`), and a claim blocked before the photo check never ran the rest.
+ */
+const barsOf = (row: { status: string; fails?: number }): Bar[] =>
+  [0, 1, 2, 3, 4].map((i) => {
+    if (row.status === "held") return i === 4 ? "hold" : "pass";
+    if (row.fails === undefined || i < row.fails) return "pass";
+    if (i === row.fails) return "reject";
+    return row.status === "blocked" ? "skip" : "pass";
+  });
 
 function Barcode({ bars }: { bars: Bar[] }) {
   return (
@@ -292,13 +287,12 @@ const M4T_ROW = {
   id: CLAIM.id,
   status: "paid" as const,
   reason: "Every check passed",
-  time: `0:${String(CLAIM.seconds).padStart(2, "0")}`,
+  // The console's one time unit: seconds, "15 s".
+  time: `${CLAIM.seconds} s`,
   amount: CLAIM.amount,
 };
 
-/** The console's words: a claim that came with the console is Approved, never Paid; the ones a reviewer answers for
- * are in full ink. */
-const verdictOf = (row: (typeof CONSOLE_ROWS)[number]) => (row.approved ? "approved" : row.status);
+/** The ones a reviewer answers for are in full ink, as the console sets them. */
 const EXCEPTION = new Set<string>(["held", "rejected", "blocked"]);
 
 function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?: boolean }) {
@@ -308,27 +302,29 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
       <span className="flex min-w-0 items-center gap-3">
         <Thumb src={row.photo} />
         <span className="flex min-w-0 flex-col leading-tight">
-          {/* The console's own convention: the claim id first, its one-time code under it. */}
+          {/* The console's own convention: the claim id first, its one-time code under it (the word in the sans). */}
           <span className="font-mono font-medium">{row.id}</span>
-          <span className="truncate font-mono text-micro text-faint">Code {row.code}</span>
+          <span className="truncate text-micro text-faint">
+            Code <span className="font-mono">{row.code}</span>
+          </span>
         </span>
       </span>
       {/* The console's verdict mark in a track as wide as the widest (Approved), so every reason starts on one line. */}
       <span className="hidden min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-center gap-3 @min-[720px]:grid">
-        <VerdictMark verdict={verdictOf(row)} className={clsx("justify-self-start", EXCEPTION.has(row.status) && "text-text")} />
-        <span className={clsx("truncate", first ? "text-text" : "text-muted")}>{row.reason}</span>
+        <VerdictMark verdict={row.status} className={clsx("justify-self-start", EXCEPTION.has(row.status) && "text-text")} />
+        {/* Two lines rather than an ellipsis: a cut sentence reads unfinished. */}
+        <span className={clsx("line-clamp-2 leading-tight", first ? "text-text" : "text-muted")}>{row.reason}</span>
       </span>
       <span className="hidden @min-[720px]:block">
-        <Barcode bars={BARS[row.status]} />
+        <Barcode bars={barsOf(row)} />
       </span>
-      <span className="hidden font-mono text-faint @min-[720px]:block">{row.time ?? "—"}</span>
+      <span className="hidden text-faint @min-[720px]:block">{row.time ?? "—"}</span>
       <span className="flex items-center justify-end gap-3 font-mono">
         <span className="@min-[720px]:hidden">
-          <VerdictMark verdict={verdictOf(row)} className={EXCEPTION.has(row.status) ? "text-text" : undefined} />
+          <VerdictMark verdict={row.status} className={EXCEPTION.has(row.status) ? "text-text" : undefined} />
         </span>
         {row.amount ? (
-          // Sent in --text; approved but never paid out (it came with the console) in --muted.
-          <span className={row.approved ? "text-muted" : undefined}>
+          <span>
             <Money value={row.amount} size="grid" />
           </span>
         ) : (
@@ -364,7 +360,8 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             </span>
           </div>
           <div className="flex gap-6 border-b border-line px-4 text-ui">
-            {["All", "Paid", "Held", "Refused"].map((t, i) => (
+            {/* The console's own status tabs, in its words. */}
+            {["All", "Paid", "Held", "Rejected", "Blocked"].map((t, i) => (
               <span key={t} className={clsx("py-2.5", i === 0 ? "border-b-2 border-text text-text" : "text-muted")}>
                 {t}
               </span>
@@ -374,22 +371,31 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             <span>Claim</span>
             <span>Verdict</span>
             <span>Checks</span>
-            <span>Photo→PayPal</span>
+            <span>Photo to PayPal</span>
             <span className="text-right">Amount</span>
           </div>
-          <motion.div className="overflow-hidden" style={{ height }}>
-            <motion.div style={{ opacity, backgroundColor: flash }}>
-              <ConsoleRow row={M4T_ROW} first />
+          {/* The rows run on past the panel's foot, cut by it as a list is, so a tall screen shows more of the queue. */}
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <motion.div className="overflow-hidden" style={{ height }}>
+              <motion.div style={{ opacity, backgroundColor: flash }}>
+                <ConsoleRow row={M4T_ROW} first />
+              </motion.div>
             </motion.div>
-          </motion.div>
-          {CONSOLE_ROWS.map((r) => (
-            <ConsoleRow key={r.id} row={r} />
-          ))}
-          <p className="mt-auto flex items-center justify-between gap-4 border-t border-line px-4 py-3 text-micro text-faint">
+            {CONSOLE_ROWS.map((r) => (
+              <ConsoleRow key={r.id} row={r} />
+            ))}
+          </div>
+          <p className="flex shrink-0 items-center justify-between gap-4 border-t border-line px-4 py-3 text-micro text-faint">
             <span>{CONSOLE_ROWS.length + 1} claims</span>
             <span>
-              {1 + CONSOLE_ROWS.filter((r) => r.status === "paid" && !r.approved).length} paid · {CONSOLE_ROWS.filter((r) => r.approved).length} approved ·{" "}
-              {CONSOLE_ROWS.filter((r) => r.status === "held").length} held for review · {CONSOLE_ROWS.filter((r) => r.status === "rejected" || r.status === "blocked").length} stopped
+              {[
+                [1 + CONSOLE_ROWS.filter((r) => r.status === "paid").length, "paid"],
+                [CONSOLE_ROWS.filter((r) => r.status === "held").length, "held for a person"],
+                [CONSOLE_ROWS.filter((r) => r.status === "rejected").length, "rejected"],
+                [CONSOLE_ROWS.filter((r) => r.status === "blocked").length, "blocked"],
+              ]
+                .map(([n, w]) => `${n} ${w}`)
+                .join(" · ")}
             </span>
           </p>
         </div>

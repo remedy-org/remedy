@@ -279,7 +279,8 @@
   --text-ui--line-height: 1.45;
   --text-micro: 0.75rem;
   --text-micro--line-height: 1.4;
-  --text-micro--letter-spacing: 0.04em;
+  /* Never tracked: a 12px caption or label is sentence-case sans, as every label is (DESIGN.md, No template devices). */
+  --text-micro--letter-spacing: normal;
 
   --font-weight-*: initial;
   --font-weight-normal: 400;
@@ -426,7 +427,8 @@
     font-family: var(--font-mono);
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
-    letter-spacing: var(--text-micro--letter-spacing);
+    /* The dev pages' mono caps keep their own tracking. */
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 

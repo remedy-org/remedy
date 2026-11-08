@@ -20,8 +20,8 @@ type Mode = "static" | "pinned" | "phone";
 
 /** The dolly: the laptop moves in from p 0.04 and arrives at 0.12, where the screen layer takes over (CustodyStage). */
 export const DOLLY = [0.04, 0.12] as const;
-/** How far past the consent card's edges the laptop's glass reaches when it arrives, px. */
-const OVERSCAN = 24;
+/** The most the laptop grows on the dolly: its glass reaches the window's width on every laptop screen. */
+const MAX_SCALE = 2.8;
 
 const ramp = (v: number, a: number, b: number) => Math.min(1, Math.max(0, (v - a) / (b - a)));
 /** DESIGN.md's state-to-state curve, cubic-bezier(0.65, 0, 0.35, 1): the laptop is under way as soon as the copy goes. */
@@ -52,9 +52,10 @@ function ChapterList() {
 }
 
 function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null>, device: RefObject<HTMLDivElement | null>) {
-  // Where the laptop has to go, and how large it has to grow, so its screen's glass covers chapter 01's consent card,
-  // measured at rest: the screen layer takes over inside the laptop's screen rect at 0.12, so the card is whole inside
-  // the glass the moment it comes in, and the dolly reads as the camera moving into the laptop's screen.
+  // Where the laptop has to go, and how large it has to grow, so its screen's glass lands on the Chain of Custody's
+  // window (columns 4 to 12, its top on the window's top), measured at rest: a match cut. The screen layer takes over
+  // inside the glass at 0.12 and only grows down to the window's foot, so the dolly reads as the camera moving into the
+  // laptop's screen, the laptop centred on the window rather than pushed off the right edge onto one card.
   const target = useRef({ x: 0, y: 0, s: 1.35 });
   useEffect(() => {
     const st = stage.current;
@@ -66,12 +67,12 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
       const S = st.getBoundingClientRect();
       const D = dev.getBoundingClientRect();
       const P = scr.getBoundingClientRect();
-      const card = st.querySelector("[data-dolly-target]")?.getBoundingClientRect();
+      const win = st.querySelector("[data-screen-inner]")?.getBoundingClientRect();
       const cx = D.left + D.width / 2;
       const cy = D.top + D.height / 2;
-      const tx = card ? card.left + card.width / 2 : S.left + S.width / 2;
-      const ty = card ? card.top + card.height / 2 : S.top + S.height / 2;
-      const s = card ? Math.min(2.2, Math.max(1.35, (card.width + 2 * OVERSCAN) / P.width, (card.height + 2 * OVERSCAN) / P.height)) : 1.35;
+      const s = win ? Math.min(MAX_SCALE, Math.max(1.35, win.width / P.width)) : 1.35;
+      const tx = win ? win.left + win.width / 2 : S.left + S.width / 2;
+      const ty = win ? win.top + (s * P.height) / 2 : S.top + S.height / 2;
       target.current = { x: tx - cx - s * (P.left + P.width / 2 - cx), y: ty - cy - s * (P.top + P.height / 2 - cy), s };
     };
     measure();

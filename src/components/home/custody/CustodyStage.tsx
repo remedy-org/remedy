@@ -20,10 +20,12 @@ import styles from "./custody.module.css";
 // up or down. The rail takes columns 1 to 3 and the screen columns 4 to 12 of the page grid, like every section.
 
 export const HANDOFF = [0.12, 0.17] as const;
-/** The rail's chapter list comes in with the consent card, once the laptop has gone from under the screen. */
-const RAIL_IN = 0.14;
-/** The screen's own frame and bar, and chapter 01's product column, come in once the clip is on the grid. */
-const ON_GRID = 0.165;
+/** The rail's chapter list comes in as the hero copy goes (the dolly's first quarter), so the left of the screen is
+ * never empty while the laptop moves into the window: just after the copy leaves (HeroRunway DOLLY[0] + 0.005). */
+const RAIL_IN = 0.05;
+/** The screen's own frame and bar come in with the consent screen: the glass already spans the window's width and top,
+ * so the clip only grows down and never slices them. */
+const ON_GRID = HANDOFF[0];
 
 const inOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
 
@@ -33,8 +35,13 @@ function Layer({ p, i, compact, fill, children }: { p: Progress; i: number; comp
   const y = useTransform(opacity, (o) => (i === 0 ? 0 : 8 * (1 - o)));
   const visibility = useTransform(opacity, (o) => (o > 0 ? "visible" : "hidden"));
   return (
-    // Top-aligned under the app bar, as a page loads: centred, a tall frame left an empty band under the bar.
-    <motion.div data-layer={i} className={clsx("absolute inset-0 flex items-start justify-center px-8", compact ? "pt-6 pb-4" : "pt-12 pb-8")} style={{ opacity, y, visibility }}>
+    // Top-aligned under the app bar, as a page loads, on a laptop screen; on a tall one (1000px and up) a claim screen
+    // sits in the middle of the frame, which a top-aligned one left half empty under it.
+    <motion.div
+      data-layer={i}
+      className={clsx("absolute inset-0 flex items-start justify-center px-8", compact ? "pt-6 pb-4" : "pt-12 pb-8", !fill && "[@media(min-height:1000px)]:items-center")}
+      style={{ opacity, y, visibility }}
+    >
       <div className={clsx("w-full max-w-[66rem]", fill && "h-full")}>{children}</div>
     </motion.div>
   );

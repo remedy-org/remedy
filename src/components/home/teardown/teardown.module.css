@@ -181,9 +181,10 @@
   gap: 32px;
 }
 
+/* Fixed tracks, each as wide as its longest value ("Checking 1 of 5"), so the labels never move as the values change. */
 .readouts {
   display: grid;
-  grid-template-columns: repeat(3, auto);
+  grid-template-columns: 8.5rem 9.5rem 5rem;
   gap: 40px;
   margin: 4px 0 0;
 }
@@ -202,7 +203,38 @@
 }
 
 .subject {
+  position: relative;
   min-height: 0;
+}
+
+/* Check 3's object (AccountCard): the owner's PayPal account, beside the evidence where check 1's phone stood, its
+   leader running to the callout. Up and down with the callout, in time, never scrubbed. */
+.account {
+  position: absolute;
+  top: 4%;
+  right: 2%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 13rem;
+  padding: 16px 18px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line);
+  opacity: 0;
+  translate: 0 8px;
+  pointer-events: none;
+  transition:
+    opacity 180ms cubic-bezier(0.65, 0, 0.35, 1),
+    translate 180ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.account[data-on] {
+  opacity: 1;
+  translate: none;
+  transition-duration: 360ms;
+  transition-timing-function: var(--ease-out-expo);
 }
 
 .side {
@@ -378,6 +410,7 @@ button.cellBody:hover .label {
 }
 
 .small .readouts {
+  grid-template-columns: 6.75rem 7.5rem 3.75rem;
   gap: 16px;
 }
 
