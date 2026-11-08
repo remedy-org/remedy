@@ -54,7 +54,9 @@ export function GridStill({ rows, openId, phone = false, className }: { rows: Cl
         <div
           key={r.id}
           className={clsx(
-            "relative flex h-13 border-b border-line last:border-b-0",
+            // A phone's row grows with a verdict that wraps to two lines, rather than cutting it.
+            "relative flex border-b border-line last:border-b-0",
+            phone ? "min-h-13 py-1.5" : "h-13",
             r.id === openId && "bg-accent-soft before:absolute before:inset-y-0 before:left-0 before:z-[1] before:w-0.5 before:bg-accent",
           )}
         >

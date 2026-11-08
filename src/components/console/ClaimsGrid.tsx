@@ -4,6 +4,7 @@ import {
   CellStyleModule,
   ClientSideRowModelApiModule,
   ClientSideRowModelModule,
+  ColumnApiModule,
   ExternalFilterModule,
   HighlightChangesModule,
   ModuleRegistry,
@@ -48,7 +49,8 @@ ModuleRegistry.registerModules([
 // The homepage's still filters its rows in place (the tour's Held step) and takes a claim's arrival as a transaction, so
 // AG Grid's row animation shows the queue narrowing and the row coming in. Registered on that grid only, through its
 // own `modules`: the console's queue filters before the grid and replaces its rows.
-const STILL_MODULES: Module[] = [ExternalFilterModule, ClientSideRowModelApiModule];
+// It also puts back its curated order when a visitor's sort is undone (applyColumnState).
+const STILL_MODULES: Module[] = [ExternalFilterModule, ClientSideRowModelApiModule, ColumnApiModule];
 
 // Below this width the grid shows one card per claim (phones, narrow windows).
 export const CARD_BELOW = 720;
@@ -94,6 +96,8 @@ export interface ClaimsGridHandle {
   setFilter(pass: ((row: ClaimRow) => boolean) | null): void;
   /** The homepage's still: selects a claim's row (the open row's tint and edge) and scrolls it into view; null clears. */
   open(id: string | null): void;
+  /** The homepage's still: back to the order its rows came in (a visitor's sort undone). */
+  resetSort(): void;
 }
 
 export interface ClaimsGridProps {
@@ -111,13 +115,19 @@ export interface ClaimsGridProps {
   oldestFirst?: boolean;
   /** The first rows are drawn (the skeleton has gone). */
   onReady?: () => void;
+  /** The homepage's still: a click on a row (the tour opens a held claim's evidence, or selects the row). */
+  onStillClick?: (row: ClaimRow) => void;
+  /** The homepage's still: which rows a click opens (they take the pointer cursor). */
+  stillOpens?: (row: ClaimRow) => boolean;
+  /** The homepage's still: the checks column names each check on hover, as the console's does. */
+  stillTips?: boolean;
   className?: string;
 }
 
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function ClaimsGrid(
-  { rows, openId, onOpen, onFocusRow, fill = false, still = false, oldestFirst = false, onReady, className },
+  { rows, openId, onOpen, onFocusRow, fill = false, still = false, oldestFirst = false, onReady, onStillClick, stillOpens, stillTips = false, className },
   ref,
 ) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -198,6 +208,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       node?.setSelected(true, true);
       if (node?.rowIndex != null) grid.ensureIndexVisible(node.rowIndex);
     },
+    resetSort() {
+      api.current?.applyColumnState({ defaultState: { sort: null } });
+    },
   }));
 
   // Tab into the grid lands on a row (the open claim's, else the first), not on each column header in turn; ↑ from the
@@ -259,7 +272,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         headerTooltip: still ? undefined : "One bar per check: the four before the model, then the model's. Solid passed, half-filled held, slashed failed, outline waiting, dotted not run.",
         cellRenderer: ChecksCell,
         width: 132,
-        tooltip: (p) => (!still && p.data?.bars ? p.data.id : undefined),
+        tooltip: (p) => ((!still || stillTips) && p.data?.bars ? p.data.id : undefined),
         tooltipComponent: ChecksTooltip,
       },
       {
@@ -307,8 +320,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         width: 96,
         pinned: "right",
         lockPinned: true,
-        sortable: true,
-        sortingOrder: still ? ["desc", "asc", null] : undefined,
+        // The homepage's still pays one refund per unit, so every amount is the same: sorting it would look broken.
+        sortable: !still,
         type: "rightAligned",
       },
     ];
@@ -319,7 +332,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       hide: hidden.has(c.colId ?? ""),
       ...c,
     }));
-  }, [hidden, still, oldestFirst]);
+  }, [hidden, still, oldestFirst, stillTips]);
 
   const focusTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(focusTimer.current), []);
@@ -369,7 +382,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
               const n = openId ? e.api.getRowNode(openId)?.rowIndex : null;
               if (n != null) e.api.ensureIndexVisible(n, "middle");
             }}
-            onRowClicked={(e: RowClickedEvent<ClaimRow>) => !still && e.data && onOpen(e.data.id)}
+            onRowClicked={(e: RowClickedEvent<ClaimRow>) => e.data && (still ? onStillClick?.(e.data) : onOpen(e.data.id))}
             onCellKeyDown={(e: CellKeyDownEvent<ClaimRow>) => {
               const key = (e.event as KeyboardEvent | null)?.key;
               if (!still && (key === "Enter" || key === " ") && e.data) {
@@ -386,6 +399,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
               focusTimer.current = window.setTimeout(() => onFocusRow(id), 120);
             }}
             rowClass={still ? undefined : "cursor-pointer"}
+            getRowClass={still && stillOpens ? (p) => (p.data && stillOpens(p.data) ? "cursor-pointer" : undefined) : undefined}
             // The still's rows light up under the pointer when the homepage lets the visitor touch the grid (it is inert
             // otherwise, so nothing hovers); they open nothing.
             // The homepage's still is a picture: no cell or header takes focus. In both, Tab leaves the grid in one step

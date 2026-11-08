@@ -254,24 +254,29 @@ export const PAID_BY_DAY = "Paid through PayPal, by day";
 /** The Refused tile's caption on the homepage: how the refusals split between the photo check and the pre-checks. */
 export const refusedSplit = (photo: number, pre: number) => `${photo} rejected by the photo check, ${pre} blocked by pre-checks`;
 
-/** The homepage's refusal reasons card, in 16px rows: its title, the intro line and each reason with its bar. */
-export const homeRefusalRows = (reasons: number) => 6 + Math.ceil((reasons * 38) / 16);
+/** The homepage's refusal reasons card, in 16px rows: its padding and title (76px with the gap around the card) and
+ * each reason with its bar (34px). */
+export const homeRefusalRows = (reasons: number) => Math.ceil((76 + reasons * 34) / 16);
+
+/** The homepage's dollars-by-day chart needs this many 16px rows to read (its card, title and columns). */
+export const HOME_DAY_ROWS = 10;
 
 /**
  * The homepage's Insights, as Studio state (InsightsPreview.tsx): six widgets on one page. Units remedied and Refused
  * are Studio's own value KPI tiles; the median is Remedy's tile (Studio's can only average); the funnel and the refusal
  * reasons are the console's own widgets; the dollars paid by day are Studio's column chart. `rows` is the canvas height
- * in 16px tracks, measured from the tour's fixed frame, so the page fills it with nothing cut off.
+ * in 16px tracks, measured from the tour's fixed frame, so the page fills it with nothing cut off. On a short frame (a
+ * 1280x800 screen) the refusal reasons give their place to the chart: the funnel already names every reason and count.
  */
-export function homeInsightsReport(data: InsightsData, rows = 40): AgReportState<InsightsRegistry> {
+export function homeInsightsReport(data: InsightsData, rows = 40, labelColor?: string): AgReportState<InsightsRegistry> {
   const say = captions(provenance(data.claims));
   const widgets = overview(data).widgets!;
   const kpiRows = 8;
   const median = widgets["kpi-median"];
   const refused = (gate: string) => data.claims.filter((c) => c.refused && c.refusalGate === gate).length;
   const reasons = new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size;
-  const body = Math.max(24, rows - kpiRows);
-  const refusalRows = Math.min(body - 10, homeRefusalRows(reasons));
+  const body = Math.max(16, rows - kpiRows);
+  const refusalRows = body - homeRefusalRows(reasons) >= HOME_DAY_ROWS ? homeRefusalRows(reasons) : 0;
   return {
     selectedPageId: "overview",
     pages: [
@@ -282,11 +287,23 @@ export function homeInsightsReport(data: InsightsData, rows = 40): AgReportState
           "kpi-median": { ...median, format: { title: { enabled: true, text: say.timeTitle }, caption: { enabled: true, text: kpiCaption(data) } } },
           "kpi-refused": kpi("Refused", sum("claims.refused"), refusedSplit(refused("Photo check"), refused("Pre-check"))),
           funnel: { ...widgets.funnel, format: titled("Check funnel") },
-          refusals: { ...widgets.refusals, format: titled("Why claims were refused") },
+          ...(refusalRows ? { refusals: { ...widgets.refusals, format: titled("Why claims were refused") } } : {}),
+          // Each day's dollars printed on its column (in the page's background colour, which reads on the paid green in
+          // both themes), the day under it, no value axis: the still's reading, in Studio. Hovering a column gives the
+          // claims paid that day.
           "paid-by-day": {
             type: "column-chart-grouped",
-            dataMapping: { categoryKey: [{ id: "calendar::day" }], valueKey: [sum("claims.amountSent")] },
-            format: titled(PAID_BY_DAY),
+            dataMapping: { categoryKey: [{ id: "calendar::day" }], valueKey: [sum("claims.amountSent")], tooltipKey: [sum("claims.remedied")] },
+            format: {
+              ...titled(PAID_BY_DAY),
+              style: {
+                theme: { bar: { series: { label: { enabled: true, fontSize: 12, ...(labelColor && { color: labelColor }) } } } },
+                custom: {
+                  valueAxis: { gridLine: { enabled: false }, line: { width: 0 }, tick: { enabled: false }, label: { fontSize: 1, color: "rgba(0, 0, 0, 0)" } },
+                  categoryAxis: { tick: { enabled: false }, label: { fontSize: 12 } },
+                },
+              },
+            },
           },
         } as AgPageState<InsightsRegistry>["widgets"],
         widgetLayout: {
@@ -294,7 +311,7 @@ export function homeInsightsReport(data: InsightsData, rows = 40): AgReportState
           "kpi-median": at(8, 0, 8, kpiRows),
           "kpi-refused": at(16, 0, 8, kpiRows),
           funnel: at(0, kpiRows, 14, body),
-          refusals: at(14, kpiRows, 10, refusalRows),
+          ...(refusalRows ? { refusals: at(14, kpiRows, 10, refusalRows) } : {}),
           "paid-by-day": at(14, kpiRows + refusalRows, 10, body - refusalRows),
         },
       },

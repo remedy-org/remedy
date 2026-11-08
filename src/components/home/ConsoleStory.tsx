@@ -14,6 +14,8 @@ import { TOUR } from "./tour-copy";
  * it or the tour by breakpoint, so nothing swaps on load.
  */
 
+// Rows the queue's still shows: four on a phone (the outcomes it needs: paid, held, rejected, blocked), six beside the
+// words on a tablet.
 const SHOWN = 6;
 
 export function ConsoleStory({
@@ -37,10 +39,10 @@ export function ConsoleStory({
         </span>
       </p>
       <div className="px-3 pb-3">
-        <GridStill rows={rows.slice(0, SHOWN)} phone />
+        <GridStill rows={rows.slice(0, SHOWN)} phone className="max-md:[&>:nth-child(5)]:hidden max-md:[&>:nth-child(7)]:hidden" />
       </div>
       <p className="border-t border-line px-4 py-2.5 text-micro text-muted">
-        {TOUR.credit[0]} · {SHOWN} of {rows.length} claims
+        {TOUR.credit[0]} · {rows.length} claims
       </p>
     </div>,
     evidence ? <EvidenceStill key="evidence" claim={evidence} note={<PayoutsNote amount={evidence.amount} id={evidence.id} />} fluid /> : null,
@@ -48,12 +50,16 @@ export function ConsoleStory({
     <ReportPeek key="report">{report}</ReportPeek>,
   ];
   return (
-    <ol className="flex flex-col gap-14">
+    // Phones: each step's words over its picture. From 768px (a tablet, a narrow window) the words take the left third and
+    // the picture the rest, so the column is used to its edge.
+    <ol className="flex flex-col gap-12 md:gap-16">
       {TOUR.steps.map((s, i) => (
-        <li key={s.name} className="flex min-w-0 flex-col">
-          <h3 className="text-head-sm font-medium">{s.name}</h3>
-          <p className="mt-2 max-w-[60ch] text-body text-pretty text-text-2">{sentences[i]}</p>
-          <div className="mt-5 min-w-0">{stills[i]}</div>
+        <li key={s.name} className="flex min-w-0 flex-col md:grid md:grid-cols-12 md:gap-x-(--col-gap)">
+          <div className="max-w-[60ch] md:col-span-4">
+            <h3 className="text-head-sm font-medium">{s.name}</h3>
+            <p className="mt-2 text-body text-pretty text-text-2">{sentences[i]}</p>
+          </div>
+          <div className="mt-5 min-w-0 md:col-span-8 md:mt-0">{stills[i]}</div>
         </li>
       ))}
     </ol>

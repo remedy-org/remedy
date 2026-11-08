@@ -11,6 +11,9 @@ import { formatClock, formatTime } from "./format";
 // here fetches except the thumbnails, which are sealed, cached, 96px and lazy (only rows AG Grid renders load them).
 
 type Cell = CustomCellRendererProps<ClaimRow>;
+/** The homepage's still (context.stacked): one face for everything but the claim id, the sans, its proportional figures
+ * (its tabular ones space a stop or a colon like mono). */
+type Home = { context?: { stacked?: boolean; compact?: boolean } };
 
 const SAMPLE_TITLE = { seeded: "Sample claim from the eval set: never paid", demo: "Filed through the judges' demo with sandbox money" };
 
@@ -65,8 +68,21 @@ export function Thumbs({ row, size = "md" }: { row: Pick<ClaimRow, "photos" | "p
 }
 
 /** Thumbnails, the claim id (mono 14/500) and when it was filed (mono 12, faint). */
-export function ClaimCell({ data, context }: Cell & { context?: { compact?: boolean } }) {
+export function ClaimCell({ data, context }: Cell & Home) {
   if (!data) return null;
+  if (context?.stacked) {
+    return (
+      <span className="flex h-full items-center gap-3">
+        <Thumbs row={data} />
+        <span className="flex min-w-0 flex-col leading-tight">
+          <span className="font-mono text-ui font-medium">{data.id}</span>
+          <span className="mt-1 truncate text-micro whitespace-nowrap text-muted" title={`Filed ${formatTime(data.createdAt)}`}>
+            {data.code ? `Code ${data.code}${context.compact ? "" : ` · ${formatClock(data.createdAt).slice(0, 5)}`}` : formatTime(data.createdAt)}
+          </span>
+        </span>
+      </span>
+    );
+  }
   return (
     <span className="flex h-full items-center gap-3">
       <Thumbs row={data} />
@@ -95,14 +111,15 @@ export function ClaimCell({ data, context }: Cell & { context?: { compact?: bool
 
 /** The pill, then the reason in one muted line when it says more than the pill: beside it in the queue, under it in
  * the homepage's narrower still (context.stacked), where a truncated sentence beside the pill would say little. */
-export function VerdictCell({ data, context }: Cell & { context?: { stacked?: boolean } }) {
+export function VerdictCell({ data, context }: Cell & Home) {
   if (!data) return null;
   if (context?.stacked) {
     return (
       <span className="flex h-full min-w-0 flex-col items-start justify-center gap-1">
         <StatusPill status={data.decision} />
         {data.note && data.decision !== "paid" && (
-          <span className="w-full truncate text-micro leading-tight text-muted" title={data.note}>
+          // A phone has no hover to read a cut reason: it wraps to a second line there instead.
+          <span className={clsx("w-full text-micro leading-tight text-muted", context.compact ? "line-clamp-2 whitespace-normal" : "truncate")} title={data.note}>
             {data.note}
           </span>
         )}
@@ -217,20 +234,21 @@ function timelineSentence(d: ClaimRow): string {
 
 /** The track, then the time to pay as a chip ("0:41"). A claim with no payout to time (held, refused, a sample) shows
  * the model's answer time instead, unboxed, in the same "0:03" format; the hover card says which it is. */
-export function TimelineCell({ data }: Cell) {
+export function TimelineCell({ data, context }: Cell & Home) {
   if (!data) return null;
-  if (!data.timeline) return <span className="font-mono text-micro text-faint">{data.photoCount ? "—" : "No photos yet"}</span>;
+  const face = context?.stacked ? "" : "font-mono tabular-nums ";
+  if (!data.timeline) return <span className={`${face}text-micro text-faint`}>{data.photoCount ? "—" : "No photos yet"}</span>;
   return (
     <span className="flex h-full items-center gap-2">
       <TimelineTrack t={data.timeline} decision={data.decision} />
       <span className="sr-only">{timelineSentence(data)}</span>
       {data.toPay !== null ? (
-        <span className="inline-flex h-5 items-center rounded-control bg-surface-2 px-1.5 font-mono text-micro text-text tabular-nums" aria-hidden="true">
+        <span className={`inline-flex h-5 items-center rounded-control bg-surface-2 px-1.5 ${face}text-micro text-text`} aria-hidden="true">
           {duration(data.toPay)}
         </span>
       ) : data.modelSec !== null ? (
         // No payout to time (held, refused, or a sample): the model's answer time, whenever it answered.
-        <span className="font-mono text-micro text-faint tabular-nums" aria-hidden="true">
+        <span className={`${face}text-micro text-faint`} aria-hidden="true">
           {duration(data.modelSec)}
         </span>
       ) : null}
@@ -239,11 +257,11 @@ export function TimelineCell({ data }: Cell) {
 }
 
 /** The payer's last four; "Unverified" in red only when it's true. */
-export function PayerCell({ data }: Cell) {
+export function PayerCell({ data, context }: Cell & Home) {
   if (!data) return null;
   return (
     <span className="flex h-full items-center gap-2">
-      <span className="font-mono text-ui text-muted">{data.payer}</span>
+      <span className={clsx("text-ui text-muted", !context?.stacked && "font-mono")}>{data.payer}</span>
       {!data.verified && <span className="text-micro text-stop">Unverified</span>}
     </span>
   );
@@ -288,8 +306,10 @@ export function PayoutCell({ data }: Cell) {
   );
 }
 
-/** "$29.99" with the cents at 73%, raised (Mercury's table cents). Sample and unpaid amounts are muted. */
-export function AmountText({ amount, muted }: { amount: string; muted?: boolean }) {
+/** "$29.99" with the cents at 73%, raised (Mercury's table cents). Sample and unpaid amounts are muted. `plain`: the
+ * homepage's still, as a finance console prints money: "$29.99" in the sans, cents on the line. */
+export function AmountText({ amount, muted, plain }: { amount: string; muted?: boolean; plain?: boolean }) {
+  if (plain) return <span className={clsx("text-ui whitespace-nowrap", muted ? "text-muted" : "text-text")}>{amount}</span>;
   const dot = amount.lastIndexOf(".");
   return (
     <span className={clsx("font-mono text-ui whitespace-nowrap tabular-nums", muted ? "text-muted" : "text-text")}>
@@ -302,10 +322,10 @@ export function AmountText({ amount, muted }: { amount: string; muted?: boolean 
   );
 }
 
-export function AmountCell({ data }: Cell) {
+export function AmountCell({ data, context }: Cell & Home) {
   if (!data) return null;
   if (!data.amount) return <span className="text-faint" aria-label="No amount">—</span>;
-  return <AmountText amount={data.amount} muted={data.decision !== "paid" || data.seeded} />;
+  return <AmountText amount={data.amount} muted={data.decision !== "paid" || data.seeded} plain={context?.stacked} />;
 }
 
 /** Phones: one 72px card per claim. Photo, id and pill; then the barcode, the time to pay and the amount. */
@@ -346,16 +366,18 @@ function HeaderTip({ text }: { text: unknown }) {
 }
 
 /** Hovering the barcode: the five checks, each with its bars named and their states. */
-export function ChecksTooltip({ data, location, value }: CustomTooltipProps<ClaimRow>) {
+export function ChecksTooltip({ data, location, value, context }: CustomTooltipProps<ClaimRow> & Home) {
   if (location === "header") return <HeaderTip text={value} />;
   if (!data?.bars) return null;
   const groups = byCheck(data.bars);
+  // The homepage's still heads each check in the sans, as its evidence does.
+  const head = context?.stacked ? "text-micro text-muted" : "micro text-faint";
   return (
     <div className="w-[296px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <p className="mb-2.5 text-ui text-text">{barsSentence(data.bars)}</p>
       {groups.map((g) => (
         <div key={g.title} className="mt-2.5 first:mt-0">
-          <p className="micro text-faint">{g.title}</p>
+          <p className={head}>{g.title}</p>
           <ul className="mt-1.5 flex flex-col gap-1">
             {g.bars.map((b) => (
               // The check's full name always; a long state wraps to its own line under it.

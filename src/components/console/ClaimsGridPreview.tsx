@@ -30,8 +30,12 @@ export interface ClaimsGridPreviewProps {
    * below through the grid's API, so a change never resets the rows. Without it, the whole frame as before.
    */
   bare?: boolean;
-  /** bare: show only the held claims (AG Grid's own filter, so the rows animate). */
-  filter?: "held" | null;
+  /** bare: show only the claims with this decision (AG Grid's own filter, so the rows animate). */
+  filter?: ClaimRow["decision"] | null;
+  /** bare: a click on a row (the tour opens a held claim's evidence). */
+  onRowClick?: (row: ClaimRow) => void;
+  /** bare: changes when the tour leaves the queue, which puts back the order a visitor's sort changed. */
+  sortEpoch?: number;
   /** bare: where the arriving claim is: "before" (not in the grid), "interim" (just in, being checked) or "final". */
   arrival?: { id: string; phase: "before" | "interim" | "final" };
   /** bare: the arrival is playing (claims-grid.css fills its barcode). */
@@ -56,10 +60,11 @@ function interimOf(row: ClaimRow): ClaimRow {
   };
 }
 
-const HELD = (r: ClaimRow) => r.decision === "held";
+// A click opens the claims that carry their evidence (every held one, preview.ts).
+const OPENS = (r: ClaimRow) => Boolean((r as PreviewRow).evidence);
 
 /** The grid area of the homepage's console tour: the real grid, filtered, opened and arriving through its API. */
-function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady }: ClaimsGridPreviewProps) {
+function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady, onRowClick, sortEpoch = 0 }: ClaimsGridPreviewProps) {
   const grid = useRef<ClaimsGridHandle>(null);
   // The rows the grid starts with, once: the arriving claim held back while it is still to arrive.
   const [initial] = useState(() => (arrival?.phase === "before" ? rows.filter((r) => r.id !== arrival.id) : rows));
@@ -87,8 +92,12 @@ function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady }
   }, [ready, arrival, final, rows]);
 
   useEffect(() => {
-    if (ready) grid.current?.setFilter(filter === "held" ? HELD : null);
+    if (ready) grid.current?.setFilter(filter ? (r) => r.decision === filter : null);
   }, [ready, filter]);
+
+  useEffect(() => {
+    if (ready && sortEpoch) grid.current?.resetSort();
+  }, [ready, sortEpoch]);
 
   useEffect(() => {
     if (ready) grid.current?.open(openId ?? null);
@@ -108,6 +117,9 @@ function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady }
           }}
           fill
           still
+          stillTips
+          onStillClick={onRowClick}
+          stillOpens={onRowClick ? OPENS : undefined}
         />
       </div>
       {aside}

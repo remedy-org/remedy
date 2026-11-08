@@ -7,9 +7,9 @@ export const TOUR = {
   muted: "Every claim with its evidence, every refund through PayPal.",
   tablist: "A tour of the Remedy console",
   steps: [
-    { name: "Claims queue", sentence: "Every claim lands decided: paid, held for a person, or refused by a named check, in one AG Grid queue." },
+    { name: "Claims queue", sentence: "Every claim arrives with a decision: paid, held for a person, or refused by a named check. All of it in one AG Grid queue." },
     { name: "Evidence", sentence: "Open a held claim to see its photos and the model’s own words. Approve, and PayPal Payouts sends the refund." },
-    { name: "Insights", sentence: "An AG Studio dashboard shows where claims stop and why each one was refused, before any money moves." },
+    { name: "Insights", sentence: "An AG Studio dashboard shows where claims stop, why each was refused, and what PayPal paid out each day." },
     { name: "CPSC report", sentence: "Your monthly CPSC progress report drafts itself from the claim records. Review it, then file." },
   ],
   chrome: { app: "Remedy", pages: ["Claims", "Insights", "Report"] as const, company: "Kikea Store" },
@@ -46,7 +46,7 @@ export interface TourTotals {
 /** What each step's panel says to a screen reader: the frame is a picture, so this carries its content. */
 export function describe(t: TourTotals, open: { id: string; amount: string }, analyst?: { question: string; answer: string } | null) {
   return [
-    `The claims queue for the Kikea recall, in AG Grid: ${t.claims} claims, ${t.paid} paid, ${t.held} held, ${t.refused} refused. Scroll it, or sort by claim, verdict or amount.`,
+    `The claims queue for the Kikea recall, in AG Grid: ${t.claims} claims, ${t.paid} paid, ${t.held} held, ${t.refused} refused. Click a held claim to open its evidence, filter it by status, or sort it by claim, verdict or timeline.`,
     `Claim ${open.id}, held: photos 1 and 2, and the model’s answer that it couldn’t tell if both photos show the same item. A person approves or rejects it; approving pays ${open.amount} through PayPal Payouts.`,
     `Insights, in AG Studio: of ${t.claims} claims, ${t.photos} sent photos, ${t.preChecked} passed the pre-checks, ${t.paid} passed the photo check and were paid; ${t.refused} were refused. Payouts by day beside it.` +
       (analyst ? ` Recall analyst, asked “${analyst.question}”: ${analyst.answer}` : ""),

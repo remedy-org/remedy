@@ -45,7 +45,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
             </span>
             {i < steps.length - 1 &&
               s.groups.map((g) => (
-                <p key={g.kind} className="text-micro text-muted">
+                <p key={g.kind} className={clsx("text-micro text-muted", flush && "truncate")} title={flush ? g.summary : undefined}>
                   <span className={clsx(figure, TONE[g.kind])}>−{g.count}</span> <span className={TONE[g.kind]}>{KIND_LABEL[g.kind]}</span> · {g.summary}
                 </p>
               ))}
@@ -55,8 +55,8 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
     );
   }
   const Drop = onToggle ? "button" : "div";
-  return (
-    <ol className={clsx("flex h-full min-h-0 flex-col", !flush && "px-1.5 pb-1", spread ? "justify-between gap-0.5" : "gap-4")} onClick={onReset} onKeyDown={onKeyDown}>
+  const list = (
+    <ol className={clsx("flex min-h-0 flex-col", flush ? "flex-1" : "h-full px-1.5 pb-1", spread ? "justify-between gap-0.5" : "gap-4")} onClick={onReset} onKeyDown={onKeyDown}>
       {steps.map((s, i) => {
         const last = i === steps.length - 1;
         return (
@@ -102,7 +102,13 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                       <span key={g.kind} className="flex min-w-0 items-baseline gap-2">
                         <span className={clsx("shrink-0", figure, TONE[g.kind])}>−{g.count}</span>
                         <span className={clsx("shrink-0", TONE[g.kind])}>{KIND_LABEL[g.kind]}</span>
-                        <span className={clsx("line-clamp-2 text-muted", onToggle && "group-enabled:group-hover:text-text")}>{g.summary}</span>
+                        {/* The homepage keeps each drop to one line, the reasons in full on hover. */}
+                        <span
+                          title={flush && !onToggle ? g.summary : undefined}
+                          className={clsx(flush ? "truncate" : "line-clamp-2", "text-muted", onToggle && "group-enabled:group-hover:text-text")}
+                        >
+                          {g.summary}
+                        </span>
                       </span>
                     ))}
                   </span>
@@ -118,5 +124,27 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
         );
       })}
     </ol>
+  );
+  if (!flush) return list;
+  // The homepage: the funnel's outcome under it, filed to paid, where the card has room for it (a 900px laptop
+  // screen and up); the stages keep a steady pitch above it instead of spreading over the whole card.
+  const paid = steps.at(-1)?.reached ?? 0;
+  const out = (kind: StopKind) => steps.reduce((n, s) => n + s.groups.filter((g) => g.kind === kind).reduce((m, g) => m + g.count, 0), 0);
+  const stopped = [
+    [out("refused"), KIND_LABEL.refused],
+    [out("held"), KIND_LABEL.held],
+    [out("waiting"), KIND_LABEL.waiting],
+  ].filter(([n]) => n) as [number, string][];
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-4 [container-type:size]">
+      {list}
+      <p className="hidden shrink-0 items-baseline justify-between gap-4 border-t border-line pt-3 [@container(min-height:20rem)]:flex">
+        <span className="min-w-0 truncate text-micro text-muted">
+          <span className="text-ui text-text">Filed to paid</span> · {paid} of {filed} claims
+          {stopped.length > 0 && `; ${stopped.map(([n, w]) => `${n} ${w}`).join(", ")}`}
+        </span>
+        <span className="shrink-0 text-[22px] leading-none">{Math.round((paid / filed) * 100)}%</span>
+      </p>
+    </div>
   );
 }

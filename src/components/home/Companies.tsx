@@ -31,7 +31,15 @@ export function Companies() {
   const sheet = <ProgressReport recall={recall} report={report} generated={generated} home />;
 
   return (
-    <Section id="companies" title={TOUR.title} muted={TOUR.muted} headingSpan={9} bodyClassName="mt-12" reveal="rise">
+    <Section
+      id="companies"
+      title={TOUR.title}
+      // Its own block, so it fills the measure (pretty) instead of breaking early to balance (the heading's text-balance).
+      muted={<span className="block text-pretty">{TOUR.muted}</span>}
+      headingSpan={9}
+      bodyClassName="mt-10 lg:mt-8"
+      reveal="rise"
+    >
       <noscript dangerouslySetInnerHTML={{ __html: NOSCRIPT }} />
       <div data-tour className="hidden lg:block">
         <ConsoleTour
@@ -47,12 +55,19 @@ export function Companies() {
           studio={STUDIO_ON_HOME ? { data: insightsPreviewForStudio() } : null}
         />
       </div>
-      <div data-story className="max-w-[720px] lg:hidden">
+      <div data-story className="lg:hidden">
         <ConsoleStory
           rows={grid.rows}
           sentences={sentences}
           evidence={evidence}
-          insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" />}
+          insights={
+            <InsightsStill
+              data={still}
+              rail={RECORDING ? <AnalystRail form="phone" /> : undefined}
+              form="phone"
+              credit={`${TOUR.credit[2]} · ${still.totals.claims} claims`}
+            />
+          }
           report={sheet}
         />
       </div>

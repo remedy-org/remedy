@@ -1,17 +1,35 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import styles from "./home.module.css";
 
 /**
- * The phone story's report: the draft's head, fading out, and "Read the whole draft" to open the rest in place (no JS:
- * the <details> alone lifts the cap). The draft opens about 2,000px tall, so closing it again from its foot brings the
- * reader back to its head, not to wherever the shorter page leaves them.
+ * The phone story's report: the draft's head and its units remedied, ending on that block's last row with the words
+ * fading into the paper, and "Read the whole draft" to open the rest in place (no JS: the <details> alone lifts the
+ * cap). The end is measured from the sheet ([data-peek-end]), so the cut never falls mid-row at any width. The draft
+ * opens about 2,000px tall, so closing it again from its foot brings the reader back to its head, not to wherever the
+ * shorter page leaves them.
  */
 export function ReportPeek({ children }: { children: ReactNode }) {
+  const clip = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = clip.current;
+    const end = el?.querySelector<HTMLElement>("[data-peek-end]");
+    if (!el || !end) return;
+    const place = () => {
+      if (el.parentElement?.querySelector("details")?.open) return;
+      el.style.setProperty("--peek-h", `${Math.ceil(end.getBoundingClientRect().bottom - el.getBoundingClientRect().top + 28)}px`);
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   return (
     <div className={styles.peek}>
-      <div className={styles.peekClip}>{children}</div>
+      <div ref={clip} className={styles.peekClip}>
+        {children}
+      </div>
       <details
         className="mt-4"
         onToggle={(e) => {
