@@ -37,8 +37,9 @@ const base =
 const variants: Record<ButtonVariant, string> = {
   primary: "btn-primary active:duration-75",
   secondary: "btn-quiet active:duration-75",
-  // A text link: the arrow moves on hover, the colour does not change.
-  tertiary: "rounded-control text-text underline-offset-4 decoration-line-2 hover:underline",
+  // A text link: the arrow moves on hover and on keyboard focus, the colour does not change. 6px of padding, cancelled
+  // by the margin, gives the focus ring room around the words without moving them.
+  tertiary: "-mx-1.5 rounded-control px-1.5 text-text underline-offset-4 decoration-line-2 hover:underline focus-visible:underline",
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -61,7 +62,7 @@ export function Button(props: ButtonProps) {
   const content = (
     <>
       <span>{pending && pendingLabel ? pendingLabel : children}</span>
-      {showArrow && <ArrowRightIcon className="shrink-0 transition-transform duration-160 ease-snap group-hover:translate-x-[3px]" />}
+      {showArrow && <ArrowRightIcon className="shrink-0 transition-transform duration-160 ease-snap group-hover:translate-x-[3px] group-focus-visible:translate-x-[3px]" />}
     </>
   );
 

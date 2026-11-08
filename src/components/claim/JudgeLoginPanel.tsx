@@ -23,7 +23,8 @@ export function JudgeLoginPanel({ login, why, id, className }: { login: JudgeLog
       <div className="flex flex-col gap-1">
         <h3 className="micro text-faint">Judges&apos; sandbox login</h3>
         {why && <p className="text-text">{why}</p>}
-        <p className="text-muted">Log in with PayPal, then use this sandbox login.</p>
+        {/* Said first, in neutral text: an email and password beside a PayPal button is what a scam page looks like. */}
+        <p className="text-muted">A test account in PayPal&apos;s sandbox, not a real PayPal login. Log in with PayPal, then use it.</p>
       </div>
       <dl className="flex flex-col">
         {rows.map((r) => (

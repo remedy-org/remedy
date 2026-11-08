@@ -62,7 +62,13 @@
   --btn-quiet-bg-hover: var(--surface-3);
   --btn-quiet-shadow: inset 0 0 0 1px var(--line-2), inset 0 1px 0 oklch(1 0 0 / 0.08);
   --btn-quiet-shadow-hover: inset 0 0 0 1px oklch(0.96 0.02 85 / 0.24), inset 0 1px 0 oklch(1 0 0 / 0.1);
-  --btn-quiet-shadow-press: inset 0 0 0 1px var(--line-2);
+  --btn-quiet-shadow-press: inset 0 0 0 1px var(--line-2), inset 0 1px 2px oklch(0 0 0 / 0.35);
+  /* Pressed, the key sinks below its resting fill, so a tap shows on touch, where there is no hover. */
+  --btn-quiet-bg-press: var(--surface);
+  /* The primary's hover sheen: white from the top edge. Light has none (it cancelled out the deeper fill). */
+  --btn-sheen: oklch(1 0 0 / 0.22);
+  /* The nav link's chip needs no ring on the dark room; in light it gets a hairline, since --surface-2 is 1.06:1 there. */
+  --nav-chip-ring: 0 0 #0000;
 }
 
 [data-theme="light"] {
@@ -79,11 +85,12 @@
   --text-2: oklch(0.33 0.008 65);
   --muted: oklch(0.45 0.008 65);
   --faint: oklch(0.51 0.008 65);
-  /* The same brass as dark. On the near-white page hover deepens (a lighter fill would vanish into the page), and the
-     1px rim carries the button's edge at 3:1, since brass is under 2:1 on the page. */
-  --accent: oklch(0.81 0.12 80);
-  --accent-hover: oklch(0.78 0.125 78);
-  --accent-press: oklch(0.74 0.125 76);
+  /* The dark brass a step deeper and richer: at 0.81 it read pale (mustard) on the near-white page. Hover deepens (a
+     lighter fill would vanish into the page), and the 1px rim carries the button's edge at 3:1, since brass is under
+     2:1 on the page. */
+  --accent: oklch(0.79 0.13 77);
+  --accent-hover: oklch(0.75 0.135 75);
+  --accent-press: oklch(0.72 0.13 74);
   --accent-edge: oklch(0.62 0.11 74);
   --accent-ink: oklch(0.22 0.03 65);
   --accent-text: oklch(0.5 0.11 68);
@@ -99,18 +106,23 @@
   --float-shadow: 0 16px 40px -20px oklch(0.23 0.01 65 / 0.22);
   --paper-shadow: 0 0 0 1px oklch(0.23 0.01 65 / 0.16), inset 0 1px 0 oklch(1 0 0 / 0.7), 0 1px 2px oklch(0.23 0.01 65 / 0.08), 0 3px 8px oklch(0.23 0.01 65 / 0.06), 0 18px 36px -12px oklch(0.23 0.01 65 / 0.22);
   --paper-drop: drop-shadow(0 0 0.5px oklch(0.23 0.01 65 / 0.5)) drop-shadow(0 1px 2px oklch(0.23 0.01 65 / 0.1)) drop-shadow(0 14px 18px oklch(0.23 0.01 65 / 0.14));
-  /* In light the band is a step darker than the object paper, so it reads as card stock against the page. */
-  --band: var(--paper-2);
-  --band-sheet: var(--paper);
-  /* The primary as in dark, its top edge brighter and its shadow ink. The quiet button is a white key on the page: a
-     hairline ring and a short drop at rest; the ring darkens and the drop grows on hover, so the step shows on white. */
-  --btn-primary-shadow: inset 0 1px 0 oklch(1 0 0 / 0.45), inset 0 -1px 0 oklch(0.22 0.03 65 / 0.16), 0 0 0 1px var(--accent-edge), 0 1px 2px oklch(0.23 0.01 65 / 0.18);
+  /* In light the band is clean warm paper, a step under the page (paper-2 read khaki next to the white page), and a
+     notice on it is a lighter sheet. */
+  --band: oklch(0.935 0.01 85);
+  --band-sheet: oklch(0.975 0.007 85);
+  /* The primary as in dark, its top edge brighter, no darker foot (on white it read skeuomorphic) and its shadow ink.
+     The quiet button is a white key on the page: a ring and a short drop at rest; on hover it tints, the ring darkens
+     and the drop grows, so the step shows on white; pressed it tints a step further. */
+  --btn-primary-shadow: inset 0 1px 0 oklch(1 0 0 / 0.4), 0 0 0 1px var(--accent-edge), 0 1px 2px oklch(0.23 0.01 65 / 0.16);
   --btn-primary-shadow-press: inset 0 1px 2px oklch(0.22 0.03 65 / 0.28), 0 0 0 1px var(--accent-edge);
   --btn-quiet-bg: var(--surface);
-  --btn-quiet-bg-hover: var(--surface);
-  --btn-quiet-shadow: 0 0 0 1px var(--line-2), inset 0 1px 0 oklch(1 0 0 / 0.9), 0 1px 2px oklch(0.23 0.01 65 / 0.08);
-  --btn-quiet-shadow-hover: 0 0 0 1px oklch(0.25 0.02 65 / 0.34), inset 0 1px 0 oklch(1 0 0 / 0.9), 0 2px 5px oklch(0.23 0.01 65 / 0.12);
-  --btn-quiet-shadow-press: 0 0 0 1px var(--line-2);
+  --btn-quiet-bg-hover: var(--surface-2);
+  --btn-quiet-bg-press: var(--surface-3);
+  --btn-quiet-shadow: 0 0 0 1px oklch(0.25 0.02 65 / 0.26), inset 0 1px 0 oklch(1 0 0 / 0.9), 0 1px 2px oklch(0.23 0.01 65 / 0.08);
+  --btn-quiet-shadow-hover: 0 0 0 1px oklch(0.25 0.02 65 / 0.44), inset 0 1px 0 oklch(1 0 0 / 0.9), 0 2px 5px oklch(0.23 0.01 65 / 0.12);
+  --btn-quiet-shadow-press: 0 0 0 1px oklch(0.25 0.02 65 / 0.44);
+  --btn-sheen: transparent;
+  --nav-chip-ring: inset 0 0 0 1px var(--line-2);
 }
 
 /*
@@ -322,6 +334,8 @@
   html {
     background: var(--bg);
     -webkit-text-size-adjust: 100%;
+    /* The sticky 64px header never covers what focus or an anchor scrolls to (WCAG 2.4.11). */
+    scroll-padding-top: 5rem;
   }
 
   /* A phone's pinned action bar (MobileCta, a step's sticky bar) is about 6rem tall: whatever focus or a scroll brings
@@ -465,6 +479,14 @@
   .btn-primary,
   .btn-quiet {
     isolation: isolate;
+    /* Invisible here. Forced colours (Contrast Themes) drops fills and shadows but paints this, so a button keeps its shape. */
+    border: 1px solid transparent;
+  }
+
+  @media (forced-colors: active) {
+    .btn-primary {
+      border-color: ButtonText;
+    }
   }
 
   .btn-primary:active,
@@ -485,7 +507,7 @@
     z-index: -1;
     border-radius: inherit;
     pointer-events: none;
-    background: radial-gradient(120% 100% at 50% 0%, oklch(1 0 0 / 0.22), transparent 65%);
+    background: radial-gradient(120% 100% at 50% 0%, var(--btn-sheen), transparent 65%);
     opacity: 0;
     transition: opacity 160ms var(--ease-out-quart);
   }
@@ -507,7 +529,7 @@
   }
 
   .btn-quiet:active {
-    background-color: var(--surface-2);
+    background-color: var(--btn-quiet-bg-press);
     box-shadow: var(--btn-quiet-shadow-press);
   }
 
@@ -546,7 +568,8 @@
     white-space: nowrap;
     transition:
       color 200ms var(--ease-snap),
-      background-color 200ms var(--ease-snap);
+      background-color 200ms var(--ease-snap),
+      box-shadow 200ms var(--ease-snap);
   }
 
   .nav-link::after {
@@ -557,12 +580,14 @@
 
   .nav-link:focus-visible {
     background-color: var(--surface-2);
+    box-shadow: var(--nav-chip-ring);
     color: var(--text);
   }
 
   @media (hover: hover) {
     .nav-link:hover {
       background-color: var(--surface-2);
+      box-shadow: var(--nav-chip-ring);
       color: var(--text);
       transition-duration: 120ms;
     }

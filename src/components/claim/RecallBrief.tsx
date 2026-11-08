@@ -80,7 +80,7 @@ export function RecallBrief({ recall, sandbox, demo }: { recall: Recall; sandbox
         <Fact label="Units recalled" value={recall.units || "Not stated"} />
         <Fact label="Sold by" value={company} />
       </dl>
-      <a href={recall.url} className="self-start text-ui text-muted underline decoration-line-strong underline-offset-4 hover:text-text max-sm:hidden" rel="noopener noreferrer" target="_blank">
+      <a href={recall.url} className="self-start py-0.5 text-ui text-muted underline decoration-line-strong underline-offset-4 hover:text-text max-sm:hidden" rel="noopener noreferrer" target="_blank">
         Read the recall notice on cpsc.gov
       </a>
     </section>

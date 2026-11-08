@@ -30,34 +30,50 @@
   --rx: -10deg;
   --ry: 6deg;
   --scene-top: 8%;
-  /* The laptop: warm space grey (hue 75, chroma 0.004, like the room). */
+  /*
+   * The laptop: warm space grey (hue 75, chroma 0.004, like the room). In dark the deck sits well above the page (about
+   * 0.2 L) and catches a cool rim light along its front edge and the hinge, so the lower half reads as metal, not as a
+   * smudge on the graphite room.
+   */
   --lid: oklch(0.13 0.004 75);
   --lid-edge: oklch(1 0 0 / 0.14);
-  --deck-top: oklch(0.3 0.004 75);
-  --deck-bottom: oklch(0.255 0.004 75);
+  --deck-top: oklch(0.36 0.004 75);
+  --deck-bottom: oklch(0.31 0.004 75);
   --hinge-a: oklch(0.15 0.004 75);
-  --hinge-b: oklch(0.22 0.004 75);
-  --key: oklch(0.17 0.004 75);
-  --pad: oklch(0.285 0.004 75);
-  --lip: oklch(0.2 0.004 75);
-  /* The table: one surface step above the page, a centimetre grid in the hairline colour. */
+  --hinge-b: oklch(0.24 0.004 75);
+  --key: oklch(0.19 0.004 75);
+  --key-edge: oklch(1 0 0 / 0.06);
+  --pad: oklch(0.355 0.004 75);
+  --pad-edge: oklch(1 0 0 / 0.1);
+  --lip: oklch(0.24 0.004 75);
+  --lip-low: oklch(0.17 0.004 75);
+  --rim: oklch(0.62 0.006 240 / 0.6);
+  /* The table: one surface step above the page, a centimetre grid in the hairline colour, faint enough to stay a surface. */
   --table: var(--surface);
-  --grid-major: color-mix(in oklch, var(--text) 7%, transparent);
-  --grid-minor: color-mix(in oklch, var(--text) 3.5%, transparent);
-  --contact: oklch(0.05 0.004 75 / 0.65);
+  --grid-major: color-mix(in oklch, var(--text) 9%, transparent);
+  --grid-minor: color-mix(in oklch, var(--text) 4.5%, transparent);
+  /* The pool under the laptop, a little stronger than the page-wide --pool, so the object sits on something. */
+  --hero-pool: oklch(0.8 0.1 78 / 0.19);
+  --contact: oklch(0.05 0.004 75 / 0.7);
 }
 
 /* In light the laptop is silver: the same object a step lighter, so it sits on a light table, not as a hole in it. */
 :global([data-theme="light"]) .view {
   --lid: oklch(0.2 0.004 75);
   --lid-edge: oklch(0.23 0.01 65 / 0.3);
-  --deck-top: oklch(0.86 0.004 75);
-  --deck-bottom: oklch(0.8 0.004 75);
-  --hinge-a: oklch(0.55 0.004 75);
-  --hinge-b: oklch(0.72 0.004 75);
-  --key: oklch(0.42 0.004 75);
-  --pad: oklch(0.83 0.004 75);
-  --lip: oklch(0.7 0.004 75);
+  /* Silver, lighter at the back, with mid-grey keys: texture, not the strongest contrast on the right of the page. */
+  --deck-top: oklch(0.9 0.004 75);
+  --deck-bottom: oklch(0.84 0.004 75);
+  --hinge-a: oklch(0.6 0.004 75);
+  --hinge-b: oklch(0.76 0.004 75);
+  --key: oklch(0.56 0.004 75);
+  --key-edge: oklch(1 0 0 / 0.35);
+  --pad: oklch(0.87 0.004 75);
+  --pad-edge: oklch(0.23 0.01 65 / 0.1);
+  --lip: oklch(0.8 0.004 75);
+  --lip-low: oklch(0.7 0.004 75);
+  --rim: oklch(1 0 0 / 0.9);
+  --hero-pool: var(--pool);
   --table: var(--surface-2);
   /* On the near-white table only the 5cm lines show: a 1cm mesh at this contrast reads as noise, not a grid. */
   --grid-major: color-mix(in oklch, var(--text) 7%, transparent);
@@ -96,7 +112,7 @@
   transform: rotateX(90deg) translateY(-62em);
   background-color: var(--table);
   background-image:
-    radial-gradient(closest-side, var(--pool), transparent),
+    radial-gradient(closest-side, var(--hero-pool), transparent),
     linear-gradient(var(--grid-major) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
     linear-gradient(var(--grid-minor) 1px, transparent 1px),
@@ -219,7 +235,10 @@
   border-radius: 0.6em 0.6em 2em 2em;
   background: linear-gradient(var(--deck-top), var(--deck-bottom));
   border: 1px solid var(--lid-edge);
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.06);
+  /* The rim light along the front edge, where the deck meets its lip. */
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.06),
+    inset 0 -1px 0 var(--rim);
 }
 
 /* The laptop's contact shadow on the table, a little wider than the deck and just under it. */
@@ -241,6 +260,8 @@
   top: 0;
   height: 1.4em;
   background: linear-gradient(var(--hinge-a), var(--hinge-b));
+  /* The hinge catches the same rim light on its front. */
+  box-shadow: inset 0 -1px 0 var(--rim);
 }
 
 .keys {
@@ -260,55 +281,24 @@
   height: 13.4em;
   border-radius: 1em;
   background: var(--pad);
-  border: 1px solid var(--line);
+  box-shadow: inset 0 0 0 1px var(--pad-edge);
 }
 
-/* The deck's front edge: its thickness, facing the viewer. */
+/*
+ * The deck's front edge: its thickness, facing the viewer, hanging from the front edge to the table. It runs between
+ * the deck's rounded corners, lit where it meets the top (its bottom edge in its own frame) and darker toward the
+ * table, so the deck and its edge read as one machined piece.
+ */
 .lip {
   position: absolute;
-  left: 1.4em;
-  right: 1.4em;
+  left: 1.2em;
+  right: 1.2em;
   bottom: 0;
   height: 1.1em;
   transform-origin: 50% 100%;
   transform: rotateX(90deg);
-  border-radius: 0 0 1em 1em;
-  background: var(--lip);
-}
-
-/* Exhibit labels and their leader lines sit flat over the scene. */
-.label {
-  position: absolute;
-  z-index: 2;
-}
-
-.leaders {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.leaders line {
-  stroke: var(--faint);
-  stroke-width: 1;
-}
-
-/* A 3px page-coloured halo under each leader keeps any text it crosses legible. */
-.leaders .halo {
-  stroke: var(--bg);
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.leaders circle {
-  fill: var(--text);
-}
-
-.leaders .ring {
-  fill: none;
-  stroke: color-mix(in oklch, var(--text) 50%, transparent);
+  /* Its ends round off toward the table, following the deck's rounded front corners. */
+  border-radius: 1em 1em 0 0;
+  background: linear-gradient(var(--lip-low), var(--lip));
+  box-shadow: inset 0 -1px 0 var(--rim);
 }

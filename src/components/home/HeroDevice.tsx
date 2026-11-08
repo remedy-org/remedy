@@ -2,10 +2,10 @@
 
 import clsx from "clsx";
 import { animate, motion, useInView, useMotionTemplate, useMotionValue, useSpring, type MotionValue } from "motion/react";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from "react";
-import { ExhibitLabel, Money, Paper } from "@/components/ui";
+import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from "react";
+import { Money, Paper } from "@/components/ui";
 import { CLAIM } from "./custody/claim";
-import { ClaimScreen, FINAL_PHASE, type AnchorId } from "./ClaimScreen";
+import { ClaimScreen, FINAL_PHASE } from "./ClaimScreen";
 import { Laptop } from "./Laptop";
 import styles from "./device.module.css";
 
@@ -17,9 +17,6 @@ import styles from "./device.module.css";
 const PHASE_AT = [700, 1150, 1600, 2050, 2500, 3000];
 const TAG_AFTER = 380;
 const MAX_TILT = 4;
-
-// The code is marked on the photo itself (ClaimScreen); the cut gets the one leader, from the left, across nothing.
-const EXHIBITS: { id: AnchorId; text: string; className: string }[] = [{ id: "cut", text: "Cut", className: "right-[95%] top-[46%]" }];
 
 const NOSCRIPT = `<style>[data-hero-device] [data-seq=show]{opacity:1!important;transform:none!important}[data-hero-device] [data-seq=hide]{opacity:0!important}</style>`;
 
@@ -45,16 +42,14 @@ function ReplayIcon() {
 }
 
 export interface HeroDeviceProps {
-  /** The exhibit labels' opacity: they let go of the laptop as the dolly starts. */
+  /** The receipt's opacity: it lets go of the laptop as the dolly starts. */
   labels?: MotionValue<number>;
 }
 
 export function HeroDevice({ labels }: HeroDeviceProps) {
   const stageRef = useRef<HTMLDivElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
   const tagRef = useRef<HTMLDivElement>(null);
   const shadowRef = useRef<HTMLSpanElement>(null);
-  const frame = useRef(0);
 
   const reduced = useMedia("(prefers-reduced-motion: reduce)");
   const finePointer = useMedia("(hover: hover) and (pointer: fine)");
@@ -111,60 +106,6 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
   const rx = useSpring(tiltX, { stiffness: 140, damping: 20 });
   const ry = useSpring(tiltY, { stiffness: 140, damping: 20 });
   const transform = useMotionTemplate`rotateX(${rx}deg) rotateY(${ry}deg)`;
-
-  // Leader lines run from each exhibit label to its point in the photo, measured on screen after the 3D transform.
-  const measure = useCallback(() => {
-    frame.current = 0;
-    const stage = stageRef.current;
-    const svg = svgRef.current;
-    if (!stage || !svg || !stage.offsetWidth) return;
-    const s = stage.getBoundingClientRect();
-    const k = s.width / stage.offsetWidth || 1;
-    for (const { id } of EXHIBITS) {
-      const label = stage.querySelector(`[data-exhibit="${id}"]`);
-      const anchor = stage.querySelector(`[data-anchor="${id}"]`);
-      const group = svg.querySelector(`[data-leader="${id}"]`);
-      if (!label || !anchor || !group) continue;
-      const l = label.getBoundingClientRect();
-      const a = anchor.getBoundingClientRect();
-      const x1 = (l.right - s.left) / k;
-      const y1 = (l.top + l.height / 2 - s.top) / k;
-      const x2 = (a.left + a.width / 2 - s.left) / k;
-      const y2 = (a.top + a.height / 2 - s.top) / k;
-      const [halo, line, ring, dot] = Array.from(group.children);
-      for (const el of [halo, line]) {
-        el.setAttribute("x1", String(x1));
-        el.setAttribute("y1", String(y1));
-        el.setAttribute("x2", String(x2));
-        el.setAttribute("y2", String(y2));
-      }
-      for (const c of [ring, dot]) {
-        c.setAttribute("cx", String(x2));
-        c.setAttribute("cy", String(y2));
-      }
-      group.removeAttribute("visibility");
-    }
-  }, []);
-
-  const schedule = useCallback(() => {
-    if (!frame.current) frame.current = requestAnimationFrame(measure);
-  }, [measure]);
-
-  useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    schedule();
-    const resize = new ResizeObserver(schedule);
-    resize.observe(stage);
-    document.fonts?.ready.then(schedule);
-    const off = [rx.on("change", schedule), ry.on("change", schedule)];
-    return () => {
-      resize.disconnect();
-      off.forEach((f) => f());
-      cancelAnimationFrame(frame.current);
-      frame.current = 0;
-    };
-  }, [rx, ry, schedule]);
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!finePointer || reduced || !stageRef.current) return;
@@ -229,26 +170,6 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
           </div>
         </motion.div>
 
-        <motion.div className="pointer-events-none absolute inset-0 z-[2]" style={labels ? { opacity: labels } : undefined}>
-          <svg ref={svgRef} className={styles.leaders} aria-hidden="true">
-            {EXHIBITS.map(({ id }) => (
-              <g key={id} data-leader={id} visibility="hidden">
-                <line className={styles.halo} />
-                <line />
-                <circle className={styles.ring} r={6} />
-                <circle r={2.5} />
-              </g>
-            ))}
-          </svg>
-          {EXHIBITS.map(({ id, text, className }) => (
-            <div key={id} className={clsx(styles.label, "whitespace-nowrap", className)}>
-              <ExhibitLabel leader="right" leaderLength={28} as="span">
-                {text}
-              </ExhibitLabel>
-              <span data-exhibit={id} className="absolute top-1/2 right-0 size-px" />
-            </div>
-          ))}
-        </motion.div>
       </div>
       <figcaption className="relative z-10 mt-2 flex flex-wrap items-center justify-end gap-x-6 gap-y-1 pr-[calc(var(--bleed,0px)+2rem)]">
         <span className="text-ui text-faint">

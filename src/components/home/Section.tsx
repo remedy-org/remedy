@@ -22,8 +22,9 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
 
 /**
  * A homepage section on the one 12-column grid. No rules between sections: each one opens with a fade from
- * --section-lift into the page over 288px (the paper band is its own boundary), then 128px of air on laptops (72px on
- * phones). The heading takes columns 1 to 7 and the lead columns 8 to 12, bottom-aligned, so every section's text
+ * --section-lift into the page over 288px (the paper band is its own boundary: a large sheet lying on the room, inset
+ * from the screen's edges with rounded corners, never a full-bleed jump from graphite to cream), then 128px of air on
+ * laptops (72px on phones). The heading takes columns 1 to 7 and the lead columns 8 to 12, bottom-aligned, so every section's text
  * starts on the same two grid lines. The heading is 40px, two-tone, and focuses in.
  */
 export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className }: SectionProps) {
@@ -31,7 +32,7 @@ export function Section({ id, exhibit, title, muted, lead, tone = "dark", childr
   const paper = tone === "paper";
   const [letter, name] = exhibit.split(" · ");
   return (
-    <section id={id} aria-labelledby={headingId} className={clsx("scroll-mt-16", paper ? "bg-band text-ink" : styles.fade, className)}>
+    <section id={id} aria-labelledby={headingId} className={clsx("scroll-mt-16", paper ? styles.band : styles.fade, className)}>
       <div className="page py-18 lg:py-32">
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
           <div className="col-span-12 lg:col-span-7">

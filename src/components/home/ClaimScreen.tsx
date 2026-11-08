@@ -12,13 +12,6 @@ export const CHECKS = ["Live camera session", "Photo not seen before", "Verified
 /** phase: how many checks have passed; CHECKS.length + 1 means the payout has landed. */
 export const FINAL_PHASE = CHECKS.length + 1;
 
-// Where each exhibit points, as a share of the 4:3 camera frame. The photo is 2:3 portrait, cropped to 4:3 at
-// object-position 50% 75%, so the frame shows image heights 37.5%-87.5%.
-export const ANCHORS = {
-  cut: { x: 0.29, y: 0.5 },
-} as const;
-export type AnchorId = keyof typeof ANCHORS;
-
 const pop = { type: "spring", stiffness: 520, damping: 28 } as const;
 
 function Corner({ className }: { className: string }) {
@@ -53,7 +46,7 @@ function CheckRow({ label, state }: { label: string; state: "waiting" | "running
 export function ClaimScreen({ phase }: { phase: number }) {
   return (
     <div className="flex h-full flex-col text-text">
-      {/* Top bar, left-aligned so the exhibit leaders drop through the empty middle of the bar, not through text. */}
+      {/* Top bar: what is live on the left, the recall's number on the right. */}
       <div className="flex h-[3.4em] shrink-0 items-center gap-[1.4em] border-b border-line px-[1.6em]">
         <span className="flex items-center gap-[0.6em] font-mono text-[1.05em] tracking-[0.06em] text-pay uppercase">
           <span className="size-[0.6em] rounded-full bg-pay" />
@@ -92,14 +85,6 @@ export function ClaimScreen({ phase }: { phase: number }) {
             <span className="absolute bottom-[1.4em] left-[1.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] text-text uppercase">
               AI-made test photo
             </span>
-            {(Object.keys(ANCHORS) as AnchorId[]).map((id) => (
-              <span
-                key={id}
-                data-anchor={id}
-                className="absolute size-px"
-                style={{ left: `${ANCHORS[id].x * 100}%`, top: `${ANCHORS[id].y * 100}%` }}
-              />
-            ))}
           </div>
           <div className="flex flex-1 items-center justify-between">
             <span className="font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Photo 1 of 3</span>
@@ -137,7 +122,8 @@ export function ChecksPanel({ phase }: { phase: number }) {
           data-seq="hide"
           className={clsx(
             // Out over 120ms before the chip comes in (its delay below): the two messages never overprint.
-            "absolute inset-0 flex items-center rounded-[0.5em] border border-dashed border-line-strong px-[1em] text-[1.15em] text-faint transition-opacity duration-[120ms]",
+            // A live status, not a placeholder: a solid hairline and a readable muted label until the payout lands.
+            "absolute inset-0 flex items-center rounded-[0.5em] border border-line-2 bg-surface px-[1em] text-[1.25em] text-muted transition-opacity duration-[120ms]",
             paid && "opacity-0",
           )}
         >
