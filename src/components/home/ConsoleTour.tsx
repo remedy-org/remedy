@@ -156,7 +156,9 @@ function Toolbar() {
     <span aria-hidden="true" inert className="ml-auto flex shrink-0 items-center gap-3 select-none">
       <span className="text-ui whitespace-nowrap text-muted">{TOUR.toolbar.export}</span>
       <span className="relative flex h-9 w-44 items-center rounded-control border border-line bg-surface pr-9 pl-3 text-ui whitespace-nowrap text-faint xl:w-60">
-        {TOUR.toolbar.search}
+        {/* The console's placeholder whole where the box has room for it, its first words on a narrower window. */}
+        <span className="xl:hidden">{TOUR.toolbar.search.split(",")[0]}</span>
+        <span className="max-xl:hidden">{TOUR.toolbar.search}</span>
         <kbd className="absolute right-2 inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro text-faint">/</kbd>
       </span>
     </span>
