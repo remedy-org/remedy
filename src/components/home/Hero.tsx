@@ -62,7 +62,7 @@ export function Hero() {
       </div>
       <div className={clsx("mt-4", styles.focusIn)} style={line(3)}>
         {/* An owner with a real recall: the demo above is not her claim, and this is where hers is. */}
-        <p className="mt-1.5 text-ui text-pretty text-muted">Own a recalled product? Claim through the link on its recall notice.</p>
+        <p className="mt-1.5 max-w-[36ch] text-ui text-pretty text-muted">Own a recalled product? Claim through the link on its recall notice.</p>
       </div>
     </>
   );
