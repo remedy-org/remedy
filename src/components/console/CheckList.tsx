@@ -12,8 +12,16 @@ const word: Partial<Record<CheckState, string>> = {
   skipped: "Not run",
 };
 
-function Marker({ state }: { state: CheckState }) {
+function Marker({ state, quiet }: { state: CheckState; quiet?: boolean }) {
   const ring = "flex size-6 shrink-0 items-center justify-center rounded-full";
+  // A step that didn't finish (an import's draft), not a check that failed: a neutral cross, no colour.
+  if (quiet && (state === "reject" || state === "hold")) {
+    return (
+      <span className={clsx(ring, "bg-surface-2 text-muted")}>
+        <CrossIcon size={14} />
+      </span>
+    );
+  }
   switch (state) {
     case "pass":
       return (
@@ -52,12 +60,25 @@ function Marker({ state }: { state: CheckState }) {
 
 /** One row per check: its icon, its name, a word only for an exception, and what it found when there is something to
  * say. The result is also in each row's accessible name, so the icon never carries it alone. */
-export function CheckList({ steps, label, words, className }: { steps: CheckStep[]; label: string; words?: Partial<Record<CheckState, string>>; className?: string }) {
+export function CheckList({
+  steps,
+  label,
+  words,
+  quiet,
+  className,
+}: {
+  steps: CheckStep[];
+  label: string;
+  words?: Partial<Record<CheckState, string>>;
+  // Step ids drawn without colour when they didn't finish (quiet markers).
+  quiet?: string[];
+  className?: string;
+}) {
   return (
     <ol aria-label={label} className={clsx("flex flex-col", className)}>
       {steps.map((s) => (
         <li key={s.id} className="flex gap-3 border-b border-line py-3 last:border-b-0">
-          <Marker state={s.state} />
+          <Marker state={s.state} quiet={quiet?.includes(s.id)} />
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-3">
               <span className={clsx("text-ui font-medium", s.state === "waiting" ? "text-faint" : "text-text")}>{s.label}</span>

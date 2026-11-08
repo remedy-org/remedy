@@ -13,11 +13,13 @@ export interface ListEditorProps {
   min?: number;
   max?: number;
   errors?: Record<number, string>;
+  // A quieter line under an item: what to change, short of an error.
+  notes?: Record<number, string>;
   placeholder?: string;
 }
 
 /** An editable, numbered list of short lines: the labels a photo must show, or the proof steps. */
-export function ListEditor({ legend, help, items, onChange, addLabel, min = 0, max = 8, errors = {}, placeholder }: ListEditorProps) {
+export function ListEditor({ legend, help, items, onChange, addLabel, min = 0, max = 8, errors = {}, notes = {}, placeholder }: ListEditorProps) {
   const id = useId();
   const set = (i: number, v: string) => onChange(items.map((x, j) => (j === i ? v : x)));
   return (
@@ -55,7 +57,7 @@ export function ListEditor({ legend, help, items, onChange, addLabel, min = 0, m
                 <CrossIcon />
               </button>
             </div>
-            {errors[i] && <p className="pl-7 text-ui text-stop">{errors[i]}</p>}
+            {errors[i] ? <p className="pl-7 text-ui text-stop">{errors[i]}</p> : notes[i] && <p className="pl-7 text-ui text-muted">{notes[i]}</p>}
           </li>
         ))}
       </ol>

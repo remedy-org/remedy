@@ -31,8 +31,16 @@ const indexed = (fields: Record<string, string> | undefined, prefix: string) =>
  * half after confirming...". A notice that names no way to destroy the unit gets a question, never a value that reads
  * as already filled in. */
 export function proofHint(remedy: string): string {
-  const act = remedy.match(/\b(?:cut|destroy|puncture|discard|dispose of|throw away|remove)\b.*?(?=\s+(?:after|and|then|before|to|by)\b|[.,;]|$)/i)?.[0];
-  return act && act.length <= 60 ? act[0].toUpperCase() + act.slice(1) : "What makes this unit unusable";
+  const act = remedy.match(/\b(?:cut|destroy|puncture|remove)\b.*?(?=\s+(?:after|and|then|before|to|by)\b|[.,;]|$)/i)?.[0];
+  return act && act.length <= 60 ? act[0].toUpperCase() + act.slice(1) : "A step a photo can prove, e.g. the product cut in half";
+}
+
+// What no photo can prove: throwing a unit away, no longer using it, sending it back or getting in touch.
+const UNSEEN = /\b(?:discard|dispose|throw (?:it |them )?away|bin it|stop using|no longer use|return (?:it|them)|contact|call|email|register)\b/i;
+
+/** A proof step a photo can't show, said under the step with what to write instead; null when it reads as visible. */
+export function unseenStep(step: string): string | null {
+  return UNSEEN.test(step) ? "A photo can't show this. Write a step it can prove, e.g. the bristles cut off the handle." : null;
 }
 
 /** The drafted checks, editable, then the refund, auto-pay and claim link. Publishing makes /r/<slug> live. */
@@ -89,6 +97,7 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
           addLabel="Add a step"
           min={1}
           errors={indexed(f, "spec.proof_steps")}
+          notes={Object.fromEntries(spec.proof_steps.flatMap((step, i) => (unseenStep(step) ? [[i, unseenStep(step)!]] : [])))}
           placeholder={proofHint(notice.remedy)}
         />
         {f?.["spec.proof_steps"] && <p className="-mt-4 text-ui text-stop">{f["spec.proof_steps"]}</p>}

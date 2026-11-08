@@ -47,13 +47,28 @@ export function otherRemedy(remedy: string): string | null {
 const blankSpec = (n: CpscSummary): CheckSpec => ({
   recall: `${n.product || n.title} (CPSC ${n.id})`,
   source: n.url,
-  product: "",
+  // CPSC's own product name to start from: the company describes it further.
+  product: n.product,
   label_must_show: [],
   proof_steps: [""],
 });
 
-/** Paste a CPSC link, read the notice, let the model draft the checks, then edit and publish. */
-export function ImportRecall({ example }: { example: string }) {
+// The firm CPSC names, and the signed-in company, compared loosely: "Kikea Store" and "KIKEA STORE INC." are one.
+const firmKey = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\b(?:inc|llc|ltd|co|corp|corporation|company|store|stores)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+export const sameFirm = (a: string, b: string) => {
+  const [x, y] = [firmKey(a), firmKey(b)];
+  return !x || !y || x.includes(y) || y.includes(x);
+};
+
+/** Paste a CPSC link, read the notice, let the model draft the checks, then edit and publish. company: the signed-in
+ * company's name, to say so when CPSC names another firm. */
+export function ImportRecall({ example, company }: { example: string; company?: string | null }) {
   const router = useRouter();
   const [ref, setRef] = useState("");
   const [step, setStep] = useState<Step>({ at: "find" });
@@ -82,7 +97,7 @@ export function ImportRecall({ example }: { example: string }) {
 
   if (step.at === "edit") {
     return (
-      <Layout notice={step.notice}>
+      <Layout notice={step.notice} company={company}>
         <h2 ref={stage} tabIndex={-1} className="sr-only">
           Review the photo checks
         </h2>
@@ -100,7 +115,7 @@ export function ImportRecall({ example }: { example: string }) {
 
   if (step.at === "drafting" || step.at === "draft_failed") {
     return (
-      <Layout notice={step.notice}>
+      <Layout notice={step.notice} company={company}>
         <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
           <div>
             <h2 ref={stage} tabIndex={-1} className="text-body font-medium outline-none">
@@ -108,7 +123,7 @@ export function ImportRecall({ example }: { example: string }) {
             </h2>
             <p className="mt-1 text-ui text-muted">From the notice and its photos, Remedy writes what an owner&apos;s photos must show. You review every line before it goes live.</p>
           </div>
-          <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn't finish" }} />
+          <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn't finish" }} quiet={["draft"]} />
           {/* The failure in the card's own type, one line and its two ways on: no box inside the box. */}
           {step.at === "draft_failed" && (
             <div className="flex flex-col gap-3">
@@ -135,7 +150,7 @@ export function ImportRecall({ example }: { example: string }) {
     <div className="flex max-w-[40rem] flex-col gap-8">
       <form onSubmit={read} className="flex flex-col gap-6" noValidate>
         <Field
-          label="CPSC recall URL or number"
+          label="The cpsc.gov link or recall number"
           placeholder={example}
           value={ref}
           onChange={(e) => setRef(e.target.value)}
@@ -169,13 +184,15 @@ export function ImportRecall({ example }: { example: string }) {
           </Button>
         </div>
       </form>
-      {step.at === "reading" && <CheckList label="Import progress" steps={importSteps(step.at)} className="rounded-card border border-line bg-surface px-6 py-2" />}
+      {/* The three steps from the start, waiting, so the first screen says what happens next. */}
+      <CheckList label="Import progress" steps={importSteps(step.at)} className="rounded-card border border-line bg-surface px-6 py-2" />
     </div>
   );
 }
 
-function Layout({ notice, children }: { notice: CpscSummary; children: ReactNode }) {
+function Layout({ notice, company, children }: { notice: CpscSummary; company?: string | null; children: ReactNode }) {
   const other = otherRemedy(notice.remedy);
+  const otherFirm = company && notice.firm && !sameFirm(notice.firm, company) ? notice.firm : null;
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
       <div className="order-2 flex min-w-0 flex-col gap-6 lg:order-1">
@@ -184,6 +201,12 @@ function Layout({ notice, children }: { notice: CpscSummary; children: ReactNode
         {other && (
           <p className="border-l-2 border-hold pl-3 text-ui text-text">
             CPSC lists a {other} as this recall&apos;s remedy. Remedy pays refunds for destroyed units.
+          </p>
+        )}
+        {/* Quiet, not a stop: a company can run a recall CPSC files under its maker or its retailer. */}
+        {otherFirm && (
+          <p className="text-ui text-muted">
+            CPSC names {otherFirm} for this recall; you&apos;re signed in as {company}. Publish it only if your company runs this recall.
           </p>
         )}
         {children}
