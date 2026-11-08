@@ -475,3 +475,6 @@ export const RECEIPT_LIVE_MS = 10 * 60_000;
 
 /** How long the paid receipt takes to feed out of its slot; the PAID stamp lands after it, once PayPal says Received. */
 export const FEED_MS = 900;
+
+/** How long a paid result's passed checks take to fold into their one line, before the receipt starts to print. */
+export const FOLD_MS = 320;

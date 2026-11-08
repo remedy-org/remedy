@@ -3,6 +3,7 @@ import type { JudgeLogin } from "@/lib/demo/judgeLogin";
 import { sampleTitle } from "@/lib/demo/sampleCopy";
 import { DEMO_SAMPLES } from "@/lib/demo/samples";
 import type { Refusal } from "@/lib/limits";
+import { CAPTURE_SESSION_MINUTES } from "@/lib/ids";
 import type { Decision, Recall } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
@@ -78,7 +79,10 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   const error = authError && !signedInAs ? AUTH_ERRORS[authError] : null;
   const thing = thingOf(recall);
   const cut = cutInHalf(recall.spec);
-  const how = `${cut ? `Cut the ${thing} in half first` : `Destroy the ${thing} first, as the notice says`}, then photograph it with a code we give you, and PayPal pays you${recall.autoPay ? "" : ` once ${company} approves it`}.`;
+  // How fast, in the real terms: an auto-paid claim pays the moment its checks pass (seconds after the photo).
+  const how = `${cut ? `Cut the ${thing} in half` : `Destroy the ${thing} as the notice says`}, photograph it with the code we give you, and PayPal pays you ${recall.autoPay ? "in seconds" : `once ${company} approves it`}.`;
+  // What the tap commits to: the code's clock starts on the next screen.
+  const clock = `Your code is good for ${CAPTURE_SESSION_MINUTES} minutes, so ${cut ? `cut the ${thing} first` : `destroy the ${thing} first`}.`;
   // On the page, not in a box: the offer is the screen's headline, beside the recall it answers.
   const frame = "flex flex-col border-line max-lg:border-t max-lg:pt-8 lg:-ml-8 lg:self-stretch lg:border-l lg:pl-8";
 
@@ -101,7 +105,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <p className="text-body text-pretty text-muted">
           {demo ? (
             <>
-              Send four claims for the <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens> with a PayPal demo account. Remedy pays the genuine one and stops the three that aren&apos;t.
+              Send four claims for the <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens>. Remedy pays the genuine one and stops the three that aren&apos;t.
             </>
           ) : (
             how
@@ -147,6 +151,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
             {action}
           </Button>
         )}
+        {!demo && !refusal && !unverified && <p className="-mt-1 text-ui text-pretty text-muted">{clock}</p>}
         <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : PAYPAL_CONSENT}</p>
       </div>
     </section>

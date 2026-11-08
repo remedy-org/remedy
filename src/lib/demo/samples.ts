@@ -59,9 +59,11 @@ export const DEMO_SAMPLES: DemoSample[] = [
     id: "ai-no-session",
     title: "An uploaded photo",
     description: "A photo of the cut Kikea pillow, made outside this claim's camera session, with someone else's code on the tag. Remedy blocks it before the model sees it.",
-    photos: ["/demo/c08-1.jpg"],
+    // c08's photo with its tag repainted to H6N (a code outside the issued alphabet, as K7Q is), so the two fakes never
+    // carry the same code. The model never sees it: the camera check stops it first.
+    photos: ["/demo/web-1.jpg"],
     code: null,
-    tagReads: "K7Q",
+    tagReads: "H6N",
     liveSession: false,
     expect: "blocked",
     decidedBy: "session",

@@ -19,15 +19,14 @@ const REFUND_WORD: Partial<Record<CheckState, string>> = {
 };
 
 /**
- * The refund while the checks run: what it is, its state in one word, and the amount, once, between hairlines. Its top
- * hairline is the slot the receipt prints out of: the paid result draws the receipt from the same line. On a phone it
- * comes right under the checks, whose last hairline is that slot, so it draws only its own foot there.
+ * The refund while the checks run: what it is, its state in one word, and the amount, once. It comes right under the
+ * checks (on a laptop too, in the same column), whose last hairline is above it, so it draws only its own foot.
  */
 export function RefundRow({ amount, state, className }: { amount: { value: string; currency: string }; state: CheckState; className?: string }) {
   const word = REFUND_WORD[state] ?? "After the checks";
   const sent = state === "pass";
   return (
-    <div data-row="refund" className={clsx("flex items-center justify-between gap-4 border-b border-line-2 py-4 lg:[@media(min-height:601px)]:border-t", className)}>
+    <div data-row="refund" className={clsx("flex items-center justify-between gap-4 border-b border-line-2 py-4", className)}>
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="text-body text-text">Refund to your PayPal</span>
         <span key={word} className={clsx("text-ui", sent ? "text-text" : state === "hold" ? "text-hold" : "text-muted", styles.swap)}>
@@ -58,6 +57,8 @@ export interface ReceiptProps {
   took: number | null;
   /** Prints now: a claim decided under a minute ago. A reload, or a later visit, shows it at rest. */
   arrive: boolean;
+  /** Arriving: how long to wait before printing (the passed checks fold first). */
+  delay?: number;
   /** One quiet line at its foot. */
   foot?: ReactNode;
 }
@@ -67,10 +68,13 @@ export interface ReceiptProps {
  * stamp beside it, then PayPal's live status, who it went to, the claim, the PayPal payout id and when it left. It
  * prints out of the refund row's slot, and the stamp lands once it is out.
  */
-export function Receipt({ amount, recallId, claimId, account, payerTail, payoutId, sentAt, took, arrive, foot }: ReceiptProps) {
+export function Receipt({ amount, recallId, claimId, account, payerTail, payoutId, sentAt, took, arrive, delay = 0, foot }: ReceiptProps) {
   return (
-    // The slot's lip stays where the refund row's top hairline was; the paper feeds down out of it.
-    <div id="receipt" className={clsx("scroll-mt-24 border-line-2 lg:[@media(min-height:601px)]:border-t", arrive && styles.feed)} style={{ ["--feed-ms" as string]: `${FEED_MS}ms` }}>
+    // The slot is drawn: a dark lip a little wider than the paper, which feeds down out of it, so the paper's edge while
+    // it prints reads as the slot it comes from, never as a clipping.
+    <div id="receipt" className="relative scroll-mt-24">
+      <span aria-hidden="true" className="absolute -inset-x-2 -top-px z-10 h-[3px] rounded-full bg-text/75" />
+      <div className={clsx(arrive && styles.feed)} style={{ ["--feed-ms" as string]: `${FEED_MS}ms`, ["--feed-delay" as string]: `${delay}ms` }}>
       <div>
         <Paper
           variant="receipt"
@@ -90,7 +94,7 @@ export function Receipt({ amount, recallId, claimId, account, payerTail, payoutI
             </div>
             <div className="mt-3 flex items-center justify-between gap-4">
               <Money value={Number(amount.value)} currency={amount.currency} size="amount" className="text-ink" />
-              <PaidStamp arrive={arrive} />
+              <PaidStamp arrive={arrive} delay={delay} />
             </div>
             <dl className="mt-5 border-t border-dashed border-paper-line text-ui">
               <PayoutRow />
@@ -128,6 +132,7 @@ export function Receipt({ amount, recallId, claimId, account, payerTail, payoutI
             {foot && <div className="mt-4 text-ui text-ink-muted">{foot}</div>}
           </div>
         </Paper>
+      </div>
       </div>
     </div>
   );

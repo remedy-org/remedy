@@ -82,8 +82,10 @@ export function ClaimFlow(props: ClaimFlowProps) {
     };
     // From the camera, the photo just taken carries into the checking screen (a View Transition: the still and the
     // checking screen's photo share a name, PHOTO_TRANSITION) while the camera's dark gives way to the page, so the
-    // object never leaves the eye. Without the API, or for photos that came from another device, it simply swaps.
-    if (phase === "capture" && typeof document.startViewTransition === "function" && document.visibilityState === "visible") {
+    // object never leaves the eye. Without the API, under reduced motion (a crossfade would lay the camera over the
+    // checks), or for photos that came from another device, it simply swaps.
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (phase === "capture" && !still && typeof document.startViewTransition === "function" && document.visibilityState === "visible") {
       document.startViewTransition(() => flushSync(apply));
       return;
     }

@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { ArrowLeftIcon, Button } from "@/components/ui";
 import { canAskForReview, reviewAsked } from "@/lib/appeal";
 import type { DemoSample } from "@/lib/demo";
@@ -8,7 +8,7 @@ import type { Claim, Recall, Reason } from "@/lib/types";
 import { CheckList, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
 import { evidenceSummary } from "./EvidenceText";
-import { ClaimFrame, ClaimLayout, NARROW_ONLY, OutcomeHead, WIDE_TOP_RULE } from "./Exhibit";
+import { ClaimFrame, ClaimLayout, NARROW_ONLY, OutcomeHead, photoWidth } from "./Exhibit";
 import styles from "./flow.module.css";
 import { FocusTitle } from "./FocusTitle";
 import {
@@ -19,6 +19,7 @@ import {
   companyName,
   cutInHalf,
   decidingReasons,
+  FOLD_MS,
   handWrittenLabel,
   misreadOf,
   money,
@@ -30,6 +31,7 @@ import {
   secondsBetween,
   type CheckRow,
 } from "./model";
+import { PassedChecks } from "./PassedChecks";
 import { Receipt } from "./Receipt";
 import { SubmitButton } from "./SubmitButton";
 import { BringIntoView, PaidTitle, PayoutLive } from "./ReceiptLive";
@@ -95,6 +97,8 @@ interface Parts {
   meta?: boolean;
   /** The photos are on screen already (a repost's comparison): no thumbnail beside the headline. */
   photosShown?: boolean;
+  /** Paid: the five passed checks fold into one line, so the receipt and the way on share the headline's screen. */
+  fold?: { arrive: boolean };
 }
 
 /** A sentence as the page writes it: "We couldn't…" for the pipeline's "Couldn't…", and a full stop. */
@@ -129,6 +133,7 @@ export function Result(props: ResultProps) {
   const six = sixRows(rows, { ...options, explained: true });
   const summary = evidenceSummary(six, { decision: claim.decision, cut, unanswered: noModelAnswer(claim.decision, claim.reasons) });
   const parts = paid ? paidParts(props) : claim.decision === "held" ? heldParts(props, sixRows(rows, options)) : refusedParts(props);
+  const list = <CheckList rows={six} label={`Checks for this claim: ${summary}`} className={parts.fold && "border-t-0"} />;
   const page = (
     <ClaimLayout
       labelledBy="result-title"
@@ -136,9 +141,13 @@ export function Result(props: ResultProps) {
       checks={
         <>
           {parts.under && <div className={clsx(NARROW_ONLY, "flex flex-col gap-4")}>{parts.under}</div>}
-          <CheckList rows={six} label={`Checks for this claim: ${summary}`} />
-          {/* The claim's number under the checks on a laptop, so the checks sit right under the photo. */}
-          {parts.meta && <Meta id={claim.id} className={WIDE_BLOCK} />}
+          {parts.fold ? (
+            <PassedChecks count={six.filter((r) => r.key !== "refund").length} arrive={parts.fold.arrive}>
+              {list}
+            </PassedChecks>
+          ) : (
+            list
+          )}
         </>
       }
       photo={parts.side}
@@ -146,7 +155,7 @@ export function Result(props: ResultProps) {
         (parts.next || parts.meta) && (
           <>
             {parts.next}
-            {parts.meta && <Meta id={claim.id} className={NARROW_ONLY} />}
+            {parts.meta && <Meta id={claim.id} />}
           </>
         )
       }
@@ -165,8 +174,6 @@ export function Result(props: ResultProps) {
     </ClaimFrame>
   );
 }
-
-const WIDE_BLOCK = "hidden lg:[@media(min-height:601px)]:block";
 
 function Meta({ id, className }: { id: string; className?: string }) {
   return (
@@ -207,9 +214,12 @@ function paidParts({ claim, recall, photoUrls, againHref, sample, round, now, sa
       )}
     </>
   );
+  // Every check passed (a paid claim's always have): they fold into one line first, then the receipt prints.
+  const delay = arrive ? FOLD_MS : 0;
   return {
     title: <PaidTitle />,
     side: <ClaimPhotos urls={photoUrls} claimId={claim.id} />,
+    fold: { arrive },
     next: (
       <>
         <Receipt
@@ -222,12 +232,13 @@ function paidParts({ claim, recall, photoUrls, againHref, sample, round, now, sa
           sentAt={sentAt}
           took={secondsBetween(claim.events, "photos_received", "payout_sent")}
           arrive={arrive}
+          delay={delay}
           foot={foot}
         />
-        {arrive && <BringIntoView id="receipt" />}
+        {arrive && <BringIntoView id="receipt" title="result-title" after={delay} />}
         {/* The way on comes in once the receipt is out, so the paper is the only thing moving. */}
         {sample && (
-          <div className={clsx(arrive && styles.later)}>
+          <div className={clsx(arrive && styles.later)} style={{ ["--feed-delay" as string]: `${delay}ms` }}>
             <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} />
           </div>
         )}
@@ -270,8 +281,8 @@ function heldParts({ claim, recall, photoUrls, againHref, sample, round }: Resul
     meta: true,
     next: (
       <>
-        {/* A rule under the lead on a laptop; on a phone the checks' last hairline is right above it, so none of its own. */}
-        <p className={clsx("border-line text-body text-pretty text-muted", WIDE_TOP_RULE, "lg:[@media(min-height:601px)]:pt-5")}>{next}</p>
+        {/* Right under the checks, whose last hairline is above it: no rule of its own. */}
+        <p className="text-body text-pretty text-muted">{next}</p>
         {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} unanswered={unanswered} />}
       </>
     ),
@@ -307,8 +318,10 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
         </span>
       ),
     );
-  // A demo claim's photo whose tag is known: the tag itself, enlarged, under the two lines.
+  // A demo claim's photo whose tag is known: the tag itself, enlarged. On a laptop under the photo it was cut from; on a
+  // phone after the checks, the column's full width.
   const tag = sample && lead === "code" && seen.readable ? SAMPLE_COPY[sample.id]?.tag : undefined;
+  const tagRead = claim.verdict?.label.text_seen || seen.cells.map((c) => c.seen).join("");
   // What we saw and what's wrong, in one or two sentences: the deciding reason first, then any other, each once.
   const first = reviewed ? (
     `${asked ? "You asked for a review, and" : "Your claim was held for a person, and"} ${company} refused it: ${reasons[0]?.text ?? ""}`
@@ -365,8 +378,14 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
         {rest.length > 0 && ` ${rest.join(" ")}`}
       </>
     ),
-    // A laptop: the evidence where the photo was. A repost's photo beside the earlier one, or the photo whole.
-    side: pair ?? <ClaimPhotos urls={photoUrls} claimId={claim.id} />,
+    // A laptop: the evidence where the photo was. A repost's photo beside the earlier one, or the photo whole (and its
+    // tag enlarged under it, at the photo's width).
+    side: pair ?? (
+      <>
+        <ClaimPhotos urls={photoUrls} claimId={claim.id} />
+        {tag && <TagCrop src={tag} read={tagRead} style={{ width: photoWidth(2 / 3) }} />}
+      </>
+    ),
     under: pair,
     photosShown: Boolean(pair),
     meta: true,
@@ -378,7 +397,14 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
               {a}
             </p>
           ))}
-        {tag && photoUrls[0] && <TagCrop src={photoUrls[0]} tag={tag} read={`${claim.verdict?.label.text_seen ?? ""} ${seen.cells.map((c) => c.seen).join("")}`.trim()} />}
+        {tag && <TagCrop src={tag} read={tagRead} className={NARROW_ONLY} />}
+        {/* The demo's refusal answers the fair question, what a genuine owner who slipped can do, in the product's terms:
+            no button of its own, since the demo's next step is the next claim. */}
+        {sample && lead === "code" && (
+          <p className="text-ui text-pretty text-muted">
+            Wrote a character wrong? A new claim gives you a new code. When a tag is hard to read, you can ask a person at {company} to look at your photos, once.
+          </p>
+        )}
         {earlier && (
           <Button href={`/r/${recall.slug}/claim/${earlier}`} size="lg" block prefetch={false}>
             {duplicate?.earlier?.id === earlier ? "See your earlier claim" : `See your claim ${earlier}`}
@@ -439,22 +465,16 @@ function DuplicatePair({ claimId, photoUrls, earlier, n }: { claimId: string; ph
 }
 
 /**
- * The tag in the claim's photo, enlarged (about three times the photo beside the checks, at the photo file's own pixels),
- * so the code that stopped the claim can be read without squinting. A demo photo's tag is framed in its copy.
+ * The tag in the claim's photo, enlarged (about three times the photo beside the checks), so the code that stopped the
+ * claim can be read without squinting: cut from the photo's full-size original, never the photo blown up. The column's
+ * full width at 2:1; on a laptop the photo's width, under it.
  */
-function TagCrop({ src, tag, read }: { src: string; tag: { x: number; y: number; w: number }; read: string }) {
-  // 3:2, the tag's own shape; the demo photos are 2:3 portrait.
-  const W = 240;
-  const H = 160;
-  const width = W / tag.w;
-  const height = width * 1.5;
+function TagCrop({ src, read, className, style }: { src: string; read: string; className?: string; style?: CSSProperties }) {
   return (
-    <figure className="flex flex-col gap-2">
-      <div className="relative max-w-full overflow-hidden rounded-card bg-surface-2 ring-1 ring-line" style={{ width: W, height: H }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={`The tag in your photo, enlarged: it reads ${read}`} className="absolute max-w-none" style={{ width, height, left: W / 2 - tag.x * width, top: H / 2 - tag.y * height }} />
-      </div>
-      <figcaption className="text-micro text-muted">The tag in your photo, enlarged</figcaption>
+    <figure className={clsx("flex w-full max-w-full flex-col gap-2", className)} style={style}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={`Tag reading ${read}`} width={800} height={400} className="block aspect-[2/1] h-auto w-full rounded-card bg-surface-2 object-cover ring-1 ring-line" />
+      <figcaption className="text-ui text-muted">The tag in your photo, enlarged</figcaption>
     </figure>
   );
 }

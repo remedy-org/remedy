@@ -16,9 +16,10 @@ export interface FlowShellProps {
 }
 
 /**
- * The claim flow's frame: a quiet header, the steps on graphite with the film grain, a one-line footer. The header's and
- * footer's edges are the steps' own (the 960px frame), so the wordmark and every step share one left edge. No step
- * meter: each step's headline says what to do, and the header says what it is for.
+ * The claim flow's frame: a quiet header, the steps on graphite with the film grain, a one-line footer. The header and
+ * footer sit on the homepage's page frame, so the wordmark never moves from the homepage into the flow; the steps keep
+ * their one centred 960px column. No step meter: each step's headline says what to do, and the header says what it is
+ * for.
  */
 export function FlowShell({ children, context }: FlowShellProps) {
   return (
@@ -26,8 +27,9 @@ export function FlowShell({ children, context }: FlowShellProps) {
     <div className="grain flex min-h-dvh flex-col max-sm:pointer-coarse:has-[[data-mobile-cta]]:pb-16">
       {/* A phone's camera step is the whole screen, with its own bar: the site's header and footer step aside. */}
       <header className="border-b border-line max-sm:[body:has([data-camera])_&]:hidden">
+        {/* The homepage's frame, so the wordmark stays where it was when "Try a claim" brings an owner here. */}
         <div className="page">
-          <div className="mx-auto flex h-16 max-w-[60rem] items-center justify-between gap-4 [@media(max-height:600px)]:h-12">
+          <div className="flex h-16 items-center justify-between gap-4 [@media(max-height:600px)]:h-12">
             <div className="flex min-w-0 items-center gap-4">
               {/* No homepage prefetch: an owner from a recall email never opens it, and on a phone it costs data. */}
               <Wordmark href="/" prefetch={false} />
@@ -50,7 +52,7 @@ export function FlowShell({ children, context }: FlowShellProps) {
       <footer className="border-t border-line max-sm:[body:has([data-camera])_&]:hidden">
         {/* One line on the steps' own edges. No company name: a recall's company never reads as Remedy's customer here. */}
         <div className="page">
-          <p className="mx-auto flex max-w-[60rem] flex-wrap items-center gap-x-2 py-6 text-ui text-faint">
+          <p className="flex flex-wrap items-center gap-x-2 py-6 text-ui text-faint">
             <span>&copy; 2026 Remedy</span>
             <span aria-hidden="true">·</span>
             <Link href="/privacy" className={FOOT_LINK}>

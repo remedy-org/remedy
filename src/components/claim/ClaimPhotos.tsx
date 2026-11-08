@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
-import { evidenceWidth, PHOTO_TRANSITION } from "./Exhibit";
+import { PHOTO_TRANSITION, photoWidth } from "./Exhibit";
 
 // A photo's shape, remembered for this page's life: the camera knows it as it takes the photo, so the checking screen
 // and the result after it draw the photo at its own size from the first frame, and nothing reflows when it loads.
@@ -17,8 +17,9 @@ export function rememberAspect(claimId: string, n: number, width: number, height
 
 /**
  * A claim's photos as evidence, the same element from the checking screen to the result: the photo being looked at whole,
- * at its own shape (never cropped, never in a frame of empty bands), and, when there are several, every photo as an equal
- * thumbnail under it, the one shown outlined.
+ * at its own shape (never cropped, never in a frame of empty bands) and at the camera's size, so the shutter's photo moves
+ * into it without shrinking, and, when there are several, every photo as an equal thumbnail under it, the one shown
+ * outlined.
  */
 export function ClaimPhotos({ urls, claimId }: { urls: string[]; claimId: string }) {
   const [active, setActive] = useState(0);
@@ -54,7 +55,7 @@ export function ClaimPhotos({ urls, claimId }: { urls: string[]; claimId: string
         alt={`Photo ${active + 1} of claim ${claimId}`}
         onLoad={(e) => measure(e.currentTarget, active + 1)}
         // The first photo is the one the camera's still carries into this screen.
-        style={{ aspectRatio: aspect, width: evidenceWidth(aspect), viewTransitionName: active === 0 ? PHOTO_TRANSITION : undefined }}
+        style={{ aspectRatio: aspect, width: photoWidth(aspect), viewTransitionName: active === 0 ? PHOTO_TRANSITION : undefined }}
         className="block h-auto rounded-card bg-surface-2 object-contain ring-1 ring-line"
       />
       {urls.length > 1 && (

@@ -17,8 +17,9 @@ export interface CtaFirst {
  * on the first screen. The strip the bar covers counts as off screen. The bar is a visual shortcut: the step's button is
  * the real control, so assistive tech and the Tab order never meet it twice. The target is looked up by id when the bar
  * mounts, so a step that swaps its button for another keys its bar to match. `note`: a line the bar carries above the
- * button, such as time running out, which the step then doesn't repeat. `first`: until that element has been on screen,
- * the bar's quiet button brings it into view instead of acting.
+ * button, such as time running out, which the step then doesn't repeat. `first`: until all of that element has been on
+ * screen above the bar, the bar's quiet button brings it into view instead of acting. The bar's side padding is the
+ * page's gutter, so its button lines up with the step's own.
  */
 export function MobileCta({
   target,
@@ -46,7 +47,10 @@ export function MobileCta({
   useEffect(() => {
     const el = firstTarget && document.getElementById(firstTarget);
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setSeen(true), { rootMargin: "0px 0px -90px 0px" });
+    // Seen only once all of it has cleared the bar (the bar's real height): a heading peeking over the bar, with the
+    // email and password behind it, is not the login seen.
+    const cover = Math.ceil(bar.current?.offsetHeight || 90);
+    const io = new IntersectionObserver(([e]) => e.intersectionRatio >= 0.99 && setSeen(true), { rootMargin: `0px 0px -${cover}px 0px`, threshold: [0.99, 1] });
     io.observe(el);
     return () => io.disconnect();
   }, [firstTarget]);
@@ -66,7 +70,7 @@ export function MobileCta({
       data-mobile-cta=""
       data-cta-shown={show ? "" : undefined}
       className={clsx(
-        "fixed inset-x-0 bottom-0 z-30 hidden border-t border-line bg-bg px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-160 ease-snap max-sm:pointer-coarse:block",
+        "fixed inset-x-0 bottom-0 z-30 hidden border-t border-line bg-bg px-(--gutter) pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-160 ease-snap max-sm:pointer-coarse:block",
         show ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0",
       )}
     >

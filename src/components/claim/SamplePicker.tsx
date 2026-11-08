@@ -133,7 +133,7 @@ export function SamplePicker({
           {options.map(({ sample, locked }) => {
             const run = latest.get(sample.id);
             const outcome = outcomeOf(run?.decision);
-            const runId = resultOf(sample.id)?.id;
+            const runOf = resultOf(sample.id);
             const copy = SAMPLE_COPY[sample.id];
             const id = `sample-${sample.id}`;
             return (
@@ -178,7 +178,20 @@ export function SamplePicker({
                   {outcome && (
                     <span id={`${id}-outcome`} className="text-ui">
                       <span className={clsx("font-medium", outcome.tone)}>{outcome.word}</span>
-                      {runId && <span className="text-faint"> · <span className="font-mono">{runId}</span></span>}
+                      {/* The claim's number opens its result: a link inside the row (a label may hold one; a tap on it
+                          follows the link and leaves the choice alone). */}
+                      {runOf && (
+                        <span className="text-faint">
+                          {" · "}
+                          <Link
+                            href={runOf.href}
+                            aria-label={`Open claim ${runOf.id}`}
+                            className="relative font-mono text-text-2 underline decoration-line-strong underline-offset-4 hover:text-text hover:decoration-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                          >
+                            {runOf.id}
+                          </Link>
+                        </span>
+                      )}
                     </span>
                   )}
                 </span>
@@ -212,11 +225,15 @@ export function SamplePicker({
       </form>
 
       {scored.length > 0 && (
-        <form action="/api/claims/round" method="post">
+        // Says what it clears before it does: one press empties the list.
+        <form action="/api/claims/round" method="post" className="flex flex-wrap items-center gap-x-3">
           <input type="hidden" name="recall" value={slug} />
-          <SubmitButton variant="tertiary" size="sm" arrow={false}>
+          <SubmitButton variant="tertiary" size="sm" arrow={false} aria-describedby="start-over-note">
             Start over
           </SubmitButton>
+          <span id="start-over-note" className="text-ui text-faint">
+            Clears the {scored.length === 1 ? "claim" : `${scored.length} claims`} you sent
+          </span>
         </form>
       )}
       </div>
@@ -275,17 +292,24 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
           );
         })}
       </ul>
-      {/* The next thing worth seeing is the company's side of the same four claims; starting over is the quiet way back. */}
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-6">
-        <Button href={first ? `/console?claim=${first.id}` : "/console"} size="lg" prefetch={false} className="max-sm:w-full">
-          See these claims as {company}
-        </Button>
-        <form action="/api/claims/round" method="post">
-          <input type="hidden" name="recall" value={slug} />
-          <SubmitButton variant="tertiary" size="md" arrow={false}>
-            Start over
-          </SubmitButton>
-        </form>
+      {/* The next thing worth seeing is the company's side of the same four claims, said before the tap (it has its own
+          login); starting over is the quiet button beside it, so the two read as a pair. */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <Button href={first ? `/console?claim=${first.id}` : "/console"} size="lg" prefetch={false} aria-describedby="console-note">
+            See them as {company} sees them
+          </Button>
+          <form action="/api/claims/round" method="post" className="flex">
+            <input type="hidden" name="recall" value={slug} />
+            <SubmitButton variant="secondary" size="lg" arrow={false} aria-describedby="start-over-note" className="max-sm:w-full">
+              Start over
+            </SubmitButton>
+          </form>
+        </div>
+        <p className="text-ui text-faint">
+          <span id="console-note">Opens {company}&apos;s console, which has its own login.</span>{" "}
+          <span id="start-over-note">Start over clears these four.</span>
+        </p>
       </div>
     </section>
   );

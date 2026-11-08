@@ -104,5 +104,7 @@ export function CameraTopBar({ back, children }: { back: ReactNode; children?: R
   );
 }
 
-/** The top bar's back control: a 44px target, an arrow and the word. */
-export const CAMERA_BACK = "inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-ui font-medium text-[oklch(0.96_0.006_85)] focus-visible:outline-2 focus-visible:outline-focus";
+/** The top bar's back control: a 44px target, an arrow and the word; its focus ring drawn inside, so the card's rounded
+ * corner never clips it. */
+export const CAMERA_BACK =
+  "inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-ui font-medium text-[oklch(0.96_0.006_85)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus";

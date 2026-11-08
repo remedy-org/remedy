@@ -20,9 +20,10 @@ function Hazard({ text }: { text: string }) {
 
 /**
  * What was recalled and why: on a laptop the left column (the product, the CPSC line, the hazard, CPSC's photo, facts);
- * on a phone the CPSC line beside a small CPSC photo, and the hazard, so the owner can say "that's ours" while the offer
- * and its action stay above the fold. The price is the card's. `heading`: the brief's product name, an h2 under the
- * offer's h1 (read out only: on screen the product is the brief's small header).
+ * below 1024px (a phone, or a laptop at 200%) the compact brief: the CPSC line and who pays, CPSC's photo across the
+ * column (a tap opens it whole), and the hazard, so the owner can say "that's ours" while the offer and its action stay
+ * near the top. The price is the card's. `heading`: the brief's product name, an h2 under the offer's h1 (read out only:
+ * on screen the product is the brief's small header).
  */
 export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; heading?: "h1" | "h2" }) {
   const hazard = hazardLine(recall);
@@ -36,7 +37,10 @@ export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; headin
   const source = (
     <>
       CPSC <span className="font-mono">{recall.id}</span> · Recalled {day(recall.recallDate)}
-      <span className="max-sm:hidden"> · </span>
+      {/* Room either side of the dot, so cpsc.gov's focus ring never touches it. */}
+      <span aria-hidden="true" className="mx-2 max-sm:hidden">
+        ·
+      </span>
       <span className="max-sm:mt-0.5 max-sm:block">
         {/* A 44px target on the text's own box: the hit area is the ::after, so the focus ring hugs the word. */}
         <a href={recall.url} className="text-link text-text underline decoration-line-strong underline-offset-4 hover:decoration-text" rel="noopener noreferrer" target="_blank">
@@ -46,25 +50,25 @@ export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; headin
     </>
   );
   return (
-    <section aria-labelledby="recall-title" className="flex flex-col gap-4 sm:gap-6">
+    <section aria-labelledby="recall-title" className="flex flex-col gap-4 lg:gap-6">
       <Heading id="recall-title" className="sr-only">
         {recall.product}
       </Heading>
-      {/* Phones: CPSC's photo on its paper plate, small (a tap opens it whole), beside the line that proves it's a real
-          recall, and who is recalling it and paying: from an email link, an unknown name and a payment login otherwise
-          read as a phishing page. */}
-      <div className="flex items-center gap-3 sm:hidden">
-        {image && <RecallPhoto url={image.url} caption={image.caption || undefined} product={recall.product} />}
+      {/* Below 1024px: the line that proves it's a real recall, and who is recalling it and paying (from an email link, an
+          unknown name and a payment login otherwise read as a phishing page), then CPSC's photo across the column, big
+          enough to tell the three pillows apart, with "Enlarge" on it: a tap opens it whole. */}
+      <div className="flex flex-col gap-3 lg:hidden">
         <div className="flex min-w-0 flex-col gap-1">
           <p className="text-ui text-muted">{source}</p>
           <p className="text-ui text-muted">
             Sold by <span className="text-text">{company}</span>, which pays these refunds through Remedy.
           </p>
         </div>
+        {image && <RecallPhoto url={image.url} caption={image.caption || undefined} product={recall.product} />}
       </div>
 
-      {/* Tablets and laptops: the product as the brief's small header, so the offer beside it is the one headline. */}
-      <div className="flex flex-col gap-1 max-sm:hidden">
+      {/* Laptops: the product as the brief's small header, so the offer beside it is the one headline. */}
+      <div className="flex flex-col gap-1 max-lg:hidden">
         <p aria-hidden="true" className="text-body font-medium text-balance text-text">
           {recall.product}
         </p>
@@ -73,12 +77,12 @@ export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; headin
       {hazard && <Hazard text={hazard} />}
 
       {image && (
-        <figure className="flex flex-col gap-2 max-sm:hidden">
+        <figure className="flex flex-col gap-2 max-lg:hidden">
           {/* CPSC's own photo, hot-linked from cpsc.gov so it stays the official one. Multiplied into the plate, so its
               white studio background never reads as a slab brighter than the plate around it. The caption is its text. */}
           {/* The plate's height is fixed, so the page is laid out before cpsc.gov's photo arrives: nothing under it moves. */}
           {/* In the dark room the cream plate is dimmed a step, so it never outshines the page's one amber. */}
-          <div className="flex h-48 items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line brightness-[0.84] lg:h-80 in-data-[theme=light]:brightness-100">
+          <div className="flex h-80 items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line brightness-[0.84] in-data-[theme=light]:brightness-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image.url} alt={image.caption ? "" : `The recalled ${recall.product}`} fetchPriority="high" className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
           </div>
@@ -86,7 +90,7 @@ export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; headin
         </figure>
       )}
 
-      <dl className="grid grid-cols-2 border-t border-line text-ui max-sm:hidden">
+      <dl className="grid grid-cols-2 border-t border-line text-ui max-lg:hidden">
         <Fact label="Units recalled" value={recall.units || "Not stated"} />
         <Fact label="Sold by" value={company} />
       </dl>

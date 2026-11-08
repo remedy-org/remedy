@@ -12,12 +12,32 @@
     clip-path: inset(0 -48px -64px -48px);
   }
   .feed > * {
-    animation: feed var(--feed-ms, 900ms) var(--ease-out-quart) both;
+    animation: feed var(--feed-ms, 900ms) var(--ease-out-quart) var(--feed-delay, 0ms) both;
   }
 
-  /* What waits for the receipt to print, then comes in: the paid result's photo beside the checks. */
+  /* The receipt's shadow comes on once the paper is out: while it prints, nothing hangs below the slot but paper. */
+  .feed [data-paper] {
+    animation: shadow-in 240ms var(--ease-snap) calc(var(--feed-delay, 0ms) + var(--feed-ms, 900ms)) both;
+  }
+
+  /* What waits for the receipt to print, then comes in: the paid result's way on. */
   .later {
-    animation: swap 360ms var(--ease-snap) var(--feed-ms, 900ms) both;
+    animation: swap 360ms var(--ease-snap) calc(var(--feed-delay, 0ms) + var(--feed-ms, 900ms)) both;
+  }
+
+  /* A paid result's five passed checks folding into their one line (PassedChecks), and opening again on a tap. */
+  .fold {
+    interpolate-size: allow-keywords;
+  }
+  .fold::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size 320ms var(--ease-out-quart),
+      content-visibility 320ms allow-discrete;
+  }
+  .fold[open]::details-content {
+    block-size: auto;
   }
 
   /* The check running now: an arc turning on its ring. */
@@ -70,6 +90,12 @@
 @keyframes feed {
   from {
     transform: translateY(-100%);
+  }
+}
+
+@keyframes shadow-in {
+  from {
+    filter: none;
   }
 }
 

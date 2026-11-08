@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { Button, NoBreakHyphens } from "@/components/ui";
+import { Button } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
 import { CodeTag } from "./CodeTag";
 import { STEP_GRID, StepTitle } from "./Exhibit";
@@ -107,7 +107,7 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
             <p className="text-body text-pretty text-text">
               {written ? (
                 <>
-                  Photograph the tag with <NoBreakHyphens>{written}</NoBreakHyphens> and <span className="font-mono whitespace-nowrap">{code}</span>, and the {thing} {cut ? "cut in half" : "destroyed"}.
+                  Photograph the tag with <span className="font-mono whitespace-nowrap">{written}</span> and <span className="font-mono whitespace-nowrap">{code}</span>, and the {thing} {cut ? "cut in half" : "destroyed"}.
                 </>
               ) : (
                 <>

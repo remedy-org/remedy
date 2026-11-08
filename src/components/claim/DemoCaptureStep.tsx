@@ -126,9 +126,9 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
       ) : (
         <div data-theme="dark" data-camera="" className={clsx(CAMERA_FRAME, HUG, "lg:row-span-2")}>
           <CameraTopBar back={back}>
-            <span className="text-[oklch(0.96_0.006_85)]">
-              <span className="sr-only">Code </span>
-              <span className="font-mono">{code}</span>
+            {/* Said, not left bare: "Code" in the bar's muted sans, the code itself in mono. */}
+            <span className="text-[oklch(0.86_0.005_80)]">
+              Code <span className="font-mono text-[oklch(0.96_0.006_85)]">{code}</span>
             </span>
           </CameraTopBar>
           {/* The photo whole at its own shape (the tag is what the checks read), at the size the checking screen keeps. The

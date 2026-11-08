@@ -9,17 +9,17 @@ export const SAMPLE_PAYOUT_UPDATED = "No PayPal status: no payout was sent";
 
 // What the claim flow calls each of the four demo claims: an owner's situation, and one line of what is in the photo
 // (never the outcome: the checks say that). The same words in the picker, on the photo step and on a result's "Next
-// claim". `alt` says what the photo shows, for the camera's still. `tag` frames the tag in the photo (its centre and the
-// share of the photo's width to show, as fractions), for a refusal that turns on what the tag says.
-export const SAMPLE_COPY: Record<string, { title: string; line: string; alt: string; tag?: { x: number; y: number; w: number } }> = {
+// claim". `alt` says what the photo shows, for the camera's still. `tag` is the tag in the photo, cut from the photo's
+// full-size original (2:1, 800 x 400), for a refusal that turns on what the tag says.
+export const SAMPLE_COPY: Record<string, { title: string; line: string; alt: string; tag?: string }> = {
   genuine: { title: "A genuine claim", line: "The pillow cut in half, its tag written with this claim's code.", alt: "A pillow cut in half, its tag reading X-VESOLJE M4T" },
   "wrong-code": {
     title: "Wrong code on the tag",
     line: "A real cut pillow, but the tag carries a code this claim was never given.",
     alt: "A grey pillow cut in half, its tag reading X-VESOLJE K7Q",
-    tag: { x: 0.3125, y: 0.598, w: 0.3 },
+    tag: "/demo/c11-tag.jpg",
   },
-  "ai-no-session": { title: "Photo pulled from the web", line: "A picture of a cut pillow that was never taken in this claim's camera.", alt: "A floral pillow cut in half, a tag reading K7Q beside it" },
+  "ai-no-session": { title: "A photo from the web", line: "A picture of a cut pillow that was never taken in this claim's camera.", alt: "A floral pillow cut in half, a tag reading H6N beside it" },
   reposted: { title: "A photo used before", line: "The genuine claim's photo, sent again as a new claim.", alt: "A pillow cut in half, its tag reading X-VESOLJE M4T" },
 };
 

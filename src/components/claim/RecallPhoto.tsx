@@ -3,8 +3,9 @@
 import { useRef } from "react";
 
 /**
- * A phone's small CPSC photo beside the recall line, as a button: it opens the photo full width with CPSC's caption, so
- * an owner can say "that's ours" before logging in. Escape, the close button or a tap outside it closes it.
+ * CPSC's photo across the compact brief (below 1024px), on its paper plate, as a button: big enough to tell the three
+ * pillows apart, with "Enlarge" on it, and a tap opens it full width with CPSC's caption, so an owner can say "that's
+ * ours" before logging in. Escape, the close button or a tap outside it closes it.
  */
 export function RecallPhoto({ url, caption, product }: { url: string; caption?: string; product: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -14,11 +15,18 @@ export function RecallPhoto({ url, caption, product }: { url: string; caption?: 
         type="button"
         onClick={() => dialog.current?.showModal()}
         aria-haspopup="dialog"
-        aria-label={`See CPSC's photo of the recalled ${product}`}
-        className="shrink-0 rounded-control bg-paper p-1 ring-1 ring-line transition-shadow duration-160 hover:ring-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        aria-label={`Enlarge CPSC's photo of the recalled ${product}`}
+        className="group relative flex h-28 w-full items-center justify-center rounded-control bg-paper p-2 ring-1 ring-line brightness-[0.84] transition-shadow duration-160 hover:ring-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus in-data-[theme=light]:brightness-100"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="" width={64} height={64} className="block size-16 object-contain mix-blend-multiply" />
+        <img src={url} alt="" className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
+        <span aria-hidden="true" className="absolute right-1.5 bottom-1.5 inline-flex h-6 items-center gap-1 rounded-[4px] bg-paper px-1.5 text-micro font-medium text-ink ring-1 ring-paper-line">
+          <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" aria-hidden="true">
+            <circle cx="5.25" cy="5.25" r="3.5" />
+            <path d="M7.9 7.9l2.6 2.6" />
+          </svg>
+          Enlarge
+        </span>
       </button>
       <dialog
         ref={dialog}

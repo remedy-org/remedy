@@ -33,7 +33,7 @@ const SLUG = "kikea-x-vesolje";
 const ORIGIN = "http://127.0.0.1:3000";
 
 // What the model reads on each sample photo's tag.
-const TAGS: Record<string, string> = { "c02-1.jpg": "M4T", "c11-1.jpg": "K7Q", "c08-1.jpg": "R2D" };
+const TAGS: Record<string, string> = { "c02-1.jpg": "M4T", "c11-1.jpg": "K7Q", "web-1.jpg": "H6N" };
 let photoTags: [Buffer, string][];
 
 function verdictFor(tag: string): Verdict {

@@ -59,6 +59,17 @@ describe("sixRows", () => {
     expect(rows.find((r) => r.key === "session")!.detail).toBe("This photo came from outside the claim's camera.");
     const code = rows.find((r) => r.key === "code")!;
     expect(code.unrun).toBe(true);
-    expect(code.detail).toBe("Not run: an earlier check stopped the claim.");
+    expect(code.detail).toBe("Not run: this photo wasn't taken in this claim's camera.");
+  });
+
+  it("marks the wrong characters of a code the tag shows", () => {
+    const wrong: CheckRow[] = [
+      ...pre("pass"),
+      { id: "label", group: "model", label: "", state: "pass", quote: 'The tag reads "X-VESOLJE K7Q".' },
+      { id: "code", group: "model", label: "", state: "reject", quote: 'The code reads "K7Q".' },
+      { id: "step_1", group: "model", label: "", state: "pass" },
+    ];
+    const code = sixRows(wrong, { ...base, code: "K7P" }).find((r) => r.key === "code")!;
+    expect(code.read).toEqual({ label: "X-VESOLJE", code: "K7Q", off: [2] });
   });
 });

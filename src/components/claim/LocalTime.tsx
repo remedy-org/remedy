@@ -25,13 +25,13 @@ function dayWord(d: Date): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]},`;
 }
 
-/** The viewer's zone as their browser names it ("IST", "GMT+5:30", "PST"). */
-const zoneOf = (d: Date) => new Intl.DateTimeFormat(undefined, { timeZoneName: "short" }).formatToParts(d).find((p) => p.type === "timeZoneName")?.value ?? "";
+/** "3:40 am": the hour as a receipt prints it, never zero-padded or 24-hour. */
+const ampm = (d: Date) => `${d.getHours() % 12 || 12}:${two(d.getMinutes())} ${d.getHours() < 12 ? "am" : "pm"}`;
 
 /**
- * A claim's time in the viewer's own zone once the page has hydrated ("14:32", "7 Nov 2026, 14:32 IST"); on the server
- * and through hydration the UTC stamp the console prints, so the two never mismatch. A stamp names its zone, so the
- * receipt and the company's console (in UTC) are never read as a day apart. The UTC stamp stays in the title.
+ * A claim's time in the viewer's own zone once the page has hydrated ("14:32", or a receipt's "7 Nov 2026, 3:40 am", as
+ * any shop's receipt prints it, with no zone); on the server and through hydration the UTC stamp the console prints, so
+ * the two never mismatch. The UTC stamp stays in the title.
  */
 export function ClaimTime({ iso, format }: { iso: string; format: "clock" | "day" | "stamp" }) {
   const local = useLocal();
@@ -42,7 +42,7 @@ export function ClaimTime({ iso, format }: { iso: string; format: "clock" | "day
       ? hm
       : format === "day"
         ? `${dayWord(d)} ${hm}`
-        : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${hm} ${zoneOf(d)}`.trim()
+        : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${ampm(d)}`
     : format === "stamp"
       ? stamp(iso)
       : `${clock(iso).slice(0, 5)} UTC`;

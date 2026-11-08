@@ -4,7 +4,7 @@ import type { CheckState } from "@/components/ui";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
 import { EvidenceText } from "./EvidenceText";
 import styles from "./flow.module.css";
-import type { CheckRow } from "./model";
+import { codeDiff, type CheckRow } from "./model";
 
 /**
  * The claim's checks as the owner reads them: the five checks, then the refund, always the same six, on every claim. The
@@ -27,10 +27,17 @@ export interface SixRow {
   detail?: string;
   /** Why it passed, in one plain line. */
   because?: string;
-  /** What the photo check read on the tag: "X-VESOLJE · K7P". */
-  read?: string;
+  /** What the photo check read on the tag: the label and the code, and which of the code's characters are wrong. */
+  read?: TagRead;
   /** The PayPal payout id of a sent refund. */
   reference?: string;
+}
+
+/** What the photo check read on the tag ("X-VESOLJE", "K7Q"), and the code's characters that differ from the claim's. */
+export interface TagRead {
+  label?: string;
+  code?: string;
+  off?: number[];
 }
 
 const KEY_OF = (id: string): SixKey | null => {
@@ -129,7 +136,13 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
       const seen = read?.code ?? firstQuoted(own.find((r) => r.id === "code")?.quote);
       // The label as read often carries the code too ("X-VESOLJE K7Q"): said once.
       const label = (read?.label ?? firstQuoted(own.find((r) => r.id === "label")?.quote))?.replace(seen ?? "\u0000", "").trim();
-      if (label || seen) out.read = [label, seen].filter(Boolean).join(" · ");
+      if (label || seen) {
+        // A wrong code: the characters that differ are marked, as the headline marks them.
+        const diff = state === "reject" && seen ? codeDiff(code, seen) : null;
+        out.read = diff?.readable
+          ? { label: label || undefined, code: diff.cells.map((c) => c.seen).join(""), off: diff.cells.flatMap((c, i) => (c.same ? [] : [i])) }
+          : { label: label || undefined, code: seen || undefined };
+      }
       // What was read says it: the pipeline's sentence would only repeat it.
       if (out.read && state === "reject") out.detail = undefined;
       // Unsure: one plain line in Remedy's voice, not the pipeline's list. The photo check's words stay in the evidence.
@@ -157,8 +170,30 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
     }
     return out;
   });
+  // A check that never ran names the one that stopped the claim, so the order reads as meant: the camera, the photo and
+  // the account are checked together, and the photo check runs only on what they let through.
+  const stopper = six.find((r) => r.key !== "refund" && (r.state === "reject" || r.state === "blocked"))?.key;
+  const notRun = stopper ? stoppedBy(stopper, these) : null;
   // A demo claim's account check that didn't run for it (the claim stopped before it) still says why it never would.
-  return six.map((r) => (demo && r.key === "account" && r.state === "skipped" && !r.detail ? { ...r, unrun: false, detail: DEMO_ACCOUNT } : r));
+  return six.map((r) =>
+    demo && r.key === "account" && r.state === "skipped" && !r.detail ? { ...r, unrun: false, detail: DEMO_ACCOUNT } : r.unrun && r.key !== "refund" && notRun ? { ...r, detail: notRun } : r,
+  );
+}
+
+/** Why a later check never ran, by the check that stopped the claim. */
+function stoppedBy(key: SixKey, these: string): string {
+  switch (key) {
+    case "session":
+      return `Not run: ${these} wasn't taken in this claim's camera.`.replace("these photos wasn't", "these photos weren't");
+    case "duplicate":
+      return `Not run: ${these} ${these === "this photo" ? "was" : "were"} claimed before.`;
+    case "account":
+      return "Not run: this PayPal account has claimed already.";
+    case "code":
+      return "Not run: the tag doesn't match this claim.";
+    default:
+      return "Not run: an earlier check stopped the claim.";
+  }
 }
 
 /** A row's state as one word, for the screen reader's line and the list's hidden text. */
@@ -212,24 +247,43 @@ function Glyph({ state }: { state: CheckState }) {
   }
 }
 
+/**
+ * "Read on the tag: X-VESOLJE · K7Q": the tag's words in mono, the dot between them in the sans (a mono space is a wide
+ * gap), and on a wrong code the characters that differ underlined in red, as the headline marks them.
+ */
+function ReadOnTag({ read, className }: { read: TagRead; className: string }) {
+  return (
+    <>
+      Read on the tag:{" "}
+      <span className={clsx("whitespace-nowrap", className)}>
+        {read.label && <span className="font-mono">{read.label}</span>}
+        {read.label && read.code && "\u00a0·\u00a0"}
+        {read.code && (
+          <span className="font-mono">
+            {[...read.code].map((ch, i) =>
+              read.off?.includes(i) ? (
+                <span key={i} className="text-stop underline decoration-stop decoration-2 underline-offset-[5px]">
+                  {ch}
+                </span>
+              ) : (
+                ch
+              ),
+            )}
+          </span>
+        )}
+      </span>
+    </>
+  );
+}
+
 /** The one line under a check: "Checking" while it runs, then why it passed or what went wrong. */
 function Reason({ r }: { r: SixRow }) {
   if (r.state === "running") return <>Checking</>;
   if (r.state === "pass") {
-    if (r.read)
-      return (
-        <>
-          Read on the tag: <span className="font-mono whitespace-nowrap text-text-2">{r.read}</span>
-        </>
-      );
+    if (r.read) return <ReadOnTag read={r.read} className="text-text-2" />;
     return <>{r.because}</>;
   }
-  if (r.read && !r.detail)
-    return (
-      <>
-        Read on the tag: <span className="font-mono whitespace-nowrap text-text">{r.read}</span>
-      </>
-    );
+  if (r.read && !r.detail) return <ReadOnTag read={r.read} className="text-text" />;
   if (r.detail) return <EvidenceText>{r.detail}</EvidenceText>;
   return null;
 }
@@ -257,13 +311,14 @@ export function CheckList({ rows, label = "Checks", live, className }: { rows: S
               <Glyph state={r.state} />
             </span>
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className={clsx("text-body", quiet ? "text-faint" : r.state === "skipped" ? "text-muted" : "text-text")}>
+              {/* The failed check is the list's red thing, with its mark: its name in red, never just a 10px cross. */}
+              <span className={clsx("text-body", quiet ? "text-faint" : r.state === "skipped" ? "text-muted" : failed ? "text-stop" : "text-text")}>
                 {r.label}
                 <span className="sr-only">: {outcomeWord(r).toLowerCase()}</span>
               </span>
               {/* While the checks run every row keeps the line, so the list never changes height as rows land. */}
               {(live || reason) && (
-                <span key={`${r.state}-${r.read ?? ""}`} className={clsx("min-h-[1.45em] text-ui text-pretty", failed && !r.read ? "text-text" : r.unrun ? "text-faint" : "text-muted", live && reason && styles.swap)}>
+                <span key={`${r.state}-${r.read?.code ?? ""}`} className={clsx("min-h-[1.45em] text-ui text-pretty", failed && !r.read ? "text-text" : r.unrun ? "text-faint" : "text-muted", live && reason && styles.swap)}>
                   {reason}
                 </span>
               )}

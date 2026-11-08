@@ -189,9 +189,14 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
   if (done && settled && settled !== "failed") return <>{settled}</>;
   // Without the result in place (a preview, or it couldn't be had), the headline is the outcome, in the result's words.
   const outcome = done && (preview || settled === "failed");
+  // The last check has passed and only the refund is left: the headline says what is happening now.
+  const checksCount = all.filter((r) => r.key !== "refund").length;
+  const refunding = !done && view.decision === "paid" && shown >= checksCount;
   const title = sending
     ? `Sending your ${count > 1 ? "photos" : "photo"}`
-    : outcome
+    : refunding
+      ? "Sending your refund"
+      : outcome
       ? view.decision === "paid"
         ? PAID_TITLE.sent
         : view.decision === "held"
@@ -209,7 +214,7 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
   // One line for a screen reader, rewritten as each row lands (role="status", so it waits its turn): the check, its
   // outcome and its reason. The list itself stays quiet. Checks are named, never numbered: nothing on screen numbers them.
   const last = shown > 0 ? all[Math.min(shown, all.length) - 1] : null;
-  const checks = all.filter((r) => r.key !== "refund").length;
+  const checks = checksCount;
   const amount = money(refund);
   const spoken = outcome
     ? view.decision === "paid"
@@ -222,9 +227,9 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
       : "";
   const refundRow = rows.find((r) => r.key === "refund");
 
-  // Tall laptops: the headline and the refund on the left, the photo and the checks on the right. Phones and short
-  // screens: the headline with a thumbnail, the checks, then the refund. The result keeps this layout, so nothing moves
-  // when the outcome lands; a paid result prints the receipt out of the refund row.
+  // Tall laptops: the photo on the left, where the camera held it; the headline, the checks ticking under it and the
+  // refund on the right. Phones and short screens: the headline with a thumbnail, the checks, then the refund. The
+  // result keeps this layout, so the outcome lands in place; a paid result prints the receipt out of the refund row.
   return (
     <ClaimLayout
       labelledBy="checking-title"

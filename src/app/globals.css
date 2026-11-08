@@ -649,33 +649,50 @@
 }
 
 /*
- * The claim flow's one hand-off (ClaimFlow.tsx): the photo just taken shrinks from the camera into the checking screen's
- * photo (or a phone's thumbnail), and the camera's dark crossfades to the page. Reduced motion: a plain 120ms fade.
+ * The claim flow's one hand-off (ClaimFlow.tsx): the photo just taken moves from the camera into the checking screen's
+ * photo (on a laptop the same box, so it holds still; on a phone it shrinks into the thumbnail), and the camera's dark
+ * gives way to the page. Reduced motion skips the transition: the checking screen simply replaces the camera.
  */
 @media (prefers-reduced-motion: no-preference) {
   ::view-transition-group(claim-photo) {
     animation-duration: 360ms;
     animation-timing-function: var(--ease-out-quart);
   }
-  /* The old page goes quickly and the new one comes in a beat later, so two layouts never sit over each other. */
+  /* Both snapshots fill the one moving box, so a tall photo turning into a square thumbnail changes shape cleanly and
+     never leaves the old snapshot hanging out under the new one. */
+  ::view-transition-image-pair(claim-photo) {
+    overflow: clip;
+    border-radius: 6px;
+  }
+  ::view-transition-old(claim-photo),
+  ::view-transition-new(claim-photo) {
+    block-size: 100%;
+    object-fit: cover;
+    object-position: 50% 70%;
+  }
+  /* The old page is gone in 100ms and the new one comes in after it, so the camera's chrome never ghosts over the checks. */
   ::view-transition-old(root) {
-    animation-duration: 140ms;
+    animation-duration: 100ms;
     animation-timing-function: linear;
   }
   ::view-transition-new(root) {
     animation-duration: 240ms;
-    animation-delay: 80ms;
+    animation-delay: 60ms;
     animation-fill-mode: both;
     animation-timing-function: var(--ease-snap);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*) {
-    animation-duration: 0s;
+/* A phone's camera is the whole screen: under the two pages, its black eases to the page's ground over 200ms, so the
+   room goes from dark to light in one move rather than a flip. */
+@media (prefers-reduced-motion: no-preference) and (max-width: 639px) {
+  ::view-transition {
+    background: var(--bg);
+    animation: camera-to-page 200ms var(--ease-snap) both;
   }
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation-duration: 120ms;
+}
+@keyframes camera-to-page {
+  from {
+    background: oklch(0.12 0.004 75);
   }
 }
 

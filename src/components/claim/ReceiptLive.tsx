@@ -98,23 +98,28 @@ export function PaidTitle() {
 }
 
 /**
- * The receipt as it starts to print: when its paper would end under the fold (a phone, where it prints under the
- * checks), the slot is brought up near the top first, so the whole receipt comes out on screen. Once. Focus stays on the
- * result's heading, as on every result, so a screen reader reads the headline and the checks before the receipt; the
- * polite line says when PayPal confirms it.
+ * The receipt as it starts to print (`after` ms in, once the passed checks have folded): when its paper would end under
+ * the fold, the page scrolls toward it so more of it comes out on screen, but never past the result's headline, which
+ * has focus: focus no one can see is lost, and the headline is the news. Once. A screen reader reads the headline and
+ * the checks before the receipt; the polite line says when PayPal confirms it.
  */
-export function BringIntoView({ id }: { id: string }) {
+export function BringIntoView({ id, title, after = 0 }: { id: string; title: string; after?: number }) {
   useEffect(() => {
     const t = setTimeout(() => {
       const el = document.getElementById(id);
       const paper = el?.querySelector<HTMLElement>("[data-paper]");
       if (!el || !paper) return;
-      if (el.getBoundingClientRect().top + paper.offsetHeight <= window.innerHeight) return;
+      const top = el.getBoundingClientRect().top;
+      if (top + paper.offsetHeight <= window.innerHeight) return;
+      const head = document.getElementById(title);
+      const cap = head ? head.getBoundingClientRect().top + window.scrollY - 16 : Infinity;
+      const to = Math.min(top + window.scrollY - 96, cap);
+      if (to <= window.scrollY) return;
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      el.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
-    }, 80);
+      window.scrollTo({ top: to, behavior: reduced ? "auto" : "smooth" });
+    }, after + 80);
     return () => clearTimeout(t);
-  }, [id]);
+  }, [id, title, after]);
   return null;
 }
 
@@ -123,11 +128,11 @@ export function BringIntoView({ id }: { id: string }) {
  * argues with itself and the stamp is the second moment. Its room is kept until then, so the amount never moves. On a
  * receipt printing now with PayPal already done, it lands as the paper finishes feeding out.
  */
-export function PaidStamp({ arrive }: { arrive: boolean }) {
+export function PaidStamp({ arrive, delay = 0 }: { arrive: boolean; delay?: number }) {
   const { status, changed } = useContext(PayoutContext);
   if (!received(status)) return <span aria-hidden="true" className="h-8 w-[4.75rem] shrink-0" />;
   return (
-    <Stamp tone="pay" land={changed ? 0 : arrive ? FEED_MS : undefined} className="mr-1">
+    <Stamp tone="pay" land={changed ? 0 : arrive ? delay + FEED_MS : undefined} className="mr-1">
       Paid
     </Stamp>
   );
@@ -143,7 +148,7 @@ export function PayoutRow() {
   const words = payoutWords(status);
   return (
     <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 border-b border-dashed border-paper-line py-2.5">
-      <dt className="text-ink-muted">PayPal</dt>
+      <dt className="text-ink-muted">Status</dt>
       <dd key={words.label} className={clsx("text-right font-medium text-ink", changed && styles.swap)}>
         {words.label}
       </dd>
