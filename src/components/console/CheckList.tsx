@@ -1,5 +1,7 @@
+"use client";
+
 import clsx from "clsx";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BlockIcon, CheckIcon, CrossIcon, HoldIcon, type CheckState, type CheckStep } from "@/components/ui";
 
 // The console's check rows: the icon says the result, and a word appears only where a check didn't pass.
@@ -53,6 +55,10 @@ function Marker({ state, quiet }: { state: CheckState; quiet?: boolean }) {
           <span className="h-px w-2 bg-muted" />
         </span>
       );
+    case "running":
+      // The step happening now: a ring whose brass arc turns once every 1.2 s (still under reduced motion), so a wait
+      // of seconds never reads as a frozen screen.
+      return <span aria-hidden="true" className={clsx(ring, "border-2 border-line border-t-accent motion-safe:animate-spin motion-safe:[animation-duration:1.2s]")} />;
     default:
       return <span className={clsx(ring, "border border-line-strong")} />;
   }
@@ -82,13 +88,38 @@ export function CheckList({
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-3">
               <span className={clsx("text-ui font-medium", s.state === "waiting" ? "text-faint" : "text-text")}>{s.label}</span>
-              {(words?.[s.state] ?? word[s.state]) ? <span className="shrink-0 text-micro text-muted">{words?.[s.state] ?? word[s.state]}</span> : <span className="sr-only">Passed</span>}
+              {(words?.[s.state] ?? word[s.state]) ? (
+                <span className="shrink-0 text-micro text-muted">
+                  {words?.[s.state] ?? word[s.state]}
+                  {s.state === "running" && <Elapsed key={s.id} />}
+                </span>
+              ) : (
+                <span className="sr-only">Passed</span>
+              )}
             </div>
             {s.detail && <Detail>{s.detail}</Detail>}
           </div>
         </li>
       ))}
     </ol>
+  );
+}
+
+/** The seconds a running step has taken, from 1 s: "· 8 s", the figure in mono and the unit in the sans, as the console
+ * prints a span. Out of the accessibility tree: a clock read out every second is noise. */
+function Elapsed() {
+  const [sec, setSec] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setSec((n) => n + 1), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  if (!sec) return null;
+  return (
+    <span aria-hidden="true">
+      {" · "}
+      <span className="font-mono tabular-nums">{sec}</span>
+      <span className="text-faint">{"\u202f"}s</span>
+    </span>
   );
 }
 

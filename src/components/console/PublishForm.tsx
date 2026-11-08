@@ -78,7 +78,7 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
         </div>
 
         <Field label="The product" error={f?.["spec.product"]}>
-          {(c) => <Textarea {...c} rows={3} className="field-sizing-content" value={spec.product} onChange={(e) => setSpec({ ...spec, product: e.target.value })} />}
+          {(c) => <Textarea {...c} rows={3} className="min-h-11 resize-none field-sizing-content" value={spec.product} onChange={(e) => setSpec({ ...spec, product: e.target.value })} />}
         </Field>
 
         <ListEditor
@@ -104,7 +104,7 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
 
         {spec.note !== undefined && (
           <Field label="Note from the draft" hint="Reviewers only">
-            {(c) => <Textarea {...c} rows={2} className="field-sizing-content" value={spec.note ?? ""} onChange={(e) => setSpec({ ...spec, note: e.target.value })} />}
+            {(c) => <Textarea {...c} rows={2} className="min-h-11 resize-none field-sizing-content" value={spec.note ?? ""} onChange={(e) => setSpec({ ...spec, note: e.target.value })} />}
           </Field>
         )}
       </section>

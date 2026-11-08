@@ -45,7 +45,7 @@ export function ListEditor({ legend, help, items, onChange, addLabel, min = 0, m
                 placeholder={placeholder}
                 aria-label={`${legend}, item ${i + 1}`}
                 onChange={(e) => set(i, e.target.value)}
-                className="min-h-11 flex-1 resize-y field-sizing-content"
+                className="min-h-11 flex-1 resize-none field-sizing-content"
               />
               <button
                 type="button"
