@@ -20,7 +20,7 @@ function Keyboard() {
         const total = row.keys.reduce((a, b) => a + b, 0) + GAP * (row.keys.length - 1);
         let x = (580 - total) / 2;
         return row.keys.map((w, k) => {
-          const rect = <rect key={`${r}-${k}`} x={x} y={row.y} width={w} height={row.h} rx={4} fill="var(--key)" stroke="oklch(1 0 0 / 0.05)" />;
+          const rect = <rect key={`${r}-${k}`} x={x} y={row.y} width={w} height={row.h} rx={4} fill="var(--key)" stroke="var(--key-edge)" />;
           x += w + GAP;
           return rect;
         });

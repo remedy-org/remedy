@@ -29,7 +29,7 @@ export function useTheme(): Theme {
 }
 
 /**
- * A 36px icon button (44px hit area) that switches the app between the dark brand theme and the light theme. The
+ * A 36px framed icon button (44px hit area) that switches the app between the dark brand theme and the light theme. The
  * glyph is a half-lit disc that turns over with the theme; its angle follows <html data-theme> in CSS, so it is right
  * from the first paint.
  */
@@ -43,8 +43,10 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label={`Switch to ${next} theme`}
       title={`Switch to ${next} theme`}
       className={clsx(
-        "relative inline-flex size-9 shrink-0 items-center justify-center rounded-control text-muted",
-        "transition-[background-color,color,transform] duration-160 ease-snap hover:bg-surface-2 hover:text-text active:translate-y-px",
+        // A framed key at rest (a hairline border, so forced colours keeps it too), so on a phone it reads as a button,
+        // not a glyph; hover fills it, and a press fills it a step further and sinks, which shows on touch too.
+        "relative inline-flex size-9 shrink-0 items-center justify-center rounded-button border border-line-2 text-muted",
+        "transition-[background-color,color,scale] duration-160 ease-snap hover:bg-surface-2 hover:text-text active:scale-[0.96] active:bg-surface-3 active:text-text active:duration-75",
         "after:absolute after:-inset-1 after:content-['']",
         className,
       )}

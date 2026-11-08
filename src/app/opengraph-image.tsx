@@ -16,7 +16,7 @@ const FAINT = "#9a9895"; // --faint
 const LINE = "rgba(248,241,227,0.08)"; // --line
 const SCRIM = "rgba(13,12,10,0.78)"; // --photo-scrim
 const PAPER = "#efebe1"; // --paper: the mark's tag
-const ACCENT = "#f3aa40"; // --accent: the mark's stub, the only amber on the card
+const ACCENT = "#ebb75b"; // --accent (brass): the mark's stub, the only amber on the card
 
 // The Claim Check mark, the same 21 x 14 geometry as ui/Wordmark.tsx: the tag (proof) and the torn amber stub (refund).
 const MARK_TAG = "M0 3L3 0H11.15A1.6 1.6 0 0 0 12 1.413V12.587A1.6 1.6 0 0 0 11.15 14H3L0 11ZM5 7A1.25 1.25 0 1 0 2.5 7A1.25 1.25 0 1 0 5 7Z";

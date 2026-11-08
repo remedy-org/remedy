@@ -216,3 +216,25 @@
     translate: 0 8px;
   }
 }
+
+/*
+ * The Problem's paper band: a large sheet of card stock lying on the room, inset from the screen's edges, rounded and
+ * shadowed like the other paper, so the page never jumps from graphite straight to a full-bleed cream band. The sheet
+ * is a layer behind the content, so the content keeps the page frame's grid.
+ */
+.band {
+  position: relative;
+  isolation: isolate;
+  color: var(--ink);
+}
+
+.band::before {
+  content: "";
+  position: absolute;
+  inset: 0 clamp(8px, 1.1vw, 16px);
+  z-index: -1;
+  border-radius: 16px;
+  background: var(--band);
+  box-shadow: var(--paper-shadow);
+  pointer-events: none;
+}

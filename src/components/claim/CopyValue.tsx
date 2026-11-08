@@ -25,7 +25,8 @@ export function CopyValue({ label }: { label: string }) {
         type="button"
         onClick={(e) => copy(e.currentTarget)}
         aria-label={copied === "yes" ? `${label} copied` : `Copy the ${label}`}
-        className="relative inline-flex h-8 min-w-[4.5rem] shrink-0 items-center justify-center gap-1.5 rounded-control px-2.5 text-ui font-medium text-text shadow-[inset_0_0_0_1px_var(--line-2)] transition-colors duration-160 after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        // Text-style, not a raised key: a helper beside the value, never competing with the page's one action.
+        className="relative inline-flex h-8 min-w-[4.5rem] shrink-0 items-center justify-center gap-1.5 rounded-button px-2.5 text-ui font-medium text-muted transition-[background-color,color,scale] duration-160 ease-snap after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[''] hover:bg-surface-3 hover:text-text active:scale-[0.96] active:bg-surface-3 active:text-text active:duration-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         {copied === "yes" ? (
           <>

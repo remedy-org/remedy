@@ -2,16 +2,16 @@
 
 import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { CrossIcon } from "@/components/ui";
+import { Button, CrossIcon } from "@/components/ui";
 
-/** FlowShell's header slot beside the SANDBOX DEMO chip, where the pill docks so it never floats over a step. */
+/** FlowShell's header slot beside the SANDBOX DEMO status, where the button docks so it never floats over a step. */
 export const JUDGES_DOCK_ID = "judges-dock";
 
 const noop = () => () => {};
 
 /**
- * Below 1200px the judges' notes live behind a 32px pill in the header that opens them as a bottom sheet (a modal
- * dialog). The pill renders into the header's slot once the page has hydrated.
+ * Below 1200px the judges' notes live behind a quiet 36px button in the header (a button's shape, not a status pill's)
+ * that opens them as a bottom sheet (a modal dialog). It renders into the header's slot once the page has hydrated.
  */
 export function JudgesSheet({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -23,8 +23,9 @@ export function JudgesSheet({ children }: { children: ReactNode }) {
     () => null,
   );
   const pill = (
-    <button
-      type="button"
+    <Button
+      variant="secondary"
+      size="sm"
       onClick={() => {
         ref.current?.showModal();
         setOpen(true);
@@ -32,12 +33,11 @@ export function JudgesSheet({ children }: { children: ReactNode }) {
       aria-haspopup="dialog"
       aria-expanded={open}
       aria-controls={id}
-      className="micro inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 whitespace-nowrap text-text transition-colors duration-160 after:absolute after:-inset-y-1.5 after:inset-x-0 after:content-[''] hover:bg-surface-2 relative"
+      className="shrink-0 px-3"
     >
-      <span className="size-1.5 rounded-full bg-faint" aria-hidden="true" />
       <span className="max-[399px]:hidden">For judges</span>
       <span className="min-[400px]:hidden">Judges</span>
-    </button>
+    </Button>
   );
   return (
     <>

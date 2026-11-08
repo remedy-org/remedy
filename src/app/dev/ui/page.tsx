@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { EASE, Money, Paper, Stamp, ThemeToggle, Wordmark } from "@/components/ui";
+import { Button, EASE, Money, Paper, Stamp, ThemeToggle, Wordmark } from "@/components/ui";
 import { StampReplay } from "./StampReplay";
 
 // /dev/ui: the foundation pieces from DESIGN.md (Money, Paper, Stamp, the type scale, the mark), for screenshots and
@@ -289,6 +289,32 @@ export default function DevUiPage() {
                   <code className="font-mono text-ui text-text">{CSS_EASE[k].token}</code>
                   <span className="text-ui text-faint">{CSS_EASE[k].use}</span>
                 </span>
+              </li>
+            ))}
+          </ul>
+        </Block>
+
+        <Block n="07" title="Buttons" note="Radius grows with height: 8px at 36 and 44px, 10px at 48px. Hover, press (98%, deeper) and Tab for the focus ring.">
+          {(["primary", "secondary", "tertiary"] as const).map((variant) => (
+            <Spec key={variant} name={`variant="${variant}"`} detail="sm 36px, md 44px, lg 48px; then disabled and pending.">
+              <div className="flex flex-wrap items-center gap-4" data-buttons={variant}>
+                <Button variant={variant} size="sm">Try a claim</Button>
+                <Button variant={variant} size="md">Log in with PayPal</Button>
+                <Button variant={variant} size="lg">Try a claim with sample photos</Button>
+                <Button variant={variant} size="md" disabled>Disabled</Button>
+                <Button variant={variant} size="md" pending pendingLabel="Sending…">Send</Button>
+              </div>
+            </Spec>
+          ))}
+        </Block>
+
+        <Block n="08" title="Nav links" note=".nav-link: a 32px --surface-2 chip on hover and focus (a --line-2 hairline in light), 44px hit area.">
+          <ul className="-ml-2.5 flex flex-wrap items-center gap-1" data-nav-demo>
+            {["How it works", "Problem", "Fraud checks", "Results", "For companies", "Company sign in"].map((label) => (
+              <li key={label}>
+                <a href="#" className="nav-link">
+                  {label}
+                </a>
               </li>
             ))}
           </ul>

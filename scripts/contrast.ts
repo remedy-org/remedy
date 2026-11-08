@@ -99,9 +99,9 @@ type Pair = { fg: string; bg: string; min: number; note?: string };
 // A colour spec: a token, a token at an alpha ("--pay-ink@0.85"), "white", or a stack painted bottom to top
 // ("--surface+--pay-soft").
 function layer(tokens: Record<string, string>, part: string): RGBA {
-  // "white": a pure-white photo, the worst case under the photo label's scrim.
-  if (part === "white") return { r: 1, g: 1, b: 1, a: 1 };
   const [name, alpha] = part.split("@");
+  // "white": a pure-white photo, the worst case under the photo label's scrim; "white@0.22", the primary's hover sheen.
+  if (name === "white") return { r: 1, g: 1, b: 1, a: alpha ? Number(alpha) : 1 };
   const c = resolveColor(tokens, need(tokens, name));
   return alpha ? { ...c, a: c.a * Number(alpha) } : c;
 }
@@ -118,6 +118,12 @@ const app: Pair[] = [
   ...["--accent-text"].flatMap((fg) => surfaces.map((bg) => ({ fg, bg, min: 4.5 }))),
   { fg: "--accent-ink", bg: "--accent", min: 4.5, note: "primary button" },
   { fg: "--accent-ink", bg: "--accent-hover", min: 4.5, note: "primary button, hover" },
+  // The hover sheen (.btn-primary::before) at its brightest, the top centre: white at 22% over the hover fill.
+  { fg: "--accent-ink", bg: "--accent-hover+white@0.22", min: 4.5, note: "primary button, hover sheen" },
+  { fg: "--accent-ink", bg: "--accent-press", min: 4.5, note: "primary button, pressed" },
+  // The primary's 1px rim is its edge against the page (in light, brass alone is under 2:1 there), and the mark's rim.
+  ...["--bg", "--surface", "--surface-2"].map((bg) => ({ fg: "--accent-edge", bg, min: 3, note: "primary button's rim" })),
+  { fg: "--accent", bg: "--bg", min: 0, note: "info: brass fill against the page" },
   ...["--pay", "--hold", "--stop"].flatMap((s) => [
     ...surfaces.slice(0, 3).map((bg) => ({ fg: s, bg, min: 4.5 })),
     { fg: s, bg: `--bg+${s}-soft`, min: 4.5, note: "status pill on the page" },

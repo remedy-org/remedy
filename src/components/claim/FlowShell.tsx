@@ -26,7 +26,10 @@ export function FlowShell({ children, demo, sandbox, company }: FlowShellProps) 
             {/* Below 360px the demo's header holds the mark, SANDBOX, the judges' pill and the theme toggle: the name gives way. */}
             <Wordmark href="/" nameClassName={demo ? "max-[359px]:sr-only" : undefined} />
             {(demo || sandbox) && (
-              <span className="micro inline-flex h-6 shrink-0 items-center rounded-control border border-line-strong px-2 whitespace-nowrap text-muted">
+              // A status, so a status's shape (DESIGN.md: pills are verdicts and states): a soft fill and a hollow dot, no
+              // border, never mistaken for the judges' button beside it.
+              <span className="micro inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-2.5 whitespace-nowrap text-muted">
+                <span className="size-1.5 rounded-full border border-faint" aria-hidden="true" />
                 Sandbox<span className={demo ? "max-[399px]:hidden" : "hidden"}>&nbsp;demo</span>
               </span>
             )}

@@ -147,11 +147,11 @@ function useTryInView() {
 
 // The link's box is the chip: 32px tall and 8px past the text each side (the negative margin keeps the row where it
 // was), with a 44px hit area around it, so the focus ring and the current chip are one shape. The current link is
-// --text on --surface-2; only the chip's opacity moves, and it is never amber.
+// --text on --surface-2 (with the light theme's --line-2 hairline); only the chip's opacity moves, and it is never amber.
 const linkClass = clsx(
   "relative isolate -mx-2 inline-flex h-8 items-center rounded-control px-2 text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text",
   "after:absolute after:inset-x-0 after:-inset-y-1.5",
-  "before:absolute before:inset-0 before:-z-10 before:rounded-control before:bg-surface-2 before:opacity-0 before:transition-opacity before:duration-160 before:ease-snap",
+  "before:absolute before:inset-0 before:-z-10 before:rounded-control before:bg-surface-2 before:shadow-(--nav-chip-ring) before:opacity-0 before:transition-opacity before:duration-160 before:ease-snap",
   "aria-[current=location]:text-text aria-[current=location]:before:opacity-100",
 );
 

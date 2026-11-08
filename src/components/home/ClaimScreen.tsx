@@ -12,13 +12,6 @@ export const CHECKS = ["Live camera session", "Photo not seen before", "Verified
 /** phase: how many checks have passed; CHECKS.length + 1 means the payout has landed. */
 export const FINAL_PHASE = CHECKS.length + 1;
 
-// Where each exhibit points, as a share of the 4:3 camera frame. The photo is 2:3 portrait, cropped to 4:3 at
-// object-position 50% 75%, so the frame shows image heights 37.5%-87.5%.
-export const ANCHORS = {
-  cut: { x: 0.29, y: 0.5 },
-} as const;
-export type AnchorId = keyof typeof ANCHORS;
-
 const pop = { type: "spring", stiffness: 520, damping: 28 } as const;
 
 function Corner({ className }: { className: string }) {
@@ -27,7 +20,7 @@ function Corner({ className }: { className: string }) {
 
 function CheckRow({ label, state }: { label: string; state: "waiting" | "running" | "pass" }) {
   return (
-    <li className="flex items-center gap-[0.9em] border-b border-line py-[0.95em] last:border-b-0">
+    <li className="flex items-center gap-[0.9em] border-b border-line py-[1.05em] last:border-b-0">
       <span className="relative flex size-[1.9em] shrink-0 items-center justify-center">
         <span
           className={clsx(
@@ -45,7 +38,7 @@ function CheckRow({ label, state }: { label: string; state: "waiting" | "running
           <CheckIcon size={16} className="size-[1.25em]" />
         </motion.span>
       </span>
-      <span className={clsx("text-[1.2em] leading-tight transition-colors duration-160", state === "waiting" ? "text-faint" : "text-text")}>{label}</span>
+      <span className={clsx("text-[1.35em] leading-tight transition-colors duration-160", state === "waiting" ? "text-faint" : "text-text")}>{label}</span>
     </li>
   );
 }
@@ -53,7 +46,7 @@ function CheckRow({ label, state }: { label: string; state: "waiting" | "running
 export function ClaimScreen({ phase }: { phase: number }) {
   return (
     <div className="flex h-full flex-col text-text">
-      {/* Top bar, left-aligned so the exhibit leaders drop through the empty middle of the bar, not through text. */}
+      {/* Top bar: what is live on the left, the recall's number on the right. */}
       <div className="flex h-[3.4em] shrink-0 items-center gap-[1.4em] border-b border-line px-[1.6em]">
         <span className="flex items-center gap-[0.6em] font-mono text-[1.05em] tracking-[0.06em] text-pay uppercase">
           <span className="size-[0.6em] rounded-full bg-pay" />
@@ -82,8 +75,9 @@ export function ClaimScreen({ phase }: { phase: number }) {
             <Corner className="right-[1em] top-[1em] border-r border-t" />
             <Corner className="bottom-[1em] left-[1em] border-b border-l" />
             <Corner className="bottom-[1em] right-[1em] border-b border-r" />
-            {/* The marked code region (DESIGN.md: an amber active state): a 1.5px box on the tag's code, labelled on it. */}
-            <span className="absolute top-[53%] left-[69%] h-[25%] w-[24.5%] rounded-[0.35em] border-[1.5px] border-accent" aria-hidden="true">
+            {/* The marked code region: a 1.5px box on the tag's code, labelled on it. In --text, not amber: the hero's CTA
+                is the viewport's one amber. */}
+            <span className="absolute top-[53%] left-[69%] h-[25%] w-[24.5%] rounded-[0.35em] border-[1.5px] border-text/70" aria-hidden="true">
               <span className="absolute bottom-full left-[-1.5px] mb-[0.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] whitespace-nowrap text-text uppercase">
                 Code M4T
               </span>
@@ -91,14 +85,6 @@ export function ClaimScreen({ phase }: { phase: number }) {
             <span className="absolute bottom-[1.4em] left-[1.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] text-text uppercase">
               AI-made test photo
             </span>
-            {(Object.keys(ANCHORS) as AnchorId[]).map((id) => (
-              <span
-                key={id}
-                data-anchor={id}
-                className="absolute size-px"
-                style={{ left: `${ANCHORS[id].x * 100}%`, top: `${ANCHORS[id].y * 100}%` }}
-              />
-            ))}
           </div>
           <div className="flex flex-1 items-center justify-between">
             <span className="font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Photo 1 of 3</span>
@@ -136,7 +122,8 @@ export function ChecksPanel({ phase }: { phase: number }) {
           data-seq="hide"
           className={clsx(
             // Out over 120ms before the chip comes in (its delay below): the two messages never overprint.
-            "absolute inset-0 flex items-center rounded-[0.5em] border border-dashed border-line-strong px-[1em] text-[1.15em] text-faint transition-opacity duration-[120ms]",
+            // A live status, not a placeholder: a solid hairline and a readable muted label until the payout lands.
+            "absolute inset-0 flex items-center rounded-[0.5em] border border-line-2 bg-surface px-[1em] text-[1.25em] text-muted transition-opacity duration-[120ms]",
             paid && "opacity-0",
           )}
         >
