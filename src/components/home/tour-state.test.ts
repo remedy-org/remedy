@@ -53,8 +53,8 @@ describe("tour copy", () => {
     expect(strings).not.toMatch(/\b(samples?|sandbox|test|demo|never sent|no money moved|AI-made|exhibit)\b/i);
   });
 
-  it("names the sponsor SDKs where they do the work: AG Grid on the queue, AG Studio on Insights", () => {
-    expect(TOUR.steps[0].sentence).toMatch(/AG Grid/);
+  it("names AG Studio where it does the work, and keeps the queue's sentence free of a vendor name (the footer credits AG Grid)", () => {
+    expect(TOUR.steps[0].sentence).not.toMatch(/AG Grid/);
     expect(TOUR.steps[2].sentence).toMatch(/AG Studio/);
   });
 

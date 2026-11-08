@@ -69,14 +69,23 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           </Button>
           <p className="mt-3 text-ui text-muted">Remedy reads your PayPal name and email to open your workspace.</p>
 
-          {/* The shared login sits under the real way in, never in front of it: the same rows as /try's, one tap apart. */}
+          {/* The shared login sits under the real way in, never in front of it: one quiet line that opens the same rows as
+              /try's. Open from the start when a try result sent the visitor here for its claim. */}
           {login && (
-            <JudgeLoginPanel
-              login={login}
-              heading="h2"
-              why={fromClaim ? "This claim is in the company console. Log in with the demo account to see it." : undefined}
-              className="mt-10 border-t border-line pt-6"
-            />
+            <details className="group mt-6" open={fromClaim || undefined}>
+              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-ui text-muted hover:text-text [&::-webkit-details-marker]:hidden">
+                Use the demo account
+                <svg aria-hidden="true" viewBox="0 0 10 6" className="h-1.5 w-2.5 transition-transform duration-160 group-open:rotate-180">
+                  <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </summary>
+              <JudgeLoginPanel
+                login={login}
+                heading="h2"
+                why={fromClaim ? "This claim is in the company console. Log in with the demo account to see it." : undefined}
+                className="mt-3"
+              />
+            </details>
           )}
 
           {/* An owner's way in is the recall's own page, with its notice and PayPal login: never the demo. */}

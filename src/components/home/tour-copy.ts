@@ -7,7 +7,7 @@ export const TOUR = {
   muted: "Every claim, its evidence and its PayPal refund.",
   tablist: "A tour of the Remedy console",
   steps: [
-    { name: "Claims queue", sentence: "Every claim lands in one AG Grid queue, already decided: paid, held for a person, or refused." },
+    { name: "Claims queue", sentence: "Every claim lands in one queue, already decided: paid, held for a person, or refused." },
     { name: "Evidence", sentence: "A held claim opens to its photos and the model’s own words. Approve, and PayPal Payouts sends the refund." },
     { name: "Insights", sentence: "AG Studio shows where claims stop and why, and what PayPal paid out each day." },
     { name: "CPSC report", sentence: "The monthly CPSC progress report drafts itself from the same claims. Review it, then file." },

@@ -138,7 +138,7 @@ export function Footer() {
         </div>
         <div className="mt-12 flex flex-col gap-1 border-t border-line pt-5 pb-10 text-ui text-faint sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; 2026 Remedy</p>
-          <p>Started at the PayPal AI Hackathon.</p>
+          <p>Started at the PayPal AI Hackathon. The console runs on AG Grid.</p>
         </div>
       </div>
     </footer>
