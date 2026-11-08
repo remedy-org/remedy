@@ -99,7 +99,7 @@ export function SamplePicker({
       <div className="flex min-w-0 flex-col gap-6">
       {/* A limit's notice, rendered later, takes focus from the title. */}
       <FocusTitle id="picker-title" />
-      <StepTitle id="picker-title">Choose a claim to send</StepTitle>
+      <StepTitle id="picker-title">Choose a claim</StepTitle>
 
       {refusal && <LimitNotice refusal={refusal} demo />}
 
@@ -182,7 +182,7 @@ export function SamplePicker({
             <LimitNextStep demo />
           ) : (
             <Button type="submit" size="lg" block>
-              Run this claim
+              Start this claim
             </Button>
           )}
         </div>

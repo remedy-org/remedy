@@ -35,7 +35,7 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   const asked = typeof query.sample === "string" ? options.find((o) => o.sample.id === query.sample && !o.locked)?.sample.id : undefined;
   const selected = asked ?? options.find((o) => !o.locked && !ran.has(o.sample.id))?.sample.id ?? "genuine";
   const roundDone = DEMO_SAMPLES.every((s) => ran.has(s.id));
-  // A run the claim limits would refuse is never offered: the notice shows before "Run this sample", from the same
+  // A run the claim limits would refuse is never offered: the notice shows before "Start this claim", from the same
   // index.json read. Today's photo checks aren't read here (another Blob read on every view); the start still refuses
   // on them, and redirects back with ?limit=.
   const now = new Date();

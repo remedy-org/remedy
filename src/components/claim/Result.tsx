@@ -445,7 +445,7 @@ function DemoActions({ sample, slug, againHref, round, unanswered }: { sample: D
       <div className="flex w-full flex-col gap-2">
         {unanswered ? (
           <RunSample slug={slug} sample={sample.id}>
-            Run it again
+            Try this claim again
           </RunSample>
         ) : next ? (
           <RunSample slug={slug} sample={next.id}>

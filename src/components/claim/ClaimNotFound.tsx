@@ -26,7 +26,7 @@ export function ClaimNotFound({ demo }: { demo?: boolean }) {
       description="Check the link, or log in with the PayPal account that started it."
       action={
         <Button href={demo ? `/r/${recall}/try` : `/r/${recall}`} prefetch={false}>
-          {demo ? "Run a claim" : "Start your claim"}
+          {demo ? "Try a claim" : "Start your claim"}
         </Button>
       }
     />

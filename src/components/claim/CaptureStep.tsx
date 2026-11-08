@@ -522,7 +522,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             <EvidenceText>{reminder}</EvidenceText>
           </p>
         ) : (
-          <h1 id="capture-title-wide" tabIndex={-1} className="text-title font-semibold text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+          <h1 id="capture-title-wide" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
             {expired ? (
               <>
                 Code <span className="font-mono">{code}</span> has expired
