@@ -19,10 +19,10 @@ export interface WordmarkProps {
  * The master (markPaths.ts) is drawn on a 24 x 16 grid. The tag fills the full 16: the cap height plus overshoots. Its
  * torn edge is six even 90deg teeth, 1.333 deep on a 2.667 pitch, peaks on x 13. The stub's torn edge is the same edge
  * moved 2 right and never turned, so the two halves of the tear stay identical and the gap stays an even 2 (a turned
- * edge opened into a wedge that read as a lightning bolt at icon size); only its three outer sides turn -8deg about
- * its top corner, so its far corner rises 0.9 above the tag (the svg lets that overflow) and the lift reads from the
- * slanted top and far side. The hole is cut out, so the page shows through, and it sits small and near the point so
- * hole and teeth never read as an eye and a mouth.
+ * edge opened into a wedge that read as a lightning bolt at icon size). Its outer sides are skewed -8deg about x 15: a
+ * parallelogram 8 wide whose top and foot stay parallel, rising 1.12 to its upright far edge (the svg lets that
+ * overflow), so it lifts as rigid paper rather than flaring into a keystone. The hole is cut out, so the page shows
+ * through, and it sits small and near the point so hole and teeth never read as an eye and a mouth.
  *
  * The teeth sit on thirds of a unit, so they are crisp from 2x. Below that a 45deg tooth one pixel deep averages to a
  * grey seam, so the two sizes the site uses have hinted drawings on whole pixels, shown below 1.5dppx: 24 x 16 (md,
@@ -33,9 +33,11 @@ export interface WordmarkProps {
  * opengraph-image.tsx draws the master, and scripts/apple-icon.ts renders it into apple-icon.png (run it after any
  * change to markPaths.ts). src/app/icon.svg is its own drawing on a 32 grid (it must stay comment-free: XML forbids a
  * double hyphen in a comment, and a favicon that fails to parse shows nothing). An SVG image's media queries see its
- * own width, so it carries three drawings: a 16px one on whole pixels (crenellated tear, a 2px hole, the lift as a 1px
- * step), the 24 x 16 hinted drawing from 24px (a 2x tab, when the browser rasterises the icon at 32), and the master
- * from 48px. The mark is centred on the tile, cream and amber on the dark in both themes.
+ * own width (resolution queries never match inside one, in Chromium or WebKit), so it carries three drawings: a 16px
+ * one on whole pixels (four crenellated teeth and a flat stub on the tag's own rows 4 to 12, so the art is centred on
+ * the tile; no hole, since a dot in a 7px tag reads as an eye, and no lift, since 8deg is 0.7px across the stub and a
+ * 1px step read as a notch), the 24 x 16 hinted drawing from 24px (a 2x tab, when the browser rasterises the icon at
+ * 32), and the master from 48px. Cream and amber on the dark in both themes.
  *
  * Colours follow the theme through light-dark(), which reads the color-scheme each [data-theme] block sets:
  * dark: the tag is --paper, the stub --accent. Light: the tag is --text, the same ink as the name beside it (a lighter
@@ -49,16 +51,17 @@ const markColours = {
 } as CSSProperties;
 
 // The hinted drawings, one unit per pixel. 24 x 16: the master's outline with the crenellated tear (peaks x 13, valleys
-// x 12, the stub's edge 2 to the right) and the master's hole. 18 x 12: the master at 0.75, snapped (tag to x 10, a 3px
-// chamfer, a 2px hole centred on a pixel corner, the stub from x 11/12).
+// x 12, the stub's edge 2 to the right), the master's hole and its stub, whose far edge sits on x 23. 18 x 12: the
+// master at 0.75, snapped (tag to x 10, a 3px chamfer, a 2px hole centred on a pixel corner, the stub from x 11/12 to an
+// upright far edge on x 18, rising 0.84). Both far edges land on whole pixels, so only the slanted top and foot blur.
 const HINTED = {
   16: {
     tag: "M3.5 0H13V1H12V2H13V3H12V4H13V5H12V6H13V7H12V8H13V9H12V10H13V11H12V12H13V13H12V14H13V15H12V16H3.5L0 12.5V3.5ZM5.25 8A1.25 1.25 0 1 0 2.75 8A1.25 1.25 0 1 0 5.25 8Z",
-    stub: "M15 0L21.437 -0.905L23.664 14.94L14 16V15H15V14H14V13H15V12H14V11H15V10H14V9H15V8H14V7H15V6H14V5H15V4H14V3H15V2H14V1H15Z",
+    stub: "M15 0L23 -1.124V14.876L15 16H14V15H15V14H14V13H15V12H14V11H15V10H14V9H15V8H14V7H15V6H14V5H15V4H14V3H15V2H14V1H15Z",
   },
   12: {
     tag: "M3 0H10V1H9V2H10V3H9V4H10V5H9V6H10V7H9V8H10V9H9V10H10V11H9V12H3L0 9V3ZM4 6A1 1 0 1 0 2 6A1 1 0 1 0 4 6Z",
-    stub: "M12 0L16.357 -0.612L18.027 11.271L11 12V11H12V10H11V9H12V8H11V7H12V6H11V5H12V4H11V3H12V2H11V1H12Z",
+    stub: "M12 0L18 -0.843V11.157L12 12H11V11H12V10H11V9H12V8H11V7H12V6H11V5H12V4H11V3H12V2H11V1H12Z",
   },
 } as const;
 

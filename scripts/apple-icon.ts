@@ -9,10 +9,10 @@ const SIZE = 180;
 const BG = "#0d0c0a"; // --bg (dark)
 const PAPER = "#efebe1"; // --paper: the tag
 const ACCENT = "#f3aa40"; // --accent: the stub
-// The mark spans x 0 to 23.664 and y -0.905 to 16 on its grid. At 4.65 units a pixel it is 110px wide, 35px clear of
+// The mark spans x 0 to 23 and y -1.124 to 16 on its grid. At 4.65 units a pixel it is 107px wide, 37px clear of
 // each side; the tag (y 0 to 16) is centred, and the stub's lifted corner rises into the top margin.
 const SCALE = 4.65;
-const X = (SIZE - 23.664 * SCALE) / 2;
+const X = (SIZE - 23 * SCALE) / 2;
 const Y = (SIZE - 16 * SCALE) / 2;
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">

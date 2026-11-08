@@ -58,10 +58,12 @@ export default async function OpengraphImage() {
     (
       <div style={{ display: "flex", width: "100%", height: "100%", background: BG, color: TEXT, fontFamily: fonts.length ? "Schibsted Grotesk" : undefined }}>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, padding: "64px 56px 56px 72px" }}>
-          {/* The lockup at 30px: the tag is the cap height plus overshoot (0.727em, 22px), 0.25em from the name, its foot
-              on the baseline. flex-end aligns the svg with the line box's foot, 4px under the baseline here, hence the margin. */}
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 7.5, fontSize: 30, fontWeight: 600, letterSpacing: -0.75, lineHeight: 1 }}>
-            <svg width="33" height="23.375" viewBox="0 -1 24 17" style={{ marginBottom: 4 }}>
+          {/* The lockup at 44px, so the master lands on 2px a unit (a fractional scale blurred the teeth into a seam): the
+              tag is the cap height plus overshoot (0.727em, 32px), 0.25em from the name, its foot on the baseline. The
+              viewBox opens 1.5 units above the tag for the stub's lift. flex-end aligns the svg with the line box's foot,
+              under the baseline here, hence the margin. */}
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 11, fontSize: 44, fontWeight: 600, letterSpacing: -1.1, lineHeight: 1 }}>
+            <svg width="48" height="35" viewBox="0 -1.5 24 17.5" style={{ marginBottom: 6 }}>
               <path fillRule="evenodd" fill={PAPER} d={MARK_TAG} />
               <path fill={ACCENT} d={MARK_STUB} />
             </svg>
