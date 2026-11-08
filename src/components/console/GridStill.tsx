@@ -9,7 +9,7 @@ import { AmountCell, ChecksCell, ClaimCell, PayerCell, PayoutCell, TimeCell, Ver
  * `still` mode, without AG Grid's JS. The homepage tour shows it until the real grid has drawn (and to a visitor who
  * lands on the section, until they pick a step), so the swap changes nothing they can see: same columns, same rows,
  * same alignment. Optional columns come and go with the still's width as ClaimsGrid's hiddenAt() decides it (payout
- * from 708px, the photo check's time from 796px, PayPal from 968px), here through container queries.
+ * from 708px, the photo check's time from 812px, PayPal from 984px), here through container queries.
  */
 
 type Cell = CustomCellRendererProps<ClaimRow>;
@@ -25,8 +25,9 @@ const COLUMNS: Column[] = [
   { id: "createdAt", header: "Claim", cell: ClaimCell, className: "w-[220px]" },
   { id: "decision", header: "Verdict", cell: VerdictCell, className: "min-w-[144px] flex-1" },
   { id: "checks", header: "Checks", cell: ChecksCell, className: "w-[136px]" },
-  { id: "time", header: "Answered in", cell: TimeCell, className: "hidden w-[88px] justify-end @min-[796px]:flex" },
-  { id: "payer", header: "PayPal", cell: PayerCell, className: "hidden w-[172px] @min-[968px]:flex" },
+  { id: "time", header: "Answered in", cell: TimeCell, className: "hidden w-[104px] justify-end @min-[812px]:flex" },
+  // 20px clear of the right-aligned "Answered in" before it, as the grid draws it (claims-grid.css).
+  { id: "payer", header: "PayPal", cell: PayerCell, className: "hidden w-[172px] pl-5 @min-[984px]:flex" },
   { id: "payoutStatus", header: "Payout", cell: PayoutCell, className: "hidden w-[112px] @min-[708px]:flex" },
   { id: "amount", header: "Amount", cell: AmountCell, className: "w-[96px] justify-end" },
 ];
@@ -80,7 +81,8 @@ export function GridStill({
       aria-hidden="true"
       className={clsx("claims-grid @container overflow-hidden", flush ? "bg-bg" : "rounded-[10px] border border-line bg-surface", !phone && "h-full", className)}
     >
-      <div className={clsx("flex h-9 border-b border-line", flush ? "bg-bg" : "bg-surface-2")}>
+      {/* 36px and its hairline under it, as AG Grid draws its header (the rows start on the same line). */}
+      <div className={clsx("box-content flex h-9 border-b border-line", flush ? "bg-bg" : "bg-surface-2")}>
         {columns.map((c) => (
           <span key={c.id} data-col={c.id} className={clsx("flex shrink-0 items-center px-3 text-[13px] font-medium whitespace-nowrap text-muted", edge, c.className)}>
             {c.header}

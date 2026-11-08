@@ -26,8 +26,9 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
  *      takes the still's place as soon as it has drawn, so a visitor may filter it by status, sort it, hover its checks,
  *      and click a held claim to open its evidence (step 02) from the first click;
  *   02 the same grid with a held claim selected and its evidence laid over the grid's right-hand columns;
- *   03 Insights: real AG Studio, drawn out of sight as the frame comes near so it is there when picked (the still
- *      stands in until then). A visitor may hover its charts and cross-filter it, and clear the filter from the frame;
+ *   03 Insights: real AG Studio, drawn out of sight once a visitor shows intent (a pointer over its step, focus or a
+ *      pick), so a page that is only scrolled past never loads it (the still stands in until then). A visitor may
+ *      hover its charts and cross-filter it, and clear the filter from the frame;
  *   04 the CPSC report draft, the section's one paper object, read by scrolling it.
  * The grid scrolls inside the frame only once a visitor has clicked or focused it, the report also once the pointer
  * rests on it with the page still: a wheel passing over the frame keeps moving the page.
@@ -120,7 +121,7 @@ function Roll({ value }: { value: string }) {
 
 /** The status tabs as the console has them: each filters the live grid (AG Grid's own filter, so the rows animate),
  * their counts following the arriving claim. The console's "Approved" tab also holds claims approved and not yet sent;
- * every one here was sent, so it reads "Paid", as their pills and the ledger do. */
+ * every one here was paid (settled with PayPal, preview.ts), so it reads "Paid", as their verdicts and the ledger do. */
 function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>; value: Tab; onChange: (t: Tab) => void }) {
   return (
     <div role="group" aria-label="Filter the claims by status" className="relative flex">
@@ -148,9 +149,23 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
   );
 }
 
+/** The queue toolbar's right end as the console draws it (ClaimsQueue.tsx): Export CSV and the search box with its /
+ * key. Drawn, not working: the tour's queue is a picture a visitor filters and sorts, never searches. */
+function Toolbar() {
+  return (
+    <span aria-hidden="true" inert className="ml-auto flex shrink-0 items-center gap-3 select-none">
+      <span className="text-ui whitespace-nowrap text-muted">{TOUR.toolbar.export}</span>
+      <span className="relative flex h-9 w-44 items-center rounded-control border border-line bg-surface pr-9 pl-3 text-ui whitespace-nowrap text-faint xl:w-60">
+        {TOUR.toolbar.search}
+        <kbd className="absolute right-2 inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro text-faint">/</kbd>
+      </span>
+    </span>
+  );
+}
+
 /**
  * The ledger over the grid, as the console's borderless stat strip: the money sent through PayPal and how fast, then
- * the units, then what waits for a person and what was refused. Each figure in the sans at regular weight with its
+ * the units, then what waits for a person and what was rejected or blocked. Each figure in the sans at regular weight with its
  * proportional figures (its tabular ones space a stop or a colon like mono), its words after it in the UI size. A
  * figure the arriving claim changes rolls to its new value. On a narrow window the last figures drop whole (they wrap
  * out of the strip's one line) rather than being cut.
@@ -162,7 +177,8 @@ function TourLedger({ rows, unitsSold }: { rows: PreviewRow[]; unitsSold: number
     ...(l.medianToPay === null ? [] : ([[spokenTime(Math.round(l.medianToPay)), "median, photo to PayPal"]] as [string, string][])),
     [formatCount(l.remedied), `of ${formatCount(unitsSold)} units remedied`],
     [formatCount(l.held), "held for a person"],
-    [formatCount(l.refused), "refused"],
+    // The status tabs' own words: no "Refused" tab to find these under.
+    [formatCount(l.refused), "rejected or blocked"],
   ];
   return (
     <dl className="flex h-14 flex-wrap gap-x-8 overflow-hidden whitespace-nowrap max-xl:gap-x-6">
@@ -372,9 +388,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     return () => cancelAnimationFrame(frameId);
   }, [step, swapped, arrival, playArrival]);
 
-  // Real Studio replaces the Insights still at 1024px and up (wherever the frame credits it), on intent (hover, focus or pick of tab 03), and never on
-  // Save-Data. Its canvas is measured from the frame, so it fills the body with nothing cut off. If it hasn't drawn in
-  // 6s, the still stays for the session.
+  // Real Studio replaces the Insights still at 1024px and up, on intent (hover, focus or pick of tab 03, or of the app
+  // bar's Insights), and never on Save-Data: a visitor who only scrolls past never loads it (nor its licence notice in
+  // the console). Its canvas is measured from the frame, so it fills the body with nothing cut off. If it hasn't drawn
+  // in 8s, the still stays for the session.
   const studioIntent = () => {
     if (!STUDIO_ON_HOME || !studio || now.current.studioState !== "off") return;
     const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
@@ -385,32 +402,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     setStudioState("mounted");
     later(studioWait.current, STUDIO_WAIT, () => setStudioState((s) => (s === "mounted" ? "failed" : s)));
   };
-  const intent = useRef(studioIntent);
-  useEffect(() => {
-    intent.current = studioIntent;
-  });
-
-  // Studio draws out of sight once the frame is a viewport away (the page's first load never carries it), so picking
-  // Insights shows the real dashboard at once, with no still giving way to it.
-  useEffect(() => {
-    const el = frame.current;
-    if (!el || !STUDIO_ON_HOME || !studio) return;
-    let wait = 0;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (!e.isIntersecting) return;
-        io.disconnect();
-        // After the page's own work settles: a short wait, then the next idle moment.
-        wait = window.setTimeout(() => (window.requestIdleCallback ?? ((f: () => void) => f()))(() => intent.current()), 300);
-      },
-      { rootMargin: "100% 0px" },
-    );
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      window.clearTimeout(wait);
-    };
-  }, [studio]);
 
   // The frame fits under the steps on a laptop screen (tour.module.css .stage reads the steps row's height), and the
   // nav's "For companies" jump lands so a visitor sees the whole frame: from the heading when it all fits, else from
@@ -502,10 +493,15 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
         later(timers.current, 160, () => setDockOut(false));
       }
     }
-    // Leaving the queue puts it back as it was: every claim, in the order it came in.
+    // Leaving the queue puts it back as it was: every claim, in the order it came in, scrolled to the top (BareGrid).
     if (next >= 2) {
       setStatus("all");
       setSortEpoch((n) => n + 1);
+    }
+    // The draft opens on its first page, however far a visitor read it last time.
+    if (next === 3 && reportEl.current) {
+      reportEl.current.scrollTop = 0;
+      reportEl.current.removeAttribute("data-scrolled");
     }
     if (next === 1) {
       setDockOut(false);
@@ -543,6 +539,8 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const onStatus = (t: Tab) => {
     if (now.current.step === 1) go(0);
     settleArrival();
+    // The checks popover goes at once (until the pointer moves again), never left fading over the rows the filter keeps.
+    setPointed(false);
     setStatus(t);
   };
 
@@ -651,6 +649,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
           ) : null
         }
         onPage={onPage}
+        onPageIntent={(p) => p === "Insights" && studioIntent()}
         className={styles.stage}
         data-step={step}
         data-studio-pick={studioAtPick || undefined}
@@ -661,8 +660,9 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
             <TourLedger rows={queue} unitsSold={unitsSold} />
           </div>
           <div className="relative flex min-h-0 flex-1 flex-col">
-            <div className="border-b border-line px-5">
+            <div className="flex items-center gap-4 border-b border-line px-5">
               <StatusFilter counts={counts} value={status} onChange={onStatus} />
+              <Toolbar />
             </div>
             <div ref={gridGate} {...gate("grid")} data-quiet={!tips || undefined} data-fresh={fresh ?? undefined} className={clsx(styles.gate, "min-h-0 flex-1")}>
               <ClaimsGridPreviewLazy
@@ -683,6 +683,11 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
                 fallback={<GridStill rows={still} openId={picked} filter={status === "all" ? null : status} flush />}
               />
             </div>
+            {/* The queue's foot, as the console's: it updates itself while a claim comes in. */}
+            <p inert aria-hidden="true" className={clsx(styles.foot, "text-ui text-muted")}>
+              <span className="size-1.5 shrink-0 rounded-full bg-pay" />
+              {TOUR.toolbar.live}
+            </p>
             {/* The evidence docks as the console's panel: flush to the window's right edge from the status row to the
                 foot, over the grid's right-hand columns (the money ones it repeats), so the grid keeps its width and its
                 columns as the claim opens. */}

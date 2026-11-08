@@ -268,7 +268,10 @@
 
 /* The still's PayPal column starts 20px clear of the right-aligned "Answered in" before it, so the two headers never
    read as one ("Answered in PayPal"). */
-.claims-grid[data-still] .ag-header-cell[col-id="payer"],
-.claims-grid[data-still] .ag-cell[col-id="payer"] {
+.claims-grid[data-still] .ag-header-cell[col-id="payer"] {
   padding-left: 20px;
+}
+/* A cell's 1px border sits inside its padding: its words start 20px in, on the header's. */
+.claims-grid[data-still] .ag-cell[col-id="payer"] {
+  padding-left: 19px;
 }

@@ -23,20 +23,18 @@ const NOSCRIPT = `<style>[data-tour]{display:none!important}[data-story]{display
 export function Companies() {
   const grid = previewProps();
   const still = insightsStill(insightsPreview());
-  const { recall, report, generated } = reportPreview();
+  const { recall, report, generated, daysIn } = reportPreview();
   const evidence = grid.rows.find((r) => r.id === PREVIEW_OPEN_ID)?.evidence ?? null;
   // Step 03 names the recall analyst only when its recorded answer is there to show.
   const sentences = stepSentences(Boolean(RECORDING));
   const descriptions = describe(still.totals, { id: PREVIEW_OPEN_ID, amount: evidence?.amount ?? "" }, RECORDING);
-  const sheet = <ProgressReport recall={recall} report={report} generated={generated} home />;
+  const sheet = <ProgressReport recall={recall} report={report} generated={generated} daysIn={daysIn} home />;
 
   return (
     <Section
       id="companies"
       exhibit="For companies"
       title={TOUR.title}
-      // Its own block, so it fills the measure (pretty) instead of breaking early to balance (the heading's text-balance).
-      muted={<span className="block text-pretty">{TOUR.muted}</span>}
       headingSpan={12}
       bodyClassName="mt-10 lg:mt-8"
       // The console frame and its heading share one laptop screen: less air above than the page's other sections.
@@ -70,11 +68,16 @@ export function Companies() {
         />
       </div>
 
-      <div className="mt-14 grid-12 gap-y-6 lg:mt-16 lg:items-center">
-        <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-7">{TOUR.cta.body}</p>
-        <Button href="/signin" size="lg" className="col-span-12 w-full justify-center sm:w-auto sm:justify-self-start lg:col-span-5 lg:col-start-8 lg:justify-self-end">
-          {TOUR.cta.button}
-        </Button>
+      {/* The sentence and its button as one row, then what New recall takes. The button is the quiet one: the footer
+          tag's Try a claim, a screen below, is the page's brass, and two never share a view. */}
+      <div className="mt-14 flex flex-col gap-3 lg:mt-16">
+        <div className="flex flex-col items-start gap-x-6 gap-y-5 sm:flex-row sm:items-center">
+          <p className="max-w-[60ch] text-body text-pretty text-text-2">{TOUR.cta.body}</p>
+          <Button href="/signin" variant="secondary" size="lg" className="w-full shrink-0 justify-center sm:w-auto">
+            {TOUR.cta.button}
+          </Button>
+        </div>
+        <p className="max-w-[72ch] text-ui text-pretty text-muted">{TOUR.cta.recall}</p>
       </div>
     </Section>
   );

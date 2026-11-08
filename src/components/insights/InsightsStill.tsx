@@ -105,8 +105,8 @@ export function InsightsStill({
   }
   return (
     // On a short frame (a 768px-tall screen) the cards keep their height and the canvas scrolls, as Studio's does.
-    // Sized, so a short frame (under 540px: a 1280x800 or 1024x768 screen) can leave out the refusal reasons as Studio
-    // does there: the funnel names each one with its count.
+    // Sized, so a frame under 620px (a 1440x900 screen and smaller) can leave out the refusal reasons as Studio does
+    // there: the funnel names each one with its count.
     <div data-still className="flex h-full gap-3 overflow-y-auto p-4 [container-type:size] xl:p-5">
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <dl className="grid shrink-0 grid-cols-3 gap-3">
@@ -114,7 +114,7 @@ export function InsightsStill({
             <div key={k.id} data-kpi={k.id} className={clsx("flex flex-col gap-2 xl:h-[116px]", flat ? "py-2" : "rounded-card bg-surface p-4 shadow-card")}>
               <dt className="text-ui font-medium">{k.title}</dt>
               <dd className="text-[28px] leading-none">{k.value}</dd>
-              <dd className="text-micro text-pretty text-muted">{k.caption}</dd>
+              <dd className="text-ui text-pretty text-muted">{k.caption}</dd>
             </div>
           ))}
         </dl>
@@ -127,7 +127,8 @@ export function InsightsStill({
             </div>
           </Card>
           <div className="flex flex-col gap-3">
-            <Card title="Why claims were refused" flat={flat} className="shrink-0 [@container(max-height:540px)]:hidden">
+            {/* Left out where Studio leaves it out (report.ts HOME_DAY_ROWS): the day chart needs the room. */}
+            <Card title="Why claims were refused" flat={flat} className="shrink-0 [@container(max-height:619px)]:hidden">
               <RefusalReasonsView items={data.refusals} flush />
             </Card>
             <Card title={PAID_BY_DAY} flat={flat} className="min-h-[144px] flex-1">

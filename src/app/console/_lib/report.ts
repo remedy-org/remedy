@@ -49,7 +49,8 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   // reconciles approved and sent); Held is only a claim waiting for a person.
   const paidNote = !unsent ? "Unit destroyed on camera; refund sent through PayPal" : "Unit destroyed on camera; refund approved by the rule";
   const rows: [Decision, string, number, string][] = [
-    ["paid", "Approved", stats.remedied, paidNote],
+    // Paid when every approved refund went out through PayPal, as the grid's Paid tab counts them.
+    ["paid", unsent ? "Approved" : "Paid", stats.remedied, paidNote],
     ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn't run, auto-pay was off, or PayPal refused an approved payout"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],

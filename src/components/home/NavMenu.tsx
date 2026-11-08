@@ -140,7 +140,7 @@ export function NavMenu<Id extends string>({ links, current, onPick }: { links: 
               Try a claim
             </Button>
             <Button href="/signin" variant="secondary" size="lg" block className="mt-4">
-              Company sign in
+              Log in with PayPal
             </Button>
           </div>
           {/* Below lg the bar keeps its room for the current section's name, so the theme toggle is here. */}

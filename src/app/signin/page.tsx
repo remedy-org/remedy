@@ -9,7 +9,7 @@ import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { DEFAULT_NEXT, getSession, safeNext } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: "Sign in",
+  title: "Log in",
   description: "Companies running a recall sign in to Remedy with PayPal.",
 };
 
@@ -54,7 +54,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
       </header>
       <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none sm:py-16 sm:pb-28 lg:items-start">
         <div className="col-span-12 mx-auto flex w-full max-w-[400px] flex-col lg:col-span-4 lg:mx-0">
-          <h1 className="text-h2 font-medium">Sign in to Remedy</h1>
+          <h1 className="text-h2 font-medium">Log in to Remedy</h1>
           <p className="mt-2 text-ui text-muted">Review recall claims and pay refunds through PayPal.</p>
 
           {error && <ErrorState variant="inline" className="mt-6" title={error.title} description={error.description} />}
@@ -70,12 +70,13 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           </Button>
           <p className="mt-3 text-ui text-muted">Remedy reads your PayPal name and email to open your workspace.</p>
 
-          {/* The shared login sits under the real way in, never in front of it: one quiet line that opens the same rows as
-              /try's. Open from the start when a try result sent the visitor here for its claim. */}
+          {/* The shared login sits under the real way in, never in front of it: one quiet line, "Use a guest login", that
+              opens the same rows as /try's, named the guest login. Open from the start when a try result sent the visitor
+              here for its claim. */}
           {login && (
             <details className="group mt-6" open={fromClaim || undefined}>
               <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-ui text-muted hover:text-text [&::-webkit-details-marker]:hidden">
-                Use the demo account
+                Use a guest login
                 <svg aria-hidden="true" viewBox="0 0 10 6" className="h-1.5 w-2.5 transition-transform duration-160 group-open:rotate-180">
                   <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -83,7 +84,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
               <JudgeLoginPanel
                 login={login}
                 heading="h2"
-                why={fromClaim ? "This claim is in the company console. Log in with the demo account to see it." : undefined}
+                title="Guest login"
+                why={fromClaim ? "This claim is in the company console. Log in with the guest login to see it." : undefined}
                 className="mt-3"
               />
             </details>

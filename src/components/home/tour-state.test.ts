@@ -53,9 +53,13 @@ describe("tour copy", () => {
     expect(strings).not.toMatch(/\b(samples?|sandbox|test|demo|never sent|no money moved|AI-made|exhibit)\b/i);
   });
 
-  it("names AG Studio where it does the work, and keeps the queue's sentence free of a vendor name (the footer credits AG Grid)", () => {
-    expect(TOUR.steps[0].sentence).not.toMatch(/AG Grid/);
-    expect(TOUR.steps[2].sentence).toMatch(/AG Studio/);
+  it("keeps library names out of the steps' sentences (the footer credits AG Grid and AG Studio)", () => {
+    for (const s of stepSentences(true)) expect(s).not.toMatch(/AG Grid|AG Studio/);
+  });
+
+  it("says a refusal in the status tabs' own words: rejected or blocked", () => {
+    expect(TOUR.steps[0].sentence).toMatch(/rejected or blocked/);
+    expect(TOUR.steps[0].sentence).not.toMatch(/refused/);
   });
 
   it("names a barcode in words, never by colour alone", () => {

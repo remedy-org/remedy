@@ -108,8 +108,13 @@ function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady, 
     if (ready && sortEpoch) grid.current?.resetSort();
   }, [ready, sortEpoch]);
 
+  // A claim opened from nothing (the tour's step 02) comes to the middle of the list, whatever a visitor scrolled or
+  // sorted; a click on another row only swaps the selection, that row already in view.
+  const wasOpen = useRef<string | null>(null);
   useEffect(() => {
-    if (ready) grid.current?.open(openId ?? null);
+    if (!ready) return;
+    grid.current?.open(openId ?? null, !wasOpen.current);
+    wasOpen.current = openId ?? null;
   }, [ready, openId]);
 
   return (

@@ -8,7 +8,22 @@ import { CopyValue } from "./CopyValue";
  * password as two plain rows of mono text, each on one line with a copy button, after one line of how-to. Rendered on
  * the server from judgeLogin(). The same rows on /try and on /signin.
  */
-export function JudgeLoginPanel({ login, why, id, heading: Heading = "h3", className }: { login: JudgeLogin; why?: ReactNode; id?: string; heading?: "h2" | "h3"; className?: string }) {
+export function JudgeLoginPanel({
+  login,
+  why,
+  id,
+  heading: Heading = "h3",
+  title = "Demo account",
+  className,
+}: {
+  login: JudgeLogin;
+  why?: ReactNode;
+  id?: string;
+  heading?: "h2" | "h3";
+  /** The panel's name: /signin calls it the guest login. */
+  title?: string;
+  className?: string;
+}) {
   const rows = [
     { label: "email", value: login.email },
     { label: "password", value: login.password },
@@ -18,10 +33,10 @@ export function JudgeLoginPanel({ login, why, id, heading: Heading = "h3", class
     <section
       id={id}
       tabIndex={id ? -1 : undefined}
-      aria-label="Demo account"
+      aria-label={title}
       className={clsx("flex scroll-mt-24 flex-col gap-2 text-ui outline-none focus:outline-2 focus:outline-offset-4 focus:outline-focus", className)}
     >
-      <Heading className="font-medium text-text">Demo account</Heading>
+      <Heading className="font-medium text-text">{title}</Heading>
       {why && <p className="text-muted">{why}</p>}
       {/* Said first, in neutral text, before the email and password. */}
       <p className="text-muted">Use these when PayPal asks you to log in.</p>

@@ -61,13 +61,20 @@ describe("homepage console tour data", () => {
   });
 
   it("keeps Studio's home report to six widgets, titled, with two value KPIs and the day chart, fitted to its rows", () => {
-    const state = homeInsightsReport(insightsPreview(), 36);
+    // The tallest frame (680px) gives Studio 37 rows.
+    const state = homeInsightsReport(insightsPreview(), 37);
     const page = state.pages![0];
     const widgets = Object.values(page.widgets ?? {}) as { type?: string; format?: { subtitle?: unknown } }[];
     expect(Object.keys(page.widgets ?? {})).toHaveLength(6);
     const layout = Object.values(page.widgetLayout ?? {}) as { yTrack: number; ySpan: number }[];
-    expect(Math.max(...layout.map((l) => l.yTrack + l.ySpan))).toBe(36);
+    expect(Math.max(...layout.map((l) => l.yTrack + l.ySpan))).toBe(37);
     expect(widgets.every((w) => !w.format?.subtitle)).toBe(true);
     expect(widgets.filter((w) => w.type === "value")).toHaveLength(2);
+  });
+
+  it("gives the refusal reasons' place to the day chart on a shorter frame, so each day's dollars fit in its column", () => {
+    const widgets = homeInsightsReport(insightsPreview(), 35).pages[0].widgets ?? {};
+    expect(Object.keys(widgets)).not.toContain("refusals");
+    expect(Object.keys(widgets)).toContain("paid-by-day");
   });
 });

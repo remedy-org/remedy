@@ -24,10 +24,15 @@
   transform: translateX(var(--x, 0));
 }
 
-/* The keyboard's ring stands clear of the word (the step's own 8px of side padding). */
+/* The keyboard's ring goes round the word alone, 4px clear of it, so the step bar under the row never cuts it. */
 .step:focus-visible {
+  outline: none;
+}
+
+.step:focus-visible [data-label] {
+  border-radius: 4px;
   outline: 2px solid var(--focus);
-  outline-offset: 0;
+  outline-offset: 4px;
 }
 
 /* The active step's sentence, on column 8: all four stacked in one cell (the tallest holds the height, so nothing
@@ -111,23 +116,29 @@
   border-radius: 0;
 }
 
-.gate :global(.ag-header-cell:first-child),
-.gate :global(.ag-row .ag-cell:first-child) {
+/* By column, never by :first-child: AG Grid keeps each pinned part and the scrolling middle in its own container, and
+   adds cells to them in the order it draws them, so a positional rule also padded the Verdict and PayPal cells. A cell
+   has a 1px border inside its padding, a header cell none: both put their content 20px in. */
+.gate :global(.ag-header-cell[col-id="createdAt"]) {
   padding-left: 20px;
 }
 
-.gate :global(.ag-header-cell:last-child),
-.gate :global(.ag-row .ag-cell:last-child) {
+.gate :global(.ag-cell[col-id="createdAt"]) {
+  padding-left: 19px;
+}
+
+.gate :global(.ag-header-cell[col-id="amount"]) {
   padding-right: 20px;
 }
 
-/* "Answered in" is wider than its 88px column: right-aligned, it runs on into the empty end of the Checks header
-   rather than ending in an ellipsis. */
-.gate :global(.ag-header-cell[col-id="time"]),
-.gate :global(.ag-header-cell[col-id="time"] .ag-header-cell-label),
-.gate :global(.ag-header-cell[col-id="time"] .ag-header-cell-text) {
-  overflow: visible;
-  text-overflow: clip;
+.gate :global(.ag-cell[col-id="amount"]) {
+  padding-right: 19px;
+}
+
+/* The figures in the page's own proportional sans, as the still sets them (AG Grid's theme sets tabular ones, which
+   space a stop like mono), so nothing in a row moves when the grid takes the still's place. */
+.gate :global(.ag-cell) {
+  font-variant-numeric: normal;
 }
 
 /* A claim that has just arrived carries a soft tint across its whole row while it is being checked, its changed cells
@@ -165,13 +176,25 @@
 }
 
 /* Step 02's evidence: the console's docked panel, flush to the window's right edge from the status row to the foot,
-   a hairline on its left and one shadow toward the grid. Sized, so a short window can trade the photos' captions and
-   some of their height for the model's quoted answer, which the step promises. */
+   a hairline on its left and one shadow toward the grid. Opaque from its first frame (it uncovers, never fades over the
+   grid). Sized, so a short window can trade the photos' captions and some of their height for the model's quoted
+   answer, which the step promises. */
 .dock {
   container-type: size;
   border-left: 1px solid var(--line);
   background: var(--surface);
   box-shadow: -24px 0 48px -28px oklch(0 0 0 / 0.55);
+}
+
+/* The queue's foot inside the window: the console's live line. */
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  flex-shrink: 0;
+  padding-inline: 20px;
+  border-top: 1px solid var(--line);
 }
 
 :global(html[data-theme="light"]) .dock {
@@ -241,49 +264,10 @@
   }
 }
 
-/* Step 02's payout path: Approve, a drawn line, PayPal Payouts, a line, the amount, in one line at every width (a
-   picture of where the money goes, not a control: plain words). Tighter on the narrowest phones. */
-.flowPath {
+/* Step 02's foot: the panel's Pay and Reject, drawn (PayoutsNote.tsx). */
+.review {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-ui);
-  white-space: nowrap;
-}
-
-@media (max-width: 383px) {
-  .flowPath {
-    gap: 6px;
-  }
-
-  .flowPath .flowLine {
-    min-width: 12px;
-  }
-
-  .flowPath [data-check] {
-    display: none;
-  }
-}
-
-.flowLine {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 16px;
-  height: 1px;
-  background: var(--faint);
-  transform-origin: left;
-}
-
-.flowLine::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: -3px;
-  width: 7px;
-  height: 7px;
-  border-top: 1px solid var(--faint);
-  border-right: 1px solid var(--faint);
-  rotate: 45deg;
+  flex-direction: column;
 }
 
 /*
@@ -317,11 +301,40 @@
   display: none !important;
 }
 
+/* A product page, not Studio's editor: no ring on a hovered panel and no selection box on a clicked one. A pick on the
+   funnel keeps its own highlight. */
+.studio :global(.ag-studio-layout-widget),
+.studio :global(.ag-studio-layout-widget:hover),
+.studio :global(.ag-studio-layout-widget:focus-within) {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 /* A tile's caption wraps (a 1024px screen's Refused tile) rather than ending in an ellipsis. */
 .studio :global(.ag-studio-layout-widget-caption) {
   white-space: normal;
   text-overflow: clip;
   text-wrap: pretty;
+}
+
+/* The figures' captions read as the ledger's words: 14px in --muted, 8px under their figure (never left at the tile's
+   foot), as the still draws them. */
+.studio :global(.ag-studio-layout-content-container > .ag-studio-layout-widget:nth-child(-n + 3) .ag-studio-layout-widget-container) {
+  /* The figure's body as tall as its 28px line (its content is laid over it), the caption's row taking the rest. */
+  grid-template-rows: auto 34px 1fr !important;
+}
+
+.studio :global(.ag-studio-layout-content-container > .ag-studio-layout-widget:nth-child(-n + 3) .ag-studio-layout-widget-footer) {
+  align-self: start;
+  /* 8px under the figure's glyphs: its 34px line box already holds 4px of it. */
+  margin-top: 4px;
+  padding-top: 0;
+}
+
+.studio :global(.ag-studio-layout-content-container > .ag-studio-layout-widget:nth-child(-n + 3) .ag-studio-layout-widget-caption) {
+  font-size: var(--text-ui) !important;
+  line-height: 20px !important;
+  color: var(--muted) !important;
 }
 
 /* Once Studio has drawn over it, the still leaves (after the crossfade), so it is never read twice. */
@@ -473,10 +486,10 @@
     transition: opacity 200ms var(--ease-snap);
   }
 
-  /* The draft is paper: it never shows half transparent (grey) over the window. It appears whole once the page before
-     it has gone, and rises 12px. */
+  /* The draft is paper: it never shows half transparent (grey) over the window. It appears whole at once, over the page
+     leaving under it (so the window is never empty), and rises 12px. */
   .reportBody[data-on] {
-    animation: sheet-in 420ms var(--ease-out-expo) 140ms both;
+    animation: sheet-in 420ms var(--ease-out-expo) both;
   }
 
   /* A figure that changes rolls: the old value up and out, the new one up from below, 360ms. */
@@ -489,23 +502,18 @@
     animation: roll-in 360ms var(--ease-out-quart) both;
   }
 
-  /* The evidence docks (16px in and fade, 280ms), a beat after its row is selected, and fades out when the step is
-     left. Then the payout path draws in, part by part: the way the money goes. */
+  /* The evidence docks a beat after its row is selected: the opaque panel uncovers from the window's edge (220ms),
+     never a see-through layer over the grid, then its contents fade in. It fades out when the step is left. */
   .dock {
-    animation: dock-in 280ms var(--ease-out-expo) both;
+    animation: dock-in 220ms var(--ease-snap) both;
+  }
+
+  .dock > * {
+    animation: flow-in 200ms var(--ease-out-quart) 120ms both;
   }
 
   .dock[data-out] {
     animation: dock-out var(--dur-ui) var(--ease-snap) both;
-  }
-
-  .dock .flow [data-flow] {
-    animation: flow-in 240ms var(--ease-out-quart) calc(360ms + var(--at, 0) * 140ms) both;
-  }
-
-  .dock .flow [data-flow="line"] {
-    animation-name: line-draw;
-    animation-duration: 360ms;
   }
 
   /* Where claims stop: the funnel's bars grow (Paid last), then the refusal bars; the analyst's answer focuses in. */
@@ -569,8 +577,12 @@
 
 @keyframes dock-in {
   from {
-    opacity: 0;
-    translate: 16px 0;
+    clip-path: inset(0 0 0 100%);
+  }
+
+  /* Open to the left past the panel's edge, so its shadow toward the grid stays drawn. */
+  to {
+    clip-path: inset(0 0 0 -64px);
   }
 }
 
@@ -583,12 +595,6 @@
 @keyframes flow-in {
   from {
     opacity: 0;
-  }
-}
-
-@keyframes line-draw {
-  from {
-    transform: scaleX(0);
   }
 }
 

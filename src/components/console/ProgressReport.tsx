@@ -40,14 +40,17 @@ export function ProgressReport({
   recall,
   report,
   generated,
+  daysIn,
   home = false,
 }: {
   recall: Recall;
   report: Report;
   generated: string;
+  /** Whole days from the recall's date to the draft's, said beside the reporting period. */
+  daysIn?: number;
   /**
    * The homepage's sheet, inside the console tour's frame: sized by its own width, sans figures, shares to one decimal
-   * that add up to 100.0%, no ruler, and the marks its phone peek (ReportPeek.tsx) cuts on.
+   * that add up to 100.0%, and the marks its phone peek (ReportPeek.tsx) cuts on.
    */
   home?: boolean;
 }) {
@@ -88,7 +91,7 @@ export function ProgressReport({
             ["Remedy", "Refund for destroyed units"],
             ["Refund per unit", formatMoney(recall.refund)],
             // The period the report covers: from the recall's date to the day it was drawn up, as CPSC's monthly report reads.
-            ["Reporting period", `${formatDate(recall.recallDate)} to ${generated}`],
+            ["Reporting period", `${formatDate(recall.recallDate)} to ${generated}${daysIn ? `, ${plural(daysIn, "day")} in` : ""}`],
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="text-muted">{k}</dt>
@@ -106,7 +109,7 @@ export function ProgressReport({
           <Figure label={home ? "Remedied" : "Units remedied"} value={formatCount(s.remedied)} note="Destroyed on camera" home={home} />
           <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} home={home} />
         </div>
-        {s.unitsSold > 0 && !home && <ReturnRuler remedied={s.remedied} sold={s.unitsSold} />}
+        {s.unitsSold > 0 && <ReturnRuler remedied={s.remedied} sold={s.unitsSold} />}
       </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
@@ -194,7 +197,7 @@ export function ProgressReport({
       </section>
 
       <footer className="mt-12 border-t border-line pt-4 text-micro text-muted">
-        Draft for review, not for filing.
+        Draft for your review before filing.
       </footer>
     </article>
   );

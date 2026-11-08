@@ -19,7 +19,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "For companies",
     links: [
       { href: "#companies", label: "Overview" },
-      { href: "/signin", label: "Sign in" },
+      { href: "/signin", label: "Log in" },
     ],
   },
   {
@@ -64,7 +64,9 @@ function CtaTag() {
               href="/signin"
               className="group inline-flex min-h-11 items-center gap-2 rounded-control text-ui text-ink underline-offset-4 decoration-paper-line hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
-              Company sign in
+              <span>
+                <span className="text-ink-muted">Running a recall?</span> Log in with PayPal
+              </span>
               <ArrowRightIcon className="shrink-0 transition-transform duration-160 ease-snap group-hover:translate-x-[3px]" />
             </Link>
           </div>
@@ -138,7 +140,7 @@ export function Footer() {
         </div>
         <div className="mt-12 flex flex-col gap-1 border-t border-line pt-5 pb-10 text-ui text-faint sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; 2026 Remedy</p>
-          <p>Started at the PayPal AI Hackathon. The console runs on AG Grid.</p>
+          <p>Started at the PayPal AI Hackathon. The console runs on AG Grid and AG Studio.</p>
         </div>
       </div>
     </footer>

@@ -118,7 +118,8 @@ const BASE = { queue: 220 + 96, still: 220 + 136 + 96 };
 const PAYER = { queue: 172, still: 172 };
 const OPTIONAL = {
   queue: { checks: 136, payoutStatus: 120, time: 124, toPay: 132, payer: PAYER.queue } as Record<string, number>,
-  still: { time: 88, payoutStatus: 112, payer: PAYER.still } as Record<string, number>,
+  // "Answered in" whole on its 12px padding, right-aligned over its values: 104px.
+  still: { time: 104, payoutStatus: 112, payer: PAYER.still } as Record<string, number>,
 };
 const ORDER = { queue: ["checks", "payoutStatus", "time", "toPay", "payer"], still: ["payoutStatus", "time", "payer"] };
 // Columns only a wide queue shows, and the verdict width they leave.
@@ -184,9 +185,10 @@ export interface ClaimsGridHandle {
   update(row: ClaimRow): void;
   /** The homepage's still: shows only the rows that pass (null for all), animating the change. */
   setFilter(pass: ((row: ClaimRow) => boolean) | null): void;
-  /** The homepage's still: selects a claim's row (the open row's tint and edge) and scrolls it into view; null clears. */
-  open(id: string | null): void;
-  /** The homepage's still: back to the order its rows came in (a visitor's sort undone). */
+  /** The homepage's still: selects a claim's row (the open row's tint and edge) and scrolls it into view (`middle`: to
+   * the middle of the list, never left half cut at its foot); null clears. */
+  open(id: string | null, middle?: boolean): void;
+  /** The homepage's still: back to the order its rows came in (a visitor's sort undone), scrolled to the first row. */
   resetSort(): void;
 }
 
@@ -514,16 +516,17 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       filter.current = pass;
       api.current?.onFilterChanged();
     },
-    open(id) {
+    open(id, middle) {
       const grid = api.current;
       if (!grid) return;
       if (!id) return grid.deselectAll();
       const node = grid.getRowNode(id);
       node?.setSelected(true, true);
-      if (node?.rowIndex != null) grid.ensureIndexVisible(node.rowIndex);
+      if (node?.rowIndex != null) grid.ensureIndexVisible(node.rowIndex, middle ? "middle" : null);
     },
     resetSort() {
       api.current?.applyColumnState({ defaultState: { sort: null } });
+      if (api.current?.getDisplayedRowCount()) api.current.ensureIndexVisible(0, "top");
     },
   }));
 

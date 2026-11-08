@@ -46,7 +46,10 @@ export function previewSeed(asConsole = false) {
   // The hashes only feed the duplicate-photo check, which seeded claims never run.
   const hashes = Object.fromEntries(SEED_PHOTOS.map((name) => [name, "0000000000000000"]));
   const claims = buildSeedClaims({ recall, now: PREVIEW_NOW, hashes });
-  const built = { recall, claims: asConsole ? claims : claims.map((c) => ({ ...c, seeded: false })) };
+  // On the homepage the seed's one payout still settling (its newest) has settled, so the claim the tour shows arriving
+  // lands as Paid, under the Paid tab, as every other paid claim there: one word for one state.
+  const live = (c: Claim): Claim => ({ ...c, seeded: false, ...(c.payout?.status === "PENDING" && { payout: { ...c.payout, status: "SUCCESS" } }) });
+  const built = { recall, claims: asConsole ? claims : claims.map(live) };
   cached.set(asConsole, built);
   return built;
 }
@@ -124,7 +127,8 @@ function evidenceOf(claim: Claim, recall: Recall): DrawerClaim {
 /** The CPSC progress-report draft over the same 40 claims, as /console/report builds it for a live workspace. */
 export function reportPreview() {
   const { recall, claims } = previewSeed();
-  return { recall, report: typeset(buildReport(claims.map(summarize), recall)), generated: formatDayET(PREVIEW_NOW.toISOString()) };
+  const daysIn = Math.floor((PREVIEW_NOW.getTime() - Date.parse(recall.recallDate)) / 86_400_000);
+  return { recall, report: typeset(buildReport(claims.map(summarize), recall)), generated: formatDayET(PREVIEW_NOW.toISOString()), daysIn };
 }
 
 /**

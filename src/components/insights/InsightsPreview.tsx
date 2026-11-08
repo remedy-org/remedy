@@ -4,7 +4,7 @@ import type { AgReportState, AgStudioApi } from "ag-studio";
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { InsightsData } from "@/app/console/insights/facts";
 import type { StudioFilter } from "./InsightsPreviewLazy";
-import { filterClaims, filterLabel, filterPicks, homeInsightsReport, homeKpiCaptions, homeTime } from "./report";
+import { filterClaims, filterLabel, filterPicks, homeInsightsReport, homeKpiCaptions, homeTime, paidByDayChart } from "./report";
 import { buildSources } from "./sources";
 import { colorResolver, fonts, onThemeChange, readTheme } from "./studio-setup";
 import lib from "./studio-lib";
@@ -95,6 +95,7 @@ export default function InsightsPreview({
     // nothing, when a pick can't be read here); Studio redraws a tile from its state, so they are set again after it.
     let byTitle: Record<string, string> = {};
     let label = "";
+    let labelsOn = true;
     const clear = () => {
       const studio = api.current;
       if (!studio) return;
@@ -103,6 +104,21 @@ export default function InsightsPreview({
     };
     const follow = (state: AgReportState<InsightsRegistry>) => {
       const picks = filterPicks(pageOf(state));
+      // Under a cross-filter the day chart's labels go: Studio would print what the filter keeps at each column's foot
+      // ("$0.00" cut by the axis). The columns, dimmed whole with the kept part solid, and their tooltips say it.
+      const labels = !picks.length;
+      if (labels !== labelsOn && api.current) {
+        labelsOn = labels;
+        api.current.setState({
+          ...state,
+          pages: state.pages.map((page) => {
+            const chart = page.widgets?.["paid-by-day"];
+            if (!chart || chart.type !== "column-chart-grouped") return page;
+            return { ...page, widgets: { ...page.widgets, "paid-by-day": { ...chart, format: { ...chart.format, ...paidByDayChart(labelColor, labels).format, title: chart.format?.title } } } };
+          }),
+        });
+        return;
+      }
       const shown = picks.length ? filterClaims(data.claims, picks) : data.claims;
       const home = shown ? homeKpiCaptions(data.claims, shown) : { median: "", refused: "" };
       byTitle = { [say.timeTitle]: home.median, Refused: home.refused };

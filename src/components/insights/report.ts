@@ -77,16 +77,23 @@ export function filterClaims<T extends Partial<Claim>>(claims: T[], picks: Filte
   return claims.filter((c) => picks.every((p, i) => p.values.includes(reads[i]!(c))));
 }
 
-// How the filter bar names a pick: a refusal reason reads as itself, a funnel drop by the furthest stage its claims
-// reached (the grid's "Furthest stage"), a day as filed.
+// How the filter bar names a pick, in an operations person's words: a refusal reason reads as itself, a funnel drop
+// by where its claims stopped (the furthest stage they passed is the grid's "Furthest stage"), a day as filed.
 const or = (values: string[]) => values.map(shownAs).join(" or ");
+const STOPPED: Record<string, string> = {
+  Filed: "claims still waiting for photos",
+  "Photos sent": "claims stopped at the account checks",
+  "Passed account checks": "claims stopped at the photo check",
+  "Passed photo check": "claims held after passing every check",
+  Paid: "approved claims",
+};
 const PICK_LABEL: Record<string, (values: string[]) => string> = {
-  "claims.stage": (v) => `Furthest stage: ${or(v)}`,
+  "claims.stage": (v) => v.map((stage) => STOPPED[stage] ?? `claims that passed ${stage}`).join(" or "),
   "claims.decision": (v) => `Verdict: ${or(v)}`,
   [DAY]: (v) => `Filed ${or(v.map((d) => `${Number(d.slice(6))} ${MONTHS[Number(d.slice(4, 6)) - 1] ?? ""}`.trim()))}`,
 };
 
-/** "Rejected by a person on review", "Furthest stage: Photos sent · Decision: Held"; a pick this can't name reads as a chart's. */
+/** "Rejected by a person on review", "claims stopped at the account checks · Verdict: Held"; a pick this can't name reads as a chart's. */
 export function filterLabel(picks: FilterPick[]) {
   return picks.map((p) => (p.field ? (PICK_LABEL[p.field] ?? or)(p.values) : "A pick on a chart")).join(" · ");
 }
@@ -120,12 +127,12 @@ export const reportRows = (data: InsightsData, narrow = false) => {
   return narrow ? r.progress + r.decisions + r.funnel + r.refusals + r.paid : r.progress + r.funnel + r.paid;
 };
 
-const usdDay = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-
 /** Studio's own column chart (AG Charts) of the dollars PayPal sent, by the day the claim was filed: each day's sum on
  * its column in the page's background colour (labelColor), the day under it, no value axis. Hovering a column gives the
- * claims remedied that day. The console's Insights and the homepage's draw the same chart. */
-export function paidByDayChart(labelColor?: string) {
+ * claims remedied that day. The console's Insights and the homepage's draw the same chart. Under a cross-filter the
+ * day's whole column dims and what the filter keeps is drawn solid over it; the homepage turns the labels off then
+ * (`labels` false), since Studio prints the kept amount at the column's foot, "$0.00" cut in half on the axis. */
+export function paidByDayChart(labelColor?: string, labels = true) {
   return {
     type: "column-chart-grouped" as const,
     dataMapping: { categoryKey: [{ id: "calendar::day" }], valueKey: [sum("claims.amountSent")], tooltipKey: [sum("claims.remedied")] },
@@ -135,8 +142,8 @@ export function paidByDayChart(labelColor?: string) {
         theme: {
           bar: {
             series: {
-              // A day the cross-filter leaves out keeps its dimmed column and no "$0.00" over it.
-              label: { enabled: true, fontSize: 12, ...(labelColor && { color: labelColor }), formatter: ({ value }: { value: number }) => (value ? usdDay.format(value) : "") },
+              // Studio formats the label from the field (a label formatter here is never called).
+              label: { enabled: labels, fontSize: 12, ...(labelColor && { color: labelColor }) },
             },
           },
         },
@@ -252,8 +259,9 @@ export const refusedSplit = (photo: number, pre: number) =>
  * each reason with its bar (34px). */
 export const homeRefusalRows = (reasons: number) => Math.ceil((76 + reasons * 34) / 16);
 
-/** The homepage's dollars-by-day chart needs this many 16px rows to read (its card, title and columns). */
-export const HOME_DAY_ROWS = 10;
+/** The homepage's dollars-by-day chart needs this many 16px rows to read (its card, title and columns, the smallest day's
+ * dollars inside its column). The still leaves the refusal reasons out at the same frame height (InsightsStill.tsx). */
+export const HOME_DAY_ROWS = 13;
 
 /**
  * The homepage's Insights, as Studio state (InsightsPreview.tsx): six widgets on one page. Units remedied and Refused

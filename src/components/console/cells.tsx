@@ -51,24 +51,32 @@ export function Thumbs({ row, size = "md" }: { row: Pick<ClaimRow, "photos" | "p
       </span>
     );
   }
-  // A fixed slot (room for two overlapping photos), so claim ids line up whether a claim has one photo or two; a single
-  // photo sits in its middle, so the column's left edge doesn't go ragged.
+  // A fixed slot, so claim ids line up whether a claim has one photo or two, each centred in it. Two photos stack as two
+  // prints: the second behind the first, 6px up and to the right, the first ringed in the row's ground, so they never
+  // read as one wide photo.
   return (
-    <span aria-hidden="true" className={clsx("thumbs relative flex shrink-0", size === "md" ? "w-14" : "w-[70px]", shown.length === 1 && "justify-center")}>
-      {shown.map((p, i) => (
-        // A private, session-checked route: next/image's optimizer can't fetch it with the company's cookie.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={p.thumb}
-          src={p.thumb}
-          alt=""
-          width={size === "md" ? 32 : 40}
-          height={size === "md" ? 24 : 30}
-          loading="lazy"
-          decoding="async"
-          className={clsx(box, "rounded-[4px] bg-surface-2 object-cover ring-1 ring-line", i > 0 && (size === "md" ? "-ml-2" : "-ml-2.5"))}
-        />
-      ))}
+    <span aria-hidden="true" className={clsx("thumbs relative flex shrink-0 justify-center", size === "md" ? "w-14" : "w-[70px]")}>
+      <span className={clsx("relative flex", shown.length > 1 && (size === "md" ? "pt-1.5 pr-1.5" : "pt-2 pr-2"))}>
+        {shown.map((p, i) => (
+          // A private, session-checked route: next/image's optimizer can't fetch it with the company's cookie.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={p.thumb}
+            src={p.thumb}
+            alt=""
+            width={size === "md" ? 32 : 40}
+            height={size === "md" ? 24 : 30}
+            loading="lazy"
+            decoding="async"
+            className={clsx(
+              box,
+              "rounded-[4px] bg-surface-2 object-cover",
+              i === 0 ? "relative z-[1] ring-1 ring-line" : "absolute top-0 right-0 ring-1 ring-line",
+              i === 0 && shown.length > 1 && "outline-[1.5px] outline-offset-1 outline-bg outline-solid",
+            )}
+          />
+        ))}
+      </span>
     </span>
   );
 }
@@ -471,7 +479,9 @@ export function ChecksTooltip({ data, location, value }: CustomTooltipProps<Grid
   const shown = data.bars.filter((b) => !(isPreCheck(b.id) && b.state === "skipped"));
   const groups = FIVE_CHECKS.map((c) => ({ title: c.short, bars: shown.filter((b) => checkOf(b.id) === c.n) })).filter((g) => g.bars.length);
   return (
-    <div className="w-[328px] rounded-card bg-surface px-3.5 py-3 shadow-float">
+    // Wide enough for the longest check beside its longest word ("Same item in both photos", "One photo, not needed");
+    // a longer one wraps, never cut.
+    <div className="w-[360px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <p className="text-ui text-text">{barsSentence(data.bars)}</p>
       {groups.map((g) => (
         <div key={g.title} className="mt-3">
@@ -480,7 +490,7 @@ export function ChecksTooltip({ data, location, value }: CustomTooltipProps<Grid
             {g.bars.map((b) => (
               <li key={b.id} className="flex items-center gap-2.5 text-ui">
                 <Bar bar={b} />
-                <span className="min-w-0 flex-1 truncate text-text-2">{b.label}</span>
+                <span className="min-w-0 flex-1 text-text-2">{b.label}</span>
                 {barWord(b) && <span className="shrink-0 text-micro text-muted">{barWord(b)}</span>}
               </li>
             ))}
