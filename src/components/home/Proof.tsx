@@ -127,7 +127,7 @@ export function Proof() {
   return (
     <Section
       id="proof"
-      exhibit="C · Proof"
+      exhibit="Test results"
       title="Tested on 36 claims before we built."
       muted="Three runs per model."
       lead={

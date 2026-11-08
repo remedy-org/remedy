@@ -15,5 +15,5 @@ export { Skeleton, SkeletonText, type SkeletonProps, type SkeletonTextProps } fr
 export { Stamp, type StampProps, type StampTone } from "./Stamp";
 export { StatusPill, statusLabel, type Status, type StatusPillProps } from "./StatusPill";
 export { THEME_STORAGE_KEY, type Theme } from "./theme";
-export { ThemeToggle } from "./ThemeToggle";
+export { ThemeToggle, useTheme } from "./ThemeToggle";
 export { Wordmark, type WordmarkProps } from "./Wordmark";

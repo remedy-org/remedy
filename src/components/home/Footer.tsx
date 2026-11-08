@@ -3,12 +3,12 @@ import { ArrowRightIcon, Button, Paper, Wordmark } from "@/components/ui";
 import styles from "./home.module.css";
 import { Enter } from "./Reveal";
 
-// In the nav's order.
+// In page order, in the nav's words; The problem is here though the nav leaves it out.
 const PRODUCT = [
   { href: "#how", label: "How it works" },
   { href: "#problem", label: "The problem" },
-  { href: "#checks", label: "What stops a fake" },
-  { href: "#proof", label: "Proof" },
+  { href: "#checks", label: "Fraud checks" },
+  { href: "#proof", label: "Test results" },
   { href: "#companies", label: "For companies" },
   { href: "/r/kikea-x-vesolje/try", label: "Try a demo claim" },
   { href: "/signin", label: "Company sign in" },
@@ -35,7 +35,7 @@ function CtaTag() {
       <Paper variant="tag" hole padding="none" className="sm:-rotate-1">
         <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div>
-            <p className="micro text-ink-muted">Exhibit E · Your turn</p>
+            <p className="micro text-ink-muted">Your turn</p>
             <h2 className="mt-4 text-title-lg font-medium text-balance">Run a claim yourself.</h2>
             <p className="mt-3 max-w-[40ch] text-body text-pretty text-ink-muted">
               Four sample claims with AI-made test photos go through the same five checks. Refunds are sandbox money.
@@ -46,6 +46,7 @@ function CtaTag() {
             <Button
               href="/r/kikea-x-vesolje/try"
               size="lg"
+              data-try-cta=""
               className="shadow-[0_0_0_1px_var(--paper-line)] focus-visible:outline-ink max-sm:h-auto max-sm:min-h-12 max-sm:w-full max-sm:py-3 max-sm:text-center max-sm:whitespace-normal"
             >
               Try a claim with sample photos
@@ -102,7 +103,8 @@ export function Footer() {
               Recall refunds paid within a minute of a live photo. A fake has to beat a live camera, a photo fingerprint and a verified PayPal account before the model even looks.
             </p>
           </div>
-          <nav aria-label="Footer" className="col-span-12 md:col-span-6 lg:col-span-5 lg:col-start-8">
+          {/* #footer-nav: where the nav's Menu link goes without JS. */}
+          <nav id="footer-nav" aria-label="Footer" className="col-span-12 md:col-span-6 lg:col-span-5 lg:col-start-8">
             <h2 className="sr-only">Remedy</h2>
             <ul className="flex flex-wrap gap-x-6 md:-mt-2.5">
               {PRODUCT.map((l) => (

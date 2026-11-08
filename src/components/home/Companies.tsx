@@ -24,7 +24,7 @@ export function Companies() {
   return (
     <Section
       id="companies"
-      exhibit="D · For companies"
+      exhibit="For companies"
       title="Every claim, with its evidence."
       muted="Paid, held or refused, in one queue."
     >

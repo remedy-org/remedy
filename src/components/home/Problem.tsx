@@ -61,7 +61,7 @@ export function Problem() {
   return (
     <Section
       id="problem"
-      exhibit="A · The problem"
+      exhibit="The problem"
       tone="paper"
       title="Recall refunds run on an inbox."
       muted="AI broke the inbox."

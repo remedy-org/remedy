@@ -23,13 +23,18 @@ function apply(theme: Theme) {
   }
 }
 
+/** The theme <html data-theme> shows now, kept in step with the toggle; "dark" on the server. */
+export function useTheme(): Theme {
+  return useSyncExternalStore(subscribe, read, () => "dark" as Theme);
+}
+
 /**
  * A 36px icon button (44px hit area) that switches the app between the dark brand theme and the light theme. The
  * glyph is a half-lit disc that turns over with the theme; its angle follows <html data-theme> in CSS, so it is right
  * from the first paint.
  */
 export function ThemeToggle({ className }: { className?: string }) {
-  const theme = useSyncExternalStore(subscribe, read, () => "dark" as Theme);
+  const theme = useTheme();
   const next: Theme = theme === "dark" ? "light" : "dark";
   return (
     <button

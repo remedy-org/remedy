@@ -39,6 +39,7 @@ export function Hero() {
         <Button
           href="/r/kikea-x-vesolje/try"
           size="lg"
+          data-try-cta=""
           className="max-sm:h-auto max-sm:min-h-12 max-sm:w-full max-sm:px-3 max-sm:py-2.5 max-sm:text-center max-sm:text-balance max-sm:whitespace-normal"
         >
           Try a claim with sample photos

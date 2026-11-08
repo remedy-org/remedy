@@ -117,11 +117,13 @@ export function HeroRunway({ copy, facts }: { copy: ReactNode; facts: ReactNode 
       ref={runway}
       aria-labelledby="hero-title"
       data-runway={mode === "phone" ? undefined : ""}
+      data-spy="how"
       className={pinned ? styles.runway : "relative"}
       style={pinned ? ({ "--scroll": `${SCROLL_VH}vh` } as CSSProperties) : undefined}
     >
-      {/* The nav's "How it works" lands on the first chapter, once the screen has taken over from the laptop. */}
-      {pinned && <span id="how" className="absolute left-0" style={{ top: `${(scrollAt(0.215) * SCROLL_VH).toFixed(1)}vh` }} aria-hidden="true" />}
+      {/* The nav's "How it works" lands on the first chapter, once the screen has taken over from the laptop. Each #how
+          takes focus after the jump (tabIndex -1), so the next Tab goes on from there. */}
+      {pinned && <span id="how" tabIndex={-1} className="absolute left-0 outline-none" style={{ top: `${(scrollAt(0.215) * SCROLL_VH).toFixed(1)}vh` }} aria-hidden="true" />}
       <div ref={stage} className={pinned ? styles.stage : "relative"}>
         <div className={styles.hero}>
           <motion.div className={styles.copy} style={pinned ? dolly.text : undefined}>
@@ -141,12 +143,12 @@ export function HeroRunway({ copy, facts }: { copy: ReactNode; facts: ReactNode 
         {pinned && <CustodyStage p={p} stage={stage} skip={<SkipLink />} />}
       </div>
       {mode === "static" && (
-        <div id="how" className="scroll-mt-16">
+        <div id="how" tabIndex={-1} className="outline-none">
           <StaticFigures />
         </div>
       )}
       {mode === "phone" && (
-        <div id="how" className="scroll-mt-16">
+        <div id="how" tabIndex={-1} className="outline-none">
           <PhoneRunway skip={<SkipLink />} />
         </div>
       )}

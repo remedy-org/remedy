@@ -5,7 +5,7 @@ import { Reveal } from "./Reveal";
 
 export interface SectionProps {
   id: string;
-  /** The exhibit letter and name, e.g. "A · The problem". */
+  /** The exhibit's name, e.g. "The problem": the eyebrow reads "Exhibit · The problem", in the nav's words. */
   exhibit: string;
   /** Two-tone heading: the claim, then the explanation in muted. */
   title: ReactNode;
@@ -29,17 +29,16 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
 export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className }: SectionProps) {
   const headingId = `${id}-title`;
   const paper = tone === "paper";
-  const [letter, name] = exhibit.split(" · ");
   return (
-    <section id={id} aria-labelledby={headingId} className={clsx("scroll-mt-16", paper ? "bg-band text-ink" : styles.fade, className)}>
+    <section id={id} aria-labelledby={headingId} className={clsx(paper ? "bg-band text-ink" : styles.fade, className)}>
       <div className="page py-18 lg:py-32">
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
           <div className="col-span-12 lg:col-span-7">
             <p className={clsx(styles.line, "micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
-              Exhibit <span className={paper ? "text-ink" : "text-text-2"}>{letter}</span>
-              {name && <> · {name}</>}
+              Exhibit · <span className={paper ? "text-ink" : "text-text-2"}>{exhibit}</span>
             </p>
-            <h2 id={headingId} className="mt-5 text-title-lg font-medium text-balance">
+            {/* tabIndex -1: the nav's links focus the heading after the jump, so the next Tab goes on from here. */}
+            <h2 id={headingId} tabIndex={-1} className="mt-5 text-title-lg font-medium text-balance outline-none">
               <span className={clsx(styles.line, "block")} style={line(1)}>
                 {title}
               </span>{" "}
