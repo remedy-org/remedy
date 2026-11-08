@@ -14,7 +14,7 @@ export function MobileSummary({ data }: { data: InsightsData }) {
     <section aria-label="Summary" className="flex flex-col gap-6 px-4 pb-8 sm:hidden">
       <InsightsLedger claims={data.claims} unitsSold={data.recall.unitsSold} />
 
-      <div className="rounded-card border border-line bg-surface p-4">
+      <div>
         <h2 className="text-ui font-medium">Where claims stop</h2>
         <ol className="mt-3 flex flex-col gap-2">
           {steps.map((s, i) => (
