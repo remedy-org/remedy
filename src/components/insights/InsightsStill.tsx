@@ -12,9 +12,9 @@ import { RefusalReasonsView } from "./widgets/RefusalReasonsView";
 // nothing; on phones it is the story's third block, read as text, under the same "Built on AG Studio" foot as the
 // queue's "Built on AG Grid".
 
-function Card({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
+function Card({ title, children, flat, className }: { title: string; children: ReactNode; flat?: boolean; className?: string }) {
   return (
-    <div className={clsx("flex min-h-0 flex-col gap-3 rounded-card bg-surface p-4 shadow-card", className)}>
+    <div className={clsx("flex min-h-0 flex-col gap-3 rounded-card p-4", flat ? "ring-1 ring-line" : "bg-surface shadow-card", className)}>
       <p className="text-ui font-medium">{title}</p>
       {children}
     </div>
@@ -55,6 +55,7 @@ export function InsightsStill({
   rail,
   form = "frame",
   credit,
+  flat = false,
 }: {
   data: InsightsStillData;
   /** The recall analyst's recorded answer, beside the canvas (under it on phones). */
@@ -62,6 +63,12 @@ export function InsightsStill({
   form?: "frame" | "phone";
   /** Phones: the foot under the dashboard naming the SDK it is built on. */
   credit?: string;
+  /**
+   * Flat in a console window (the homepage tour): the three figures as a borderless stat strip, as the Claims page's
+   * ledger reads, and the panels on the window's ground in a hairline ring, no card surface or shadow. AG Studio is
+   * drawn the same way there (home/tour.module.css .studio).
+   */
+  flat?: boolean;
 }) {
   if (form === "phone") {
     // The funnel names every refusal with its count, so a phone skips the separate refusals card.
@@ -69,19 +76,19 @@ export function InsightsStill({
       <div className="overflow-hidden rounded-frame bg-bg shadow-float">
         <div className="flex flex-col gap-3 p-3">
           {/* Each figure on one baseline: its label over it (two lines held), its caption under it. */}
-          <dl className="grid grid-cols-3 divide-x divide-line rounded-card bg-surface shadow-card">
+          <dl className={clsx("grid grid-cols-3 divide-x divide-line", !flat && "rounded-card bg-surface shadow-card")}>
             {data.kpis.map((k) => (
-              <div key={k.id} className="flex min-w-0 flex-col gap-1 px-3 py-3">
+              <div key={k.id} className={clsx("flex min-w-0 flex-col gap-1 py-3", flat ? "px-3 first:pl-1" : "px-3")}>
                 <dt className="min-h-[2lh] text-micro leading-tight text-muted">{k.phone ?? k.title}</dt>
                 <dd className="text-[22px] leading-7">{k.value}</dd>
                 <dd className="text-micro leading-tight text-pretty text-muted">{k.caption}</dd>
               </div>
             ))}
           </dl>
-          <Card title="Check funnel">
+          <Card title="Check funnel" flat={flat}>
             <CheckFunnelView steps={data.steps} compact flush />
           </Card>
-          <Card title={PAID_BY_DAY}>
+          <Card title={PAID_BY_DAY} flat={flat}>
             <PaidByDay days={data.days} className="h-36" />
           </Card>
           {rail}
@@ -98,7 +105,7 @@ export function InsightsStill({
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <dl className="grid shrink-0 grid-cols-3 gap-3">
           {data.kpis.map((k) => (
-            <div key={k.id} data-kpi={k.id} className="flex flex-col gap-2 rounded-card bg-surface p-4 shadow-card xl:h-[116px]">
+            <div key={k.id} data-kpi={k.id} className={clsx("flex flex-col gap-2 xl:h-[116px]", flat ? "py-2" : "rounded-card bg-surface p-4 shadow-card")}>
               <dt className="text-ui font-medium">{k.title}</dt>
               <dd className="text-[28px] leading-none">{k.value}</dd>
               <dd className="text-micro text-pretty text-muted">{k.caption}</dd>
@@ -106,7 +113,7 @@ export function InsightsStill({
           ))}
         </dl>
         <div className="grid flex-1 grid-cols-[55fr_45fr] gap-3 xl:grid-cols-[14fr_10fr]">
-          <Card title="Check funnel" className="min-h-auto!">
+          <Card title="Check funnel" flat={flat} className="min-h-auto!">
             {/* The funnel sizes itself to the card (its footer is a size query), so it holds its stages' height here and
                 a short frame scrolls instead. */}
             <div className="min-h-60 flex-1">
@@ -114,10 +121,10 @@ export function InsightsStill({
             </div>
           </Card>
           <div className="flex flex-col gap-3">
-            <Card title="Why claims were refused" className="shrink-0 [@container(max-height:540px)]:hidden">
+            <Card title="Why claims were refused" flat={flat} className="shrink-0 [@container(max-height:540px)]:hidden">
               <RefusalReasonsView items={data.refusals} flush />
             </Card>
-            <Card title={PAID_BY_DAY} className="min-h-[144px] flex-1">
+            <Card title={PAID_BY_DAY} flat={flat} className="min-h-[144px] flex-1">
               <PaidByDay days={data.days} />
             </Card>
           </div>
