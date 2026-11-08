@@ -43,7 +43,7 @@ function CtaTag() {
       <Paper variant="tag" hole padding="none" className="sm:-rotate-1">
         <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div>
-            <p className="micro text-ink-muted">Try it</p>
+            <p className="eyebrow text-ink-muted">Try it</p>
             <h2 className="mt-4 text-title-lg font-medium text-balance">See a refund land in a minute.</h2>
             <p className="mt-3 max-w-[40ch] text-body text-pretty text-ink-muted">
               Run four claims, one of them genuine. Remedy pays it through PayPal and stops the three fakes.

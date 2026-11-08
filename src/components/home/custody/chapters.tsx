@@ -54,10 +54,10 @@ function Lit({ p, at, className, children }: { p?: Progress; at: number; classNa
 function RefundLine() {
   return (
     <div className="flex flex-col gap-2">
-      <span className="micro text-faint">Your refund</span>
+      <span className="text-ui text-faint">Your refund</span>
       <div className="flex items-center gap-4">
         <Money value={CLAIM.amount} size="amount" />
-        <span className="inline-flex h-6 items-center rounded-full border border-line px-2.5 font-mono text-micro whitespace-nowrap text-muted">About 5 min start to finish</span>
+        <span className="text-ui whitespace-nowrap text-muted">About 5 min start to finish</span>
       </div>
     </div>
   );
@@ -200,7 +200,7 @@ export function CodeChapter({ p }: { p: Progress }) {
           </div>
           <p className={clsx("max-w-[44ch] text-body text-muted", compact && "@max-[719px]:hidden")}>Write it on a tag with <NoBreakHyphens>X-VESOLJE</NoBreakHyphens>, big, in marker. Then photograph the cut pillow with the tag on it, in this page&rsquo;s camera.</p>
           <div className="hidden flex-col gap-2 @min-[720px]:flex">
-            <span className="micro text-faint">Your photo must show</span>
+            <span className="text-ui text-faint">Your photo must show</span>
             <ol className="flex flex-col gap-1.5">
               {SHOT_LIST.map((s, i) => (
                 <li key={s} className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-baseline text-ui">
@@ -350,7 +350,8 @@ export function ConsoleChapter({ p }: { p: Progress }) {
   const open = useGate(p, (v) => v >= 0.91, { duration: DURATION.object, ease: EASE.outQuart, delay: 0.2 }, { duration: 0.28, ease: EASE.outQuart });
   const height = useTransform(open, (k) => `${(k * (compact ? 3 : 3.5)).toFixed(3)}rem`);
   const opacity = useTransform(open, [0.5, 1], [0, 1]);
-  const flash = useTransform(p, (v) => `color-mix(in oklch, var(--accent) ${(14 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
+  // The console's one neutral flash on a changed row (never amber: the rail's running chapter is this screen's amber).
+  const flash = useTransform(p, (v) => `color-mix(in oklch, var(--text) ${(8 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
   // It fills the stage down to its foot, so as the pin releases the stage never shows an empty band under it.
   return (
     <div className="h-full @container">
@@ -369,12 +370,12 @@ export function ConsoleChapter({ p }: { p: Progress }) {
           </div>
           <div className="flex gap-6 border-b border-line px-4 text-ui">
             {["All", "Paid", "Held", "Refused"].map((t, i) => (
-              <span key={t} className={clsx("py-2.5", i === 0 ? "border-b-2 border-accent text-text" : "text-muted")}>
+              <span key={t} className={clsx("py-2.5", i === 0 ? "border-b-2 border-text text-text" : "text-muted")}>
                 {t}
               </span>
             ))}
           </div>
-          <div className={clsx(GRID, "hidden h-9 border-b border-line bg-surface-2 font-mono text-micro tracking-[0.06em] text-faint uppercase @min-[720px]:grid")}>
+          <div className={clsx(GRID, "hidden h-9 border-b border-line bg-surface-2 text-micro font-medium text-muted @min-[720px]:grid")}>
             <span>Claim</span>
             <span>Verdict</span>
             <span>Checks</span>
