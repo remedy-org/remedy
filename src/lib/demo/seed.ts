@@ -46,6 +46,30 @@ type Kind = "paid" | "held" | "rejected" | "blocked" | "pending";
 // 26 paid, 3 held, 6 rejected, 3 blocked, 2 pending (newest).
 const MIX: Kind[] = [...Array<Kind>(26).fill("paid"), ...Array<Kind>(3).fill("held"), ...Array<Kind>(6).fill("rejected"), ...Array<Kind>(3).fill("blocked")];
 
+/**
+ * Each claim's place, newest first, among the decided claims (by their index in `kinds`): the outcomes come mixed as a
+ * queue really fills, so a console sorted newest first shows paid, held, rejected and blocked claims in its first rows
+ * (it opens paid, held, rejected, paid, blocked), then each outcome at its own share all the way down. Within an outcome
+ * the shuffled order is kept, so which claim is newer than which (and every id, photo and reason) stays as it was.
+ */
+export function spread(kinds: readonly Kind[]): number[] {
+  const LEAD: Kind[] = ["paid", "held", "rejected", "paid", "blocked"];
+  const queues = new Map<Kind, number[]>();
+  kinds.forEach((k, i) => queues.set(k, [...(queues.get(k) ?? []), i]));
+  const share = new Map([...queues].map(([k, q]) => [k, q.length / kinds.length]));
+  const taken = new Map<Kind, number>();
+  const behind = (k: Kind, r: number) => (r + 1) * share.get(k)! - (taken.get(k) ?? 0);
+  const rank: number[] = [];
+  for (let r = 0; r < kinds.length; r++) {
+    const left = [...queues.keys()].filter((k) => queues.get(k)!.length);
+    const lead = LEAD[r];
+    const k = lead && left.includes(lead) ? lead : left.reduce((a, b) => (behind(b, r) > behind(a, r) ? b : a));
+    rank[queues.get(k)!.shift()!] = r;
+    taken.set(k, (taken.get(k) ?? 0) + 1);
+  }
+  return rank;
+}
+
 // Deterministic, so a reseed rewrites the same claims.
 function prng(seed: number) {
   let a = seed >>> 0;
@@ -95,7 +119,8 @@ export function buildSeedClaims({ recall, now, hashes, taken = new Set(), reuse 
     return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`;
   };
 
-  // Fisher-Yates over the mix, then newest-first times: pending claims are the two newest.
+  // Fisher-Yates over the mix, then newest-first times, given out so the outcomes come mixed (spread): pending claims are
+  // the two newest.
   const kinds = [...MIX];
   for (let i = kinds.length - 1; i > 0; i--) {
     const j = int(i + 1);
@@ -103,10 +128,11 @@ export function buildSeedClaims({ recall, now, hashes, taken = new Set(), reuse 
   }
   const HOUR = 3_600_000;
   const times = Array.from({ length: kinds.length }, () => now.getTime() - (0.25 + rand() * 71.5) * HOUR).sort((a, b) => b - a);
+  const rank = spread(kinds);
   const plan: { kind: Kind; t: number }[] = [
     { kind: "pending", t: now.getTime() - 2 * 60_000 },
     { kind: "pending", t: now.getTime() - 7 * 60_000 },
-    ...kinds.map((kind, i) => ({ kind, t: Math.floor(times[i] / 1000) * 1000 })),
+    ...kinds.map((kind, i) => ({ kind, t: Math.floor(times[rank[i]] / 1000) * 1000 })),
   ];
 
   const refund = `$${recall.refund.value}`;
@@ -222,7 +248,8 @@ export function buildSeedClaims({ recall, now, hashes, taken = new Set(), reuse 
     }
     claims.push(claim);
   }
-  return claims.reverse();
+  // Newest first.
+  return claims.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export interface EnsureOptions {

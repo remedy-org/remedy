@@ -15,8 +15,9 @@ import { storyEvidence, TOUR } from "./tour-copy";
  * it or the tour by breakpoint, so nothing swaps on load.
  */
 
-// Rows the queue's still shows: four on a phone (the outcomes it needs: paid, held, rejected, blocked), six beside the
-// words on a tablet.
+// Rows the queue's still shows, the newest decided claims (the two still waiting for photos left out): four on a phone
+// (the outcomes it needs: paid, held, rejected, blocked; the second and third paid hidden), six beside the words on a
+// tablet.
 const SHOWN = 6;
 
 export function ConsoleStory({
@@ -41,10 +42,12 @@ export function ConsoleStory({
         </span>
         <span className="flex min-w-0 items-baseline gap-2 text-ui whitespace-nowrap">
           <span className="truncate text-text-2 max-sm:hidden">{TOUR.recall.product}</span>
-          <span className="font-mono text-muted">{TOUR.recall.id}</span>
+          <span className="text-muted">
+            CPSC <span className="font-mono">{TOUR.recall.id}</span>
+          </span>
         </span>
       </p>
-      <GridStill rows={rows.slice(0, SHOWN)} openId={evidence?.id} phone flush className="max-md:[&>:nth-child(5)]:hidden max-md:[&>:nth-child(7)]:hidden" />
+      <GridStill rows={rows.filter((r) => r.decision !== "pending").slice(0, SHOWN)} openId={evidence?.id} phone flush className="max-md:[&>:nth-child(5)]:hidden max-md:[&>:nth-child(7)]:hidden" />
     </div>,
     evidence ? <EvidenceStill key="evidence" claim={evidence} note={<PayoutsNote amount={evidence.amount} id={evidence.id} />} fluid /> : null,
     <div key="insights">{insights}</div>,

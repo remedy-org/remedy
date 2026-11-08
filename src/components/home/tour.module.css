@@ -89,6 +89,12 @@
   scrollbar-width: none;
 }
 
+/* The list runs on under the window's foot line: its last 20px fade out, so a row cut by the foot never shows as a
+   sliver of ascenders over it. */
+.gate :global(.ag-body-viewport) {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent);
+}
+
 .gate :global(.ag-grid-viewport)::-webkit-scrollbar {
   display: none;
 }
@@ -160,11 +166,15 @@
   transition: background-color 1400ms var(--ease-out-quart) 400ms !important;
 }
 
-/* The ledger's figures and the status counts roll to their new value when the arriving claim lands (Roll). */
+/* The ledger's figures and the status counts roll to their new value when the arriving claim lands (Roll): through a
+   window one line of the figure tall, whatever line box it sits in (the ledger's is 56px), so the old value is wholly
+   out of it before the new one is wholly in, and two values never show stacked. */
 .roll {
   display: inline-grid;
-  overflow: hidden;
-  vertical-align: bottom;
+  height: 1.1em;
+  overflow: clip;
+  line-height: 1.1;
+  vertical-align: baseline;
 }
 
 .roll > * {
@@ -337,10 +347,10 @@
   color: var(--muted) !important;
 }
 
-/* Once Studio has drawn over it, the still leaves (after the crossfade), so it is never read twice. */
+/* Once Studio has drawn over it, the still leaves in the same frame: a cut, never a crossfade, so no figure or label
+   is ever on screen twice. */
 .body[data-studio-shown] :global([data-still]) {
   visibility: hidden;
-  transition: visibility 0s linear 200ms;
 }
 
 /* The report scrolls inside the window like a document in a viewer: the paper runs on past the window's foot, and
@@ -481,11 +491,6 @@
     animation: rise-in 320ms var(--ease-out-expo) 60ms both;
   }
 
-  /* The still gives way to Studio once Studio has drawn: a 200ms crossfade, the still in place under it. */
-  .studio {
-    transition: opacity 200ms var(--ease-snap);
-  }
-
   /* The draft is paper: it never shows half transparent (grey) over the window. It appears whole at once, over the page
      leaving under it (so the window is never empty), and rises 12px. */
   .reportBody[data-on] {
@@ -570,14 +575,14 @@
 @keyframes roll-out {
   to {
     opacity: 0;
-    translate: 0 -70%;
+    translate: 0 -100%;
   }
 }
 
 @keyframes roll-in {
   from {
     opacity: 0;
-    translate: 0 70%;
+    translate: 0 100%;
   }
 }
 

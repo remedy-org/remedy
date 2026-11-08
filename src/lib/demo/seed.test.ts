@@ -41,6 +41,16 @@ describe("buildSeedClaims", () => {
     expect(Date.parse(copied!.createdAt)).toBeLessThan(Date.parse(reposts[0].createdAt));
   });
 
+  it("mixes the outcomes newest first, so a queue sorted by time opens on every kind of claim", () => {
+    expect(claims.slice(2, 7).map((c) => c.decision)).toEqual(["paid", "held", "rejected", "paid", "blocked"]);
+    // A claim that names an earlier one (a repost, a second claim from one account) is newer than it.
+    for (const c of claims.filter((c) => c.decision === "blocked")) {
+      for (const id of c.reasons.flatMap((r) => r.text.match(/RM-\d{4}/g) ?? [])) {
+        expect(Date.parse(claims.find((o) => o.id === id)!.createdAt)).toBeLessThan(Date.parse(c.createdAt));
+      }
+    }
+  });
+
   it("issues codes Remedy could issue, except where the photos already carry an eval case's code", () => {
     const evalCodes = new Set(storedVerdicts.map((v) => v.code));
     for (const c of claims) {

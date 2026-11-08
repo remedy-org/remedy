@@ -47,6 +47,9 @@ const STUDIO_FROM = 1024;
 // How long the page must have been still before a pointer resting on the report hands it the wheel.
 const IDLE = 150;
 const STUDIO_WAIT = 8000;
+// The still's entrance on a pick (its bars, then the day columns and their figures, tour.module.css): Studio cuts in
+// only after it, so the cut never lands on a half-grown chart.
+const STILL_ENTRANCE = 1500;
 // Studio's canvas rows are 16px, inside 14px of canvas padding and 6px around each panel (InsightsPreview.tsx): its
 // cards sit on the frame's 20px inset with 12px between them, where the still draws its own (homeRowsFor).
 // The nav's height, and the air the nav jump leaves under it.
@@ -234,6 +237,11 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const arriving = useRef<number[]>([]);
   const studioWait = useRef<number[]>([]);
   const played = useRef(false);
+  const pickedAt = useRef(0);
+  // When Insights was picked, for the cut to Studio (STILL_ENTRANCE).
+  useEffect(() => {
+    if (step === 2) pickedAt.current = performance.now();
+  }, [step]);
   const gridGate = useRef<HTMLDivElement>(null);
   const reportEl = useRef<HTMLDivElement>(null);
   const now = useRef({ step, swapped, arrival, studioState, engaged });
@@ -739,7 +747,11 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
                 data={studio.data}
                 rows={studioRows}
                 active={step === 2}
-                onDisplayed={() => setStudioState((s) => (s === "mounted" ? "shown" : s))}
+                onDisplayed={() => {
+                  // A cut, once the still has finished coming in (STILL_ENTRANCE) if it is the step on screen.
+                  const wait = now.current.step === 2 ? STILL_ENTRANCE - (performance.now() - pickedAt.current) : 0;
+                  later(studioWait.current, Math.max(0, wait), () => setStudioState((s) => (s === "mounted" ? "shown" : s)));
+                }}
                 onFilter={setStudioFilter}
               />
             </div>

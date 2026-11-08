@@ -44,8 +44,9 @@ export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(functi
         </span>
         <span aria-hidden="true" className="flex h-full items-center gap-5 text-ui">
           {TOUR.chrome.pages.map((p) =>
+            // Drawn, not a step: fainter than the pages that take a click, and no pointer, so it never looks live.
             p === "New recall" ? (
-              <span key={p} className="flex h-full items-center text-muted">
+              <span key={p} className="flex h-full cursor-default items-center text-faint">
                 {p}
               </span>
             ) : (
@@ -66,7 +67,9 @@ export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(functi
           {notice}
           <span aria-hidden="true" className="flex items-baseline gap-2">
             <span className="text-text-2">{TOUR.recall.product}</span>
-            <span className="font-mono text-muted">{TOUR.recall.id}</span>
+            <span className="text-muted">
+              CPSC <span className="font-mono">{TOUR.recall.id}</span>
+            </span>
             {/* Room for it beside a filter's notice only on a wide window. */}
             <span className={clsx("text-muted", notice && "max-2xl:hidden")}>
               <span className="text-faint">· </span>

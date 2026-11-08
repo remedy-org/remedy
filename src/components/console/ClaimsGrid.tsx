@@ -528,7 +528,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       if (node?.rowIndex != null) grid.ensureIndexVisible(node.rowIndex, middle ? "middle" : null);
     },
     resetSort() {
-      api.current?.applyColumnState({ defaultState: { sort: null } });
+      // Back to the queue's own order: newest first (the sign-in picture's: its rows as they came).
+      api.current?.applyColumnState({ state: keepOrder ? [] : [{ colId: "createdAt", sort: "desc" }], defaultState: { sort: null } });
       if (api.current?.getDisplayedRowCount()) api.current.ensureIndexVisible(0, "top");
     },
   }));
@@ -645,13 +646,11 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         lockPinned: true,
         suppressMovable: true,
         sortable: true,
-        // The queue is newest first, the held tab oldest first; the homepage's still keeps the order its rows come in
-        // (curated in preview.ts) until a visitor sorts it, and a third click on the header gives that order back. In
-        // the queue a header click flips the order, with no unsorted step between.
-        sort: still || keepOrder ? undefined : oldestFirst ? "asc" : "desc",
-        // The homepage's still keeps the order its rows come in (curated in preview.ts) until a visitor sorts it, and a
-        // third click on the header gives that order back. In the queue a header click flips the order.
-        sortingOrder: still ? ["desc", "asc", null] : ["desc", "asc"],
+        // The queue is newest first, the held tab oldest first, and the homepage's still newest first as the queue is,
+        // its arrow shown; a sign-in picture that keeps its rows' order (keepOrder) is not sorted. A header click flips
+        // the order, with no unsorted step between.
+        sort: keepOrder ? undefined : oldestFirst ? "asc" : "desc",
+        sortingOrder: ["desc", "asc"],
         // Claims filed in the same minute: the claim id breaks the tie, so a run of identical photos and codes doesn't
         // sit together.
         comparator: (a: string, b: string, na, nb) => a.localeCompare(b) || (na.data?.id ?? "").localeCompare(nb.data?.id ?? ""),

@@ -38,7 +38,7 @@ export function Companies() {
       headingSpan={12}
       bodyClassName="mt-10 lg:mt-8"
       // The console frame and its heading share one laptop screen: less air above than the page's other sections.
-      padClassName="py-18 lg:pt-20 lg:pb-32"
+      padClassName="py-18 lg:pt-20 lg:pb-24"
       reveal="rise"
     >
       <noscript dangerouslySetInnerHTML={{ __html: NOSCRIPT }} />
@@ -68,16 +68,20 @@ export function Companies() {
         />
       </div>
 
-      {/* The sentence and its button as one row, then what New recall takes. The button is the quiet one: the footer
-          tag's Try a claim, a screen below, is the page's brass, and two never share a view. */}
-      <div className="mt-14 flex flex-col gap-3 lg:mt-16">
-        <div className="flex flex-col items-start gap-x-6 gap-y-5 sm:flex-row sm:items-center">
+      {/* One grid row: the sentence and what New recall takes on columns 1 to 7, the button on column 8, where the step
+          sentences above start. The button is the quiet one at the nav's 44px: the footer tag's Try a claim, a screen
+          below, is the page's brass, and two never share a view. Under it, which PayPal account it means. */}
+      <div className="mt-14 grid-12 gap-y-5 lg:mt-16">
+        <div className="col-span-12 flex flex-col gap-3 lg:col-span-7">
           <p className="max-w-[60ch] text-body text-pretty text-text-2">{TOUR.cta.body}</p>
-          <Button href="/signin" variant="secondary" size="lg" className="w-full shrink-0 justify-center sm:w-auto">
+          <p className="max-w-[64ch] text-ui text-pretty text-muted">{TOUR.cta.recall}</p>
+        </div>
+        <div className="col-span-12 flex flex-col items-start gap-3 lg:col-span-5 lg:col-start-8">
+          <Button href="/signin" variant="secondary" className="w-full justify-center sm:w-auto">
             {TOUR.cta.button}
           </Button>
+          <p className="text-ui text-pretty text-muted">{TOUR.cta.account}</p>
         </div>
-        <p className="max-w-[72ch] text-ui text-pretty text-muted">{TOUR.cta.recall}</p>
       </div>
     </Section>
   );

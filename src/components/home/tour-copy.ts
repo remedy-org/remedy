@@ -6,21 +6,24 @@ export const TOUR = {
   title: "Run the whole recall from one console.",
   tablist: "A tour of the Remedy console",
   steps: [
-    { name: "Claims queue", sentence: "Every claim lands in one queue already decided, as paid, held for a person, rejected or blocked." },
+    { name: "Claims", sentence: "Every claim lands in one queue already decided, as paid, held for a person, rejected or blocked." },
     { name: "Evidence", sentence: "A held claim opens to its photos and the model’s own words. Pay it there, and PayPal sends the refund." },
     { name: "Insights", sentence: "Insights shows where claims stop and why, and what PayPal paid out each day." },
-    { name: "CPSC report", sentence: "The monthly CPSC progress report drafts itself from the same claims. Review it, then file." },
+    { name: "Report", sentence: "The monthly CPSC progress report drafts itself from the same claims. Review it, then file." },
   ],
-  /** The console window's app bar: its pages (New recall is drawn, never a step), and the recall it shows (the recall
-   * switcher's place) with its auto-pay setting; the queue's toolbar and its live line, as the console draws them. */
+  /** The console window's app bar: its pages (New recall is drawn unavailable, never a step), and the recall it shows
+   * (the recall switcher's place: its product as CPSC titles it, then "CPSC" and its number, the number alone in mono,
+   * as ConsoleNav sets it) with its auto-pay setting; the queue's toolbar and its foot line, as the console draws them. */
   chrome: { pages: ["Claims", "Insights", "New recall", "Report"] as const },
-  recall: { product: "X-VESOLJE nursing pillows", id: "CPSC 27-071", autoPay: "Auto-pay on" },
+  recall: { product: "X-VESOLJE Nursing Pillows", id: "27-071", autoPay: "Auto-pay on" },
   toolbar: { export: "Export CSV", search: "Search claims, codes…", live: "Updated 8 Nov" },
   /** Step 03's sentence goes on to the analyst only when a recorded answer is there to show (AnalystRail.tsx). */
   analystSentence: " Then ask the recall analyst why.",
   cta: {
     body: "No separate sign-up. Your console opens on a working recall, ready the moment you import your own.",
     button: "Log in with PayPal",
+    // Which account: the company's business account (docs/PRODUCT.md, Company sign-in), never an owner's own.
+    account: "With your company’s PayPal Business account.",
     // What New recall really takes and does (ImportRecall.tsx), nothing more.
     recall: "New recall takes a cpsc.gov link or a recall number like 27-071, reads the product, units sold and remedy from CPSC, and drafts the checks for you to edit before you publish.",
   },
@@ -50,7 +53,7 @@ export interface TourTotals {
 /** What each step's panel says to a screen reader: the frame is a picture, so this carries its content. */
 export function describe(t: TourTotals, open: { id: string; amount: string }, analyst?: { question: string; answer: string } | null) {
   return [
-    `The claims queue for the Kikea recall: ${t.claims} claims, ${t.paid} paid, ${t.held} held for a person, ${t.refused} rejected or blocked. Click a held claim to open its evidence, filter it by status, or sort it by claim, verdict or the photo check’s time.`,
+    `The claims queue for the Kikea recall: ${t.claims} claims, ${t.paid} paid, ${t.held} held for a person, ${t.refused} rejected or blocked. Click held claim ${open.id} to open its evidence, filter the queue by status, or sort it by claim, verdict or the photo check’s time.`,
     `Claim ${open.id}, held: photos 1 and 2, and the model’s answer that it couldn’t tell if both photos show the same item. A person pays or rejects it; paying sends ${open.amount} through PayPal Payouts.`,
     `Insights: of ${t.claims} claims, ${t.photos} sent photos, ${t.preChecked} passed the pre-checks, ${t.paid} passed the photo check and were paid; ${t.refused} were refused. Payouts by day beside it.` +
       (analyst ? ` Recall analyst, asked “${analyst.question}”: ${analyst.answer}` : ""),

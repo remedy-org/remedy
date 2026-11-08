@@ -34,6 +34,20 @@ describe("homepage console tour data", () => {
     expect(rows.find((r) => r.id === PREVIEW_OPEN_ID)?.decision).toBe("held");
   });
 
+  it("opens newest first, the one clickable held claim the one How it works' console shows, and the same rows there", async () => {
+    const { CONSOLE_ROWS } = await import("./custody/claim");
+    const { formatDayTime } = await import("@/components/console/format");
+    const { duration } = await import("@/app/console/_lib/view");
+    const { rows } = previewProps();
+    expect(rows.map((r) => r.createdAt)).toEqual([...rows.map((r) => r.createdAt)].sort().reverse());
+    expect(rows.filter((r) => r.evidence).map((r) => r.id)).toEqual([PREVIEW_OPEN_ID]);
+    const decided = rows.filter((r) => r.decision !== "pending").slice(0, CONSOLE_ROWS.length);
+    expect(CONSOLE_ROWS.map((r) => [r.id, r.status, r.filed, r.time ?? null])).toEqual(
+      decided.map((r) => [r.id, r.decision, formatDayTime(r.createdAt), r.modelSec === null ? null : duration(r.modelSec)]),
+    );
+    expect(CONSOLE_ROWS.find((r) => r.status === "held")?.id).toBe(PREVIEW_OPEN_ID);
+  });
+
   it("draws the claims as a live workspace: paid through PayPal, nothing labelled as a sample", () => {
     const { ledger } = previewProps();
     const { report } = reportPreview();

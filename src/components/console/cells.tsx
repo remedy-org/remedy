@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { barsSentence, duration, formatCents, isPreCheck, NO_PAYOUT, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
-import { checkOf, FIVE_CHECKS } from "@/lib/fiveChecks";
+import { checkOf, FIVE_CHECKS, fiveOutcomes, type Outcome } from "@/lib/fiveChecks";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
 import { VerdictMark, verdictOf, verdictWord } from "./VerdictMark";
@@ -91,7 +91,8 @@ function TagThumb({ row }: { row: Pick<ClaimRow, "photos"> }) {
 }
 
 /** Thumbnails, the claim id (mono 14/500) and its code and filing time (mono 12, faint). The homepage's still
- * (context.stacked) sets the second line in the sans; a phone's (context.compact) shows one tag photo and the code alone. */
+ * (context.stacked) sets the second line in the sans, the day and time alone; a phone's (context.compact) shows one tag
+ * photo and the time. */
 export function ClaimCell({ data, context }: Cell) {
   if (!data) return null;
   if (context?.stacked) {
@@ -100,8 +101,10 @@ export function ClaimCell({ data, context }: Cell) {
         {context.compact ? <TagThumb row={data} /> : <Thumbs row={data} />}
         <span className="flex min-w-0 flex-col leading-tight">
           <span className="font-mono text-ui font-medium">{data.id}</span>
+          {/* When it was filed, as the console's second line ends: the day and time, so the newest-first order reads. The
+              code is left to the claim's evidence: the starter claims share their eval cases' few codes. */}
           <span className="mt-1 truncate text-micro whitespace-nowrap text-muted" title={`Filed ${formatTime(data.createdAt)}`}>
-            {data.code ? `Code ${data.code}${context.compact ? "" : ` · ${formatClock(data.createdAt).slice(0, 5)}`}` : formatTime(data.createdAt)}
+            {context.compact ? formatClock(data.createdAt).slice(0, 5) : formatDayTime(data.createdAt)}
           </span>
         </span>
       </span>
@@ -252,7 +255,35 @@ export function ChecksCell({ data, context }: Cell) {
   if (!data.bars) return <span className="text-faint" aria-label="Checks not recorded on this row">—</span>;
   return (
     <span className="flex h-full items-center">
-      <Barcode bars={data.bars} slots={context?.slots} />
+      {context?.stacked ? <FiveBarcode bars={data.bars} /> : <Barcode bars={data.bars} slots={context?.slots} />}
+    </span>
+  );
+}
+
+/** A recorded answer's state as one of the five checks' outcome shows it. */
+const FIVE_STATE: Record<Outcome, BarState> = { pass: "pass", skipped: "skipped", hold: "hold", fail: "reject", open: "waiting" };
+
+/**
+ * The homepage's strip: the five checks the page names, three that run before any AI and the model's two, one bar each
+ * (fiveOutcomes groups the recorded answers under them, as the hover card does), so the picture matches the page's
+ * "five checks" and How it works' console.
+ */
+function FiveBarcode({ bars }: { bars: CheckBar[] }) {
+  // "Same item in both photos" is not needed on a one-photo claim: it never keeps "really destroyed" from passing.
+  const ran = bars.filter((b) => !(b.id === "same_item" && b.state === "skipped"));
+  const five = fiveOutcomes(ran.map((b) => ({ id: b.id, state: b.state }))).map((c) => ({ id: String(c.n), state: FIVE_STATE[c.outcome] }));
+  return (
+    <span role="img" aria-label={barsSentence(bars)} className="flex items-center gap-2.5">
+      <span className="flex gap-0.5">
+        {five.slice(0, 3).map((b) => (
+          <Bar key={b.id} bar={b} />
+        ))}
+      </span>
+      <span className="flex gap-0.5">
+        {five.slice(3).map((b) => (
+          <Bar key={b.id} bar={b} />
+        ))}
+      </span>
     </span>
   );
 }

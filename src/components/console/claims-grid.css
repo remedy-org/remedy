@@ -287,6 +287,12 @@
   flex: 0 1 auto;
 }
 
+/* The homepage's still has no filter icons: its label fills the header cell, so a click anywhere in the shaded cell
+   sorts, not only on the word. */
+.claims-grid[data-still] .ag-header-cell:not(.ag-right-aligned-header) .ag-header-cell-label {
+  flex: 1 1 auto;
+}
+
 /* A status tab sets the Verdict filter (one decision): the tab already says so, so the column's icon doesn't light up
    as if the reviewer had set a filter. A filter set from the column's own menu still shows. */
 .claims-grid[data-tab-filter] .ag-header-cell[col-id="decision"] .ag-filter-active {

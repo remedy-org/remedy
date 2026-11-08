@@ -20,13 +20,14 @@ const td = "border-t border-line py-2.5 pr-4 align-top last:pr-0";
  */
 export function shares(counts: number[]): string[] {
   const total = counts.reduce((a, b) => a + b, 0);
-  if (!total) return counts.map(() => "0.0%");
+  if (!total) return counts.map(() => "0%");
   const raw = counts.map((c) => (c / total) * 1000);
   const floor = raw.map((r) => Math.floor(r + 1e-9));
   let left = 1000 - floor.reduce((a, b) => a + b, 0);
   const order = raw.map((r, i) => [r - Math.floor(r + 1e-9), i] as const).sort((a, b) => b[0] - a[0]);
   for (const [, i] of order) if (left-- > 0) floor[i]++;
-  return floor.map((n) => `${(n / 10).toFixed(1)}%`);
+  // A whole share prints whole (65%, not 65.0%), as the console's own report does.
+  return floor.map((n) => `${(n / 10).toFixed(1).replace(/\.0$/, "")}%`);
 }
 
 // CPSC's own wording of units sold, only when it says more than the figure above it (a range, several products).
@@ -109,7 +110,7 @@ export function ProgressReport({
           <Figure label={home ? "Remedied" : "Units remedied"} value={formatCount(s.remedied)} note="Destroyed on camera" home={home} />
           <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} home={home} />
         </div>
-        {s.unitsSold > 0 && <ReturnRuler remedied={s.remedied} sold={s.unitsSold} />}
+        {s.unitsSold > 0 && <ReturnRuler remedied={s.remedied} sold={s.unitsSold} daysIn={daysIn} />}
       </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
@@ -239,18 +240,22 @@ const RULER = 0.12;
 const on = (share: number) => `${(Math.min(share, RULER) / RULER) * 100}%`;
 
 /** Units remedied on a 4px ruler to 12%, with the 6-10% share recalls typically reach as a hatched band, as Insights
- * draws it: the scale is honest, so a young recall's sliver sits plainly next to the band. */
-function ReturnRuler({ remedied, sold }: { remedied: number; sold: number }) {
+ * draws it: the scale is honest, so a young recall's sliver sits plainly next to the band. Each says what it measures,
+ * as Insights' does: the marker this recall so far (days in), the band a whole recall's lifetime, with its source. */
+function ReturnRuler({ remedied, sold, daysIn }: { remedied: number; sold: number; daysIn?: number }) {
   const share = remedied / sold;
   return (
     <div className="flex flex-col gap-2">
+      <p aria-hidden="true" className="text-micro text-pay-ink">
+        This recall{daysIn ? `, ${plural(daysIn, "day")} in` : " so far"}
+      </p>
       <div
         role="meter"
         aria-label="Units remedied of units sold"
         aria-valuemin={0}
         aria-valuemax={sold}
         aria-valuenow={remedied}
-        aria-valuetext={`${percent(remedied, sold)}; recalls typically reach ${TYPICAL_RETURN.from * 100} to ${TYPICAL_RETURN.to * 100}%`}
+        aria-valuetext={`${percent(remedied, sold)}${daysIn ? `, ${plural(daysIn, "day")} in` : ""}; over a whole recall, recalls typically reach ${TYPICAL_RETURN.from * 100} to ${TYPICAL_RETURN.to * 100}%`}
         // Printed with its colours, background graphics on or off: the report's one graphic.
         className="relative h-1 rounded-full bg-paper-2 [print-color-adjust:exact] [-webkit-print-color-adjust:exact] *:[print-color-adjust:exact] *:[-webkit-print-color-adjust:exact]"
       >
@@ -272,7 +277,9 @@ function ReturnRuler({ remedied, sold }: { remedied: number; sold: number }) {
           className="absolute whitespace-nowrap max-sm:right-[calc(100%-var(--to))] sm:left-(--from)"
           style={{ "--from": on(TYPICAL_RETURN.from), "--to": on(TYPICAL_RETURN.to) } as CSSProperties}
         >
-          Typical recall, {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}%
+          <span className="sm:hidden">Whole recall, </span>
+          <span className="max-sm:hidden">Typical over a whole recall, </span>
+          {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}%<span className="max-sm:hidden"> ({TYPICAL_RETURN.source.replace(/^PIRG, .*?, /, "PIRG, ")})</span>
         </span>
         <span className="absolute right-0 font-mono">{RULER * 100}%</span>
       </p>

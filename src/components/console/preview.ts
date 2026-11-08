@@ -1,7 +1,7 @@
 import "server-only";
 import { toDrawerClaim, type DrawerClaim } from "@/app/console/_lib/drawer";
 import { buildReport } from "@/app/console/_lib/report";
-import { ledgerOf, toRow, type ClaimRow } from "@/app/console/_lib/view";
+import { ledgerOf, toRow } from "@/app/console/_lib/view";
 import { demoRecall } from "@/lib/demo/kikea";
 import { buildSeedClaims, SEED_PHOTO_PREFIX, SEED_PHOTOS } from "@/lib/demo/seed";
 import { summarize } from "@/lib/store/store";
@@ -19,16 +19,16 @@ import { formatDay } from "./format";
 // A fixed "now", so the preview's times and ids don't change between builds. The seed spreads its claims over the 72
 // hours before it, so a day after the recall's date (5 Nov 2026) every claim comes after the recall.
 export const PREVIEW_NOW = new Date("2026-11-08T09:00:00.000Z");
-// The held claim whose evidence the preview opens: the model couldn't tell if both photos show the same item. Its
-// recorded answers are read on the homepage word for word, so it is one whose answers name only what the photos show.
-export const PREVIEW_OPEN_ID = "RM-8843";
+// The held claim whose evidence the preview opens, the newest held one, as How it works' console shows it: the model
+// couldn't tell if both photos show the same item. Its recorded answers are read on the homepage word for word, so it is
+// one whose answers name only what the photos show. It is the one held claim the tour opens: the seeded claims share a
+// few sample photos, and two held claims opened side by side would show the same pair.
+export const PREVIEW_OPEN_ID = "RM-9629";
 // The claim the homepage's tour shows arriving: the newest paid claim, already in the preview rows (a test checks
 // both). The arrival replays how it came in; it never adds a 41st claim.
 export const ARRIVE_ID = "RM-0553";
 // The rows the server-drawn still shows before the grid loads: enough to fill the frame. The grid itself holds all 40.
 export const STILL_ROWS = 14;
-const DECISIONS = ["paid", "held", "rejected", "blocked"] as const;
-const PATTERN: (typeof DECISIONS)[number][] = ["paid", "held", "rejected", "paid", "blocked"];
 
 // The panel's tiles are about 170px wide: 384 is their 2x (Next's default image sizes include it).
 const image = (key: string, w: 96 | 256 | 384) => `/_next/image?url=${encodeURIComponent(publicPhoto(key))}&w=${w}&q=75`;
@@ -58,24 +58,16 @@ export function previewSeed(asConsole = false) {
  * does (verdicts, reasons and check names in its words); otherwise the homepage's live drawing and its shorter lines. */
 export function previewProps(height = 560, { asConsole = false } = {}): ClaimsGridPreviewProps & { rows: PreviewRow[] } {
   const { recall, claims } = previewSeed(asConsole);
-  const all = claims.map((c) => toRow(summarize(c), recall, (key) => ({ thumb: image(key, 96), large: image(key, 256) })));
-  // Ordered for the shot, decided claims first: the outcomes mixed (paid, the open held claim, rejected, paid,
-  // blocked, ...), newest first within each, then the claims still waiting for photos at the foot. The grid keeps this
-  // order until a visitor sorts it. Phones pick one of each outcome from these.
-  const queues = new Map(DECISIONS.map((d) => [d, all.filter((r) => r.decision === d && r.id !== PREVIEW_OPEN_ID)]));
-  const open = all.find((r) => r.id === PREVIEW_OPEN_ID);
-  if (open) queues.get("held")!.unshift(open);
-  const picked: ClaimRow[] = [];
-  for (let i = 0; DECISIONS.some((d) => queues.get(d)!.length); i++) {
-    const next = queues.get(PATTERN[i % PATTERN.length])!.shift();
-    if (next) picked.push(next);
-  }
-  picked.push(...all.filter((r) => r.decision === "pending"));
+  // Newest first, as the console sorts its queue: the seed gives its claims out in time so the outcomes come mixed
+  // (lib/demo/seed.ts spread), the two still waiting for photos on top. Phones pick one of each outcome from these.
+  const all = claims
+    .map((c) => toRow(summarize(c), recall, (key) => ({ thumb: image(key, 96), large: image(key, 256) })))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const rows: PreviewRow[] = typeset(
-    picked.map((r) => {
+    all.map((r) => {
       const row = asConsole ? r : { ...r, note: shortNote(r.note), bars: r.bars?.map((b) => ({ ...b, label: CHECK_NAME[b.id]?.(r.code ?? "") ?? b.label })) ?? null };
-      // Every held claim carries its evidence, so a visitor who clicks one in the queue opens it.
-      const claim = r.decision === "held" ? claims.find((c) => c.id === r.id) : undefined;
+      // The open claim carries its evidence, so a visitor who clicks it in the queue opens it; no other row opens.
+      const claim = r.id === PREVIEW_OPEN_ID ? claims.find((c) => c.id === r.id) : undefined;
       return claim ? { ...row, evidence: evidenceOf(claim, recall) } : row;
     }),
   );

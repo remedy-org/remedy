@@ -3,7 +3,7 @@ import { barcodeWords } from "./ConsoleReplica";
 import { stepSentences, TOUR } from "./tour-copy";
 import { nextTab, stateAt, STEPS } from "./tour-state";
 
-const openId = "RM-8843";
+const openId = "RM-9629";
 
 describe("tour steps", () => {
   it("has at most one amber subject, and only on 02 at rest", () => {
