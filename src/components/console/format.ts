@@ -30,3 +30,7 @@ export const formatClock = (iso: string) => clockFmt.format(new Date(iso));
 export const formatCount = (n: number) => n.toLocaleString("en-US");
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${formatCount(n)} ${n === 1 ? one : many}`;
+
+/** A product name as one string that never breaks at its hyphens ("X-VESOLJE"): a word joiner after each one. One text
+ * node, so a screen reader hears the name as written, spaces and all. */
+export const keepHyphens = (text: string) => text.replace(/-/g, "-\u2060");

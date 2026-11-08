@@ -28,10 +28,11 @@ const indexed = (fields: Record<string, string> | undefined, prefix: string) =>
   );
 
 /** A proof step's placeholder in the notice's own words: "Cut the pillow in half", from "...asked to cut the pillow in
- * half after confirming...". */
+ * half after confirming...". A notice that names no way to destroy the unit gets a question, never a value that reads
+ * as already filled in. */
 export function proofHint(remedy: string): string {
   const act = remedy.match(/\b(?:cut|destroy|puncture|discard|dispose of|throw away|remove)\b.*?(?=\s+(?:after|and|then|before|to|by)\b|[.,;]|$)/i)?.[0];
-  return act && act.length <= 60 ? act[0].toUpperCase() + act.slice(1) : "Cut fully in half";
+  return act && act.length <= 60 ? act[0].toUpperCase() + act.slice(1) : "What makes this unit unusable";
 }
 
 /** The drafted checks, editable, then the refund, auto-pay and claim link. Publishing makes /r/<slug> live. */
@@ -63,23 +64,22 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
         <div>
           <h2 className="text-body font-medium">What an owner&apos;s photos must show</h2>
           <p className="mt-1 text-ui text-muted">
-            {drafted ? "Drafted from the notice. " : ""}The model checks every claim against these lines, and money moves only if each one is visibly confirmed. Ask only
-            for what a photo can show.
+            {drafted ? "Drafted from the notice. " : ""}Remedy checks every claim&apos;s photos against these lines, and money moves only when each one is visibly
+            confirmed. Ask only for what a photo can show.
           </p>
         </div>
 
-        <Field label="The product" help="Its look, from the notice's photos: shape, colours, prints and distinctive parts." error={f?.["spec.product"]}>
+        <Field label="The product" error={f?.["spec.product"]}>
           {(c) => <Textarea {...c} rows={3} className="field-sizing-content" value={spec.product} onChange={(e) => setSpec({ ...spec, product: e.target.value })} />}
         </Field>
 
         <ListEditor
           legend="The label must show"
-          help="Identifiers such as model numbers or date codes, each with where it sits. Leave empty if the product has no label."
           items={spec.label_must_show}
           onChange={(label_must_show) => setSpec({ ...spec, label_must_show })}
           addLabel="Add a label line"
           errors={indexed(f, "spec.label_must_show")}
-          placeholder="Model NP001, printed on the sewn-in tag"
+          placeholder="An identifier and where it sits"
         />
 
         <ListEditor
@@ -107,7 +107,7 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
             {(c) => (
               <div className="relative">
                 <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-body text-muted">$</span>
-                <Input {...c} mono inputMode="decimal" placeholder="29.99" value={refund} onChange={(e) => setRefund(e.target.value)} className="pl-7" />
+                <Input {...c} mono inputMode="decimal" value={refund} onChange={(e) => setRefund(e.target.value)} className="pl-7" />
               </div>
             )}
           </Field>

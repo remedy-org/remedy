@@ -8,9 +8,10 @@
 }
 
 /* The open claim, and the row the keyboard is on: one surface step up with a 2px ink edge on the left, like the edge of
-   an evidence tag. Ink, not amber: amber is the view's one action. */
+   an evidence tag. Ink, not amber: amber is the view's one action. While a claim is open the edge is its row's alone,
+   so two edges never point at two claims at once. */
 .claims-grid .ag-row.ag-row-selected::before,
-.claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible)::before {
+.claims-grid:not(:has(.ag-row-selected)) .ag-row.ag-row-focus:has(.ag-cell:focus-visible)::before {
   content: "";
   position: absolute;
   inset-block: 0;

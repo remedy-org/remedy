@@ -3,11 +3,13 @@
 import clsx from "clsx";
 import type { AgReportState, AgStudioApi } from "ag-studio";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import type { InsightsData } from "@/app/console/insights/facts";
+import { INSIGHTS_ACTIONS } from "./actions";
 import { buildAnalyst } from "./analyst";
 import { InsightsLedger } from "./InsightsLedger";
 import "./insights.css";
-import { filterClaims, filterLabel, filterPicks, insightsReport, panelName, type FilterPick } from "./report";
+import { filterClaims, filterLabel, filterPicks, insightsReport, panelName, reportRows, type FilterPick } from "./report";
 import { buildSources } from "./sources";
 import lib from "./studio-lib";
 import { buildTheme } from "./theme";
@@ -23,9 +25,8 @@ if (process.env.NODE_ENV !== "production") lib.enableStudioDevValidations();
 const LICENSE = process.env.NEXT_PUBLIC_AG_STUDIO_LICENSE;
 if (LICENSE) lib.AgStudioLicenseManager.setLicenseKey(LICENSE);
 
-// Studio's own words for the rail, in the console's voice.
-// The thread picker names an untitled thread "This conversation" and the button beside it "Start over": Studio's own
-// "New chat" next to "New" read as the same control twice.
+// Studio's own words for the analyst's panel, in the console's voice. Its thread picker is hidden (insights.css); the
+// button beside it reads "Start over".
 const LOCALE = {
   panelTitleAi: "Recall analyst",
   aiMessageInputPlaceholder: "Ask about this recall's claims…",
@@ -108,7 +109,12 @@ const pageOf = (state: AgReportState<InsightsRegistry>) => state.pages.find((p) 
 
 const plural = (n: number, one: string) => `${n.toLocaleString("en-US")} ${n === 1 ? one : `${one}s`}`;
 
-export default function InsightsStudio({ data }: { data: InsightsData }) {
+// Studio's canvas rows are 16px, inside its 32px padding top and bottom: the host is sized to the report, so the page
+// scrolls as one and no panel scrolls inside another.
+const ROW = 16;
+const CANVAS_PAD = 64;
+
+export default function InsightsStudio({ data, narrow = false }: { data: InsightsData; narrow?: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
   const api = useRef<AgStudioApi<InsightsRegistry> | null>(null);
@@ -127,6 +133,10 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
   }, [mode]);
   // The theme Studio starts with; later changes go through setProperty below.
   const initialTheme = useRef(theme);
+  const [askOpen, setAskOpen] = useState(false);
+  // Rendered in the browser only (InsightsLoader), after the page header that holds the slot.
+  const [actions] = useState(() => document.getElementById(INSIGHTS_ACTIONS));
+  const height = reportRows(data, narrow) * ROW + CANVAS_PAD;
 
   useEffect(() => {
     if (!host.current) return;
@@ -137,7 +147,7 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
         loadThemeGoogleFonts: false,
         // A day reads as the rest of the app writes it ("4 Nov"), not in the browser's locale (11/04/2026).
         data: { ...buildSources(data), buckets: lib.createBuckets<InsightsRegistry>({ overrides: [{ id: "day", format: "d mmm" }] }) },
-        initialState: insightsReport(data),
+        initialState: insightsReport(data, narrow),
         widgets: insightsWidgets(lib),
         panels: PANELS,
         localeText: LOCALE,
@@ -147,6 +157,9 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
         onStateUpdated: ({ state }) => {
           const next = filterPicks(pageOf(state));
           setPicks((prev) => (samePicks(prev, next) ? prev : next));
+          // The panel's own header closes it too: the page's button follows. Studio's state names a panel only while it is
+          // collapsed (or resized), so an open analyst has no `collapsed` at all.
+          setAskOpen(state.panels?.ai?.collapsed !== true);
         },
       },
       { modules: [lib.AgStudioAiModule] },
@@ -161,11 +174,22 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
       api.current = null;
       studio.destroy();
     };
-  }, [data]);
+  }, [data, narrow]);
 
   useEffect(() => {
     if (api.current && theme !== initialTheme.current) api.current.setProperty("theme", theme);
   }, [theme]);
+
+  const toggleAsk = () => {
+    const studio = api.current;
+    if (!studio) return;
+    const state = studio.getState();
+    const open = state.panels?.ai?.collapsed === true;
+    studio.setState({ ...state, panels: { ...state.panels, ai: { ...state.panels?.ai, collapsed: !open } } });
+    setAskOpen(open);
+    // Into the question box, ready to type.
+    if (open) requestAnimationFrame(() => host.current?.querySelector<HTMLElement>(".ag-studio-ai-panel textarea, .ag-studio-ai-panel [contenteditable]")?.focus());
+  };
 
   const clearFilter = () => {
     const studio = api.current;
@@ -180,9 +204,21 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
   // insights-report (insights.css) takes Studio's editor chrome off the read-only panels.
   const filtered = picks.length > 0;
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex w-full flex-col">
+      {actions &&
+        createPortal(
+          <button
+            type="button"
+            onClick={toggleAsk}
+            aria-expanded={askOpen}
+            className="-my-3 inline-flex min-h-11 items-center text-ui text-text underline decoration-line-strong underline-offset-4 hover:decoration-text"
+          >
+            {askOpen ? "Close the analyst" : "Ask about this recall"}
+          </button>,
+          actions,
+        )}
       {/* The figures follow the page's filter; a pick no list here can read leaves them on every claim. */}
-      <div className="px-8">
+      <div className="px-4 sm:px-6 lg:px-8">
         <InsightsLedger claims={(filtered && shown) || data.claims} unitsSold={data.recall.unitsSold} />
       </div>
       {/* The page's filter, said in words with a way out: a pick in one panel changes every number on the page. */}
@@ -210,7 +246,11 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
           </>
         )}
       </div>
-      <div ref={host} className="insights-report min-h-0 w-full flex-1 pr-8 [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!" />
+      <div
+        ref={host}
+        style={{ height }}
+        className={clsx("insights-report w-full [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!", !askOpen && "insights-ask-closed")}
+      />
       <p id={PANEL_KEYS} hidden>
         Press Enter to use this panel&apos;s controls, the arrow keys or Tab to move between them, and Escape to come back out. A pick filters the whole page until you
         pick it again or press Clear filter above the report.

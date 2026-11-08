@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { AlertIcon } from "@/components/ui";
 
 /** The photo route URL at a width (console/_lib/photos.ts): resized and cached on the server. */
@@ -21,9 +21,12 @@ export function EvidencePhoto({
   sized,
   tall,
   onOpen,
+  description,
   className,
 }: {
   src: string;
+  /** What the photo check saw (and the code it read): told to a screen reader with the photo. */
+  description?: string;
   n: number;
   of: number;
   sized?: boolean;
@@ -33,6 +36,8 @@ export function EvidencePhoto({
 }) {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const label = `Photo ${n} of ${of}`;
+  const descId = useId();
+  const describedBy = description ? descId : undefined;
   const frame = clsx(
     "relative block w-full overflow-hidden rounded-control border border-line bg-surface-2",
     tall ? "aspect-[3/4]" : "aspect-[4/3]",
@@ -52,7 +57,7 @@ export function EvidencePhoto({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={sized ? src : atWidth(src, 880)}
-          alt={label}
+          alt={description ? `${label}. ${description}` : label}
           onLoad={() => setState("ready")}
           onError={() => setState("error")}
           className={clsx("size-full transition-opacity duration-120 ease-snap", onOpen ? "object-contain" : "object-cover", state === "ready" ? "opacity-100" : "opacity-0")}
@@ -63,15 +68,20 @@ export function EvidencePhoto({
   return (
     <figure className={clsx("flex flex-col gap-2", className)}>
       {onOpen ? (
-        <button type="button" onClick={onOpen} className={clsx(frame, "cursor-zoom-in")} aria-label={`${label}, opens the photo viewer`}>
+        <button type="button" onClick={onOpen} className={clsx(frame, "cursor-zoom-in")} aria-label={`${label}, opens the photo viewer`} aria-describedby={describedBy}>
           {inner}
         </button>
       ) : (
-        <a href={src} target="_blank" rel="noreferrer" className={frame} aria-label={`${label}, opens full size`}>
+        <a href={src} target="_blank" rel="noreferrer" className={frame} aria-label={`${label}, opens full size`} aria-describedby={describedBy}>
           {inner}
         </a>
       )}
       <figcaption className="text-micro text-muted">{label}</figcaption>
+      {description && (
+        <span id={descId} className="sr-only">
+          {description}
+        </span>
+      )}
     </figure>
   );
 }

@@ -29,6 +29,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(await draftSpec(record));
   } catch (e) {
     console.error("draftSpec failed:", e instanceof Error ? e.message : e);
-    return fail(502, "The model didn't return a draft. Nothing was published; try again, or write the checks yourself.");
+    return fail(502, "No draft came back. Nothing was published; try again, or write the checks yourself.");
   }
 }

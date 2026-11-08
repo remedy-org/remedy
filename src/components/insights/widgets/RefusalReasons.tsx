@@ -11,7 +11,7 @@ import { num, useRows } from "./useRows";
 // photo (a pre-check), by the model, or by a person. The bars are the funnel's muted ink: the title already says
 // these were refused.
 
-const GATE_LABEL: Record<string, string> = { "No AI": "before the model", "Model reads": "by the model", Person: "by a person" };
+const GATE_LABEL: Record<string, string> = { "No AI": "by a pre-check", "Model reads": "by the photo check", Person: "by a person" };
 
 export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
   const { dataMapping, widgetApi } = params;
@@ -38,8 +38,9 @@ export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col px-1.5 pb-1" onClick={() => widgetApi.resetCrossFilter()}>
-      <ul className="flex min-h-0 flex-1 flex-col overflow-y-auto" onKeyDown={moveBetweenItems}>
+    <div className="flex h-full min-h-0 flex-col pb-1" onClick={() => widgetApi.resetCrossFilter()}>
+      {/* Each reason's hover tint reaches 8px past the column, so its words start on the panel title's edge. */}
+      <ul className="-mx-2 flex min-h-0 flex-1 flex-col overflow-y-auto" onKeyDown={moveBetweenItems}>
         {items.map((i) => (
           <li key={i.reason}>
             <button

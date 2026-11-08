@@ -29,7 +29,7 @@ const seededPaid: Claim = sampleClaim({
 });
 
 describe("the grid's evidence cells", () => {
-  it("draw the barcode: four pre-checks, then the model's checks", () => {
+  it("draw the barcode: the pre-checks, then the photo check's", () => {
     const row = toRow(summarize(seededPaid), recall);
     expect(row.bars?.map((b) => `${b.id}:${b.state}`)).toEqual([
       "session:pass",
@@ -38,21 +38,23 @@ describe("the grid's evidence cells", () => {
       "payer_verified:pass",
       "label:pass",
       "code:pass",
+      // One photo: the same-item comparison had nothing to compare, so its bar is drawn as not needed.
+      "same_item:skipped",
       "screen:pass",
       "step_1:pass",
     ]);
     expect(row.note).toBe("All checks passed");
     // Each group counts what passed of what ran: the seeded claim's fingerprint check wasn't run, so it isn't counted.
-    expect(barsSentence(row.bars!)).toBe("Pre-checks 3 of 3 · Model answers 4 of 4");
+    expect(barsSentence(row.bars!)).toBe("Pre-checks 3 of 3 · Photo check 4 of 4");
   });
 
-  it("show the checks a claim will run as waiting, and a blocked claim's model checks as not run", () => {
+  it("show the checks a claim will run as waiting, and a blocked claim's photo checks as not run", () => {
     expect(toRow(summarize(sampleClaim({ photos: [] })), recall).bars?.every((b) => b.state === "waiting")).toBe(true);
     const blocked = toRow(summarize(sampleClaim({ decision: "blocked", reasons: [reject("session", "Not taken in this session")] })), recall);
     expect(blocked.bars?.slice(0, 4).map((b) => b.state)).toEqual(["reject", "pass", "pass", "pass"]);
-    // label, code, screen and the recall's one step, none of them run.
-    expect(blocked.bars?.slice(4).map((b) => b.state)).toEqual(["skipped", "skipped", "skipped", "skipped"]);
-    expect(barsSentence(blocked.bars!)).toBe("Pre-checks 3 of 4 · Model answers not run");
+    // label, code, same item, screen and the recall's one step, none of them run.
+    expect(blocked.bars?.slice(4).map((b) => b.state)).toEqual(["skipped", "skipped", "skipped", "skipped", "skipped"]);
+    expect(barsSentence(blocked.bars!)).toBe("Pre-checks 3 of 4 · Photo check not run");
   });
 
   it("count a demo sample's checks as its receipt does: one claim per account is skipped unless it's the genuine one", () => {
@@ -60,7 +62,7 @@ describe("the grid's evidence cells", () => {
       toRow(summarize(sampleClaim({ decision: "rejected", demo: true, reasons: [{ check: "label", outcome: "pass", text: "" }, reject("code", "Written code reads K7Q"), { check: "step_1", outcome: "pass", text: "" }, { check: "screen", outcome: "pass", text: "" }], events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] })), recall);
     // A check that didn't run has no bar.
     expect(demo("wrong-code").bars?.find((b) => b.id === "payer")).toBeUndefined();
-    expect(barsSentence(demo("wrong-code").bars!)).toBe("Pre-checks 3 of 3 · Model answers 3 of 4");
+    expect(barsSentence(demo("wrong-code").bars!)).toBe("Pre-checks 3 of 3 · Photo check 3 of 4");
     expect(demo("genuine").bars?.find((b) => b.id === "payer")?.state).toBe("pass");
   });
 

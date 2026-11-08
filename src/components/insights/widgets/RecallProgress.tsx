@@ -31,7 +31,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
   const share = total > 0 ? done / total : 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col justify-between gap-4 px-1.5 pb-1">
+    <div className="flex h-full min-h-0 flex-col justify-between gap-4 pb-1">
       <p className="sr-only">
         {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}. Recalls typically reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
       </p>

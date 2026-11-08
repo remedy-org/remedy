@@ -61,7 +61,7 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
         // Keyed by recall: switching recalls starts a fresh queue (tabs, search, live updates).
         <ClaimsQueue
           key={recall.id}
-          recall={{ id: recall.id, unitsSold: recall.unitsSold }}
+          recall={{ id: recall.id, unitsSold: recall.unitsSold, product: recall.product }}
           rows={rows}
           at={new Date().toISOString()}
           initialTab={one(params.tab)}

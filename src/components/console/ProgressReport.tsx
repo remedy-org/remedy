@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
 import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
-import { NoBreakHyphens, StatusPill } from "@/components/ui";
+import { StatusPill } from "@/components/ui";
 import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
-import { formatCount, formatDate, plural } from "./format";
+import { formatCount, formatDate, keepHyphens, plural } from "./format";
 
 function H({ children }: { children: ReactNode }) {
   return <h3 className="text-body font-medium">{children}</h3>;
@@ -34,7 +34,7 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
       <header className="flex flex-col gap-3 border-b border-line pb-8">
         <p className="text-ui text-muted">Draft · generated {generated}</p>
         <h2 className="text-h2 font-medium text-balance">
-          CPSC {recall.id}: <NoBreakHyphens>{recall.product}</NoBreakHyphens>
+          CPSC {recall.id}: {keepHyphens(recall.product)}
         </h2>
         <p className="text-ui text-muted">{recall.title}</p>
         <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-ui sm:grid-cols-4">

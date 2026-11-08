@@ -131,7 +131,7 @@ function EvidenceStill({ claim }: { claim: DrawerClaim }) {
             ))}
           </div>
           <CheckList
-            label={`Model answers for ${claim.id}`}
+            label={`Photo check for ${claim.id}`}
             steps={checks.slice(0, 3).map((c) => ({
               id: c.id,
               label: c.label,

@@ -28,7 +28,7 @@ function importSteps(at: Step["at"], notice?: CpscSummary): CheckStep[] {
   const draft = at === "drafting" ? "running" : at === "draft_failed" ? "hold" : "waiting";
   return [
     { id: "cpsc", label: "Read CPSC's record", state: read, detail: notice ? `Recall ${notice.id}, ${units(notice)}` : "Product, units sold and the remedy" },
-    { id: "draft", label: "Draft the photo checks", state: draft, detail: at === "draft_failed" ? "No draft came back" : "The model reads the notice and its photos, about 15 seconds" },
+    { id: "draft", label: "Draft the photo checks", state: draft, detail: at === "draft_failed" ? "No draft came back" : "Drafting the photo checks from the notice, about 15 seconds" },
     { id: "review", label: "You review and publish", state: "waiting", detail: "Nothing goes live until you publish" },
   ];
 }
@@ -106,7 +106,7 @@ export function ImportRecall({ example }: { example: string }) {
             <h2 ref={stage} tabIndex={-1} className="text-body font-medium outline-none">
               Drafting the photo checks
             </h2>
-            <p className="mt-1 text-ui text-muted">The model reads the notice and its photos, then writes what an owner&apos;s photos must show. You review every line before it goes live.</p>
+            <p className="mt-1 text-ui text-muted">From the notice and its photos, Remedy writes what an owner&apos;s photos must show. You review every line before it goes live.</p>
           </div>
           <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn't finish" }} />
           {/* The failure in the card's own type, one line and its two ways on: no box inside the box. */}

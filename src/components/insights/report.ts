@@ -96,8 +96,29 @@ export function filterLabel(picks: FilterPick[]) {
  */
 export const refusalRows = (reasons: number) => Math.max(22, 22 + Math.ceil((reasons * 58 - 224) / 16));
 
-const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
-  const tall = refusalRows(new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size);
+const reasonCount = (data: InsightsData) => new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size;
+
+/**
+ * Rows for each panel. Side by side the funnel and the refusals share a row (refusalRows); stacked, the decisions and the
+ * refusals each take only what they list (the title, then 58px a reason), with no shared height to match.
+ */
+const rowsOf = (data: InsightsData, narrow: boolean) => {
+  const tall = refusalRows(reasonCount(data));
+  return narrow
+    ? { progress: 15, decisions: 14, funnel: tall, refusals: Math.ceil((72 + reasonCount(data) * 58) / 16) }
+    : { progress: 15, decisions: 15, funnel: tall, refusals: tall };
+};
+
+/** The canvas rows the report takes: what the page sizes Studio's host to, so the page scrolls and the canvas never does. */
+export const reportRows = (data: InsightsData, narrow = false) => {
+  const r = rowsOf(data, narrow);
+  return narrow ? r.progress + r.decisions + r.funnel + r.refusals : r.progress + r.funnel;
+};
+
+// Every claim is one click away in the claims grid (the page header links it), so the report is the figures alone: no
+// second table of the same rows. Below 1024px each panel takes the canvas's full width, one under another.
+const overview = (data: InsightsData, narrow: boolean): AgPageState<InsightsRegistry> => {
+  const r = rowsOf(data, narrow);
   return {
     id: "overview",
     widgets: {
@@ -133,33 +154,28 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
         },
         format: titled("Why claims were refused"),
       },
-      claims: {
-        type: "grid",
-        dataMapping: {
-          // Short columns first, so the amount is always in view; the reason runs last.
-          cols: [{ id: "claims.id" }, { id: "claims.filedAt" }, { id: "claims.decision" }, { id: "claims.refund" }, { id: "claims.reason" }],
+    },
+    widgetLayout: narrow
+      ? {
+          progress: at(0, 0, 24, r.progress),
+          decisions: at(0, r.progress, 24, r.decisions),
+          funnel: at(0, r.progress + r.decisions, 24, r.funnel),
+          refusals: at(0, r.progress + r.decisions + r.funnel, 24, r.refusals),
+        }
+      : {
+          progress: at(0, 0, 16, r.progress),
+          decisions: at(16, 0, 8, r.decisions),
+          funnel: at(0, r.progress, 16, r.funnel),
+          refusals: at(16, r.progress, 8, r.refusals),
         },
-        sort: [{ field: { id: "claims.filedAt" }, direction: "desc" }],
-        // No grand total: a sum under a column of decisions and reasons says nothing.
-        format: { ...titled("Every claim"), style: { grandTotalRow: { enabled: false } } },
-      },
-    },
-    widgetLayout: {
-      progress: at(0, 0, 16, 15),
-      decisions: at(16, 0, 8, 15),
-      funnel: at(0, 15, 16, tall),
-      refusals: at(16, 15, 8, tall),
-      // Ten rows of 44px under the header and title.
-      claims: at(0, 15 + tall, 24, 36),
-    },
   };
 };
 
-export const insightsReport = (data: InsightsData): AgReportState<InsightsRegistry> => ({
+export const insightsReport = (data: InsightsData, narrow = false): AgReportState<InsightsRegistry> => ({
   selectedPageId: "overview",
-  pages: [overview(data)],
+  pages: [overview(data, narrow)],
   panels: {
-    // The analyst opens on demand from the rail's edge: the report leads, not an empty chat.
+    // The analyst opens on demand from "Ask about this recall" in the page header: the report leads, not an empty chat.
     ai: { collapsed: true },
     filters: { collapsed: true },
     edit: { collapsed: true },

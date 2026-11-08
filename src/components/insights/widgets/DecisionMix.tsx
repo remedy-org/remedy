@@ -44,13 +44,14 @@ export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 px-1.5 pb-1" onClick={() => widgetApi.resetCrossFilter()}>
+    <div className="flex h-full min-h-0 flex-col gap-3 pb-1" onClick={() => widgetApi.resetCrossFilter()}>
       <div aria-hidden="true" className="flex h-3 gap-0.5 overflow-hidden rounded-[3px]">
         {items.map((i) => (
           <span key={i.label} className={clsx("h-full min-w-[3px]", FILL[i.label] ?? "bg-faint", selected.size > 0 && !selected.has(i.label) && "opacity-30")} style={{ flexGrow: i.n }} />
         ))}
       </div>
-      <ul className="flex min-h-0 flex-col" onKeyDown={moveBetweenItems}>
+      {/* Each row's hover tint reaches 8px past the bar, so the dots and words start on the bar's own left edge. */}
+      <ul className="-mx-2 flex min-h-0 flex-col" onKeyDown={moveBetweenItems}>
         {items.map((i) => (
           <li key={i.label}>
             <button

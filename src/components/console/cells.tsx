@@ -18,6 +18,8 @@ export type GridRow = ClaimRow & { group?: { key: string; label: string } };
  * every row's strip has the same length), and the live group totals (a store the group rows subscribe to). */
 export interface GridContext {
   stacked?: boolean;
+  /** Opens a claim a row's reason names ("Second claim from one PayPal account · RM-7306"). */
+  open?: (id: string) => void;
   slots?: { pre: number; model: number };
   groups?: GroupStats;
 }
@@ -110,13 +112,15 @@ export function VerdictCell({ data, context }: Cell) {
       </span>
     );
   }
-  // An approved claim's line ("All checks passed") repeats down the list: faint, so the exceptions stand out.
+  // An approved claim that passed every check says nothing more than its pill and its full strip of checks: the line
+  // stays empty, so only the exceptions carry a reason and stand out.
+  const note = data.decision === "paid" && data.note === "All checks passed" ? null : data.note;
   return (
     <span className="verdict-track h-full">
       <StatusPill status={data.decision} label={verdictLabel(data)} className={data.decision === "pending" ? "pill-pending" : undefined} />
-      {data.note && (
-        <span className={clsx("min-w-0 truncate text-ui", data.decision === "paid" ? "text-faint" : "text-muted")} title={data.note}>
-          <LinkedIds text={data.note} />
+      {note && (
+        <span className="min-w-0 truncate text-ui text-muted" title={note}>
+          <LinkedIds text={note} onOpen={context?.open} self={data.id} />
         </span>
       )}
     </span>
@@ -125,6 +129,8 @@ export function VerdictCell({ data, context }: Cell) {
 
 // A word only where a check didn't simply pass; a pass is its filled bar alone.
 const BAR_WORD: Record<BarState, string> = { pass: "", hold: "Held", reject: "Failed", waiting: "Waiting", skipped: "Not run" };
+const barWord = (b: Pick<CheckBar, "id" | "state">) =>
+  b.id === "model" && b.state === "hold" ? "No answer" : b.id === "same_item" && b.state === "skipped" ? "One photo, not needed" : BAR_WORD[b.state];
 
 // One bar's shape by state; the hover card (ChecksTooltip) uses the same shapes as its legend.
 function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
@@ -138,7 +144,8 @@ function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
         // Failed: filled, with a slash in the background colour.
         bar.state === "reject" && "bg-stop after:absolute after:top-1/2 after:-left-1 after:h-px after:w-4 after:-rotate-60 after:bg-bg",
         bar.state === "waiting" && "border border-line-strong",
-        bar.state === "skipped" && "border border-dotted border-line-strong",
+        // Not needed or not run: a dim hollow box, so the strip keeps its length without claiming a check.
+        bar.state === "skipped" && "border border-line-strong opacity-45",
       )}
     />
   );
@@ -146,9 +153,8 @@ function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
 
 const splitBars = (bars: CheckBar[]) => ({ pre: bars.filter((b) => isPreCheck(b.id)), model: bars.filter((b) => !isPreCheck(b.id)) });
 
-/** The checks as a fixed strip: the four pre-checks, 4px, then the model's answers, padded to the recall's longest so
- * every row's strip ends on one x. Shape carries the outcome as well as colour (filled, half, slashed, outline,
- * dotted). */
+/** The checks as a fixed strip: the four pre-checks, 4px, then the photo check's answers, padded to the recall's longest
+ * so every row's strip ends on one x. Shape carries the outcome as well as colour (filled, half, slashed, outline, dim). */
 export function Barcode({ bars, slots }: { bars: CheckBar[]; slots?: GridContext["slots"] }) {
   const { pre, model } = splitBars(bars);
   const group = (list: CheckBar[], n = 0) => (
@@ -211,9 +217,9 @@ export const CANT_RECEIVE = "This payee's PayPal account can't receive payouts, 
 export const sent = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) => r.decision === "paid" && Boolean(r.payoutStatus) && !r.seeded;
 
 /** Where the money is: Sent, Settling or Failed at PayPal; Not sent (red, with PayPal's time) when PayPal refused an
- * approve; Not sent with its reason under it for an approved claim whose payee can't receive; a dash while nothing is
- * owed. */
-export function PayoutCell({ data, context }: Cell) {
+ * approve; a quiet Not sent for an approved claim whose payee can't receive (the reason in its title and the evidence
+ * panel's PayPal step); a dash while nothing is owed. */
+export function PayoutCell({ data }: Cell) {
   if (!data) return null;
   if (data.payoutFailedAt) {
     return (
@@ -227,12 +233,10 @@ export function PayoutCell({ data, context }: Cell) {
     );
   }
   if (data.decision === "paid" && !sent(data)) {
-    // The homepage's still keeps its narrower column: the word alone, the reason in its title.
-    if (context?.stacked) return <span className="inline-flex h-full items-center text-ui text-muted" title={CANT_RECEIVE}>Not sent</span>;
     return (
-      <span className="flex h-full min-w-0 flex-col justify-center leading-tight" title={CANT_RECEIVE}>
-        <span className="text-ui text-muted">Not sent</span>
-        <span className="truncate text-micro text-faint">Payee can&apos;t receive</span>
+      <span className="inline-flex h-full items-center gap-2 text-ui text-muted" title={CANT_RECEIVE}>
+        <span className="size-1.5 shrink-0 rounded-full border border-faint" aria-hidden="true" />
+        Not sent
       </span>
     );
   }
@@ -274,10 +278,23 @@ export function AmountCell({ data }: Cell) {
 /** Narrow grids: one 88px card per claim. Photo, id and amount; then the pill in its track and the reason; then code, time and payout. */
 export function CardRow({ data }: Cell) {
   if (!data) return null;
+  // A screen reader hears the card as one labelled sentence, not its columns' glyphs ("—", "·") read one by one.
+  const said = [
+    data.id,
+    verdictLabel(data) ?? { held: "held", rejected: "rejected", blocked: "blocked", pending: "in progress", paid: "approved" }[data.decision],
+    data.note ?? data.reason,
+    data.amount ? `${data.amount}${data.decision === "held" ? " once approved" : ""}` : "no refund",
+    payoutWord(data),
+    data.code && `code ${data.code}`,
+    `filed ${formatDayTime(data.createdAt)} UTC`,
+  ]
+    .filter(Boolean)
+    .join(", ");
   return (
     <span className="flex h-full items-center gap-3 px-4">
+      <span className="sr-only">{said}</span>
       <Thumbs row={data} size="lg" />
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
+      <span aria-hidden="true" className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex items-baseline justify-between gap-3">
           <span className="font-mono text-ui font-medium">{data.id}</span>
           <span className="shrink-0">{data.amount ? <AmountText amount={data.amount} tone={toneOf(data)} /> : <span className="text-faint">—</span>}</span>
@@ -300,7 +317,7 @@ export function CardRow({ data }: Cell) {
 /** The payout column's word, for the card row's line and the CSV. */
 export function payoutWord(r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "payoutFailedAt">): string | null {
   if (r.payoutFailedAt) return "Not sent";
-  if (r.decision === "paid" && !sent(r)) return "Payee can't receive";
+  if (r.decision === "paid" && !sent(r)) return "Not sent";
   if (!r.payoutStatus) return null;
   return r.payoutStatus === "SUCCESS" ? "Sent" : FAILED.has(r.payoutStatus) ? "Failed" : "Settling";
 }
@@ -370,7 +387,7 @@ export function ChecksTooltip({ data, location, value }: CustomTooltipProps<Grid
   const { pre, model } = splitBars(data.bars);
   const groups = [
     { title: "Pre-checks", bars: pre },
-    { title: "Model answers", bars: model },
+    { title: "Photo check", bars: model },
   ].filter((g) => g.bars.length);
   return (
     <div className="w-[296px] rounded-card bg-surface px-3.5 py-3 shadow-float">
@@ -383,7 +400,7 @@ export function ChecksTooltip({ data, location, value }: CustomTooltipProps<Grid
               <li key={b.id} className="flex items-center gap-2.5 text-ui">
                 <Bar bar={b} />
                 <span className="min-w-0 flex-1 truncate text-text-2">{b.label}</span>
-                {BAR_WORD[b.state] && <span className="shrink-0 text-micro text-muted">{b.id === "model" && b.state === "hold" ? "No answer" : BAR_WORD[b.state]}</span>}
+                {barWord(b) && <span className="shrink-0 text-micro text-muted">{barWord(b)}</span>}
               </li>
             ))}
           </ul>
@@ -400,8 +417,8 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Gr
   if (!data || !t) return null;
   const steps: [string, number | null][] = [
     ["Photos in", 0],
-    ["Model answered", t.answered],
-    ["Rule decided", t.decided],
+    ["Photo check answered", t.answered],
+    ["Decided", t.decided],
     ...(data.seeded
       ? []
       : ([

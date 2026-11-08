@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { CrossIcon } from "@/components/ui";
 import { formatCents, ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
-import { ClaimsGrid, type ClaimsGridHandle, type GridTotals, type GroupBy } from "./ClaimsGrid";
+import { ClaimsGrid, type ClaimsGridHandle, type GridTotals, type GroupBy, type SortOrder } from "./ClaimsGrid";
 import type { DecisionModel } from "./DecisionFilter";
 import { Keys } from "./Keys";
 import { formatCount, plural } from "./format";
@@ -34,11 +34,11 @@ const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: strin
   },
   rejected: {
     title: "No rejected claims",
-    description: "A claim is rejected when the model's answer fails a check, such as a wrong code or label.",
+    description: "A claim is rejected when its photos fail a check, such as a wrong code or label.",
   },
   blocked: {
     title: "No blocked claims",
-    description: "Blocked claims never reached the model: a reused photo, an expired camera session or a second claim from one account.",
+    description: "A pre-check stops a claim before its photos are read: a reused photo, an expired camera session or a second claim from one account.",
   },
   pending: {
     title: "Nothing in progress",
@@ -51,6 +51,8 @@ const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: strin
 // grid.
 const FILL = "(min-width: 1024px)";
 const WIDE = "(min-width: 1280px)";
+// Below 768px the toolbar keeps to the tabs' row: the search folds to its icon, and grouping and export step aside.
+const ROOMY = "(min-width: 768px)";
 function useMedia(query: string) {
   return useSyncExternalStore(
     (on) => {
@@ -83,7 +85,7 @@ const GROUPS: { id: GroupBy; label: string }[] = [
 const isTab = (v: string | undefined): v is Tab => TABS.some((t) => t.id === v);
 
 export interface ClaimsQueueProps {
-  recall: Pick<Recall, "id" | "unitsSold">;
+  recall: Pick<Recall, "id" | "unitsSold" | "product">;
   rows: ClaimRow[];
   // When the server read these rows (ISO).
   at: string;
@@ -107,6 +109,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const { rows, pending, showPending, at, failed, state, refresh } = useQueuePoll(recall.id, initial, initialAt, pointerIn || focusIn || open !== null);
   const wide = useMedia(WIDE);
   const fill = useMedia(FILL);
+  const roomy = useMedia(ROOMY);
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "all");
   // The Verdict column's filter: the tab's, or what the column's menu picked.
   const [filter, setFilter] = useState<DecisionModel | null>(() => tabFilter(isTab(initialTab) ? initialTab : "all"));
@@ -151,7 +154,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const found = useMemo(() => (tab === "all" ? searched : searched.filter((r) => r.decision === tab)), [searched, tab]);
   const filtered = filter !== null && tabOf(filter) === "all";
   const openRow = rows.find((r) => r.id === open) ?? null;
-  const compact = wide && open !== null && !search && !searchOpen;
+  const compact = ((wide && open !== null) || !roomy) && !search && !searchOpen;
   // A search with nothing in this tab: where its matches are instead, so an empty tab is never a dead end.
   const elsewhere = tab !== "all" && search ? TABS.filter((t) => t.id !== "all" && t.id !== tab && counts[t.id] > 0) : [];
 
@@ -256,6 +259,20 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       // An open dialog (the ? sheet) handles its own keys, Esc included: closing the panel behind it would be the wrong layer.
       if (help || (e.target instanceof Element && e.target.closest("dialog[open]"))) return;
+      // A column's filter is open: Esc closes it (focus back on its header), / closes it and goes to search, and no other
+      // single key reaches the queue's shortcuts while it is up.
+      if (document.querySelector(".ag-popup .ag-filter, .ag-popup .ag-menu")) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          grid.current?.closeFilter();
+        } else if (e.key === "/" && !typing(e.target)) {
+          e.preventDefault();
+          grid.current?.closeFilter();
+          setSearchOpen(true);
+          requestAnimationFrame(() => searchBox.current?.focus());
+        }
+        return;
+      }
       if (e.key === "Escape" && open && wide && !typing(e.target)) {
         e.preventDefault();
         close();
@@ -317,8 +334,12 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   };
 
   return (
-    <section aria-label="Claims" className="flex min-h-0 flex-1 flex-col">
+    <section aria-labelledby="claims-heading" className="flex min-h-0 flex-1 flex-col">
+      <h2 className="sr-only">Summary</h2>
       <Ledger ledger={ledger} />
+      <h2 id="claims-heading" className="sr-only">
+        Claims
+      </h2>
 
       {/* From 1280px the open claim's panel is a column beside the tabs, grid and footer, from under the ledger to the
           foot of the window: the evidence has the height, and the search, the heading's actions and the footer stay in
@@ -328,7 +349,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           {/* One row while it fits: the search narrows first, and only a narrow queue wraps the controls to a second line. */}
           <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-line">
             <StatusTabs value={tab} counts={counts} onChange={changeTab} controls="claims-panel" />
-            <div className="mb-1.5 ml-auto flex shrink-0 items-center gap-3 max-sm:hidden">
+            <div className="mb-1.5 ml-auto flex shrink-0 items-center gap-3 max-md:hidden">
               <GroupControl value={groupBy} onChange={setGroupBy} />
               <button
                 type="button"
@@ -338,6 +359,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                 Export CSV
               </button>
             </div>
+            {/* Card rows have no header to click: below 768px the sort is its own control, beside search. */}
+            {!roomy && <SortControl key={tab} initial={tab === "held" ? "oldest" : "newest"} onChange={(o) => grid.current?.sortBy(o)} />}
             {compact ? (
               <button
                 type="button"
@@ -347,7 +370,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                 }}
                 aria-label="Search claims (/)"
                 title="Search claims (/)"
-                className="mb-1.5 inline-flex size-9 shrink-0 items-center justify-center rounded-control text-muted shadow-[inset_0_0_0_1px_var(--line)] hover:text-text max-sm:hidden"
+                className="mb-1.5 inline-flex size-9 shrink-0 items-center justify-center rounded-control text-muted shadow-[inset_0_0_0_1px_var(--line)] hover:text-text"
               >
                 <SearchGlyph />
               </button>
@@ -430,11 +453,13 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                 search is its quick filter), so switching tabs never remounts it. With nothing to show, a note covers it. */}
             <ClaimsGrid
               ref={grid}
+              label={`Claims for ${recall.product}`}
               rows={rows}
               // Held claims wait for a person: the longest waiting first.
               oldestFirst={tab === "held"}
               openId={open}
               onOpen={openClaim}
+              onOpenLinked={goTo}
               onFocusRow={(id) => open && wide && id !== open && openClaim(id)}
               fill={fill}
               search={search}
@@ -679,6 +704,39 @@ function GroupControl({ value, onChange }: { value: GroupBy; onChange: (g: Group
         {GROUPS.map((g) => (
           <option key={g.id} value={g.id}>
             {g.id === "none" ? "No grouping" : `Group: ${g.label}`}
+          </option>
+        ))}
+      </select>
+      <svg aria-hidden="true" viewBox="0 0 10 6" className="pointer-events-none absolute right-2.5 h-1.5 w-2.5 text-muted">
+        <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </label>
+  );
+}
+
+const SORTS: { id: SortOrder; label: string }[] = [
+  { id: "newest", label: "Newest first" },
+  { id: "oldest", label: "Oldest first" },
+  { id: "amount", label: "Amount" },
+];
+
+function SortControl({ initial, onChange }: { initial: SortOrder; onChange: (o: SortOrder) => void }) {
+  const [value, setValue] = useState(initial);
+  return (
+    <label className="relative mb-1.5 ml-auto inline-flex h-9 items-center text-ui">
+      <span className="sr-only">Sort claims</span>
+      <select
+        value={value}
+        onChange={(e) => {
+          const o = e.target.value as SortOrder;
+          setValue(o);
+          onChange(o);
+        }}
+        className="h-9 appearance-none rounded-control bg-surface pr-7 pl-2.5 text-ui text-muted shadow-[inset_0_0_0_1px_var(--line)] hover:text-text"
+      >
+        {SORTS.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.label}
           </option>
         ))}
       </select>

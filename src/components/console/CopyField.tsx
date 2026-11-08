@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { CheckIcon } from "@/components/ui";
 
-/** A read-only mono value with a Copy button that confirms in place. */
-export function CopyField({ value, label }: { value: string; label: string }) {
+/** A read-only mono value with a Copy button that confirms in place. secret: shown as dots (a password), still copied whole. */
+export function CopyField({ value, label, secret }: { value: string; label: string; secret?: boolean }) {
   const [copied, setCopied] = useState<"yes" | "no" | null>(null);
   const copy = async () => {
     try {
@@ -20,6 +20,7 @@ export function CopyField({ value, label }: { value: string; label: string }) {
     <div className="flex min-w-0 items-stretch overflow-hidden rounded-control border border-line-strong bg-surface has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-focus">
       <input
         readOnly
+        type={secret ? "password" : "text"}
         value={value}
         aria-label={label}
         onFocus={(e) => e.currentTarget.select()}

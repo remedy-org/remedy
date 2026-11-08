@@ -265,8 +265,9 @@ export function ReviewActions({
               <>
                 <Button
                   key="approve"
-                  // Where the payee's PayPal can't receive money, approve sends nothing: never the screen's amber action.
-                  variant={stuck || review.sample ? "secondary" : "primary"}
+                  // The held claim's decision is the panel's one action, amber here as in the photo viewer; Reject leads only
+                  // once approve can't pay (its checks would stop the payout, or PayPal refused it).
+                  variant={stuck ? "secondary" : "primary"}
                   onClick={() => (setSample(null), setNotPaid(null), setMode("approve"))}
                   autoFocus={back === "approve"}
                   className="flex-1 sm:flex-none"
@@ -303,7 +304,9 @@ export function ReviewActions({
       {mode === "approve" && !labels.blocked && (
         <>
           {review.sample ? (
-            <p className="text-ui text-muted">Approving records the decision. This payee&apos;s PayPal account can&apos;t receive payouts, so no refund is sent.</p>
+            <p className="text-ui text-muted">
+              Approves the <span className="font-mono text-text">{claim.amount}</span> refund. The payout waits until this payee&apos;s PayPal account can receive it.
+            </p>
           ) : (
             <p className="text-ui text-muted">
               Sends <span className="font-mono text-text">{claim.amount}</span> to <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts.

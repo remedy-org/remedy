@@ -3,15 +3,15 @@ import type { InsightsData } from "@/app/console/insights/facts";
 import { funnel, KIND_LABEL, shownAs } from "./funnel";
 import { InsightsLedger } from "./InsightsLedger";
 
-// Below 1024px AG Studio's canvas doesn't reflow (it keeps its 24 columns), so phones and small tablets get the
-// figures and the funnel as plain HTML from the same facts. Server-rendered.
+// Below 640px a phone gets the figures and the funnel as plain HTML from the same facts; from 640px the report is AG
+// Studio's, its panels stacked below 1024px (InsightsLoader). Server-rendered.
 
 export function MobileSummary({ data }: { data: InsightsData }) {
   const steps = funnel(data.claims);
   const filed = steps[0].reached || 1;
 
   return (
-    <section aria-label="Summary" className="flex flex-col gap-6 px-4 pb-8 sm:px-6 lg:hidden">
+    <section aria-label="Summary" className="flex flex-col gap-6 px-4 pb-8 sm:hidden">
       <InsightsLedger claims={data.claims} unitsSold={data.recall.unitsSold} />
 
       <div className="rounded-card border border-line bg-surface p-4">
@@ -40,8 +40,6 @@ export function MobileSummary({ data }: { data: InsightsData }) {
           ))}
         </ol>
       </div>
-
-      <p className="text-micro text-muted">The full report and the Recall analyst open on a larger screen.</p>
     </section>
   );
 }

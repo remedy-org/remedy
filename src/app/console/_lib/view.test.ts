@@ -57,7 +57,7 @@ describe("console view", () => {
   it("says the rule's decision in one sentence", () => {
     expect(decisionSentence(sampleClaim({ decision: "paid" }), recall)).toBe("All checks passed, so Remedy paid $29.99 through PayPal.");
     expect(decisionSentence(sampleClaim({ decision: "blocked", reasons: [reject("payer_verified", "This PayPal account isn't verified")] }), recall)).toBe(
-      "Stopped before the photos reached the model: this PayPal account isn't verified.",
+      "Stopped by a pre-check before the photo check: this PayPal account isn't verified.",
     );
     expect(decisionSentence(sampleClaim({ decision: "rejected", reasons: [reject("review", "Rejected on review: PayPal name doesn't match.")] }), recall)).toBe(
       "Rejected on review: PayPal name doesn't match.",
@@ -273,9 +273,9 @@ describe("report", () => {
     ];
     const r = buildReport(claims.map(summarize), recall);
     expect(r.outcomes.find((o) => o.decision === "rejected")).toMatchObject({ count: 2, share: "50%", note: "A photo check failed, or a person rejected it on review" });
-    expect(r.outcomes.find((o) => o.decision === "held")?.note).toContain("PayPal didn't take the payout");
+    expect(r.outcomes.find((o) => o.decision === "held")?.note).toContain("PayPal refused an approved payout");
     expect(r.refusals).toEqual([
-      { reason: "One-time code missing or wrong", count: 2 },
+      { reason: "Code missing or wrong", count: 2 },
       { reason: "Destruction not shown", count: 1 },
     ]);
     // A seeded sample is counted as remedied, but its payout never left: it is not money paid or confirmed.

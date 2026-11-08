@@ -44,10 +44,14 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   // "Paid" is said only beside a payout really sent: the outcome is the rule's approval. What was sent is the Refunds
   // section's to say, in numbers.
   const unsent = samples.length;
-  const paidNote = !unsent ? "Unit destroyed on camera; refund sent through PayPal" : "Unit destroyed on camera; refund approved";
+  // One definition per state, in the words the claims grid uses: an approved refund PayPal hasn't sent is "Not sent", and
+  // stays Approved; Held is only a claim waiting for a person.
+  const paidNote = !unsent
+    ? "Unit destroyed on camera; refund sent through PayPal"
+    : "Unit destroyed on camera; refund approved. Not sent while the payee's PayPal account can't receive payouts";
   const rows: [Decision, string, number, string][] = [
     ["paid", "Approved", stats.remedied, paidNote],
-    ["held", "Held", stats.held, "Waiting for a person: an answer was unclear, a check couldn't run, PayPal didn't take the payout, or auto-pay was off"],
+    ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn't run, auto-pay was off, or PayPal refused an approved payout"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
     ["pending", "In progress", stats.pending, "Code issued; photos not yet checked"],

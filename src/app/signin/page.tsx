@@ -60,8 +60,14 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
             </p>
           )}
 
+          <Button href={start} size="lg" block className="mt-8" prefetch={false}>
+            Log in with PayPal
+          </Button>
+          <p className="mt-3 text-ui text-muted">Remedy reads your PayPal name and email to open your workspace.</p>
+
+          {/* The shared login sits under the real way in, never in front of it. */}
           {login && (
-            <section aria-labelledby="demo-account" className="mt-8 flex flex-col gap-3 rounded-card bg-surface p-4 shadow-ring">
+            <section aria-labelledby="demo-account" className="mt-10 flex flex-col gap-3 border-t border-line pt-6">
               <div className="flex flex-col gap-1">
                 <h2 id="demo-account" className="text-ui font-medium">
                   Demo account
@@ -69,24 +75,17 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
                 {fromClaim && <p className="text-ui text-muted">This claim is in the company console. Log in with the demo account to see it.</p>}
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-micro text-muted" id="demo-email">
-                  Email
-                </span>
+                <span className="text-micro text-muted">Email</span>
                 <CopyField value={login.email} label="Email" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-micro text-muted">Password</span>
-                <CopyField value={login.password} label="Password" />
+                <CopyField value={login.password} label="Password" secret />
               </div>
             </section>
           )}
 
-          <Button href={start} size="lg" block className="mt-6" prefetch={false}>
-            Log in with PayPal
-          </Button>
-          <p className="mt-3 text-ui text-muted">Remedy reads your PayPal name and email to open your workspace.</p>
-
-          <p className="mt-12 border-t border-line pt-5 text-ui text-muted">
+          <p className="mt-10 border-t border-line pt-5 text-ui text-muted">
             Own a recalled product? Use the claim link on the recall notice, or{" "}
             <Link href="/r/kikea-x-vesolje/try" className="text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
               file a claim

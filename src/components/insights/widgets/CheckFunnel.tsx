@@ -40,7 +40,7 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
   };
 
   return (
-    <ol className="flex h-full min-h-0 flex-col justify-between gap-0.5 px-1.5 pb-1" onClick={() => widgetApi.resetCrossFilter()} onKeyDown={moveBetweenItems}>
+    <ol className="flex h-full min-h-0 flex-col justify-between gap-0.5 pb-1" onClick={() => widgetApi.resetCrossFilter()} onKeyDown={moveBetweenItems}>
       {steps.map((s, i) => {
         const last = i === steps.length - 1;
         return (
@@ -55,7 +55,8 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
                 />
               </span>
             </div>
-            {!last && (
+            {/* A stage where no claim stopped says nothing: the next bar's length already shows it. */}
+            {!last && s.stopped > 0 && (
               <button
                 type="button"
                 disabled={!s.stopped}
@@ -80,12 +81,7 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
                       </span>
                     ))}
                   </span>
-                ) : (
-                  <span className="flex items-baseline gap-2">
-                    <span className="font-mono text-faint tabular-nums">0</span>
-                    <span className="text-muted">none stopped here</span>
-                  </span>
-                )}
+                ) : null}
               </button>
             )}
           </li>

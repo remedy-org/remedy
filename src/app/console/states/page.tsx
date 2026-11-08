@@ -85,7 +85,7 @@ export default async function StatesPage() {
             label="Import progress"
             steps={[
               { id: "cpsc", label: "Read CPSC's record", state: "pass", detail: "Recall 26-412, about 1,200,000 units" },
-              { id: "draft", label: "Draft the photo checks", state: "running", detail: "The model reads the notice and its photos, about 15 seconds" },
+              { id: "draft", label: "Draft the photo checks", state: "running", detail: "Drafting the photo checks from the notice, about 15 seconds" },
               { id: "review", label: "You review and publish", state: "waiting", detail: "Nothing goes live until you publish" },
             ]}
           />

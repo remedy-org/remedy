@@ -132,8 +132,17 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
   });
   const answered = c.checks.filter((r) => !PRE_IDS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK);
   const steps = recall.spec.proof_steps;
-  if (answered.length) return [...pre, ...answered.map((r) => ({ id: r.check, label: checkLabel(r.check, code, steps), state: r.outcome }))];
-  const expected = ["label", "code", ...(c.photoHashes.length > 1 ? ["same_item"] : []), "screen", ...steps.map((_, i) => `step_${i + 1}`)];
+  if (answered.length) {
+    const bars: CheckBar[] = answered.map((r) => ({ id: r.check, label: checkLabel(r.check, code, steps), state: r.outcome }));
+    // "Same item" is only asked of two or more photos. A one-photo claim keeps its place in the strip as a skipped
+    // check, so every row of a recall draws the same track and none looks as if it got fewer checks.
+    if (!answered.some((r) => r.check === "same_item")) {
+      const at = bars.findIndex((b) => b.id === "code") + 1 || bars.findIndex((b) => b.id === "label") + 1;
+      bars.splice(at, 0, { id: "same_item", label: checkLabel("same_item", code, steps), state: "skipped" });
+    }
+    return [...pre, ...bars];
+  }
+  const expected = ["label", "code", "same_item", "screen", ...steps.map((_, i) => `step_${i + 1}`)];
   const state: BarState = c.decision === "blocked" ? "skipped" : "waiting";
   return [...pre, ...expected.map((id) => ({ id, label: checkLabel(id, code, steps), state }))];
 
@@ -143,7 +152,7 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
 const PROCESS = new Set(["model", "payout", "auto_pay"]);
 
 /**
- * "Pre-checks 4 of 4 · Model answers 5 of 5": the one count the console gives everywhere (the barcode's label and hover,
+ * "Pre-checks 4 of 4 · Photo check 5 of 5": the one count the console gives everywhere (the barcode's label and hover,
  * the panel). Each group counts what passed of what ran; a group where nothing ran says why ("waiting", "not run"). A
  * check that was not run is left out of its total and shown as a dotted slot in the barcode.
  */
@@ -156,8 +165,8 @@ export function checkCount(items: { id: string; state: BarState | PreCheckState 
   const model = items.filter((b) => !PRE_IDS.has(b.id) && !PROCESS.has(b.id));
   const pre = items.filter((b) => PRE_IDS.has(b.id));
   // A pre-check that stopped the claim means the model never ran, which isn't waiting.
-  const none = pre.some((b) => b.state === "reject") ? "Model answers not run" : "Model answers waiting";
-  return `${group("Pre-checks", pre)} · ${model.length ? group("Model answers", model) : none}`;
+  const none = pre.some((b) => b.state === "reject") ? "Photo check not run" : "Photo check waiting";
+  return `${group("Pre-checks", pre)} · ${model.length ? group("Photo check", model) : none}`;
 }
 
 /** The barcode as a sentence, for screen readers: the console's one count. */
@@ -190,14 +199,31 @@ const REFUSED_NOTE: Record<string, string> = {
   payer_verified: "Not paid on review: account not verified",
 };
 
-/** The verdict column's muted line: the reason, or that a paid claim passed every check (the bars beside it count them). */
-function noteOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes" | "checks">, bars: CheckBar[] | null, recall: Pick<Recall, "autoPay">): string | null {
+/** The verdict column's muted line: the reason, or that a paid claim passed every check (the bars beside it count them).
+ * A refused claim's line leads with its category, the words the Verdict filter, Insights and the report use, then the
+ * detail that tells this claim apart. copiedFrom: the earlier claim a reused photo matches. */
+function noteOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes" | "checks">, bars: CheckBar[] | null, recall: Pick<Recall, "autoPay">, copiedFrom?: string | null): string | null {
   if (c.decision === "paid" && !c.reason) {
     return bars?.some((b) => b.state === "pass") ? "All checks passed" : null;
   }
   const refused = c.decision === "held" && c.reason && !(c.reason.check in REFUSED_NOTE) ? c.checks?.find((r) => r.outcome === "hold" && r.check in REFUSED_NOTE) : undefined;
   if (refused) return REFUSED_NOTE[refused.check];
+  if ((c.decision === "rejected" || c.decision === "blocked") && c.reason && c.reason.check !== "review") return refusalLine(c.reason, copiedFrom);
   return reasonOf(c, recall);
+}
+
+/** "Code missing or wrong · reads K7O, expected K7Q": a refusal in the company's words, short enough for the grid. */
+export function refusalLine(r: Pick<Reason, "check" | "text">, copiedFrom?: string | null): string {
+  const lead = refusalLabel(r.check);
+  if (lead === "Other") return r.text;
+  const id = r.text.match(/\bRM-\d{4}\b/)?.[0] ?? copiedFrom ?? null;
+  if (r.check === "code") {
+    const read = r.text.match(/reads (\S+?);? this claim's code is (\S+)/);
+    if (read) return `${lead} · reads ${read[1]}, expected ${read[2]}`;
+    const none = r.text.match(/^No code written.*code is (\S+)/);
+    if (none) return `${lead} · none written, expected ${none[1]}`;
+  }
+  return id && (r.check === "payer" || r.check === "duplicate_photo") ? `${lead} · ${id}` : lead;
 }
 
 export type PhotoUrls = (key: string, n: number) => RowPhoto;
@@ -247,7 +273,7 @@ export function companyReasonText(r: Pick<Reason, "check" | "text">, decision: D
 
 /** A grid row from an index row. photoUrls turns each photo's store key into the URLs the grid loads (the console
  * seals them per company; the homepage preview uses public sample photos); without it a row shows no thumbnails. */
-export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls): ClaimRow {
+export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls, copiedFrom?: string | null): ClaimRow {
   const owed = c.decision === "paid" || c.decision === "held" ? amountOf(c.payoutAmount, recall) : null;
   const bars = barsOf(c, recall);
   const timeline = timelineOf(c);
@@ -270,7 +296,7 @@ export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls): C
     photos: photoUrls ? (c.photoKeys ?? []).map(photoUrls) : [],
     bars,
     // A refused payout is the newest thing about a held claim, and what the reviewer acts on: it leads the verdict.
-    note: failedAt ? "Payout not sent: retry or reject" : noteOf(c, bars, recall),
+    note: failedAt ? "Payout not sent: retry or reject" : noteOf(c, bars, recall, copiedFrom),
     payoutFailedAt: failedAt,
     timeline,
     toPay: timeline && c.decision === "paid" ? timeline.sent : null,
@@ -374,7 +400,7 @@ export function duration(sec: number): string {
 // Why a claim was refused, by the check that refused it: one wording for the grid's filter and grouping, Insights and
 // the CPSC report, so the three never disagree.
 const REFUSAL: Record<string, string> = {
-  code: "One-time code missing or wrong",
+  code: "Code missing or wrong",
   screen: "Photo of a screen or a print",
   label: "Label missing or not the recalled product",
   same_item: "Photos showed different items",
@@ -457,9 +483,9 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
     case "rejected":
       return reviewed ? `Rejected on review: ${stripPrefix(reviewed.text).replace(/[.\s]+$/, "")}.` : `A check failed, so no money moves: ${lower(first(c.reasons, "reject") ?? "refused")}.`;
     case "blocked":
-      return `Stopped before the photos reached the model: ${lower(first(c.reasons, "reject") ?? "a pre-check failed")}.`;
+      return `Stopped by a pre-check before the photo check: ${lower(first(c.reasons, "reject") ?? "a pre-check failed")}.`;
     case "pending":
-      return c.photos.length ? "The photos are with the model; the rule decides when it answers." : "The owner has a code and an open camera session, but no photos yet.";
+      return c.photos.length ? "The photo check is reading the photos; the rule decides when it answers." : "The owner has a code and an open camera session, but no photos yet.";
   }
 }
 
@@ -492,7 +518,7 @@ function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerV
   const row = (id: string, label: string, pass: string): PreCheckRow => {
     const f = failed(id);
     if (f) return { id, label, state: f.outcome === "reject" ? "reject" : "hold", detail: f.text };
-    return ran ? { id, label, state: "pass", detail: pass } : { id, label, state: "waiting", detail: "Runs when the photos arrive" };
+    return ran ? { id, label, state: "pass", detail: pass } : { id, label, state: "waiting", detail: "" };
   };
   return [
     row("session", "Live camera session", "Taken in this claim's camera session, before it expired"),

@@ -19,8 +19,8 @@ import { payoutFailure, ReviewActions, reviewLabels, type ReviewIntent } from ".
 
 // The evidence for one claim: on laptops a non-modal panel docked beside the grid (Mercury's detail card), so ↑/↓
 // keeps walking the queue; on phones and tablets a full-screen modal. Both show the same content: the money's
-// timeline, the photos, the pre-checks, every model answer with its quoted evidence, the rule's decision, then approve
-// or reject for held claims.
+// timeline, the photos, the pre-checks, every photo-check answer with its quoted evidence, the rule's decision, then
+// approve or reject for held claims.
 
 export interface EvidenceProps {
   claimId: string | null;
@@ -365,15 +365,15 @@ const PRE_STATE: Record<PreCheckState, CheckState> = { pass: "pass", hold: "hold
 
 type Step = { label: string; at: string | null; note?: string; failed?: boolean; value?: string };
 
-/** The money's path for this claim, from its events: photos in, model answered, rule decided, PayPal sent, settled. */
+/** The money's path for this claim, from its events: photos in, photo check, decision, PayPal sent, settled. */
 function moneySteps(claim: DrawerClaim): Step[] {
   const at = (match: (e: DrawerClaim["events"][number]) => boolean) => claim.events.find(match)?.at ?? null;
   const photos = at((e) => e.type === "photos_received");
   const decided = at((e) => e.type === "decided" || e.type === "blocked" || e.type === "rejected");
   const steps: Step[] = [
     { label: "Photos in", at: photos },
-    { label: "Model", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "A pre-check stopped it: the photos never reached the model." : undefined },
-    { label: "Rule", at: decided },
+    { label: "Photo check", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "A pre-check stopped it, so the photos were never read." : undefined },
+    { label: "Decision", at: decided },
   ];
   if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? CANT_RECEIVE : undefined, value: claim.decision === "paid" ? "Not sent" : undefined }];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
@@ -430,8 +430,8 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
   );
 }
 
-/** What decided a held or refused claim: the reason as a heading, what it means, and the model's own words. Null for
- * any other claim. */
+/** What decided a held or refused claim: the reason as a heading, what it means, and the photo check's own words. Null
+ * for any other claim. */
 function deciding(claim: DrawerClaim): { title: string; detail: string | null; evidence: string | null } | null {
   if (claim.decision !== "held" && claim.decision !== "rejected" && claim.decision !== "blocked") return null;
   // The newest thing that stopped the money leads: PayPal not taking the payout, or the checks run again on approve.
@@ -469,8 +469,8 @@ function deciding(claim: DrawerClaim): { title: string; detail: string | null; e
   return { title: check?.rule ?? pre?.detail ?? claim.sentence, detail: null, evidence: check?.evidence ?? null };
 }
 
-/** Held or refused: the reason as the panel's first heading, the model's own words under it, then the count. Claim ids
- * it names open in the panel. */
+/** Held or refused: the reason as the panel's first heading, the photo check's own words under it, then the count.
+ * Claim ids it names open in the panel. */
 function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: string) => void }) {
   const d = deciding(claim);
   if (!d) return null;
@@ -491,10 +491,16 @@ function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: string)
 }
 
 /** Under a check list: the passed rows' details, folded by default so what held or failed is in view first. */
-function PassedToggle({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
+function PassedToggle({ count, open, onToggle, name }: { count: number; open: boolean; onToggle: () => void; name: string }) {
   if (!count) return null;
   return (
-    <button type="button" aria-expanded={open} onClick={onToggle} className="-mt-1 inline-flex min-h-8 items-center gap-1.5 self-start text-ui text-muted hover:text-text">
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-label={`${name} details`}
+      onClick={onToggle}
+      className="-mt-1 inline-flex min-h-8 items-center gap-1.5 self-start text-ui text-muted hover:text-text"
+    >
       <span aria-hidden="true" className={clsx("inline-block transition-transform", open && "rotate-90")}>
         ›
       </span>
@@ -517,6 +523,8 @@ function Evidence({
   photosRef?: RefObject<HTMLElement | null>;
 }) {
   // The "model" hold is the photo check not answering, not an answer: it isn't counted as a check that didn't pass.
+  // Before any photo arrives every check is waiting: one line says when they run, the rows are their names alone.
+  const waiting = claim.preChecks.every((p) => p.state === "waiting");
   const answers = claim.checks.filter((c) => c.id !== "model");
   const passed = answers.filter((c) => c.outcome === "pass").length;
   const preRan = claim.preChecks.filter((p) => p.state !== "waiting" && p.state !== "skipped");
@@ -531,6 +539,9 @@ function Evidence({
   const link = (text: string) => <LinkedIds text={text} onOpen={onOpen} self={claim.id} />;
   // The summary is already quoted under the check it explains (Same item, Real photo): don't print it twice.
   const summary = claim.summary && !claim.checks.some((c) => c.evidence === claim.summary) ? claim.summary : null;
+  // What a screen reader hears for each photo: what the photo check saw in it, and what the tag reads.
+  const codeCheck = claim.checks.find((c) => c.id === "code");
+  const seen = [claim.summary, codeCheck?.rule].filter(Boolean).join(" ") || undefined;
   return (
     <div className={clsx("flex flex-col gap-7 py-5", pad)}>
       {/* What decided it, then the photos, so a laptop's first view of the panel holds both. */}
@@ -554,6 +565,7 @@ function Evidence({
                 n={i + 1}
                 of={claim.photos.length}
                 tall={claim.photos.length === 2}
+                description={seen}
                 onOpen={() => setViewing({ id: claim.id, n: i })}
                 className={claim.photos.length === 3 && i === 0 ? "col-span-2" : undefined}
               />
@@ -583,19 +595,20 @@ function Evidence({
         <MoneyTimeline claim={claim} />
       </Section>
 
-      <Section title="Before the model" aside={preRan.length ? `${preRan.filter((p) => p.state === "pass").length} of ${preRan.length}` : undefined}>
+      {waiting && <p className="-mb-4 text-ui text-muted">Checks run when the photos arrive.</p>}
+      <Section title="Pre-checks" aside={preRan.length ? `${preRan.filter((p) => p.state === "pass").length} of ${preRan.length}` : undefined}>
         <CheckList
           label={`Pre-checks for ${claim.id}`}
-          steps={claim.preChecks.map((p) => ({ id: p.id, label: p.label, state: PRE_STATE[p.state], detail: p.state === "pass" && !open.pre ? undefined : link(p.detail) }))}
+          steps={claim.preChecks.map((p) => ({ id: p.id, label: p.label, state: PRE_STATE[p.state], detail: (p.state === "pass" && !open.pre) || !p.detail ? undefined : link(p.detail) }))}
         />
-        <PassedToggle count={claim.preChecks.filter((p) => p.state === "pass").length} open={open.pre} onToggle={() => toggle("pre")} />
+        <PassedToggle name="Pre-check" count={claim.preChecks.filter((p) => p.state === "pass").length} open={open.pre} onToggle={() => toggle("pre")} />
       </Section>
 
-      <Section title="The model's answers" aside={answers.length ? `${passed} of ${answers.length}` : claim.checks.length ? "No answer" : undefined}>
+      <Section title="Photo check" aside={answers.length ? `${passed} of ${answers.length}` : claim.checks.length ? "No answer" : undefined}>
         {claim.checks.length ? (
           <>
             <CheckList
-              label={`Model answers for ${claim.id}`}
+              label={`Photo check for ${claim.id}`}
               steps={claim.checks.map((c) => ({
                 id: c.id,
                 label: c.label,
@@ -610,21 +623,17 @@ function Evidence({
                   ),
               }))}
             />
-            <PassedToggle count={claim.checks.filter((c) => c.outcome === "pass").length} open={open.model} onToggle={() => toggle("model")} />
+            <PassedToggle name="Photo check" count={claim.checks.filter((c) => c.outcome === "pass").length} open={open.model} onToggle={() => toggle("model")} />
             {summary && (
               <div className="flex flex-col gap-1 border-t border-line pt-3">
-                <p className="text-ui font-medium text-text">The model&apos;s summary</p>
+                <p className="text-ui font-medium text-text">What the photo check saw</p>
                 <q className="block font-sans text-ui leading-[1.55] text-muted">{summary}</q>
               </div>
             )}
           </>
         ) : (
           <p className="text-ui text-muted">
-            {claim.decision === "blocked"
-              ? "None. A pre-check stopped this claim, so its photos never reached the model."
-              : claim.photos.length
-                ? "The model is still answering."
-                : "None yet. The model runs once the photos arrive."}
+            {claim.decision === "blocked" ? "Not run. A pre-check stopped this claim, so its photos were never read." : claim.photos.length ? "Reading the photos now." : "Waiting for photos."}
           </p>
         )}
       </Section>
@@ -678,10 +687,11 @@ function Evidence({
   );
 }
 
-/** The header's money: what the claim pays and where that money is ("$29.99 · Sent"); nothing for a refused claim. */
+/** The header's money: what the claim pays, and "Sent" or "Settling" once PayPal has it; nothing for a refused claim.
+ * A payout that wasn't sent is said once, on the timeline's PayPal step. */
 function MoneyLine({ claim }: { claim: DrawerClaim }) {
   if (claim.decision !== "paid" && claim.decision !== "held") return null;
-  const state = claim.decision === "held" ? null : claim.payout ? (claim.payout.status === "SUCCESS" ? "Sent" : "Settling") : "Not sent";
+  const state = claim.decision === "held" || !claim.payout ? null : claim.payout.status === "SUCCESS" ? "Sent" : "Settling";
   return (
     <span className="ml-auto inline-flex items-baseline gap-1.5 text-ui">
       <span className="font-mono text-text">{claim.amount}</span>

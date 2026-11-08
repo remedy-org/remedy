@@ -34,7 +34,11 @@ export function LinkedIds({ text, onOpen, self }: { text: string; onOpen?: (id: 
             {onOpen && id !== self ? (
               <button
                 type="button"
-                onClick={() => onOpen(id)}
+                // Inside a grid row, the link opens the claim it names, never the row it sits on.
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpen(id);
+                }}
                 className="font-mono text-text underline decoration-line-strong underline-offset-2 hover:decoration-text"
               >
                 {id}

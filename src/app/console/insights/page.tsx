@@ -2,7 +2,10 @@ import { PartialNotice } from "@/components/console/PartialNotice";
 import { RecallPicker } from "@/components/console/RecallPicker";
 import { InsightsLoader } from "@/components/insights/InsightsLoader";
 import { MobileSummary } from "@/components/insights/MobileSummary";
-import { Button, EmptyState, NoBreakHyphens } from "@/components/ui";
+import Link from "next/link";
+import { Button, EmptyState } from "@/components/ui";
+import { INSIGHTS_ACTIONS } from "@/components/insights/actions";
+import { keepHyphens } from "@/components/console/format";
 import { requireSession } from "@/lib/session";
 import { buildInsights } from "./facts";
 import { loadInsights } from "./load";
@@ -58,17 +61,23 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
   const data = buildInsights(claims, recall, new Date());
 
   return (
-    // On a laptop the report fills the window below the console header (56px and its hairline), so Studio's canvas
-    // and the analyst's rail scroll on their own while the page stays put. Narrower, the page scrolls a summary.
-    <main className="flex flex-col lg:h-[calc(100dvh-3.5rem-1px)] lg:min-h-[36rem]">
+    // The page scrolls as one: Studio's canvas is sized to the report, so no panel scrolls inside another.
+    <main className="flex flex-col pb-8">
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 px-4 pt-8 pb-5 sm:px-6 lg:px-8">
         <div className="min-w-0">
-          <h1 className="text-h2 font-medium text-balance">
-            <NoBreakHyphens>{recall.product}</NoBreakHyphens>
-          </h1>
-          <p className="mt-1.5 text-ui text-muted">{filed(data.claims.map((c) => c.filedAt))}</p>
+          <h1 className="text-h2 font-medium text-balance">{keepHyphens(recall.product)}</h1>
+          <p className="mt-1.5 text-ui text-muted">
+            {filed(data.claims.map((c) => c.filedAt))} ·{" "}
+            <Link href={`/console?recall=${recall.id}`} className="text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
+              Open in Claims
+            </Link>
+          </p>
         </div>
-        {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/insights" />}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/insights" />}
+          {/* "Ask about this recall" lands here once the report has loaded (InsightsStudio). */}
+          <div id={INSIGHTS_ACTIONS} className="contents" />
+        </div>
       </div>
       {unreadable.length > 0 && (
         <div className="px-4 pt-4 sm:px-6 lg:px-8">
@@ -76,7 +85,7 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
         </div>
       )}
       <MobileSummary data={data} />
-      <div className="hidden min-h-0 flex-1 overflow-hidden lg:block">
+      <div className="hidden sm:block">
         <InsightsLoader data={data} />
       </div>
     </main>

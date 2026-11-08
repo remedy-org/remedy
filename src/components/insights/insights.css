@@ -139,3 +139,37 @@
   padding: 2px 0 2px 12px;
   color: var(--text-2);
 }
+
+/*
+ * The analyst opens from "Ask about this recall" in the page header, so while it is closed nothing of it shows: no
+ * rotated rail at the canvas's edge. Open, it is a plain column: no thread picker (one conversation per visit; "Start
+ * over" clears it), and its header takes the page's neutral focus ring, never a second amber.
+ */
+.insights-report.insights-ask-closed .ag-studio-root-panel-container-right {
+  display: none;
+}
+
+.insights-report .ag-studio-ai-thread-button {
+  display: none;
+}
+
+.insights-report .ag-studio-panel-header:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+/*
+ * Side by side, the right column's panels keep 40px off the left column's bars and track, which otherwise run straight
+ * into the next panel's text. Stacked (below 1024px) every panel starts at 0 and none takes it.
+ */
+.insights-report .ag-studio-layout-widget:not([style*="left: 0px"]) .ag-studio-layout-widget-container {
+  padding-left: 40px;
+}
+
+/* Below 1024px the page's gutter is 24px (the header's sm:px-6), so the canvas keeps the same edge. */
+@media (max-width: 1023px) {
+  .insights-report .ag-studio-root {
+    --ag-studio-canvas-padding: 24px;
+  }
+}
