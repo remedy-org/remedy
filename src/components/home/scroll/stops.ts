@@ -50,26 +50,27 @@ export type Page = {
 export type Stop = { name: string; at: (page: Page) => number | readonly number[] | undefined };
 
 /**
- * The sections a frame is fitted to: their text, and their objects (the sheet's cards when it isn't pinned, the tags and
- * the refund, the tour's tabs and console, the footer's tag).
+ * The sections a frame is fitted to: their text, and their objects (the sheet's cards when it isn't pinned, the claims'
+ * photos heading their lanes and the claims under each check on a narrow window, the tour's tabs and console, the
+ * footer's tag).
  */
 const TEXT = [
-  "#checks header p, #checks h2, #checks [data-lanes-top] span, #checks ol > li h3, #checks ol > li p:not(.sr-only), #checks [data-try-cta]",
+  "#checks header p, #checks h2, #checks [data-lanes-top] p, #checks [data-lanes-top] li > span:first-child, #checks ol > li h3, #checks ol > li p:not(.sr-only), #checks [data-try-cta]",
   "#proof h2, #proof p, #proof dt, #proof dd",
   "#companies header p, #companies h2, #companies [role=tab], #companies [data-story] ~ div > *",
   "main ~ footer h2, main ~ footer p, main ~ footer li a",
 ].join(", ");
-const OBJECTS = "#checks [data-tag], #checks div[aria-hidden][data-lane], #companies [role=tablist], #companies [data-step], main ~ footer > div:first-child";
+const OBJECTS = "#checks [data-lanes-top] img, #checks ol > li > ul > li, #companies [role=tablist], #companies [data-step], main ~ footer > div:first-child";
 /** The Problem sheet's, only while it isn't pinned: pinned, its stage sticks, so its layout positions follow the scroll
  * and it is covered by Fraud checks wherever a section frame could meet it. */
 const PROBLEM_TEXT = "#problem h2, #problem p:not(.sr-only)";
 const PROBLEM_OBJECTS = "#problem [data-card]";
-/** A gate's heading and its text, kept together (the block less its 24px padding): never a heading alone at the foot. */
-const GATE_TEXT = "#checks ol > li > div:first-child > div";
+/** A check's heading and its text, kept together (the block less its 24px padding): never a heading alone at the foot. */
+const GATE_TEXT = "#checks ol > li > div:first-child";
 
-/** Gate 03 of the laptop pipeline (and of the phone list), and the one above it. */
+/** Check 3 of the laptop matrix (and of the phone list), and the first. */
 const GATE_3 = "#checks ol > li:nth-child(3)";
-const GATE_2 = "#checks ol > li:nth-child(2)";
+const GATE_1 = "#checks ol > li:nth-child(1)";
 
 /**
  * Top to bottom. Each stop is a whole frame: a beat at rest, never a transition half played, and nothing cut at either
@@ -99,18 +100,18 @@ export const STOPS: readonly Stop[] = [
     name: "Problem, the loop cut",
     at: (p) => p.sheet(REST + 2) ?? p.fit(p.foot("#problem article", 0.78), { min: p.foot("#problem article", 0.8), max: p.foot("#problem article", 0.45) }),
   },
-  // Fraud checks: the heading on the top line over the gates that need no AI, their tags dropped. Never so high that
+  // Fraud checks: the heading on the top line over the four claims and the checks that need no AI. Never so high that
   // the Problem sheet shows above the section's edge, and the heading at least 16px under the nav.
   {
     name: "Fraud checks",
     at: (p) => p.fit(p.line("#checks header"), { min: p.line("#checks", 0), max: p.line("#checks header", 16) }),
   },
-  // Then gate 03 to the rule and "Try to fool it", as the model's samples drop and the refund is paid: gate 03's hairline
-  // tucked under the nav, so it never reads as a second rule under it. On a tall screen, gate 02's, so Results' heading
-  // stays below the fold.
+  // Then check 3 to the rule and "Try to fool it", as the last lanes draw down to the checks the model reads and the
+  // genuine claim is paid: check 3's hairline tucked under the nav, so it never reads as a second rule under it. On a
+  // tall screen, as high as check 1's, so Results' heading stays below the fold.
   {
     name: "Fraud checks, the rule",
-    at: (p) => p.fit(p.line(GATE_3, -1), { min: p.line(GATE_2, -1), before: "#proof header" }),
+    at: (p) => p.fit(p.line(GATE_3, -1), { min: p.line(GATE_1, -1), before: "#proof header" }),
   },
   // Results: the heading, the zero and the footnote, For companies kept below the fold rather than cut by it (on a tall
   // screen, its heading and tabs whole under Results). Never showing the end of Fraud checks above it.
@@ -118,8 +119,8 @@ export const STOPS: readonly Stop[] = [
     name: "Results",
     at: (p) => p.fit(p.line("#proof header"), { min: p.past("#checks [data-try-cta]"), before: "#companies header" }),
   },
-  // For companies: the tour whole, its tabs 16px under the nav and the console frame under them (the frame is sized to
-  // fit this, home.module.css .stage). Phones and narrow windows, which get the story instead, stop at its heading.
+  // For companies: the tour whole, its steps 16px under the nav and the console frame under them (the frame is sized to
+  // fit this, tour.module.css .stage). Phones and narrow windows, which get the story instead, stop at its heading.
   { name: "For companies", at: (p) => p.fit(p.line("#companies [data-tour]", 16) ?? p.line("#companies header")) },
   // The footer's tag: "See a refund land in a minute." and Try a claim, at the page end; on a short screen, where the end
   // would cut the tag under the nav, the tag whole nearest the end (within half a screen of it).
@@ -200,8 +201,8 @@ const INK = 2;
 /** Air a paper object (a tag, the console) keeps from the nav and the screen's foot: its shadow. */
 const AIR = 8;
 
-/** The intervals a frame edge may not fall inside: each line's ink, each object with its shadow. Tags not yet dropped
- * (their lane armed, Pipeline.tsx) are not there. */
+/** The intervals a frame edge may not fall inside: each line's ink, each object with its shadow. An outcome not yet
+ * printed (its lane armed, Pipeline.tsx) is not there. */
 function atoms(sheet: boolean): [number, number][] {
   const out: [number, number][] = [];
   const add = (sel: string, grow: number) => {

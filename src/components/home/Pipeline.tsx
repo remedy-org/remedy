@@ -135,7 +135,7 @@ export function Pipeline() {
   return (
     <div ref={ref} className="relative hidden lg:block">
       {/* Each lane's head: the claim's name, its photo, and the line's first stretch down to the first check. */}
-      <div className="grid-12 items-end">
+      <div className="grid-12 items-end" data-lanes-top>
         <p className={clsx(GATE, "max-w-[44ch] pb-6 text-ui text-muted")}>Four claims, and the check that stops each one.</p>
         <ul className={LANES} aria-label="The four claims">
           {SAMPLES.map((s) => (
