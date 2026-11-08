@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopyField } from "@/components/console/CopyField";
+import { previewProps } from "@/components/console/preview";
+import { SigninPreview } from "@/components/console/SigninPreview";
 import { Button, CheckIcon, ErrorState, ThemeToggle, Wordmark } from "@/components/ui";
 import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { DEFAULT_NEXT, getSession, safeNext } from "@/lib/session";
@@ -34,9 +36,11 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   const login = judgeLogin("business");
   const fromClaim = new URL(next, "http://n").searchParams.has("claim");
 
+  const preview = previewProps(456);
+
   return (
-    // On the homepage's page frame: the wordmark on the gutter, then one quiet column, centred in the window. No picture
-    // of the console beside it: what is behind the login is said in words.
+    // On the homepage's page frame and 12-column grid: the wordmark on the gutter, the form in columns 1 to 4, and from
+    // 1024px the console it opens, flat, from column 6 running off the right edge. Phones get the form alone.
     <div className="flex min-h-dvh flex-col overflow-x-clip">
       <header className="page flex h-16 items-center justify-between gap-4">
         <Wordmark href="/" />
@@ -47,8 +51,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <ThemeToggle />
         </div>
       </header>
-      <main id="main" tabIndex={-1} className="page flex flex-1 items-center justify-center py-12 outline-none sm:py-16 sm:pb-28">
-        <div className="flex w-full max-w-[400px] flex-col">
+      <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none sm:py-16 sm:pb-28 lg:items-start">
+        <div className="col-span-12 mx-auto flex w-full max-w-[400px] flex-col lg:col-span-4 lg:mx-0">
           <h1 className="text-h2 font-medium">Sign in to Remedy</h1>
           <p className="mt-2 text-ui text-muted">Review recall claims and pay refunds through PayPal.</p>
 
@@ -94,6 +98,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           </p>
         </div>
 
+        <div className="hidden lg:col-span-7 lg:col-start-6 lg:block">
+          <SigninPreview rows={preview.rows} ledger={preview.ledger!} counts={preview.counts!} height={preview.height} />
+        </div>
       </main>
     </div>
   );

@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/ui";
 import { barsSentence, duration, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
+import { VerdictMark, verdictOf, verdictWord } from "./VerdictMark";
 
 // The claims grid's cells (DESIGN.md "AG Grid", UI-SPEC §3.3). Every cell renders from the index row alone; nothing
 // here fetches except the thumbnails, which are sealed, cached, 96px and lazy (only rows AG Grid renders load them).
@@ -99,7 +100,15 @@ export function ClaimCell({ data, context }: Cell) {
   }
   return (
     <span className="flex h-full items-center gap-3">
-      <Thumbs row={data} />
+      <span className="relative flex">
+        <Thumbs row={data} />
+        {/* Shown on a picked row only (ClaimsGrid's pick style): a filled box with a check over the photos' corner. */}
+        <span aria-hidden="true" className="pick-box">
+          <svg viewBox="0 0 12 12" className="size-3">
+            <path d="M2.75 6.25l2.1 2.1 4.4-4.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </span>
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="font-mono text-ui font-medium">{data.id}</span>
         {/* The code on the tag, then the day and time it was filed (UTC, as the column header says): a list spans days,
@@ -138,12 +147,12 @@ export function VerdictCell({ data, context }: Cell) {
       </span>
     );
   }
-  // An approved claim that passed every check says nothing more than its pill and its full strip of checks: the line
+  // An approved claim that passed every check says nothing more than its mark and its full strip of checks: the line
   // stays empty, so only the exceptions carry a reason and stand out.
   const note = data.decision === "paid" && data.note === "All checks passed" ? null : data.note;
   return (
-    <span className="verdict-track h-full">
-      <StatusPill status={data.decision} label={verdictLabel(data)} className={data.decision === "pending" ? "pill-pending" : undefined} />
+    <span className="verdict-track is-mark h-full">
+      <VerdictMark verdict={verdictOf(data)} className={EXCEPTION.has(data.decision) ? "text-text" : undefined} />
       {note && (
         <span className="min-w-0 truncate text-ui text-muted" title={note}>
           <LinkedIds text={note} onOpen={context?.open} self={data.id} />
@@ -153,19 +162,24 @@ export function VerdictCell({ data, context }: Cell) {
   );
 }
 
+/** The decisions a reviewer acts on or answers for: their word is in full ink, the rest in the second. */
+export const EXCEPTION = new Set<ClaimRow["decision"]>(["held", "rejected", "blocked"]);
+
 // A word only where a check didn't simply pass; a pass is its filled bar alone.
 const BAR_WORD: Record<BarState, string> = { pass: "", hold: "Held", reject: "Failed", waiting: "Waiting", skipped: "Not run" };
 const barWord = (b: Pick<CheckBar, "id" | "state">) =>
   b.id === "model" && b.state === "hold" ? "No answer" : b.id === "same_item" && b.state === "skipped" ? "One photo, not needed" : BAR_WORD[b.state];
 
-// One bar's shape by state; the hover card (ChecksTooltip) uses the same shapes as its legend.
-function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
+// One bar's shape by state; the hover card (ChecksTooltip) uses the same shapes as its legend. In the console a pass
+// is a filled bar in ink: green means money moved, and a strip of checks moves none, so only what held or failed takes
+// a colour and stands out down the column. The homepage's still keeps its green passes (`pay`).
+function Bar({ bar, pay }: { bar: Pick<CheckBar, "state">; pay?: boolean }) {
   return (
     <span
       data-state={bar.state}
       className={clsx(
         "relative h-4 w-2 shrink-0 overflow-hidden rounded-[1.5px]",
-        bar.state === "pass" && "bg-pay/70",
+        bar.state === "pass" && (pay ? "bg-pay/70" : "bg-text-2/45"),
         // Held: the top half filled, so it reads without colour.
         bar.state === "hold" && "border border-hold bg-[linear-gradient(var(--hold)_50%,transparent_50%)]",
         // Failed: filled, with a slash in the background colour.
@@ -182,12 +196,12 @@ const splitBars = (bars: CheckBar[]) => ({ pre: bars.filter((b) => isPreCheck(b.
 
 /** The checks as a fixed strip: the four pre-checks, 4px, then the photo check's answers, padded to the recall's longest
  * so every row's strip ends on one x. Shape carries the outcome as well as colour (filled, half, slashed, outline, dim). */
-export function Barcode({ bars, slots }: { bars: CheckBar[]; slots?: GridContext["slots"] }) {
+export function Barcode({ bars, slots, pay }: { bars: CheckBar[]; slots?: GridContext["slots"]; pay?: boolean }) {
   const { pre, model } = splitBars(bars);
   const group = (list: CheckBar[], n = 0) => (
     <span className="flex gap-0.5">
       {list.map((b) => (
-        <Bar key={b.id} bar={b} />
+        <Bar key={b.id} bar={b} pay={pay} />
       ))}
       {Array.from({ length: Math.max(0, n - list.length) }, (_, i) => (
         <span key={`pad-${i}`} className="h-4 w-2 shrink-0" />
@@ -207,7 +221,7 @@ export function ChecksCell({ data, context }: Cell) {
   if (!data.bars) return <span className="text-faint" aria-label="Checks not recorded on this row">—</span>;
   return (
     <span className="flex h-full items-center">
-      <Barcode bars={data.bars} slots={context?.slots} />
+      <Barcode bars={data.bars} slots={context?.slots} pay={context?.stacked} />
     </span>
   );
 }
@@ -245,11 +259,9 @@ export const NO_PAYOUT = "This claim came with your console, so the rule's appro
 /** Whether money left for this claim (a payout PayPal took). */
 export const sent = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) => r.decision === "paid" && Boolean(r.payoutStatus) && !r.seeded;
 
-/** Where the money is: Sent, Settling or Failed at PayPal; Not sent (red, with PayPal's time) when PayPal refused an
- * approve; a quiet Approved for a claim that came with the console, which never pays out (the reason in its title and the evidence
- * panel's PayPal step); a dash while nothing is owed. */
-export function PayoutCell({ data }: Cell) {
-  if (!data) return null;
+/** Where the money is, in the homepage still's words: Sent, Settling or Failed at PayPal; Not sent when PayPal refused
+ * an approve; a quiet Approved for a claim that came with the console; a dash while nothing is owed. */
+function StillPayout({ data }: { data: GridRow }) {
   if (data.payoutFailedAt) {
     return (
       <span className="flex h-full flex-col justify-center leading-tight" title={`PayPal didn't take the payout at ${formatTime(data.payoutFailedAt)}: nothing was paid`}>
@@ -276,6 +288,35 @@ export function PayoutCell({ data }: Cell) {
     <span className="inline-flex h-full items-center gap-2 text-ui text-text-2" title={`PayPal: ${status}`}>
       <span className={`size-1.5 shrink-0 rounded-full ${mark}`} aria-hidden="true" />
       {word}
+    </span>
+  );
+}
+
+export type PayoutState = { word: "Not sent" | "Sent" | "Refused"; detail: string | null; title: string };
+
+/**
+ * The money's one column, in three words: Sent once PayPal has the payout (settling, then settled), Refused when PayPal
+ * didn't take it, Not sent for an approved claim no payout went out for (one that came with the console). Null while
+ * nothing is owed: a held claim waits for a person, a refused one owes nothing.
+ */
+export function payoutState(r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "payoutFailedAt">): PayoutState | null {
+  if (r.payoutFailedAt) return { word: "Refused", detail: `PayPal ${formatClock(r.payoutFailedAt).slice(0, 5)}`, title: `PayPal didn't take the payout at ${formatTime(r.payoutFailedAt)}: nothing was paid` };
+  if (r.decision === "paid" && !sent(r)) return { word: "Not sent", detail: null, title: NO_PAYOUT };
+  if (!r.payoutStatus) return null;
+  if (FAILED.has(r.payoutStatus)) return { word: "Refused", detail: "PayPal", title: `PayPal: ${r.payoutStatus}` };
+  return { word: "Sent", detail: r.payoutStatus === "SUCCESS" ? "Settled" : "Settling", title: `PayPal: ${r.payoutStatus}` };
+}
+
+/** The Payout column: the word, and under it where PayPal has it or when it refused. Refused is the only colour. */
+export function PayoutCell({ data, context }: Cell) {
+  if (!data) return null;
+  if (context?.stacked) return <StillPayout data={data} />;
+  const p = payoutState(data);
+  if (!p) return <span className="text-faint" aria-label="No payout">—</span>;
+  return (
+    <span className="flex h-full flex-col justify-center leading-tight" title={p.title}>
+      <span className={clsx("text-ui", p.word === "Refused" ? "text-stop" : p.word === "Sent" ? "text-text-2" : "text-muted")}>{p.word}</span>
+      {p.detail && <span className="mt-0.5 text-micro text-faint">{p.detail}</span>}
     </span>
   );
 }
@@ -312,10 +353,12 @@ export function AmountCell({ data, context }: Cell) {
 export function CardRow({ data }: Cell) {
   if (!data) return null;
   // A screen reader hears the card as one labelled sentence, not its columns' glyphs ("—", "·") read one by one.
+  const verdict = verdictOf(data);
+  const note = data.decision === "paid" && data.note === "All checks passed" ? null : (data.note ?? (data.decision === "paid" ? null : data.reason));
   const said = [
     data.id,
-    verdictLabel(data) ?? { held: "held", rejected: "rejected", blocked: "blocked", pending: "in progress", paid: "approved" }[data.decision],
-    data.note ?? data.reason,
+    verdictWord(verdict).toLowerCase(),
+    note,
     data.amount ? `${data.amount}${data.decision === "held" ? " once approved" : ""}` : "no refund",
     payoutWord(data),
     data.code && `code ${data.code}`,
@@ -332,15 +375,19 @@ export function CardRow({ data }: Cell) {
           <span className="font-mono text-ui font-medium">{data.id}</span>
           <span className="shrink-0">{data.amount ? <AmountText amount={data.amount} tone={toneOf(data)} /> : <span className="text-faint">—</span>}</span>
         </span>
-        <span className="verdict-track">
-          <StatusPill status={data.decision} label={verdictLabel(data)} />
-          <span className="min-w-0 truncate text-ui text-muted">
-            <LinkedIds text={data.note ?? data.reason} />
-          </span>
+        <span className="verdict-track is-mark is-card">
+          <VerdictMark verdict={verdict} className={EXCEPTION.has(data.decision) ? "text-text" : undefined} />
+          {note && (
+            <span className="min-w-0 truncate text-ui text-muted">
+              <LinkedIds text={note} />
+            </span>
+          )}
         </span>
-        {/* What the columns say on a wider grid, in one line: the code, the time to payout and where the money is. */}
-        <span className="truncate font-mono text-micro text-faint">
-          {[data.code, formatDayTime(data.createdAt), payoutWord(data)].filter(Boolean).join(" · ")}
+        {/* What the columns say on a wider grid, in one line: the code and filing time (data, in mono), then the payout
+            only where money moved or was refused. */}
+        <span className="flex min-w-0 items-baseline gap-2 text-micro text-faint">
+          <span className="truncate font-mono">{[data.code, formatDayTime(data.createdAt)].filter(Boolean).join(" · ")}</span>
+          {payoutState(data)?.word !== "Not sent" && payoutWord(data) && <span className="shrink-0">· {payoutWord(data)}</span>}
         </span>
       </span>
     </span>
@@ -349,14 +396,12 @@ export function CardRow({ data }: Cell) {
 
 /** The payout column's word, for the card row's line and the CSV. */
 export function payoutWord(r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "payoutFailedAt">): string | null {
-  if (r.payoutFailedAt) return "Not sent";
-  if (r.decision === "paid" && !sent(r)) return "Approved";
-  if (!r.payoutStatus) return null;
-  return r.payoutStatus === "SUCCESS" ? "Sent" : FAILED.has(r.payoutStatus) ? "Failed" : "Settling";
+  return payoutState(r)?.word ?? null;
 }
 
-/** Group by: the row heading a group, which folds it (a click, Enter, → and ←). Its name, how many claims it holds
- * now (filters apply), a bar of their verdicts and what they add up to. */
+/** Group by: the row heading a group, which folds it (a click, Enter, → and ←). Its name, how many claims it holds now
+ * (filters apply) and which of them wait on a person or were refused, in words; what the approved ones add up to sits on
+ * the Amount column's edge. */
 export function GroupRow({ data, context }: Cell) {
   const key = data?.group?.key ?? "";
   const stats = context?.groups;
@@ -367,23 +412,27 @@ export function GroupRow({ data, context }: Cell) {
   );
   if (!data?.group) return null;
   const folded = Boolean(total?.folded);
+  const exceptions = total ? MIX_ORDER.filter((d) => d !== "paid" && total.mix[d]).map((d) => `${total.mix[d]} ${MIX_WORD[d]}`) : [];
   return (
-    <span className="flex h-full cursor-pointer items-center gap-2 border-t border-line-2 bg-surface-2/60 px-3">
-      <span aria-hidden="true" className={clsx("inline-block w-3 text-muted transition-transform duration-160", !folded && "rotate-90")}>
-        ›
-      </span>
+    <span className="flex h-full cursor-pointer items-center gap-2.5 border-t border-line bg-surface-2/50 pr-3 pl-3">
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 12 12"
+        className={clsx("size-3 shrink-0 text-muted transition-transform duration-160 ease-snap", !folded && "rotate-90")}
+      >
+        <path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
       <span className="min-w-0 truncate text-ui font-medium text-text">
         <LinkedIds text={data.group.label} />
       </span>
-      <span className="shrink-0 text-ui text-muted">
-        <span aria-hidden="true">· </span>
+      <span className="shrink-0 truncate text-ui text-muted">
         {plural(total?.count ?? 0, "claim")}
+        {exceptions.length > 0 && `, ${exceptions.join(", ")}`}
         <span className="sr-only">{folded ? ", folded" : ", expanded"}</span>
       </span>
-      {total && total.count > 0 && <VerdictMix mix={total.mix} count={total.count} />}
       {total && total.cents > 0 && (
         <span className="ml-auto shrink-0 text-ui text-muted">
-          <span className="font-mono tabular-nums">{formatCents(total.cents)}</span> approved
+          <span className="font-mono text-text-2 tabular-nums">{formatCents(total.cents)}</span> approved
         </span>
       )}
     </span>
@@ -391,20 +440,7 @@ export function GroupRow({ data, context }: Cell) {
 }
 
 const MIX_ORDER: ClaimRow["decision"][] = ["paid", "held", "rejected", "blocked", "pending"];
-const MIX_FILL: Record<ClaimRow["decision"], string> = { paid: "bg-pay/70", held: "bg-hold", rejected: "bg-stop", blocked: "bg-stop/60", pending: "bg-line-strong" };
 const MIX_WORD: Record<ClaimRow["decision"], string> = { paid: "approved", held: "held", rejected: "rejected", blocked: "blocked", pending: "in progress" };
-
-/** A group's verdicts as one 64px bar, in the checks strip's colours; the words are for screen readers and the title. */
-function VerdictMix({ mix, count }: { mix: Partial<Record<ClaimRow["decision"], number>>; count: number }) {
-  const words = MIX_ORDER.filter((d) => mix[d]).map((d) => `${mix[d]} ${MIX_WORD[d]}`).join(", ");
-  return (
-    <span className="ml-2 inline-flex h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-surface-3" role="img" aria-label={words} title={words}>
-      {MIX_ORDER.filter((d) => mix[d]).map((d) => (
-        <span key={d} className={MIX_FILL[d]} style={{ width: `${((mix[d] ?? 0) / count) * 100}%` }} />
-      ))}
-    </span>
-  );
-}
 
 const noop = () => () => {};
 
@@ -413,17 +449,22 @@ function HeaderTip({ text }: { text: unknown }) {
   return <p className="w-[280px] rounded-card bg-surface px-3.5 py-3 text-ui text-muted shadow-float">{String(text ?? "")}</p>;
 }
 
+/** A column whose cells need no hover card: its header's legend only. */
+export function HeaderOnlyTip({ location, value }: CustomTooltipProps<GridRow>) {
+  return location === "header" ? <HeaderTip text={value} /> : null;
+}
+
 /** Hovering the strip: the count, then each check by name with its result, pre-checks first. */
-export function ChecksTooltip({ data, location, value }: CustomTooltipProps<GridRow>) {
+export function ChecksTooltip({ data, location, value, context }: CustomTooltipProps<GridRow, unknown, GridContext>) {
   if (location === "header") return <HeaderTip text={value} />;
   if (!data?.bars) return null;
   const { pre, model } = splitBars(data.bars);
   const groups = [
-    { title: "Pre-checks", bars: pre },
+    { title: "Account checks", bars: pre },
     { title: "Photo check", bars: model },
   ].filter((g) => g.bars.length);
   return (
-    <div className="w-[296px] rounded-card bg-surface px-3.5 py-3 shadow-float">
+    <div className="w-[328px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <p className="text-ui text-text">{barsSentence(data.bars)}</p>
       {groups.map((g) => (
         <div key={g.title} className="mt-3">
@@ -431,7 +472,7 @@ export function ChecksTooltip({ data, location, value }: CustomTooltipProps<Grid
           <ul className="mt-1.5 flex flex-col gap-1">
             {g.bars.map((b) => (
               <li key={b.id} className="flex items-center gap-2.5 text-ui">
-                <Bar bar={b} />
+                <Bar bar={b} pay={context?.stacked} />
                 <span className="min-w-0 flex-1 truncate text-text-2">{b.label}</span>
                 {barWord(b) && <span className="shrink-0 text-micro text-muted">{barWord(b)}</span>}
               </li>

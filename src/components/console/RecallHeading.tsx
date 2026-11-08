@@ -14,16 +14,15 @@ export interface RecallHeadingProps {
 /** The recall a console page is about: CPSC number, product, refund and auto-pay, with a switcher when there are several. */
 export function RecallHeading({ recall, recalls, basePath, actions }: RecallHeadingProps) {
   // The title and its actions share one row, so the claims start as high on the screen as they can.
+  // On a laptop the actions sit at the title row's right; on a phone the title, then what it is, then the actions.
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
-        <h1 className="min-w-0 text-h2 font-medium text-balance">{keepHyphens(recall.product)}</h1>
-        <div className="flex flex-wrap items-center gap-3">
-          {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath={basePath} />}
-          {actions}
-        </div>
+    <div className="grid grid-cols-1 gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-8">
+      <h1 className="min-w-0 text-h2 font-medium text-balance">{keepHyphens(recall.product)}</h1>
+      <div className="order-3 mt-2 flex flex-wrap items-center gap-3 sm:order-none sm:col-start-2 sm:row-start-1 sm:mt-0 sm:self-center">
+        {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath={basePath} />}
+        {actions}
       </div>
-      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-ui text-muted">
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-ui text-muted sm:col-span-2">
         <span>
           CPSC <span className="font-mono text-text-2">{recall.id}</span>
         </span>

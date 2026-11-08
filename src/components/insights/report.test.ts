@@ -91,7 +91,7 @@ describe("the homepage's tiles", () => {
   });
   const paid = claim({});
   const photo = claim({ decision: "Rejected" as never, amountPaid: 0, timeToSendSec: null, refused: 1, refusalGate: "Photo check" as never });
-  const pre = claim({ decision: "Blocked" as never, amountPaid: 0, timeToSendSec: null, refused: 1, refusalGate: "Pre-check" as never });
+  const pre = claim({ decision: "Blocked" as never, amountPaid: 0, timeToSendSec: null, refused: 1, refusalGate: "Account check" as never });
 
   it("says a time under a minute in seconds", () => {
     expect(spokenTime(12)).toBe("12 sec");
@@ -100,13 +100,13 @@ describe("the homepage's tiles", () => {
 
   it("counts the captions over the claims a cross-filter leaves", () => {
     const all = [paid, paid, photo, pre];
-    expect(homeKpiCaptions(all)).toEqual({ median: "across 2 payouts", refused: "1 rejected by the photo check, 1 blocked by pre-checks" });
+    expect(homeKpiCaptions(all)).toEqual({ median: "across 2 payouts", refused: "1 rejected by the photo check, 1 blocked by the account checks" });
     expect(homeKpiCaptions(all, [paid])).toEqual({ median: "across 1 payout", refused: "None refused among these claims" });
     expect(homeKpiCaptions(all, [photo])).toEqual({ median: "None paid among these claims", refused: "1 rejected by the photo check" });
   });
 
   it("names only the checks that refused", () => {
-    expect(refusedSplit(0, 3)).toBe("3 blocked by pre-checks");
+    expect(refusedSplit(0, 3)).toBe("3 blocked by the account checks");
     expect(refusedSplit(0, 0)).toBe("None refused");
   });
 });

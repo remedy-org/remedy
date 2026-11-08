@@ -1,7 +1,7 @@
 // The check funnel's arithmetic, shared by the server's facts and the Check funnel widget. Pure.
 
 /** How far a claim got, in order. Every claim reaches "Filed"; it stops at the last stage it passed. */
-export const STAGES = ["Filed", "Photos sent", "Passed pre-checks", "Passed photo check", "Paid"] as const;
+export const STAGES = ["Filed", "Photos sent", "Passed account checks", "Passed photo check", "Paid"] as const;
 export type Stage = (typeof STAGES)[number];
 
 /** How the report shows a decision or a stage: "Paid" reads as "Approved", as the console's pill does, since "paid"

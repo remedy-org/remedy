@@ -32,19 +32,21 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
   const report = buildReport(claims, recall);
 
   return (
-    // The sheet and a narrow rail beside it, on the page's left gutter as every console page is: the rail carries the
-    // print action (and the recall picker), aligned to the sheet's top edge. The sheet itself names the recall and date.
+    // On the page's left gutter as every console page is: the title and its actions on one row, as the claims page
+    // has them (print, and the recall picker), then the sheet at its reading width. The sheet names the recall and date.
     <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8 print:p-0">
-      <div className="grid w-full max-w-[52rem] gap-6 lg:max-w-[70rem] lg:grid-cols-[minmax(0,52rem)_minmax(0,1fr)] lg:gap-12 print:block print:max-w-none">
-        <div className="lg:col-span-2 print:hidden">
-          <h1 className="text-h2 font-medium">CPSC progress report</h1>
-          <p className="mt-1 text-ui text-muted">A draft from your claim records, laid out for the monthly report.</p>
+      <div className="flex w-full max-w-[52rem] flex-col gap-8 print:block print:max-w-none">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 print:hidden">
+          <div className="min-w-0">
+            <h1 className="text-h2 font-medium">CPSC progress report</h1>
+            <p className="mt-1 text-ui text-muted">Drafted from your claim records, laid out for the monthly report.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/report" />}
+            <PrintButton />
+          </div>
         </div>
         <ProgressReport recall={recall} report={report} generated={`${formatDayET(new Date().toISOString())} (ET)`} />
-        <aside className="flex flex-col gap-5 text-ui lg:sticky lg:top-6 lg:self-start print:hidden">
-          <PrintButton />
-          {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/report" />}
-        </aside>
       </div>
     </main>
   );

@@ -164,9 +164,11 @@ export function buildSeedClaims({ recall, now, hashes, taken = new Set(), reuse 
         claim.photos = other.photos;
         others = [summary(other)];
       } else if (variant === 1) {
-        // A second claim from an account that was already paid, with different photos.
+        // A second claim from an account that was already paid, with photos that share none with its first claim: the
+        // account is the story here, not a repost.
         claim.payerId = other.payerId;
-        claim.photos = photosOf(POOLS.pass.find((s) => s.photos[0] !== other.photos[0].key.slice(SEED_PHOTO_PREFIX.length)) ?? sample);
+        const theirs = new Set(other.photos.map((p) => p.key));
+        claim.photos = photosOf(POOLS.pass.find((s) => !s.photos.some((p) => theirs.has(`${SEED_PHOTO_PREFIX}${p}`))) ?? sample);
         others = [summary(other)];
       } else {
         claim.payerVerified = false;
@@ -174,6 +176,13 @@ export function buildSeedClaims({ recall, now, hashes, taken = new Set(), reuse 
         claim.photos = photosOf(sample);
       }
       claim.reasons = preCheck({ claim, sessionId: session.id, photoHashes: claim.photos.map((p) => p.hash), others, now: new Date(photosAt) });
+      // The one deliberate repost names the claim it copied, so the console can open it beside this one. (The seeded
+      // claims share a few sample photos among themselves; only this one is a repost.)
+      if (variant === 0) {
+        claim.reasons = claim.reasons.map((r) => (r.check === "duplicate_photo" ? { ...r, text: `${r.text}, ${other.id}` } : r));
+      } else {
+        claim.reasons = claim.reasons.filter((r) => r.check !== "duplicate_photo");
+      }
       claim.decision = "blocked";
       claim.events.push({ at: at(photosAt + 400), type: "blocked", detail: `Blocked before the photo check: ${claim.reasons.map((r) => r.text).join("; ")}` });
       claims.push(claim);

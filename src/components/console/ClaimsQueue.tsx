@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { CrossIcon } from "@/components/ui";
 import { formatCents, ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
+import { BulkBar, type BulkMode, type BulkResult } from "./BulkBar";
 import { ClaimsGrid, type ClaimsGridHandle, type GridTotals, type GroupBy, type SortOrder } from "./ClaimsGrid";
 import type { DecisionModel } from "./DecisionFilter";
 import { Keys } from "./Keys";
@@ -38,7 +39,7 @@ const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: strin
   },
   blocked: {
     title: "No blocked claims",
-    description: "A pre-check stops a claim before its photos are read: a reused photo, an expired camera session or a second claim from one account.",
+    description: "The account checks stop a claim before its photos are read: a reused photo, an expired camera session or a second claim from one account.",
   },
   pending: {
     title: "Nothing in progress",
@@ -51,8 +52,10 @@ const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: strin
 // grid.
 const FILL = "(min-width: 1024px)";
 const WIDE = "(min-width: 1280px)";
-// Below 768px the toolbar keeps to the tabs' row: the search folds to its icon, and grouping and export step aside.
-const ROOMY = "(min-width: 768px)";
+// Below 640px (phones, where the claims are cards) the toolbar keeps to the tabs' row: the search folds to its icon, and
+// grouping and export step aside for the cards' sort. From 640px the grid has its columns and headers, 200% zoom on a
+// laptop included.
+const ROOMY = "(min-width: 640px)";
 function useMedia(query: string) {
   return useSyncExternalStore(
     (on) => {
@@ -122,6 +125,14 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const [help, setHelp] = useState(false);
   // A or R on a claim they can't act on: said in the footer for a few seconds, so a key never seems to do something silently.
   const [hint, setHint] = useState<string | null>(null);
+  // The claims picked for a bulk decision, in the grid's order, and the bulk bar's step.
+  const [picked, setPicked] = useState<string[]>([]);
+  const [bulk, setBulk] = useState<BulkMode>("idle");
+  const pickedSet = useMemo(() => new Set(picked), [picked]);
+  const pick = useCallback((ids: string[]) => {
+    setPicked(ids);
+    if (!ids.length) setBulk("idle");
+  }, []);
   useEffect(() => {
     if (!hint) return;
     const t = window.setTimeout(() => setHint(null), 4000);
@@ -179,13 +190,15 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     (t: Tab) => {
       setTab(t);
       setFilter(tabFilter(t));
+      // A new list is a new pick: claims the list no longer shows are never acted on unseen.
+      pick([]);
       const row = open ? rows.find((r) => r.id === open) : null;
       if (row && t !== "all" && row.decision !== t) {
         setOpen(null);
         setIntent(null);
       }
     },
-    [open, rows],
+    [open, rows, pick],
   );
 
   // A claim the panel links to (the claim a repost copied, the account's other claim): its row, in the list that shows it.
@@ -238,6 +251,44 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   );
   const nextHeld = next && next.after === open ? next.id : undefined;
 
+  // A bulk decision finished: what happened, in the footer, and on to the next held claim the pick didn't hold. Claims
+  // PayPal or the checks refused stay picked, so the bar keeps naming them.
+  const bulkDone = useCallback(
+    (results: BulkResult[], decision: "approve" | "reject") => {
+      const done = results.filter((r) => r.ok);
+      const failed = results.filter((r) => !r.ok).map((r) => r.id);
+      const samples = done.filter((r) => r.sample).length;
+      const verb = decision === "reject" ? "rejected" : samples === done.length ? "approved" : "paid through PayPal";
+      if (done.length) {
+        setHint(
+          `${plural(done.length, "claim")} ${verb}` +
+            (samples ? (samples === done.length ? ": they came with your console, so nothing was sent and they stay in the queue" : `; ${samples} came with your console and stay in the queue`) : ""),
+        );
+      }
+      setBulk("idle");
+      setPicked(failed);
+      if (failed.length) return;
+      refresh();
+      const order = grid.current?.displayedIds() ?? found.map((r) => r.id);
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      const last = Math.max(...results.map((r) => order.indexOf(r.id)));
+      const acted = new Set(results.map((r) => r.id));
+      const later = order.slice(last + 1).find((id) => byId.get(id)?.decision === "held" && !acted.has(id));
+      const earlier = order.slice(0, Math.max(0, last)).find((id) => byId.get(id)?.decision === "held" && !acted.has(id));
+      const to = later ?? earlier ?? null;
+      // No held claim left outside the pick: the keyboard stays in the list, on the first picked claim it still shows.
+      requestAnimationFrame(() => {
+        if (to && wide) setOpen(to);
+        if (to) return grid.current?.focusRow(to);
+        const shown = grid.current?.displayedIds() ?? [];
+        const back = results.map((r) => r.id).find((id) => shown.includes(id));
+        if (back) grid.current?.focusRow(back);
+        else grid.current?.focusFirst();
+      });
+    },
+    [found, rows, wide, refresh],
+  );
+
   // The tab, search and open claim live in the URL (replaceState: no navigation, no server render), so a reload or a
   // shared link comes back to the same view.
   useEffect(() => {
@@ -257,8 +308,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      // An open dialog (the ? sheet) handles its own keys, Esc included: closing the panel behind it would be the wrong layer.
-      if (help || (e.target instanceof Element && e.target.closest("dialog[open]"))) return;
+      // An open dialog (the ? sheet, the photo viewer) handles its own keys, Esc included: closing the panel behind it
+      // would be the wrong layer. The evidence sheet (below 1280px) is the panel itself: A and R work in it as beside the grid.
+      if (help || (e.target instanceof Element && e.target.closest("dialog[open]:not(.evidence-sheet)"))) return;
+      const inSheet = e.target instanceof Element && Boolean(e.target.closest(".evidence-sheet"));
+      if (inSheet && e.key !== "a" && e.key !== "r") return;
       // A column's filter is open: Esc closes it (focus back on its header), / closes it and goes to search, and no other
       // single key reaches the queue's shortcuts while it is up.
       if (document.querySelector(".ag-popup .ag-filter, .ag-popup .ag-menu")) {
@@ -271,6 +325,12 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           setSearchOpen(true);
           requestAnimationFrame(() => searchBox.current?.focus());
         }
+        return;
+      }
+      // Esc lets a pick go before it closes the panel.
+      if (e.key === "Escape" && picked.length && !typing(e.target)) {
+        e.preventDefault();
+        pick([]);
         return;
       }
       if (e.key === "Escape" && open && wide && !typing(e.target)) {
@@ -291,13 +351,19 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         e.preventDefault();
         if (open) grid.current?.focusRow(open);
         else grid.current?.focusFirst();
+      } else if ((e.key === "a" || e.key === "r") && picked.length > 1) {
+        // A pick of several: the bulk bar's approve or reject, for its held claims.
+        e.preventDefault();
+        const held = rows.filter((r) => pickedSet.has(r.id) && r.decision === "held").length;
+        if (!held) setHint("None of the picked claims is held: only held claims can be approved or rejected");
+        else setBulk(e.key === "a" ? "approve" : "reject");
       } else if (e.key === "a" || e.key === "r") {
         // Never while the open claim's confirm or reason is up (or sending): a letter typed there, or after focus
         // dropped to the page, must not swap the form for another.
         if (document.querySelector(".evidence-panel [data-review-open]")) return;
         // The grid row with focus, else the open claim: A and R open it and start the confirm.
         const focused = e.target instanceof Element && e.target.closest(".claims-grid") ? grid.current?.focusedRowId() : null;
-        const id = focused ?? open;
+        const id = picked[0] ?? focused ?? open;
         const row = rows.find((r) => r.id === id);
         e.preventDefault();
         if (!row) {
@@ -320,7 +386,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, wide, fill, close, openClaim, changeTab, rows, help]);
+  }, [open, wide, fill, close, openClaim, changeTab, rows, help, picked, pickedSet, pick]);
 
   // The column's menu changed the Verdict filter: a single decision is its tab, anything else is All, filtered.
   const onDecisionFilter = useCallback((m: DecisionModel | null) => {
@@ -349,7 +415,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           {/* One row while it fits: the search narrows first, and only a narrow queue wraps the controls to a second line. */}
           <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-line">
             <StatusTabs value={tab} counts={counts} onChange={changeTab} controls="claims-panel" />
-            <div className="mb-1.5 ml-auto flex shrink-0 items-center gap-3 max-md:hidden">
+            <div className="mb-1.5 ml-auto flex shrink-0 items-center gap-3 max-sm:hidden">
               <GroupControl value={groupBy} onChange={setGroupBy} />
               <button
                 type="button"
@@ -359,7 +425,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                 Export CSV
               </button>
             </div>
-            {/* Card rows have no header to click: below 768px the sort is its own control, beside search. */}
+            {/* Card rows have no header to click: below 640px the sort is its own control, beside search. */}
             {!roomy && <SortControl key={tab} initial={tab === "held" ? "oldest" : "newest"} onChange={(o) => grid.current?.sortBy(o)} />}
             {compact ? (
               <button
@@ -382,7 +448,10 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                     ref={searchBox}
                     type="search"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      pick([]);
+                    }}
                     onBlur={() => setSearchOpen(false)}
                     onKeyDown={(e) => {
                       // Esc clears the box and goes back to the list, so the next j or ↓ walks the claims; ↓ goes there too.
@@ -467,7 +536,25 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               onDecisionFilter={onDecisionFilter}
               groupBy={groupBy}
               onShown={setTotals}
+              picked={pickedSet}
+              onPick={pick}
             />
+            {picked.length > 0 && (
+              // Over the grid's foot, centred: the pick's actions in reach of the rows they act on.
+              <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
+                <BulkBar
+                  rows={rows.filter((r) => pickedSet.has(r.id)).sort((a, b) => picked.indexOf(a.id) - picked.indexOf(b.id))}
+                  mode={bulk}
+                  onMode={setBulk}
+                  onClear={() => {
+                    pick([]);
+                    requestAnimationFrame(() => (open ? grid.current?.focusRow(open) : grid.current?.focusFirst()));
+                  }}
+                  onDone={bulkDone}
+                  onOpen={goTo}
+                />
+              </div>
+            )}
             {shown === 0 && (
               // Under the header row, sized to its words: the grid's frame stays, with the note where the rows would be.
               <div className="absolute inset-x-px top-[37px] bottom-px z-10 rounded-b-card bg-surface px-6 pt-8">
@@ -608,8 +695,8 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
     </button>
   );
   return (
-    <span className="inline-flex items-center gap-2">
-      <span aria-hidden="true" className={clsx("size-1.5 rounded-full", state === "live" && !failed ? "bg-pay" : "border border-faint")} />
+    <span className="inline-flex items-baseline gap-2">
+      <span aria-hidden="true" className={clsx("size-1.5 shrink-0 -translate-y-px self-center rounded-full", state === "live" && !failed ? "bg-pay" : "border border-faint")} />
       {failed ? (
         <>Couldn&apos;t update · {refresh}</>
       ) : state === "live" ? (
@@ -621,9 +708,12 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
       ) : state === "ended" ? (
         <>Live updates stopped after 10 minutes · {refresh}</>
       ) : (
-        <>
-          Up to date · updated <Ago key={at} at={at} /> · {refresh}
-        </>
+        // One flex item: the wrapper's gap would otherwise open between each word run.
+        <span>
+          <span className="max-sm:hidden">Up to date · updated </span>
+          <span className="sm:hidden">Updated </span>
+          <Ago key={at} at={at} /> · {refresh}
+        </span>
       )}
     </span>
   );
@@ -635,7 +725,9 @@ const SHORTCUTS: [string[], string][] = [
   [["↑", "↓"], "Next / previous claim"],
   [["J", "K"], "Next / previous claim"],
   [["Enter"], "Open claim"],
-  [["Esc"], "Close"],
+  [["⇧", "↑", "↓"], "Pick several claims"],
+  [["X"], "Pick or drop a claim"],
+  [["Esc"], "Close, or let the pick go"],
   [["A"], "Approve (press twice)"],
   [["R"], "Reject"],
 ];

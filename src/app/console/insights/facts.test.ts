@@ -62,13 +62,13 @@ describe("funnel", () => {
 
   it("names the reasons claims stopped at a stage, commonest first, with counts when they differ", () => {
     const rows = [
-      { stage: "Passed pre-checks" as const, stopReason: "Photo of a screen or a print", decision: "Rejected" },
-      { stage: "Passed pre-checks" as const, stopReason: "Photo of a screen or a print", decision: "Rejected" },
-      { stage: "Passed pre-checks" as const, stopReason: "Code missing or wrong", decision: "Rejected" },
+      { stage: "Passed account checks" as const, stopReason: "Photo of a screen or a print", decision: "Rejected" },
+      { stage: "Passed account checks" as const, stopReason: "Photo of a screen or a print", decision: "Rejected" },
+      { stage: "Passed account checks" as const, stopReason: "Code missing or wrong", decision: "Rejected" },
       { stage: "Paid" as const, stopReason: null, decision: "Paid" },
     ];
     expect(funnel(rows)[2]).toEqual({
-      stage: "Passed pre-checks",
+      stage: "Passed account checks",
       reached: 4,
       stopped: 3,
       groups: [{ kind: "refused", count: 3, summary: "Photo of a screen or a print 2, Code missing or wrong 1" }],
@@ -86,8 +86,8 @@ describe("funnel", () => {
 
   it("counts held claims apart from refused ones", () => {
     const rows = [
-      { stage: "Passed pre-checks", stopReason: "Couldn't tell if both photos show the same item", decision: "Held", count: 3 },
-      { stage: "Passed pre-checks", stopReason: "Photo of a screen or a print", decision: "Rejected", count: 6 },
+      { stage: "Passed account checks", stopReason: "Couldn't tell if both photos show the same item", decision: "Held", count: 3 },
+      { stage: "Passed account checks", stopReason: "Photo of a screen or a print", decision: "Rejected", count: 6 },
     ];
     const step = funnel(rows)[2];
     expect(step.stopped).toBe(9);

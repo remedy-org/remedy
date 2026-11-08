@@ -45,11 +45,12 @@ export interface DrawerClaim {
   checks: DrawerCheck[];
   // The model's own one-line summary, when it answered.
   summary: string | null;
-  // The checks in one line, as the grid's barcode counts them: "Pre-checks 4 of 4 · Model answers 4 of 5".
+  // The checks in one line, as the grid's barcode counts them: "Account checks 4 of 4 · Photo check 4 of 5".
   five: string;
   sentence: string;
   amount: string;
-  payout: { batchId: string; status: string; updatedAt: string } | null;
+  // itemId: PayPal's id for this one payout (older claims have only the batch's).
+  payout: { batchId: string; itemId?: string; status: string; updatedAt: string } | null;
   events: DrawerEvent[];
   // A held claim whose last approve the checks stopped before the payout (review.ts): when, and what they found.
   refused: { at: string; text: string } | null;
@@ -105,7 +106,7 @@ function sampleEvents(c: Claim, amount: string): Claim["events"] {
       e.type === "photos_received"
         ? { ...e, detail: `${n} ${n === 1 ? "photo" : "photos"} received` }
         : e.type === "prechecked"
-          ? { ...e, detail: "Pre-checks passed" }
+          ? { ...e, detail: "Account checks passed" }
           : e.type === "payout_sent"
             ? { ...e, detail: `Approved for ${amount}. No payout: this claim came with your console.` }
             : e,
@@ -194,11 +195,26 @@ function plainEvents(events: Claim["events"]): DrawerEvent[] {
 
 /** A blocked repost's earlier claim, when it is on the same recall (another company's claim never shows). */
 export function duplicateFor(c: Claim, rows: ClaimSummary[]): DrawerClaim["duplicate"] {
-  if (c.decision !== "blocked" || !c.reasons.some((r) => r.check === "duplicate_photo")) return null;
-  const match = duplicateOf(c, rows);
+  const reason = c.reasons.find((r) => r.check === "duplicate_photo");
+  if (c.decision !== "blocked" || !reason) return null;
+  const match = duplicateOf(c, rows) ?? namedCopy(c, reason.text, rows);
   const row = match && rows.find((r) => r.id === match.id);
   if (!match || !row || row.recallId !== c.recallId) return null;
   return { photo: match.photo, id: match.id, theirs: match.theirs, of: row.photoHashes.length, src: null };
+}
+
+/** A claim that came with the console isn't checked against the others (they share sample photos), so its one repost
+ * names the claim it copied in its reason ("…already used in another claim, RM-2125"): that claim's matching photo. */
+function namedCopy(c: Claim, text: string, rows: ClaimSummary[]): { photo: number; id: string; theirs: number } | null {
+  if (!c.seeded) return null;
+  const id = text.match(/\bRM-\d{4}\b/)?.[0];
+  const row = id ? rows.find((r) => r.id === id && r.seeded) : undefined;
+  if (!row) return null;
+  for (const [i, p] of c.photos.entries()) {
+    const j = row.photoHashes.indexOf(p.hash);
+    if (j >= 0) return { photo: i + 1, id: row.id, theirs: j + 1 };
+  }
+  return null;
 }
 
 // A check that approve would stop the payout on, said on its pre-check row before anyone decides.
@@ -235,7 +251,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,
     // A seeded sample's PayPal batch and status are made up by the seed: nothing was sent, so there is none to show.
-    payout: c.payout && !c.seeded ? { batchId: c.payout.batchId, status: c.payout.status, updatedAt: c.payout.updatedAt } : null,
+    payout: c.payout && !c.seeded ? { batchId: c.payout.batchId, ...(c.payout.itemId ? { itemId: c.payout.itemId } : {}), status: c.payout.status, updatedAt: c.payout.updatedAt } : null,
     events: plainEvents(c.seeded ? sampleEvents(c, amount) : c.events),
     refused,
     stops: c.decision === "held" && !c.seeded ? stops : [],

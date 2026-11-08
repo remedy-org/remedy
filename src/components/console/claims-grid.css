@@ -1,12 +1,5 @@
 /* The claims grid's finishing touches the theme params can't express (gridTheme.ts holds the rest). */
 
-/* An "In progress" pill is --surface-2, the open row's own tint: on that row it steps up a surface so it keeps its
-   shape. */
-.claims-grid .ag-row-selected .pill-pending,
-.claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible) .pill-pending {
-  background-color: var(--surface-3);
-}
-
 /* The homepage's still (gridTheme.ts stillTheme): sentence case in the sans face. */
 .claims-grid[data-still] .ag-header-cell-text {
   text-transform: none;
@@ -150,6 +143,17 @@
   justify-self: start;
 }
 
+/* The console's verdict is a 14px mark and a word (VerdictMark.tsx), not a pill: its track is as wide as the widest,
+   "In progress". */
+.verdict-track.is-mark {
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+}
+
+/* A card row (phones) has no column to line up with: the reason follows its mark, so a 320px screen keeps its words. */
+.verdict-track.is-mark.is-card {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
 /* The homepage tour's arriving claim (components/console/preview.ts ARRIVE_ID): as its checks come back, the two
    groups of its checks strip fill (the pre-checks, then the photo check's answers 160ms later), each bar over
    --dur-ui, before its verdict turns. Every cell the arrival changes flashes the one neutral tint. Scoped to the
@@ -193,4 +197,29 @@
   to {
     transform: scaleY(1);
   }
+}
+
+/* A picked row (Shift+↑/↓, Shift-click, Cmd- or Ctrl-click, X): a quiet ink tint across the row and a filled check box
+   over its photos' corner. The tint is the open row's step, mixed a little warmer, so a picked row reads apart from the
+   one whose evidence is open. ClaimsGrid writes the per-row rules; these are the shared parts. */
+.claims-grid {
+  --pick-bg: color-mix(in oklch, var(--text) 9%, var(--surface));
+}
+
+.claims-grid .pick-box {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 0 0 2px var(--pick-bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-ui) var(--ease-snap);
 }

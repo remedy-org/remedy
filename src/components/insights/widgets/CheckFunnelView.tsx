@@ -21,7 +21,7 @@ export interface CheckFunnelViewProps {
   compact?: boolean;
   /** Spread the stages over the card's height (the console's canvas); off, they sit 16px apart from the top. */
   spread?: boolean;
-  /** The homepage: on the card's own content edge (no inset), figures in the sans face, no ↳ marks. */
+  /** The homepage: on the card's own content edge (no inset), figures in the sans face. */
   flush?: boolean;
 }
 
@@ -62,7 +62,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
         const last = i === steps.length - 1;
         return (
           <li key={s.stage} className="flex flex-col gap-1">
-            <div className="grid grid-cols-[9.5rem_2.5rem_1fr] items-center gap-3">
+            <div className="grid grid-cols-[11.5rem_2.5rem_1fr] items-center gap-3">
               {/* The console says Approved for a payout it has not sent (funnel.ts shownAs); the homepage's are sent. */}
               <span className="truncate text-ui text-text">{flush ? s.stage : shownAs(s.stage)}</span>
               <span className={clsx("text-right text-ui text-text", figure)}>{s.reached}</span>
@@ -88,17 +88,12 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                     }
                   : {})}
                 className={clsx(
-                  "group ml-[9.5rem] flex min-h-6 items-center gap-2 rounded-control py-0.5 text-left text-micro transition-colors",
+                  "group ml-[11.5rem] flex min-h-6 items-center gap-2 rounded-control py-0.5 text-left text-micro transition-colors",
                   flush ? "pl-3" : "px-2",
                   onToggle && "disabled:cursor-default enabled:hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
                   selected.has(s.stage) ? "bg-surface-2 ring-1 ring-text-2" : "",
                 )}
               >
-                {!flush && (
-                  <span aria-hidden="true" className="self-start font-mono text-faint">
-                    ↳
-                  </span>
-                )}
                 <span className="flex min-w-0 flex-col">
                     {s.groups.map((g) => (
                       <span key={g.kind} className="flex min-w-0 items-baseline gap-2">

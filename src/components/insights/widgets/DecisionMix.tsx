@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import type { AgWidgetParams } from "ag-studio";
 import type { MouseEvent } from "react";
+import { VerdictGlyph, type Verdict } from "@/components/console/VerdictMark";
 import type { DecisionMixDef } from "./defs";
 import { shownAs } from "../funnel";
 import { moveBetweenItems } from "./listKeys";
@@ -19,8 +20,8 @@ const FILL: Record<string, string> = {
   Blocked: "bg-[color-mix(in_oklch,var(--stop)_55%,var(--surface))]",
   "In progress": "bg-faint",
 };
-// Shape as well as colour: hollow for the states nothing decided yet or that never reached the model.
-const DOT: Record<string, string> = { Blocked: "border border-stop bg-transparent", "In progress": "border border-faint bg-transparent" };
+// Shape as well as colour: each decision's key is the queue's own verdict glyph.
+const GLYPH: Record<string, Verdict> = { Paid: "paid", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
 
 export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
   const { dataMapping, widgetApi } = params;
@@ -50,7 +51,7 @@ export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
           <span key={i.label} className={clsx("h-full min-w-[3px]", FILL[i.label] ?? "bg-faint", selected.size > 0 && !selected.has(i.label) && "opacity-30")} style={{ flexGrow: i.n }} />
         ))}
       </div>
-      {/* Each row's hover tint reaches 8px past the bar, so the dots and words start on the bar's own left edge. */}
+      {/* Each row's hover tint reaches 8px past the bar, so the marks and words start on the bar's own left edge. */}
       <ul className="-mx-2 flex min-h-0 flex-col" onKeyDown={moveBetweenItems}>
         {items.map((i) => (
           <li key={i.label}>
@@ -66,7 +67,7 @@ export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
               )}
             >
               <span className="flex items-center gap-2 text-ui text-text">
-                <span aria-hidden="true" className={clsx("size-2 shrink-0 rounded-full", DOT[i.label] ?? FILL[i.label])} />
+                <VerdictGlyph verdict={i.label === "Paid" && shownAs(i.label) !== "Paid" ? "approved" : (GLYPH[i.label] ?? "pending")} />
                 {shownAs(i.label)}
               </span>
               <span className="font-mono text-ui text-text tabular-nums">{i.n}</span>

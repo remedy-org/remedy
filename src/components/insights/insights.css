@@ -173,3 +173,31 @@
     --ag-studio-canvas-padding: 24px;
   }
 }
+
+/*
+ * The analyst's rail in the console's own type: its title and "Start over" are words, with no stock glyphs beside them
+ * (the double chevron and the speech bubble); the page header's "Close the analyst" closes it, and so does a click on
+ * its title.
+ */
+.insights-report .ag-studio-ai-panel .ag-studio-panel-chevron,
+.insights-report .ag-studio-ai-thread-new-button .ag-icon {
+  display: none;
+}
+
+.insights-report .ag-studio-ai-panel .ag-studio-panel-title {
+  font: 500 14px/20px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  color: var(--text);
+}
+
+.insights-report .ag-studio-ai-thread-new-button {
+  color: var(--muted);
+  font: 400 14px/20px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+
+.insights-report .ag-studio-ai-thread-new-button:hover {
+  color: var(--text);
+  text-decoration-color: var(--text);
+}
