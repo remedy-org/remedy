@@ -1,8 +1,9 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { CheckIcon, CrossIcon, StatusPill } from "@/components/ui";
+import { CheckIcon, CrossIcon } from "@/components/ui";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { EvidencePhoto } from "./EvidencePhoto";
+import { VerdictMark, verdictOf } from "./VerdictMark";
 
 export interface EvidenceStillProps {
   claim: DrawerClaim;
@@ -13,11 +14,7 @@ export interface EvidenceStillProps {
   className?: string;
 }
 
-// The pill's word as the grid's (cells.tsx verdictLabel, a client module this server still can't call): "Approved"
-// until PayPal has the payout, then "Paid".
-const verdict = (c: DrawerClaim) => (c.decision === "paid" ? (c.payout?.status && !c.seeded ? "Paid" : "Approved") : undefined);
-
-// A held answer is marked as the Held pill marks it, with its filled dot: two bars read as a media player's pause.
+// A held answer is marked with a filled dot: two bars beside the verdict's own pause would read as a media player.
 const HeldDot = ({ size = 12 }: { size?: number }) => <span className="rounded-full bg-hold" style={{ width: size / 2, height: size / 2 }} />;
 
 const MARK = {
@@ -71,10 +68,13 @@ export function EvidenceStill({ claim, note, fluid, className }: EvidenceStillPr
       <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
         <span className="flex items-center gap-3">
           <span className="font-mono text-ui font-medium whitespace-nowrap">{claim.id}</span>
-          <StatusPill status={claim.decision} label={verdict(claim)} />
+          <VerdictMark
+            verdict={verdictOf({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null, seeded: claim.seeded })}
+            className={claim.decision === "paid" || claim.decision === "pending" ? undefined : "text-text"}
+          />
         </span>
         <span className="text-ui whitespace-nowrap text-muted">
-          Code <span className="text-text">{claim.code}</span>
+          Code <span className="font-mono text-text">{claim.code}</span>
         </span>
       </div>
       <div className={clsx("relative min-h-0 flex-1", !fluid && "overflow-hidden")}>

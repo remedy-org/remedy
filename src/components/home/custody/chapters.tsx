@@ -4,7 +4,8 @@ import clsx from "clsx";
 import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { AlertIcon, ClockIcon, DURATION, EASE, Money, NoBreakHyphens, Paper, SPRING, StatusPill } from "@/components/ui";
+import { VerdictMark } from "@/components/console/VerdictMark";
+import { AlertIcon, ClockIcon, DURATION, EASE, Money, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
 import { RemedyMark } from "@/components/ui/Wordmark";
 import { CLAIM, CODE_AT, CONSENT_AT, CONSOLE_ROWS, SHOT_AT, WRITE_AT } from "./claim";
 import { useGate } from "./gate";
@@ -262,7 +263,8 @@ function Barcode({ bars }: { bars: Bar[] }) {
           className={clsx(
             "h-4 w-1.5 rounded-[1.5px]",
             i === 3 ? "ml-2" : i > 0 && "ml-[3px]",
-            b === "pass" && "bg-pay/70",
+            // A pass in ink, as the console draws it: green means money moved, and a check moves none.
+            b === "pass" && "bg-text-2/45",
             b === "hold" && "bg-[linear-gradient(var(--hold)_50%,transparent_50%)] ring-1 ring-hold/60 ring-inset",
             b === "reject" && "bg-stop",
             b === "skip" && "border border-dashed border-line-strong",
@@ -294,6 +296,11 @@ const M4T_ROW = {
   amount: CLAIM.amount,
 };
 
+/** The console's words: a claim that came with the console is Approved, never Paid; the ones a reviewer answers for
+ * are in full ink. */
+const verdictOf = (row: (typeof CONSOLE_ROWS)[number]) => (row.approved ? "approved" : row.status);
+const EXCEPTION = new Set<string>(["held", "rejected", "blocked"]);
+
 function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?: boolean }) {
   const compact = useContext(Compact);
   return (
@@ -306,9 +313,9 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
           <span className="truncate font-mono text-micro text-faint">Code {row.code}</span>
         </span>
       </span>
-      {/* The pill sits in a track as wide as the widest pill (Rejected), so every reason starts on one line. */}
-      <span className="hidden min-w-0 grid-cols-[5.25rem_minmax(0,1fr)] items-center gap-3 @min-[720px]:grid">
-        <StatusPill status={row.status} label={row.approved ? "Approved" : undefined} className="justify-self-start" />
+      {/* The console's verdict mark in a track as wide as the widest (Approved), so every reason starts on one line. */}
+      <span className="hidden min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-center gap-3 @min-[720px]:grid">
+        <VerdictMark verdict={verdictOf(row)} className={clsx("justify-self-start", EXCEPTION.has(row.status) && "text-text")} />
         <span className={clsx("truncate", first ? "text-text" : "text-muted")}>{row.reason}</span>
       </span>
       <span className="hidden @min-[720px]:block">
@@ -317,7 +324,7 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
       <span className="hidden font-mono text-faint @min-[720px]:block">{row.time ?? "—"}</span>
       <span className="flex items-center justify-end gap-3 font-mono">
         <span className="@min-[720px]:hidden">
-          <StatusPill status={row.status} label={row.approved ? "Approved" : undefined} />
+          <VerdictMark verdict={verdictOf(row)} className={EXCEPTION.has(row.status) ? "text-text" : undefined} />
         </span>
         {row.amount ? (
           // Sent in --text; approved but never paid out (it came with the console) in --muted.

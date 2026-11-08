@@ -2,7 +2,6 @@ import clsx from "clsx";
 import type { CSSProperties, ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
 import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
-import { StatusPill } from "@/components/ui";
 import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
 import { formatCount, formatDate, keepHyphens, plural } from "./format";
@@ -126,16 +125,10 @@ export function ProgressReport({
             {report.outcomes.map((o, i) => (
               <tr key={o.decision}>
                 <td className={td}>
-                  {home ? (
-                    <span className="inline-flex w-(--verdict-pill-w)">
-                      <StatusPill status={o.decision} label={o.label} />
-                    </span>
-                  ) : (
-                    // The console's mark and word, in the sheet's ink: a filed document reads in words, not in chips.
-                    <VerdictMark verdict={o.decision === "paid" ? (o.label === "Paid" ? "paid" : "approved") : o.decision} className="text-text">
-                      {o.label}
-                    </VerdictMark>
-                  )}
+                  {/* The console's mark and word, in the sheet's ink: a filed document reads in words, not in chips. */}
+                  <VerdictMark verdict={o.decision === "paid" ? (o.label === "Paid" ? "paid" : "approved") : o.decision} className="text-text">
+                    {o.label}
+                  </VerdictMark>
                   <span className="mt-1.5 block text-muted sm:hidden">{o.note}</span>
                 </td>
                 <td className={`${td} text-right ${figure}`}>{formatCount(o.count)}</td>

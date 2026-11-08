@@ -3,7 +3,6 @@
 import clsx from "clsx";
 import { useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
-import { StatusPill } from "@/components/ui";
 import { barsSentence, duration, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
@@ -126,18 +125,14 @@ export function ClaimCell({ data, context }: Cell) {
   );
 }
 
-/** The rule's decision: "Approved" until PayPal has the payout, then "Paid". Every other decision keeps its own word. */
-export const verdictLabel = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) =>
-  r.decision === "paid" ? (r.payoutStatus && !r.seeded ? "Paid" : "Approved") : undefined;
-
-/** The pill in a fixed track as wide as the widest pill, then the reason: every reason starts on one x. Under it in
- * the homepage's narrower still (context.stacked), where a truncated sentence beside the pill would say little. */
+/** The mark in a fixed track as wide as the widest, then the reason: every reason starts on one x. Under it in the
+ * homepage's narrower still (context.stacked), where a truncated sentence beside the mark would say little. */
 export function VerdictCell({ data, context }: Cell) {
   if (!data) return null;
   if (context?.stacked) {
     return (
       <span className="flex h-full min-w-0 flex-col items-start justify-center gap-1">
-        <StatusPill status={data.decision} label={verdictLabel(data)} />
+        <VerdictMark verdict={verdictOf(data)} className={EXCEPTION.has(data.decision) ? "text-text" : undefined} />
         {data.note && data.decision !== "paid" && (
           // A phone has no hover to read a cut reason: it wraps to a second line there instead.
           <span className={clsx("w-full text-micro leading-tight text-muted", context.compact ? "line-clamp-2 whitespace-normal" : "truncate")} title={data.note}>
@@ -170,16 +165,16 @@ const BAR_WORD: Record<BarState, string> = { pass: "", hold: "Held", reject: "Fa
 const barWord = (b: Pick<CheckBar, "id" | "state">) =>
   b.id === "model" && b.state === "hold" ? "No answer" : b.id === "same_item" && b.state === "skipped" ? "One photo, not needed" : BAR_WORD[b.state];
 
-// One bar's shape by state; the hover card (ChecksTooltip) uses the same shapes as its legend. In the console a pass
-// is a filled bar in ink: green means money moved, and a strip of checks moves none, so only what held or failed takes
-// a colour and stands out down the column. The homepage's still keeps its green passes (`pay`).
-function Bar({ bar, pay }: { bar: Pick<CheckBar, "state">; pay?: boolean }) {
+// One bar's shape by state; the hover card (ChecksTooltip) uses the same shapes as its legend. A pass is a filled bar
+// in ink: green means money moved, and a strip of checks moves none, so only what held or failed takes a colour and
+// stands out down the column.
+function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
   return (
     <span
       data-state={bar.state}
       className={clsx(
         "relative h-4 w-2 shrink-0 overflow-hidden rounded-[1.5px]",
-        bar.state === "pass" && (pay ? "bg-pay/70" : "bg-text-2/45"),
+        bar.state === "pass" && "bg-text-2/45",
         // Held: the top half filled, so it reads without colour.
         bar.state === "hold" && "border border-hold bg-[linear-gradient(var(--hold)_50%,transparent_50%)]",
         // Failed: filled, with a slash in the background colour.
@@ -196,12 +191,12 @@ const splitBars = (bars: CheckBar[]) => ({ pre: bars.filter((b) => isPreCheck(b.
 
 /** The checks as a fixed strip: the four pre-checks, 4px, then the photo check's answers, padded to the recall's longest
  * so every row's strip ends on one x. Shape carries the outcome as well as colour (filled, half, slashed, outline, dim). */
-export function Barcode({ bars, slots, pay }: { bars: CheckBar[]; slots?: GridContext["slots"]; pay?: boolean }) {
+export function Barcode({ bars, slots }: { bars: CheckBar[]; slots?: GridContext["slots"] }) {
   const { pre, model } = splitBars(bars);
   const group = (list: CheckBar[], n = 0) => (
     <span className="flex gap-0.5">
       {list.map((b) => (
-        <Bar key={b.id} bar={b} pay={pay} />
+        <Bar key={b.id} bar={b} />
       ))}
       {Array.from({ length: Math.max(0, n - list.length) }, (_, i) => (
         <span key={`pad-${i}`} className="h-4 w-2 shrink-0" />
@@ -221,7 +216,7 @@ export function ChecksCell({ data, context }: Cell) {
   if (!data.bars) return <span className="text-faint" aria-label="Checks not recorded on this row">—</span>;
   return (
     <span className="flex h-full items-center">
-      <Barcode bars={data.bars} slots={context?.slots} pay={context?.stacked} />
+      <Barcode bars={data.bars} slots={context?.slots} />
     </span>
   );
 }
@@ -259,39 +254,6 @@ export const NO_PAYOUT = "This claim came with your console, so the rule's appro
 /** Whether money left for this claim (a payout PayPal took). */
 export const sent = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) => r.decision === "paid" && Boolean(r.payoutStatus) && !r.seeded;
 
-/** Where the money is, in the homepage still's words: Sent, Settling or Failed at PayPal; Not sent when PayPal refused
- * an approve; a quiet Approved for a claim that came with the console; a dash while nothing is owed. */
-function StillPayout({ data }: { data: GridRow }) {
-  if (data.payoutFailedAt) {
-    return (
-      <span className="flex h-full flex-col justify-center leading-tight" title={`PayPal didn't take the payout at ${formatTime(data.payoutFailedAt)}: nothing was paid`}>
-        <span className="inline-flex items-center gap-1.5 text-ui text-stop">
-          <span className="size-1.5 shrink-0 rounded-full bg-stop" aria-hidden="true" />
-          Not sent
-        </span>
-        <span className="font-mono text-micro text-faint">PayPal {formatClock(data.payoutFailedAt).slice(0, 5)}</span>
-      </span>
-    );
-  }
-  if (data.decision === "paid" && !sent(data)) {
-    return (
-      <span className="inline-flex h-full items-center gap-2 text-ui text-muted" title={NO_PAYOUT}>
-        <span className="size-1.5 shrink-0 rounded-full border border-faint" aria-hidden="true" />
-        Approved
-      </span>
-    );
-  }
-  if (!data.payoutStatus) return <span className="text-faint" aria-label="No payout">—</span>;
-  const status = data.payoutStatus;
-  const [word, mark] = status === "SUCCESS" ? ["Sent", "bg-pay"] : FAILED.has(status) ? ["Failed", "bg-stop"] : ["Settling", "border border-muted"];
-  return (
-    <span className="inline-flex h-full items-center gap-2 text-ui text-text-2" title={`PayPal: ${status}`}>
-      <span className={`size-1.5 shrink-0 rounded-full ${mark}`} aria-hidden="true" />
-      {word}
-    </span>
-  );
-}
-
 export type PayoutState = { word: "Not sent" | "Sent" | "Refused"; detail: string | null; title: string };
 
 /**
@@ -308,9 +270,8 @@ export function payoutState(r: Pick<ClaimRow, "decision" | "payoutStatus" | "see
 }
 
 /** The Payout column: the word, and under it where PayPal has it or when it refused. Refused is the only colour. */
-export function PayoutCell({ data, context }: Cell) {
+export function PayoutCell({ data }: Cell) {
   if (!data) return null;
-  if (context?.stacked) return <StillPayout data={data} />;
   const p = payoutState(data);
   if (!p) return <span className="text-faint" aria-label="No payout">—</span>;
   return (
@@ -455,7 +416,7 @@ export function HeaderOnlyTip({ location, value }: CustomTooltipProps<GridRow>) 
 }
 
 /** Hovering the strip: the count, then each check by name with its result, pre-checks first. */
-export function ChecksTooltip({ data, location, value, context }: CustomTooltipProps<GridRow, unknown, GridContext>) {
+export function ChecksTooltip({ data, location, value }: CustomTooltipProps<GridRow>) {
   if (location === "header") return <HeaderTip text={value} />;
   if (!data?.bars) return null;
   const { pre, model } = splitBars(data.bars);
@@ -472,7 +433,7 @@ export function ChecksTooltip({ data, location, value, context }: CustomTooltipP
           <ul className="mt-1.5 flex flex-col gap-1">
             {g.bars.map((b) => (
               <li key={b.id} className="flex items-center gap-2.5 text-ui">
-                <Bar bar={b} pay={context?.stacked} />
+                <Bar bar={b} />
                 <span className="min-w-0 flex-1 truncate text-text-2">{b.label}</span>
                 {barWord(b) && <span className="shrink-0 text-micro text-muted">{barWord(b)}</span>}
               </li>

@@ -4,7 +4,8 @@ import clsx from "clsx";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { OpenedExhibit } from "@/components/home/teardown";
-import { Money, NoBreakHyphens, StatusPill } from "@/components/ui";
+import { VerdictMark } from "@/components/console/VerdictMark";
+import { Money, NoBreakHyphens } from "@/components/ui";
 import { CHAPTERS, CLAIM } from "./claim";
 import { CodeTag, ConsentChapter } from "./chapters";
 
@@ -94,7 +95,7 @@ export function StaticFigures() {
                   <span className="font-mono text-micro text-faint">Code {CLAIM.code}</span>
                 </span>
                 <span className="flex flex-col items-end gap-1">
-                  <StatusPill status="paid" />
+                  <VerdictMark verdict="paid" />
                   <span className="font-mono text-ui">
                     <Money value={CLAIM.amount} size="grid" />
                   </span>
