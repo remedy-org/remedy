@@ -106,6 +106,22 @@ The server always renders the static form.
 - The clock follows the real 15 s: the pre-checks finish in under a second, the model reads until about 0:14, and the
   payout goes at 0:15.
 
+### Pacing
+
+- Each beat's shot is a camera key at 22% of the beat, pushed in 6% by 88% (`ARRIVE` and `DEPART` in `model.ts`). The
+  moves onto and off the tag macro change the framing most, so they get more scroll: the camera leaves acct and code at
+  80% and arrives on code and the cut at 36%. Between keys the camera eases on DESIGN.md's
+  state-to-state curve, `cubic-bezier(0.65, 0, 0.35, 1)` (`inOutCubic` in `model.ts`), so its peak speed is 1.5x the
+  average. A move between distant subjects also pulls back mid-way (`PULL` 0.5 m of half-width per metre the aim travels,
+  at most `PULL_MAX` 0.45 m past the wider shot; `PULL_ZOOM` adds more for a big change of zoom) and aims at the
+  middle of both subjects, so a stop mid-move shows both whole.
+- A part opens as the camera arrives and closes over the last 12% of its beat; its leader draws on over the tenth of
+  the beat before the camera arrives and fades (never retracts) over 6% as the camera leaves. The callout is up or
+  down, eased in time by CSS, never scrubbed. The paid beat's halves part and stay parted to the end.
+- In the custody pin the exhibit comes and goes as one opaque layer, cut in time (`custody/gate.ts`) like the claim
+  screens: the outgoing layer leaves in 180ms and the incoming one rises in over 360ms, 140ms later.
+- The live canvas replaces the beat's still in one frame once warm, so the stage never shows the ground alone.
+
 ### Regenerating the stills
 
 Start `next dev`, then run:

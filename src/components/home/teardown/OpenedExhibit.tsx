@@ -5,7 +5,7 @@ import { useScroll, type MotionValue } from "motion/react";
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
 import { CHECKS, EXHIBIT, RECEIPT_ROWS } from "./claim";
-import { BEATS, RANGES, TOTAL_VH, clock, holdOf, stateAt, type BeatId, type ExhibitState, type Shot } from "./model";
+import { BEATS, RANGES, RECEIPT_FADE, TOTAL_VH, clock, holdOf, stateAt, type BeatId, type ExhibitState, type Shot } from "./model";
 import type { Colors, Exhibit, Rect, Tier } from "./scene";
 import { createFrameWatch, stageLayers } from "./watch";
 import styles from "./teardown.module.css";
@@ -139,7 +139,7 @@ function Receipt({ stamped, className, style }: { stamped: boolean; className?: 
             </div>
           ))}
         </dl>
-        <div className="mt-4 flex items-center justify-end gap-4">
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
           <span className={styles.stampSlot}>
             {stamped && (
               <Stamp tone="pay" land>
@@ -258,7 +258,8 @@ function IntroCallout({ framed }: { framed: number }) {
 
 function Callout({ s }: { s: ExhibitState }) {
   if (s.beat === "intro") return <IntroCallout framed={s.framed} />;
-  const i = s.active;
+  // Check 5's words hold into the payout until the receipt lands over them.
+  const i = s.beat === "paid" ? CHECKS.length - 1 : s.active;
   if (i < 0) return null;
   const c = CHECKS[i];
   return (
@@ -365,11 +366,13 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
       anchor = ex.render(st, rect).anchor;
       watchFrames(ex);
     }
-    // Leader: from the part to the callout's first line, drawn on like ink as the part opens.
+    // Leader: from the part to the callout's first line, drawn on like ink as the camera arrives on the part, and faded
+    // out (never retracted, which left a segment hanging in mid-air) as the camera leaves it (model.ts), so it never
+    // points into a moving frame.
     const box = calloutBox.current?.getBoundingClientRect();
     const path = leader.current;
     if (path && dot.current) {
-      const vis = anchor && box && st.callout > 0.01 ? st.callout : 0;
+      const vis = anchor && box && st.callout ? st.leader : 0;
       if (anchor && box && vis) {
         const tx = box.left - stage.left - 12;
         const ty = box.top - stage.top + 9;
@@ -377,16 +380,22 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
         dot.current.setAttribute("cx", anchor.x.toFixed(1));
         dot.current.setAttribute("cy", anchor.y.toFixed(1));
       }
-      path.style.strokeDashoffset = String(1 - vis);
-      path.style.opacity = vis ? "1" : "0";
+      path.style.strokeDashoffset = String(1 - st.leaderInk);
+      path.style.opacity = vis ? String(st.leaderFade ** 2) : "0";
       dot.current.style.opacity = String(vis);
     }
-    if (calloutBox.current) {
-      calloutBox.current.style.opacity = String(st.callout);
-      calloutBox.current.style.transform = `translateY(${((1 - st.callout) * 8).toFixed(1)}px)`;
-    }
+    // The mask over the scene follows the camera onto the tag macro and off it (model.ts macroAt): there the top fade
+    // starts lower, so the pillow's body is out of the picture and the tag, further down, is whole, and the left edge
+    // fades later, so the left half's stuffing is gone rather than cut off. The fade stays soft (96px or more), and
+    // only starts lower over the second half of the move, so mid-move the body never ends on a hard line.
+    const late = Math.min(1, Math.max(0, (st.macro - 0.5) / 0.5));
+    el.style.setProperty("--m-in", `${(4 + 84 * late * late * (3 - 2 * late)).toFixed(1)}px`);
+    el.style.setProperty("--m-len", `${(128 - 32 * st.macro).toFixed(1)}px`);
+    el.style.setProperty("--m-edge", `${(10 * st.macro).toFixed(2)}%`);
+    // The callout is a state the CSS eases in time (360ms in, 180ms out), so a stop never rests on half-drawn words.
+    if (calloutBox.current) calloutBox.current.toggleAttribute("data-on", st.callout > 0);
     if (receipt.current) {
-      receipt.current.style.opacity = String(Math.min(1, st.receipt * 1.4));
+      receipt.current.style.opacity = String(Math.min(1, st.receipt * RECEIPT_FADE));
       receipt.current.style.transform = `translateY(${((1 - st.receipt) * 48).toFixed(1)}px) rotate(${(1.2 - st.receipt * 2.4).toFixed(2)}deg)`;
     }
     // Active check's bar fills with its beat.
@@ -612,7 +621,8 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
             {small && postersEl}
           </div>
           <div className={styles.side} aria-hidden="true">
-            <div ref={calloutBox} className={styles.calloutWrap}>
+            {/* A new check's words mount fresh and rise in; check 5's hold on into the payout. */}
+            <div ref={calloutBox} key={s.beat === "paid" ? "torn" : s.beat} className={styles.calloutWrap}>
               <Callout s={s} />
             </div>
             {s.receipt > 0 && (

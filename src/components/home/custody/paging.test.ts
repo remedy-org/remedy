@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BEATS as EXHIBIT_BEATS } from "../teardown/model";
-import { nextStop } from "./paging";
+import { glideMs, nextStop } from "./paging";
 import { SCROLL_VH } from "./pace";
 
 const STOPS = [0, 0.2, 0.35, 0.6, 0.9];
@@ -28,5 +28,11 @@ describe("keyboard paging through the pin", () => {
   it("is needed: every exhibit beat is shorter than one browser page (about 95vh)", () => {
     for (const b of EXHIBIT_BEATS) expect(b.vh).toBeLessThan(95);
     expect(SCROLL_VH).toBeGreaterThan(95);
+  });
+
+  it("moves every page at one pace: never under 600ms, never faster than 1.6px a millisecond", () => {
+    expect(glideMs(200)).toBe(600);
+    expect(glideMs(-200)).toBe(600);
+    expect(glideMs(1600)).toBe(1000);
   });
 });

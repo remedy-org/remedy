@@ -10,7 +10,10 @@ import styles from "./home.module.css";
  * armed without JS, under reduced motion, or when the element is already on screen at load, so screenshots and
  * no-JS visitors see the finished page. `onArm` runs just before arming, to measure what the move needs.
  */
-export function useEnter(ref: RefObject<HTMLElement | null>, { threshold = 0.35, onArm }: { threshold?: number; onArm?: (el: HTMLElement) => void } = {}) {
+export function useEnter(
+  ref: RefObject<HTMLElement | null>,
+  { threshold = 0.35, margin = "-20%", onArm }: { threshold?: number; margin?: string; onArm?: (el: HTMLElement) => void } = {},
+) {
   useEffect(() => {
     const el = ref.current;
     if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -24,7 +27,7 @@ export function useEnter(ref: RefObject<HTMLElement | null>, { threshold = 0.35,
         io.disconnect();
       },
       // A tall element can never be 35% visible on a short screen; its top third in view is enough then.
-      { threshold: [0, threshold], rootMargin: "0px 0px -20% 0px" },
+      { threshold: [0, threshold], rootMargin: `0px 0px ${margin} 0px` },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -35,11 +38,13 @@ export function useEnter(ref: RefObject<HTMLElement | null>, { threshold = 0.35,
 
 /**
  * Focus-in (DESIGN.md, move 1): every child with the `line` class from home.module.css goes from blurred, 12px down
- * and transparent to sharp, 900ms, 80ms apart (`--line` sets each one's place). Text only.
+ * and transparent to sharp, 700ms, 60ms apart (`--line` sets each one's place). Text only. It plays as soon as the
+ * block's top is 8% above the viewport's foot, so a heading is sharp before it reaches reading height: at 35% in view,
+ * a tall heading was still blurred at 60% down the screen while the shorter content under it was already sharp.
  */
 export function Reveal({ children, className, as: Tag = "div" }: { children: ReactNode; className?: string; as?: "div" | "header" }) {
   const ref = useRef<HTMLElement>(null);
-  useEnter(ref);
+  useEnter(ref, { threshold: 0.01, margin: "-8%" });
   return (
     <Tag ref={ref as RefObject<never>} className={clsx(styles.reveal, className)}>
       {children}

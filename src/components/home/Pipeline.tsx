@@ -156,7 +156,15 @@ function useLanes(ref: RefObject<HTMLDivElement | null>) {
       { rootMargin: "0px 0px -30% 0px" },
     );
     root.querySelectorAll("[data-stop]").forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      // Disarm, so a second run (React's StrictMode in dev, or a remount) measures the tags where they rest, not where
+      // the armed state has lifted them.
+      root.querySelectorAll<HTMLElement>("[data-lane]").forEach((el) => {
+        delete el.dataset.go;
+        el.style.removeProperty("--go-at");
+      });
+    };
   }, [ref]);
 }
 

@@ -3,6 +3,7 @@
 import type * as T from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { EXHIBIT } from "../claim";
+import { smooth } from "../model";
 import { rng } from "./noise";
 import { marker, markerWidth, paperCanvas } from "./textures";
 
@@ -18,6 +19,8 @@ export interface Tag {
   mesh: T.Group;
   /** The contact shadow's strength: full when the tag lies on the floor, none once it lifts. */
   shadow: T.MeshBasicMaterial;
+  /** The card's cut edge, a shade darker than its faces (darker still on the light theme's pale floor). */
+  edge: T.MeshStandardMaterial;
   /** Redraws the lettering with the first `chars` of the code marked, `now` the one being read. */
   draw(chars: number, now: number, colors: { paper: string; ink: string; accent: string }): void;
   /** The hole, in world space. */
@@ -201,6 +204,7 @@ export function buildTag(THREE: Three): Tag {
     pivot,
     mesh,
     shadow: shadowMat,
+    edge: edgeMat,
     draw,
     twine,
     poseTwine,
@@ -209,8 +213,8 @@ export function buildTag(THREE: Three): Tag {
   };
 }
 
-// ---- Check 1: the phone's live camera. Seen from behind the phone: its screen shows the viewfinder, its camera's
-// frustum runs out to a frame round the evidence, and a scan plane travels down it.
+// ---- Check 1: the phone's live camera. Held off the evidence's front right, its screen (the viewfinder) toward the
+// viewer, its camera's frustum running out toward the cut, and a scan plane travelling down it.
 export interface Phone {
   group: T.Group;
   lines: T.LineSegments;
@@ -219,26 +223,35 @@ export interface Phone {
   sheetMat: T.MeshBasicMaterial;
   pose(open: number, scan: number): void;
   lens(out: T.Vector3): T.Vector3;
+  /** The body's four face corners, in world space, for the leader's anchor (the group's box is far wider, tilted). */
+  face(): T.Vector3[];
 }
 
-/** How far down the view, as a share of the lens-to-evidence distance, the frustum's frame floats. */
-const FRUSTUM_FAR = 0.45;
+/** The phone at rest, and the point its camera looks at (the cut's middle). Metres. */
+const PHONE_AT = [0.5, 0.3, 0.36] as const;
+const PHONE_LOOK = [0.05, 0.05, 0.04] as const;
+/**
+ * How far from the lens the frustum's frame floats, in metres: about a third of the way to the cut, so it hangs in the
+ * gap between the phone and the pillow and never reaches the right half's arm (at 0.27 its edge met the arm).
+ */
+const FRUSTUM_FAR = 0.16;
+/** How far the phone slides in along its own view axis as the part opens, from the viewer's side. */
+const PHONE_SLIDE = 0.08;
 
 export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   const group = new THREE.Group();
   const bw = 0.072;
   const bh = 0.15;
-  const body = new THREE.Mesh(
-    new RoundedBoxGeometry(bw, bh, 0.008, 4, 0.009),
-    new THREE.MeshPhysicalMaterial({
-      color: "#1b1b1d",
-      roughness: 0.5,
-      clearcoat: 1,
-      clearcoatRoughness: 0.12,
-      metalness: 0.3,
-    }),
-  );
-  body.castShadow = true;
+  const bodyMat = new THREE.MeshPhysicalMaterial({
+    color: "#1b1b1d",
+    roughness: 0.5,
+    clearcoat: 1,
+    clearcoatRoughness: 0.12,
+    metalness: 0.3,
+    transparent: true,
+  });
+  // No cast shadow: held a hand's height off the floor, its shadow fell far to the right, a smudge under the callout.
+  const body = new THREE.Mesh(new RoundedBoxGeometry(bw, bh, 0.008, 4, 0.009), bodyMat);
   group.add(body);
   // The screen faces the viewer behind the phone (-z); the lens looks at the evidence (+z).
   const sw = bw - 0.006;
@@ -271,24 +284,28 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     screenTex.needsUpdate = true;
   };
   drawScreen();
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false }));
+  const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false, transparent: true });
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), screenMat);
   screen.position.z = -0.0042;
   screen.rotation.y = Math.PI;
   group.add(screen);
-  const lensM = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.0055, 0.0055, 0.002, 24),
-    new THREE.MeshPhysicalMaterial({
-      color: "#0b0b0c",
-      roughness: 0.2,
-      clearcoat: 1,
-    }),
-  );
+  const lensMat = new THREE.MeshPhysicalMaterial({
+    color: "#0b0b0c",
+    roughness: 0.2,
+    clearcoat: 1,
+    transparent: true,
+  });
+  const lensM = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.0055, 0.002, 24), lensMat);
   lensM.rotation.x = Math.PI / 2;
   lensM.position.set(-bw / 2 + 0.014, bh / 2 - 0.016, 0.0048);
   group.add(lensM);
-  // Held above the front of the evidence, looking down at it, as the owner would.
-  group.position.set(0.02, 0.5, 0.6);
-  group.lookAt(0.0, 0.02, 0.02);
+  // Held off the front right of the evidence, a little above it, looking across and down at the cut, as the owner
+  // would. The check's shot (model.ts SHOTS.live) sees the phone beside the pillow, between it and the callout, and the
+  // frustum running out from it toward the cut: from the old spot above the front, the shot looked straight down the
+  // phone's own axis, so the phone and its frame lay on the pillow.
+  group.position.set(...PHONE_AT);
+  group.lookAt(...PHONE_LOOK);
+  const rest = group.position.clone();
 
   const lineMat = new THREE.LineBasicMaterial({
     color: 0xebb75b,
@@ -313,15 +330,15 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     group.updateMatrixWorld(true);
     return group.localToWorld(out.copy(lensLocal));
   };
-  // The camera's view as a frustum gizmo: from the lens to a 3:4 portrait frame, 48 degrees tall, so seen from the
-  // lens the frame just holds the cut pillow (as the RM-0442 photo does). The frame floats a little over half way
-  // down, clear of the evidence: at the evidence's own distance it cut through the stuffing and read as a seam.
+  // The camera's view as a frustum gizmo: from the lens to a 3:4 portrait frame, 48 degrees tall, pointing at the cut
+  // (as the RM-0442 photo was taken). The frame floats short of the evidence: at the evidence's own distance it cut
+  // through the stuffing and read as a seam.
   group.updateMatrixWorld(true);
   const o = lens(new THREE.Vector3());
   const ax = new THREE.Vector3(1, 0, 0).transformDirection(group.matrixWorld);
   const ay = new THREE.Vector3(0, 1, 0).transformDirection(group.matrixWorld);
   const az = new THREE.Vector3(0, 0, 1).transformDirection(group.matrixWorld);
-  const far = o.distanceTo(new THREE.Vector3(0, 0.04, 0.02)) * FRUSTUM_FAR;
+  const far = FRUSTUM_FAR;
   const tv = Math.tan((48 / 2) * (Math.PI / 180));
   const th = tv * 0.75;
   const frameAt = (dist: number) =>
@@ -339,9 +356,22 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     );
   const corners = frameAt(far);
 
+  // The body's face corners, in the group's own space.
+  const faceLocal = [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ].map(([sx, sy]) => new THREE.Vector3((sx * bw) / 2, (sy * bh) / 2, 0));
+
   function pose(open: number, scan: number) {
+    // The phone opens like the other parts: it grows in and slides along its own view axis toward the evidence,
+    // fading up over the first 40% of its opening, so it never pops in whole.
     group.visible = open > 0.01;
-    group.scale.setScalar(Math.max(0.001, 0.85 + 0.15 * open));
+    group.scale.setScalar(Math.max(0.001, 0.5 + 0.5 * open));
+    group.position.copy(rest).addScaledVector(az, -PHONE_SLIDE * (1 - open));
+    const fade = smooth(Math.min(1, open / 0.4));
+    for (const m of [bodyMat, screenMat, lensMat]) m.opacity = fade;
     lens(L);
     const pts: number[] = [];
     // The four edges draw out from the lens as the part opens, then the far frame closes.
@@ -378,7 +408,19 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     lineMat.opacity = 0.8 * open;
     lines.visible = open > 0.01;
   }
-  return { group, lines, sheet, lineMat, sheetMat, pose, lens };
+  return {
+    group,
+    lines,
+    sheet,
+    lineMat,
+    sheetMat,
+    pose,
+    lens,
+    face: () => {
+      group.updateMatrixWorld(true);
+      return faceLocal.map((v) => group.localToWorld(v.clone()));
+    },
+  };
 }
 
 // ---- Check 2: the photo, printed, with its real 64-bit fingerprint (dHash) drawn over it as an 8 x 8 grid, held in
@@ -408,11 +450,12 @@ export interface Prints {
 
 export function buildPrints(THREE: Three, photo: T.Texture, earlier: T.Texture[], paper: string): Prints {
   const group = new THREE.Group();
-  const border = new THREE.MeshStandardMaterial({
-    color: paper,
-    roughness: 0.6,
-  });
   const card = (tex: T.Texture) => {
+    // Each print has its own materials, so each fades on its own.
+    const border = new THREE.MeshStandardMaterial({
+      color: paper,
+      roughness: 0.6,
+    });
     const m = new THREE.Mesh(new THREE.BoxGeometry(PRINT_W, PRINT_H, 0.0012), [
       border,
       border,
@@ -508,10 +551,17 @@ export function buildPrints(THREE: Three, photo: T.Texture, earlier: T.Texture[]
     });
   }
 
+  const mainMats = main.material as T.Material[];
   function pose(open: number, hash: number) {
     group.visible = open > 0.01;
     group.position.y = 0.035 + open * 0.2;
     group.scale.setScalar(Math.max(0.001, 0.6 + 0.4 * open));
+    // The print fades up over the first 40% of its opening, as the earlier prints do, so it never pops in whole.
+    const fade = smooth(Math.min(1, open / 0.4));
+    mainMats.forEach((x) => {
+      x.transparent = true;
+      x.opacity = fade;
+    });
     gridMat.opacity = hash * open;
     grid.position.z = 0.004 + 0.014 * hash;
     ghosts.forEach((g, i) => {

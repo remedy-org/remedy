@@ -56,9 +56,12 @@ async function main() {
           })),
         );
     for (const job of jobs) {
+      // The OS scheme as well as the stored choice: with nothing stored the site follows prefers-color-scheme, and
+      // Playwright's default is light, so a "dark" job drew the light theme's scene.
       const ctx = await browser.newContext({
         viewport: { width: job.w, height: job.h },
         deviceScaleFactor: job.dpr,
+        colorScheme: job.theme === "light" ? "light" : "dark",
       });
       await ctx.addInitScript(
         ([key, theme]) => {
@@ -107,10 +110,11 @@ async function main() {
         // Mobile posters frame the evidence alone in a near-square still. The wide shots (the whole pillow) are framed
         // tight, past the canvas edge where only the shot's margin falls, so on a 375px phone the object fills about
         // 85% of the width instead of a thumbnail's 55%; the macro shots (the print, the tag) keep their margin.
-        // The cut and paid shots part the halves, so they keep a little more room than the whole pillow does.
+        // The cut and paid shots part the halves, and the live shot holds the phone off the pillow's right, so they
+        // keep a little more room than the whole pillow does.
         const rect = ["fp", "code"].includes(at.name)
           ? { x0: 0.1, y0: 0.12, x1: 0.9, y1: 0.88 }
-          : ["torn", "paid"].includes(at.name)
+          : ["live", "torn", "paid"].includes(at.name)
             ? { x0: 0.02, y0: 0.06, x1: 0.98, y1: 0.94 }
             : { x0: -0.07, y0: 0.04, x1: 1.07, y1: 0.96 };
         await page.evaluate(

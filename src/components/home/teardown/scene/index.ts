@@ -167,6 +167,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
   }
 
   let colors = opts.colors;
+  let tagPaper = colors.paper;
   let tier: Tier = opts.tier;
   function applyColors(c: Colors) {
     colors = c;
@@ -193,6 +194,10 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
       mats.cloth.sheenColor.set("#7e8aae");
     }
     for (const f of mats.fuzz) f.color.copy(mats.stuff.color);
+    // The cream tag on the light theme's cream floor: a darker edge, a stronger contact shadow (in render) and paper a
+    // shade down, so its outline and M4T hold in the whole-pillow shots.
+    tag.edge.color.set(c.dark ? "#b9ad97" : "#8f7f65");
+    tagPaper = c.dark ? c.paper : `#${new THREE.Color(c.paper).offsetHSL(0, 0, -0.12).getHexString()}`;
     prints.drawGrid(c.accent, c.faint, c.paper);
   }
 
@@ -251,9 +256,9 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     // The tag lifts toward the camera for check 4 and rises in the explode.
     tag.pivot.position.y = 0.0016 + s.code * 0.045 + s.explode * 0.05;
     tag.mesh.rotation.x = -Math.PI / 2 + s.code * 0.6 + s.explode * 0.25;
-    tag.shadow.opacity = (colors.dark ? 0.55 : 0.32) * Math.max(0, 1 - (s.code + s.explode) * 3);
+    tag.shadow.opacity = (colors.dark ? 0.55 : 0.7) * Math.max(0, 1 - (s.code + s.explode) * 3);
     tag.draw(s.chars, s.charNow, {
-      paper: colors.paper,
+      paper: tagPaper,
       ink: colors.ink,
       accent: colors.accent,
     });
@@ -268,13 +273,12 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
 
     let anchor: Frame["anchor"] = null;
     // The phone and the tag: the leader ends 8px outside the part's right side (toward the callout), level with the
-    // lens or the code, so it never crosses the phone or strikes through M4T.
-    const beside = (b: ReturnType<typeof screenBox>, at: { x: number; y: number }) =>
-      b ? { x: b.x1 + 8, y: Math.min(b.y1 - 4, Math.max(b.y0 + 4, at.y)) } : at;
-    if (s.active === 0) anchor = beside(screenBox(phone.group), project(phone.lens(P.clone())));
+    // lens or the code, so it never crosses the phone or strikes through M4T. Both are boxed by their own face's four
+    // corners: the box round a tilted group (the phone's thickness, the tag's wider contact shadow) ends well to the
+    // right of the part itself.
+    const beside = (b: ReturnType<typeof quadBox>, at: { x: number; y: number }) => ({ x: b.x1 + 8, y: Math.min(b.y1 - 4, Math.max(b.y0 + 4, at.y)) });
+    if (s.active === 0) anchor = beside(quadBox(phone.face()), project(phone.lens(P.clone())));
     else if (s.active === 1) anchor = project(prints.corner(new THREE.Vector3()));
-    // The tag by its card's own four corners: the box round its tilted group (and its wider contact shadow), projected
-    // this close, ends far to the right of the paper.
     else if (s.active === 3) anchor = beside(cardBox(), project(tag.codePoint(new THREE.Vector3())));
     else if (s.active === 4) anchor = project(right.rimTop(new THREE.Vector3()));
     return { anchor };
@@ -299,21 +303,25 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     }
     return { x0, y0, x1, y1 };
   }
-  /** The tag card's projected bounds on the canvas, CSS px, from its four corners. */
-  function cardBox() {
-    tag.mesh.updateMatrixWorld(true);
+  /** Projected bounds on the canvas, CSS px, of a few world points (a part's face corners). */
+  function quadBox(pts: THREE.Vector3[]) {
     let x0 = Infinity;
     let y0 = Infinity;
     let x1 = -Infinity;
     let y1 = -Infinity;
-    for (let i = 0; i < 4; i++) {
-      const q = project(tag.mesh.localToWorld(corner.set(((i & 1) - 0.5) * TAG_W, ((i >> 1) - 0.5) * TAG_H, 0)));
+    for (const v of pts) {
+      const q = project(v);
       x0 = Math.min(x0, q.x);
       y0 = Math.min(y0, q.y);
       x1 = Math.max(x1, q.x);
       y1 = Math.max(y1, q.y);
     }
     return { x0, y0, x1, y1 };
+  }
+  /** The tag card's projected bounds, from its four corners. */
+  function cardBox() {
+    tag.mesh.updateMatrixWorld(true);
+    return quadBox([0, 1, 2, 3].map((i) => tag.mesh.localToWorld(new THREE.Vector3(((i & 1) - 0.5) * TAG_W, ((i >> 1) - 0.5) * TAG_H, 0))));
   }
   function bounds() {
     const out: {
