@@ -151,8 +151,17 @@ function Facet({ title, children, scroll }: { title: string; children: ReactNode
       <p aria-hidden="true" className="py-1 text-micro text-faint">
         {title}
       </p>
-      {/* A long list scrolls inside the menu, with room under its last row, so nothing is cut at the menu's edge. */}
-      <div className={scroll ? "max-h-52 overflow-y-auto overscroll-contain pb-1" : undefined}>{children}</div>
+      {/* A long list is whole on a laptop's screen; only a short window scrolls it, its last row fading at the edge, so
+          the list reads as one that goes on, never as one that ends. */}
+      <div
+        className={
+          scroll
+            ? "max-h-[min(60vh,28rem)] overflow-y-auto overscroll-contain pb-1 [@media(max-height:799px)]:max-h-52 [@media(max-height:799px)]:[mask-image:linear-gradient(to_bottom,#000_calc(100%-16px),transparent)]"
+            : undefined
+        }
+      >
+        {children}
+      </div>
     </fieldset>
   );
 }

@@ -38,7 +38,8 @@ export function RowMeta({ row }: { row: ClaimRow }) {
   );
 }
 
-/** The panel's frame while its module or its claim loads: the row's header, then the skeleton of the evidence. */
+/** The panel's frame while its module or its claim loads: the row's header, the skeleton of the evidence, and a held
+ * claim's foot, each at the loaded panel's own geometry, so nothing moves when the evidence lands. */
 export function EvidenceShell({ row }: { row: ClaimRow | null }) {
   return (
     <div aria-busy="true" className="flex h-full w-full shrink-0 flex-col overflow-hidden rounded-card bg-surface shadow-float">
@@ -61,21 +62,56 @@ export function EvidenceShell({ row }: { row: ClaimRow | null }) {
         </div>
         <span className="-mr-2 size-11 shrink-0" />
       </div>
-      <DrawerSkeleton />
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <DrawerSkeleton row={row} />
+      </div>
+      {row?.decision === "held" && <GhostFooter />}
+      <div aria-hidden="true" className="flex h-9 shrink-0 items-center gap-4 border-t border-line px-5 [@media(max-height:600px)]:hidden [@media(max-height:960px)]:h-8">
+        {["w-24", "w-20", "w-16", "w-14"].map((w) => (
+          <Skeleton key={w} className={`h-2.5 ${w}`} />
+        ))}
+      </div>
     </div>
   );
 }
 
-/** The evidence's skeleton: the reason, the photos, then the two check lists. */
-export function DrawerSkeleton() {
+/** A held claim's foot while it loads: its two buttons, as ghosts, at the loaded foot's height. */
+export function GhostFooter() {
+  return (
+    <div aria-hidden="true" className="flex shrink-0 gap-3 border-t border-line px-5 py-4">
+      <Skeleton className="h-11 w-32 rounded-button" />
+      <Skeleton className="h-11 w-24 rounded-button" />
+    </div>
+  );
+}
+
+const REASONED = new Set<ClaimRow["decision"]>(["held", "rejected", "blocked"]);
+
+/** The evidence's skeleton at the loaded panel's geometry: a held or refused claim's reason (its title, the photo
+ * check's quoted words on their rule, the count), the photos under their title, then the timeline and the checks. */
+export function DrawerSkeleton({ row }: { row?: ClaimRow | null }) {
+  const reasoned = row ? REASONED.has(row.decision) : false;
   return (
     <div className="flex flex-col gap-7 px-5 py-5">
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3.5 w-1/2" />
-      </div>
+      {reasoned && (
+        <div className="flex flex-col gap-1.5">
+          <span className="flex h-5 items-center">
+            <Skeleton className="h-[15px] w-3/4" />
+          </span>
+          <span className="flex h-[65px] flex-col justify-center gap-2 border-l border-line-strong pl-3">
+            <Skeleton className="h-[13px] w-full" />
+            <Skeleton className="h-[13px] w-11/12" />
+            <Skeleton className="h-[13px] w-2/3" />
+          </span>
+          <span className="mt-1 flex h-[17px] items-center">
+            <Skeleton className="h-3 w-48" />
+          </span>
+        </div>
+      )}
       <div className="flex flex-col gap-3">
-        <Skeleton className="h-4 w-16" />
+        <span className={row?.decision === "held" ? "flex h-[26px] items-center" : "flex h-5 items-center"}>
+          <Skeleton className="h-4 w-16" />
+        </span>
         <div className="grid grid-cols-2 gap-3">
           <Skeleton className="aspect-[3/4] w-full rounded-control" />
           <Skeleton className="aspect-[3/4] w-full rounded-control" />

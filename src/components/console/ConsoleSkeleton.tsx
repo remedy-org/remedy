@@ -1,26 +1,38 @@
 import clsx from "clsx";
 import { Skeleton } from "@/components/ui";
 
-/** The claims page while it loads: heading, the ledger strip, tabs and grid rows, in their real sizes. */
+/** The claims page while it loads, on the loaded page's own geometry (RecallHeading, then the ledger, the tabs and the
+ * grid with no gap between them, as ClaimsQueue lays them out), so the page never shifts when the claims arrive. */
 export function ConsoleSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading claims" className="flex flex-1 flex-col gap-4 px-4 pt-6 pb-4 sm:px-6 lg:h-[calc(100dvh-57px)] lg:flex-none lg:overflow-hidden lg:px-8">
-      <div className="flex flex-col gap-3">
-        <Skeleton className="h-3 w-56" />
-        <Skeleton className="h-7 w-80 max-w-full" />
-        <Skeleton className="h-4 w-72 max-w-full" />
+    <div aria-busy="true" aria-label="Loading claims" className="flex flex-1 flex-col gap-4 px-4 pt-6 pb-3 sm:px-6 lg:h-[calc(100dvh-57px)] lg:flex-none lg:overflow-hidden lg:px-8">
+      <div className="grid grid-cols-1 gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-8">
+        <span className="flex h-11 items-center">
+          <Skeleton className="h-7 w-80 max-w-full" />
+        </span>
+        <span className="hidden h-11 items-center gap-3 sm:flex">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-9 w-32 rounded-button" />
+        </span>
+        <span className="flex h-5 items-center sm:col-span-2">
+          <Skeleton className="h-3.5 w-80 max-w-full" />
+        </span>
       </div>
-      <div className="flex min-h-12 flex-wrap items-center gap-x-8 gap-y-3 border-y border-line py-3">
-        {["w-56", "w-40", "w-44", "w-16", "w-20"].map((w) => (
-          <Skeleton key={w} className={`h-5 ${w}`} />
-        ))}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-12 flex-wrap items-center gap-x-8 gap-y-2 border-y border-line py-2.5">
+          {["w-40", "w-28", "w-44", "w-56"].map((w) => (
+            <span key={w} className="flex h-7 items-center">
+              <Skeleton className={`h-5 ${w}`} />
+            </span>
+          ))}
+        </div>
+        <div className="mt-1 flex h-[45px] items-center gap-6 border-b border-line">
+          {["w-10", "w-20", "w-11", "w-16", "w-14", "w-20"].map((w, i) => (
+            <Skeleton key={i} className={`h-4 ${w}`} />
+          ))}
+        </div>
+        <SkeletonGrid rows={10} />
       </div>
-      <div className="flex h-11 items-center gap-6 border-b border-line">
-        {["w-10", "w-12", "w-11", "w-16", "w-14"].map((w) => (
-          <Skeleton key={w} className={`h-4 ${w}`} />
-        ))}
-      </div>
-      <SkeletonGrid rows={10} />
     </div>
   );
 }

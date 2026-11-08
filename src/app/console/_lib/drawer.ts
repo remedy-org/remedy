@@ -164,8 +164,8 @@ export function photoUrl(claimId: string, n: number) {
 }
 
 /**
- * A starter (seeded) claim's history as it happened: it was filed before PayPal Payouts was connected, so no payout left
- * and no PayPal status exists. The stored lines (lib/demo/sampleCopy.ts) are rewritten in the console's words.
+ * A starter (seeded) claim's history as it happened: it came with the workspace, so no payout left and no PayPal status
+ * exists. The stored lines (lib/demo/sampleCopy.ts) are rewritten in the console's words.
  */
 function sampleEvents(c: Claim, amount: string): Claim["events"] {
   const n = c.photos.length;
@@ -177,7 +177,7 @@ function sampleEvents(c: Claim, amount: string): Claim["events"] {
         : e.type === "prechecked"
           ? { ...e, detail: "Account checks passed" }
           : e.type === "payout_sent"
-            ? { ...e, detail: `Approved for ${amount}. Filed before PayPal Payouts was connected; no payout sent.` }
+            ? { ...e, detail: `Approved for ${amount}. No payout: the claim came with the workspace.` }
             : e,
     );
 }

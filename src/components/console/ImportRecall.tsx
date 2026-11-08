@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { ApiError } from "@/app/console/_lib/api";
@@ -11,6 +12,7 @@ import { api } from "./api";
 import { CheckList } from "./CheckList";
 import { formatCount } from "./format";
 import { CpscNotice } from "./CpscNotice";
+import { sameFirm } from "./firm";
 import { PublishForm } from "./PublishForm";
 
 type Step =
@@ -53,19 +55,6 @@ const blankSpec = (n: CpscSummary): CheckSpec => ({
   proof_steps: [""],
 });
 
-// The firm CPSC names, and the signed-in company, compared loosely: "Kikea Store" and "KIKEA STORE INC." are one.
-const firmKey = (name: string) =>
-  name
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, " ")
-    .replace(/\b(?:inc|llc|ltd|co|corp|corporation|company|store|stores)\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-export const sameFirm = (a: string, b: string) => {
-  const [x, y] = [firmKey(a), firmKey(b)];
-  return !x || !y || x.includes(y) || y.includes(x);
-};
-
 /** Paste a CPSC link, read the notice, let the model draft the checks, then edit and publish. company: the signed-in
  * company's name, to say so when CPSC names another firm. */
 export function ImportRecall({ example, company }: { example: string; company?: string | null }) {
@@ -88,7 +77,7 @@ export function ImportRecall({ example, company }: { example: string; company?: 
   const read = async (e: FormEvent) => {
     e.preventDefault();
     // Checked on submit, not by disabling the button: a disabled primary gives no reason.
-    if (ref.trim().length < 5) return setStep({ at: "find", error: { error: "Paste a CPSC recall URL or number", fields: { ref: "Paste a cpsc.gov recall URL or a number like 27-071" } } });
+    if (ref.trim().length < 5) return setStep({ at: "find", error: { error: "Paste a CPSC recall URL or number", fields: { ref: "Paste a cpsc.gov recall URL or a number like 27-068" } } });
     setStep({ at: "reading" });
     const res = await api<CpscSummary>("/api/console/recalls/import", { json: { ref } });
     if (!res.ok) return setStep({ at: "find", error: res.error });
@@ -97,9 +86,9 @@ export function ImportRecall({ example, company }: { example: string; company?: 
 
   if (step.at === "edit") {
     return (
-      <Layout notice={step.notice} company={company}>
+      <Layout notice={step.notice} company={company} intro={INTRO.edit}>
         <h2 ref={stage} tabIndex={-1} className="sr-only">
-          Review the photo checks
+          Photo checks
         </h2>
         <PublishForm
           cpscRef={ref}
@@ -115,7 +104,7 @@ export function ImportRecall({ example, company }: { example: string; company?: 
 
   if (step.at === "drafting" || step.at === "draft_failed") {
     return (
-      <Layout notice={step.notice} company={company}>
+      <Layout notice={step.notice} company={company} intro={INTRO.drafting}>
         <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
           <div>
             <h2 ref={stage} tabIndex={-1} className="text-body font-medium outline-none">
@@ -123,7 +112,7 @@ export function ImportRecall({ example, company }: { example: string; company?: 
             </h2>
             <p className="mt-1 text-ui text-muted">From the notice and its photos, Remedy writes what an owner&apos;s photos must show. You review every line before it goes live.</p>
           </div>
-          <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn't finish" }} quiet={["draft"]} />
+          <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn't finish", running: "Drafting" }} quiet={["draft"]} />
           {/* The failure in the card's own type, one line and its two ways on: no box inside the box. */}
           {step.at === "draft_failed" && (
             <div className="flex flex-col gap-3">
@@ -146,9 +135,11 @@ export function ImportRecall({ example, company }: { example: string; company?: 
   }
 
   const error = step.at === "find" ? step.error : undefined;
+  // The steps sit in the right column, where CPSC's card takes their place once the notice is read: nothing on the page
+  // moves between steps, and a laptop's first screen isn't a narrow form beside an empty half.
   return (
-    <div className="flex max-w-[40rem] flex-col gap-8">
-      <form onSubmit={read} className="flex flex-col gap-6" noValidate>
+    <Frame intro={INTRO.find} asideLast aside={<CheckList label="Import progress" steps={importSteps(step.at)} words={{ running: "Reading" }} className="rounded-card border border-line bg-surface px-6 py-2" />}>
+      <form onSubmit={read} className="flex max-w-[40rem] flex-col gap-6" noValidate>
         <Field
           label="The cpsc.gov link or recall number"
           placeholder={example}
@@ -184,18 +175,48 @@ export function ImportRecall({ example, company }: { example: string; company?: 
           </Button>
         </div>
       </form>
-      {/* The three steps from the start, waiting, so the first screen says what happens next. */}
-      <CheckList label="Import progress" steps={importSteps(step.at)} className="rounded-card border border-line bg-surface px-6 py-2" />
+    </Frame>
+  );
+}
+
+// The page's heading says the step it is on: what to paste, what Remedy is doing, what to review.
+const INTRO = {
+  find: {
+    title: "Import a recall from CPSC",
+    lead: "Paste the cpsc.gov link or recall number. Remedy reads CPSC's record, drafts the photo checks from its text and photos, and you edit them before the claim page goes live.",
+  },
+  drafting: {
+    title: "Import a recall from CPSC",
+    lead: "Remedy has read CPSC's record and is drafting the photo checks. You review every line before anything goes live.",
+  },
+  edit: {
+    title: "Review the photo checks",
+    lead: "Edit what an owner's photos must show, set the refund, then publish the claim link. Nothing goes live until you publish.",
+  },
+};
+
+/** The page on every step: its heading, then the step's column and the right-hand one (the steps, then CPSC's card). */
+function Frame({ intro, aside, asideLast, children }: { intro: { title: string; lead: string }; aside: ReactNode; asideLast?: boolean; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-8">
+      <header className="max-w-read">
+        <h1 className="text-h2 font-medium">{intro.title}</h1>
+        <p className="mt-2 text-body text-muted">{intro.lead}</p>
+      </header>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
+        {/* On a phone CPSC's card leads the step it informs; the waiting steps follow the form. */}
+        <div className={clsx("flex min-w-0 flex-col gap-6 lg:order-1", !asideLast && "order-2")}>{children}</div>
+        <aside className={clsx("lg:sticky lg:top-6 lg:order-2", !asideLast && "order-1")}>{aside}</aside>
+      </div>
     </div>
   );
 }
 
-function Layout({ notice, company, children }: { notice: CpscSummary; company?: string | null; children: ReactNode }) {
+function Layout({ notice, company, intro, children }: { notice: CpscSummary; company?: string | null; intro: { title: string; lead: string }; children: ReactNode }) {
   const other = otherRemedy(notice.remedy);
   const otherFirm = company && notice.firm && !sameFirm(notice.firm, company) ? notice.firm : null;
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
-      <div className="order-2 flex min-w-0 flex-col gap-6 lg:order-1">
+    <Frame intro={intro} aside={<CpscNotice notice={notice} />}>
         {/* The first thing on the page when it applies: a claim page here would pay owners to destroy what the
             recall repairs. Publishing stays possible; the company decides. */}
         {other && (
@@ -210,10 +231,6 @@ function Layout({ notice, company, children }: { notice: CpscSummary; company?: 
           </p>
         )}
         {children}
-      </div>
-      <aside className="order-1 lg:sticky lg:top-6 lg:order-2">
-        <CpscNotice notice={notice} />
-      </aside>
-    </div>
+    </Frame>
   );
 }

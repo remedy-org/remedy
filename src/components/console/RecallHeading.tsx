@@ -9,10 +9,12 @@ export interface RecallHeadingProps {
   recalls: Recall[];
   basePath: string;
   actions?: ReactNode;
+  /** The page shows times: say their zone once, here, rather than in a column's head. */
+  times?: boolean;
 }
 
 /** The recall a console page is about: CPSC number, product, refund and auto-pay, with a switcher when there are several. */
-export function RecallHeading({ recall, recalls, basePath, actions }: RecallHeadingProps) {
+export function RecallHeading({ recall, recalls, basePath, actions, times }: RecallHeadingProps) {
   // The title and its actions share one row, so the claims start as high on the screen as they can.
   // On a laptop the actions sit at the title row's right; on a phone the title, then what it is, then the actions.
   return (
@@ -34,6 +36,13 @@ export function RecallHeading({ recall, recalls, basePath, actions }: RecallHead
         </span>
         <span aria-hidden="true" className="text-faint">·</span>
         <span>Auto-pay {recall.autoPay ? "on" : "off"}</span>
+        {times && (
+          <>
+            <span aria-hidden="true" className="text-faint">·</span>
+            {/* The console's one zone, the report's and the CSV's too. */}
+            <span>Times in UTC</span>
+          </>
+        )}
       </p>
     </div>
   );

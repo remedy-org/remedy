@@ -55,7 +55,7 @@ export function SigninPreview({ rows, ledger, counts, height }: { rows: PreviewR
           </div>
         </div>
         <div className={clsx("px-5 pt-3 transition-opacity duration-500 ease-out", ready ? "opacity-100" : "opacity-0")} style={{ height }}>
-          <ClaimsGrid rows={rows} openId={null} onOpen={noop} onReady={() => setReady(true)} fill />
+          <ClaimsGrid rows={rows} openId={null} onOpen={noop} onReady={() => setReady(true)} fill keepOrder />
         </div>
       </div>
     </div>

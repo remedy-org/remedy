@@ -8,10 +8,10 @@ import type { ApiError } from "@/app/console/_lib/api";
 // The model's words set as the owner's pages set them: curly quotes, codes in mono.
 import { ModelQuote } from "@/components/claim/EvidenceText";
 import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
-import { duration, NO_PAYOUT, type ClaimRow } from "@/app/console/_lib/view";
+import { duration, type ClaimRow } from "@/app/console/_lib/view";
 import { api } from "./api";
 import { DurationText, EXCEPTION } from "./cells";
-import { DrawerSkeleton, RowAmount, RowMeta, RowVerdict } from "./EvidenceShell";
+import { DrawerSkeleton, GhostFooter, RowAmount, RowMeta, RowVerdict } from "./EvidenceShell";
 import { CheckList } from "./CheckList";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { formatClock, formatTime } from "./format";
@@ -53,6 +53,8 @@ export interface EvidenceProps {
   // The claim this one was opened from through a link in its evidence: the header offers the way back.
   back?: string | null;
   onBack?: () => void;
+  // Two or more claims are picked: the bulk bar acts on them, so this claim's own actions step back.
+  picking?: boolean;
 }
 
 // Claims this page view already loaded, by id and version: walking back up the queue costs nothing.
@@ -111,7 +113,7 @@ function useClaim(id: string, version: number | null | undefined, filedAt: strin
 }
 
 /** Laptops: an aside beside the grid. No backdrop, the grid stays live; Esc closes it (ClaimsQueue returns focus). */
-export function EvidencePanel({ claimId, row, notice, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
+export function EvidencePanel({ claimId, row, notice, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack, picking }: EvidenceProps) {
   if (!claimId) return null;
   return (
     <aside
@@ -133,6 +135,7 @@ export function EvidencePanel({ claimId, row, notice, viewPhotos, version, filed
         nextHeld={nextHeld}
         back={back}
         onBack={onBack}
+        picking={picking}
         variant="panel"
       />
     </aside>
@@ -197,6 +200,7 @@ function EvidenceContent({
   nextHeld,
   back,
   onBack,
+  picking,
   variant,
 }: Omit<EvidenceProps, "claimId"> & { id: string; variant: "panel" | "sheet" }) {
   const router = useRouter();
@@ -230,14 +234,19 @@ function EvidenceContent({
   const photos = useRef<HTMLElement>(null);
   // The footer's open form, so the key line says what A and Enter do now.
   const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle");
+  // A decision saving: the key line says that keys typed now wait for the next claim.
+  const [busy, setBusy] = useState(false);
   const onMode = useCallback((mode: "idle" | "approve" | "reject") => {
     setMode(mode);
-    // Scrolled within the panel only: scrollIntoView would scroll the page under it too.
+    // Scrolled within the panel only (scrollIntoView would scroll the page under it too): the photos end just over the
+    // form, clear of the scroller's fading edge, so no heading below them peeks half-cut above it; photos taller than
+    // the panel's room start at its top.
     if (mode === "reject")
       requestAnimationFrame(() => {
-        const box = scroller.current;
-        const el = photos.current;
-        if (box && el) box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top;
+        const box = scroller.current?.getBoundingClientRect();
+        const el = photos.current?.getBoundingClientRect();
+        if (!box || !el || !scroller.current) return;
+        scroller.current.scrollTop += el.height + EDGE > box.height ? el.top - box.top : el.bottom + EDGE - box.bottom;
       });
   }, []);
   // A or R from the queue, or Approve and Reject in the photo viewer: both open the footer's confirm. A key meant for
@@ -257,7 +266,12 @@ function EvidenceContent({
   return (
     // On a short window (under 600px) the panel scrolls as one, header and footer included, so the evidence isn't
     // squeezed between them; the reject form's buttons stay in view (ReviewActions).
-    <div className="flex h-full min-h-0 flex-col [@media(max-height:600px)]:overflow-y-auto" aria-busy={load.state === "loading" || undefined}>
+    <div
+      className="flex h-full min-h-0 flex-col [@media(max-height:600px)]:overflow-y-auto"
+      aria-busy={load.state === "loading" || undefined}
+      // The claim's evidence is in: keys waiting for it (keyQueue) go on.
+      data-ready={claim?.id === id ? id : undefined}
+    >
       <header className={clsx("flex items-start gap-3 border-b border-line py-3", pad)}>
         <div className="min-w-0 flex-1">
           {back && onBack && (
@@ -286,6 +300,10 @@ function EvidenceContent({
             </span>
             {claim ? <MoneyLine claim={claim} /> : row?.id === id && <RowAmount row={row} />}
           </div>
+          {/* The decision just made on the claim before this one takes the meta line's place for 2 s, cross-faded in the
+              same slot, so nothing under the header moves. */}
+          <div className="grid">
+          <div className={clsx("col-start-1 row-start-1 transition-opacity duration-120 ease-out", notice && "opacity-0")} aria-hidden={notice ? true : undefined}>
           {!claim && row?.id === id ? (
             <RowMeta row={row} />
           ) : claim ? (
@@ -307,10 +325,11 @@ function EvidenceContent({
           ) : (
             <Skeleton className="mt-2 h-4 w-64 max-w-full" />
           )}
-          {/* The decision just made on the claim before this one: said where the reviewer is looking, for 2 s. */}
-          <p role="status" className="text-ui text-text-2 empty:hidden">
-            {notice ? <span className="mt-1.5 block">{notice}</span> : null}
+          </div>
+          <p role="status" className={clsx("col-start-1 row-start-1 mt-0.5 truncate text-ui text-text-2 transition-opacity duration-120 ease-out", notice ? "opacity-100" : "pointer-events-none opacity-0")}>
+            {notice}
           </p>
+          </div>
         </div>
         <button
           type="button"
@@ -324,7 +343,10 @@ function EvidenceContent({
 
       {/* Positioned, so its absolutely placed descendants (screen-reader text, the photo badges) scroll and clip with it:
           without a containing block of its own they reached past the window and the whole page scrolled into a void. */}
-      <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain [@media(max-height:600px)]:flex-none [@media(max-height:600px)]:overflow-visible">
+      <div
+        ref={scroller}
+        className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain [mask-image:linear-gradient(to_bottom,#000_calc(100%-20px),transparent)] [@media(max-height:600px)]:flex-none [@media(max-height:600px)]:overflow-visible [@media(max-height:600px)]:[mask-image:none]"
+      >
         {load.state === "error" && (
           <div className={clsx("py-6", pad)}>
             <ErrorState
@@ -338,7 +360,7 @@ function EvidenceContent({
             />
           </div>
         )}
-        {load.state !== "error" && !body && <DrawerSkeleton />}
+        {load.state !== "error" && !body && <DrawerSkeleton row={row?.id === id ? row : null} />}
         {load.state !== "error" && body && (
           <div className={clsx("transition-opacity duration-120", stale && "opacity-50")}>
             <Evidence claim={body} pad={pad} onReview={stale ? undefined : review} onOpen={onOpen} photosRef={photos} viewPhotos={stale ? undefined : viewPhotos} />
@@ -346,9 +368,15 @@ function EvidenceContent({
         )}
       </div>
 
+      {/* A held claim still loading keeps its foot's room, so the buttons never pop in under the evidence. */}
+      {!body && load.state === "loading" && row?.id === id && row.decision === "held" && <GhostFooter />}
       {claim?.review && (
         <footer className={clsx("border-t border-line bg-surface py-4", pad)}>
-          <ReviewActions key={claim.id} claim={claim} onDone={done} onFailed={() => router.refresh()} intent={act} onMode={onMode} onOpen={onOpen} />
+          {/* One set of actions at a time: while claims are picked, the bar under the grid acts and these step back. */}
+          {picking && <p className="mb-3 text-ui text-muted">Picked claims use the bar under the list.</p>}
+          <div inert={picking || undefined} className={clsx("transition-opacity duration-160", picking && "opacity-40")}>
+          <ReviewActions key={claim.id} claim={claim} onDone={done} onFailed={() => router.refresh()} intent={act} onMode={onMode} onBusy={setBusy} onOpen={onOpen} />
+          </div>
         </footer>
       )}
       {claim && justSaved && (
@@ -357,7 +385,7 @@ function EvidenceContent({
             <span className="font-medium text-text">
               {justSaved.decision === "paid" ? "Approved" : "Rejected"} at <span className="font-mono">{formatClock(justSaved.at)}</span> UTC.
             </span>{" "}
-            {justSaved.decision !== "paid" ? "The owner sees your reason on their claim page." : claim.seeded ? NO_PAYOUT : `${claim.amount} sent through PayPal.`}
+            {justSaved.decision !== "paid" ? "The owner sees your reason on their claim page." : claim.seeded ? null : `${claim.amount} sent through PayPal.`}
             {nextHeld === null && " No held claims are left in this list."}
           </p>
           {nextHeld && onOpen && (
@@ -374,7 +402,9 @@ function EvidenceContent({
           className={clsx("flex h-9 shrink-0 items-center gap-4 border-t border-line text-micro text-faint [@media(max-height:600px)]:hidden [@media(max-height:960px)]:h-8", pad)}
           aria-hidden="true"
         >
-          {mode === "approve" && labels && !labels.blocked ? (
+          {busy && claim?.review ? (
+            <span>Saving · keys you press now go to the next claim</span>
+          ) : mode === "approve" && labels && !labels.blocked ? (
             <>
               <Keys k={["A"]}>{labels.confirmKey}</Keys>
               <Keys k={["Esc"]}>Cancel</Keys>
@@ -394,8 +424,8 @@ function EvidenceContent({
                   <Keys k={["V"]}>Photos</Keys>
                 </span>
               ) : null}
-              {labels && !labels.blocked && <Keys k={["A"]}>{labels.approveKey}</Keys>}
-              {labels && <Keys k={["R"]}>Reject</Keys>}
+              {labels && !labels.blocked && !picking && <Keys k={["A"]}>{labels.approveKey}</Keys>}
+              {labels && !picking && <Keys k={["R"]}>Reject</Keys>}
               <Keys k={["Esc"]}>Close</Keys>
             </>
           )}
@@ -404,6 +434,9 @@ function EvidenceContent({
     </div>
   );
 }
+
+// The panel's scroller fades its last 20px, so a line cut by its edge reads as one that goes on, never a sliced glyph.
+const EDGE = 20;
 
 // The rule's outcome under Decision, when the reason itself already leads the panel.
 const OUTCOME: Partial<Record<DrawerClaim["decision"], string>> = {
@@ -436,7 +469,8 @@ function moneySteps(claim: DrawerClaim): Step[] {
     { label: "Photo check", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "The account checks stopped it, so the photos were never read." : undefined },
     { label: "Decision", at: decided },
   ];
-  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? NO_PAYOUT : undefined }];
+  // A starter claim sends no payout: the approve confirm said so when it was decided, and the Payout cell says so on hover.
+  if (claim.seeded) return [...steps, { label: "PayPal", at: null }];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
   const failure = payoutFailure(claim);
   if (failure) {

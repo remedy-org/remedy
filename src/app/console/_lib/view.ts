@@ -9,9 +9,14 @@ import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
 export const cents = (m: Pick<Money, "value">) => Math.round(Number(m.value) * 100);
 
-// The one wording for an approved refund on a starter claim, which never pays out: the Payout cell, the time card, the
-// drawer's timeline, the ledger and the CPSC report.
-export const NO_PAYOUT = "Filed before PayPal Payouts was connected; no payout sent.";
+// Why an approved starter claim (the claims every workspace opens with, on the shared recall) sent no money, in the
+// product's words: the Payout cell's hover card and the time card. The approve confirm says it once per decision
+// (ReviewActions), the ledger's hover card and the CPSC report in the plural (noPayout).
+export const NO_PAYOUT = "Came with your workspace. Approving it records the decision and sends no payout.";
+
+/** The same reason for several approved starter claims: the ledger's hover card and the CPSC report's own row. */
+export const noPayout = (n: number) =>
+  n === 1 ? "1 approved claim came with your workspace. Approving it recorded the decision and sent no payout." : `${n.toLocaleString("en-US")} approved claims came with your workspace. Approving them recorded the decision and sent no payout.`;
 
 export function formatCents(c: number): string {
   return `$${(c / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -473,8 +478,8 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
   const reviewed = c.reasons.find((r) => r.check === "review");
   switch (c.decision) {
     case "paid":
-      // A starter claim was decided like any claim; it was filed before PayPal Payouts was connected and never pays out,
-      // which the timeline's PayPal step says once.
+      // A starter claim was decided like any claim; it came with the workspace and never pays out, which the approve
+      // confirm said when it was decided.
       if (c.seeded) return reviewed ? `Approved on review for ${amount}.` : `All checks passed, so the rule approved the ${amount} refund.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `All checks passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {

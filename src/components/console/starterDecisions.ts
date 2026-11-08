@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import type { ClaimRow } from "@/app/console/_lib/view";
 
-// Decisions on the shared recall's starter claims. They were filed before PayPal Payouts was connected and sit in every
+// Decisions on the shared recall's starter claims. They came with the workspace, never pay out and sit in every
 // company's console, so a person's approve or reject is kept for this browser tab: the claim leaves Held here, with the
 // evidence as decided, and another company's queue is untouched. Nothing is paid either way.
 

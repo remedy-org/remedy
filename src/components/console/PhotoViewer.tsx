@@ -28,8 +28,9 @@ export interface PhotoViewerProps {
 
 /**
  * The photos full size, over the console: every photo of the claim side by side, uncropped, with the claim id and the
- * question that held it on top. ← and → move between the photos, Esc goes back to the panel (the dialog returns focus
- * to the thumbnail that opened it). On a phone it shows one photo at a time.
+ * question that held it on top. A and R approve or reject from here as in the panel (the viewer closes on the panel's
+ * confirm, which takes the second A), ← and → move between the photos where one shows at a time, Esc goes back to the
+ * panel (the dialog returns focus to the thumbnail that opened it). On a phone it shows one photo at a time.
  */
 export function PhotoViewer({ claimId, photos, start, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -61,6 +62,14 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
         onClose();
       }}
       onKeyDown={(e) => {
+        // The panel's keys, where the call is made: A opens the approve confirm (A again pays), R the reason.
+        if (onReview && labels && !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat) {
+          const key = e.key.toLowerCase();
+          if ((key === "a" && !labels.blocked) || key === "r") {
+            e.preventDefault();
+            return review(key === "a" ? "approve" : "reject");
+          }
+        }
         if (photos.length < 2 || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
         e.preventDefault();
         go(e.key === "ArrowRight" ? 1 : -1);
@@ -136,13 +145,21 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
                 {labels.approve}
               </Button>
             )}
-            <Button size="sm" variant={labels.blocked ? "primary" : "secondary"} onClick={() => review("reject")}>
+            {/* Amber is for moving money only: a reject is the quiet button even when it leads. */}
+            <Button size="sm" variant="secondary" onClick={() => review("reject")}>
               {labels.reject}
             </Button>
           </div>
         )}
         <p className="ml-auto flex items-center gap-4 text-micro text-faint" aria-hidden="true">
-          {photos.length > 1 && <Keys k={["←", "→"]}>Switch photo</Keys>}
+          {onReview && labels && !labels.blocked && <Keys k={["A"]}>{labels.approveKey}</Keys>}
+          {onReview && labels && <Keys k={["R"]}>Reject</Keys>}
+          {/* Only where one photo shows at a time (a phone): wider, every photo is already in view. */}
+          {photos.length > 1 && (
+            <span className="sm:hidden">
+              <Keys k={["←", "→"]}>Switch photo</Keys>
+            </span>
+          )}
           <Keys k={["Esc"]}>Back to the evidence</Keys>
         </p>
       </footer>

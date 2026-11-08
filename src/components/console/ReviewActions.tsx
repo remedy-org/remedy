@@ -51,7 +51,7 @@ const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 /**
  * One name for each review action, the same on the panel's buttons, the photo viewer's and the key hints: "Pay $29.99…"
  * (or "Try again: pay…" after a payout that failed on the way to PayPal), "Reject…"; a starter claim's are "Approve…"
- * and "Reject…", since nothing is paid (it was filed before PayPal Payouts was connected). blocked: approve's checks
+ * and "Reject…", since nothing is paid (it came with the workspace). blocked: approve's checks
  * would stop the payout now (DrawerClaim.stops), so Reject leads and approve isn't offered as a button. confirmKey:
  * what A does once the confirm is open.
  */
@@ -73,7 +73,7 @@ export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "dec
  * A starter claim's decision comes back decided but unsaved, and the panel keeps it for this tab (starterDecisions.ts).
  * The keyboard's A and R (intent) open the same confirm or form as the buttons and move focus into it. While the
  * confirm or form is open (data-review-open), the queue's A and R do nothing; the confirm takes A itself, the reason
- * takes ⌘↵ (Ctrl+Enter), and 1 to 4 pick a quick reason while it is empty. onMode tells the panel which form opened (the
+ * takes ⌘↵ (Ctrl+Enter), and 1 to 4 pick a quick reason while it is empty or holds another quick reason. onMode tells the panel which form opened (the
  * reject form brings the photos into view).
  */
 export function ReviewActions({
@@ -82,10 +82,13 @@ export function ReviewActions({
   onFailed,
   intent,
   onMode,
+  onBusy,
   onOpen,
 }: {
   claim: DrawerClaim;
   onMode?: (mode: Mode) => void;
+  // A decision is saving: the panel's key line says the keys wait (the queue holds them for the next claim).
+  onBusy?: (busy: boolean) => void;
   onDone: (c: ReviewedClaim) => void;
   // A refused approve still writes the claim's history (payout_failed, approve_refused): the panel reloads it.
   onFailed?: () => void;
@@ -112,6 +115,11 @@ export function ReviewActions({
   useEffect(() => {
     onMode?.(mode);
   }, [mode, onMode]);
+  useEffect(() => {
+    onBusy?.(busy);
+  }, [busy, onBusy]);
+  // The decision unmounts the buttons in the same render that ends the save.
+  useEffect(() => () => onBusy?.(false), [onBusy]);
   // A reason the route or the check below refused: focus goes back into the reason, never to the page, where the next
   // letter typed would be a shortcut.
   const reasonError = error?.fields?.reason;
@@ -204,6 +212,8 @@ export function ReviewActions({
     <div
       className="flex flex-col gap-4"
       data-review-open={mode !== "idle" || busy || undefined}
+      // The queue holds keys typed while this is set, and replays them on the next claim (keyQueue.ts).
+      data-saving={busy || undefined}
       onKeyDown={(e) => {
         // Esc cancels the open confirm or reason first; the console's own Esc (close the panel) never sees this one.
         if (e.key === "Escape" && mode !== "idle" && !busy) {
@@ -309,7 +319,8 @@ export function ReviewActions({
           {/* One line, so the evidence above keeps its height. */}
           {review.sample ? (
             <p className="text-ui text-pretty text-muted">
-              <span className="font-medium text-text">Approve {claim.id}?</span> Filed before PayPal Payouts was connected, so no payout is sent.
+              {/* The one place a starter claim's decision says why no money moves. */}
+              <span className="font-medium text-text">Approve {claim.id}?</span> It came with your workspace, so no PayPal payout goes out.
             </p>
           ) : (
             <p className="text-ui text-muted">
@@ -373,11 +384,11 @@ export function ReviewActions({
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   onKeyDown={(e) => {
-                    // ⌘↵ or Ctrl+Enter sends it; 1 to 4 pick a quick reason while the field is still empty.
+                    // ⌘↵ or Ctrl+Enter sends it; 1 to 4 pick a quick reason while the field is empty or holds one.
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
                       form.current?.requestSubmit();
-                    } else if (!reason && /^[1-4]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                    } else if ((!reason || QUICK.some((q) => q.text(claim.code) === reason)) && /^[1-4]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
                       e.preventDefault();
                       e.stopPropagation();
                       quick(Number(e.key) - 1);

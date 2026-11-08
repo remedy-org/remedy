@@ -52,7 +52,7 @@ describe("approveClaim", () => {
     await store.putClaim(claim);
     const pay = vi.fn();
     const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
-    expect(result).toMatchObject({ ok: true, claim: { decision: "paid", payout: null }, sample: expect.stringContaining("no payout sent") });
+    expect(result).toMatchObject({ ok: true, claim: { decision: "paid", payout: null }, sample: expect.stringContaining("sends no payout") });
     expect(result.ok && result.claim.reasons.at(-1)).toEqual({ check: "review", outcome: "pass", text: "Approved on review by x" });
     expect(JSON.stringify(result)).not.toMatch(/came with your console/);
     expect(pay).not.toHaveBeenCalled();

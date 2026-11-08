@@ -1,15 +1,16 @@
 "use client";
 
 import clsx from "clsx";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { CrossIcon } from "@/components/ui";
-import { formatCents, ledgerOf, searchKey, searchText, type ClaimRow } from "@/app/console/_lib/view";
+import { duration, formatCents, ledgerOf, searchKey, searchText, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
 import { BulkBar, type BulkMode, type BulkResult } from "./BulkBar";
 import { ClaimsGrid, type ClaimsGridHandle, type GridTotals, type GroupBy, type SortOrder } from "./ClaimsGrid";
 import type { DecisionModel } from "./DecisionFilter";
 import { EvidenceShell } from "./EvidenceShell";
 import { Keys } from "./Keys";
+import { holdable, keyQueue } from "./keyQueue";
 import { formatCount, plural } from "./format";
 import { Ledger } from "./Ledger";
 import type { ReviewIntent } from "./ReviewActions";
@@ -147,8 +148,10 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     return () => window.clearTimeout(t);
   }, [notice]);
   const [help, setHelp] = useState(false);
-  // A or R on a claim they can't act on: said in the footer for a few seconds, so a key never seems to do something silently.
-  const [hint, setHint] = useState<string | null>(null);
+  // A or R on a claim they can't act on: said under that claim's row (else at the grid's foot) until the next key, or 4 s,
+  // so a key never seems to do something silently.
+  const [hint, setHintState] = useState<{ text: string; row: string | null } | null>(null);
+  const setHint = useCallback((text: string | null, row: string | null = null) => setHintState(text ? { text, row } : null), []);
   // The claims picked for a bulk decision, in the grid's order, and the bulk bar's step.
   const [picked, setPicked] = useState<string[]>([]);
   const [bulk, setBulk] = useState<BulkMode>("idle");
@@ -160,10 +163,22 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   useEffect(() => {
     if (!hint) return;
     const t = window.setTimeout(() => setHint(null), 4000);
-    return () => window.clearTimeout(t);
-  }, [hint]);
+    // The next key moves on from it, wherever focus is (the grid takes j and k before the window sees them).
+    const next = () => setHint(null);
+    window.addEventListener("keydown", next, true);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("keydown", next, true);
+    };
+  }, [hint, setHint]);
   const grid = useRef<ClaimsGridHandle>(null);
   const searchBox = useRef<HTMLInputElement>(null);
+  // Keys typed while a decision saves, or while the claim they are meant for loads, wait and replay in order once its
+  // panel is ready (keyQueue.ts). awaiting: the claim they wait for; savingSeen and decidedNow tell a save that went
+  // through from one that didn't, whose keys are let go rather than landing on the claim that stayed.
+  const awaiting = useRef<string | null>(null);
+  const savingSeen = useRef(false);
+  const decidedNow = useRef(false);
   // Beside the docked panel the toolbar has the grid's width only: an empty search folds to its icon, so the tabs and
   // controls never crowd it into "Search cla". It opens on a click or /, and stays open while it holds words.
   const [searchOpen, setSearchOpen] = useState(false);
@@ -256,6 +271,13 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   // After a person approves or rejects a held claim, the next held claim in the grid's order as it stood. Beside the
   // docked panel focus moves to its row and the panel follows; the sheet offers it in its footer.
   const [next, setNext] = useState<{ after: string; id: string | null } | null>(null);
+  // This visit's decisions, and when the first decided claim was opened, for the one line that says what the session did
+  // once the Held queue is clear.
+  const openedAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (open) openedAt.current = Date.now();
+  }, [open]);
+  const [session, setSession] = useState<{ since: number | null; done: { id: string; decision: string; at: number }[] }>({ since: null, done: [] });
   const decided = useCallback(
     (id: string, decision?: string, claim?: { sample?: boolean; amount?: string } | null) => {
       const order = grid.current?.displayedIds() ?? found.map((r) => r.id);
@@ -265,7 +287,13 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
       const nextId = (held[i + 1] ?? held[i - 1]) || null;
       setNext({ after: id, id: nextId });
       const said =
-        decision === "rejected" ? `${id} rejected` : claim?.sample ? `${id} approved · no payout sent` : `${id} approved · ${claim?.amount ?? "refund"} sent`;
+        decision === "rejected" ? `${id} rejected` : claim?.sample ? `${id} approved` : `${id} approved · ${claim?.amount ?? "refund"} sent`;
+      // Keys typed while it saved are for the claim that opens next: they wait for its panel (keyQueue).
+      decidedNow.current = true;
+      const start = openedAt.current;
+      const now = Date.now();
+      setSession((s) => ({ since: s.since ?? start, done: [...s.done.filter((d) => d.id !== id), { id, decision: decision ?? "", at: now }] }));
+      if (wide && nextId) awaiting.current = nextId;
       if (wide && nextId) {
         setNotice({ id: nextId, text: said });
         requestAnimationFrame(() => {
@@ -282,6 +310,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   );
   const nextHeld = next && next.after === open ? next.id : undefined;
 
+
   // A bulk decision finished: what happened, in the footer, and on to the next held claim the pick didn't hold. Claims
   // PayPal or the checks refused stay picked, so the bar keeps naming them.
   const bulkDone = useCallback(
@@ -291,12 +320,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
       const samples = done.filter((r) => r.sample).length;
       const verb = decision === "reject" ? "rejected" : samples === done.length ? "approved" : "paid through PayPal";
       for (const r of done) if (r.claim?.seeded) keepStarterDecision(r.claim);
-      if (done.length) {
-        setHint(
-          `${plural(done.length, "claim")} ${verb}` +
-            (decision === "approve" && samples ? (samples === done.length ? ": filed before PayPal Payouts was connected, so no payout was sent" : `; ${samples} filed before PayPal Payouts was connected sent nothing`) : ""),
-        );
-      }
+      // The confirm said why the starter claims send nothing: the result says what happened, once.
+      if (done.length) setHint(decision === "approve" && samples && samples < done.length ? `${plural(done.length - samples, "claim")} paid through PayPal, ${formatCount(samples)} approved` : `${plural(done.length, "claim")} ${verb}`);
       setBulk("idle");
       setPicked(failed);
       if (failed.length) return;
@@ -318,7 +343,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         else grid.current?.focusFirst();
       });
     },
-    [found, rows, wide, refresh],
+    [found, rows, wide, refresh, setHint],
   );
 
   // The tab, search and open claim live in the URL (replaceState: no navigation, no server render), so a reload or a
@@ -336,6 +361,65 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
       // Safari allows 100 replaceState calls in 30 s; the view itself is unaffected.
     }
   }, [tab, search, open]);
+
+  useEffect(() => {
+    if (!wide) return;
+    const replayed = new WeakSet<Event>();
+    const gated = () => {
+      const panel = document.querySelector(".evidence-panel");
+      if (!panel) {
+        awaiting.current = null;
+        return false;
+      }
+      if (panel.querySelector("[data-saving]")) {
+        if (!savingSeen.current) decidedNow.current = false;
+        savingSeen.current = true;
+        return true;
+      }
+      if (savingSeen.current) {
+        savingSeen.current = false;
+        if (!decidedNow.current) {
+          // PayPal refused it, or another tab decided it first: the claim stays, and keys meant for the next one never
+          // land on it.
+          keys.clear();
+          setHint("Not saved, so the keys pressed meanwhile were let go");
+          return false;
+        }
+      }
+      const want = awaiting.current;
+      if (want && !panel.querySelector(`[data-ready="${CSS.escape(want)}"]`)) return true;
+      awaiting.current = null;
+      return false;
+    };
+    const keys = keyQueue({
+      gated,
+      send: (k) => {
+        const el = document.activeElement instanceof HTMLElement ? document.activeElement : document.body;
+        const ev = new KeyboardEvent("keydown", { ...k, bubbles: true, cancelable: true, composed: true });
+        replayed.add(ev);
+        el.dispatchEvent(ev);
+        // A letter typed into a reason while it waited: typed in now, as the browser would have.
+        if (!ev.defaultPrevented && k.key.length === 1 && !k.metaKey && !k.ctrlKey && !k.altKey && (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement)) {
+          document.execCommand("insertText", false, k.key);
+        }
+      },
+      frame: (fn) => requestAnimationFrame(fn),
+      now: () => performance.now(),
+      onDrop: () => setHint("Keys pressed while the claim was saving were let go"),
+    });
+    // Capture, on the window: before the grid, the panel or a field sees the key.
+    const onKey = (e: KeyboardEvent) => {
+      if (replayed.has(e) || e.repeat || e.key === "Tab" || !holdable(e) || !keys.holds()) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      keys.hold({ key: e.key, code: e.code, shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey, altKey: e.altKey });
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      keys.clear();
+    };
+  }, [wide, setHint]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -376,7 +460,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         setSearchOpen(true);
         requestAnimationFrame(() => searchBox.current?.focus());
       } else if (/^[1-6]$/.test(e.key)) {
-        changeTab(TABS[Number(e.key) - 1].id);
+        // Never while a claim's confirm, reason or save is up: a digit there is a quick reason or a slip, not a new list.
+        if (!document.querySelector(".evidence-panel [data-review-open]")) changeTab(TABS[Number(e.key) - 1].id);
       } else if ((e.key === "v" || e.key === "V") && open) {
         // The open claim's photos, full size.
         e.preventDefault();
@@ -407,11 +492,13 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           return;
         }
         if (row.decision !== "held") {
-          setHint(`${row.id} isn't held: only held claims can be approved or rejected`);
+          setHint(`${row.id} isn't held: only held claims can be approved or rejected`, row.id);
           return;
         }
         setHint(null);
         if (row.id !== open) openClaim(row.id);
+        // The keys after this one wait until its panel has loaded (keyQueue).
+        if (wide) awaiting.current = row.id;
         setIntent((i) => ({
           mode: e.key === "a" ? "approve" : "reject",
           n: (i?.n ?? 0) + 1,
@@ -423,7 +510,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, wide, fill, close, openClaim, changeTab, rows, help, picked, pickedSet, pick]);
+  }, [open, wide, fill, close, openClaim, changeTab, rows, help, picked, pickedSet, pick, setHint]);
 
   // The column's menu changed the Verdict filter: a single decision is its tab, anything else is All, filtered.
   const onDecisionFilter = useCallback((m: DecisionModel | null) => {
@@ -488,6 +575,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                     onChange={(e) => {
                       setSearch(e.target.value);
                       pick([]);
+                      setHint(null);
                     }}
                     onBlur={() => setSearchOpen(false)}
                     onKeyDown={(e) => {
@@ -577,10 +665,14 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               picked={pickedSet}
               onPick={pick}
             />
+            {hint && <RowHint key={`${hint.text}|${hint.row}`} text={hint.text} row={hint.row} />}
             {shown === 0 && (
               // Under the header row, sized to its words: the grid's frame stays, with the note where the rows would be.
               <div className="absolute inset-x-px top-[37px] bottom-px z-10 rounded-b-card bg-surface px-6 pt-8">
-                {!tabRows.length && !filtered && !search ? (
+                {!tabRows.length && !filtered && !search && tab === "held" && session.done.length > 0 ? (
+                  // The queue cleared in this visit: what the session did, in one line, at the moment the work is done.
+                  <Note title="Held queue clear">{sessionLine(session.done, session.since)}</Note>
+                ) : !tabRows.length && !filtered && !search ? (
                   <Note title={EMPTY_TAB[tab as Exclude<Tab, "all">].title}>{EMPTY_TAB[tab as Exclude<Tab, "all">].description}</Note>
                 ) : search ? (
                   <Note
@@ -639,6 +731,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                   }}
                   onDone={bulkDone}
                   onOpen={goTo}
+                  onBack={() => requestAnimationFrame(() => (picked[0] ? grid.current?.focusRow(picked[0]) : grid.current?.focusFirst()))}
                 />
               </div>
             )}
@@ -664,7 +757,6 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               {ledger.settling > 0 && ` · ${formatCount(ledger.settling)} settling at PayPal`}
               {tab === "held" && " · oldest first"}
             </span>
-            {hint && <span className="text-text-2">{hint}</span>}
             <span className="ml-auto inline-flex items-center gap-4">
               <Status state={state} at={at} failed={failed} onRefresh={refresh} />
               <button type="button" onClick={() => setHelp(true)} className="-my-1 inline-flex h-8 items-center gap-1.5 rounded-control px-2 hover:text-text">
@@ -697,6 +789,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               nextHeld={nextHeld}
               back={back}
               onBack={goBack}
+              picking={picked.length > 1}
             />
             </Suspense>
             ) : (
@@ -726,6 +819,38 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
 
       {help && <ShortcutSheet onClose={() => setHelp(false)} />}
     </section>
+  );
+}
+
+/** "2 approved, 1 rejected, in 1 min 12 s.": this visit's decisions on the Held queue. */
+function sessionLine(done: { decision: string; at: number }[], since: number | null): string {
+  const approved = done.filter((d) => d.decision === "paid").length;
+  const rejected = done.filter((d) => d.decision === "rejected").length;
+  const parts = [approved && `${formatCount(approved)} approved`, rejected && `${formatCount(rejected)} rejected`].filter(Boolean).join(", ");
+  const took = since === null ? null : Math.max(1, Math.round((Math.max(...done.map((d) => d.at)) - since) / 1000));
+  return `${parts}${took === null ? "" : `, in ${duration(took)}`}.`;
+}
+
+/** A key's "can't do that" under the row it was pressed on (above it near the grid's foot), else at the grid's foot: where
+ * the reviewer is looking, never in the footer's corner. A floating line, so no row moves. */
+function RowHint({ text, row }: { text: string; row: string | null }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const box = el?.parentElement;
+    if (!el || !box) return;
+    const at = row ? box.querySelector(`.claims-grid .ag-row[row-id="${CSS.escape(row)}"]`) : null;
+    const b = box.getBoundingClientRect();
+    const r = at?.getBoundingClientRect();
+    if (!r || r.bottom < b.top || r.top > b.bottom) return;
+    const below = r.bottom - b.top + 4;
+    el.style.bottom = "auto";
+    el.style.top = `${below + el.offsetHeight > b.height - 8 ? r.top - b.top - el.offsetHeight - 4 : below}px`;
+  }, [row]);
+  return (
+    <p ref={ref} role="status" className="pointer-events-none absolute bottom-3 left-4 z-20 max-w-[calc(100%-2rem)] rounded-control bg-surface px-3 py-1.5 text-ui text-text-2 shadow-float">
+      {text}
+    </p>
   );
 }
 
@@ -791,8 +916,8 @@ const SHORTCUTS: [string[], "/" | "to" | "+" | null, string][] = [
   [["V", "Space"], "/", "The open claim's photos"],
   [["⇧", "↑/↓"], "+", "Pick several claims"],
   [["X"], null, "Pick or drop a claim"],
-  [["A"], null, "Approve (press twice)"],
-  [["R"], null, "Reject"],
+  [["A"], null, "Approve (press twice), in the panel or the photos"],
+  [["R"], null, "Reject, in the panel or the photos"],
   [["⌘", "↵"], "+", "Send the reason"],
   [["Esc"], null, "Close the panel or clear the selection"],
   [["?"], null, "This sheet"],

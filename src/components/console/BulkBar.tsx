@@ -18,7 +18,7 @@ export type BulkMode = "idle" | "approve" | "reject";
 export interface BulkResult {
   id: string;
   ok: boolean;
-  // A starter claim (filed before PayPal Payouts was connected): decided, never paid, kept in this tab.
+  // A starter claim (it came with the workspace): decided, never paid, kept in this tab.
   sample: boolean;
   // The claim as decided, when it was.
   claim?: ReviewedClaim;
@@ -42,9 +42,12 @@ export function BulkBar({
   onClear,
   onDone,
   onOpen,
+  onBack,
 }: {
   // The picked claims, in the grid's order.
   rows: ClaimRow[];
+  // Esc out of the confirm or the reason: focus back on the pick's anchor row, never the page.
+  onBack?: () => void;
   mode: BulkMode;
   onMode: (m: BulkMode) => void;
   onClear: () => void;
@@ -91,13 +94,22 @@ export function BulkBar({
       ref={bar}
       role="region"
       aria-label="Picked claims"
-      className="w-full rounded-card bg-surface-2 text-ui shadow-[inset_0_0_0_1px_var(--line)]"
+      // A strip under the grid on a hairline, not a box: the pick's one set of actions.
+      className="w-full border-t border-line-2 bg-surface-2 text-ui"
       onKeyDown={(e) => {
         if (e.key === "Escape" && !busy) {
           e.preventDefault();
           e.stopPropagation();
-          if (mode !== "idle") onMode("idle");
-          else onClear();
+          if (mode !== "idle") {
+            onMode("idle");
+            onBack?.();
+          } else onClear();
+        }
+        // A again approves, as the key line says (A opened this confirm).
+        if (mode === "approve" && !busy && (e.key === "a" || e.key === "A") && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          run("approve");
         }
       }}
     >
@@ -124,6 +136,18 @@ export function BulkBar({
               setReason(e.target.value);
               setError(null);
             }}
+            onKeyDown={(e) => {
+              // As in the panel: ⌘↵ or Ctrl+Enter sends it, and 1 to 4 pick a quick reason while the box is empty or holds one.
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              } else if ((!reason || QUICK.some((q) => generic(q) === reason)) && /^[1-4]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                setReason(generic(QUICK[Number(e.key) - 1]));
+                setError(null);
+              }
+            }}
             aria-describedby="bulk-reason-hint"
             aria-invalid={error ? true : undefined}
             className="w-full resize-none rounded-control border border-line-strong bg-surface px-3 py-2 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0"
@@ -131,23 +155,28 @@ export function BulkBar({
           <p id="bulk-reason-hint" className={clsx("text-micro", error ? "text-stop" : "text-muted")}>
             {error ?? "Each owner reads this on their claim page, with their own code where the reason names it."}
           </p>
+          {/* The panel's quick reasons: outlined choices in the text colour, each with its number key. */}
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick reasons">
-            {QUICK.map((q) => {
+            {QUICK.map((q, i) => {
               const text = generic(q);
               return (
                 <button
                   key={q.label}
                   type="button"
                   aria-pressed={reason === text}
+                  aria-keyshortcuts={String(i + 1)}
                   onClick={() => {
                     setReason(text);
                     setError(null);
                   }}
                   className={clsx(
-                    "inline-flex h-8 items-center rounded-control px-2.5 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] hover:text-text",
-                    reason === text ? "bg-surface-3 text-text" : "text-muted",
+                    "inline-flex h-8 items-center gap-1.5 rounded-control px-2 text-ui whitespace-nowrap text-text shadow-[inset_0_0_0_1px_var(--line-strong)] transition-colors duration-160 hover:bg-surface-2",
+                    reason === text && "bg-surface-3 shadow-[inset_0_0_0_1px_var(--text-2)]",
                   )}
                 >
+                  <span aria-hidden="true" className="font-mono text-micro text-faint">
+                    {i + 1}
+                  </span>
                   {q.label}
                 </button>
               );
@@ -206,7 +235,8 @@ export function BulkBar({
           )}
           {mode === "reject" && (
             <>
-              <Button size="sm" type="submit" form="bulk-reject" pending={busy} pendingLabel={verb}>
+              {/* The quiet button: amber is for moving money only. */}
+              <Button size="sm" type="submit" form="bulk-reject" variant="secondary" pending={busy} pendingLabel={verb}>
                 Reject {held.length}
               </Button>
               <Button size="sm" variant="tertiary" arrow={false} disabled={busy} onClick={() => onMode("idle")}>
@@ -227,22 +257,38 @@ export function BulkBar({
           )}
         </div>
       </div>
-      {mode === "idle" && !busy && !failed.length && (
+      {!busy && !failed.length && (
+        // What the keys do now, in every mode, as the panel's key line says it.
         <p aria-hidden="true" className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-4 py-2 text-micro text-faint">
-          <Keys k={["⇧", "↑/↓"]}>Pick more</Keys>
-          {held.length > 0 && <Keys k={["A"]}>Approve</Keys>}
-          {held.length > 0 && <Keys k={["R"]}>Reject</Keys>}
-          <Keys k={["Esc"]}>Clear</Keys>
+          {mode === "reject" ? (
+            <>
+              <Keys k={["1–4"]}>Quick reason</Keys>
+              <Keys k={["⌘↵"]}>Reject {held.length}</Keys>
+              <Keys k={["Esc"]}>Cancel</Keys>
+            </>
+          ) : mode === "approve" ? (
+            <>
+              <Keys k={["A"]}>{owed.length ? `Pay ${formatCents(cents)}` : `Approve ${held.length}`}</Keys>
+              <Keys k={["Esc"]}>Cancel</Keys>
+            </>
+          ) : (
+            <>
+              <Keys k={["⇧", "↑/↓"]}>Pick more</Keys>
+              {held.length > 0 && <Keys k={["A"]}>Approve</Keys>}
+              {held.length > 0 && <Keys k={["R"]}>Reject</Keys>}
+              <Keys k={["Esc"]}>Clear</Keys>
+            </>
+          )}
         </p>
       )}
     </div>
   );
 }
 
-/** "Pay $59.98 to 2 owners through PayPal?", saying what the starter claims (filed before PayPal Payouts was connected) do. */
+/** "Pay $59.98 to 2 owners through PayPal?", saying what the starter claims (they came with the workspace) do. */
 function approveLine(held: ClaimRow[], owed: ClaimRow[], cents: number) {
   const starter = held.length - owed.length;
-  if (!owed.length) return `Approve ${plural(held.length, "held claim")}? Filed before PayPal Payouts was connected, so no payout is sent.`;
+  if (!owed.length) return `Approve ${plural(held.length, "held claim")}? ${held.length === 1 ? "It" : "They"} came with your workspace, so no PayPal payout goes out.`;
   const pay = `Pay ${formatCents(cents)} to ${plural(owed.length, "owner")} through PayPal?`;
-  return starter ? `${pay} ${plural(starter, "other claim")}, filed before PayPal Payouts was connected, ${starter === 1 ? "sends" : "send"} nothing.` : pay;
+  return starter ? `${pay} ${plural(starter, "other claim")} came with your workspace and ${starter === 1 ? "sends" : "send"} no payout.` : pay;
 }

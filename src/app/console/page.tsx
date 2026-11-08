@@ -3,6 +3,7 @@ import { ClaimsQueue } from "@/components/console/ClaimsQueue";
 import { CopyField } from "@/components/console/CopyField";
 import { PartialNotice } from "@/components/console/PartialNotice";
 import { RecallHeading } from "@/components/console/RecallHeading";
+import { WorkspaceNote } from "@/components/console/WorkspaceNote";
 import { requireSession } from "@/lib/session";
 import { claimUrl } from "./_lib/links";
 import { gridRows } from "./_lib/queue";
@@ -41,10 +42,12 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
 
   return (
     <main className={`flex flex-1 flex-col gap-4 px-4 pt-6 pb-3 sm:px-6 lg:px-8 ${rows.length ? VIEWPORT : ""}`}>
+      <WorkspaceNote recall={recall} recalls={recalls} company={session.name} />
       <RecallHeading
         recall={recall}
         recalls={recalls}
         basePath="/console"
+        times
         actions={
           <>
             <Button href={`/console/report?recall=${recall.id}`} variant="tertiary" size="sm">

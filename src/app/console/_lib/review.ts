@@ -59,7 +59,7 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
       { ...claim, decision: "paid", reasons: [...claim.reasons, { check: "review", outcome: "pass", text: `Approved on review by ${by}` }] },
       now,
       "approved",
-      `Approved on review by ${by}. ${NO_PAYOUT}`,
+      `Approved on review by ${by}. No payout: the claim came with the workspace.`,
     );
     return { ok: true, claim: decided, sample: `Approved. ${NO_PAYOUT}` };
   }

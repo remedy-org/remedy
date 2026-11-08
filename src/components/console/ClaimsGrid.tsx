@@ -213,6 +213,8 @@ export interface ClaimsGridProps {
   still?: boolean;
   /** Sort oldest first (the held tab: the longest waiting leads) instead of newest first. */
   oldestFirst?: boolean;
+  /** Keep the rows in the order they come in (the sign-in page's picture: decided claims first), unsorted. */
+  keepOrder?: boolean;
   /** Search words, matched by the grid's quick filter against the claim id, code, PayPal account and reason. */
   search?: string;
   /** The Verdict column's filter (the status tabs set it); onDecisionFilter hears it change from the column's menu. */
@@ -315,6 +317,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     fill = false,
     still = false,
     oldestFirst = false,
+    keepOrder = false,
     search = "",
     decisionFilter,
     onDecisionFilter,
@@ -577,6 +580,43 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     return () => window.clearTimeout(t);
   }, [listKey, still]);
 
+  // A new list (a tab, a search, a grouping): a hover card still fading over the old rows goes at once (claims-grid.css).
+  const viewKey = `${filterJson}|${search}|${grouping}`;
+  const lastView = useRef(viewKey);
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el || lastView.current === viewKey) return;
+    lastView.current = viewKey;
+    el.dataset.tipsOff = "";
+    const t = window.setTimeout(() => delete el.dataset.tipsOff, 400);
+    return () => window.clearTimeout(t);
+  }, [viewKey]);
+
+  // A new grouping starts at the top of the list, or with the keyboard's claim in the middle of it, never at the old
+  // pixel offset (partway into a group, its head out of sight); and on a row's edge, never with a row cut under the
+  // header.
+  const lastGrouping = useRef(grouping);
+  useEffect(() => {
+    const grid = api.current;
+    if (!grid || still || lastGrouping.current === grouping) return;
+    lastGrouping.current = grouping;
+    const t = window.setTimeout(() => {
+      if (grid.isDestroyed() || !grid.getDisplayedRowCount()) return;
+      const at = cursor.current ? grid.getRowNode(cursor.current) : null;
+      if (!at?.displayed || at.rowIndex == null) return grid.ensureIndexVisible(0, "top");
+      grid.ensureNodeVisible(at, "middle");
+      const top = grid.getVerticalPixelRange().top;
+      for (let i = 0; i < grid.getDisplayedRowCount(); i++) {
+        const node = grid.getDisplayedRowAtIndex(i);
+        if (node && node.rowTop != null && node.rowHeight != null && node.rowTop + node.rowHeight > top) {
+          if (node.rowTop < top) grid.ensureIndexVisible(i, "top");
+          break;
+        }
+      }
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [grouping, rowData, still]);
+
   // AG Grid leaves its grid role unnamed: name it for the recall, so a screen reader says which claims these are.
   useEffect(() => {
     const el = wrap.current?.querySelector("[role=grid], [role=treegrid]");
@@ -595,9 +635,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     const all: ColDef<GridRow>[] = [
       {
         colId: "createdAt",
-        // The second line's time is UTC (cells.tsx): said once here, so every row's line fits the column. The homepage's
-        // still names the column alone, in the sans face.
-        headerName: still ? "Claim" : "Claim · UTC",
+        // The second line's time is UTC (cells.tsx), said once for the page in its heading ("Times in UTC").
+        headerName: "Claim",
         headerTooltip: still ? undefined : "The claim, the code on its tag, and when it was filed (UTC).",
         field: "createdAt",
         cellRenderer: ClaimCell,
@@ -609,7 +648,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         // The queue is newest first, the held tab oldest first; the homepage's still keeps the order its rows come in
         // (curated in preview.ts) until a visitor sorts it, and a third click on the header gives that order back. In
         // the queue a header click flips the order, with no unsorted step between.
-        sort: still ? undefined : oldestFirst ? "asc" : "desc",
+        sort: still || keepOrder ? undefined : oldestFirst ? "asc" : "desc",
         // The homepage's still keeps the order its rows come in (curated in preview.ts) until a visitor sorts it, and a
         // third click on the header gives that order back. In the queue a header click flips the order.
         sortingOrder: still ? ["desc", "asc", null] : ["desc", "asc"],
@@ -629,9 +668,12 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         // line changes on its own (a refused payout).
         valueGetter: (p) => (p.data ? `${p.data.decision} ${p.data.note ?? ""}` : null),
         cellRenderer: VerdictCell,
-        // All the spare width: the reason is what a reviewer reads first, and the amount stays on the right edge.
-        flex: 1,
+        // The spare width: the reason is what a reviewer reads first, and the amount stays on the right edge. In the queue
+        // it shares the width with the columns after it (four parts to their one each) up to 600px, room for the longest
+        // reason, so a 1920 screen has no empty band between a verdict and its checks.
+        flex: still ? 1 : 4,
         minWidth: still ? VERDICT_MIN.still : VERDICT_MIN.queue,
+        maxWidth: still ? undefined : 600,
         // The homepage's still sorts by verdict too (a visitor's quickest check that it's a grid).
         sortable: true,
         sortingOrder: ["asc", "desc", null],
@@ -735,9 +777,12 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       suppressMovable: still,
       suppressHeaderMenuButton: true,
       ...c,
+      // In the queue the optional columns take their share of a wide grid at their own width or more (the verdict's
+      // flex above), so the space between columns stays even rather than pooling after the verdict.
+      ...(!still && c.colId && c.colId in OPTIONAL.queue && c.width ? { flex: 1, minWidth: c.width } : {}),
       hide: c.hide || hidden.has(c.colId ?? ""),
     }));
-  }, [hidden, still, oldestFirst, stillTips, pointerSettled]);
+  }, [hidden, still, oldestFirst, keepOrder, stillTips, pointerSettled]);
 
   // After every filter, sort or data change: the totals under the grid, each group's count and sum, and the count the
   // queue's footer gives.

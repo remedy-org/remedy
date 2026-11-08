@@ -47,10 +47,15 @@
   outline: none !important;
 }
 
-/* The keyboard marks the whole row, not the one cell it sits on: the open row's tint across every cell (pinned ones
-   included, which paint their own background), with the amber edge above, in place of the cell's ring. */
+/* The keyboard marks the whole row, not the one cell it sits on: an ink tint across every cell (pinned ones included,
+   which paint their own background), between the hover's and a pick's, so the row a run of j presses is on stays easy
+   to follow in a long list, in both themes; its 3px ink edge is drawn below. */
 .claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible) .ag-cell {
-  background-color: var(--surface-2);
+  background-color: color-mix(in oklch, var(--text) 7%, var(--surface));
+}
+.claims-grid:not(:has(.ag-row-selected)) .ag-row.ag-row-focus:has(.ag-cell:focus-visible)::before {
+  width: 3px;
+  background: var(--text);
 }
 
 .claims-grid .ag-row.ag-row-focus .ag-cell.ag-cell-focus:focus-visible {
@@ -118,6 +123,17 @@
   background: transparent;
   border: 0;
   padding: 0;
+}
+
+/* A hover card leaves in 120ms (AG Grid's own fade is 1s, which left a see-through card over the next tab's rows), and
+   one card only: the one opening replaces the one leaving at once. A tab, search or grouping change takes it at once
+   (ClaimsGrid sets data-tips-off). */
+.claims-grid .ag-tooltip-animate {
+  transition: opacity 120ms ease-out;
+}
+.claims-grid:has(.ag-tooltip-custom:not(.ag-tooltip-hiding)) .ag-tooltip-hiding,
+.claims-grid[data-tips-off] .ag-tooltip-custom {
+  display: none;
 }
 
 /* A claim still checking: its last timeline dot breathes (1.6s), static under reduced motion. */
