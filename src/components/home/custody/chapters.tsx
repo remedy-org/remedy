@@ -40,7 +40,7 @@ const ramp = (v: number, a: number, b: number) => clamp01((v - a) / (b - a));
 
 /** A line that lights from 35% once the progress passes `at`, in time, so a step comes up in its turn and a stop never
  * rests on it half lit. Lit at rest. */
-function Lit({ p, at, className, children }: { p?: Progress; at: number; className?: string; children: ReactNode }) {
+function Lit({ p, at, className, children }: { p?: Progress; at: number; className?: string; children?: ReactNode }) {
   const done = useDone();
   const lit = useGate(p ?? done, (v) => v >= at);
   const opacity = useTransform(lit, (k) => 0.35 + 0.65 * k);
@@ -51,15 +51,25 @@ function Lit({ p, at, className, children }: { p?: Progress; at: number; classNa
   );
 }
 
-function RefundLine() {
+/**
+ * A list of steps on a hairline, each with a small node that lights in turn (no numerals: the order is the line). `p`
+ * lights them at `at`; without it they are all lit. `card`: the list sits on the consent card from 720px, so each node
+ * masks the hairline in the card's colour there.
+ */
+function StepLine({ p, at, steps, card, className }: { p?: Progress; at: readonly number[]; steps: readonly string[]; card?: boolean; className?: string }) {
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-ui text-faint">Your refund</span>
-      <div className="flex items-center gap-4">
-        <Money value={CLAIM.amount} size="amount" />
-        <span className="text-ui whitespace-nowrap text-muted">About 5 min start to finish</span>
-      </div>
-    </div>
+    <ol className={clsx("relative flex flex-col gap-2.5 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-line", className)}>
+      {steps.map((s, i) => (
+        <li key={s} className="relative grid grid-cols-[1.25rem_minmax(0,1fr)] text-ui">
+          <span className={clsx("mt-1.5 flex size-2 rounded-full bg-bg", card && "@min-[720px]:bg-surface")}>
+            <Lit p={p} at={at[i]} className="block size-2 rounded-full border border-text-2" />
+          </span>
+          <Lit p={p} at={at[i]}>
+            {s}
+          </Lit>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -79,19 +89,19 @@ export function ConsentChapter({ p }: { p?: Progress }) {
     <div className="@container">
       <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
         <motion.div className={clsx("hidden flex-col @min-[720px]:flex", compact ? "gap-4" : "gap-6")} style={{ opacity: product }}>
-          <span className="micro text-faint">
-            {CLAIM.recall} · Recalled {CLAIM.recalled}
+          <span className="text-ui text-faint">
+            <span className="font-mono">{CLAIM.recall}</span> · Recalled {CLAIM.recalled}
           </span>
           <p className="text-h2 font-medium">{CLAIM.product}</p>
           <p className="flex gap-3 rounded-card bg-stop-soft p-4 text-body font-medium text-text">
             <AlertIcon className="mt-1 shrink-0 text-stop" />
             Risk of serious injury or death from suffocation. Stop using it now.
           </p>
-          <RefundLine />
-          <dl className={clsx("grid grid-cols-2 border-t border-line text-ui", compact && "hidden")}>
+          <dl className={clsx("grid grid-cols-3 border-t border-line text-ui", compact && "hidden")}>
             {[
               ["Units recalled", CLAIM.units],
               ["Sold by", CLAIM.company],
+              ["Claim takes", "About 5 minutes"],
             ].map(([k, v]) => (
               <div key={k} className="flex flex-col gap-1 border-b border-line py-3">
                 <dt className="text-faint">{k}</dt>
@@ -116,33 +126,16 @@ export function ConsentChapter({ p }: { p?: Progress }) {
                 <RemedyMark className="h-4 w-6" />
               </span>
             </div>
-            <span className="text-ui text-muted">
-              CPSC recall 27-071 · Kikea Store <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow
+            {/* The recall, said once: beside the brief it already names it. */}
+            <span className="text-ui text-muted @min-[720px]:hidden">
+              Kikea Store <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow · <span className="font-mono">{CLAIM.recall}</span>
             </span>
           </div>
           <p className="text-title font-medium text-pretty">
             Get $29.99 back for your <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> pillow.{" "}
             <span className="text-muted">Remedy sends it through PayPal once your photo shows it&rsquo;s destroyed.</span>
           </p>
-          <ol
-            className={clsx(
-              "relative flex flex-col gap-3 before:absolute before:top-1 before:bottom-1 before:left-[7px] before:w-px before:bg-line",
-              compact && "@max-[719px]:hidden",
-            )}
-          >
-            {CONSENT_STEPS.map((s, i) => (
-              <li key={s} className="relative grid grid-cols-[1.75rem_minmax(0,1fr)] items-baseline text-ui font-medium">
-                <span className="relative bg-bg font-mono text-micro text-faint @min-[720px]:bg-surface">
-                  <Lit p={p} at={CONSENT_AT[i]}>
-                    {String(i + 1).padStart(2, "0")}
-                  </Lit>
-                </span>
-                <Lit p={p} at={CONSENT_AT[i]}>
-                  {s}
-                </Lit>
-              </li>
-            ))}
-          </ol>
+          <StepLine p={p} at={CONSENT_AT} steps={CONSENT_STEPS} card className={clsx("font-medium", compact && "@max-[719px]:hidden")} />
           {/* A picture of the claim page's button, drawn as a wireframe (a dashed hairline, no fill, faint text) so it never
               reads as a button on this page: the amber and the real buttons stay on the page's own actions. */}
           <span className="flex h-12 items-center justify-center rounded-control border border-dashed border-line-2 text-ui text-faint">
@@ -188,7 +181,7 @@ export function CodeChapter({ p }: { p: Progress }) {
         <div className={clsx("flex flex-col", compact ? "gap-4" : "gap-6")}>
           <div className="flex items-center justify-between gap-4">
             <p className="text-title font-medium">Your one-time code</p>
-            <span className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-line px-2.5 font-mono text-ui text-muted tabular-nums">
+            <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-ui text-muted">
               <ClockIcon size={14} />
               <motion.span>{left}</motion.span>
             </span>
@@ -201,18 +194,7 @@ export function CodeChapter({ p }: { p: Progress }) {
           <p className={clsx("max-w-[44ch] text-body text-muted", compact && "@max-[719px]:hidden")}>Write it on a tag with <NoBreakHyphens>X-VESOLJE</NoBreakHyphens>, big, in marker. Then photograph the cut pillow with the tag on it, in this page&rsquo;s camera.</p>
           <div className="hidden flex-col gap-2 @min-[720px]:flex">
             <span className="text-ui text-faint">Your photo must show</span>
-            <ol className="flex flex-col gap-1.5">
-              {SHOT_LIST.map((s, i) => (
-                <li key={s} className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-baseline text-ui">
-                  <Lit p={p} at={SHOT_AT[i]} className="font-mono text-micro text-faint">
-                    {String(i + 1).padStart(2, "0")}
-                  </Lit>
-                  <Lit p={p} at={SHOT_AT[i]}>
-                    {s}
-                  </Lit>
-                </li>
-              ))}
-            </ol>
+            <StepLine p={p} at={SHOT_AT} steps={SHOT_LIST} />
           </div>
         </div>
 
@@ -220,7 +202,7 @@ export function CodeChapter({ p }: { p: Progress }) {
           <motion.div
             className={clsx("relative w-full origin-[50%_19px] @min-[720px]:max-w-[22rem]", compact ? "max-w-[15rem]" : "max-w-[18rem]")}
             initial={false}
-            animate={swung ? { rotate: -2, y: 0, opacity: 1 } : { rotate: -8, y: -28, opacity: 0 }}
+            animate={swung ? { rotate: 0, y: 0, opacity: 1 } : { rotate: -6, y: -28, opacity: 0 }}
             transition={swung ? SPRING.drop : { duration: 0.16 }}
           >
             {/* The string, from the punched hole up and off the top of the frame. */}
@@ -239,8 +221,9 @@ export function CodeChapter({ p }: { p: Progress }) {
 export function CodeTag({ wipe, short, className }: { wipe?: MotionValue<string>; short?: boolean; className?: string }) {
   return (
     <Paper variant="tag" hole padding="lg" className={clsx("w-full", className)}>
-      <p className="micro text-ink-muted">
-        {CLAIM.recall} · {CLAIM.company}
+      <p className="flex items-baseline justify-between gap-3 text-ui text-ink-muted">
+        {CLAIM.company}
+        <span className="font-mono text-micro">{CLAIM.recall}</span>
       </p>
       <motion.p className="mt-5 font-mono leading-none font-medium tracking-[0.08em]" style={wipe ? { clipPath: wipe } : undefined}>
         <span className="block text-[1.75rem]">X-VESOLJE</span>
@@ -319,7 +302,7 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
       </span>
       {/* The pill sits in a track as wide as the widest pill (Rejected), so every reason starts on one line. */}
       <span className="hidden min-w-0 grid-cols-[5.25rem_minmax(0,1fr)] items-center gap-3 @min-[720px]:grid">
-        <StatusPill status={row.status} className="justify-self-start" />
+        <StatusPill status={row.status} label={row.approved ? "Approved" : undefined} className="justify-self-start" />
         <span className={clsx("truncate", first ? "text-text" : "text-muted")}>{row.reason}</span>
       </span>
       <span className="hidden @min-[720px]:block">
@@ -328,12 +311,12 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
       <span className="hidden font-mono text-faint @min-[720px]:block">{row.time ?? "—"}</span>
       <span className="flex items-center justify-end gap-3 font-mono">
         <span className="@min-[720px]:hidden">
-          <StatusPill status={row.status} />
+          <StatusPill status={row.status} label={row.approved ? "Approved" : undefined} />
         </span>
         {row.amount ? (
-          <span className="flex flex-col items-end leading-tight">
+          // Sent in --text; approved but never paid out (it came with the console) in --muted.
+          <span className={row.approved ? "text-muted" : undefined}>
             <Money value={row.amount} size="grid" />
-            {row.approved && <span className="micro text-[10px] text-faint">Approved</span>}
           </span>
         ) : (
           <span className="text-faint">—</span>
@@ -366,7 +349,6 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             <span className="text-ui font-medium">
               <NoBreakHyphens>Kikea X-VESOLJE nursing pillows</NoBreakHyphens>
             </span>
-            <span className="micro text-faint">{CLAIM.recall}</span>
           </div>
           <div className="flex gap-6 border-b border-line px-4 text-ui">
             {["All", "Paid", "Held", "Refused"].map((t, i) => (
@@ -393,8 +375,8 @@ export function ConsoleChapter({ p }: { p: Progress }) {
           <p className="mt-auto flex items-center justify-between gap-4 border-t border-line px-4 py-3 text-micro text-faint">
             <span>{CONSOLE_ROWS.length + 1} claims</span>
             <span>
-              {1 + CONSOLE_ROWS.filter((r) => r.status === "paid").length} paid · {CONSOLE_ROWS.filter((r) => r.status === "held").length} held for review ·{" "}
-              {CONSOLE_ROWS.filter((r) => r.status === "rejected" || r.status === "blocked").length} stopped
+              {1 + CONSOLE_ROWS.filter((r) => r.status === "paid" && !r.approved).length} paid · {CONSOLE_ROWS.filter((r) => r.approved).length} approved ·{" "}
+              {CONSOLE_ROWS.filter((r) => r.status === "held").length} held for review · {CONSOLE_ROWS.filter((r) => r.status === "rejected" || r.status === "blocked").length} stopped
             </span>
           </p>
         </div>

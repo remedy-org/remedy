@@ -68,12 +68,12 @@ export const WRITE_AT = [0.398, 0.436] as const;
 export const SHOT_AT = [0.432, 0.444, 0.456];
 
 // The console replica after the payout: the M4T claim slides in over the claims the demo workspace starts with, with
-// the ids, codes, photos and reasons buildSeedClaims gives them (src/lib/demo/seed.ts, seed 27071), as in the "For
-// companies" replica (ConsoleReplica.tsx). Seeded claims are decided but never paid out, so an approved one's amount
-// reads "Approved", not sent.
+// the ids, photos and reasons buildSeedClaims gives them (src/lib/demo/seed.ts, seed 27071). Every claim shows its own
+// one-time code, and the one deliberate duplicate (RM-0120, a repost of RM-7581's photo) names the claim it copied.
+// Seeded claims are decided but never paid out, so an approved one reads "Approved", never "Paid", its amount muted.
 export const CONSOLE_ROWS: { photo: string; code: string; id: string; status: Status; reason: string; time?: string; amount?: number; approved?: boolean }[] = [
   { photo: "/demo/c01-1.jpg", code: "K7Q", id: "RM-7581", status: "paid", reason: "Every check passed", amount: 29.99, approved: true },
   { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-9629", status: "held", reason: "Couldn't tell if both photos show the same item" },
-  { photo: "/demo/c10-1.jpg", code: "K7Q", id: "RM-9545", status: "rejected", reason: "Looks like a photo of a screen or a print" },
-  { photo: "/demo/c01-1.jpg", code: "R8D", id: "RM-0120", status: "blocked", reason: "Photo 1 was already used in another claim" },
+  { photo: "/demo/c10-1.jpg", code: "C3W", id: "RM-9545", status: "rejected", reason: "Looks like a photo of a screen or a print" },
+  { photo: "/demo/c01-1.jpg", code: "T6H", id: "RM-0120", status: "blocked", reason: "Same photo as RM-7581" },
 ];

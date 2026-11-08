@@ -15,12 +15,10 @@ import { CodeTag, ConsentChapter } from "./chapters";
 // paid receipt); then the console row the claim lands in. The screens are pictures (aria-hidden); each caption
 // carries the chapter in words.
 
-function Caption({ n, title, text }: { n: string; title: string; text: string }) {
+function Caption({ title, text }: { title: string; text: string }) {
   return (
     <figcaption className="flex flex-col gap-1.5">
-      <span className="eyebrow text-muted">
-        <span className="font-mono">{n}</span> · <span className="text-text-2">{title}</span>
-      </span>
+      <span className="eyebrow text-text-2">{title}</span>
       <span className="max-w-[60ch] text-ui text-pretty text-muted">{text}</span>
     </figcaption>
   );
@@ -31,7 +29,7 @@ function Screen({ i, children }: { i: number; children: ReactNode }) {
   const c = CHAPTERS[i];
   return (
     <figure className="m-0 flex flex-col gap-4">
-      <Caption n={c.n} title={c.title} text={c.text} />
+      <Caption title={c.title} text={c.text} />
       <div className="rounded-frame bg-bg p-5 shadow-card" aria-hidden="true">
         {children}
       </div>
@@ -40,10 +38,10 @@ function Screen({ i, children }: { i: number; children: ReactNode }) {
 }
 
 /** A small paper object on the table, captioned like the screens. */
-function PaperObject({ n, title, text, children, className }: { n: string; title: string; text: string; children: ReactNode; className?: string }) {
+function PaperObject({ title, text, children, className }: { title: string; text: string; children: ReactNode; className?: string }) {
   return (
     <figure className={clsx("m-0 flex flex-col gap-5", className)}>
-      <Caption n={n} title={title} text={text} />
+      <Caption title={title} text={text} />
       <div className="flex justify-center px-4 lg:justify-start" aria-hidden="true">
         {children}
       </div>
@@ -72,8 +70,8 @@ export function StaticFigures() {
           <Screen i={0}>
             <ConsentChapter />
           </Screen>
-          <PaperObject n={CHAPTERS[1].n} title={CHAPTERS[1].title} text={CHAPTERS[1].text} className="lg:self-center">
-            <CodeTag className="max-w-[17rem] -rotate-2" />
+          <PaperObject title={CHAPTERS[1].title} text={CHAPTERS[1].text} className="lg:self-center">
+            <CodeTag className="max-w-[17rem]" />
           </PaperObject>
         </div>
       </div>
@@ -81,11 +79,11 @@ export function StaticFigures() {
       <OpenedExhibit chapters={CHAPTERS.length} />
       <div className="page pb-18 lg:pb-32">
         <div className="grid-12">
-          <PaperObject n={CHAPTERS[5].n} title={CHAPTERS[5].title} text={CHAPTERS[5].text} className="col-span-12 lg:col-span-4">
+          <PaperObject title={CHAPTERS[5].title} text={CHAPTERS[5].text} className="col-span-12 lg:col-span-4">
             <div className="w-full max-w-[20rem] overflow-hidden rounded-card bg-surface shadow-card">
               <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
                 <span className="text-ui font-medium">Console</span>
-                <span className="micro text-faint">{CLAIM.recall}</span>
+                <span className="font-mono text-micro text-faint">{CLAIM.recall}</span>
               </div>
               <div className="flex items-center gap-3 px-4 py-3">
                 <span className="relative h-6 w-8 shrink-0 overflow-hidden rounded-[4px] border border-line">

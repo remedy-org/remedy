@@ -5,7 +5,7 @@ import { CLAIM } from "./claim";
 
 /**
  * The claim page's own top bar, inside every screen the custody sequence shows: recall, then the claim app's step meter.
- * The meter has no number: the rail beside it is the sequence's one counter (01 to 06).
+ * The meter has no number: the rail beside it is the sequence's one list of chapters.
  */
 export function ScreenBar({ step, console: isConsole, compact }: { step: number; console?: boolean; compact?: boolean }) {
   return (
@@ -24,7 +24,7 @@ export function ScreenBar({ step, console: isConsole, compact }: { step: number;
             ))}
           </span>
         )}
-        {isConsole && <span className="micro text-faint">{CLAIM.recall}</span>}
+        {isConsole && <span className="font-mono text-micro text-faint">{CLAIM.recall}</span>}
       </span>
     </div>
   );

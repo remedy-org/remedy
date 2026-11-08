@@ -61,9 +61,8 @@ function RailItem({ p, i }: { p: Progress; i: number }) {
     return on.get() * (0.25 + 0.75 * clamp01((v - from) / (STARTS[i + 1] - from)));
   });
   return (
-    <motion.li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] items-baseline py-2.5" style={{ opacity, x }}>
+    <motion.li className="relative py-2.5" style={{ opacity, x }}>
       <motion.span className="absolute inset-y-1.5 -left-4 w-0.5 rounded-full bg-accent" style={{ scaleY: lead, originY: 0 }} />
-      <span className="font-mono text-micro text-faint">{c.n}</span>
       <span className="text-body font-medium">{c.title}</span>
     </motion.li>
   );
