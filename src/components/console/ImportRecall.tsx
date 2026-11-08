@@ -28,7 +28,7 @@ function importSteps(at: Step["at"], notice?: CpscSummary): CheckStep[] {
   const draft = at === "drafting" ? "running" : at === "draft_failed" ? "hold" : "waiting";
   return [
     { id: "cpsc", label: "Read CPSC's record", state: read, detail: notice ? `Recall ${notice.id}, ${units(notice)}` : "Product, units sold and the remedy" },
-    { id: "draft", label: "Draft the photo checks", state: draft, detail: at === "draft_failed" ? "No draft came back" : "Drafting the photo checks from the notice, about 15 seconds" },
+    { id: "draft", label: "Draft the photo checks", state: draft, detail: at === "draft_failed" ? "No draft came back" : "From the notice and its photos, about 15 seconds" },
     { id: "review", label: "You review and publish", state: "waiting", detail: "Nothing goes live until you publish" },
   ];
 }

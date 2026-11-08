@@ -18,8 +18,10 @@ export type BulkMode = "idle" | "approve" | "reject";
 export interface BulkResult {
   id: string;
   ok: boolean;
-  // A claim that came with the console: the server says what it would have done, and nothing is saved.
+  // A starter claim (filed before PayPal Payouts was connected): decided, never paid, kept in this tab.
   sample: boolean;
+  // The claim as decided, when it was.
+  claim?: ReviewedClaim;
   error?: ApiError;
 }
 
@@ -28,7 +30,7 @@ const CODE = "{code}";
 const generic = (q: (typeof QUICK)[number]) => q.text(CODE).replace(`read ${CODE}, this claim's code`, "read this claim's code").replace(`code ${CODE}`, "code");
 
 /**
- * The pick's actions, floating over the foot of the grid (Linear's selection bar): how many are picked and how many of
+ * The pick's actions, docked under the grid (Linear's selection bar): how many are picked and how many of
  * them are held, then Approve and Reject for the held ones. Approve asks once ("Pay $89.97 to 3 owners"), reject asks
  * one reason for all, with the panel's quick reasons. The claims go one at a time, in the grid's order, so a refusal
  * names its claim; the bar then says what happened and the queue moves on to the next held claim.
@@ -73,7 +75,7 @@ export function BulkBar({
       const quick = QUICK.find((q) => generic(q) === reason);
       const text = quick ? quick.text(r.code ?? "") : reason;
       const res = await api<ReviewedClaim>(`/api/console/claims/${r.id}/${decision}`, { method: "POST", json: decision === "reject" ? { reason: text } : undefined });
-      results.push(res.ok ? { id: r.id, ok: true, sample: Boolean(res.data.sample) } : { id: r.id, ok: false, sample: false, error: res.error });
+      results.push(res.ok ? { id: r.id, ok: true, sample: Boolean(res.data.sample), claim: res.data } : { id: r.id, ok: false, sample: false, error: res.error });
     }
     setProgress(null);
     const bad = results.filter((r) => !r.ok);
@@ -89,7 +91,7 @@ export function BulkBar({
       ref={bar}
       role="region"
       aria-label="Picked claims"
-      className="pointer-events-auto w-[min(40rem,calc(100%-1.5rem))] rounded-card bg-surface-2 text-ui shadow-float"
+      className="w-full rounded-card bg-surface-2 text-ui shadow-[inset_0_0_0_1px_var(--line)]"
       onKeyDown={(e) => {
         if (e.key === "Escape" && !busy) {
           e.preventDefault();
@@ -227,7 +229,7 @@ export function BulkBar({
       </div>
       {mode === "idle" && !busy && !failed.length && (
         <p aria-hidden="true" className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-4 py-2 text-micro text-faint">
-          <Keys k={["⇧", "↑", "↓"]}>Pick more</Keys>
+          <Keys k={["⇧", "↑/↓"]}>Pick more</Keys>
           {held.length > 0 && <Keys k={["A"]}>Approve</Keys>}
           {held.length > 0 && <Keys k={["R"]}>Reject</Keys>}
           <Keys k={["Esc"]}>Clear</Keys>
@@ -237,10 +239,10 @@ export function BulkBar({
   );
 }
 
-/** "Pay $59.98 to 2 owners through PayPal.", saying what the ones that came with the console do. */
+/** "Pay $59.98 to 2 owners through PayPal?", saying what the starter claims (filed before PayPal Payouts was connected) do. */
 function approveLine(held: ClaimRow[], owed: ClaimRow[], cents: number) {
   const starter = held.length - owed.length;
-  if (!owed.length) return `Approve ${plural(held.length, "held claim")}? ${held.length === 1 ? "It came" : "They came"} with your console, so nothing is sent.`;
+  if (!owed.length) return `Approve ${plural(held.length, "held claim")}? Filed before PayPal Payouts was connected, so no payout is sent.`;
   const pay = `Pay ${formatCents(cents)} to ${plural(owed.length, "owner")} through PayPal?`;
-  return starter ? `${pay} ${plural(starter, "other claim")} came with your console and ${starter === 1 ? "sends" : "send"} nothing.` : pay;
+  return starter ? `${pay} ${plural(starter, "other claim")}, filed before PayPal Payouts was connected, ${starter === 1 ? "sends" : "send"} nothing.` : pay;
 }

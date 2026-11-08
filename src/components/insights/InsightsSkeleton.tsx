@@ -1,44 +1,75 @@
+import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui";
 
-// The report while AG Studio loads: the figures' strip, the canvas's own grid (24 columns, 16px rows, the same widget
-// spans) and the analyst's rail, so nothing moves when Studio paints over it.
+// The report while AG Studio loads, drawn as the report itself lays out (insights report.ts): the figures' strip with its
+// five figures, then two thirds and one third on the page's gutter. Left: Recall progress, Where claims stop, Paid
+// through PayPal by day; right: Decisions, then Why claims were refused. Each panel is a section under a hairline with its
+// real title; grey bars stand where the numbers and bars go. No cards and no analyst rail, so nothing moves when Studio
+// paints over it.
 
-const BLOCKS: [x: number, y: number, w: number, h: number][] = [
-  [0, 0, 16, 15],
-  [16, 0, 8, 15],
-  [0, 15, 16, 22],
-  [16, 15, 8, 22],
-];
+// Each panel's height on Studio's canvas (16px rows, report.ts): the first row's 240px less the canvas's top inset, then
+// the funnel's row, then the day chart's.
+function Section({ title, first, className, children }: { title: string; first?: boolean; className?: string; children: ReactNode }) {
+  return (
+    <section className={first ? className : `border-t border-line pt-8 ${className ?? ""}`}>
+      <h2 className="text-ui font-medium text-text">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+const LABELS = ["w-2/5", "w-1/3", "w-1/2", "w-1/4", "w-2/5", "w-1/3"];
+const BARS = ["w-11/12", "w-3/4", "w-7/12", "w-5/12", "w-1/4", "w-1/6"];
+
+const Rows = ({ n, bar = true }: { n: number; bar?: boolean }) => (
+  <div className="mt-5 flex flex-col gap-5">
+    {Array.from({ length: n }, (_, i) => (
+      <div key={i} className="flex flex-col gap-2">
+        <div className="flex justify-between gap-4">
+          <Skeleton className={`h-3.5 ${LABELS[i % LABELS.length]}`} />
+          <Skeleton className="h-3.5 w-8" />
+        </div>
+        {bar && <Skeleton className={`h-1.5 ${BARS[i % BARS.length]}`} />}
+      </div>
+    ))}
+  </div>
+);
 
 export function InsightsSkeleton() {
   return (
-    <div className="flex h-full min-h-0 w-full flex-col" aria-busy="true" aria-label="Loading the report">
-      <div className="px-8">
-        <div className="flex h-12 items-center gap-8 border-y border-line">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-5 w-56" />
-          <Skeleton className="h-5 w-40" />
+    <div className="flex w-full flex-col" aria-busy="true" aria-label="Loading the report">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="flex min-h-12 flex-wrap items-center gap-x-8 gap-y-2 border-y border-line py-2.5">
+          {["w-28", "w-24", "w-32", "w-44", "w-36"].map((w) => (
+            <Skeleton key={w} className={`h-5 ${w}`} />
+          ))}
         </div>
       </div>
-      <div className="flex min-h-0 flex-1">
-        <div className="min-w-0 flex-1 overflow-hidden p-8">
-          <div className="grid" style={{ gridTemplateColumns: "repeat(24, minmax(0, 1fr))", gridAutoRows: "16px" }}>
-            {BLOCKS.map(([x, y, w, h]) => (
-              <div key={`${x}-${y}`} className="p-1.5" style={{ gridColumn: `${x + 1} / span ${w}`, gridRow: `${y + 1} / span ${h}` }}>
-                <div className="flex h-full flex-col gap-3 rounded-card border border-line bg-surface p-4">
-                  <Skeleton className="h-3.5 w-28" />
-                  {h > 8 && <Skeleton className="h-2.5 w-40" />}
-                  <Skeleton className="mt-auto h-6 w-20" />
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className="grid grid-cols-1 px-4 pt-8 sm:px-6 lg:grid-cols-[2fr_1fr] lg:px-8">
+        <div className="flex flex-col">
+          <Section title="Recall progress" first className="h-[208px]">
+            <Skeleton className="mt-6 h-9 w-40" />
+            <Skeleton className="mt-6 h-1.5 w-full" />
+            <Skeleton className="mt-3 h-3 w-56" />
+          </Section>
+          <Section title="Where claims stop" className="h-[384px]">
+            <Rows n={5} />
+          </Section>
+          <Section title="Paid through PayPal, by day" className="h-[240px]">
+            <div className="mt-6 flex h-36 items-end gap-6">
+              {["h-1/5", "h-1/2", "h-1/3", "h-4/5"].map((h) => (
+                <Skeleton key={h} className={`flex-1 rounded-b-none ${h}`} />
+              ))}
+            </div>
+          </Section>
         </div>
-        <div className="flex w-[400px] flex-col gap-3 border-l border-line bg-surface p-4">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="mt-auto h-9 w-full" />
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-11 w-full rounded-card" />
+        <div className="flex flex-col lg:pl-10">
+          <Section title="Decisions" first className="h-[208px]">
+            <Rows n={5} bar={false} />
+          </Section>
+          <Section title="Why claims were refused">
+            <Rows n={6} />
+          </Section>
         </div>
       </div>
     </div>

@@ -53,7 +53,8 @@ export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; 
             )}
           >
             {t.label}
-            <span className={clsx("font-mono text-micro tabular-nums", active ? "text-muted" : "text-faint")}>{counts[t.id]}</span>
+            {/* Two figures wide at least, so a search that takes a count from 49 to 0 never moves the tabs. */}
+            <span className={clsx("inline-block min-w-[2ch] font-mono text-micro tabular-nums", active ? "text-muted" : "text-faint")}>{counts[t.id]}</span>
           </button>
         );
       })}

@@ -21,7 +21,8 @@ const noop = () => {};
 
 /**
  * The sign-in page's picture of what is behind it: the claims queue on the shared recall, drawn by the console's own grid
- * (not the homepage's still), flat and at 1:1, running off the right edge and dissolving at its foot. Laptops only, so a
+ * (not the homepage's still), flat and at 1:1, ending on the page frame's right edge as the header does, and dissolving at
+ * its foot. Laptops only, so a
  * phone never loads the grid. Inert and out of the accessibility tree: the form beside it says what it is in words. It
  * fades in once the grid has drawn, over an empty frame of the same size, so nothing moves.
  */
@@ -33,7 +34,7 @@ export function SigninPreview({ rows, ledger, counts, height }: { rows: PreviewR
     <div
       aria-hidden="true"
       inert
-      className="pointer-events-none relative w-[1120px] select-none [mask-image:linear-gradient(to_bottom,#000_62%,transparent_96%)]"
+      className="pointer-events-none relative w-full select-none [mask-image:linear-gradient(to_bottom,#000_62%,transparent_96%)]"
     >
       {/* A window's edge in both themes: one hairline border (the mask would clip a ring drawn outside it), no lift. */}
       <div className="overflow-hidden rounded-card border border-line-2 bg-bg text-text">

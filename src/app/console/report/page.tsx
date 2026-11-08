@@ -30,12 +30,16 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
 
   const claims = await loadClaims(store, recall, session);
   const report = buildReport(claims, recall);
+  // The filed copy's foot on every printed page: who files it, which recall, and the page of how many.
+  const css = (t: string) => JSON.stringify(t).replace(/</g, "\\3c ");
+  const page = `@page{margin:16mm 16mm 18mm;@bottom-left{content:${css(`${session.name ? `${session.name} · ` : ""}CPSC ${recall.id} progress report`)};font:10px/1.4 system-ui,sans-serif;color:#555}@bottom-right{content:"Page " counter(page) " of " counter(pages);font:10px/1.4 system-ui,sans-serif;color:#555}}`;
 
   return (
-    // On the page's left gutter as every console page is: the title and its actions on one row, as the claims page
-    // has them (print, and the recall picker), then the sheet at its reading width. The sheet names the recall and date.
+    // The title and its actions on one row, as the claims page has them (print, and the recall picker), then the sheet
+    // at its reading width, centred on the page as a document is. The sheet names the recall and date.
     <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8 print:p-0">
-      <div className="flex w-full max-w-[52rem] flex-col gap-8 print:block print:max-w-none">
+      <style>{page}</style>
+      <div className="mx-auto flex w-full max-w-[52rem] flex-col gap-8 print:block print:max-w-none">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 print:hidden">
           <div className="min-w-0">
             <h1 className="text-h2 font-medium">CPSC progress report</h1>

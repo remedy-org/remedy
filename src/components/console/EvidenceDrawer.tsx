@@ -3,14 +3,15 @@
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Button, CrossIcon, ErrorState, Skeleton, SkeletonText, type CheckState } from "@/components/ui";
+import { Button, CrossIcon, ErrorState, Skeleton, type CheckState } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 // The model's words set as the owner's pages set them: curly quotes, codes in mono.
 import { ModelQuote } from "@/components/claim/EvidenceText";
-import type { DrawerClaim } from "@/app/console/_lib/drawer";
-import { duration, type PreCheckState } from "@/app/console/_lib/view";
+import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
+import { duration, NO_PAYOUT, type ClaimRow, type PreCheckState } from "@/app/console/_lib/view";
 import { api } from "./api";
-import { EXCEPTION, NO_PAYOUT } from "./cells";
+import { EXCEPTION } from "./cells";
+import { DrawerSkeleton, RowAmount, RowMeta, RowVerdict } from "./EvidenceShell";
 import { CheckList } from "./CheckList";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { formatClock, formatTime } from "./format";
@@ -18,7 +19,10 @@ import { Keys } from "./Keys";
 import { LinkedIds } from "./LinkedIds";
 import { PhotoViewer } from "./PhotoViewer";
 import { payoutFailure, ReviewActions, reviewLabels, type ReviewIntent } from "./ReviewActions";
+import { keepStarterDecision, starterDecision } from "./starterDecisions";
 import { VerdictMark, verdictOf } from "./VerdictMark";
+
+export { DrawerSkeleton };
 
 // The evidence for one claim: on laptops a non-modal panel docked beside the grid (Mercury's detail card), so ↑/↓
 // keeps walking the queue; on phones and tablets a full-screen modal. Both show the same content: the money's
@@ -27,6 +31,12 @@ import { VerdictMark, verdictOf } from "./VerdictMark";
 
 export interface EvidenceProps {
   claimId: string | null;
+  // The claim's grid row: the header draws from it the moment the panel opens, before the evidence loads.
+  row?: ClaimRow | null;
+  // A decision just made on the claim before this one, said in the header for 2 s ("RM-5250 approved · $29.99 sent").
+  notice?: string | null;
+  // V or Space from the queue: opens the photo viewer at the first photo each time it changes.
+  viewPhotos?: number;
   // The grid row's version: the panel asks for the claim at it, which the server caches (Blob budget).
   version?: number | null;
   // The grid row's filed time: part of that cache's key, so a claim id the demo data reused never shows an older claim.
@@ -36,8 +46,8 @@ export interface EvidenceProps {
   intent?: ReviewIntent | null;
   // Opens another claim of the queue (the claim a repost copied, the next held claim).
   onOpen?: (id: string) => void;
-  // A person approved or rejected this claim (ClaimsQueue works out the next held one).
-  onDecided?: (id: string, decision: DrawerClaim["decision"]) => void;
+  // A person approved or rejected this claim (ClaimsQueue works out the next held one). claim: what was decided.
+  onDecided?: (id: string, decision: DrawerClaim["decision"], claim?: { sample?: boolean; amount?: string } | null) => void;
   // After a decision: the next held claim in the list, null when none is left, undefined before.
   nextHeld?: string | null;
   // The claim this one was opened from through a link in its evidence: the header offers the way back.
@@ -54,6 +64,9 @@ type Load = { state: "loading" } | { state: "error"; error: ApiError } | { state
 /** Loads a claim, keeping the one shown before on screen until the next arrives (no skeleton flash between rows). */
 function useClaim(id: string, version: number | null | undefined, filedAt: string | undefined) {
   const key = seenKey(id, version);
+  // A starter claim this tab decided: the evidence as decided (starterDecisions.ts), never the shared held one.
+  const local = starterDecision(id);
+  if (local && seen.get(key) !== local) seen.set(key, local);
   // Bumped when a fetch lands in `seen`, so this renders again.
   const [, setLanded] = useState(0);
   const [failure, setFailure] = useState<{ key: string; error: ApiError } | null>(null);
@@ -98,16 +111,19 @@ function useClaim(id: string, version: number | null | undefined, filedAt: strin
 }
 
 /** Laptops: an aside beside the grid. No backdrop, the grid stays live; Esc closes it (ClaimsQueue returns focus). */
-export function EvidencePanel({ claimId, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
+export function EvidencePanel({ claimId, row, notice, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
   if (!claimId) return null;
   return (
     <aside
       role="complementary"
       aria-label={`Evidence for ${claimId}`}
-      className="evidence-panel flex h-full w-[440px] shrink-0 flex-col overflow-hidden rounded-card bg-surface shadow-float transition-[translate,opacity] duration-160 ease-out-expo starting:translate-x-4 starting:opacity-0"
+      className="evidence-panel flex h-full w-full shrink-0 flex-col overflow-hidden rounded-card bg-surface shadow-float"
     >
       <EvidenceContent
         id={claimId}
+        row={row}
+        notice={notice}
+        viewPhotos={viewPhotos}
         version={version}
         filedAt={filedAt}
         onClose={onClose}
@@ -124,7 +140,7 @@ export function EvidencePanel({ claimId, version, filedAt, onClose, intent, onOp
 }
 
 /** Phones and tablets: a full-screen modal dialog (a sheet from the right on tablets). */
-export function EvidenceDrawer({ claimId, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
+export function EvidenceDrawer({ claimId, row, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -149,6 +165,8 @@ export function EvidenceDrawer({ claimId, version, filedAt, onClose, intent, onO
         <EvidenceContent
           key={claimId}
           id={claimId}
+          row={row}
+          viewPhotos={viewPhotos}
           version={version}
           filedAt={filedAt}
           onClose={() => ref.current?.close()}
@@ -167,6 +185,9 @@ export function EvidenceDrawer({ claimId, version, filedAt, onClose, intent, onO
 
 function EvidenceContent({
   id,
+  row,
+  notice,
+  viewPhotos,
   version,
   filedAt,
   onClose,
@@ -182,14 +203,16 @@ function EvidenceContent({
   const { claim, stale, load, retry, replace } = useClaim(id, version, filedAt);
   // The decision this view just saved: said in the footer, which then offers the next held claim.
   const [saved, setSaved] = useState<{ id: string; decision: DrawerClaim["decision"]; at: string } | null>(null);
-  const done = (c: DrawerClaim) => {
+  const done = (c: ReviewedClaim) => {
     // Another claim's evidence may now read differently (approving this one makes the account's other claim stop on
     // approve, rejecting it frees it): every claim loads afresh from here.
     seen.clear();
+    // A starter claim's decision is kept in this tab (the shared record stays held); nothing else needs reloading.
+    if (c.seeded) keepStarterDecision(c);
     replace(c);
     setSaved({ id: c.id, decision: c.decision, at: new Date().toISOString() });
-    onDecided?.(c.id, c.decision);
-    router.refresh();
+    onDecided?.(c.id, c.decision, { sample: Boolean(c.sample), amount: c.amount });
+    if (!c.seeded) router.refresh();
   };
   const heading = useRef<HTMLHeadingElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -205,7 +228,10 @@ function EvidenceContent({
   }, [justSaved, nextHeld]);
   // The reject form takes the footer's room: the photos it is about come into view above it.
   const photos = useRef<HTMLElement>(null);
+  // The footer's open form, so the key line says what A and Enter do now.
+  const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle");
   const onMode = useCallback((mode: "idle" | "approve" | "reject") => {
+    setMode(mode);
     // Scrolled within the panel only: scrollIntoView would scroll the page under it too.
     if (mode === "reject")
       requestAnimationFrame(() => {
@@ -214,12 +240,14 @@ function EvidenceContent({
         if (box && el) box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top;
       });
   }, []);
-  // A or R from the queue, or Approve and Reject in the photo viewer: both open the footer's confirm.
-  const [act, setAct] = useState(intent);
+  // A or R from the queue, or Approve and Reject in the photo viewer: both open the footer's confirm. A key meant for
+  // another claim (the panel is still on the last one) waits for that claim's panel.
+  const mine = (i: ReviewIntent | null | undefined) => (i && (!i.id || i.id === id) ? i : null);
+  const [act, setAct] = useState(() => mine(intent));
   const [seenIntent, setSeenIntent] = useState(intent);
   if (intent !== seenIntent) {
     setSeenIntent(intent);
-    setAct(intent);
+    setAct(mine(intent));
   }
   const review = claim?.review ? (mode: ReviewIntent["mode"]) => setAct((i) => ({ mode, n: (i?.n ?? 0) + 1 })) : undefined;
   const labels = claim?.review ? reviewLabels(claim) : null;
@@ -243,20 +271,24 @@ function EvidenceContent({
             <h2 ref={heading} id={variant === "sheet" ? "drawer-title" : undefined} className="font-mono text-body font-medium outline-none" tabIndex={-1}>
               {id}
             </h2>
-            {/* In the grid's verdict track, so walking the queue never moves it. */}
+            {/* In the grid's verdict track, so walking the queue never moves it. Before the claim loads, the grid row's. */}
             <span className="inline-flex w-[6.5rem]">
               {claim ? (
                 <VerdictMark
                   verdict={verdictOf({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null, seeded: Boolean(claim.seeded) })}
                   className={EXCEPTION.has(claim.decision) ? "text-text" : undefined}
                 />
+              ) : row?.id === id ? (
+                <RowVerdict row={row} />
               ) : (
                 <Skeleton className="h-4 w-20" />
               )}
             </span>
-            {claim && <MoneyLine claim={claim} />}
+            {claim ? <MoneyLine claim={claim} /> : row?.id === id && <RowAmount row={row} />}
           </div>
-          {claim ? (
+          {!claim && row?.id === id ? (
+            <RowMeta row={row} />
+          ) : claim ? (
             // One line in the 440px panel, so the evidence keeps the height: "Unverified" only when it's true, as in the
             // grid (the pre-checks say verified).
             <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-ui text-muted">
@@ -275,6 +307,10 @@ function EvidenceContent({
           ) : (
             <Skeleton className="mt-2 h-4 w-64 max-w-full" />
           )}
+          {/* The decision just made on the claim before this one: said where the reviewer is looking, for 2 s. */}
+          <p role="status" className="text-ui text-text-2 empty:hidden">
+            {notice ? <span className="mt-1.5 block">{notice}</span> : null}
+          </p>
         </div>
         <button
           type="button"
@@ -305,7 +341,7 @@ function EvidenceContent({
         {load.state !== "error" && !body && <DrawerSkeleton />}
         {load.state !== "error" && body && (
           <div className={clsx("transition-opacity duration-120", stale && "opacity-50")}>
-            <Evidence claim={body} pad={pad} onReview={stale ? undefined : review} onOpen={onOpen} photosRef={photos} />
+            <Evidence claim={body} pad={pad} onReview={stale ? undefined : review} onOpen={onOpen} photosRef={photos} viewPhotos={stale ? undefined : viewPhotos} />
           </div>
         )}
       </div>
@@ -319,9 +355,9 @@ function EvidenceContent({
         <footer ref={savedFooter} className={clsx("flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line bg-surface py-4", pad)}>
           <p role="status" className="min-w-0 flex-1 basis-56 text-ui text-muted">
             <span className="font-medium text-text">
-              {justSaved.decision === "paid" ? "Approved" : "Rejected"} · saved at <span className="font-mono">{formatClock(justSaved.at)}</span> UTC.
+              {justSaved.decision === "paid" ? "Approved" : "Rejected"} at <span className="font-mono">{formatClock(justSaved.at)}</span> UTC.
             </span>{" "}
-            {justSaved.decision === "paid" ? `${claim.amount} sent through PayPal.` : "The owner sees your reason on their claim page."}
+            {justSaved.decision !== "paid" ? "The owner sees your reason on their claim page." : claim.seeded ? NO_PAYOUT : `${claim.amount} sent through PayPal.`}
             {nextHeld === null && " No held claims are left in this list."}
           </p>
           {nextHeld && onOpen && (
@@ -338,10 +374,31 @@ function EvidenceContent({
           className={clsx("flex h-9 shrink-0 items-center gap-4 border-t border-line text-micro text-faint [@media(max-height:600px)]:hidden [@media(max-height:960px)]:h-8", pad)}
           aria-hidden="true"
         >
-          <Keys k={["↑", "↓"]}>Next claim</Keys>
-          {labels && !labels.blocked && <Keys k={["A"]}>{labels.approveKey}</Keys>}
-          {labels && <Keys k={["R"]}>Reject</Keys>}
-          <Keys k={["Esc"]}>Close</Keys>
+          {mode === "approve" && labels && !labels.blocked ? (
+            <>
+              <Keys k={["A"]}>{labels.confirmKey}</Keys>
+              <Keys k={["Esc"]}>Cancel</Keys>
+            </>
+          ) : mode === "reject" ? (
+            <>
+              <Keys k={["1–4"]}>Quick reason</Keys>
+              <Keys k={["⌘↵"]}>Reject</Keys>
+              <Keys k={["Esc"]}>Cancel</Keys>
+            </>
+          ) : (
+            <>
+              <Keys k={["↓", "↑"]}>Next claim</Keys>
+              {/* On a wide screen only, where the line has room: the ? sheet lists it everywhere. */}
+              {(claim ?? stale)?.photos.length ? (
+                <span className="hidden min-[1600px]:inline-flex">
+                  <Keys k={["V"]}>Photos</Keys>
+                </span>
+              ) : null}
+              {labels && !labels.blocked && <Keys k={["A"]}>{labels.approveKey}</Keys>}
+              {labels && <Keys k={["R"]}>Reject</Keys>}
+              <Keys k={["Esc"]}>Close</Keys>
+            </>
+          )}
         </p>
       )}
     </div>
@@ -521,12 +578,14 @@ function Evidence({
   onReview,
   onOpen,
   photosRef,
+  viewPhotos,
 }: {
   claim: DrawerClaim;
   pad: string;
   onReview?: (mode: ReviewIntent["mode"]) => void;
   onOpen?: (id: string) => void;
   photosRef?: RefObject<HTMLElement | null>;
+  viewPhotos?: number;
 }) {
   // The "model" hold is the photo check not answering, not an answer: it isn't counted as a check that didn't pass.
   // Before any photo arrives every check is waiting: one line says when they run, the rows are their names alone.
@@ -537,6 +596,12 @@ function Evidence({
   // The photo viewer, open on a photo (0-based); keyed by claim, so ↑/↓ to another claim closes it.
   const [viewing, setViewing] = useState<{ id: string; n: number } | null>(null);
   const viewer = viewing?.id === claim.id ? viewing.n : null;
+  // V or Space from the queue opens the viewer at the first photo (a count that changes on each press).
+  const [seenView, setSeenView] = useState(viewPhotos);
+  if (viewPhotos !== seenView) {
+    setSeenView(viewPhotos);
+    if (viewPhotos && claim.photos.length) setViewing({ id: claim.id, n: 0 });
+  }
   const d = deciding(claim);
   // The passed rows' details, open or folded, per claim: ↑/↓ to the next claim folds them again.
   const [unfolded, setUnfolded] = useState<{ id: string; pre: boolean; model: boolean }>({ id: claim.id, pre: false, model: false });
@@ -549,7 +614,8 @@ function Evidence({
   const codeCheck = claim.checks.find((c) => c.id === "code");
   const seen = [claim.summary, codeCheck?.rule].filter(Boolean).join(" ") || undefined;
   return (
-    <div className={clsx("flex flex-col gap-7 py-5", pad)}>
+    // Paragraphs wrap with no word left alone on a last line ("it.").
+    <div className={clsx("flex flex-col gap-7 py-5 [&_p]:text-pretty [&_q]:text-pretty", pad)}>
       {/* What decided it, then the photos, so a laptop's first view of the panel holds both. */}
       <Deciding claim={claim} onOpen={onOpen} />
       <section ref={photosRef} className="flex scroll-mt-4 flex-col gap-3" aria-labelledby="photos-title">
@@ -752,28 +818,6 @@ function Duplicate({ claim, onOpen, onView }: { claim: DrawerClaim; onOpen?: (id
           )}
         </p>
       </div>
-    </div>
-  );
-}
-
-export function DrawerSkeleton() {
-  return (
-    <div className="flex flex-col gap-8 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-3">
-        <Skeleton className="h-3 w-48" />
-        <Skeleton className="aspect-[4/3] w-full rounded-control" />
-      </div>
-      {[4, 5].map((rows, s) => (
-        <div key={s} className="flex flex-col gap-3">
-          <Skeleton className="h-4 w-36" />
-          {Array.from({ length: rows }, (_, i) => (
-            <div key={i} className="flex gap-3 border-b border-line py-3 last:border-b-0">
-              <Skeleton className="size-6 shrink-0 rounded-full" />
-              <SkeletonText lines={2} className="flex-1" />
-            </div>
-          ))}
-        </div>
-      ))}
     </div>
   );
 }

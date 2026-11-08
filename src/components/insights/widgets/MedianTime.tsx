@@ -25,5 +25,5 @@ export function MedianTime(params: AgWidgetParams<MedianTimeDef> & { spoken?: bo
   return <p className="px-2 pt-1 text-[28px] leading-none text-text">{mid === null ? "—" : say(Math.round(mid))}</p>;
 }
 
-/** The homepage's tile: "12 sec", as the homepage says a time. */
+/** The homepage's tile: "12 s", as the console says a time. */
 export const HomeMedianTime = (params: AgWidgetParams<MedianTimeDef>) => <MedianTime {...params} spoken />;

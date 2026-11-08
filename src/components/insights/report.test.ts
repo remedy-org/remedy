@@ -94,7 +94,7 @@ describe("the homepage's tiles", () => {
   const pre = claim({ decision: "Blocked" as never, amountPaid: 0, timeToSendSec: null, refused: 1, refusalGate: "Account check" as never });
 
   it("says a time under a minute in seconds", () => {
-    expect(spokenTime(12)).toBe("12 sec");
+    expect(spokenTime(12)).toBe("12 s");
     expect(spokenTime(65)).not.toMatch(/sec/);
   });
 

@@ -64,14 +64,14 @@ export interface DrawerClaim {
   duplicate: { photo: number; id: string; theirs: number; of: number; src: string | null } | null;
   // The owner asked a person to look at a claim the rule refused (src/lib/appeal.ts): when, or null.
   appealedAt: string | null;
-  // Approve and reject for held claims. A seeded one's review is a sample: answered, but never paid or saved.
+  // Approve and reject for held claims. A starter claim's review is decided but never paid or saved (review.ts).
   review: { sample: boolean; note: string | null } | null;
   recall: { id: string; autoPay: boolean };
   // Payouts in this build go to PayPal's sandbox: the approve step says so beside the amount.
   sandbox: boolean;
 }
 
-// What approve and reject answer: the claim, and for a seeded claim what the review would have done.
+// What approve and reject answer: the claim, and for a starter claim the result line (it is kept in the reviewer's tab).
 export type ReviewedClaim = DrawerClaim & { sample?: string };
 
 // Pre-check reasons, a person's review, the owner's ask for one, auto-pay and the PayPal payout aren't model answers:
@@ -95,8 +95,8 @@ export function photoUrl(claimId: string, n: number) {
 }
 
 /**
- * A seeded claim's history as it happened: it came with the console and never pays out, so no payout left and no PayPal
- * status exists. The stored lines (lib/demo/sampleCopy.ts) are rewritten in the console's words.
+ * A starter (seeded) claim's history as it happened: it was filed before PayPal Payouts was connected, so no payout left
+ * and no PayPal status exists. The stored lines (lib/demo/sampleCopy.ts) are rewritten in the console's words.
  */
 function sampleEvents(c: Claim, amount: string): Claim["events"] {
   const n = c.photos.length;
@@ -108,7 +108,7 @@ function sampleEvents(c: Claim, amount: string): Claim["events"] {
         : e.type === "prechecked"
           ? { ...e, detail: "Account checks passed" }
           : e.type === "payout_sent"
-            ? { ...e, detail: `Approved for ${amount}. No payout: this claim came with your console.` }
+            ? { ...e, detail: `Approved for ${amount}. Filed before PayPal Payouts was connected; no payout sent.` }
             : e,
     );
 }

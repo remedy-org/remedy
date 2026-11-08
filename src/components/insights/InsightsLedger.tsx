@@ -4,7 +4,7 @@ import { insightsLedger } from "./report";
 
 type Rows = Parameters<typeof insightsLedger>[0];
 
-/** The report's figures, in the Claims page ledger's type: remedied of sold, approved and sent, the median time and
+/** The report's figures, in the Claims page ledger's type: remedied of sold, sent and approved but not sent, the median time and
  * refusals. */
 export function InsightsLedger({ claims, unitsSold, className }: { claims: Rows; unitsSold: number; className?: string }) {
   const l = insightsLedger(claims);
@@ -19,7 +19,7 @@ export function InsightsLedger({ claims, unitsSold, className }: { claims: Rows;
         }
         label="remedied"
       />
-      <MoneyItems approvedCents={l.paidCents + l.unsentCents} sentCents={l.paidCents} />
+      <MoneyItems sentCents={l.paidCents} unsentCents={l.unsentCents} unsent={l.unsent} />
       {l.median !== null && (
         <LedgerItem
           value={durationFigure(l.median)}

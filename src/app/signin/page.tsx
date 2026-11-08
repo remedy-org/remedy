@@ -36,7 +36,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   const login = judgeLogin("business");
   const fromClaim = new URL(next, "http://n").searchParams.has("claim");
 
-  const preview = previewProps(456);
+  // The console it opens, drawn as the console draws it: the same verdicts, reasons, payout words and figures.
+  const preview = previewProps(456, { asConsole: true });
 
   return (
     // On the homepage's page frame and 12-column grid: the wordmark on the gutter, the form in columns 1 to 4, and from

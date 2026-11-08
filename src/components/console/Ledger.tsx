@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { duration, formatCents, type Ledger as LedgerData } from "@/app/console/_lib/view";
+import { duration, formatCents, NO_PAYOUT, type Ledger as LedgerData } from "@/app/console/_lib/view";
 import { formatCount } from "./format";
 
 /** One figure: the value (22/500) and what it counts (12, muted). The term comes first in the DOM, as a definition list
@@ -20,18 +20,25 @@ export function LedgerStrip({ className, children }: { className?: string; child
   return <dl className={clsx("flex min-h-12 flex-wrap items-center gap-x-6 gap-y-2 border-y border-line py-2.5 min-[900px]:gap-x-8", className)}>{children}</dl>;
 }
 
-/** Approved, then what PayPal sent as its own quieter figure: the outcome in full ink, the money's state beside it. */
-export function MoneyItems({ approvedCents, sentCents }: { approvedCents: number; sentCents: number }) {
+/** What PayPal sent leads; refunds approved but never sent (starter claims, filed before PayPal Payouts was connected)
+ * follow as their own quieter figure with the reason on hover, so approved = sent + not sent is on the strip. */
+export function MoneyItems({ sentCents, unsentCents, unsent }: { sentCents: number; unsentCents: number; unsent: number }) {
   return (
     <>
-      <LedgerItem value={formatCents(approvedCents)} label="approved" />
-      <LedgerItem value={<span className="text-muted">{formatCents(sentCents)}</span>} label="sent" />
+      <LedgerItem value={formatCents(sentCents)} label="sent" />
+      {unsent > 0 && (
+        <LedgerItem
+          value={<span className="text-muted">{formatCents(unsentCents)}</span>}
+          label={<span className="underline decoration-line-strong decoration-dotted underline-offset-3">approved, not sent</span>}
+          title={`${formatCount(unsent)} approved ${unsent === 1 ? "refund" : "refunds"}: ${NO_PAYOUT.charAt(0).toLowerCase()}${NO_PAYOUT.slice(1)}`}
+        />
+      )}
     </>
   );
 }
 
 /**
- * The ledger over the grid: units remedied of units sold, the refunds approved and what PayPal sent, and the median time
+ * The ledger over the grid: units remedied of units sold, what PayPal sent and what was approved but not sent, and the median time
  * from photos to PayPal once there is one. Held and refused claims are counted on the tabs under it.
  */
 export function Ledger({ ledger, className }: { ledger: LedgerData; className?: string }) {
@@ -47,7 +54,7 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
         }
         label="remedied"
       />
-      <MoneyItems approvedCents={ledger.paidCents + ledger.sampleCents} sentCents={ledger.paidCents} />
+      <MoneyItems sentCents={ledger.paidCents} unsentCents={ledger.sampleCents} unsent={ledger.sampleRemedied} />
       {ledger.medianToPay !== null && (
         <LedgerItem
           value={durationFigure(ledger.medianToPay)}

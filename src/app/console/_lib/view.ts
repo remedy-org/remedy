@@ -9,6 +9,10 @@ import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
 export const cents = (m: Pick<Money, "value">) => Math.round(Number(m.value) * 100);
 
+// The one wording for an approved refund on a starter claim, which never pays out: the Payout cell, the time card, the
+// drawer's timeline, the ledger and the CPSC report.
+export const NO_PAYOUT = "Filed before PayPal Payouts was connected; no payout sent.";
+
 export function formatCents(c: number): string {
   return `$${(c / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -121,15 +125,15 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
   const code = c.code ?? "";
   const ran = c.photoHashes.length > 0 || c.decision === "blocked";
   const failed = (id: string) => c.checks?.find((r) => r.check === id && r.outcome !== "pass");
-  // A pre-check that doesn't apply to a claim is left out of its strip, as the drawer leaves it out of the list
-  // (preChecksOf): the seeded claims' fingerprint check, and one claim per account on a demo sample but the genuine
-  // one. A hollow "not run" box beside every approved claim read as a check switched off.
-  const pre = PRE_CHECKS.flatMap(([id, label]): CheckBar[] => {
+  // A pre-check that doesn't apply to a claim keeps its place in the strip as a skipped slot (a dash), so every row
+  // draws the same four account slots in the same place; the drawer leaves it out of the list (preChecksOf). Those are
+  // the starter claims' fingerprint check, and one claim per account on a demo sample but the genuine one.
+  const pre = PRE_CHECKS.map(([id, label]): CheckBar => {
     const f = failed(id);
-    if (f) return [{ id, label, state: f.outcome }];
-    if (id === "duplicate_photo" && c.seeded && ran) return [];
-    if (id === "payer" && c.demo && c.sample !== "genuine" && ran) return [];
-    return [{ id, label, state: ran ? "pass" : "waiting" }];
+    if (f) return { id, label, state: f.outcome };
+    if (id === "duplicate_photo" && c.seeded && ran) return { id, label, state: "skipped" };
+    if (id === "payer" && c.demo && c.sample !== "genuine" && ran) return { id, label, state: "skipped" };
+    return { id, label, state: ran ? "pass" : "waiting" };
   });
   const answered = c.checks.filter((r) => !PRE_IDS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK);
   const steps = recall.spec.proof_steps;
@@ -229,6 +233,13 @@ export function refusalLine(r: Pick<Reason, "check" | "text">, copiedFrom?: stri
 
 export type PhotoUrls = (key: string, n: number) => RowPhoto;
 
+/** What search matches a row on: the claim id, the code, the PayPal account's last four, the reason and the verdict line. */
+export const searchText = (r: Pick<ClaimRow, "id" | "code" | "payer" | "reason" | "note">) => `${r.id} ${r.code ?? ""} ${r.payer} ${r.reason} ${r.note ?? ""}`;
+
+/** Search's one comparison: case aside, and O and 0 as one character, so "K70" finds the tag the photo check read as
+ * "K7O" (a reviewer types what they see, and the two look alike). */
+export const searchKey = (t: string) => t.toLowerCase().replace(/o/g, "0");
+
 const first = (reasons: Reason[], outcome: Reason["outcome"]) => reasons.find((r) => r.outcome === outcome)?.text;
 
 // One line for the grid: why the claim is where it is. reason is the row's decidingReason.
@@ -265,6 +276,8 @@ const modelHoldCause = (text: string, short = false) => {
 /** A reason as the company reads it: the "model" holds in the reviewer's words, every other reason as written. short:
  * the grid's one line. */
 export function companyReasonText(r: Pick<Reason, "check" | "text">, decision: Decision, short = false): string {
+  // A proof step the photos showed is the step itself, without the rule's "Done:" before it.
+  if (/^step_\d+$/.test(r.check) && r.text.startsWith("Done: ")) return r.text.slice(6, 7).toUpperCase() + r.text.slice(7);
   if (r.check !== "model") return r.text;
   if (decision === "held" && short) return `${modelHoldCause(r.text, true)}: needs your review`;
   const cause = modelHoldCause(r.text);
@@ -460,9 +473,9 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
   const reviewed = c.reasons.find((r) => r.check === "review");
   switch (c.decision) {
     case "paid":
-      // A claim that came with the console was decided by the rule like any claim; it never pays out, which the
-      // timeline's PayPal step says once.
-      if (c.seeded) return `All checks passed, so the rule approved the ${amount} refund.`;
+      // A starter claim was decided like any claim; it was filed before PayPal Payouts was connected and never pays out,
+      // which the timeline's PayPal step says once.
+      if (c.seeded) return reviewed ? `Approved on review for ${amount}.` : `All checks passed, so the rule approved the ${amount} refund.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `All checks passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
       // The rule refused it and the owner asked a person to look (src/lib/appeal.ts): the rule's reason stands beside it.

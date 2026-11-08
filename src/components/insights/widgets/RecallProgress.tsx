@@ -9,8 +9,9 @@ import { num, useRows } from "./useRows";
 // Custom widget 1: units remedied against units sold, on a ruler with the share recalls usually reach. Remedy's own
 // number is a sliver next to the 6-10% band on purpose: the scale is honest, and the gap is the point.
 
+// The CPSC report's ruler ends at 12% too (ProgressReport.tsx): the end is labelled on both, so they read as one scale.
 const SCALE = 0.12;
-const TICKS = [0, 0.01, 0.05, 0.1];
+const TICKS = [0, 0.01, 0.05, 0.1, SCALE];
 
 const pct = (share: number) => {
   const p = share * 100;
@@ -61,7 +62,11 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
           <span className="text-micro whitespace-nowrap text-muted">Typical recall</span>
         </div>
         {TICKS.map((t) => (
-          <div key={t} className={clsx("absolute bottom-0 flex flex-col gap-1", t === 0 ? "items-start" : "-translate-x-1/2 items-center")} style={{ left: at(t) }}>
+          <div
+            key={t}
+            className={clsx("absolute bottom-0 flex flex-col gap-1", t === 0 ? "items-start" : t === SCALE ? "-translate-x-full items-end" : "-translate-x-1/2 items-center")}
+            style={{ left: at(t) }}
+          >
             <span className="h-1.5 w-px bg-line-strong" />
             <span className="font-mono text-micro text-faint tabular-nums">{t === 0 ? "0" : pct(t)}</span>
           </div>

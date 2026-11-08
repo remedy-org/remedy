@@ -25,7 +25,7 @@ export interface Report {
   // Of that, what PayPal has confirmed, and how many payouts are still settling.
   settledCents: number;
   settling: number;
-  // Seeded samples the rule "paid": decided, never sent.
+  // Starter claims the rule approved: filed before PayPal Payouts was connected, never sent.
   sampleCents: number;
   samplesPaid: number;
   seeded: number;
@@ -44,11 +44,10 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   // "Paid" is said only beside a payout really sent: the outcome is the rule's approval. What was sent is the Refunds
   // section's to say, in numbers.
   const unsent = samples.length;
-  // One definition per state, in the words the claims grid uses: claims that came with the console are approved by the
-  // rule and never pay out, so with any among them the row says approved; Held is only a claim waiting for a person.
-  const paidNote = !unsent
-    ? "Unit destroyed on camera; refund sent through PayPal"
-    : "Unit destroyed on camera; refund approved by the rule. Claims that came with the console never pay out";
+  // One definition per state, in the words the claims grid uses: starter claims, filed before PayPal Payouts was
+  // connected, are approved and never pay out, so with any among them the row says approved (the Refunds section
+  // reconciles approved and sent); Held is only a claim waiting for a person.
+  const paidNote = !unsent ? "Unit destroyed on camera; refund sent through PayPal" : "Unit destroyed on camera; refund approved by the rule";
   const rows: [Decision, string, number, string][] = [
     ["paid", "Approved", stats.remedied, paidNote],
     ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn't run, auto-pay was off, or PayPal refused an approved payout"],

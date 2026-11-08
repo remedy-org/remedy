@@ -4,14 +4,14 @@ import { sendCheck } from "@/lib/rule";
 import type { ClaimSummary, Store } from "@/lib/store";
 import type { Claim, Reason, Recall } from "@/lib/types";
 import { othersFor, payoutFailedDetail, payoutNote } from "@/app/api/claims/_lib/pipeline";
-import { formatMoney, reviewReasonText } from "./view";
+import { formatMoney, NO_PAYOUT, reviewReasonText } from "./view";
 
 // A person's decision on a held claim. Kept free of Next imports so the money path is unit-tested. Every save goes
 // through store.updateClaim, so a decision is written only over the claim it was made on: a webhook or payout refresh
 // that lands in between is kept, never overwritten.
 
 export type ReviewResult =
-  // sample: the answer to a seeded claim's review, which is shown but never saved.
+  // sample: a starter claim's review, decided as asked but never saved (the console keeps it for the reviewer's tab).
   | { ok: true; claim: Claim; sample?: string }
   | { ok: false; status: number; code: "not_held" | "send_check" | "paypal"; message: string; reasons?: Reason[]; reference?: string };
 
@@ -33,9 +33,9 @@ async function notHeld(store: Store, id: string): Promise<ReviewResult> {
   return { ok: false, status: 409, code: "not_held", message: current ? `This claim is already ${current.decision}.` : "This claim is gone." };
 }
 
-// Seeded claims sit on the shared demo recall, in every company's console, with made-up PayPal accounts. Reviewing one
-// answers what would happen but saves nothing: no payout to a fake account, and one judge's reject doesn't empty the
-// next judge's review queue.
+// Starter (seeded) claims sit on the shared recall, in every company's console, and were filed before PayPal Payouts was
+// connected. Reviewing one answers with the claim as decided but saves nothing: no payout, and one company's decision
+// doesn't empty the next company's review queue. The console keeps the decision in the reviewer's tab.
 
 /**
  * What the checks run again on approve would stop the payout for, from index.json's rows: the same set the owner's
@@ -55,11 +55,13 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
   if (claim.decision !== "held") return notHeld(store, claim.id);
   const amount = formatMoney(recall.refund);
   if (claim.seeded) {
-    return {
-      ok: true,
-      claim,
-      sample: `Done. This claim came with your console, so nothing was sent and it stays in the queue for the next reviewer. On an owner's claim, approving sends ${amount} through PayPal Payouts.`,
-    };
+    const decided = append(
+      { ...claim, decision: "paid", reasons: [...claim.reasons, { check: "review", outcome: "pass", text: `Approved on review by ${by}` }] },
+      now,
+      "approved",
+      `Approved on review by ${by}. ${NO_PAYOUT}`,
+    );
+    return { ok: true, claim: decided, sample: `Approved. ${NO_PAYOUT}` };
   }
 
   const conflicts = approveConflicts(claim, await store.listClaims());
@@ -112,11 +114,13 @@ export async function rejectClaim({ store, claim: stale, by, reason, now = new D
   if (claim.decision !== "held") return notHeld(store, claim.id);
   const text = reviewReasonText(reason);
   if (claim.seeded) {
-    return {
-      ok: true,
-      claim,
-      sample: `Done. This claim came with your console, so it stays in the queue for the next reviewer. On an owner's claim, the owner would read: "${/[.!?]$/.test(text) ? text : `${text}.`}"`,
+    const decided: Claim = {
+      ...claim,
+      decision: "rejected",
+      reasons: [...claim.reasons, { check: "review", outcome: "reject", text }],
+      events: [...claim.events, event(now, "rejected", `${text} (by ${by})`)],
     };
+    return { ok: true, claim: decided, sample: "Rejected." };
   }
   const rejected = await store.updateClaim(claim.id, (c) =>
     c.decision === "held"

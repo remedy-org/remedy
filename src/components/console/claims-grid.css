@@ -200,7 +200,7 @@
 }
 
 /* A picked row (Shift+↑/↓, Shift-click, Cmd- or Ctrl-click, X): a quiet ink tint across the row and a filled check box
-   over its photos' corner. The tint is the open row's step, mixed a little warmer, so a picked row reads apart from the
+   in place of its photos (they step aside, so a photo and a control never share one spot). The tint is the open row's step, mixed a little warmer, so a picked row reads apart from the
    one whose evidence is open. ClaimsGrid writes the per-row rules; these are the shared parts. */
 .claims-grid {
   --pick-bg: color-mix(in oklch, var(--text) 9%, var(--surface));
@@ -208,8 +208,9 @@
 
 .claims-grid .pick-box {
   position: absolute;
-  top: -5px;
-  left: -5px;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -222,4 +223,52 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--dur-ui) var(--ease-snap);
+}
+
+.claims-grid .thumbs {
+  transition: opacity var(--dur-ui) var(--ease-snap);
+}
+
+/* A filter's icon sits beside its column's name, not 1,100px away at the far edge of a wide Verdict column: the label
+   keeps its own width, and the icon follows it (AG Grid lays the container out right to left). Right-aligned columns
+   keep theirs. */
+.claims-grid .ag-header-cell:not(.ag-right-aligned-header) .ag-cell-label-container {
+  justify-content: flex-end;
+  gap: 6px;
+}
+.claims-grid .ag-header-cell:not(.ag-right-aligned-header) .ag-header-cell-label {
+  flex: 0 1 auto;
+}
+
+/* A status tab sets the Verdict filter (one decision): the tab already says so, so the column's icon doesn't light up
+   as if the reviewer had set a filter. A filter set from the column's own menu still shows. */
+.claims-grid[data-tab-filter] .ag-header-cell[col-id="decision"] .ag-filter-active {
+  background-image: none;
+  outline: none;
+}
+.claims-grid[data-tab-filter] .ag-header-cell[col-id="decision"] .ag-filter-active::after {
+  content: none;
+}
+.claims-grid[data-tab-filter] .ag-header-cell[col-id="decision"] .ag-filter-active .ag-icon-filter {
+  clip-path: none;
+  color: inherit;
+}
+.claims-grid[data-tab-filter] .ag-header-cell[col-id="decision"] .ag-header-cell-filter-button {
+  opacity: 0.45;
+}
+
+/* The homepage's still: a header that doesn't sort takes no hover tint and no pointer, so nothing looks clickable that
+   isn't. */
+.claims-grid[data-still] .ag-header-cell:not(.ag-header-cell-sortable) {
+  cursor: default;
+}
+.claims-grid[data-still] .ag-header-cell:not(.ag-header-cell-sortable):hover {
+  background-color: transparent;
+}
+
+/* The still's PayPal column starts 20px clear of the right-aligned "Answered in" before it, so the two headers never
+   read as one ("Answered in PayPal"). */
+.claims-grid[data-still] .ag-header-cell[col-id="payer"],
+.claims-grid[data-still] .ag-cell[col-id="payer"] {
+  padding-left: 20px;
 }

@@ -20,7 +20,7 @@ export function LinkedIds({ text, onOpen, self }: { text: string; onOpen?: (id: 
         if (i % 2 === 0) return <Fragment key={i}>{part}</Fragment>;
         if (isCode(part)) {
           return (
-            <span key={i} className="font-mono whitespace-nowrap">
+            <span key={i} className="font-mono whitespace-nowrap [font-feature-settings:'zero']">
               {part}
             </span>
           );

@@ -9,7 +9,7 @@ import { INSIGHTS_ACTIONS } from "./actions";
 import { buildAnalyst } from "./analyst";
 import { InsightsLedger } from "./InsightsLedger";
 import "./insights.css";
-import { filterClaims, filterLabel, filterPicks, insightsReport, panelName, reportRows, type FilterPick } from "./report";
+import { filterClaims, filterLabel, filterPicks, insightsReport, paidByDayChart, panelName, reportRows, type FilterPick } from "./report";
 import { buildSources } from "./sources";
 import { colorResolver, fonts, onThemeChange, readTheme } from "./studio-setup";
 import lib from "./studio-lib";
@@ -81,6 +81,8 @@ const plural = (n: number, one: string) => `${n.toLocaleString("en-US")} ${n ===
 // scrolls as one and no panel scrolls inside another.
 const ROW = 16;
 const CANVAS_PAD = 64;
+// The console's header and its hairline, which the analyst's rail sticks under.
+const HEADER = 57;
 
 export default function InsightsStudio({ data, narrow = false }: { data: InsightsData; narrow?: boolean }) {
   const host = useRef<HTMLDivElement>(null);
@@ -90,17 +92,19 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
   const [picks, setPicks] = useState<FilterPick[]>([]);
   const shown = useMemo(() => filterClaims(data.claims, picks), [data, picks]);
   const mode = useSyncExternalStore(onThemeChange, readTheme, () => "dark");
-  const theme = useMemo(() => {
+  const { theme, labelColor } = useMemo(() => {
     void mode; // Rebuilt from the live tokens whenever the theme toggles.
     const { resolve, done } = colorResolver();
     try {
-      return buildTheme(lib, resolve, fonts());
+      // The day chart prints each day's dollars on its green column in the page's background colour.
+      return { theme: buildTheme(lib, resolve, fonts()), labelColor: resolve("var(--bg)") };
     } finally {
       done();
     }
   }, [mode]);
   // The theme Studio starts with; later changes go through setProperty below.
   const initialTheme = useRef(theme);
+  const initialLabel = useRef(labelColor);
   const [askOpen, setAskOpen] = useState(false);
   // Rendered in the browser only (InsightsLoader), after the page header that holds the slot.
   const [actions] = useState(() => document.getElementById(INSIGHTS_ACTIONS));
@@ -115,7 +119,7 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
         loadThemeGoogleFonts: false,
         // A day reads as the rest of the app writes it ("4 Nov"), not in the browser's locale (11/04/2026).
         data: { ...buildSources(data), buckets: lib.createBuckets<InsightsRegistry>({ overrides: [{ id: "day", format: "d mmm" }] }) },
-        initialState: insightsReport(data, narrow),
+        initialState: insightsReport(data, narrow, initialLabel.current),
         widgets: insightsWidgets(lib),
         panels: PANELS,
         localeText: LOCALE,
@@ -144,9 +148,36 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
     };
   }, [data, narrow]);
 
+  // Which input moved focus last: the panels' focus ring shows for the keyboard only (insights.css), since Studio focuses a
+  // panel from code after a click too, where :focus-visible alone can't tell.
   useEffect(() => {
-    if (api.current && theme !== initialTheme.current) api.current.setProperty("theme", theme);
-  }, [theme]);
+    const root = document.documentElement;
+    const pointer = () => (root.dataset.modality = "pointer");
+    const key = (e: KeyboardEvent) => !e.metaKey && !e.ctrlKey && (root.dataset.modality = "key");
+    window.addEventListener("pointerdown", pointer, true);
+    window.addEventListener("keydown", key, true);
+    return () => {
+      window.removeEventListener("pointerdown", pointer, true);
+      window.removeEventListener("keydown", key, true);
+      delete root.dataset.modality;
+    };
+  }, []);
+
+  useEffect(() => {
+    const studio = api.current;
+    if (!studio || theme === initialTheme.current) return;
+    studio.setProperty("theme", theme);
+    // The day chart's labels follow the page's background into the new theme.
+    const state = studio.getState();
+    studio.setState({
+      ...state,
+      pages: state.pages.map((page) => {
+        const chart = page.widgets?.["paid-by-day"];
+        if (!chart || chart.type !== "column-chart-grouped") return page;
+        return { ...page, widgets: { ...page.widgets, "paid-by-day": { ...chart, format: { ...chart.format, ...paidByDayChart(labelColor).format, title: chart.format?.title } } } };
+      }),
+    });
+  }, [theme, labelColor]);
 
   const toggleAsk = () => {
     const studio = api.current;
@@ -155,8 +186,21 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
     const open = state.panels?.ai?.collapsed === true;
     studio.setState({ ...state, panels: { ...state.panels, ai: { ...state.panels?.ai, collapsed: !open } } });
     setAskOpen(open);
-    // Into the question box, ready to type.
-    if (open) requestAnimationFrame(() => host.current?.querySelector<HTMLElement>(".ag-studio-ai-panel textarea, .ag-studio-ai-panel [contenteditable]")?.focus());
+    if (!open) return;
+    // The rail sticks under the console's header at the window's height (insights.css): the page scrolls it up to there,
+    // so its question box is on screen, then focus goes into the box, ready to type. Studio draws the rail a frame or two
+    // after the state changes.
+    let tries = 0;
+    const settle = () => {
+      const box = host.current?.querySelector<HTMLElement>(".ag-studio-ai-panel textarea, .ag-studio-ai-panel [contenteditable]");
+      if (!box) return void (tries++ < 20 && requestAnimationFrame(settle));
+      const top = (host.current?.getBoundingClientRect().top ?? 0) + window.scrollY - HEADER;
+      if (box.getBoundingClientRect().bottom > window.innerHeight && top > window.scrollY) {
+        window.scrollTo({ top, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      }
+      box.focus({ preventScroll: true });
+    };
+    requestAnimationFrame(settle);
   };
 
   const clearFilter = () => {

@@ -1,9 +1,9 @@
 "use client";
 
 import clsx from "clsx";
-import { useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
-import { barsSentence, duration, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
+import { barsSentence, duration, formatCents, isPreCheck, NO_PAYOUT, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
 import { VerdictMark, verdictOf, verdictWord } from "./VerdictMark";
@@ -46,13 +46,14 @@ export function Thumbs({ row, size = "md" }: { row: Pick<ClaimRow, "photos" | "p
   if (!shown.length) {
     return (
       <span aria-hidden="true" className={clsx("flex shrink-0", size === "md" ? "w-14" : "w-[70px]")}>
-        <span className={clsx(box, "rounded-[4px] border border-dashed border-line-strong", row.photoCount > 0 && "bg-surface-2")} />
+        <span className={clsx(box, "mx-auto rounded-[4px] border border-dashed border-line-strong", row.photoCount > 0 && "bg-surface-2")} />
       </span>
     );
   }
-  // A fixed slot (room for two overlapping photos), so claim ids line up whether a claim has one photo or two.
+  // A fixed slot (room for two overlapping photos), so claim ids line up whether a claim has one photo or two; a single
+  // photo sits in its middle, so the column's left edge doesn't go ragged.
   return (
-    <span aria-hidden="true" className={clsx("relative flex shrink-0", size === "md" ? "w-14" : "w-[70px]")}>
+    <span aria-hidden="true" className={clsx("thumbs relative flex shrink-0", size === "md" ? "w-14" : "w-[70px]", shown.length === 1 && "justify-center")}>
       {shown.map((p, i) => (
         // A private, session-checked route: next/image's optimizer can't fetch it with the company's cookie.
         // eslint-disable-next-line @next/next/no-img-element
@@ -101,7 +102,7 @@ export function ClaimCell({ data, context }: Cell) {
     <span className="flex h-full items-center gap-3">
       <span className="relative flex">
         <Thumbs row={data} />
-        {/* Shown on a picked row only (ClaimsGrid's pick style): a filled box with a check over the photos' corner. */}
+        {/* Shown on a picked row only (ClaimsGrid's pick style): a filled box with a check in place of the photos. */}
         <span aria-hidden="true" className="pick-box">
           <svg viewBox="0 0 12 12" className="size-3">
             <path d="M2.75 6.25l2.1 2.1 4.4-4.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -180,8 +181,9 @@ function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
         // Failed: filled, with a slash in the background colour.
         bar.state === "reject" && "bg-stop after:absolute after:top-1/2 after:-left-1 after:h-px after:w-4 after:-rotate-60 after:bg-bg",
         bar.state === "waiting" && "border border-line-strong",
-        // Not needed or not run: a dim hollow box, so the strip keeps its length without claiming a check.
-        bar.state === "skipped" && "border border-line-strong opacity-45",
+        // Not needed or not run: a centred 2px dash, so the strip keeps its slots without claiming a check or reading as
+        // one still waiting.
+        bar.state === "skipped" && "after:absolute after:inset-x-0 after:top-1/2 after:h-0.5 after:-translate-y-1/2 after:rounded-full after:bg-line-strong",
       )}
     />
   );
@@ -189,8 +191,9 @@ function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
 
 const splitBars = (bars: CheckBar[]) => ({ pre: bars.filter((b) => isPreCheck(b.id)), model: bars.filter((b) => !isPreCheck(b.id)) });
 
-/** The checks as a fixed strip: the four pre-checks, 4px, then the photo check's answers, padded to the recall's longest
- * so every row's strip ends on one x. Shape carries the outcome as well as colour (filled, half, slashed, outline, dim). */
+/** The checks as a fixed strip: the four account checks, a 10px gap, then the photo check's answers, padded to the
+ * recall's longest so every row's strip has the same slots in the same place. Shape carries the outcome as well as
+ * colour (filled, half, slashed, outline, dash). */
 export function Barcode({ bars, slots }: { bars: CheckBar[]; slots?: GridContext["slots"] }) {
   const { pre, model } = splitBars(bars);
   const group = (list: CheckBar[], n = 0) => (
@@ -199,14 +202,38 @@ export function Barcode({ bars, slots }: { bars: CheckBar[]; slots?: GridContext
         <Bar key={b.id} bar={b} />
       ))}
       {Array.from({ length: Math.max(0, n - list.length) }, (_, i) => (
-        <span key={`pad-${i}`} className="h-4 w-2 shrink-0" />
+        <Bar key={`pad-${i}`} bar={{ state: "skipped" }} />
       ))}
     </span>
   );
   return (
-    <span role="img" aria-label={barsSentence(bars)} className="flex items-center gap-1">
+    <span role="img" aria-label={barsSentence(bars)} className="flex items-center gap-2.5">
       {group(pre, slots?.pre)}
       {group(model, slots?.model)}
+    </span>
+  );
+}
+
+/** A span as the console prints it ("11 s", "7 min 28 s"): the figures in mono, each unit in the sans, faint, after a
+ * narrow no-break space, so the gap is a thin one beside $29.99 rather than a typewriter's. */
+export function DurationText({ sec, plus = false, className }: { sec: number; plus?: boolean; className?: string }) {
+  const parts = duration(sec).split(" ");
+  return (
+    <span className={clsx("whitespace-nowrap", className)}>
+      {plus && <span className="font-mono">+</span>}
+      {parts.map((t, i) =>
+        /\d/.test(t) ? (
+          <span key={i} className="font-mono tabular-nums">
+            {i > 0 ? "\u00a0" : ""}
+            {t}
+          </span>
+        ) : (
+          <span key={i} className="font-sans text-faint">
+            {"\u202f"}
+            {t}
+          </span>
+        ),
+      )}
     </span>
   );
 }
@@ -221,16 +248,29 @@ export function ChecksCell({ data, context }: Cell) {
   );
 }
 
-/** How long the photo check took to answer ("11 s"), right-aligned mono. The hover card has every step to the payout. */
+/** How long the photo check took to answer ("11 s"), right-aligned. The hover card has every step to the payout. An
+ * empty cell is the column's one dash, in the sans, as every other column's. */
 export function TimeCell({ data, context }: Cell) {
   if (!data) return null;
+  if (!data.timeline || data.modelSec === null) return <span className="text-ui text-faint">—</span>;
   // The homepage's still sets its figures in the sans, as the page around it does.
-  const face = context?.stacked ? "" : "font-mono tabular-nums ";
-  if (!data.timeline || data.modelSec === null) return <span className={`${face}text-ui text-faint`}>—</span>;
+  if (context?.stacked) return <span className="text-ui text-text-2">{duration(data.modelSec)}</span>;
   return (
-    <span className={`${face}text-ui text-text-2`}>
+    <span className="text-ui text-text-2">
       <span className="sr-only">Photo check answered in </span>
-      {duration(data.modelSec)}
+      <DurationText sec={data.modelSec} />
+    </span>
+  );
+}
+
+/** Photos to PayPal taking the payout, for claims a payout was sent for; a dash for the rest. */
+export function ToPayCell({ data }: Cell) {
+  if (!data) return null;
+  if (data.toPay === null || !sent(data)) return <span className="text-ui text-faint">—</span>;
+  return (
+    <span className="text-ui text-text-2">
+      <span className="sr-only">Photo to payout </span>
+      <DurationText sec={data.toPay} />
     </span>
   );
 }
@@ -247,9 +287,7 @@ export function PayerCell({ data, context }: Cell) {
 }
 
 const FAILED = new Set(["FAILED", "RETURNED", "BLOCKED", "DENIED", "REVERSED", "REFUNDED", "CANCELED"]);
-// The one wording for an approved refund on a claim that came with the console, which never pays out: here and in
-// the drawer's timeline.
-export const NO_PAYOUT = "This claim came with your console, so the rule's approval sends no payout.";
+export { NO_PAYOUT };
 
 /** Whether money left for this claim (a payout PayPal took). */
 export const sent = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) => r.decision === "paid" && Boolean(r.payoutStatus) && !r.seeded;
@@ -258,7 +296,7 @@ export type PayoutState = { word: "Not sent" | "Sent" | "Refused"; detail: strin
 
 /**
  * The money's one column, in three words: Sent once PayPal has the payout (settling, then settled), Refused when PayPal
- * didn't take it, Not sent for an approved claim no payout went out for (one that came with the console). Null while
+ * didn't take it, Not sent for an approved claim no payout went out for (a starter claim). Null while
  * nothing is owed: a held claim waits for a person, a refused one owes nothing.
  */
 export function payoutState(r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "payoutFailedAt">): PayoutState | null {
@@ -415,6 +453,14 @@ export function HeaderOnlyTip({ location, value }: CustomTooltipProps<GridRow>) 
   return location === "header" ? <HeaderTip text={value} /> : null;
 }
 
+/** The Payout column: its legend on the header, and on a Not sent cell the reason no payout went out. */
+export function PayoutTooltip({ location, value, data }: CustomTooltipProps<GridRow>) {
+  if (location === "header") return <HeaderTip text={value} />;
+  const p = data ? payoutState(data) : null;
+  if (!p || p.word !== "Not sent") return null;
+  return <HeaderTip text={p.title} />;
+}
+
 /** Hovering the strip: the count, then each check by name with its result, pre-checks first. */
 export function ChecksTooltip({ data, location, value }: CustomTooltipProps<GridRow>) {
   if (location === "header") return <HeaderTip text={value} />;
@@ -468,7 +514,7 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Gr
         {steps.map(([label, v]) => (
           <div key={label} className="contents">
             <dt className={v === null ? "text-faint" : "text-text-2"}>{label}</dt>
-            <dd className="text-right font-mono text-micro leading-5 text-muted tabular-nums">{v === null ? "—" : duration(v)}</dd>
+            <dd className="text-right text-micro leading-5 text-muted">{v === null ? "—" : <DurationText sec={v} />}</dd>
           </div>
         ))}
       </dl>
@@ -477,12 +523,34 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Gr
   );
 }
 
-/** Hovering a claim: its first photo at 240px, with its number and code. */
+/** Hovering a claim: its first photo at 240px, with its number and code, just above the claim's row rather than under
+ * the pointer, where it covered the row's own verdict. */
 export function PhotoTooltip({ data }: CustomTooltipProps<GridRow>) {
+  const card = useRef<HTMLDivElement>(null);
+  const id = data?.id;
+  useLayoutEffect(() => {
+    const el = card.current;
+    const cell = id ? document.querySelector<HTMLElement>(`.claims-grid .ag-row[row-id="${CSS.escape(id)}"] .ag-cell[col-id="createdAt"]`) : null;
+    if (!el || !cell) return;
+    // AG Grid places its popup at the pointer after this renders: measured once it has, then moved from there.
+    let frame = 0;
+    const place = () => {
+      el.style.translate = "";
+      const box = el.getBoundingClientRect();
+      const at = cell.getBoundingClientRect();
+      // Above the row (below it when there is no room), from the claim cell's left edge: the row itself, its verdict
+      // included, stays in view beside the photo.
+      const top = at.top - box.height - 6 >= 64 ? at.top - box.height - 6 : at.bottom + 6;
+      el.style.translate = `${Math.round(at.left + 8 - box.left)}px ${Math.round(top - box.top)}px`;
+    };
+    place();
+    frame = requestAnimationFrame(() => (place(), (frame = requestAnimationFrame(place))));
+    return () => cancelAnimationFrame(frame);
+  }, [id]);
   const photo = data?.photos[0];
   if (!data || !photo) return null;
   return (
-    <div className="w-[256px] overflow-hidden rounded-card bg-surface p-2 pb-2.5 shadow-float">
+    <div ref={card} className="w-[256px] overflow-hidden rounded-card bg-surface p-2 pb-2.5 shadow-float">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={photo.large} alt={`Photo 1 of ${data.photoCount} for ${data.id}`} width={240} height={180} className="block h-[180px] w-[240px] rounded-control bg-surface-2 object-cover" />
       <p className="mt-2 flex justify-between px-0.5 font-mono text-micro text-muted">

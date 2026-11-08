@@ -1,28 +1,33 @@
 "use client";
 
 import clsx from "clsx";
-import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { CrossIcon } from "@/components/ui";
-import { formatCents, ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
+import { formatCents, ledgerOf, searchKey, searchText, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
 import { BulkBar, type BulkMode, type BulkResult } from "./BulkBar";
 import { ClaimsGrid, type ClaimsGridHandle, type GridTotals, type GroupBy, type SortOrder } from "./ClaimsGrid";
 import type { DecisionModel } from "./DecisionFilter";
+import { EvidenceShell } from "./EvidenceShell";
 import { Keys } from "./Keys";
 import { formatCount, plural } from "./format";
 import { Ledger } from "./Ledger";
 import type { ReviewIntent } from "./ReviewActions";
+import { keepStarterDecision, useStarterDecisions, withStarterDecisions } from "./starterDecisions";
 import { StatusTabs, TABS, type Tab } from "./StatusTabs";
 import { useQueuePoll, type PollState } from "./useQueuePoll";
 
-// The evidence views load on the first open, not with the page: the queue's first load stays small.
-const EvidencePanel = dynamic(() => import("./EvidenceDrawer").then((m) => m.EvidencePanel), { ssr: false, loading: () => <PanelShell /> });
-const EvidenceDrawer = dynamic(() => import("./EvidenceDrawer").then((m) => m.EvidenceDrawer), { ssr: false });
+// The evidence views load on the first open, not with the page: the queue's first load stays small. The queue fetches
+// the module once it has drawn (below), so a first open rarely waits; if it does, the panel shows its own header from
+// the grid's row and its skeleton, never a blank card.
+const loadEvidence = () => import("./EvidenceDrawer");
+const EvidencePanel = lazy(() => loadEvidence().then((m) => ({ default: m.EvidencePanel })));
+const EvidenceDrawer = lazy(() => loadEvidence().then((m) => ({ default: m.EvidenceDrawer })));
+const noSubscribe = () => () => {};
 
-function PanelShell() {
-  return <div aria-hidden="true" className="h-full w-[440px] shrink-0 rounded-card bg-surface shadow-float" />;
-}
+// The evidence panel's width: 440px on a laptop, growing with the screen to 680px, so the photos (the evidence) read at
+// 1920 without opening the viewer.
+export const PANEL_W = "w-[clamp(440px,34vw,680px)]";
 
 const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: string }> = {
   paid: {
@@ -109,8 +114,18 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   // The pointer or keyboard focus in the grid: new claims wait rather than shift the rows (useQueuePoll).
   const [pointerIn, setPointerIn] = useState(false);
   const [focusIn, setFocusIn] = useState(false);
-  const { rows, pending, showPending, at, failed, state, refresh } = useQueuePoll(recall.id, initial, initialAt, pointerIn || focusIn || open !== null);
+  const { rows: polled, pending, showPending, at, failed, state, refresh } = useQueuePoll(recall.id, initial, initialAt, pointerIn || focusIn || open !== null);
+  // Starter claims this tab decided (starterDecisions.ts) read as decided here.
+  const starterDecided = useStarterDecisions();
+  const rows = useMemo(() => withStarterDecisions(polled, starterDecided), [polled, starterDecided]);
+  useEffect(() => {
+    // The evidence module, fetched while the reviewer reads the list.
+    const t = window.setTimeout(() => void loadEvidence(), 1200);
+    return () => window.clearTimeout(t);
+  }, []);
   const wide = useMedia(WIDE);
+  // The evidence views are drawn in the browser only (they load the claim there).
+  const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   const fill = useMedia(FILL);
   const roomy = useMedia(ROOMY);
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "all");
@@ -122,6 +137,15 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const [totals, setTotals] = useState<GridTotals | null>(null);
   const shown = totals?.count ?? null;
   const [intent, setIntent] = useState<ReviewIntent | null>(null);
+  // V or Space on the open claim: its photo viewer, at the first photo (a count, so each press opens it).
+  const [viewPhotos, setViewPhotos] = useState(0);
+  // A decision just made: said in the panel's header for 2 s, where the reviewer is looking, as the next claim opens.
+  const [notice, setNotice] = useState<{ id: string; text: string } | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(null), 2000);
+    return () => window.clearTimeout(t);
+  }, [notice]);
   const [help, setHelp] = useState(false);
   // A or R on a claim they can't act on: said in the footer for a few seconds, so a key never seems to do something silently.
   const [hint, setHint] = useState<string | null>(null);
@@ -145,13 +169,14 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const [searchOpen, setSearchOpen] = useState(false);
 
   const ledger = useMemo(() => ledgerOf(rows, recall), [rows, recall]);
-  // Search: every word must appear in the claim id, code, PayPal account's last four or reason. It applies to every
-  // tab, so the tabs count what it matches.
+  // Search: every word must appear in the claim id, code, PayPal account's last four, reason or verdict line, as the
+  // grid's quick filter reads them (searchText: O and 0 match each other). It applies to every tab, so the tabs count
+  // what it matches.
   const searched = useMemo(() => {
-    const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const words = searchKey(search.trim()).split(/\s+/).filter(Boolean);
     if (!words.length) return rows;
     return rows.filter((r) => {
-      const text = `${r.id} ${r.code ?? ""} ${r.payer} ${r.reason}`.toLowerCase();
+      const text = searchKey(searchText(r));
       return words.every((w) => text.includes(w));
     });
   }, [rows, search]);
@@ -176,8 +201,9 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     if (id) requestAnimationFrame(() => grid.current?.focusRow(id));
   }, [open]);
 
+  // Opening a claim drops a key's intent for another claim, never this one's: an A pressed as Enter opened it stays.
   const openClaim = useCallback((id: string) => {
-    setIntent(null);
+    setIntent((i) => (i?.id === id ? i : null));
     setOpen(id);
   }, []);
 
@@ -231,20 +257,25 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   // docked panel focus moves to its row and the panel follows; the sheet offers it in its footer.
   const [next, setNext] = useState<{ after: string; id: string | null } | null>(null);
   const decided = useCallback(
-    (id: string, decision?: string) => {
+    (id: string, decision?: string, claim?: { sample?: boolean; amount?: string } | null) => {
       const order = grid.current?.displayedIds() ?? found.map((r) => r.id);
       const byId = new Map(rows.map((r) => [r.id, r]));
       const held = order.filter((x) => x === id || byId.get(x)?.decision === "held");
       const i = held.indexOf(id);
       const nextId = (held[i + 1] ?? held[i - 1]) || null;
       setNext({ after: id, id: nextId });
+      const said =
+        decision === "rejected" ? `${id} rejected` : claim?.sample ? `${id} approved · no payout sent` : `${id} approved · ${claim?.amount ?? "refund"} sent`;
       if (wide && nextId) {
-        setHint(`${id} ${decision === "rejected" ? "rejected" : "approved"} and saved`);
+        setNotice({ id: nextId, text: said });
         requestAnimationFrame(() => {
           setIntent(null);
           setOpen(nextId);
           grid.current?.focusRow(nextId);
         });
+      } else if (wide) {
+        setNotice({ id, text: said });
+        requestAnimationFrame(() => grid.current?.focusRow(id));
       }
     },
     [found, rows, wide],
@@ -259,10 +290,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
       const failed = results.filter((r) => !r.ok).map((r) => r.id);
       const samples = done.filter((r) => r.sample).length;
       const verb = decision === "reject" ? "rejected" : samples === done.length ? "approved" : "paid through PayPal";
+      for (const r of done) if (r.claim?.seeded) keepStarterDecision(r.claim);
       if (done.length) {
         setHint(
           `${plural(done.length, "claim")} ${verb}` +
-            (samples ? (samples === done.length ? ": they came with your console, so nothing was sent and they stay in the queue" : `; ${samples} came with your console and stay in the queue`) : ""),
+            (decision === "approve" && samples ? (samples === done.length ? ": filed before PayPal Payouts was connected, so no payout was sent" : `; ${samples} filed before PayPal Payouts was connected sent nothing`) : ""),
         );
       }
       setBulk("idle");
@@ -345,6 +377,10 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         requestAnimationFrame(() => searchBox.current?.focus());
       } else if (/^[1-6]$/.test(e.key)) {
         changeTab(TABS[Number(e.key) - 1].id);
+      } else if ((e.key === "v" || e.key === "V") && open) {
+        // The open claim's photos, full size.
+        e.preventDefault();
+        setViewPhotos((n) => n + 1);
       } else if ((e.key === "j" || (e.key === "ArrowDown" && fill)) && outsideList(e.target)) {
         // Into the list from anywhere on the page: the open claim's row, else the first. Below 1024px the page scrolls,
         // so ↓ keeps scrolling it there, and j (or Tab) goes into the list.
@@ -379,6 +415,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         setIntent((i) => ({
           mode: e.key === "a" ? "approve" : "reject",
           n: (i?.n ?? 0) + 1,
+          id: row.id,
         }));
       } else if (e.key === "?") {
         setHelp(true);
@@ -528,6 +565,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               oldestFirst={tab === "held"}
               openId={open}
               onOpen={openClaim}
+              onViewPhotos={() => setViewPhotos((n) => n + 1)}
               onOpenLinked={goTo}
               onFocusRow={(id) => open && wide && id !== open && openClaim(id)}
               fill={fill}
@@ -539,22 +577,6 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               picked={pickedSet}
               onPick={pick}
             />
-            {picked.length > 0 && (
-              // Over the grid's foot, centred: the pick's actions in reach of the rows they act on.
-              <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
-                <BulkBar
-                  rows={rows.filter((r) => pickedSet.has(r.id)).sort((a, b) => picked.indexOf(a.id) - picked.indexOf(b.id))}
-                  mode={bulk}
-                  onMode={setBulk}
-                  onClear={() => {
-                    pick([]);
-                    requestAnimationFrame(() => (open ? grid.current?.focusRow(open) : grid.current?.focusFirst()));
-                  }}
-                  onDone={bulkDone}
-                  onOpen={goTo}
-                />
-              </div>
-            )}
             {shown === 0 && (
               // Under the header row, sized to its words: the grid's frame stays, with the note where the rows would be.
               <div className="absolute inset-x-px top-[37px] bottom-px z-10 rounded-b-card bg-surface px-6 pt-8">
@@ -563,6 +585,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                 ) : search ? (
                   <Note
                     title={`No claims in ${tab === "all" ? "this recall" : TABS.find((t) => t.id === tab)?.label} match “${search}”`}
+                    // A link, as the matches beside it are.
                     action={
                       <>
                         {elsewhere.map((t) => (
@@ -575,7 +598,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                             {plural(counts[t.id], "match", "matches")} in {t.label}
                           </button>
                         ))}
-                        <button type="button" onClick={clearSearch} className="text-muted hover:text-text">
+                        <button
+                          type="button"
+                          onClick={clearSearch}
+                          className="text-text underline decoration-line-strong underline-offset-2 hover:decoration-text"
+                        >
                           Clear search
                         </button>
                       </>
@@ -599,6 +626,22 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
             )}
           </div>
 
+          {picked.length > 0 && (
+            // Docked under the grid, over the footer: the pick's actions in reach, and no row hidden behind them.
+            <div className="flex pt-2">
+                <BulkBar
+                  rows={rows.filter((r) => pickedSet.has(r.id)).sort((a, b) => picked.indexOf(a.id) - picked.indexOf(b.id))}
+                  mode={bulk}
+                  onMode={setBulk}
+                  onClear={() => {
+                    pick([]);
+                    requestAnimationFrame(() => (open ? grid.current?.focusRow(open) : grid.current?.focusFirst()));
+                  }}
+                  onDone={bulkDone}
+                  onOpen={goTo}
+                />
+              </div>
+            )}
           {/* One bar under the grid: what the filters show and its money on the left; freshness and the keys on the right. */}
           <footer className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-micro text-muted">
             <span>
@@ -613,7 +656,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                   {totals.sentCents > 0 && (
                     <>
                       {" · "}
-                      <span className="font-mono">{formatCents(totals.sentCents)}</span> paid out
+                      <span className="font-mono">{formatCents(totals.sentCents)}</span> sent
                     </>
                   )}
                 </>
@@ -637,9 +680,14 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         </div>
 
         {wide && open && (
-          <div className="flex min-h-0 w-[440px] shrink-0 pt-2">
+          <div className={`flex min-h-0 ${PANEL_W} shrink-0 pt-2`}>
+            {hydrated ? (
+            <Suspense fallback={<EvidenceShell row={openRow} />}>
             <EvidencePanel
               claimId={open}
+              row={openRow}
+              notice={notice?.id === open ? notice.text : null}
+              viewPhotos={viewPhotos}
               version={openRow?.version}
               filedAt={openRow?.createdAt}
               onClose={close}
@@ -650,12 +698,19 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               back={back}
               onBack={goBack}
             />
+            </Suspense>
+            ) : (
+              <EvidenceShell row={openRow} />
+            )}
           </div>
         )}
       </div>
-      {!wide && open && (
+      {hydrated && !wide && open && (
+        <Suspense fallback={null}>
         <EvidenceDrawer
           claimId={open}
+          row={openRow}
+          viewPhotos={viewPhotos}
           version={openRow?.version}
           filedAt={openRow?.createdAt}
           onClose={close}
@@ -666,6 +721,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           back={back}
           onBack={goBack}
         />
+        </Suspense>
       )}
 
       {help && <ShortcutSheet onClose={() => setHelp(false)} />}
@@ -673,17 +729,25 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   );
 }
 
-/** "just now", then "2 min ago": a calm clock, redrawn every 15 s rather than ticking each second. */
-function Ago({ at }: { at: number }) {
+/** "just now", then "2 min ago": a calm clock, redrawn every 15 s rather than ticking each second. `stale` follows it
+ * once it is a minute old (the Refresh link). */
+function Ago({ at, stale }: { at: number; stale?: ReactNode }) {
   const [now, setNow] = useState(at);
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 15_000);
     return () => window.clearInterval(t);
   }, []);
   const min = Math.floor(Math.max(0, now - at) / 60_000);
-  return <>{min < 1 ? "just now" : `${min} min ago`}</>;
+  return (
+    <>
+      {min < 1 ? "just now" : `${min} min ago`}
+      {min >= 1 && stale}
+    </>
+  );
 }
 
+/** The queue's freshness in one word: Live while it updates itself, else when it was last read, with Refresh once that
+ * is a minute old. */
 function Status({ state, at, failed, onRefresh }: { state: PollState; at: number; failed: boolean; onRefresh: () => void }) {
   const refresh = (
     <button
@@ -710,26 +774,28 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
       ) : (
         // One flex item: the wrapper's gap would otherwise open between each word run.
         <span>
-          <span className="max-sm:hidden">Up to date · updated </span>
-          <span className="sm:hidden">Updated </span>
-          <Ago key={at} at={at} /> · {refresh}
+          Updated <Ago key={at} at={at} stale={<> · {refresh}</>} />
         </span>
       )}
     </span>
   );
 }
 
-const SHORTCUTS: [string[], string][] = [
-  [["/"], "Search"],
-  [["1", "6"], "Status tab"],
-  [["↑", "↓"], "Next / previous claim"],
-  [["J", "K"], "Next / previous claim"],
-  [["Enter"], "Open claim"],
-  [["⇧", "↑", "↓"], "Pick several claims"],
-  [["X"], "Pick or drop a claim"],
-  [["Esc"], "Close, or let the pick go"],
-  [["A"], "Approve (press twice)"],
-  [["R"], "Reject"],
+// Each row: its keys, what joins them ("/" for either, "to" for a range, "+" for together), and what they do.
+const SHORTCUTS: [string[], "/" | "to" | "+" | null, string][] = [
+  [["/"], null, "Search"],
+  [["1", "6"], "to", "Status tab"],
+  [["↓", "J"], "/", "Next claim"],
+  [["↑", "K"], "/", "Previous claim"],
+  [["Enter"], null, "Open the claim"],
+  [["V", "Space"], "/", "The open claim's photos"],
+  [["⇧", "↑/↓"], "+", "Pick several claims"],
+  [["X"], null, "Pick or drop a claim"],
+  [["A"], null, "Approve (press twice)"],
+  [["R"], null, "Reject"],
+  [["⌘", "↵"], "+", "Send the reason"],
+  [["Esc"], null, "Close the panel or clear the selection"],
+  [["?"], null, "This sheet"],
 ];
 
 function ShortcutSheet({ onClose }: { onClose: () => void }) {
@@ -743,7 +809,7 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       onClick={(e) => e.target === e.currentTarget && e.currentTarget.close()}
       aria-labelledby="shortcuts-title"
-      className="m-auto w-[360px] max-w-[calc(100vw-2rem)] rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0.1_0.004_75/0.5)]"
+      className="m-auto w-[420px] max-w-[calc(100vw-2rem)] rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0.1_0.004_75/0.5)]"
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         {/* Focus starts on the title, not on the Esc button, whose ring read as a stray selection. */}
@@ -760,13 +826,19 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <dl className="flex flex-col gap-3 px-5 py-4">
-        {SHORTCUTS.map(([keys, what]) => (
-          <div key={keys.join()} className="grid grid-cols-[88px_1fr] items-center gap-3 text-ui">
-            <dt className="flex gap-1">
+        {SHORTCUTS.map(([keys, join, what]) => (
+          <div key={keys.join()} className="grid grid-cols-[112px_1fr] items-center gap-3 text-ui">
+            <dt className="flex items-center gap-1">
               {keys.map((k, i) => (
                 <span key={k} className="inline-flex items-center gap-1">
-                  {i > 0 && keys.length === 2 && k === "6" && <span className="text-faint">to</span>}
-                  <kbd className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-[4px] border border-line-strong/60 px-1.5 font-mono text-micro text-muted">
+                  {i > 0 && join && <span className="text-micro text-faint">{join}</span>}
+                  {/* One size and ink for every cap; ⇧ and ⌘ in the sans, where the mono draws them small. */}
+                  <kbd
+                    className={clsx(
+                      "inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-[4px] border border-line-strong/60 px-1.5 text-micro text-muted",
+                      k === "⇧" || k === "⌘" ? "font-sans text-ui leading-none" : "font-mono",
+                    )}
+                  >
                     {k}
                   </kbd>
                 </span>

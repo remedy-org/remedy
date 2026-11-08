@@ -34,20 +34,27 @@ const PATTERN: (typeof DECISIONS)[number][] = ["paid", "held", "rejected", "paid
 const image = (key: string, w: 96 | 256 | 384) => `/_next/image?url=${encodeURIComponent(publicPhoto(key))}&w=${w}&q=75`;
 const publicPhoto = (key: string) => `/demo/${key.slice(SEED_PHOTO_PREFIX.length)}`;
 
-let cached: { recall: Recall; claims: Claim[] } | null = null;
+const cached = new Map<boolean, { recall: Recall; claims: Claim[] }>();
 
-/** The 40 seeded claims and the demo recall, at PREVIEW_NOW, drawn as live claims. Pure, built once per server process. */
-export function previewSeed() {
-  if (cached) return cached;
+/** The 40 seeded claims and the demo recall, at PREVIEW_NOW, drawn as live claims (the homepage), or as the console
+ * draws them (`asConsole`: the sign-in page's picture of the console it opens, starter claims approved and not sent).
+ * Pure, built once per server process. */
+export function previewSeed(asConsole = false) {
+  const hit = cached.get(asConsole);
+  if (hit) return hit;
   const recall = demoRecall(new Date(PREVIEW_NOW.getTime() - 3 * 86_400_000));
   // The hashes only feed the duplicate-photo check, which seeded claims never run.
   const hashes = Object.fromEntries(SEED_PHOTOS.map((name) => [name, "0000000000000000"]));
-  cached = { recall, claims: buildSeedClaims({ recall, now: PREVIEW_NOW, hashes }).map((c) => ({ ...c, seeded: false })) };
-  return cached;
+  const claims = buildSeedClaims({ recall, now: PREVIEW_NOW, hashes });
+  const built = { recall, claims: asConsole ? claims : claims.map((c) => ({ ...c, seeded: false })) };
+  cached.set(asConsole, built);
+  return built;
 }
 
-export function previewProps(height = 560): ClaimsGridPreviewProps & { rows: PreviewRow[] } {
-  const { recall, claims } = previewSeed();
+/** The grid's rows, ledger and counts for a picture of the console. `asConsole` draws the claims exactly as /console
+ * does (verdicts, reasons and check names in its words); otherwise the homepage's live drawing and its shorter lines. */
+export function previewProps(height = 560, { asConsole = false } = {}): ClaimsGridPreviewProps & { rows: PreviewRow[] } {
+  const { recall, claims } = previewSeed(asConsole);
   const all = claims.map((c) => toRow(summarize(c), recall, (key) => ({ thumb: image(key, 96), large: image(key, 256) })));
   // Ordered for the shot, decided claims first: the outcomes mixed (paid, the open held claim, rejected, paid,
   // blocked, ...), newest first within each, then the claims still waiting for photos at the foot. The grid keeps this
@@ -63,7 +70,7 @@ export function previewProps(height = 560): ClaimsGridPreviewProps & { rows: Pre
   picked.push(...all.filter((r) => r.decision === "pending"));
   const rows: PreviewRow[] = typeset(
     picked.map((r) => {
-      const row = { ...r, note: shortNote(r.note), bars: r.bars?.map((b) => ({ ...b, label: CHECK_NAME[b.id]?.(r.code ?? "") ?? b.label })) ?? null };
+      const row = asConsole ? r : { ...r, note: shortNote(r.note), bars: r.bars?.map((b) => ({ ...b, label: CHECK_NAME[b.id]?.(r.code ?? "") ?? b.label })) ?? null };
       // Every held claim carries its evidence, so a visitor who clicks one in the queue opens it.
       const claim = r.decision === "held" ? claims.find((c) => c.id === r.id) : undefined;
       return claim ? { ...row, evidence: evidenceOf(claim, recall) } : row;
@@ -77,7 +84,6 @@ export function previewProps(height = 560): ClaimsGridPreviewProps & { rows: Pre
 // The queue's verdict line, as a reviewer scans it: the reason in a few words. The evidence keeps the full sentence.
 const SHORT: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^This PayPal account isn’t verified/, () => "PayPal account not verified"],
-  [/^Couldn’t tell if both photos show the same item/, () => "Not sure it’s the same item"],
   [/^Looks like a photo of a screen or a print/, () => "Photo of a screen or a print"],
   [/^Written code reads (\w+); this claim’s code is (\w+)/, (m) => `Code reads ${m[1]}, not ${m[2]}`],
   [/^Photo \d+ was already used in another claim/, () => "Photo already used in another claim"],

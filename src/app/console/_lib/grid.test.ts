@@ -33,7 +33,9 @@ describe("the grid's evidence cells", () => {
     const row = toRow(summarize(seededPaid), recall);
     expect(row.bars?.map((b) => `${b.id}:${b.state}`)).toEqual([
       "session:pass",
-      // Seeded claims share sample photos: their fingerprint check never ran, so it has no bar.
+      // Starter claims share their photos: the fingerprint check never ran, so its slot is drawn as not run (a dash),
+      // in place, so every row's four account slots line up.
+      "duplicate_photo:skipped",
       "payer:pass",
       "payer_verified:pass",
       "label:pass",
@@ -60,8 +62,8 @@ describe("the grid's evidence cells", () => {
   it("count a demo sample's checks as its receipt does: one claim per account is skipped unless it's the genuine one", () => {
     const demo = (sample: string) =>
       toRow(summarize(sampleClaim({ decision: "rejected", demo: true, reasons: [{ check: "label", outcome: "pass", text: "" }, reject("code", "Written code reads K7Q"), { check: "step_1", outcome: "pass", text: "" }, { check: "screen", outcome: "pass", text: "" }], events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] })), recall);
-    // A check that didn't run has no bar.
-    expect(demo("wrong-code").bars?.find((b) => b.id === "payer")).toBeUndefined();
+    // A check that didn't run keeps its slot, drawn as not run.
+    expect(demo("wrong-code").bars?.find((b) => b.id === "payer")?.state).toBe("skipped");
     expect(barsSentence(demo("wrong-code").bars!)).toBe("Account checks 3 of 3 · Photo check 3 of 4");
     expect(demo("genuine").bars?.find((b) => b.id === "payer")?.state).toBe("pass");
   });

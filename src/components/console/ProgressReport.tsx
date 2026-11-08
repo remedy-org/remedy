@@ -155,6 +155,8 @@ export function ProgressReport({
             label="Sent"
             value={formatCents(report.sentCents)}
             note={`${plural(report.sent, "payout")}${report.sent ? each : ""}${report.settling ? ` · ${formatCount(report.settling)} settling` : report.sent ? " · all settled" : ""}`}
+            // Approved less sent, on the page: the refunds approved before PayPal Payouts was connected.
+            more={report.samplesPaid ? `${plural(report.samplesPaid, "approved refund")} not sent (${formatCents(report.sampleCents)}): filed before PayPal Payouts was connected` : undefined}
           />
           <Figure label="Method" value="PayPal" note="Payouts to each owner's verified PayPal account" home={home} />
         </div>
@@ -214,7 +216,8 @@ function ReturnRuler({ remedied, sold }: { remedied: number; sold: number }) {
         aria-valuemax={sold}
         aria-valuenow={remedied}
         aria-valuetext={`${percent(remedied, sold)}; recalls typically reach ${TYPICAL_RETURN.from * 100} to ${TYPICAL_RETURN.to * 100}%`}
-        className="relative h-1 rounded-full bg-paper-2"
+        // Printed with its colours, background graphics on or off: the report's one graphic.
+        className="relative h-1 rounded-full bg-paper-2 [print-color-adjust:exact] [-webkit-print-color-adjust:exact] *:[print-color-adjust:exact] *:[-webkit-print-color-adjust:exact]"
       >
         <span
           aria-hidden="true"
@@ -244,7 +247,7 @@ function ReturnRuler({ remedied, sold }: { remedied: number; sold: number }) {
 
 // The homepage's figures are set as the rest of its section sets them: regular weight, proportional figures (tabular
 // ones space a stop or a colon like mono).
-function Figure({ label, value, note, home }: { label: string; value: string; note?: string; home?: boolean }) {
+function Figure({ label, value, note, more, home }: { label: string; value: string; note?: string; more?: string; home?: boolean }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-ui text-muted">{label}</span>
@@ -252,6 +255,11 @@ function Figure({ label, value, note, home }: { label: string; value: string; no
       {note && (
         <span data-peek-hide className="text-ui text-muted">
           {note}
+        </span>
+      )}
+      {more && (
+        <span data-peek-hide className="text-ui text-pretty text-muted">
+          {more}
         </span>
       )}
     </div>

@@ -26,6 +26,8 @@ export interface ReviewIntent {
   mode: "approve" | "reject";
   // Changes on every key press, so pressing A twice re-opens the confirm.
   n: number;
+  // The claim the key was pressed for: a panel still showing another claim leaves it for that claim's panel.
+  id?: string;
 }
 
 type PayoutFailure = PayoutFailureWords & { at: string; raw: string };
@@ -49,8 +51,9 @@ const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 /**
  * One name for each review action, the same on the panel's buttons, the photo viewer's and the key hints: "Pay $29.99…"
  * (or "Try again: pay…" after a payout that failed on the way to PayPal), "Reject…"; a starter claim's are "Approve…"
- * and "Reject…", since nothing is paid. blocked: approve's checks would stop the payout
- * now (DrawerClaim.stops), so Reject leads and approve isn't offered as a button.
+ * and "Reject…", since nothing is paid (it was filed before PayPal Payouts was connected). blocked: approve's checks
+ * would stop the payout now (DrawerClaim.stops), so Reject leads and approve isn't offered as a button. confirmKey:
+ * what A does once the confirm is open.
  */
 export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "decision" | "events" | "stops">) {
   const sample = Boolean(claim.review?.sample);
@@ -60,16 +63,18 @@ export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "dec
     blocked,
     approve: sample ? "Approve…" : `${failure ? "Try again: pay" : "Pay"} ${claim.amount}…`,
     approveKey: sample ? "Approve" : "Pay",
+    confirmKey: sample ? "Approve" : `Pay ${claim.amount}`,
     reject: "Reject…",
   };
 }
 
 /**
  * Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit press: Pay, or A again.
- * A seeded claim's review is a sample: the server says what it would have done, and the claim stays held. The
- * keyboard's A and R (intent) open the same confirm or form as the buttons and move focus into it. While the confirm or
- * form is open (data-review-open), the queue's A and R do nothing; the confirm takes A itself. onMode tells the panel
- * which form opened (the reject form brings the photos into view).
+ * A starter claim's decision comes back decided but unsaved, and the panel keeps it for this tab (starterDecisions.ts).
+ * The keyboard's A and R (intent) open the same confirm or form as the buttons and move focus into it. While the
+ * confirm or form is open (data-review-open), the queue's A and R do nothing; the confirm takes A itself, the reason
+ * takes ⌘↵ (Ctrl+Enter), and 1 to 4 pick a quick reason while it is empty. onMode tells the panel which form opened (the
+ * reject form brings the photos into view).
  */
 export function ReviewActions({
   claim,
@@ -81,7 +86,7 @@ export function ReviewActions({
 }: {
   claim: DrawerClaim;
   onMode?: (mode: Mode) => void;
-  onDone: (c: DrawerClaim) => void;
+  onDone: (c: ReviewedClaim) => void;
   // A refused approve still writes the claim's history (payout_failed, approve_refused): the panel reloads it.
   onFailed?: () => void;
   intent?: ReviewIntent | null;
@@ -95,7 +100,6 @@ export function ReviewActions({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [reason, setReason] = useState("");
-  const [sample, setSample] = useState<string | null>(null);
   // The payout failed just now: shown at once, as the reloaded claim will show it (payoutFailure), not as a second
   // design of the same message.
   const [refused, setRefused] = useState<PayoutFailure | null>(null);
@@ -118,7 +122,6 @@ export function ReviewActions({
   if (intent !== seenIntent) {
     setSeenIntent(intent);
     if (intent && !busy) {
-      setSample(null);
       setError(null);
       setNotPaid(null);
       setDropped(false);
@@ -168,9 +171,7 @@ export function ReviewActions({
       return onFailed?.();
     }
     setRefused(null);
-    if (!result.data.sample) return onDone(result.data);
-    setSample(result.data.sample);
-    setMode("idle");
+    onDone(result.data);
   };
 
   const base = `/api/console/claims/${claim.id}`;
@@ -189,9 +190,15 @@ export function ReviewActions({
     setError(null);
     setDropped(false);
   };
-  // The checks run again on approve would stop the payout (they did, or would now): Reject leads.
+  // The checks run again on approve would stop the payout (they did, or would now): approve steps back to a quiet button.
   const stuck = labels.blocked || Boolean(notPaid);
-  const openReject = () => (setSample(null), setNotPaid(null), setMode("reject"));
+  const openReject = () => (setNotPaid(null), setMode("reject"));
+  const quick = (i: number) => {
+    const q = QUICK[i];
+    if (!q) return;
+    setReason(q.text(claim.code));
+    setError(null);
+  };
 
   return (
     <div
@@ -215,13 +222,8 @@ export function ReviewActions({
 
       {mode === "idle" && (
         <>
-          {/* The footer is the buttons alone, so the evidence keeps its room; a sample's result or a refused payout sits
-              above them. A seeded claim's note is in the evidence (EvidenceDrawer). */}
-          {sample ? (
-            <p role="status" className="text-ui text-muted">
-              {sample}
-            </p>
-          ) : notPaid ? (
+          {/* The footer is the buttons alone, so the evidence keeps its room; a refused payout sits above them. */}
+          {notPaid ? (
             // The same result line as a saved decision's (EvidenceDrawer), for the approve that paid nothing.
             <p role="status" className="text-ui text-muted">
               <span className="font-medium text-text">
@@ -252,7 +254,8 @@ export function ReviewActions({
               // Approve isn't a button while its checks would stop the payout: Reject leads, and the claim they name opens
               // beside it. The A key still opens the confirm, which says why.
               <>
-                <Button key="reject" onClick={openReject} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
+                {/* Amber is for moving money only: a reject is the quiet button even when it leads. */}
+                <Button key="reject" variant="secondary" onClick={openReject} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
                   {labels.reject}
                 </Button>
                 {other && onOpen && (
@@ -265,16 +268,16 @@ export function ReviewActions({
               <>
                 <Button
                   key="approve"
-                  // The held claim's decision is the panel's one action, amber here as in the photo viewer; Reject leads only
-                  // once approve can't pay (its checks would stop the payout, or PayPal refused it).
+                  // The held claim's decision is the panel's one action, amber here as in the photo viewer, since it moves
+                  // money; once approve can't pay (its checks would stop the payout) it is a quiet button too.
                   variant={stuck ? "secondary" : "primary"}
-                  onClick={() => (setSample(null), setNotPaid(null), setMode("approve"))}
+                  onClick={() => (setNotPaid(null), setMode("approve"))}
                   autoFocus={back === "approve"}
                   className="flex-1 sm:flex-none"
                 >
                   {labels.approve}
                 </Button>
-                <Button key="reject" variant={stuck ? "primary" : "secondary"} onClick={openReject} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
+                <Button key="reject" variant="secondary" onClick={openReject} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
                   {labels.reject}
                 </Button>
               </>
@@ -291,7 +294,7 @@ export function ReviewActions({
             nothing would be sent.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={openReject} autoFocus className="flex-1 sm:flex-none">
+            <Button variant="secondary" onClick={openReject} autoFocus className="flex-1 sm:flex-none">
               {labels.reject}
             </Button>
             <Button variant="tertiary" arrow={false} onClick={reset}>
@@ -303,14 +306,17 @@ export function ReviewActions({
 
       {mode === "approve" && !labels.blocked && (
         <>
+          {/* One line, so the evidence above keeps its height. */}
           {review.sample ? (
-            <p className="text-ui text-muted">
-              This claim came with your console, so approving sends nothing and it stays in the queue. On an owner&apos;s claim, this sends{" "}
-              <span className="font-mono text-text">{claim.amount}</span> through PayPal Payouts.
+            <p className="text-ui text-pretty text-muted">
+              <span className="font-medium text-text">Approve {claim.id}?</span> Filed before PayPal Payouts was connected, so no payout is sent.
             </p>
           ) : (
             <p className="text-ui text-muted">
-              Sends <span className="font-mono text-text">{claim.amount}</span> to <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts.
+              <span className="font-medium text-text">
+                Pay <span className="font-mono">{claim.amount}</span> to <span className="font-mono">{claim.payer}</span>?
+              </span>{" "}
+              Through PayPal Payouts.
             </p>
           )}
           {dropped && (
@@ -359,25 +365,60 @@ export function ReviewActions({
               hint="The owner reads this on their claim page"
               error={error?.fields?.reason}
             >
-              {(f) => <Textarea {...f} rows={2} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={REASON_MIN} />}
+              {(f) => (
+                <Textarea
+                  {...f}
+                  rows={2}
+                  maxLength={280}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  onKeyDown={(e) => {
+                    // ⌘↵ or Ctrl+Enter sends it; 1 to 4 pick a quick reason while the field is still empty.
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      form.current?.requestSubmit();
+                    } else if (!reason && /^[1-4]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      quick(Number(e.key) - 1);
+                    }
+                  }}
+                  autoFocus
+                  required
+                  minLength={REASON_MIN}
+                />
+              )}
             </Field>
-            <div className="-mt-1 flex flex-wrap gap-1.5" role="group" aria-label="Quick reasons">
-              {QUICK.map((q) => {
+            {/* Outlined, in the text colour: choices, not disabled chips. One row in the panel, each with its number key. */}
+            <div
+              className="-mt-1 flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="Quick reasons"
+              onKeyDown={(e) => {
+                if (/^[1-4]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  quick(Number(e.key) - 1);
+                }
+              }}
+            >
+              {QUICK.map((q, i) => {
                 const text = q.text(claim.code);
                 return (
                   <button
                     key={q.label}
                     type="button"
                     aria-pressed={reason === text}
-                    onClick={() => {
-                      setReason(text);
-                      setError(null);
-                    }}
+                    aria-keyshortcuts={String(i + 1)}
+                    onClick={() => quick(i)}
                     className={clsx(
-                      "inline-flex h-11 items-center rounded-control px-3 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] hover:bg-surface-3 hover:text-text",
-                      reason === text ? "bg-surface-3 text-text" : "bg-surface-2 text-muted",
+                      "inline-flex h-8 items-center gap-1.5 rounded-control px-2 text-ui whitespace-nowrap text-text shadow-[inset_0_0_0_1px_var(--line-strong)] transition-colors duration-160 hover:bg-surface-2 max-sm:h-11 max-sm:px-3",
+                      reason === text && "bg-surface-3 shadow-[inset_0_0_0_1px_var(--text-2)]",
                     )}
                   >
+                    <span aria-hidden="true" className="font-mono text-micro text-faint">
+                      {i + 1}
+                    </span>
                     {q.label}
                   </button>
                 );
@@ -386,7 +427,8 @@ export function ReviewActions({
           </div>
           {/* On a short window the panel scrolls as one: these two stay in view at its foot. */}
           <div className="flex flex-wrap gap-3 [@media(max-height:600px)]:sticky [@media(max-height:600px)]:bottom-0 [@media(max-height:600px)]:-mb-4 [@media(max-height:600px)]:bg-surface [@media(max-height:600px)]:py-3">
-            <Button type="submit" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
+            {/* The quiet button: amber is kept for moving money. */}
+            <Button type="submit" variant="secondary" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
               Reject claim
             </Button>
             <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>

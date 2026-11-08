@@ -37,6 +37,7 @@ export function insightsLedger(claims: LedgerRow[]) {
     remedied: claims.reduce((n, c) => n + c.remedied, 0),
     paidCents,
     unsentCents: claims.reduce((n, c) => n + Math.max(0, cents(c.amountPaid) - cents(c.amountSent)), 0),
+    unsent: claims.filter((c) => cents(c.amountPaid) > cents(c.amountSent)).length,
     median: median(times),
     timeLabel: field === "timeToSendSec" ? "median photo to payout" : "median photo check",
     timed: times.length,
@@ -106,19 +107,51 @@ const reasonCount = (data: InsightsData) => new Set(data.claims.flatMap((c) => (
 const rowsOf = (data: InsightsData, narrow: boolean) => {
   const tall = refusalRows(reasonCount(data));
   return narrow
-    ? { progress: 15, decisions: 14, funnel: tall, refusals: Math.ceil((72 + reasonCount(data) * 58) / 16) }
-    : { progress: 15, decisions: 15, funnel: tall, refusals: tall };
+    ? { progress: 15, decisions: 14, funnel: tall, refusals: Math.ceil((72 + reasonCount(data) * 58) / 16), paid: PAID_ROWS }
+    : { progress: 15, decisions: 15, funnel: tall, refusals: tall, paid: PAID_ROWS };
 };
+
+// The dollars-by-day chart: a row tall enough for its title, the columns and their day labels.
+const PAID_ROWS = 15;
 
 /** The canvas rows the report takes: what the page sizes Studio's host to, so the page scrolls and the canvas never does. */
 export const reportRows = (data: InsightsData, narrow = false) => {
   const r = rowsOf(data, narrow);
-  return narrow ? r.progress + r.decisions + r.funnel + r.refusals : r.progress + r.funnel;
+  return narrow ? r.progress + r.decisions + r.funnel + r.refusals + r.paid : r.progress + r.funnel + r.paid;
 };
+
+const usdDay = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+/** Studio's own column chart (AG Charts) of the dollars PayPal sent, by the day the claim was filed: each day's sum on
+ * its column in the page's background colour (labelColor), the day under it, no value axis. Hovering a column gives the
+ * claims remedied that day. The console's Insights and the homepage's draw the same chart. */
+export function paidByDayChart(labelColor?: string) {
+  return {
+    type: "column-chart-grouped" as const,
+    dataMapping: { categoryKey: [{ id: "calendar::day" }], valueKey: [sum("claims.amountSent")], tooltipKey: [sum("claims.remedied")] },
+    format: {
+      ...titled(PAID_BY_DAY),
+      style: {
+        theme: {
+          bar: {
+            series: {
+              // A day the cross-filter leaves out keeps its dimmed column and no "$0.00" over it.
+              label: { enabled: true, fontSize: 12, ...(labelColor && { color: labelColor }), formatter: ({ value }: { value: number }) => (value ? usdDay.format(value) : "") },
+            },
+          },
+        },
+        custom: {
+          valueAxis: { gridLine: { enabled: false }, line: { width: 0 }, tick: { enabled: false }, label: { fontSize: 1, color: "rgba(0, 0, 0, 0)" } },
+          categoryAxis: { tick: { enabled: false }, label: { fontSize: 12 } },
+        },
+      },
+    },
+  };
+}
 
 // Every claim is one click away in the claims grid (the page header links it), so the report is the figures alone: no
 // second table of the same rows. Below 1024px each panel takes the canvas's full width, one under another.
-const overview = (data: InsightsData, narrow: boolean): AgPageState<InsightsRegistry> => {
+const overview = (data: InsightsData, narrow: boolean, labelColor?: string): AgPageState<InsightsRegistry> => {
   const r = rowsOf(data, narrow);
   return {
     id: "overview",
@@ -155,26 +188,29 @@ const overview = (data: InsightsData, narrow: boolean): AgPageState<InsightsRegi
         },
         format: titled("Why claims were refused"),
       },
-    },
+      "paid-by-day": paidByDayChart(labelColor),
+    } as AgPageState<InsightsRegistry>["widgets"],
     widgetLayout: narrow
       ? {
           progress: at(0, 0, 24, r.progress),
           decisions: at(0, r.progress, 24, r.decisions),
           funnel: at(0, r.progress + r.decisions, 24, r.funnel),
           refusals: at(0, r.progress + r.decisions + r.funnel, 24, r.refusals),
+          "paid-by-day": at(0, r.progress + r.decisions + r.funnel + r.refusals, 24, r.paid),
         }
       : {
           progress: at(0, 0, 16, r.progress),
           decisions: at(16, 0, 8, r.decisions),
           funnel: at(0, r.progress, 16, r.funnel),
           refusals: at(16, r.progress, 8, r.refusals),
+          "paid-by-day": at(0, r.progress + r.funnel, 16, r.paid),
         },
   };
 };
 
-export const insightsReport = (data: InsightsData, narrow = false): AgReportState<InsightsRegistry> => ({
+export const insightsReport = (data: InsightsData, narrow = false, labelColor?: string): AgReportState<InsightsRegistry> => ({
   selectedPageId: "overview",
-  pages: [overview(data, narrow)],
+  pages: [overview(data, narrow, labelColor)],
   panels: {
     // The analyst opens on demand from "Ask about this recall" in the page header: the report leads, not an empty chat.
     ai: { collapsed: true },
@@ -204,8 +240,6 @@ const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }
     },
   },
 });
-
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 /** The homepage's day chart's title, in Studio and in the still that stands in for it (InsightsStill.tsx). */
 export const PAID_BY_DAY = "Paid through PayPal, by day";
@@ -250,29 +284,8 @@ export function homeInsightsReport(data: InsightsData, rows = 40, labelColor?: s
           funnel: { ...widgets.funnel, format: titled("Check funnel") },
           ...(refusalRows ? { refusals: { ...widgets.refusals, format: titled("Why claims were refused") } } : {}),
           // Each day's dollars printed on its column (in the page's background colour, which reads on the paid green in
-          // both themes), the day under it, no value axis: the still's reading, in Studio. Hovering a column gives the
-          // claims paid that day.
-          "paid-by-day": {
-            type: "column-chart-grouped",
-            dataMapping: { categoryKey: [{ id: "calendar::day" }], valueKey: [sum("claims.amountSent")], tooltipKey: [sum("claims.remedied")] },
-            format: {
-              ...titled(PAID_BY_DAY),
-              style: {
-                theme: {
-                  bar: {
-                    series: {
-                      // A day the cross-filter leaves out keeps its dimmed column and no "$0.00" over it.
-                      label: { enabled: true, fontSize: 12, ...(labelColor && { color: labelColor }), formatter: ({ value }: { value: number }) => (value ? usd.format(value) : "") },
-                    },
-                  },
-                },
-                custom: {
-                  valueAxis: { gridLine: { enabled: false }, line: { width: 0 }, tick: { enabled: false }, label: { fontSize: 1, color: "rgba(0, 0, 0, 0)" } },
-                  categoryAxis: { tick: { enabled: false }, label: { fontSize: 12 } },
-                },
-              },
-            },
-          },
+          // both themes), the day under it, no value axis: the still's reading, in Studio, as the console draws it.
+          "paid-by-day": paidByDayChart(labelColor),
         } as AgPageState<InsightsRegistry>["widgets"],
         widgetLayout: {
           "kpi-remedied": at(0, 0, 8, kpiRows),
@@ -288,8 +301,9 @@ export function homeInsightsReport(data: InsightsData, rows = 40, labelColor?: s
   };
 }
 
-/** A time as the homepage says it: "12 sec" under a minute, else as the ledger prints it ("1:05", "1h 06m"). */
-export const spokenTime = (sec: number) => (sec < 60 ? `${sec} sec` : duration(sec));
+/** A time as the homepage says it, in the console's one unit: "12 s" under a minute, else as the ledger prints it
+ * ("1 min 5 s"). Never "sec": the console the homepage pictures says "s". */
+export const spokenTime = (sec: number) => duration(sec);
 
 type CaptionClaim = Pick<Claim, "decision" | "source" | "amountPaid" | "modelSec" | "paidOnReview" | "timeToSendSec" | "refused" | "refusalGate">;
 

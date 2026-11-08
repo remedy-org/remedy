@@ -21,9 +21,20 @@
   box-shadow: none;
 }
 
-.insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-container {
-  outline: 2px solid var(--text-2);
-  outline-offset: 4px;
+/* Keyboard only: Studio focuses a panel's stop from code after a click too (and :focus-visible matches that), so the
+   ring waits for the keyboard (InsightsStudio marks html[data-modality]), is a 1px line on the section's own edge, and
+   never moves the content inside. */
+html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-container {
+  outline: 1px solid var(--line-strong);
+  outline-offset: 0;
+}
+
+.insights-report .ag-studio-layout-widget.ag-studio-layout-widget-focus .ag-studio-layout-widget-container {
+  padding-inline: 0;
+}
+
+.insights-report .ag-studio-layout-widget.ag-studio-layout-widget-focus:not([style*="left: 0px"]) .ag-studio-layout-widget-container {
+  padding-left: 40px;
 }
 
 /* No cards: every panel is a section under a hairline, on the page's own background (theme.ts drops the fill). */
@@ -43,30 +54,82 @@
   box-shadow: inset 1px 0 0 var(--line);
 }
 
-/* The analyst's starting questions: a plain list of text links, not a row of pills. */
+/* The analyst's starting questions: one per row, each a quiet outlined button that lifts on hover, so they read as
+   things to click rather than a paragraph of links. */
 .insights-report .ag-studio-ai-prompt-starters {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px 16px 4px;
 }
 
 .insights-report .ag-studio-ai-prompt-starter {
+  justify-content: flex-start;
+  min-height: 36px;
   border: 0;
-  border-radius: 0;
+  border-radius: 8px;
   background: none;
-  box-shadow: none;
-  padding: 4px 0;
+  box-shadow: inset 0 0 0 1px var(--line);
+  padding: 0 12px;
   color: var(--text-2);
-  text-decoration: underline;
-  text-decoration-color: var(--line-strong);
-  text-underline-offset: 3px;
+  text-align: left;
+  transition: background-color var(--dur-ui) ease-out, color var(--dur-ui) ease-out;
 }
 
 .insights-report .ag-studio-ai-prompt-starter:hover {
-  background: none;
+  background: var(--surface-2);
   color: var(--text);
-  text-decoration-color: var(--text);
+}
+
+.insights-report .ag-studio-ai-prompt-starter-label {
+  white-space: normal;
+}
+
+/*
+ * The rail keeps the page's 32px gutter on its right (24px below 1024px), as everything else on the page does, and stays
+ * in view while the report scrolls: it sticks under the console's 57px header at the window's height, so its question
+ * box is on screen at 1440x900 without scrolling. Studio's root clips rather than scrolls (overflow: clip makes no scroll
+ * container), so the rail sticks to the page.
+ */
+.insights-report .ag-studio-root-inner {
+  overflow: clip;
+}
+
+.insights-report .ag-studio-root-panel-container-right {
+  position: sticky;
+  top: 57px;
+  align-self: flex-start;
+  height: min(100%, calc(100dvh - 57px));
+  margin-right: 32px;
+}
+
+@media (max-width: 1023px) {
+  .insights-report .ag-studio-root-panel-container-right {
+    margin-right: 24px;
+  }
+}
+
+/* Nothing to start over until the first message: "Start over" (and the row it sits on) waits for one. */
+.insights-report .ag-studio-ai-assistant-panel:not(:has(.ag-studio-ai-message-container > *)) .ag-studio-ai-thread-control {
+  display: none;
+}
+
+/* The question box takes one quiet 1px edge when focused, not Studio's ink border with a ring around it. */
+.insights-report .ag-studio-ai-assistant-input,
+.insights-report .ag-studio-ai-assistant-input:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: none;
+}
+
+.insights-report .ag-studio-ai-assistant-input:focus-within {
+  border-color: var(--text-2);
+}
+
+.insights-report .ag-studio-ai-assistant-textarea:focus,
+.insights-report .ag-studio-ai-assistant-textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .insights-report .ag-studio-layout-widget-overlay-resize,

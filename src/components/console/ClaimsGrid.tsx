@@ -38,7 +38,7 @@ import {
 } from "ag-grid-community";
 import { AgGridReact, type CustomCellRendererProps } from "ag-grid-react";
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { isPreCheck, type ClaimRow } from "@/app/console/_lib/view";
+import { isPreCheck, searchKey, searchText, type ClaimRow } from "@/app/console/_lib/view";
 import {
   AmountCell,
   CardRow,
@@ -48,7 +48,9 @@ import {
   GroupRow,
   PayerCell,
   PayoutCell,
+  PayoutTooltip,
   PhotoTooltip,
+  ToPayCell,
   HeaderOnlyTip,
   payoutWord,
   sent,
@@ -110,19 +112,30 @@ const VERDICT_WANT = { queue: 320, still: 144 };
 const BASE = { queue: 220 + 96, still: 220 + 136 + 96 };
 // The still's PayPal column: "•••• 78AV" and "Unverified" side by side, never cut mid-word. The queue has no PayPal
 // account column: search finds an account, and the evidence panel names it.
-const PAYER = { queue: 0, still: 172 };
+// On a wide queue (a 1920 screen, nothing open) the verdict would otherwise take 1,100px a reason never uses: the
+// PayPal account and the photo-to-payout time come in from 1600px of grid, each only while the verdict keeps
+// VERDICT_ROOMY, so a verdict and its money stay in one glance.
+const PAYER = { queue: 172, still: 172 };
 const OPTIONAL = {
-  queue: { checks: 136, payoutStatus: 120, time: 104 } as Record<string, number>,
+  queue: { checks: 136, payoutStatus: 120, time: 124, toPay: 132, payer: PAYER.queue } as Record<string, number>,
   still: { time: 88, payoutStatus: 112, payer: PAYER.still } as Record<string, number>,
 };
-const ORDER = { queue: ["checks", "payoutStatus", "time"], still: ["payoutStatus", "time", "payer"] };
+const ORDER = { queue: ["checks", "payoutStatus", "time", "toPay", "payer"], still: ["payoutStatus", "time", "payer"] };
+// Columns only a wide queue shows, and the verdict width they leave.
+const ROOMY_ONLY = new Set(["toPay", "payer"]);
+const ROOMY_FROM = 1600;
+const VERDICT_ROOMY = 560;
 
 function hiddenAt(width: number, still: boolean): Set<string> {
   const mode = still ? "still" : "queue";
   let room = width - BASE[mode] - VERDICT_WANT[mode];
-  const hidden = new Set<string>(still ? [] : ["payer"]);
+  // The still never shows the photo-to-payout column.
+  const hidden = new Set<string>(still ? ["toPay"] : []);
   for (const id of ORDER[mode]) {
-    if ((still || hidden.size === 1) && room >= OPTIONAL[mode][id]) room -= OPTIONAL[mode][id];
+    const roomy = !still && ROOMY_ONLY.has(id);
+    const fits = roomy ? width >= ROOMY_FROM && room - OPTIONAL[mode][id] >= VERDICT_ROOMY - VERDICT_WANT[mode] : room >= OPTIONAL[mode][id];
+    // In the queue the columns come in order: once one is left out, so is every one after it.
+    if (fits && (still || !hidden.size)) room -= OPTIONAL[mode][id];
     else hidden.add(id);
   }
   return hidden;
@@ -192,6 +205,8 @@ export interface ClaimsGridProps {
   onFocusRow?: (id: string) => void;
   /** Fill the parent's height (laptops) instead of growing with the rows. */
   fill?: boolean;
+  /** V or Space on the open claim's row: its photos. */
+  onViewPhotos?: () => void;
   /** Read only (the homepage preview): no keyboard opening, no tooltips, no filters. */
   still?: boolean;
   /** Sort oldest first (the held tab: the longest waiting leads) instead of newest first. */
@@ -266,6 +281,11 @@ function firstClaimIndex(grid: GridApi<GridRow>): number {
   return -1;
 }
 const rowId = (p: GetRowIdParams<GridRow>) => p.data.id;
+// Search's words against a row's text, as the queue's tab counts match them: O and 0 are one character (searchKey).
+const quickMatch = (parts: string[], text: string) => {
+  const t = searchKey(text);
+  return parts.every((p) => t.includes(searchKey(p)));
+};
 const isGroupNode = (n: IRowNode<GridRow>) => Boolean(n.data?.group);
 const noTab = () => false;
 // What a screen reader hears on a focused row: what Enter does here, not AG Grid's "Press SPACE to select this row".
@@ -289,6 +309,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     onOpen,
     onOpenLinked,
     onFocusRow,
+    onViewPhotos,
     fill = false,
     still = false,
     oldestFirst = false,
@@ -309,6 +330,11 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
 ) {
   const wrap = useRef<HTMLDivElement>(null);
   const api = useRef<GridApi<GridRow> | null>(null);
+  // When the pointer last moved over the grid, and when the grid last reflowed: a hover card opens only for a pointer
+  // that moved since, never for a cell that slid under a still one.
+  const moved = useRef(0);
+  const shifted = useRef(0);
+  const pointerSettled = useMemo(() => () => moved.current > shifted.current, []);
   // Unknown until measured, so the grid mounts in its final layout (cards or columns) and never jumps.
   const [width, setWidth] = useState<number | null>(null);
   // AG Grid paints nothing until its script runs; the skeleton holds the grid's footprint until the first rows.
@@ -339,9 +365,18 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     const el = wrap.current;
     if (!el) return;
     setWidth(el.getBoundingClientRect().width);
-    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    const ro = new ResizeObserver(([entry]) => {
+      // The grid reflowed under a pointer that didn't move (the evidence panel opened): no hover card until it moves.
+      shifted.current = performance.now();
+      setWidth(entry.contentRect.width);
+    });
     ro.observe(el);
-    return () => ro.disconnect();
+    const onMove = () => (moved.current = performance.now());
+    el.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener("pointermove", onMove);
+    };
   }, []);
 
   const cards = width !== null && width < (still ? BASE.still + VERDICT_MIN.still : CARD_BELOW);
@@ -398,14 +433,19 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       if (!grid || node?.rowIndex == null) return;
       grid.ensureIndexVisible(node.rowIndex);
       grid.setFocusedCell(node.rowIndex, "createdAt");
+      cursor.current = id;
+      anchor.current = null;
     },
     focusFirst() {
       const grid = api.current;
       if (!grid) return;
       for (let i = 0; i < grid.getDisplayedRowCount(); i++) {
-        if (!isClaim(grid.getDisplayedRowAtIndex(i))) continue;
+        const node = grid.getDisplayedRowAtIndex(i);
+        if (!isClaim(node)) continue;
         grid.ensureIndexVisible(i);
         grid.setFocusedCell(i, "createdAt");
+        cursor.current = node!.data!.id;
+        anchor.current = null;
         return;
       }
     },
@@ -575,8 +615,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         comparator: (a: string, b: string, na, nb) => a.localeCompare(b) || (na.data?.id ?? "").localeCompare(nb.data?.id ?? ""),
         // Search already finds ids and codes; the column's own filter picks codes and days, with their counts.
         filter: still ? undefined : { component: ClaimFilter, doesFilterPass: claimFilterPass },
-        getQuickFilterText: (p) => (p.data ? `${p.data.id} ${p.data.code ?? ""} ${p.data.payer} ${p.data.reason} ${p.data.note ?? ""}` : ""),
-        tooltip: (p) => (!still && p.data?.photos.length ? p.data.id : undefined),
+        getQuickFilterText: (p) => (p.data ? searchText(p.data) : ""),
+        tooltip: (p) => (!still && p.data?.photos.length && pointerSettled() ? p.data.id : undefined),
         tooltipComponent: PhotoTooltip,
       },
       {
@@ -604,10 +644,12 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       {
         colId: "checks",
         headerName: "Checks",
-        headerTooltip: still ? undefined : "The account checks, then the photo check's answers. Filled passed, half held, slashed failed, outline waiting.",
+        headerTooltip: still
+          ? undefined
+          : "The four account checks, then the photo check's answers. Filled: passed. Half: held. Slashed: failed. Outline: waiting. Dash: not needed for this claim.",
         cellRenderer: ChecksCell,
         width: 136,
-        tooltip: (p) => ((!still || stillTips) && p.data?.bars ? p.data.id : undefined),
+        tooltip: (p) => ((!still || stillTips) && p.data?.bars && (still || pointerSettled()) ? p.data.id : undefined),
         tooltipComponent: ChecksTooltip,
         getQuickFilterText: () => "",
       },
@@ -618,11 +660,25 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         cellRenderer: TimeCell,
         width: OPTIONAL[still ? "still" : "queue"].time,
         type: "rightAligned",
-        tooltip: (p) => (!still && p.data?.timeline ? p.data.id : undefined),
+        tooltip: (p) => (!still && p.data?.timeline && pointerSettled() ? p.data.id : undefined),
         tooltipComponent: TimelineTooltip,
         sortable: true,
         valueGetter: (p) => p.data?.modelSec ?? null,
         // Claims with no time last, whichever way.
+        comparator: (a: number | null, b: number | null, _na, _nb, desc) =>
+          a === null ? (b === null ? 0 : desc ? -1 : 1) : b === null ? (desc ? 1 : -1) : a - b,
+        getQuickFilterText: () => "",
+      },
+      {
+        colId: "toPay",
+        headerName: "Photo to payout",
+        headerTooltip: still ? undefined : "Seconds from the photos arriving to PayPal taking the payout. Only claims a payout was sent for.",
+        tooltipComponent: still ? undefined : HeaderOnlyTip,
+        cellRenderer: ToPayCell,
+        width: OPTIONAL.queue.toPay,
+        type: "rightAligned",
+        sortable: true,
+        valueGetter: (p) => p.data?.toPay ?? null,
         comparator: (a: number | null, b: number | null, _na, _nb, desc) =>
           a === null ? (b === null ? 0 : desc ? -1 : 1) : b === null ? (desc ? 1 : -1) : a - b,
         getQuickFilterText: () => "",
@@ -642,7 +698,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         cellRenderer: PayoutCell,
         width: OPTIONAL[still ? "still" : "queue"].payoutStatus,
         headerTooltip: still ? undefined : "Sent once PayPal has the payout, Refused when PayPal didn't take it, Not sent when no payout went out.",
-        tooltipComponent: still ? undefined : HeaderOnlyTip,
+        tooltipComponent: still ? undefined : PayoutTooltip,
+        // Not sent says why on hover.
+        tooltip: (p) => (!still && p.data && p.data.decision === "paid" && !sent(p.data) && pointerSettled() ? p.data.id : undefined),
         enableCellChangeFlash: true,
         // The homepage's still draws its claims as live ones: one the rule decided to pay during its arrival flashes paid.
         cellClass: (p) => (p.data?.payoutStatus === "SUCCESS" || (still && p.data?.decision === "paid") ? undefined : "flash-neutral"),
@@ -665,7 +723,6 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       },
       // For the CSV only: the claim's code, when it was filed and the reason as their own columns.
       { colId: "code", headerName: "Code", valueGetter: (p) => p.data?.code ?? "", hide: true },
-      { colId: "toPay", headerName: "Photos to payout (s)", valueGetter: (p) => p.data?.toPay ?? null, hide: true },
       { colId: "filedAt", headerName: "Filed (UTC)", field: "createdAt", hide: true },
       { colId: "reason", headerName: "Reason", valueGetter: (p) => (p.data ? reasonKey(p.data) : ""), hide: true },
     ];
@@ -677,7 +734,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       ...c,
       hide: c.hide || hidden.has(c.colId ?? ""),
     }));
-  }, [hidden, still, oldestFirst, stillTips]);
+  }, [hidden, still, oldestFirst, stillTips, pointerSettled]);
 
   // After every filter, sort or data change: the totals under the grid, each group's count and sum, and the count the
   // queue's footer gives.
@@ -726,13 +783,16 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
   // and AG Grid reacts to some (rowSelection, postSortRows) by rebuilding state mid-gesture: the queue re-renders when
   // the pointer or focus enters the grid, between a click's press and release, and that first click opened nothing.
   // The handlers read the latest props through a ref instead.
-  const latest = useRef({ onOpen, onFocusRow, onReady, onDecisionFilter, measure, filterJson, openId, decisionFilter, onStillClick, onPick, picked });
+  const latest = useRef({ onOpen, onFocusRow, onReady, onDecisionFilter, measure, filterJson, openId, decisionFilter, onStillClick, onPick, picked, onViewPhotos });
   useLayoutEffect(() => {
-    latest.current = { onOpen, onFocusRow, onReady, onDecisionFilter, measure, filterJson, openId, decisionFilter, onStillClick, onPick, picked };
+    latest.current = { onOpen, onFocusRow, onReady, onDecisionFilter, measure, filterJson, openId, decisionFilter, onStillClick, onPick, picked, onViewPhotos };
   });
   // Picking: the row a range starts from (the last row focused or clicked without Shift) and the pick as it stood then (a
   // range adds to it). `now` is the pick as last handed up, so fast keys never read a pick React hasn't drawn yet.
   const anchor = useRef<{ id: string; base: string[] } | null>(null);
+  // The claim the keyboard is on, by id: a row index moves when a decided claim leaves the list or a poll adds rows, so
+  // after each change the grid's focus is put back on this claim (onModelUpdated).
+  const cursor = useRef<string | null>(null);
   const now = useRef<string[]>([]);
   useLayoutEffect(() => {
     now.current = [...(picked ?? [])];
@@ -764,35 +824,76 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       },
     };
   }, []);
-  // Shift+↑/↓ in the list: the grid's own arrow handling never sees it. Focus moves one claim (over group headings) and
-  // the pick runs from the anchor to it, one key at a time however fast they come.
+  // The keyboard in the list, handled as each key arrives, in order. AG Grid hands its cellKeyDown and cellFocused events
+  // to the grid's callbacks a moment later (after a run of fast keys, all at once), so a key acted on there could land
+  // after the next one: j×7 then Shift+↓ picked the top rows. Here every key reads and moves the grid's focused cell at
+  // once: j and k walk the claims (over group headings), Enter opens, Space opens (or, on the open claim, shows its
+  // photos), X picks, and Shift+↑/↓ picks from the anchor to the new row. A plain move lets the anchor go, so the next
+  // Shift press starts from the row the keyboard is on: N presses pick N+1 claims.
   useEffect(() => {
     const el = wrap.current;
     if (!el || still) return;
     const onKey = (e: KeyboardEvent) => {
-      if (!e.shiftKey || (e.key !== "ArrowDown" && e.key !== "ArrowUp") || e.metaKey || e.ctrlKey || e.altKey) return;
       const grid = api.current;
       const target = e.target as Element | null;
-      if (!grid || !latest.current.onPick || !target?.closest(".ag-row") || target.closest(".ag-popup")) return;
-      e.preventDefault();
-      e.stopPropagation();
+      if (!grid || !target?.closest(".ag-row") || target.closest(".ag-popup") || e.metaKey || e.ctrlKey || e.altKey) return;
       const at = grid.getFocusedCell();
       if (!at || at.rowPinned) return;
-      const step = e.key === "ArrowDown" ? 1 : -1;
-      let i = at.rowIndex + step;
-      while (i >= 0 && i < grid.getDisplayedRowCount() && !isClaim(grid.getDisplayedRowAtIndex(i))) i += step;
-      const node = grid.getDisplayedRowAtIndex(i);
       const here = grid.getDisplayedRowAtIndex(at.rowIndex);
-      if (!anchor.current && isClaim(here)) pick.from(here!.data!.id);
-      if (!isClaim(node)) {
-        // The list's end: the claim already focused is picked, so the key is never silent.
-        if (isClaim(here)) pick.range(grid, here!.data!.id);
+      const walk = (step: 1 | -1) => {
+        let i = at.rowIndex + step;
+        while (i >= 0 && i < grid.getDisplayedRowCount() && !isClaim(grid.getDisplayedRowAtIndex(i))) i += step;
+        return i >= 0 && i < grid.getDisplayedRowCount() ? i : -1;
+      };
+      const stop = () => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
+      if (e.shiftKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+        if (!latest.current.onPick) return;
+        stop();
+        if (!anchor.current && isClaim(here)) pick.from(here!.data!.id);
+        const i = walk(e.key === "ArrowDown" ? 1 : -1);
+        const node = i < 0 ? null : grid.getDisplayedRowAtIndex(i);
+        if (!isClaim(node)) {
+          // The list's end: the claim already focused is picked, so the key is never silent.
+          if (isClaim(here)) pick.range(grid, here!.data!.id);
+          return;
+        }
+        ownMoves.current.set(node!.data!.id, performance.now());
+        grid.ensureIndexVisible(i);
+        grid.setFocusedCell(i, "createdAt");
+        cursor.current = node!.data!.id;
+        pick.range(grid, node!.data!.id);
         return;
       }
-      ownMoves.current.set(node!.data!.id, performance.now());
-      grid.ensureIndexVisible(i);
-      grid.setFocusedCell(i, "createdAt");
-      pick.range(grid, node!.data!.id);
+      if (e.shiftKey) return;
+      const key = e.key;
+      if (key === "j" || key === "k") {
+        stop();
+        const i = walk(key === "j" ? 1 : -1);
+        if (i < 0) return;
+        grid.ensureIndexVisible(i);
+        grid.setFocusedCell(i, "createdAt");
+        cursor.current = grid.getDisplayedRowAtIndex(i)?.data?.id ?? null;
+        anchor.current = null;
+        return;
+      }
+      if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End"].includes(key)) {
+        // AG Grid moves the focus itself, right after this: the next Shift press anchors where it lands.
+        anchor.current = null;
+        return;
+      }
+      if (!isClaim(here)) return;
+      const id = here!.data!.id;
+      if (key === "Enter" || key === " ") {
+        stop();
+        if (key === " " && id === latest.current.openId) latest.current.onViewPhotos?.();
+        else latest.current.onOpen(id);
+      } else if ((key === "x" || key === "X") && latest.current.onPick) {
+        stop();
+        pick.toggle(grid, id);
+      }
     };
     el.addEventListener("keydown", onKey, true);
     return () => el.removeEventListener("keydown", onKey, true);
@@ -859,6 +960,16 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       onModelUpdated(e: ModelUpdatedEvent<GridRow>) {
         window.clearTimeout(measureTimer.current);
         measureTimer.current = window.setTimeout(() => !e.api.isDestroyed() && latest.current.measure(e.api), 0);
+        // A row came or went above the keyboard's claim: focus stays on that claim, not on the index it had. Only while
+        // the keyboard is in the list (or dropped to the page with it), so a model change never pulls focus from elsewhere.
+        const id = cursor.current;
+        const focused = e.api.getFocusedCell();
+        if (!id || still) return;
+        const node = e.api.getRowNode(id);
+        const active = document.activeElement;
+        const inList = Boolean(wrap.current?.contains(active)) || active === document.body;
+        if (!inList || !focused || focused.rowPinned || node?.rowIndex == null || !node.displayed) return;
+        if (node.rowIndex !== focused.rowIndex) e.api.setFocusedCell(node.rowIndex, "createdAt");
       },
       onFilterChanged(e: FilterChangedEvent<GridRow>) {
         if (still || !e.columns?.some((c) => c.getColId() === "decision")) return;
@@ -879,6 +990,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         if (m?.shiftKey && latest.current.onPick) return pick.range(e.api, id);
         if ((m?.metaKey || m?.ctrlKey) && latest.current.onPick) return pick.toggle(e.api, id);
         anchor.current = { id, base: [] };
+        cursor.current = id;
         if (now.current.length) {
           now.current = [];
           latest.current.onPick?.([]);
@@ -893,47 +1005,23 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
           toggleGroup(e.api, e.data.group.key, key === "ArrowRight" ? true : key === "ArrowLeft" ? false : undefined);
           return;
         }
-        // Keys typed faster than the grid redraws can reach the cell focus has just left: the grid's own focused cell,
-        // read now, is where the keyboard is, not the cell the event came from.
-        const focused = e.api.getFocusedCell();
-        const here = focused && !focused.rowPinned ? focused.rowIndex : e.rowIndex;
-        if (!still && (key === "Enter" || key === " ") && here != null) {
-          const node = e.api.getDisplayedRowAtIndex(here);
-          if (isClaim(node)) {
-            e.event?.preventDefault();
-            latest.current.onOpen(node!.data!.id);
-          }
-        }
-        // X adds the focused claim to the pick, or takes it out.
-        if (!still && (key === "x" || key === "X") && here != null && latest.current.onPick) {
-          const node = e.api.getDisplayedRowAtIndex(here);
-          if (isClaim(node)) {
-            e.event?.preventDefault();
-            pick.toggle(e.api, node!.data!.id);
-          }
-        }
-        // j and k walk the claims like ↓ and ↑, skipping group headings (the ? sheet lists them).
-        if (!still && (key === "j" || key === "k") && here != null) {
-          e.event?.preventDefault();
-          const step = key === "j" ? 1 : -1;
-          for (let i = here + step; i >= 0 && i < e.api.getDisplayedRowCount(); i += step) {
-            if (!isClaim(e.api.getDisplayedRowAtIndex(i))) continue;
-            e.api.ensureIndexVisible(i);
-            e.api.setFocusedCell(i, "createdAt");
-            break;
-          }
-        }
+        // Every other key the list takes is handled as it arrives (the keydown listener above), not here, where AG Grid
+        // hands it over late.
       },
       onCellFocused(e: CellFocusedEvent<GridRow>) {
         if (e.rowIndex == null || e.rowPinned) return;
         const node = e.api.getDisplayedRowAtIndex(e.rowIndex);
         if (!isClaim(node)) return;
         keepInView(wrap.current, node!.data!.id);
-        // Shift+↑/↓ picks as it moves (above), and the open panel stays on its claim; any other move starts a new range here.
+        // Where the focus is now (this event comes late): the keys above read the grid itself, the cursor follows here
+        // for moves they didn't make (a click, AG Grid's own arrows).
+        const focused = e.api.getFocusedCell();
+        const now = focused && !focused.rowPinned ? e.api.getDisplayedRowAtIndex(focused.rowIndex) : null;
+        if (isClaim(now)) cursor.current = now!.data!.id;
+        // Shift+↑/↓ picks as it moves (above), and the open panel stays on its claim.
         const moved = ownMoves.current.get(node!.data!.id);
         if (moved !== undefined && performance.now() - moved < 1000) return;
         ownMoves.current.clear();
-        pick.from(node!.data!.id);
         const onFocus = latest.current.onFocusRow;
         if (!onFocus) return;
         const id = node!.data!.id;
@@ -959,6 +1047,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       className={className ?? (fill ? `claims-grid relative h-full w-full${ready ? "" : " overflow-hidden"}` : "claims-grid relative w-full")}
       aria-busy={!ready || undefined}
       data-still={still || undefined}
+      // The Verdict filter is a status tab's (one decision, no reasons): claims-grid.css keeps its icon unlit.
+      data-tab-filter={decisionFilter && decisionFilter.decisions.length === 1 && !decisionFilter.reasons.length ? "" : undefined}
     >
       {/* The pick, drawn by row id: picking redraws no cells. */}
       {picked && picked.size > 0 && <style>{pickCss(picked)}</style>}
@@ -982,6 +1072,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
             isFullWidthRow={isFullWidthRow}
             fullWidthCellRenderer={FullWidthRow}
             quickFilterText={still ? undefined : search}
+            quickFilterMatcher={quickMatch}
             cacheQuickFilter
             // A group's heading stays while any of its claims pass; postSortRows drops a heading left with none.
             alwaysPassFilter={isGroupNode}
@@ -1023,11 +1114,12 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
   );
 });
 
-/** The picked rows' tint and their check box (claims-grid.css draws both), by row id. Ids are RM-0000: nothing to escape. */
+/** The picked rows' tint and their check box in place of the photos (claims-grid.css draws both), by row id. Ids are
+ * RM-0000: nothing to escape. */
 function pickCss(picked: ReadonlySet<string>) {
   const rows = [...picked].filter((id) => /^[A-Za-z0-9_-]+$/.test(id)).map((id) => `.claims-grid .ag-row[row-id="${id}"]`);
   if (!rows.length) return "";
-  return `${rows.join(",")}{--row-picked:1}${rows.map((r) => `${r} .ag-cell`).join(",")}{background-color:var(--pick-bg)}${rows.map((r) => `${r} .pick-box`).join(",")}{opacity:1}`;
+  return `${rows.join(",")}{--row-picked:1}${rows.map((r) => `${r} .ag-cell`).join(",")}{background-color:var(--pick-bg)}${rows.map((r) => `${r} .pick-box`).join(",")}{opacity:1}${rows.map((r) => `${r} .thumbs`).join(",")}{opacity:0}`;
 }
 
 const CSV_HEADERS: Record<string, string> = {
@@ -1058,8 +1150,16 @@ function csvCell(colId: string, r: GridRow | undefined): string {
       return verdictWord(verdictOf(r));
     case "reason":
       return reasonKey(r);
-    case "checks":
-      return r.bars ? `${r.bars.filter((b) => b.state === "pass").length} of ${r.bars.length} passed` : "";
+    case "checks": {
+      // Counted over the checks that ran, as the grid counts them; "All checks passed" never sits beside "9 of 10".
+      if (!r.bars) return "";
+      const ran = r.bars.filter((b) => b.state !== "skipped" && b.state !== "waiting");
+      const passed = ran.filter((b) => b.state === "pass").length;
+      const skipped = r.bars.filter((b) => b.state === "skipped").length;
+      const notRun = skipped ? ` (${skipped} not run)` : "";
+      if (!ran.length) return r.bars.some((b) => b.state === "waiting") ? "Waiting" : "Not run";
+      return passed === ran.length ? `All checks passed${notRun}` : `${passed} of ${ran.length} passed${notRun}`;
+    }
     case "time":
       return r.modelSec === null ? "" : String(r.modelSec);
     case "toPay":

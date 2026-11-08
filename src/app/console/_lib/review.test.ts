@@ -47,12 +47,14 @@ describe("approveClaim", () => {
     expect(pay).not.toHaveBeenCalled();
   });
 
-  it("answers a seeded sample claim's approve without paying or saving", async () => {
+  it("answers a starter claim's approve as decided, without paying or saving", async () => {
     const claim = held({ seeded: true });
     await store.putClaim(claim);
     const pay = vi.fn();
     const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
-    expect(result).toMatchObject({ ok: true, claim: { decision: "held" }, sample: expect.stringContaining("nothing was sent") });
+    expect(result).toMatchObject({ ok: true, claim: { decision: "paid", payout: null }, sample: expect.stringContaining("no payout sent") });
+    expect(result.ok && result.claim.reasons.at(-1)).toEqual({ check: "review", outcome: "pass", text: "Approved on review by x" });
+    expect(JSON.stringify(result)).not.toMatch(/came with your console/);
     expect(pay).not.toHaveBeenCalled();
     expect(await store.getClaim("RM-0412")).toEqual(claim);
   });
@@ -217,16 +219,13 @@ describe("rejectClaim", () => {
     expect(saved?.reasons.at(-1)).toEqual({ check: "review", outcome: "reject", text: "Rejected on review: The code isn't on the cut pillow" });
   });
 
-  it("answers a seeded sample claim's reject without saving it", async () => {
+  it("answers a starter claim's reject as decided, without saving it", async () => {
     const claim = held({ seeded: true });
     await store.putClaim(claim);
     const result = await rejectClaim({ store, claim, recall: sampleRecall(), by: "x", reason: "The code isn't on the cut pillow" });
-    expect(result).toMatchObject({ ok: true, claim: { decision: "held" }, sample: expect.stringContaining("Rejected on review: The code isn't on the cut pillow") });
+    expect(result).toMatchObject({ ok: true, claim: { decision: "rejected" }, sample: "Rejected." });
+    expect(result.ok && result.claim.reasons.at(-1)).toEqual({ check: "review", outcome: "reject", text: "Rejected on review: The code isn't on the cut pillow" });
     expect(await store.getClaim("RM-0412")).toEqual(claim);
-    // One closing stop, whether or not the reason brought its own.
-    const ended = await rejectClaim({ store, claim, recall: sampleRecall(), by: "x", reason: "Retake photo 2." });
-    expect(ended.ok && ended.sample).toMatch(/"Rejected on review: Retake photo 2\."$/);
-    expect(result.ok && result.sample).toMatch(/cut pillow\."$/);
   });
 
   it("leaves a claim decided since the drawer read it, and says how it was decided", async () => {
