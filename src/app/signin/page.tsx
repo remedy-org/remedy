@@ -51,7 +51,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <ThemeToggle />
         </div>
       </header>
-      <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none sm:py-16 sm:pb-28">
+      <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none sm:py-16 sm:pb-28 lg:items-start">
         <div className="col-span-12 mx-auto flex w-full max-w-[400px] flex-col lg:col-span-4 lg:mx-0">
           <h1 className="text-h2 font-medium">Sign in to Remedy</h1>
           <p className="mt-2 text-ui text-muted">Review recall claims and pay refunds through PayPal.</p>

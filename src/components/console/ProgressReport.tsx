@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
 import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
 import { StatusPill } from "@/components/ui";
@@ -236,7 +236,11 @@ function ReturnRuler({ remedied, sold }: { remedied: number; sold: number }) {
       </div>
       <p aria-hidden="true" className="relative h-4 text-micro text-muted">
         <span className="absolute left-0 font-mono">0</span>
-        <span className="absolute" style={{ left: on(TYPICAL_RETURN.from) }}>
+        {/* Under the band, from its start; on a phone ending at its end, so it never runs into the scale's last figure. */}
+        <span
+          className="absolute whitespace-nowrap max-sm:right-[calc(100%-var(--to))] sm:left-(--from)"
+          style={{ "--from": on(TYPICAL_RETURN.from), "--to": on(TYPICAL_RETURN.to) } as CSSProperties}
+        >
           Typical recall, {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}%
         </span>
         <span className="absolute right-0 font-mono">{RULER * 100}%</span>

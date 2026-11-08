@@ -4,6 +4,7 @@ import clsx from "clsx";
 import dynamic from "next/dynamic";
 import { useState, useSyncExternalStore } from "react";
 import type { Ledger as LedgerData } from "@/app/console/_lib/view";
+import { Wordmark } from "@/components/ui";
 import { Ledger } from "./Ledger";
 import type { PreviewRow } from "./ClaimsGridPreview";
 import { StatusTabs, type Tab } from "./StatusTabs";
@@ -34,9 +35,10 @@ export function SigninPreview({ rows, ledger, counts, height }: { rows: PreviewR
       inert
       className="pointer-events-none relative w-[1120px] select-none [mask-image:linear-gradient(to_bottom,#000_62%,transparent_96%)]"
     >
-      <div className="overflow-hidden rounded-card bg-bg text-text shadow-card">
+      {/* A window's edge in both themes: one hairline border (the mask would clip a ring drawn outside it), no lift. */}
+      <div className="overflow-hidden rounded-card border border-line-2 bg-bg text-text">
         <div className="flex h-12 items-center gap-6 border-b border-line px-5">
-          <span className="font-semibold tracking-[-0.025em]">Remedy</span>
+          <Wordmark />
           <span className="flex gap-5 text-ui font-medium">
             <span className="text-text">Claims</span>
             <span className="text-muted">Insights</span>
