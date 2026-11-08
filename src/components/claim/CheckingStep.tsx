@@ -213,7 +213,8 @@ export function CheckingStep({ claimId, view: initial, spec, refund, startNow, p
           aside={
             elapsed !== null &&
             !done && (
-              <span className="self-start pt-2 font-mono text-ui text-faint" aria-hidden="true">
+              // A 320px phone gives the headline the room: the rows themselves show the progress.
+              <span className="self-start pt-2 font-mono text-ui text-faint max-[25rem]:hidden" aria-hidden="true">
                 {clock(elapsed)}
               </span>
             )

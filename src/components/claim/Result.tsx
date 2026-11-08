@@ -138,18 +138,22 @@ export function Result(props: ResultProps) {
         <>
           {parts.under && <div className={clsx(NARROW_ONLY, "flex flex-col gap-4")}>{parts.under}</div>}
           <CheckList rows={six} label={`Checks for this claim: ${summary}`} />
-          {/* The claim's number as the evidence's own metadata, when nothing else on the screen carries it. */}
-          {parts.meta && (
-            <p className="text-ui text-faint">
-              Claim <span className="font-mono whitespace-nowrap">{claim.id}</span>
-            </p>
-          )}
+          {/* The claim's number as the evidence's own metadata, when nothing else on the screen carries it: under the checks
+              on a laptop, at the foot of the page on a phone. */}
+          {parts.meta && <Meta id={claim.id} className={WIDE_BLOCK} />}
           {/* Paid: the receipt takes the left column, so the photo joins the checks, the evidence the money moved on. */}
           {paid && <div className={clsx(WIDE_ONLY, "min-w-0 flex-col pt-3", parts.photoIn && styles.later)}>{parts.side}</div>}
         </>
       }
       photo={paid ? undefined : parts.side}
-      outcome={parts.next || undefined}
+      outcome={
+        (parts.next || parts.meta) && (
+          <>
+            {parts.next}
+            {parts.meta && <Meta id={claim.id} className={NARROW_ONLY} />}
+          </>
+        )
+      }
     />
   );
   return (
@@ -163,6 +167,16 @@ export function Result(props: ResultProps) {
         page
       )}
     </ClaimFrame>
+  );
+}
+
+const WIDE_BLOCK = "hidden lg:[@media(min-height:601px)]:block";
+
+function Meta({ id, className }: { id: string; className?: string }) {
+  return (
+    <p className={clsx("text-ui text-faint", className)}>
+      Claim <span className="font-mono whitespace-nowrap">{id}</span>
+    </p>
   );
 }
 

@@ -240,7 +240,9 @@ export function CheckList({ rows, label = "Checks", live, className }: { rows: S
       {checks.map((r) => {
         const quiet = r.state === "waiting" || r.unrun;
         const failed = r.state === "reject" || r.state === "blocked";
-        const reason = quiet ? null : <Reason r={r} />;
+        // Whether the row has a line to show: running, a pass's reason, or what was read or went wrong.
+        const said = r.state === "running" || Boolean(r.read || r.detail) || (r.state === "pass" && Boolean(r.quote || r.because));
+        const reason = quiet || !said ? null : <Reason r={r} />;
         return (
           <li key={r.key} data-row={r.key} className="grid grid-cols-[1rem_minmax(0,1fr)] gap-x-3 border-b border-line py-3 [@media(max-height:600px)]:py-2">
             <span key={r.state} className={clsx("flex h-[1.55em] items-center text-body", live && !quiet && styles.settle)}>

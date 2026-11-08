@@ -99,7 +99,7 @@ export function OutcomeHead({ id, thumb, title, lead, small, aside }: { id: stri
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <StepTitle id={id}>{title}</StepTitle>
         {lead ? (
-          <div className={clsx("text-pretty", small ? "text-ui text-muted" : "text-body text-text-2")}>{lead}</div>
+          <div className={clsx(small ? "text-ui text-pretty text-muted" : "text-body text-balance text-text-2")}>{lead}</div>
         ) : (
           <p aria-hidden="true" className="invisible text-ui">
             {"\u00a0"}
