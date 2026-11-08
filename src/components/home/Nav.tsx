@@ -145,6 +145,22 @@ function useTryInView() {
   return inView;
 }
 
+/**
+ * A native jump to a section (the bar's, the sheet's, the footer's, the hero's) adds a history entry the router did not
+ * write, and the router ignores Back to such an entry: Back from /signin left the sign-in page on screen under
+ * "/#companies". Once the jump has landed, the entry is written again through the router (its documented
+ * replaceState), without the hash: Back then renders the homepage where the reader left it, not at the section's top.
+ */
+function useRouterOwnsHashJumps() {
+  useEffect(() => {
+    const own = () => {
+      if (!window.history.state?.__NA) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    };
+    window.addEventListener("hashchange", own);
+    return () => window.removeEventListener("hashchange", own);
+  }, []);
+}
+
 // The link's box is the chip: 32px tall and 8px past the text each side (the negative margin keeps the row where it
 // was), with a 44px hit area around it, so the focus ring and the current chip are one shape. The current link, and a
 // link under the pointer or keyboard focus (the shared .nav-link behaviour, globals.css), is --text on --surface-2 (with
@@ -169,6 +185,7 @@ const linkClass = clsx(
 export function Nav() {
   const { current, pick } = useNavSpy();
   const tryInView = useTryInView();
+  useRouterOwnsHashJumps();
   const here = NAV_LINKS.find((l) => l.id === current);
   return (
     <header data-home-nav="" className="sticky top-0 z-30 bg-bg">

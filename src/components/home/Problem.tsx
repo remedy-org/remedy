@@ -590,7 +590,8 @@ export function Problem() {
                   </div>
 
                   <header className={s.head}>
-                    <h2 id="problem-title" className={s.title}>
+                    {/* tabIndex -1: the nav's Problem focuses it after the jump, as every section's heading. */}
+                    <h2 id="problem-title" tabIndex={-1} className={s.title}>
                       Recall refunds are <span className="block">stuck in a loop.</span>
                     </h2>
                     <p className={s.sub}>Easy refunds get faked. Hard ones get skipped.</p>
