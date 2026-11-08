@@ -197,11 +197,17 @@
   display: none;
 }
 
-@container (max-height: 520px) {
-  .dock figcaption {
-    display: none;
-  }
+/* The photos speak for themselves in the panel: their "Photo 1 of 2" captions are for screen readers only. */
+.dock figcaption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
+@container (max-height: 520px) {
   .dock figure > :first-child {
     aspect-ratio: 16 / 10;
   }
