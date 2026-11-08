@@ -4,13 +4,14 @@ import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { AlertIcon, Button } from "@/components/ui";
 import styles from "./flow.module.css";
+import { focusInView } from "./FocusTitle";
 import { CameraIcon, InfoIcon } from "./icons";
+import { EvidenceText } from "./EvidenceText";
 import { coverCrop, photosTakenKey, type ClaimView } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
-import { REAL_STEPS } from "./StepMeter";
 import { useClaimArrival } from "./useClaimArrival";
 import { mmss, useCountdown } from "./useCountdown";
-import { CAMERA_FRAME, CAMERA_VIEW, Cutout, Dock, GlassChip, InstructionBar, Reminders } from "./Viewfinder";
+import { CAMERA_FRAME, Cutout, Dock, GlassChip, InstructionBar } from "./Viewfinder";
 
 export type CameraState = "starting" | "live" | "denied" | "nocamera" | "insecure" | "error";
 
@@ -46,8 +47,8 @@ export interface CaptureStepProps {
   /** Starts over with a fresh code once this session has ended. */
   newClaimHref: string;
   loginHref: string;
-  /** The reminder chips in the instruction bar, under the frame, e.g. "Tag", "Cut in half", "Code M4T". */
-  reminders?: string[];
+  /** What the photo needs, the instruction bar's one line: "Tag with M4T, and the pillow cut in half." */
+  reminder: string;
   /** What the photo frames, in the code step's words: the "tag" (or "label") and the "cut pillow" (or "destroyed product"). */
   framing?: { thing: string; product: string };
   /**
@@ -75,7 +76,7 @@ const platformOf = (): Platform => {
 };
 
 /** Live camera only: no upload control. Up to 3 shots, downscaled in the browser, sent with the session id. */
-export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, reminders = [], framing = { thing: "label", product: "destroyed product" }, onSent, preview }: CaptureStepProps) {
+export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, reminder, framing = { thing: "label", product: "destroyed product" }, onSent, preview }: CaptureStepProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [camera, setCamera] = useState<CameraState>(preview?.camera ?? "starting");
@@ -131,6 +132,11 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
       stop();
     };
   }, [attempt, expired, preview, stop]);
+
+  // The camera won't open: focus lands on why, so a keyboard or screen reader hears it before anything else.
+  useEffect(() => {
+    if (camera === "denied" || camera === "nocamera" || camera === "insecure" || camera === "error") focusInView(document.getElementById("camera-message"));
+  }, [camera]);
 
   // Photos sent from the phone or another tab: on to the checking step, with the claim as it now stands.
   useClaimArrival(
@@ -262,33 +268,39 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const n = shots.length;
   const showPhone = !coarse && (phoneOpen || (!expired && (camera === "denied" || camera === "nocamera" || camera === "insecure")));
   const sendLabel = `Send ${n === 1 ? "photo" : `${n} photos`}`;
-  const helpText =
-    n === 0
-      ? "Live camera only: there's no upload button. Up to 3 photos; one with all of it is fine."
-      : `${n} of ${MAX_PHOTOS} taken. Open one to check it or retake it. Send once the ${framing.thing}, the ${framing.product} and the code are all in.`;
+  const helpText = n === 0 ? `Up to ${MAX_PHOTOS} photos. One with the ${framing.thing} and the ${framing.product} is enough.` : "Open a photo to check it or retake it.";
   const errorTitle = sendError?.status === 401 ? "Your PayPal login has expired" : "The photos didn't send";
   const errorText = sendError?.status === 401 ? "Log in again to send them. You'll need to retake them afterwards." : sendError?.message;
   const shown = viewing !== null ? shots[viewing] : undefined;
 
   return (
-    <section aria-labelledby="capture-title" className="mx-auto flex w-full max-w-[40rem] flex-col gap-5">
+    <section aria-labelledby="capture-title" className="flex w-full max-w-[40rem] flex-col gap-5">
       {/* The camera is dark in both themes, like a camera's. Full bleed on a phone, a 4:3 frame on a laptop. */}
       <div data-theme="dark" data-camera="" className={CAMERA_FRAME}>
-        <div className={CAMERA_VIEW}>
+        {/* A camera that won't open gives up its height, so the phone's QR under it stays in view. */}
+        <div className={clsx("relative overflow-hidden max-sm:min-h-0", failed && n === 0 && !expired ? "sm:min-h-40" : "sm:aspect-[4/3] sm:max-h-[55svh] sm:w-full [@media(max-height:600px)]:max-h-[40svh]")}>
           <video ref={videoRef} playsInline muted aria-label="Camera preview" className={clsx("absolute inset-0 size-full object-cover", !live && "invisible")} />
           {preview?.still && live && (
-            <>
-              {/* Dev previews only: a stand-in from /demo, which holds AI-made samples, labelled as one. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={preview.still} alt="" className="absolute inset-0 size-full object-cover" />
-              <GlassChip className="absolute bottom-3 left-3 z-10">AI-made preview photo</GlassChip>
-            </>
+            // Dev previews only: a still in place of the feed.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview.still} alt="" className="absolute inset-0 size-full object-cover" />
           )}
           {live ? (
             <Cutout>
               {/* The photo the shutter takes next, numbered as the slots below are. */}
               {n < MAX_PHOTOS && <GlassChip className="absolute top-2 left-2">Photo {n + 1}</GlassChip>}
             </Cutout>
+          ) : failed && n === 0 && !expired ? (
+            <FrameMessage
+              camera={camera}
+              platform={platform}
+              copyUrl={coarse ? phoneUrl : undefined}
+              inline
+              onRetry={() => {
+                setCamera("starting");
+                setAttempt((a) => a + 1);
+              }}
+            />
           ) : (
             <Cutout dashed>
               <FrameMessage
@@ -302,24 +314,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               />
             </Cutout>
           )}
-          {/* Phones: the step meter, as one chip (StepMeter hides itself here). */}
-          <GlassChip className="absolute top-3 left-3 sm:hidden">
-            Step 3 of {REAL_STEPS.length}
-          </GlassChip>
-          <div className="absolute top-3 right-3">
-            <GlassChip className={clsx(left < 60_000 && !expired && "text-accent-text")}>
-              <span role="timer" aria-live="off" aria-label={expired ? "The camera session has ended" : `${mmss(left)} left on the camera session`} className={clsx(!expired && left < 10_000 && styles.urgent)}>
-                {expired ? "Ended" : mmss(left)}
-              </span>
-            </GlassChip>
-          </div>
           {/* Phones: a one-line hint, or the longer help from (i), over the foot of the feed, so the viewfinder never
               resizes (and the guide never moves) as they come and go. */}
-          {!sendError && !expired && !help && n > 0 && (
-            <p className="absolute inset-x-3 bottom-3 z-10 rounded-control bg-[oklch(0.12_0.004_75/0.78)] px-3 py-2 text-center text-ui text-balance text-[oklch(0.86_0.005_80)] backdrop-blur-sm sm:hidden">
-              Tap a photo to check it or retake it.
-            </p>
-          )}
           <p
             id="capture-help"
             hidden={!help || Boolean(sendError) || expired}
@@ -338,12 +334,9 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                   Code <span className="font-mono">{code}</span> has expired
                 </>
               ) : (
-                <>
-                  Fit the {framing.thing}, the {framing.product} and the code <span className="font-mono">{code}</span> in the frame
-                </>
+                <EvidenceText>{reminder}</EvidenceText>
               )}
             </h2>
-            {!expired && !sendError && <Reminders items={reminders} id="capture-must" />}
             {/* A failed send says so here, on the first screen, where the Send button is. */}
             {sendError && (
               <div role="alert" className="flex items-start gap-2.5 text-left">
@@ -380,6 +373,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             className="border-t border-[oklch(1_0_0/0.08)]"
             left={
               expired ? null : (
+                <div className="flex items-center gap-3">
                 <ul className="flex gap-2.5" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
                   {Array.from({ length: MAX_PHOTOS }, (_, i) => (
                     <li key={i} className="relative size-12 shrink-0 sm:size-14">
@@ -391,22 +385,28 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                           aria-label={`Photo ${i + 1}: open it to check it or retake it`}
                           className="relative block size-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                         >
-                          <span className={clsx("block size-full rounded-control bg-paper p-[2px] shadow-paper", styles.drop)}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={shots[i].url} alt="" className="size-full rounded-[3px] object-cover" />
-                          </span>
-                          {/* The number sits inside the print's corner, so neighbours never collide. Numbers, as the empty
-                              slots have: letters are the judges' samples. */}
-                          <span aria-hidden="true" className="absolute bottom-[3px] left-[3px] flex size-4 items-center justify-center rounded-[3px] bg-accent font-mono text-[10px] leading-none font-medium text-accent-ink">
-                            {i + 1}
-                          </span>
+                          {/* The latest shot wears a 2px white ring: the one to open and check. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={shots[i].url} alt="" className={clsx("block size-full rounded-control object-cover", i === n - 1 ? "ring-2 ring-[oklch(1_0_0)]" : "ring-1 ring-[oklch(1_0_0/0.18)]", styles.drop)} />
                         </button>
                       ) : (
-                        <span className="flex size-full items-center justify-center rounded-control border border-dashed border-[oklch(1_0_0/0.25)] font-mono text-micro text-[oklch(0.74_0.005_80)]">{i + 1}</span>
+                        <span className="block size-full rounded-control border border-[oklch(1_0_0/0.18)]" />
                       )}
                     </li>
                   ))}
                 </ul>
+                <span className="flex flex-col gap-0.5 font-mono text-micro text-[oklch(0.74_0.005_80)]">
+                  {n > 0 && <span aria-hidden="true">{n}/{MAX_PHOTOS}</span>}
+                  <span
+                    role="timer"
+                    aria-live="off"
+                    aria-label={`${mmss(left)} left on the camera session`}
+                    className={clsx(left < 60_000 && "font-medium text-[oklch(0.96_0.006_85)]", left < 10_000 && styles.urgent)}
+                  >
+                    {mmss(left)}
+                  </span>
+                </span>
+                </div>
               )
             }
             middle={
@@ -424,13 +424,14 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                     aria-label={n >= MAX_PHOTOS ? "Three photos taken" : `Take photo ${n + 1} of ${MAX_PHOTOS}`}
                     aria-keyshortcuts="Space"
                     className={clsx(
-                      "flex size-[4.5rem] items-center justify-center rounded-full border-4 border-[oklch(1_0_0/0.9)] transition-opacity duration-160 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus disabled:opacity-35",
+                      "peer flex size-[4.5rem] items-center justify-center rounded-full border-4 border-[oklch(1_0_0/0.9)] transition-opacity duration-160 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus disabled:opacity-35",
                       styles.shutter,
                     )}
                   >
                     <span className="size-[3.625rem] rounded-full bg-[oklch(1_0_0)]" />
                   </button>
-                  <span aria-hidden="true" className="hidden font-mono text-micro text-[oklch(0.74_0.005_80)] sm:pointer-fine:inline-flex">
+                  {/* The keyboard's shutter, shown only to a keyboard on the shutter. */}
+                  <span aria-hidden="true" className="hidden font-mono text-micro text-[oklch(0.74_0.005_80)] sm:pointer-fine:peer-focus-visible:inline-flex">
                     <kbd className="rounded-[4px] border border-[oklch(1_0_0/0.25)] px-1.5 py-px">Space</kbd>
                   </span>
                 </>
@@ -490,9 +491,6 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         </dialog>
       </div>
 
-      {/* On a phone this lives in the instruction bar, so the camera keeps the whole screen. */}
-      {!expired && <p className="text-ui text-muted max-sm:hidden">{helpText}</p>}
-
       {/* Laptops only: on a phone this already is the phone. */}
       {!coarse && !expired && (
         <div className="max-sm:hidden">
@@ -528,23 +526,28 @@ function FrameMessage({
   camera,
   platform,
   copyUrl,
+  inline,
   onRetry,
 }: {
   camera: Exclude<CameraState, "live"> | "expired";
   platform: Platform;
   /** A phone or tablet with no camera to use: this claim's link, to open on another device. */
   copyUrl?: string;
+  /** In the flow, not over the frame: the frame gave up its height. */
+  inline?: boolean;
   onRetry(): void;
 }) {
   const m = MESSAGES[camera];
   const [copied, setCopied] = useState(false);
   const copy = copyUrl && (camera === "nocamera" || camera === "insecure");
   return (
-    <div role={camera === "starting" ? "status" : "alert"} className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+    <div role={camera === "starting" ? "status" : "alert"} className={clsx("flex flex-col items-center justify-center gap-3 px-6 text-center", inline ? "relative py-8 max-sm:absolute max-sm:inset-0" : "absolute inset-0")}>
       <span className={clsx("flex size-10 items-center justify-center rounded-full border", m.tone === "stop" ? "border-stop text-stop" : "border-line-strong text-muted", camera === "starting" && "animate-[skeleton-pulse_1.6s_ease-in-out_infinite]")}>
         {m.tone === "stop" ? <AlertIcon /> : <CameraIcon />}
       </span>
-      <p className="text-body font-medium text-text">{m.title}</p>
+      <p id={camera === "starting" ? undefined : "camera-message"} tabIndex={-1} className="text-body font-medium text-text outline-none">
+        {m.title}
+      </p>
       <p className="max-w-80 text-ui text-muted">{camera === "denied" ? DENIED[platform] : m.body}</p>
       {m.retry && (
         <Button variant="secondary" onClick={onRetry} className="mt-1">

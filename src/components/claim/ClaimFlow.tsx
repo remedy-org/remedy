@@ -7,8 +7,8 @@ import { CaptureStep, type CapturePreview } from "./CaptureStep";
 import { CheckingStep } from "./CheckingStep";
 import { CodeStep } from "./CodeStep";
 import { DemoCaptureStep } from "./DemoCaptureStep";
+import { ClaimFrame } from "./Exhibit";
 import { focusInView } from "./FocusTitle";
-import { WithJudges, type JudgeStep } from "./Judges";
 import { cutInHalf, handWrittenLabel, taggedThing, type ClaimView } from "./model";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
 import { useClaimArrival } from "./useClaimArrival";
@@ -24,6 +24,8 @@ export interface ClaimFlowProps {
   /** Server clock at render, for the countdown's first paint. */
   startNow: number;
   spec: CheckSpec;
+  /** The refund, "$29.99", for the checks' last row. */
+  amount: string;
   view: ClaimView;
   qrSvg: string;
   phoneUrl: string;
@@ -36,9 +38,6 @@ export interface ClaimFlowProps {
 
 // Each phase's h2: focus moves there on arrival and on every step change, so a keyboard or screen reader lands on the new step.
 const TITLE: Record<Phase, string> = { code: "code-title", capture: "capture-title", checking: "checking-title" };
-const JUDGE: Record<Phase, JudgeStep> = { code: "code", capture: "capture", checking: "checking" };
-// The meter takes each step's column, so its edges sit on the content's: the code card, the camera, the checks.
-const METER_WIDTH: Record<Phase, string> = { code: "max-w-claim lg:max-w-[55rem]", capture: "max-w-[40rem]", checking: "max-w-[60rem]" };
 
 /**
  * Code, camera, checking: the steps of an open claim, in the browser. The result is rendered by the server. A demo claim
@@ -56,7 +55,8 @@ export function ClaimFlow(props: ClaimFlowProps) {
   const current = phase === "checking" ? 4 : demo ? 3 : phase === "code" ? 2 : 3;
   // One word for the thing the code goes on, everywhere: a hand-written label is the paper tag itself.
   const tag = handWrittenLabel(props.spec) !== null;
-  const reminders = [tag ? "Tag" : "Label", cutInHalf(props.spec) ? "Cut in half" : "Destroyed", `Code ${code}`];
+  // What the photo needs, in one line under the frame.
+  const reminder = `${tag ? "Tag" : "Label"} with ${code}, and the ${(tag && taggedThing(props.spec)?.replace(/^cut /, "")) || "product"} ${cutInHalf(props.spec) ? "cut in half" : "destroyed"}.`;
   const framing = { thing: tag ? "tag" : "label", product: (tag && taggedThing(props.spec)) || `${cutInHalf(props.spec) ? "cut" : "destroyed"} product` };
 
   // On arrival too: the first step loads by a full navigation (a form post, a redirect), which leaves focus on the body.
@@ -81,57 +81,56 @@ export function ClaimFlow(props: ClaimFlowProps) {
   useClaimArrival(claimId, props.expiresAt, (next) => sent(next), { off: demo || Boolean(preview) || phase !== "code" });
 
   return (
-    <WithJudges demo={demo} step={JUDGE[phase]}>
-      <div className="flex flex-col gap-6">
-        <StepMeter current={current} steps={steps} compact={phase === "capture"} width={METER_WIDTH[phase]} />
-        {phase === "code" && (
-          <div className="mx-auto w-full max-w-claim lg:max-w-[55rem]">
-            <CodeStep
-              claimId={claimId}
-              code={code}
-              spec={props.spec}
-              expiresAt={props.expiresAt}
-              startNow={props.startNow}
-              frozen={Boolean(preview)}
-              qrSvg={props.qrSvg}
-              phoneUrl={props.phoneUrl}
-              newClaimHref={props.newClaimHref}
-              onContinue={() => go("capture")}
-            />
-          </div>
-        )}
-        {phase === "capture" &&
-          (sample ? (
-            <DemoCaptureStep claimId={claimId} code={code} sample={sample} reminders={reminders} onSent={sent} preview={preview && { sending: preview.sending }} />
-          ) : (
-            <CaptureStep
-              claimId={claimId}
-              sessionId={props.sessionId}
-              code={code}
-              expiresAt={props.expiresAt}
-              startNow={props.startNow}
-              qrSvg={props.qrSvg}
-              phoneUrl={props.phoneUrl}
-              newClaimHref={props.newClaimHref}
-              loginHref={props.loginHref}
-              reminders={reminders}
-              framing={framing}
-              onSent={sent}
-              preview={preview?.capture}
-            />
-          ))}
-        {phase === "checking" && (
-          <CheckingStep
+    <ClaimFrame>
+      <StepMeter current={current} steps={steps} compact={phase === "capture"} />
+      {phase === "code" && (
+        <div className="w-full lg:max-w-[55rem]">
+          <CodeStep
             claimId={claimId}
-            view={view}
+            code={code}
+            spec={props.spec}
+            expiresAt={props.expiresAt}
             startNow={props.startNow}
-            photoUrls={photoUrls}
-            sample={demo}
-            sending={preview?.sending}
-            preview={preview?.checking ?? (preview ? {} : undefined)}
+            frozen={Boolean(preview)}
+            qrSvg={props.qrSvg}
+            phoneUrl={props.phoneUrl}
+            newClaimHref={props.newClaimHref}
+            onContinue={() => go("capture")}
           />
-        )}
-      </div>
-    </WithJudges>
+        </div>
+      )}
+      {phase === "capture" &&
+        (sample ? (
+          <DemoCaptureStep claimId={claimId} code={code} sample={sample} onSent={sent} preview={preview && { sending: preview.sending }} />
+        ) : (
+          <CaptureStep
+            claimId={claimId}
+            sessionId={props.sessionId}
+            code={code}
+            expiresAt={props.expiresAt}
+            startNow={props.startNow}
+            qrSvg={props.qrSvg}
+            phoneUrl={props.phoneUrl}
+            newClaimHref={props.newClaimHref}
+            loginHref={props.loginHref}
+            reminder={reminder}
+            framing={framing}
+            onSent={sent}
+            preview={preview?.capture}
+          />
+        ))}
+      {phase === "checking" && (
+        <CheckingStep
+          claimId={claimId}
+          view={view}
+          spec={props.spec}
+          amount={props.amount}
+          startNow={props.startNow}
+          photoUrls={photoUrls}
+          sending={preview?.sending}
+          preview={preview?.checking ?? (preview ? {} : undefined)}
+        />
+      )}
+    </ClaimFrame>
   );
 }
