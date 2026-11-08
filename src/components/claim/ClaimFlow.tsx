@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { DemoSample } from "@/lib/demo";
 import type { CheckSpec } from "@/lib/types";
 import { CaptureStep, type CapturePreview } from "./CaptureStep";
@@ -10,7 +10,6 @@ import { DemoCaptureStep } from "./DemoCaptureStep";
 import { ClaimFrame } from "./Exhibit";
 import { firstShown, focusInView } from "./FocusTitle";
 import { cutInHalf, handWrittenLabel, taggedThing, type ClaimView } from "./model";
-import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
 import { useClaimArrival } from "./useClaimArrival";
 
 export type Phase = "code" | "capture" | "checking";
@@ -24,8 +23,8 @@ export interface ClaimFlowProps {
   /** Server clock at render, for the countdown's first paint. */
   startNow: number;
   spec: CheckSpec;
-  /** The refund, "$29.99", for the checks' last row. */
-  amount: string;
+  /** The refund, for the refund row under the checks. */
+  refund: { value: string; currency: string };
   view: ClaimView;
   qrSvg: string;
   phoneUrl: string;
@@ -35,7 +34,7 @@ export interface ClaimFlowProps {
   company?: string;
   sample?: DemoSample | null;
   /** Dev previews: start at a phase, with the camera or checks pinned. */
-  preview?: { phase: Phase; capture?: CapturePreview; checking?: { elapsed?: number; offline?: boolean }; sending?: boolean; photoUrls?: string[] };
+  preview?: { phase: Phase; capture?: CapturePreview; checking?: { elapsed?: number; offline?: boolean; animate?: boolean; next?: string }; sending?: boolean; photoUrls?: string[] };
 }
 
 // Each phase's h2: focus moves there on arrival and on every step change, so a keyboard or screen reader lands on the new step.
@@ -53,11 +52,6 @@ export function ClaimFlow(props: ClaimFlowProps) {
   // The checking screen's photos: the ones just sent (local object URLs, or the sample's public files).
   const [photoUrls, setPhotoUrls] = useState<string[] | undefined>(preview?.photoUrls ?? (initial.photos > 0 && sample ? sample.photos : undefined));
   const demo = Boolean(sample);
-  const steps = demo ? DEMO_STEPS : REAL_STEPS;
-  // The checks are part of the photo step: the meter reaches the refund only once every row has landed.
-  const [settled, setSettled] = useState(false);
-  const onSettled = useCallback(() => setSettled(true), []);
-  const current = phase === "checking" ? (settled ? 4 : 3) : demo ? 3 : phase === "code" ? 2 : 3;
   // One word for the thing the code goes on, everywhere: a hand-written label is the paper tag itself.
   const tag = handWrittenLabel(props.spec) !== null;
   // What the photo needs, in one line under the frame.
@@ -88,7 +82,6 @@ export function ClaimFlow(props: ClaimFlowProps) {
 
   return (
     <ClaimFrame>
-      <StepMeter current={current} steps={steps} compact={phase === "capture"} />
       {phase === "code" && (
         <div className="w-full">
           <CodeStep
@@ -132,12 +125,11 @@ export function ClaimFlow(props: ClaimFlowProps) {
           claimId={claimId}
           view={view}
           spec={props.spec}
-          amount={props.amount}
+          refund={props.refund}
           startNow={props.startNow}
           photoUrls={photoUrls}
           sending={preview?.sending}
           company={props.company}
-          onSettled={onSettled}
           preview={preview?.checking ?? (preview ? {} : undefined)}
         />
       )}

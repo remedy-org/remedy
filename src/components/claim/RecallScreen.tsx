@@ -11,7 +11,6 @@ import { FlowShell } from "./FlowShell";
 import { MobileCta } from "./MobileCta";
 import { businessDaysAfter, day, maskPayer } from "./model";
 import { RecallBrief } from "./RecallBrief";
-import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter, type StepMeterProps } from "./StepMeter";
 
 const AUTH_ERRORS = new Set<AuthError>(["denied", "state", "paypal", "refused"]);
 
@@ -59,25 +58,15 @@ function yourClaim(recall: Recall, claim: Claim): YourClaim {
   };
 }
 
-/** Where the landing's meter stands for a claim already under way. */
-function claimMeter(c: YourClaim): Pick<StepMeterProps, "current" | "outcome"> {
-  if (c.decision !== "pending") return resultMeter(c.decision, REAL_STEPS);
-  return { current: c.photos > 0 ? 4 : 2 };
-}
-
 /**
- * The recall screen's layout: the step meter in the same place as on every step, then the brief beside the consent card
- * on a laptop, stacked on a phone. Logged in (and verified, for a real claim), the PayPal step is done and the next one
- * waits until it opens.
+ * The recall screen's layout: the brief beside the consent on a laptop, stacked on a phone, on the same 960px frame as
+ * every step after it.
  */
 export function RecallView(props: ConsentCardProps) {
-  const ready = Boolean(props.signedInAs) && !props.unverified;
   const claim = props.yourClaim;
   return (
     <FlowShell>
       <ClaimFrame>
-        {/* Refused by a limit, the next step isn't open: the meter stays on the first step. */}
-        <StepMeter {...(claim ? claimMeter(claim) : ready && !props.refusal ? { current: 2, upcoming: true } : { current: 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
         {/* One bounded track on a phone, so the card's widest line can never widen the page. */}
         <div className={STEP_GRID}>
           <RecallBrief recall={props.recall} />

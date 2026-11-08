@@ -36,7 +36,7 @@ export function ExhibitPhoto({ src, alt, n, frame = "aspect-[4/3]", fit = "cover
  */
 export function StepTitle({ id, as: Tag = "h1", className, children }: { id: string; as?: "h1" | "h2"; className?: string; children: ReactNode }) {
   return (
-    <Tag id={id} tabIndex={-1} className={clsx("text-title font-semibold text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4", className)}>
+    <Tag id={id} tabIndex={-1} className={clsx("text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4", className)}>
       {children}
     </Tag>
   );
@@ -49,15 +49,41 @@ export function StepTitle({ id, as: Tag = "h1", className, children }: { id: str
  */
 export const STEP_GRID = "grid grid-cols-[minmax(0,1fr)] items-start gap-8 lg:grid-cols-2 lg:gap-16";
 
-// The checking screen and the result share one grid, so the outcome lands in place: from 1024px wide and 601px tall
-// the photo whole on the left; phones and short screens stack, with the photo as a thumbnail beside the headline. The
-// classes are spelled out so Tailwind finds them.
-export const CHECK_GRID = "grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:[@media(min-height:601px)]:grid-cols-2 lg:[@media(min-height:601px)]:gap-16";
+// The checking screen and the result: from 1024px wide and 601px tall, two columns; phones and short screens stack, with
+// the photo as a thumbnail beside the headline. The classes are spelled out so Tailwind finds them.
 export const WIDE_ONLY = "hidden lg:[@media(min-height:601px)]:flex";
 export const NARROW_ONLY = "lg:[@media(min-height:601px)]:hidden";
 
 /** The width that keeps a photo at most 55% of the screen's height, so its tag never falls below the fold. */
 export const photoWidth = (aspect: number) => `min(100%, calc(55svh * ${aspect}))`;
+
+/**
+ * The photo on a laptop, under the refund row: as tall as keeps it on the first screen while the checks run (26rem from
+ * 1440x900; 1024x768: 25rem), never under 14rem, and as wide as its shape makes it.
+ */
+export const evidenceWidth = (aspect: number) => `min(100%, calc(clamp(14rem, 100svh - 22rem, 26rem) * ${aspect}))`;
+
+/**
+ * One layout from the checking screen to the result, so the outcome lands in place. On a laptop, one 960px grid: on the
+ * left the headline, the refund row (which the paid receipt prints out of, pushing what's under it down) and the photo
+ * being checked; on the right the five checks, level with the headline. On a phone (or a short screen), one column in
+ * the DOM's order: the headline with a small photo, the checks, then the refund row, the way a receipt comes out under
+ * a till's last line. The photo is the laptop's alone (the phone has its thumbnail).
+ */
+export function ClaimLayout({ labelledBy, head, checks, outcome, photo }: { labelledBy: string; head: ReactNode; checks: ReactNode; outcome?: ReactNode; photo?: ReactNode }) {
+  return (
+    <section
+      aria-labelledby={labelledBy}
+      // Spelled out so Tailwind finds them: the two columns are lg:[@media(min-height:601px)] only.
+      className="grid grid-cols-[minmax(0,1fr)] items-start gap-y-6 lg:[@media(min-height:601px)]:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] lg:[@media(min-height:601px)]:grid-rows-[auto_auto_1fr] lg:[@media(min-height:601px)]:gap-x-16 lg:[@media(min-height:601px)]:gap-y-8 [@media(max-height:600px)]:gap-y-4"
+    >
+      <div className="min-w-0 lg:[@media(min-height:601px)]:col-start-1 lg:[@media(min-height:601px)]:row-start-1">{head}</div>
+      <div className="flex min-w-0 flex-col gap-5 lg:[@media(min-height:601px)]:col-start-2 lg:[@media(min-height:601px)]:row-span-3 lg:[@media(min-height:601px)]:row-start-1">{checks}</div>
+      {outcome && <div className="flex min-w-0 flex-col gap-6 lg:[@media(min-height:601px)]:col-start-1 lg:[@media(min-height:601px)]:row-start-2">{outcome}</div>}
+      {photo && <div className={clsx(WIDE_ONLY, "min-w-0 flex-col gap-4 lg:[@media(min-height:601px)]:col-start-1 lg:[@media(min-height:601px)]:row-start-3")}>{photo}</div>}
+    </section>
+  );
+}
 
 /**
  * The headline the checking screen and the result share: on a phone the photo's thumbnail beside it, the title, and one
@@ -73,7 +99,7 @@ export function OutcomeHead({ id, thumb, title, lead, small, aside }: { id: stri
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <StepTitle id={id}>{title}</StepTitle>
         {lead ? (
-          <div className={clsx("text-pretty text-muted", small ? "text-ui" : "text-body")}>{lead}</div>
+          <div className={clsx("text-pretty", small ? "text-ui text-muted" : "text-body text-text-2")}>{lead}</div>
         ) : (
           <p aria-hidden="true" className="invisible text-ui">
             {"\u00a0"}

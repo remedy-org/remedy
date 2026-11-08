@@ -59,7 +59,7 @@ export function PayoutLive({ claimId, status: initial, live, amount, children }:
           if (next.toUpperCase() === "SUCCESS") navigator.vibrate?.([12, 40, 12]);
         }
         const w = payoutWords(next);
-        if (w.label !== "Sent" && w.label !== "Unknown") return;
+        if (w.label !== "Processing" && w.label !== "Unknown") return;
       } catch {
         // Offline for a moment: the next tick tries again.
       }
@@ -96,46 +96,36 @@ export function PaidTitle() {
   );
 }
 
-/** The refund row's word on the result: Sent, then Received in the paid colour. */
-export function PayoutWord() {
-  const { status, changed } = useContext(PayoutContext);
-  const got = received(status);
-  return (
-    <span key={String(got)} className={clsx(got && "text-pay", changed && styles.swap)}>
-      {got ? "Received" : "Sent"}
-    </span>
-  );
-}
-
-/** The receipt as it prints: brought into view once, so the money arriving is on screen, not under the fold. */
+/**
+ * The receipt as it starts to print: when its paper would end under the fold (a phone, where it prints under the
+ * checks), the slot is brought up near the top first, so the whole receipt comes out on screen. Once.
+ */
 export function BringIntoView({ id }: { id: string }) {
   useEffect(() => {
     const t = setTimeout(() => {
       const el = document.getElementById(id);
-      if (!el) return;
-      const { bottom } = el.getBoundingClientRect();
-      if (bottom <= window.innerHeight) return;
+      const paper = el?.querySelector<HTMLElement>("[data-paper]");
+      if (!el || !paper) return;
+      if (el.getBoundingClientRect().top + paper.offsetHeight <= window.innerHeight) return;
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      el.scrollIntoView({ block: "end", behavior: reduced ? "auto" : "smooth" });
-    }, 360);
+      el.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+    }, 80);
     return () => clearTimeout(t);
   }, [id]);
   return null;
 }
 
-/** The receipt's payout status row: a word, and while it's processing, one line of why. */
+/** The receipt's PayPal row: PayPal's own word for the payout, and while it's processing, one line of why. */
 export function PayoutRow() {
   const { status, changed } = useContext(PayoutContext);
   const words = payoutWords(status);
   return (
-    <div className="flex flex-col gap-1 border-b border-paper-line py-3">
-      <div className="flex items-baseline justify-between gap-4 text-ui">
-        <dt className="shrink-0 text-ink-muted">Payout status</dt>
-        <dd key={words.label} className={clsx("font-medium text-ink", changed && styles.swap)}>
-          {words.label}
-        </dd>
-      </div>
-      {words.tone !== "pay" && words.note && <p className="mt-1 text-pretty text-ui text-ink-muted">{words.note}</p>}
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 border-b border-dashed border-paper-line py-2.5">
+      <dt className="text-ink-muted">PayPal</dt>
+      <dd key={words.label} className={clsx("text-right font-medium", words.tone === "pay" ? "text-pay-ink" : "text-ink", changed && styles.swap)}>
+        {words.label}
+      </dd>
+      {words.tone !== "pay" && words.note && <dd className="col-span-2 mt-0.5 text-pretty text-ink-muted">{words.note}</dd>}
     </div>
   );
 }
