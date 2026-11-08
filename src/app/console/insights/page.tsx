@@ -1,5 +1,6 @@
 import { PartialNotice } from "@/components/console/PartialNotice";
 import { RecallPicker } from "@/components/console/RecallPicker";
+import { WorkspaceNote } from "@/components/console/WorkspaceNote";
 import { InsightsLoader } from "@/components/insights/InsightsLoader";
 import { MobileSummary } from "@/components/insights/MobileSummary";
 import Link from "next/link";
@@ -65,6 +66,9 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
     <main className="flex flex-col pb-8">
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 px-4 pt-8 pb-5 sm:px-6 lg:px-8">
         <div className="min-w-0">
+          <div className="mb-3 empty:hidden">
+            <WorkspaceNote recall={recall} recalls={recalls} company={session.name} />
+          </div>
           <h1 className="text-h2 font-medium text-balance">{keepHyphens(recall.product)}</h1>
           <p className="mt-1.5 text-ui text-muted">
             {filed(data.claims.map((c) => c.filedAt))} ·{" "}

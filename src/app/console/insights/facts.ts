@@ -51,6 +51,9 @@ export interface ClaimFact {
   amountPaid: number;
   /** Dollars really sent through PayPal (sandbox in this build): 0 for a sample claim, whose payout never left. */
   amountSent: number;
+  /** The same, empty (null) when nothing was sent: the day chart's value, so a day with nothing sent draws no column and
+   * no "$0.00" on its axis. */
+  paidOnDay: number | null;
   /** The grid's refund cell, as the console's payout cell says it: "$29.99", "$29.99 · approved" on a starter claim, "$29.99 · not sent" on a held one, or "—". */
   refund: string;
   /** 1 when paid: a unit taken out of use and refunded. */
@@ -158,6 +161,7 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     verified: c.payerVerified,
     amountPaid: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
     amountSent: c.decision === "paid" && !c.seeded ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
+    paidOnDay: c.decision === "paid" && !c.seeded ? cents(amountOf(c.payout?.amount, recall)) / 100 : null,
     // As the queue's payout column: what a paid or held claim pays; "approved" on a starter claim (the rule approved it, and
     // starter claims never pay out) and "not sent" on a held one.
     refund:

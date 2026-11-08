@@ -4,12 +4,13 @@ import clsx from "clsx";
 import type { AgReportState, AgStudioApi } from "ag-studio";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { Button } from "@/components/ui";
 import type { InsightsData } from "@/app/console/insights/facts";
 import { INSIGHTS_ACTIONS } from "./actions";
 import { buildAnalyst } from "./analyst";
 import { InsightsLedger } from "./InsightsLedger";
 import "./insights.css";
-import { filterClaims, filterLabel, filterPicks, insightsReport, paidByDayChart, panelName, reportRows, type FilterPick } from "./report";
+import { filterClaims, filterLabel, filterPicks, insightsReport, paidByDayChart, PAID_BY_DAY, panelName, reportRows, type FilterPick } from "./report";
 import { buildSources } from "./sources";
 import { colorResolver, fonts, onThemeChange, readTheme } from "./studio-setup";
 import lib from "./studio-lib";
@@ -54,6 +55,9 @@ function namePanels(root: HTMLElement) {
     const content = panel.querySelector(".ag-studio-layout-widget-content");
     if (!stop || !content) continue;
     const text = (cls: string) => panel.querySelector(`.ag-studio-layout-widget-${cls}`)?.textContent?.trim() ?? "";
+    // The day chart keeps its columns' skeleton until AG Charts has drawn (insights.css), so its heading never sits over
+    // an empty panel.
+    if (text("title") === PAID_BY_DAY && !panel.hasAttribute("data-day-chart")) panel.setAttribute("data-day-chart", "");
     // Studio's tab guards hand focus to the stop, so a panel with nothing to operate takes both out of the Tab order.
     const inert = !content.querySelector(CONTROLS);
     if (panel.hasAttribute("data-no-controls") !== inert) panel.toggleAttribute("data-no-controls", inert);
@@ -81,8 +85,6 @@ const plural = (n: number, one: string) => `${n.toLocaleString("en-US")} ${n ===
 // scrolls as one and no panel scrolls inside another.
 const ROW = 16;
 const CANVAS_PAD = 64;
-// The console's header and its hairline, which the analyst's rail sticks under.
-const HEADER = 57;
 
 export default function InsightsStudio({ data, narrow = false }: { data: InsightsData; narrow?: boolean }) {
   const host = useRef<HTMLDivElement>(null);
@@ -106,6 +108,7 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
   const initialTheme = useRef(theme);
   const initialLabel = useRef(labelColor);
   const [askOpen, setAskOpen] = useState(false);
+  const askButton = useRef<HTMLButtonElement>(null);
   // Rendered in the browser only (InsightsLoader), after the page header that holds the slot.
   const [actions] = useState(() => document.getElementById(INSIGHTS_ACTIONS));
   const height = reportRows(data, narrow) * ROW + CANVAS_PAD;
@@ -187,17 +190,12 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
     studio.setState({ ...state, panels: { ...state.panels, ai: { ...state.panels?.ai, collapsed: !open } } });
     setAskOpen(open);
     if (!open) return;
-    // The rail sticks under the console's header at the window's height (insights.css): the page scrolls it up to there,
-    // so its question box is on screen, then focus goes into the box, ready to type. Studio draws the rail a frame or two
-    // after the state changes.
+    // The rail is a sheet fixed under the console's header (insights.css): the page never scrolls to it. Focus goes into
+    // its question box, ready to type, once Studio has drawn it (a frame or two after the state changes).
     let tries = 0;
     const settle = () => {
       const box = host.current?.querySelector<HTMLElement>(".ag-studio-ai-panel textarea, .ag-studio-ai-panel [contenteditable]");
       if (!box) return void (tries++ < 20 && requestAnimationFrame(settle));
-      const top = (host.current?.getBoundingClientRect().top ?? 0) + window.scrollY - HEADER;
-      if (box.getBoundingClientRect().bottom > window.innerHeight && top > window.scrollY) {
-        window.scrollTo({ top, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-      }
       box.focus({ preventScroll: true });
     };
     requestAnimationFrame(settle);
@@ -218,23 +216,42 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
   return (
     <div className="flex w-full flex-col">
       {actions &&
+        !askOpen &&
+        createPortal(
+          // The quiet button beside the title: the analyst is the page's second way in, after the panels themselves.
+          <Button ref={askButton} variant="secondary" size="sm" onClick={toggleAsk} aria-expanded={false}>
+            Ask the analyst
+          </Button>,
+          actions,
+        )}
+      {/* Open, the way out sits in the sheet's own header (the sheet covers the page header's corner), at any scroll. */}
+      {askOpen &&
         createPortal(
           <button
             type="button"
-            onClick={toggleAsk}
-            aria-expanded={askOpen}
-            className="-my-3 inline-flex min-h-11 items-center text-ui text-text underline decoration-line-strong underline-offset-4 hover:decoration-text"
+            onClick={() => {
+              toggleAsk();
+              requestAnimationFrame(() => askButton.current?.focus());
+            }}
+            aria-expanded
+            className="fixed top-[60px] right-4 z-40 inline-flex min-h-8 items-center rounded-control px-2 text-ui text-muted transition-colors duration-160 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-0"
           >
-            {askOpen ? "Close the analyst" : "Ask about this recall"}
+            Close the analyst
           </button>,
-          actions,
+          document.body,
         )}
       {/* The figures follow the page's filter; a pick no list here can read leaves them on every claim. */}
       <div className="px-4 sm:px-6 lg:px-8">
         <InsightsLedger claims={(filtered && shown) || data.claims} unitsSold={data.recall.unitsSold} />
       </div>
-      {/* The page's filter, said in words with a way out: a pick in one panel changes every number on the page. */}
-      <div ref={bar} tabIndex={-1} role="status" className={clsx("outline-none", filtered ? "mx-4 flex min-h-11 items-center gap-x-3 border-b border-line text-ui sm:mx-6 lg:mx-8" : "sr-only")}>
+      {/* The page's filter, said in words with a way out: a pick in one panel changes every number on the page. Always
+          there at one height, saying how to pick until something is, so nothing under it moves when a pick lands. */}
+      <div ref={bar} tabIndex={-1} role="status" className="mx-4 flex h-11 items-center gap-x-3 border-b border-line text-ui outline-none sm:mx-6 lg:mx-8">
+        {!filtered && (
+          <p className="min-w-0 truncate text-muted">
+            Showing all {plural(data.claims.length, "claim")} · Pick a decision, a drop or a reason to filter the page
+          </p>
+        )}
         {filtered && (
           <>
             <p className="min-w-0 truncate text-muted">
@@ -260,7 +277,8 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
       </div>
       <div
         ref={host}
-        style={{ height }}
+        // The analyst's empty column says what it answers from (insights.css prints it).
+        style={{ height, ["--analyst-intro" as string]: JSON.stringify(`Answers from this recall's ${plural(data.claims.length, "claim")}, naming the claim IDs it used. Ask for a chart and it adds one to this page.`) }}
         className={clsx("insights-report w-full [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!", !askOpen && "insights-ask-closed")}
       />
       <p id={PANEL_KEYS} hidden>

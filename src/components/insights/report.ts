@@ -135,7 +135,8 @@ export const reportRows = (data: InsightsData, narrow = false) => {
 export function paidByDayChart(labelColor?: string, labels = true) {
   return {
     type: "column-chart-grouped" as const,
-    dataMapping: { categoryKey: [{ id: "calendar::day" }], valueKey: [sum("claims.amountSent")], tooltipKey: [sum("claims.remedied")] },
+    // paidOnDay is empty where nothing was sent, so a day with no payout draws no column and prints no "$0.00".
+    dataMapping: { categoryKey: [{ id: "calendar::day" }], valueKey: [sum("claims.paidOnDay")], tooltipKey: [sum("claims.remedied")] },
     format: {
       ...titled(PAID_BY_DAY),
       style: {
@@ -210,7 +211,8 @@ const overview = (data: InsightsData, narrow: boolean, labelColor?: string): AgP
           decisions: at(16, 0, 8, r.decisions),
           funnel: at(0, r.progress, 16, r.funnel),
           refusals: at(16, r.progress, 8, r.refusals),
-          "paid-by-day": at(0, r.progress + r.funnel, 16, r.paid),
+          // The page's full width, so it ends on one line rather than an empty third beside the chart.
+          "paid-by-day": at(0, r.progress + r.funnel, 24, r.paid),
         },
   };
 };

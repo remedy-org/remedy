@@ -52,7 +52,7 @@ export function RefusalReasonsView({ items, selected = new Set(), onToggle, onRe
                 "grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-control text-left",
                 flush ? "py-0.5" : "px-2 py-1",
                 onToggle && "transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
-                selected.has(i.reason) && "bg-surface-2 ring-1 ring-text-2",
+                selected.has(i.reason) && "bg-surface-2 ring-1 ring-text-2 ring-inset",
                 selected.size > 0 && !selected.has(i.reason) && "opacity-45",
               )}
             >

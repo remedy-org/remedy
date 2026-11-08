@@ -62,7 +62,7 @@ export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
               className={clsx(
                 "grid w-full grid-cols-[1fr_auto_3rem] items-center gap-3 rounded-control px-2 py-0.5 text-left transition-colors hover:bg-surface-2",
                 "focus-visible:outline-2 focus-visible:outline-offset-0",
-                selected.has(i.label) && "bg-surface-2 ring-1 ring-text-2",
+                selected.has(i.label) && "bg-surface-2 ring-1 ring-text-2 ring-inset",
                 selected.size > 0 && !selected.has(i.label) && "opacity-45",
               )}
             >

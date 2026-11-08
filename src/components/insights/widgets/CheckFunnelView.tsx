@@ -91,7 +91,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                   "group ml-[11.5rem] flex min-h-6 items-center gap-2 rounded-control py-0.5 text-left text-micro transition-colors",
                   flush ? "pl-3" : "px-2",
                   onToggle && "disabled:cursor-default enabled:hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
-                  selected.has(s.stage) ? "bg-surface-2 ring-1 ring-text-2" : "",
+                  selected.has(s.stage) ? "bg-surface-2 ring-1 ring-text-2 ring-inset" : "",
                 )}
               >
                 <span className="flex min-w-0 flex-col">
