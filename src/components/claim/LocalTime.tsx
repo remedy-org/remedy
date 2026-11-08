@@ -13,13 +13,30 @@ const useLocal = () =>
     () => false,
   );
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const two = (n: number) => String(n).padStart(2, "0");
+
 /**
- * A claim's time as the company's console prints it, in UTC and saying so, so the owner's receipt and the console name
- * one moment the same way: "14:32 UTC" (clock), "7 Nov 2026, 14:32 UTC" (stamp).
+ * A claim's time in the viewer's own zone once the page has hydrated ("14:32", "7 Nov 2026, 14:32"); on the server and
+ * through hydration the UTC stamp the console prints, so the two never mismatch. The UTC stamp stays in the title.
  */
 export function ClaimTime({ iso, format }: { iso: string; format: "clock" | "stamp" }) {
+  const local = useLocal();
+  const d = new Date(iso);
+  const hm = `${two(d.getHours())}:${two(d.getMinutes())}`;
+  const text = local
+    ? format === "clock"
+      ? hm
+      : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${hm}`
+    : format === "clock"
+      ? `${clock(iso).slice(0, 5)} UTC`
+      : stamp(iso);
   // A stamp breaks only after its comma, so on a narrow receipt the date and the time each stay whole.
-  return <time dateTime={iso}>{format === "clock" ? nbsp(`${clock(iso).slice(0, 5)} UTC`) : stamp(iso).split(", ").map(nbsp).join(", ")}</time>;
+  return (
+    <time dateTime={iso} title={stamp(iso)} suppressHydrationWarning>
+      {text.split(", ").map(nbsp).join(", ")}
+    </time>
+  );
 }
 
 /**

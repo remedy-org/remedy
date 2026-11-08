@@ -22,9 +22,9 @@ export function CopyPageLink() {
       <button
         type="button"
         onClick={copy}
-        className="inline-flex min-h-11 items-center gap-1.5 self-start rounded-control text-ui font-medium text-ink underline decoration-paper-line underline-offset-4 hover:decoration-ink"
+        className="inline-flex min-h-11 items-center gap-1.5 self-start rounded-control text-ui font-medium text-text underline decoration-line-strong underline-offset-4 hover:decoration-text"
       >
-        {copied === "yes" && <CheckIcon size={14} className="text-pay-ink" />}
+        {copied === "yes" && <CheckIcon size={14} className="text-pay" />}
         {copied === "yes" ? "Link copied" : copied === "no" ? "Couldn't copy: use the address bar" : "Copy this page's link"}
       </button>
       <span className="sr-only" aria-live="polite">
