@@ -10,9 +10,9 @@ import { Laptop } from "./Laptop";
 import styles from "./device.module.css";
 
 // The hero moment (DESIGN.md, Motion): once the device is in view the five checks tick in 450ms apart, then the payout
-// chip lands, and a paper receipt tag leaves the screen to rest on the light table (spec H1). Plays once; Replay runs it
-// again. Reduced motion shows the final state and no tilt; without JS the <noscript> style below shows it too. Laptops
-// only: below 1024px the hero shows a phone instead (HeroPhone).
+// chip lands, and a paper receipt tag leaves the screen to rest on the light table (spec H1). It plays once and rests on
+// its final frame, which is what a return visit finds. Reduced motion shows the final state and no tilt; without JS the
+// <noscript> style below shows it too. Laptops only: below 1024px the hero shows a phone instead (HeroPhone).
 
 const PHASE_AT = [700, 1150, 1600, 2050, 2500, 3000];
 const TAG_AFTER = 380;
@@ -32,15 +32,6 @@ export function useMedia(query: string) {
   );
 }
 
-function ReplayIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3.25 8a4.75 4.75 0 1 0 1.4-3.37" />
-      <path d="M3 2.75v2.5h2.5" />
-    </svg>
-  );
-}
-
 export interface HeroDeviceProps {
   /** The receipt's opacity: it lets go of the laptop as the dolly starts. */
   labels?: MotionValue<number>;
@@ -55,13 +46,12 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
   const finePointer = useMedia("(hover: hover) and (pointer: fine)");
   const inView = useInView(stageRef, { once: true, amount: 0.35 });
   const [phase, setPhase] = useState(0);
-  const [run, setRun] = useState(0);
 
   useEffect(() => {
     if (!inView || reduced) return;
     const timers = PHASE_AT.map((ms, i) => setTimeout(() => setPhase(i + 1), ms));
     return () => timers.forEach(clearTimeout);
-  }, [inView, reduced, run]);
+  }, [inView, reduced]);
 
   // The payout leaves the screen: a paper tag starts at the chip's size and place on the screen, and flies out over
   // the bezel to its rest on the table, 520ms --ease-snap, its shadow fading in as it lands. Only ever scaled up to
@@ -120,11 +110,6 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
     tiltY.set(0);
   };
 
-  const replay = () => {
-    setPhase(0);
-    setRun((r) => r + 1);
-  };
-
   const shown = reduced ? FINAL_PHASE : phase;
   const renderTilt = (children: ReactNode) => (
     <motion.div className={styles.tilt} style={reduced ? undefined : { transform }}>
@@ -155,12 +140,8 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
             <Paper variant="tag" hole padding="none" className="w-[13.5rem]">
               <div className="flex flex-col gap-1 px-4 pt-10 pb-3.5">
                 <span className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Refund · {CLAIM.id}</span>
-                {/* "Sandbox" sits beside the amount, as on every demo amount. */}
-                <span className="flex items-baseline gap-2">
-                  <span className="text-[1.75rem] leading-none font-medium tracking-[-0.02em]">
-                    <Money value={CLAIM.amount} size="inline" />
-                  </span>
-                  <span className="font-mono text-micro tracking-[0.06em] text-ink-muted uppercase">Sandbox</span>
+                <span className="text-[1.75rem] leading-none font-medium tracking-[-0.02em]">
+                  <Money value={CLAIM.amount} size="inline" />
                 </span>
                 <span className="font-mono text-micro text-pay-ink">
                   sent to PayPal · {CLAIM.seconds} s
@@ -169,24 +150,7 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
             </Paper>
           </div>
         </motion.div>
-
       </div>
-      <figcaption className="relative z-10 mt-2 flex flex-wrap items-center justify-end gap-x-6 gap-y-1 pr-[calc(var(--bleed,0px)+2rem)]">
-        <span className="text-ui text-faint">
-          Claim {CLAIM.id} · AI-made test photo · sandbox money
-        </span>
-        <button
-          type="button"
-          onClick={replay}
-          className={clsx(
-            "inline-flex min-h-11 items-center gap-2 rounded-control text-ui font-medium text-muted transition-colors duration-160 hover:text-text",
-            "motion-reduce:hidden",
-          )}
-        >
-          <ReplayIcon />
-          Replay
-        </button>
-      </figcaption>
     </figure>
   );
 }

@@ -7,11 +7,12 @@ import styles from "./custody/custody.module.css";
 
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
 
-// What Remedy is, in three checkable facts: the real demo claim's time, the checks, and the eval (docs/EVAL.md).
+// What Remedy is, in three checkable facts: photo to payout on claim RM-0442 (CLAIM.seconds), the five checks, and the
+// live camera (the claim page has no upload button).
 const FACTS = [
-  { figure: `${CLAIM.seconds}\u00a0s`, text: `photo to PayPal payout, claim\u00a0${CLAIM.id}` },
-  { figure: "5 checks", text: "the first three need no AI" },
-  { figure: "36 claims", text: "tested, 4 models, 3 runs each" },
+  { figure: `${CLAIM.seconds}\u00a0s`, text: "from photo to PayPal payout" },
+  { figure: "5 checks", text: "before a cent moves" },
+  { figure: "0 uploads", text: "every photo comes from the live camera" },
 ];
 
 /**
@@ -22,15 +23,27 @@ const FACTS = [
 export function Hero() {
   const copy = (
     <>
-      {/* The lines are display: contents, so all the headline's text belongs to the h1 itself and the h1 is the LCP
-          element at every width. It focuses in as one. */}
-      <h1 id="hero-title" className={clsx("text-display font-medium text-balance", styles.focusIn)} style={line(0)}>
-        <span className="contents">Proof it&rsquo;s destroyed.</span> <span className="contents text-muted">Paid in a minute.</span>
+      {/* Set line by line on one column start, so the muted half never starts mid-line and the breaks are the same at
+          every width (a narrow phone wraps the long lines on their own). The halves are display: contents, so all the
+          headline's text belongs to the h1 itself and the h1 is the LCP element at every width. It focuses in as one. */}
+      <h1 id="hero-title" className={clsx("text-display font-medium", styles.focusIn)} style={line(0)}>
+        <span className="contents">
+          Recall refunds, <br />
+          paid in a minute.
+        </span>{" "}
+        <br />
+        <span className="contents text-muted">
+          Proven destroyed <br />
+          on a live camera.
+        </span>
       </h1>
       <p className={clsx("mt-6 max-w-[34ch] text-body lg:max-w-[42ch] text-pretty text-text-2 sm:text-lead lg:mt-8", styles.focusIn)} style={line(1)}>
         {/* Two blocks on phones, one paragraph from sm: each half stays smaller than the h1, so the h1 is the LCP. */}
-        <span className="block sm:inline">Owners cut the recalled product on a live camera, with a one-time code on it.</span>{" "}
-        <span className="block sm:inline">Remedy checks the photo and pays the refund through PayPal.</span>
+        <span className="block sm:inline">Remedy turns any CPSC recall into a live refund program.</span>{" "}
+        <span className="block sm:inline">
+          Owners show the destroyed product to a live camera with a one-time code, and the refund lands in their PayPal account
+          within a minute.
+        </span>
       </p>
       <div className={clsx("mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 lg:mt-10", styles.focusIn)} style={line(2)}>
         {/* The owner's path is the screen's one amber action; companies get a quieter link to their section, the nav's
