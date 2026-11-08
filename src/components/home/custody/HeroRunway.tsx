@@ -19,7 +19,7 @@ import styles from "./custody.module.css";
 type Mode = "static" | "pinned" | "phone";
 
 /** The dolly: the laptop moves in from p 0.04 and arrives at 0.12, where the screen layer takes over (CustodyStage). */
-const DOLLY = [0.04, 0.12] as const;
+export const DOLLY = [0.04, 0.12] as const;
 /** How far past the consent card's edges the laptop's glass reaches when it arrives, px. */
 const OVERSCAN = 24;
 

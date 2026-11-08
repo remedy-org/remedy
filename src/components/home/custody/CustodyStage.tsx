@@ -19,7 +19,7 @@ import styles from "./custody.module.css";
 // HeroRunway), then hands over to a flat, unscaled screen layer: between 0.12 and 0.17 its clip-path grows from the laptop screen's measured rect to the screen's place on the grid, so no text is ever scaled,
 // up or down. The rail takes columns 1 to 3 and the screen columns 4 to 12 of the page grid, like every section.
 
-const HANDOFF = [0.12, 0.17] as const;
+export const HANDOFF = [0.12, 0.17] as const;
 /** The rail's chapter list comes in with the consent card, once the laptop has gone from under the screen. */
 const RAIL_IN = 0.14;
 /** The screen's own frame and bar, and chapter 01's product column, come in once the clip is on the grid. */
@@ -122,7 +122,7 @@ function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
  * every line is lit, each of the exhibit's seven
  * beats (its live photo, the five checks, the paid receipt) at its hold, and the console.
  */
-const PAGE_STOPS = [
+export const PAGE_STOPS = [
   0,
   CONSENT_AT[2] + 0.014,
   SHOT_AT[2] + 0.012,
