@@ -190,7 +190,7 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
         <InsightsLedger claims={(filtered && shown) || data.claims} unitsSold={data.recall.unitsSold} />
       </div>
       {/* The page's filter, said in words with a way out: a pick in one panel changes every number on the page. */}
-      <div ref={bar} tabIndex={-1} role="status" className={clsx("outline-none", filtered ? "flex min-h-11 items-center gap-x-3 border-b border-line px-8 text-ui" : "sr-only")}>
+      <div ref={bar} tabIndex={-1} role="status" className={clsx("outline-none", filtered ? "mx-4 flex min-h-11 items-center gap-x-3 border-b border-line text-ui sm:mx-6 lg:mx-8" : "sr-only")}>
         {filtered && (
           <>
             <p className="min-w-0 truncate text-muted">

@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import type { AgAiToolDetailParams, AgTypeScriptAiToolDisplay } from "ag-studio";
 import { useState } from "react";
-import { StatusPill, type Status } from "@/components/ui";
+import { VerdictMark, type Verdict } from "@/components/console/VerdictMark";
 import type { Dossier } from "@/app/console/insights/facts";
 import type { ExplainData, NoteData, OpenData } from "./analyst";
 import { reactComp } from "./reactComp";
@@ -11,7 +11,7 @@ import { reactComp } from "./reactComp";
 // How the analyst's own tools show in the chat: the claim's evidence in mono, a claim card with its photo, and a
 // drafted note with the line that says who decides.
 
-const STATUS: Record<string, Status> = { Paid: "paid", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
+const STATUS: Record<string, Verdict> = { Paid: "approved", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
 const OUTCOME_DOT: Record<string, string> = { pass: "bg-pay", hold: "bg-hold", reject: "bg-stop" };
 // Never colour alone: each check's outcome is also a word.
 const OUTCOME_WORD: Record<string, string> = { pass: "Yes", hold: "Unclear", reject: "No" };
@@ -23,7 +23,7 @@ function Head({ d }: { d: Dossier }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="font-mono text-ui font-medium text-text">{d.id}</span>
-      <StatusPill status={STATUS[d.decision] ?? "pending"} />
+      <VerdictMark verdict={STATUS[d.decision] ?? "pending"} />
     </div>
   );
 }

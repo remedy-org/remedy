@@ -5,7 +5,7 @@ import type { CheckFunnelDef, DecisionMixDef, InsightsRegistry, MedianTimeDef, R
 import { HomeMedianTime, MedianTime } from "./MedianTime";
 import { RecallProgress } from "./RecallProgress";
 import { HomeRefusalReasons, RefusalReasons } from "./RefusalReasons";
-import { pillClasses } from "@/components/ui/StatusPill";
+import { glyphMarkup, type Verdict } from "@/components/console/VerdictMark";
 import type { Decision } from "@/lib/types";
 import { shownAs } from "../funnel";
 import { reactComp } from "../reactComp";
@@ -215,19 +215,15 @@ const claimLinks = <T extends AgBaseWidgetDefinition>(def: T): T => ({
 
 const DECISION_OF: Record<string, Decision> = { Paid: "paid", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
 
-/** A decision as the console's StatusPill draws it, as DOM for Studio's grid. */
+/** A decision as the console's grid draws it (VerdictMark: its glyph, then the word), as DOM for Studio's grid. */
 function pillElement(value: string): HTMLElement | string {
   const decision = DECISION_OF[value];
   if (!decision) return shownAs(value);
-  const { className, dot } = pillClasses(decision);
-  const track = document.createElement("span");
-  track.className = "inline-flex w-(--verdict-pill-w)";
-  const pill = document.createElement("span");
-  pill.className = `inline-flex h-[22px] items-center gap-1.5 rounded-full px-2.5 text-micro font-medium whitespace-nowrap ${className}`;
+  const word = shownAs(value);
+  const verdict: Verdict = decision === "paid" && word !== "Paid" ? "approved" : decision;
   const mark = document.createElement("span");
-  mark.className = `size-1.5 shrink-0 rounded-full ${dot}`;
-  mark.setAttribute("aria-hidden", "true");
-  pill.append(mark, shownAs(value));
-  track.append(pill);
-  return track;
+  mark.className = "inline-flex items-center gap-2 whitespace-nowrap text-text-2";
+  mark.innerHTML = glyphMarkup(verdict);
+  mark.append(word);
+  return mark;
 }

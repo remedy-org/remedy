@@ -21,7 +21,7 @@ export interface CheckFunnelViewProps {
   compact?: boolean;
   /** Spread the stages over the card's height (the console's canvas); off, they sit 16px apart from the top. */
   spread?: boolean;
-  /** The homepage: on the card's own content edge (no inset), figures in the sans face, no ↳ marks. */
+  /** The homepage: on the card's own content edge (no inset), figures in the sans face. */
   flush?: boolean;
 }
 
@@ -94,11 +94,6 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                   selected.has(s.stage) ? "bg-surface-2 ring-1 ring-text-2" : "",
                 )}
               >
-                {!flush && (
-                  <span aria-hidden="true" className="self-start font-mono text-faint">
-                    ↳
-                  </span>
-                )}
                 <span className="flex min-w-0 flex-col">
                     {s.groups.map((g) => (
                       <span key={g.kind} className="flex min-w-0 items-baseline gap-2">
