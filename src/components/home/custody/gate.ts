@@ -30,14 +30,13 @@ export function useGate(p: MotionValue<number>, on: (v: number) => boolean, ente
   return k;
 }
 
-const exhibit = (c: number) => c >= 2 && c <= 4;
+/** The incoming layer of a cut: it rises in over 360ms once the outgoing one is all but gone (LEAVE, 180ms). */
+export const CUT_IN: Transition = { ...ENTER, delay: 0.14 };
 
 /**
- * A chapter layer's strength (0 to 1) for the chapters `is` names, cut in time at each chapter change. Between two
- * claim screens the outgoing one leaves in 180ms and the incoming one rises in over 360ms, 120ms after. The exhibit is
- * an opaque page: it dissolves in over the chapter it covers, which holds at full strength under it until it is
- * opaque, and it leaves onto the console already in place under it. So no resting frame is empty or doubled, wherever
- * the scroll stops.
+ * A chapter layer's strength (0 to 1) for the chapters `is` names, cut in time at each chapter change (cut()). A jump
+ * across more than one chapter in one step (an anchor, an instant scroll) sets the layers at once: animating from the
+ * chapter left behind would flash a stale screen first.
  */
 export function useChapterGate(p: MotionValue<number>, is: (c: number) => boolean) {
   const k = useMotionValue(is(chapterAt(p.get())) ? 1 : 0);
@@ -47,18 +46,23 @@ export function useChapterGate(p: MotionValue<number>, is: (c: number) => boolea
     const to = chapterAt(v);
     if (from === to) return;
     prev.current = to;
+    if (Math.abs(to - from) > 1) return k.jump(is(to) ? 1 : 0);
     const t = cut(from, to, is);
     if (t) animate(k, is(to) ? 1 : 0, t);
   });
   return k;
 }
 
-/** The transition for the layer that `is` names when the stage goes from chapter `from` to `to`, or null if it stays. */
+/**
+ * The transition for the layer that `is` names when the stage goes from chapter `from` to `to`, or null if it stays.
+ * Every cut goes through the stage's ground, the exhibit's included: the outgoing layer leaves in 180ms and the incoming
+ * one rises in 140ms later, when the outgoing one is under 3%. Two dense layouts are never both half drawn, so no
+ * frame of a cut shows one screen's words printed over another's (a crossfade of the opaque exhibit over chapter 02,
+ * or off it onto the console, did, for about 250ms on every pass).
+ */
 export function cut(from: number, to: number, is: (c: number) => boolean): Transition | null {
   const was = is(from);
   const now = is(to);
   if (was === now) return null;
-  if (exhibit(now ? to : from)) return now ? ENTER : { ...LEAVE, duration: 0.24, delay: 0.06 };
-  if (now) return exhibit(from) ? ENTER : { ...ENTER, delay: 0.12 };
-  return exhibit(to) ? { ...LEAVE, delay: 0.36 } : LEAVE;
+  return now ? CUT_IN : LEAVE;
 }

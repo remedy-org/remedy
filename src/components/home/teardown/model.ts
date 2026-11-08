@@ -47,11 +47,11 @@ const lerp = (a: number, b: number, x: number) => a + (b - a) * x;
 /** Where p sits inside a beat, 0 to 1. */
 export const local = (id: BeatId, p: number) => inv(RANGES[id][0], RANGES[id][1], p);
 
-/** A part opens over the first 22% of its beat, holds, and closes over the last 12% (about 1 s, hold, 0.5 s). */
+/** A part opens as the camera arrives on it (ARRIVE), holds, and closes over the last 12% (about 1 s, hold, 0.5 s). */
 export function opened(id: BeatId, p: number) {
   const t = local(id, p);
   if (p < RANGES[id][0] || p > RANGES[id][1]) return 0;
-  return easeOut(inv(0, 0.22, t)) * (1 - easeInOut(inv(0.88, 1, t)));
+  return easeOut(inv(0, ARRIVE[id], t)) * (1 - easeInOut(inv(0.88, 1, t)));
 }
 
 /**
@@ -64,8 +64,8 @@ function fpOpen(p: number) {
   return 1 - easeInOut(inv(0, 0.12, local("acct", p)));
 }
 
-/** A check ticks at 82% of its beat. */
-const tickAt = (id: CheckId) => lerp(RANGES[id][0], RANGES[id][1], 0.82);
+/** A check ticks at 82% of its beat, or before the camera leaves it. */
+const tickAt = (id: CheckId) => lerp(RANGES[id][0], RANGES[id][1], Math.min(0.82, DEPART[id] - 0.04));
 
 /**
  * Seconds since the photo, as claim RM-0442 ran: the three pre-checks take under a second, the model reads the photo
@@ -112,24 +112,34 @@ export const SHOTS: Record<BeatId, Shot> = {
   fp: { az: 28, el: 8, at: [-0.9, 0.23, 0.02], rx: 0.24, ry: 0.17 },
   // No physical part: the hero view, a touch higher, while the panel does the work.
   acct: { az: 18, el: 34, at: [0.02, 0.05, 0.05], rx: 0.44, ry: 0.3 },
-  // Macro on the tag, square to its face (it lies at 36 degrees once the halves have spread), so M, 4 and T read.
-  code: { az: 36, el: 64, at: [0.29, 0.06, 0.29], rx: 0.11, ry: 0.08 },
+  // Macro on the tag, square to its face (it lies at 36 degrees once the halves have spread), so M, 4 and T read. Aimed
+  // a little low and steep, so the pillow's underside is out of the frame above the tag, never a grey smear there.
+  code: { az: 36, el: 76, at: [0.29, 0.05, 0.26], rx: 0.11, ry: 0.08 },
   // Low and from the front left, onto the right half's cut face as the halves part.
   torn: { az: -20, el: 15, at: [0.02, 0.05, 0.16], rx: 0.44, ry: 0.17 },
   // Pulled back for the rule and the explode, on a slow turntable.
   paid: { az: 24, el: 26, at: [0.02, 0.06, 0.06], rx: 0.52, ry: 0.32 },
 };
 
-/** Camera keys in p: each beat arrives at 22% of its range and holds to 88%, pushing in. */
+/**
+ * Where in its beat the camera arrives on each shot, and where it leaves for the next: 22% and 88%, except around the
+ * tag macro. The moves onto it and off it change the framing most (the whole pillow to a 4x close-up of the tag), so
+ * they get about 380px of wheel instead of about 250: the camera leaves acct and code at 80%, and arrives on code and
+ * on the cut at 36%.
+ */
+export const ARRIVE: Record<BeatId, number> = { intro: 0.22, live: 0.22, fp: 0.22, acct: 0.22, code: 0.36, torn: 0.36, paid: 0.22 };
+export const DEPART: Record<BeatId, number> = { intro: 0.88, live: 0.88, fp: 0.88, acct: 0.8, code: 0.8, torn: 0.88, paid: 0.88 };
+
+/** Camera keys in p: each beat arrives at ARRIVE and holds to DEPART, pushing in. */
 const KEYS: { p: number; shot: Shot }[] = (() => {
   const keys: { p: number; shot: Shot }[] = [{ p: 0, shot: HERO }];
   for (const b of BEATS) {
     const [a, z] = RANGES[b.id];
     const s = SHOTS[b.id];
     const push = b.id === "intro" ? 1 : 0.94;
-    keys.push({ p: lerp(a, z, 0.22), shot: s });
+    keys.push({ p: lerp(a, z, ARRIVE[b.id]), shot: s });
     keys.push({
-      p: lerp(a, z, 0.88),
+      p: lerp(a, z, DEPART[b.id]),
       shot: { ...s, rx: s.rx * push, ry: s.ry * push },
     });
   }
@@ -147,6 +157,8 @@ function keysAt(p: number) {
 const PULL = 0.5;
 /** The most a move may pull back past the wider of its two shots. */
 const PULL_MAX = 0.45;
+/** How far a move pulls back per unit of zoom it changes (|ln| of the two half-widths' ratio), as extra half-width. */
+const PULL_ZOOM = 0.12;
 
 /**
  * The shot at p, eased between keys. A move between two distant subjects pulls back as it goes (more the further the
@@ -157,12 +169,18 @@ export function shotAt(p: number): Shot {
   const { a, b, x } = keysAt(p);
   const span = Math.hypot(a.at[0] - b.at[0], a.at[1] - b.at[1], a.at[2] - b.at[2]);
   const rx = lerp(a.rx, b.rx, x);
-  // sin squared: the most pull-back mid-move, little as the camera settles onto a close shot (the tag macro).
-  const pull = Math.min(Math.sin(Math.PI * x) ** 2 * PULL * span, Math.max(0, Math.max(a.rx, b.rx) + PULL_MAX - rx));
+  // sin squared: the most pull-back mid-move, little as the camera settles onto a close shot (the tag macro). A big
+  // change of zoom pulls back too, so the move onto the macro shows the whole pillow mid-way, never a crop of its body.
+  const wide = PULL * span + PULL_ZOOM * Math.abs(Math.log(a.rx / b.rx));
+  const pull = Math.min(Math.sin(Math.PI * x) ** 2 * wide, Math.max(0, Math.max(a.rx, b.rx) + PULL_MAX - rx));
+  // Mid-move the aim leans toward the middle of both subjects together, not the middle of their two aim points, so a
+  // wide subject (the whole pillow) next to a small one (the prints) is centred with it rather than cut by the side.
+  const union = (Math.min(a.at[0] - a.rx, b.at[0] - b.rx) + Math.max(a.at[0] + a.rx, b.at[0] + b.rx)) / 2;
+  const lean = (union - (a.at[0] + b.at[0]) / 2) * Math.sin(Math.PI * x) ** 2;
   const shot: Shot = {
     az: lerp(a.az, b.az, x),
     el: lerp(a.el, b.el, x),
-    at: [lerp(a.at[0], b.at[0], x), lerp(a.at[1], b.at[1], x), lerp(a.at[2], b.at[2], x)],
+    at: [lerp(a.at[0], b.at[0], x) + lean, lerp(a.at[1], b.at[1], x), lerp(a.at[2], b.at[2], x)],
     rx: rx + pull,
     ry: lerp(a.ry, b.ry, x) + 0.65 * pull,
   };
@@ -183,7 +201,7 @@ export interface ExhibitState {
   fp: number;
   code: number;
   torn: number;
-  /** The paid beat's explode, 0 to 1 and back. */
+  /** The paid beat's explode, 0 to 1, held to the end. */
   explode: number;
   /** The scan plane's sweep across the evidence, 0 to 1 (live check). */
   scan: number;
@@ -194,13 +212,15 @@ export interface ExhibitState {
   charNow: number;
   /** Index of the check being shown (0 to 4), or -1. */
   active: number;
-  /** How visible the side callout is: the active check's, or in the intro the photo being framed. */
+  /** Whether the side callout is up (0 or 1; the stage eases it in time): the active check's, or the intro's. */
   callout: number;
   /**
-   * The leader from the part to the callout, drawn on like ink (0 to 1): only once the camera has nearly arrived on the
-   * part (12% to 22% of its beat), and gone as the part closes, so it never points into a moving frame.
+   * The leader from the part to the callout (0 to 1): drawn on like ink only as the camera arrives on the part, faded
+   * out as the camera leaves it, so it never points into a moving frame. `leader` is ink times fade.
    */
   leader: number;
+  leaderInk: number;
+  leaderFade: number;
   /** How close the camera is to the tag macro (0 to 1), easing with the camera: the stage's mask follows it. */
   macro: number;
   /** In the intro, how many of the three things the photo must show are in the frame so far (0 to 3). */
@@ -224,22 +244,29 @@ export const RECEIPT_FADE = 3;
 const receiptAt = (p: number) => (p < RANGES.paid[0] ? 0 : easeOut(inv(0.02, 0.24, local("paid", p))));
 
 /**
- * The side callout's opacity. The intro's opens with the cut; each check's then holds through the hand-off and the next
- * one cuts in over the first 5% of its beat, so the outgoing words stay until the incoming ones replace them and the
- * column is never blank between checks. The last check's holds into the payout and leaves as the receipt lands over it.
+ * Whether the side callout is up (1) or down (0): a state, not a fade, so the stage animates it in time and a reader
+ * who stops never rests on half-drawn words. The intro's comes up at 12% of its beat, as the cut opens. Each check's is
+ * up from its beat's first frame: the outgoing words hold to the hand-off and the next ones cut in there, so the column
+ * is never blank between checks. The last check's holds into the payout and goes as the receipt is half opaque over it.
  */
 function calloutAt(beat: BeatId, p: number) {
-  const t = local(beat, p);
-  if (beat === "intro") return easeOut(inv(0, 0.22, t));
-  if (beat === "paid") return Math.max(0, 1 - receiptAt(p) * RECEIPT_FADE);
-  return easeOut(inv(0, 0.05, t));
+  if (beat === "intro") return local(beat, p) >= 0.12 ? 1 : 0;
+  if (beat === "paid") return receiptAt(p) * RECEIPT_FADE >= 0.5 ? 0 : 1;
+  return 1;
 }
 
-/** The leader's ink: a check's part has its leader from 12% to 22% of its beat until it starts closing at 88%. */
-function leaderAt(beat: BeatId, p: number) {
+/** The leader's ink drawing on: from 10% of its beat before the camera arrives on the part, to the arrival. */
+function leaderInkAt(beat: BeatId, p: number) {
   if (!CHECK_IDS.includes(beat as CheckId)) return 0;
-  const t = local(beat, p);
-  return smooth(inv(0.12, 0.22, t)) * (1 - easeInOut(inv(0.88, 1, t)));
+  const a = ARRIVE[beat];
+  return smooth(inv(a - 0.1, a, local(beat, p)));
+}
+
+/** The leader's strength as the part closes: it fades (never retracts) over 6% of the beat as the camera leaves. */
+function leaderFadeAt(beat: BeatId, p: number) {
+  if (!CHECK_IDS.includes(beat as CheckId)) return 0;
+  const d = DEPART[beat];
+  return 1 - easeInOut(inv(d, d + 0.06, local(beat, p)));
 }
 
 /**
@@ -261,7 +288,8 @@ export function stateAt(pIn: number): ExhibitState {
   const active = CHECK_IDS.indexOf(beat as CheckId);
   const done = CHECK_IDS.filter((id) => p >= tickAt(id)).length;
   const codeT = local("code", p);
-  const chars = p < RANGES.code[0] ? 0 : p > RANGES.code[1] ? 3 : [0.3, 0.44, 0.58].filter((t) => codeT >= t).length;
+  // The characters are read once the camera has arrived on the tag (code ARRIVE, 36%), M then 4 then T.
+  const chars = p < RANGES.code[0] ? 0 : p > RANGES.code[1] ? 3 : [0.4, 0.52, 0.64].filter((t) => codeT >= t).length;
   const charNow = p >= RANGES.code[0] && p <= RANGES.code[1] && codeT < 0.8 ? chars - 1 : -1;
   const paidT = local("paid", p);
   const ruled = p >= RANGES.paid[0] + 0.12 * (RANGES.paid[1] - RANGES.paid[0]);
@@ -273,7 +301,9 @@ export function stateAt(pIn: number): ExhibitState {
     fp: fpOpen(p),
     code: opened("code", p),
     torn: opened("torn", p),
-    explode: Math.sin(Math.PI * smooth(inv(0.05, 0.95, paidT))) * (p >= RANGES.paid[0] && p <= RANGES.paid[1] ? 1 : 0),
+    // The halves part as the receipt lands and stay parted to the end: the last 3D frame before the console is the
+    // pillow destroyed, never put back together. The turntable carries the motion after that.
+    explode: smooth(inv(0.05, 0.45, paidT)) * (p >= RANGES.paid[0] ? 1 : 0),
     scan: inv(0.3, 0.75, local("live", p)),
     hash: smooth(inv(0.25, 0.6, local("fp", p))),
     chars,
@@ -281,7 +311,9 @@ export function stateAt(pIn: number): ExhibitState {
     active,
     // The intro has a callout too (the photo being framed), so the side column is never empty while the pillow is cut.
     callout: calloutAt(beat, p),
-    leader: leaderAt(beat, p),
+    leader: leaderInkAt(beat, p) * leaderFadeAt(beat, p),
+    leaderInk: leaderInkAt(beat, p),
+    leaderFade: leaderFadeAt(beat, p),
     macro: macroAt(p),
     framed: p > RANGES.intro[1] ? 3 : FRAMED_AT.filter((t) => local("intro", p) >= t).length,
     done,

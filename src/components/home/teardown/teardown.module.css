@@ -113,9 +113,11 @@
   mask-composite: intersect;
 }
 
+/* The canvas replaces the posters in one frame, the render it shows already drawn: a fade in over them left the ground
+   alone for a frame (the posters unmount as it starts), then a pale pillow. Both show the same beat, so it reads as a
+   cut, never a ghost of one pillow over the other. */
 .canvas {
   opacity: 0;
-  transition: opacity 400ms var(--ease-out-expo);
 }
 
 .canvasOn {
@@ -215,7 +217,27 @@
 
 .calloutWrap {
   opacity: 0;
-  will-change: opacity, transform;
+  translate: 0 8px;
+  transition:
+    opacity 180ms cubic-bezier(0.65, 0, 0.35, 1),
+    translate 180ms cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: opacity, translate;
+}
+
+/* Up: in over 360ms on the entrance curve. A new check's callout mounts down and rises in; the outgoing one has gone
+   with its beat, so the cut never shows two checks' words over each other. */
+.calloutWrap[data-on] {
+  opacity: 1;
+  translate: none;
+  transition-duration: 360ms;
+  transition-timing-function: var(--ease-out-expo);
+}
+
+@starting-style {
+  .calloutWrap[data-on] {
+    opacity: 0;
+    translate: 0 8px;
+  }
 }
 
 /* One height for every check's callout (the tallest is about 190px), so as the next one cuts in, its first line and the
@@ -378,9 +400,15 @@ button.cellBody:hover .label {
   padding-block: 8px;
 }
 
+/* One height for the column on phones too (the tallest check's callout, code M4T's), with each callout from its top, so
+   "Check n of 5" holds still as the stills cut from beat to beat instead of jumping with the callout's height. */
 .small .side {
   align-items: end;
-  min-height: 8.5rem;
+  min-height: 11.5rem;
+}
+
+.small .calloutWrap {
+  align-self: start;
 }
 
 .small .row {

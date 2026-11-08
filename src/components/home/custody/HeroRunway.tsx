@@ -18,11 +18,14 @@ import styles from "./custody.module.css";
 // sticky phone. The hero is the same element, in the same place, in every form, so the switch never moves it.
 type Mode = "static" | "pinned" | "phone";
 
-const DOLLY = [0.04, 0.2] as const;
-const SCALE = 1.35;
+/** The dolly: the laptop moves in from p 0.04 and arrives at 0.12, where the screen layer takes over (CustodyStage). */
+const DOLLY = [0.04, 0.12] as const;
+/** How far past the consent card's edges the laptop's glass reaches when it arrives, px. */
+const OVERSCAN = 24;
 
 const ramp = (v: number, a: number, b: number) => Math.min(1, Math.max(0, (v - a) / (b - a)));
-const easeInOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
+/** DESIGN.md's state-to-state curve, cubic-bezier(0.65, 0, 0.35, 1): the laptop is under way as soon as the copy goes. */
+const inOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
 
 function SkipLink() {
   return (
@@ -49,9 +52,10 @@ function ChapterList() {
 }
 
 function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null>, device: RefObject<HTMLDivElement | null>) {
-  // Where the laptop has to go so its screen sits over chapter 01's consent card at 1.35x, measured at rest: the
-  // screen layer takes over inside the laptop's screen rect, so the dolly lands on the card it zoomed into.
-  const target = useRef({ x: 0, y: 0 });
+  // Where the laptop has to go, and how large it has to grow, so its screen's glass covers chapter 01's consent card,
+  // measured at rest: the screen layer takes over inside the laptop's screen rect at 0.12, so the card is whole inside
+  // the glass the moment it comes in, and the dolly reads as the camera moving into the laptop's screen.
+  const target = useRef({ x: 0, y: 0, s: 1.35 });
   useEffect(() => {
     const st = stage.current;
     if (!st) return;
@@ -67,7 +71,8 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
       const cy = D.top + D.height / 2;
       const tx = card ? card.left + card.width / 2 : S.left + S.width / 2;
       const ty = card ? card.top + card.height / 2 : S.top + S.height / 2;
-      target.current = { x: tx - cx - SCALE * (P.left + P.width / 2 - cx), y: ty - cy - SCALE * (P.top + P.height / 2 - cy) };
+      const s = card ? Math.min(2.2, Math.max(1.35, (card.width + 2 * OVERSCAN) / P.width, (card.height + 2 * OVERSCAN) / P.height)) : 1.35;
+      target.current = { x: tx - cx - s * (P.left + P.width / 2 - cx), y: ty - cy - s * (P.top + P.height / 2 - cy), s };
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -76,7 +81,7 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
     return () => ro.disconnect();
   }, [p, stage, device]);
 
-  const k = useTransform(p, (v) => easeInOut(ramp(v, DOLLY[0], DOLLY[1])));
+  const k = useTransform(p, (v) => inOut(ramp(v, DOLLY[0], DOLLY[1])));
   // The hero copy, its facts and the laptop's labels leave in time as the dolly starts, and come back the same way: a
   // scrubbed fade held the headline blurred at half strength wherever the reader paused. The copy leaves at half the
   // focus-in's length and comes back as a reveal; the labels (paper on the light table) go at once, never left
@@ -96,9 +101,9 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
     device: {
       x: useTransform(k, (t) => t * target.current.x),
       y: useTransform(k, (t) => t * target.current.y),
-      scale: useTransform(k, (t) => 1 + (SCALE - 1) * t),
+      scale: useTransform(k, (t) => 1 + (target.current.s - 1) * t),
       opacity: body,
-      "--tilt-k": useTransform(p, (v) => 1 - easeInOut(ramp(v, DOLLY[0], 0.15))),
+      "--tilt-k": useTransform(p, (v) => 1 - inOut(ramp(v, DOLLY[0], DOLLY[1] - 0.01))),
       willChange: useTransform(p, (v) => (v > 0.02 && v < 0.22 ? "transform, opacity" : "auto")),
     },
     labels,

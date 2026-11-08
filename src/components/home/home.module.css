@@ -11,13 +11,13 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* 1. Focus-in: blur 10px, 12px down and transparent to rest, 900ms, 80ms apart per line. Text only. */
+  /* 1. Focus-in: blur 10px, 12px down and transparent to rest, 700ms, 60ms apart per line. Text only. */
   .line {
     transition:
-      opacity var(--dur-reveal) var(--ease-out-expo),
-      filter var(--dur-reveal) var(--ease-out-expo),
-      translate var(--dur-reveal) var(--ease-out-expo);
-    transition-delay: calc(var(--line, 0) * 80ms);
+      opacity 700ms var(--ease-out-expo),
+      filter 700ms var(--ease-out-expo),
+      translate 700ms var(--ease-out-expo);
+    transition-delay: calc(var(--line, 0) * 60ms);
   }
 
   .reveal[data-enter="armed"] .line {

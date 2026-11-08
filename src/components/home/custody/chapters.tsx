@@ -70,11 +70,11 @@ const CONSENT_STEPS = ["Cut it in half, as the notice says", "Write your one-tim
 /** `p` lights the steps in turn (the pinned laptop); without it they are all lit. */
 export function ConsentChapter({ p }: { p?: Progress }) {
   const compact = useContext(Compact);
-  // In the pinned sequence the product column comes in only once the screen's clip has grown to the grid (0.2), so
-  // while it grows from the laptop's screen the clip holds the consent card alone, and never slices this column's words.
+  // In the pinned sequence the product column comes in only once the screen's clip has grown to the grid (0.165,
+  // CustodyStage's ON_GRID), so while it grows from the laptop's screen the clip holds the consent card alone, and never slices this column's words.
   // It comes in time, so a stop there never rests on it half drawn.
   const done = useDone();
-  const product = useGate(p ?? done, (v) => v >= 0.195);
+  const product = useGate(p ?? done, (v) => v >= 0.165);
   return (
     <div className="@container">
       <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
@@ -354,8 +354,9 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
 
 export function ConsoleChapter({ p }: { p: Progress }) {
   const compact = useContext(Compact);
-  // RM-0442's row opens into the table once the console is in (an object moving, 560ms), its words after the space.
-  const open = useGate(p, (v) => v >= 0.91, { duration: DURATION.object, ease: EASE.outQuart }, { duration: 0.28, ease: EASE.outQuart });
+  // RM-0442's row opens into the table once the console is in (an object moving, 560ms), its words after the space. It
+  // waits 200ms, so on a page straight past 0.91 the table has landed first and the paid row is the last thing in.
+  const open = useGate(p, (v) => v >= 0.91, { duration: DURATION.object, ease: EASE.outQuart, delay: 0.2 }, { duration: 0.28, ease: EASE.outQuart });
   const height = useTransform(open, (k) => `${(k * (compact ? 3 : 3.5)).toFixed(3)}rem`);
   const opacity = useTransform(open, [0.5, 1], [0, 1]);
   const flash = useTransform(p, (v) => `color-mix(in oklch, var(--accent) ${(14 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);

@@ -196,8 +196,8 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     for (const f of mats.fuzz) f.color.copy(mats.stuff.color);
     // The cream tag on the light theme's cream floor: a darker edge, a stronger contact shadow (in render) and paper a
     // shade down, so its outline and M4T hold in the whole-pillow shots.
-    tag.edge.color.set(c.dark ? "#b9ad97" : "#a2937a");
-    tagPaper = c.dark ? c.paper : `#${new THREE.Color(c.paper).offsetHSL(0, 0, -0.08).getHexString()}`;
+    tag.edge.color.set(c.dark ? "#b9ad97" : "#8f7f65");
+    tagPaper = c.dark ? c.paper : `#${new THREE.Color(c.paper).offsetHSL(0, 0, -0.12).getHexString()}`;
     prints.drawGrid(c.accent, c.faint, c.paper);
   }
 

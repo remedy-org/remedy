@@ -10,20 +10,20 @@ import { ExhibitSlot } from "./ExhibitSlot";
 import { useBeatPaging } from "./paging";
 import { scrollAt } from "./pace";
 import { ScreenBar } from "./frames";
-import { ENTER, IN_OUT, LEAVE, useChapterGate, useGate } from "./gate";
+import { CUT_IN, ENTER, IN_OUT, LEAVE, useChapterGate, useGate } from "./gate";
 import { EXHIBIT_RANGE, STARTS, chapterAt, clamp01, inExhibit } from "./timeline";
 import styles from "./custody.module.css";
 
 // The pinned Chain of Custody on laptops (spec H2). Everything here is drawn from one timeline p (paced against the
-// scroll in pace.ts). The laptop's screen hands over to a flat, unscaled screen layer: between 0.12 and 0.20 its
-// clip-path grows from the laptop screen's measured rect to the screen's place on the grid, so no text is ever scaled,
+// scroll in pace.ts). The laptop dollies in until its screen's glass covers chapter 01's consent card (0.04 to 0.12,
+// HeroRunway), then hands over to a flat, unscaled screen layer: between 0.12 and 0.17 its clip-path grows from the laptop screen's measured rect to the screen's place on the grid, so no text is ever scaled,
 // up or down. The rail takes columns 1 to 3 and the screen columns 4 to 12 of the page grid, like every section.
 
-const HANDOFF = [0.12, 0.2] as const;
-/** The rail's chapter list comes in once the screen's clip has nearly reached the grid. */
-const RAIL_IN = 0.17;
+const HANDOFF = [0.12, 0.17] as const;
+/** The rail's chapter list comes in with the consent card, once the laptop has gone from under the screen. */
+const RAIL_IN = 0.14;
 /** The screen's own frame and bar, and chapter 01's product column, come in once the clip is on the grid. */
-const ON_GRID = 0.195;
+const ON_GRID = 0.165;
 
 const inOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
 
@@ -81,8 +81,8 @@ function RailCaption({ p, i }: { p: Progress; i: number }) {
 }
 
 /**
- * The screen's clip: the laptop screen's live rect at 0.12, the screen's place on the grid (columns 4 to 12) at 0.20.
- * The layer itself dissolves in over the laptop's own screen in time as p passes 0.12 (CustodyStage), so no stop rests
+ * The screen's clip: the laptop screen's live rect at 0.12, the screen's place on the grid (columns 4 to 12) at 0.17.
+ * The layer itself comes in over the laptop's own screen in time as p passes 0.12 (CustodyStage), so no stop rests
  * on the two screens half over each other. Only the consent card shows while the clip grows (chapter 01's other column
  * comes in once it has reached the grid, ConsentChapter), so no text is ever sliced by its edge. Written straight to
  * the element, so scrolling never re-renders React.
@@ -102,10 +102,10 @@ function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
       const from = { t: lap.top - S.top, r: S.right - lap.right, b: S.bottom - lap.bottom, l: lap.left - S.left, round: 6 };
       box = { t: 0, r: 0, b: 0, l: 0, round: 0 };
       for (const key of Object.keys(end) as (keyof typeof end)[]) box[key] = from[key] + (end[key] - from[key]) * k;
-      // Once the laptop has gone from under it (0.13 to 0.16), the clip lets go of the consent card's edges, so a stop
+      // Once the laptop has gone from under it (0.13 to 0.15), the clip lets go of the consent card's edges, so a stop
       // mid-growth shows the card whole, never its top or a side sliced off.
       const card = el.querySelector("[data-dolly-target]")?.getBoundingClientRect();
-      const c = clamp01((v - 0.13) / 0.03);
+      const c = clamp01((v - 0.13) / 0.02);
       if (card && c > 0) {
         const m = 16;
         const keep = { t: card.top - S.top - m, r: S.right - card.right - m, b: S.bottom - card.bottom - m, l: card.left - S.left - m };
@@ -117,13 +117,13 @@ function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
 }
 
 /**
- * Where Space and Page Down stop on the timeline: the hero, chapter 01 as the screen settles on the grid (the #how
- * anchor), so the dolly gets a page of its own, chapter 01 and 02 once every line is lit, each of the exhibit's seven
+ * Where Space and Page Down stop on the timeline: the hero, chapter 01 once every line is lit (so the dolly gets a page
+ * of its own, landing on the settled screen; a stop as it settled made the next page look like it did nothing), 02 once
+ * every line is lit, each of the exhibit's seven
  * beats (its live photo, the five checks, the paid receipt) at its hold, and the console.
  */
 const PAGE_STOPS = [
   0,
-  0.215,
   CONSENT_AT[2] + 0.014,
   SHOT_AT[2] + 0.012,
   ...EXHIBIT_BEATS.map((b) => EXHIBIT_RANGE[0] + holdOf(b.id) * (EXHIBIT_RANGE[1] - EXHIBIT_RANGE[0])),
@@ -175,19 +175,23 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
     return () => ro.disconnect();
   }, [stage, p]);
 
-  // The consent screen dissolves in over the laptop's own screen as p passes 0.12, in time (320ms in, 160ms back), so no
-  // stop rests on the two screens half over each other. Opacity and pointer events as well as visibility: a chapter
+  // As p passes 0.12, in time, the laptop's own screen clears to the page's ground (160ms, the layer coming in), then
+  // the consent screen rises in on it (320ms, 140ms later): one UI at a time, never the laptop's photo and checks
+  // under a half-drawn card. Back, both leave in 160ms. Opacity and pointer events as well as visibility: a chapter
   // layer sets its own visibility, which would show through a hidden parent and catch the hero's clicks and pointer
   // (its Replay and the laptop's tilt) while invisible.
-  const handIn = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.32 }, { ...LEAVE, duration: 0.16 });
+  const handIn = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.16 }, { ...LEAVE, duration: 0.16 });
+  const content = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.32, delay: 0.14 }, { ...LEAVE, duration: 0.16 });
   const screenStyle = {
     opacity: handIn,
     visibility: useTransform(handIn, (o) => (o > 0 ? "visible" : "hidden")),
     pointerEvents: useTransform(handIn, (o) => (o > 0.5 ? "auto" : "none")),
   };
   // The screen's frame and app bar come in with the clip on the grid, so the growing clip never slices the bar's words.
-  const frame = useGate(p, (v) => v >= ON_GRID);
-  const railHead = useGate(p, (v) => v >= RAIL_IN);
+  // They and the rail leave while the exhibit covers the stage, and come back after it has gone, so its cuts in and
+  // out pass through the bare ground, never the exhibit's headline over the rail's list.
+  const frame = useGate(p, (v) => v >= ON_GRID && !inExhibit(v), CUT_IN, LEAVE);
+  const railHead = useGate(p, (v) => v >= RAIL_IN && !inExhibit(v), CUT_IN, LEAVE);
   // The rail's skip link hides while the exhibit covers it: the exhibit carries the same link in its own foot. Past the
   // console it has nothing left to skip, so it fades out as the pin releases, never left alone on the stage.
   const skipVisibility = useTransform(p, (v) => (inExhibit(v) ? "hidden" : "visible"));
@@ -201,7 +205,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
           <motion.div style={{ opacity: frame }}>
             <ScreenBar step={[1, 2, 3, 4, 4, 4][chapter]} console={chapter === 5} />
           </motion.div>
-          <div className="relative min-h-0 flex-1">
+          <motion.div className="relative min-h-0 flex-1" style={{ opacity: content }}>
             <Compact.Provider value={compact}>
               <Layer p={p} i={0} compact={compact}>
                 <ConsentChapter p={p} />
@@ -214,7 +218,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
                 <ConsoleChapter p={p} />
               </Layer>
             </Compact.Provider>
-          </div>
+          </motion.div>
         </div>
       </motion.div>
 
