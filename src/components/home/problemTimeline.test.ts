@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANCHOR_AT, dash, outExpo, outQuart, OVERLAP_VH, PAYOFF_LEAD, PAYOFF_REST, piecewise, REST, SECTION_VH, seg, stampScale, T } from "./problemTimeline";
+import { ANCHOR_AT, dash, outExpo, outQuart, OVERLAP_VH, PAYOFF_LEAD, PAYOFF_REST, piecewise, REST, SECTION_VH, seg, T } from "./problemTimeline";
 
 // DESIGN.md: a pinned beat gets at least about 70vh of scroll, exits run half as long as entrances, and the second
 // pinned sequence (this one) holds for about 130vh before section B scrolls over it.
@@ -88,15 +88,6 @@ describe("timeline helpers", () => {
     expect(seg(0, [10, 20])).toBe(0);
     expect(seg(15, [10, 20])).toBe(0.5);
     expect(seg(99, [10, 20])).toBe(1);
-  });
-
-  it("lands a stamp 4% past rest with no bounce", () => {
-    expect(stampScale(0)).toBeCloseTo(1.4);
-    expect(stampScale(0.7)).toBeCloseTo(0.96);
-    expect(stampScale(1)).toBeCloseTo(1);
-    let min = Infinity;
-    for (let x = 0; x <= 1; x += 0.01) min = Math.min(min, stampScale(x));
-    expect(min).toBeGreaterThanOrEqual(0.959);
   });
 
   it("shows a piece of a path without a stray dot at its start", () => {

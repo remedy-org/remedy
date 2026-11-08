@@ -172,10 +172,9 @@ const agedSheet: Pair[] = [
   // The payoff prints in ink inside the lamp's last pool; its farthest letters sit where the room is at most 14% of the
   // dim's 0.88.
   { fg: "--ink", bg: "--aged+--grain-floor+--room@0.13", min: 4.5, note: "payoff at the edge of the lamp's pool" },
-  // Stacked, the chain's "Back to 01" is the string's red a step darker and the cut's stamp PAID's green a step darker,
-  // both on the sheet at its darkest.
-  { fg: "--loop-ink", bg: "--aged+--aged-edge@0.2+--grain-floor", min: 4.5, note: "Back to 01 on the sheet" },
-  { fg: "--cut-ink", bg: "--aged+--aged-edge@0.2+--grain-floor", min: 4.5, note: "CUT BY REMEDY stamp on the sheet" },
+  // Stacked, the chain's "Back to 1" is the string's red a step darker, on the sheet at its darkest ("Remedy cuts here"
+  // is --ink, checked above).
+  { fg: "--loop-ink", bg: "--aged+--aged-edge@0.2+--grain-floor", min: 4.5, note: "Back to 1 on the sheet" },
   // In light the lamp goes down to --dim-light; the payoff's farthest letters sit where it is at most 14% of the 0.6.
   { fg: "--ink", bg: "--aged+--grain-floor+--dim-light@0.09", min: 4.5, note: "payoff at the edge of the pool, light" },
 ];

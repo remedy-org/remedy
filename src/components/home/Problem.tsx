@@ -3,9 +3,9 @@
 import clsx from "clsx";
 import { Tinos } from "next/font/google";
 import { useCallback, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type Ref } from "react";
-import { SkipLink, Stamp } from "@/components/ui";
+import { SkipLink } from "@/components/ui";
 import s from "./problem.module.css";
-import { clamp, dash, inOutQuart, outExpo, outQuart, PAYOFF_LEAD, PAYOFF_REST, piecewise, REST, seg, stampScale, T } from "./problemTimeline";
+import { clamp, dash, inOutQuart, outExpo, outQuart, PAYOFF_LEAD, PAYOFF_REST, piecewise, REST, seg, T } from "./problemTimeline";
 
 /*
  * The Problem section: one aged evidence sheet on the dark desk. On a laptop (at least 1024 x 700, motion allowed) it rises out
@@ -90,12 +90,16 @@ const unit = (a: Pt, b: Pt): Pt => {
   return [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
 };
 
-/** An open chevron whose tip sits just outside the pin at `end`, pointing along `dir`. */
-function head(end: Pt, dir: Pt, size = 1): string {
-  const tip: Pt = [end[0] - dir[0] * 8, end[1] - dir[1] * 8];
-  const back: Pt = [tip[0] - dir[0] * 6.5 * size, tip[1] - dir[1] * 6.5 * size];
-  const n: Pt = [-dir[1] * 3.6 * size, dir[0] * 3.6 * size];
-  return `M${f1(back[0] + n[0])},${f1(back[1] + n[1])} L${f1(tip[0])},${f1(tip[1])} L${f1(back[0] - n[0])},${f1(back[1] - n[1])}`;
+/**
+ * A filled arrowhead whose tip touches the numbered pin at `end` (its head is 22px across, so the tip stops 12px short
+ * of its centre), pointing along `dir`: the string reads as cause and effect, one pin into the next. `gap` 0 puts the tip
+ * on `end` itself (the stacked chain's turn into "Back to 1").
+ */
+function head(end: Pt, dir: Pt, size = 1, gap = 12): string {
+  const tip: Pt = [end[0] - dir[0] * gap, end[1] - dir[1] * gap];
+  const back: Pt = [tip[0] - dir[0] * 10.5 * size, tip[1] - dir[1] * 10.5 * size];
+  const n: Pt = [-dir[1] * 4.6 * size, dir[0] * 4.6 * size];
+  return `M${f1(back[0] + n[0])},${f1(back[1] + n[1])} L${f1(tip[0])},${f1(tip[1])} L${f1(back[0] - n[0])},${f1(back[1] - n[1])} Z`;
 }
 
 /** The loop's spans in eye-path order, their arrowheads, and the cut. Span 3 (the faked photo to the fraud checks) comes as two halves so it can be cut. */
@@ -133,12 +137,12 @@ function loopPaths({ pts, stacked, cutU, back }: Geo) {
   const sd: Pt = [tan[0] * Math.cos(k) - tan[1] * Math.sin(k), tan[0] * Math.sin(k) + tan[1] * Math.cos(k)];
   const half = stacked ? 22 : 32;
   const slash = `M${f1(mid[0] - sd[0] * half)},${f1(mid[1] - sd[1] * half)} L${f1(mid[0] + sd[0] * half)},${f1(mid[1] + sd[1] * half)}`;
-  const hs = stacked ? 1.5 : 1;
+  const hs = stacked ? 1.15 : 1;
   const heads: Record<Head, string> = {
     span1: head(p2, unit(s1[1], p2), hs),
     span2: head(p3, unit(s2[1], p3), hs),
     span3: head(p4, unit(c, p4), hs),
-    ret: !stacked ? head(p1, unit(r[1], p1)) : back ? head([back[0] + 2, back[1]], [1, 0], hs) : "",
+    ret: !stacked ? head(p1, unit(r[1], p1)) : back ? head([back[0] + 2, back[1]], [1, 0], hs, 0) : "",
   };
   const spans: Record<Span, string> = {
     span1: qd(s1),
@@ -245,13 +249,6 @@ function Card({ n, slide, before, after, children }: { n: 1 | 2 | 3 | 4; slide?:
   );
 }
 
-/** The card's place in the loop, so a paused reader knows where to start. The list already numbers it for screen readers. */
-const Num = ({ n }: { n: number }) => (
-  <span aria-hidden="true" className={s.num}>
-    0{n}
-  </span>
-);
-
 /* ---------- the section ---------- */
 
 export function Problem() {
@@ -341,7 +338,6 @@ export function Problem() {
         set("--hl", outQuart(seg(t, T.hl)));
         set("--ring", outQuart(o ? o.ring : seg(t, T.ring)));
         set("--mk", outQuart(seg(t, T.mark)));
-        set("--mks", stampScale(seg(t, T.mark)));
         // The lead prints as the string snaps; the rest after it. Stacked, both wait for the cut and for the payoff
         // to come up the screen. Not pinned, each line prints once as a timed transition (problem.module.css), so a
         // paused thumb never leaves it half-blurred.
@@ -603,7 +599,6 @@ export function Problem() {
                     <Card n={1}>
                       <div className={s.card}>
                         <p className={s.cardLabel}>
-                          <Num n={1} />
                           Recalled products stay in homes.
                         </p>
                         {/* "Only" keeps the figure saying what the label says: few come back, the rest stay. PIRG's words. */}
@@ -623,13 +618,14 @@ export function Problem() {
                     <Card n={2}>
                       <div className={clsx(s.card, s.notice)}>
                         <p className={s.cardLabel}>
-                          <Num n={2} />
                           Easy refunds run on emailed photos.
                         </p>
                         <figure className={s.doc}>
                           {/* Who is asking, first: the official notice, so the address never reads as a scam email. */}
                           <figcaption className={s.docMeta}>
-                            <span>Recall notice · CPSC 27-071</span>
+                            <span>
+                              Recall notice · <span className={s.mono}>CPSC 27-071</span>
+                            </span>
                             <span>Nursing pillow · Suffocation risk</span>
                           </figcaption>
                           <blockquote className={s.excerpt}>
@@ -650,8 +646,7 @@ export function Problem() {
                       <div className={s.strip}>
                         <div className={s.stripPaper}>
                           <p className={s.cardLabel}>
-                            <Num n={3} />
-                            The photo can be faked.
+                              The photo can be faked.
                           </p>
                           <p className={s.stripHead}>The US safety regulator&rsquo;s own filing warns of</p>
                           <p className={clsx(s.stripText, facsimile.className)}>&ldquo;artificially generated images.&rdquo;</p>
@@ -664,23 +659,21 @@ export function Problem() {
                       after={
                         // Stacked, where the chain turns back: the loop said in string and red ink, not a caption.
                         <p ref={backRef} aria-hidden="true" className={s.back}>
-                          &#8634; Back to 01
+                          &#8634; Back to 1
                         </p>
                       }
                       before={
-                        // Named only once the string is there to be cut (it is measured in the browser).
+                        // Named only once the string is there to be cut (it is measured in the browser): in ink, beside
+                        // the slash, so the cut says who made it.
                         geo && (
                           <span aria-hidden="true" className={s.cutTag}>
-                            <Stamp tone="pay" rotate={-5} className={s.cutStamp}>
-                              Cut by Remedy
-                            </Stamp>
+                            Remedy cuts here
                           </span>
                         )
                       }
                     >
                       <div className={s.card}>
                         <p className={s.cardLabel}>
-                          <Num n={4} />
                           Fraud checks push owners away.
                         </p>
                         <p className={s.cardLine}>
@@ -699,7 +692,10 @@ export function Problem() {
                           top: p[1],
                           opacity: `var(--p${i + 1}, 1)`,
                         }}
-                      />
+                      >
+                        {/* The reading order, on the pin itself: data, so mono. */}
+                        {i + 1}
+                      </span>
                     ))}
                   </ol>
 
@@ -709,7 +705,7 @@ export function Problem() {
                   </p>
 
                   <p className={s.sources}>
-                    <span className={s.sourcesLabel}>Sources:</span>{" "}
+                    <span className={s.sourcesLabel}>Sources</span>{" "}
                     {SOURCES.map((src, i) => (
                       <span key={src.href} className={s.source}>
                         <span className={s.nowrap}>

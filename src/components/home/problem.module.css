@@ -20,9 +20,7 @@
   /* Muted ink for text printed straight on the aged sheet (the sub-line, the sources): a step darker than
      --ink-muted, so it holds 4.5:1 on the grain's darkest and the warm edge band. */
   --sheet-muted: oklch(0.36 0.012 65);
-  /* The stacked cut's stamp: PAID's green a step darker, so it holds 4.5:1 on the sheet's warm edge band. */
-  --cut-ink: oklch(0.36 0.11 150);
-  /* The stacked chain's "Back to 01": the string's red a step darker, so it holds 4.5:1 on the warm edge band. */
+  /* The stacked chain's "Back to 1": the string's red a step darker, so it holds 4.5:1 on the warm edge band. */
   --loop-ink: oklch(0.38 0.14 28);
   --crease-dark: oklch(0.23 0.01 65 / 0.085);
   --crease-light: oklch(1 0 0 / 0.5);
@@ -41,13 +39,13 @@
   /* Where the board's sheet folds (Problem.tsx HINGE): under card 1, so the first two cards land on the half that
      shows while the sheet is still folded. */
   --hinge-at: 61%;
-  /* The room the lamp goes down into, and how far it falls over the sheet. In light the lamp goes down to a neutral
-     warm grey (--dim-light) at most 60%, so the pool reads at a glance, the paper never turns brown and the headline
-     holds 3:1. */
+  /* The room the lamp goes down into, and how far it falls over the sheet: far enough that the pool on the cut leads,
+     never so far that the cards around it stop reading (55% in dark). In light the lamp goes down to a neutral warm
+     grey (--dim-light) at most 40%, so the paper never turns brown. */
   --room: oklch(0.16 0.006 70);
   --dim-light: oklch(0.58 0.01 75);
   --dim-tone: var(--room);
-  --dim-max: 0.88;
+  --dim-max: 0.55;
   /* The desk under the sheet. Dark: the page. Light: a warm cream a step under the page, so the sheet lifts off it
      without a grey seam under the cream nav. */
   --desk-light: oklch(0.905 0.012 82);
@@ -63,7 +61,7 @@
   --desk: var(--desk-light);
   --desk-shadow: oklch(0.23 0.01 65 / 0.42);
   --dim-tone: var(--dim-light);
-  --dim-max: 0.6;
+  --dim-max: 0.4;
 }
 
 /* --muted, as every section's eyebrow (Section.tsx). */
@@ -283,14 +281,20 @@
   text-wrap: pretty;
 }
 
+/* Words in the sans; only the filings' numbers are data. */
 .sources {
   position: relative;
   margin: 28px 0 0;
-  font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.7;
   color: var(--sheet-muted);
   opacity: var(--src, 1);
+}
+
+.sourcesLabel {
+  margin-right: 0.35em;
+  font-weight: 500;
+  color: var(--ink);
 }
 
 .sep {
@@ -395,18 +399,6 @@
   color: var(--ink);
 }
 
-/* The card's place in the loop: 01 to 04, in the mono, as data. */
-.num {
-  display: inline-block;
-  margin-right: 0.6em;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--ink-muted);
-  vertical-align: 0.08em;
-}
-
 /* Where the stacked chain turns back to card 1: the string ends in it, in the string's red ink. Unlinked and not
    underlined, so it never reads as a link. */
 .back {
@@ -508,7 +500,6 @@
   margin: 0;
   padding: 7px 10px;
   border-bottom: 1px solid var(--paper-line);
-  font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.35;
   color: var(--ink-muted);
@@ -621,18 +612,29 @@
 
 /* ---------- pins and string ---------- */
 
+/* A brass pin with the card's place in the loop struck into its head, 1 to 4, in the mono (it is the reading order,
+   so it is data). Each arrowhead stops at its rim. */
 .pin {
   position: absolute;
   z-index: 4;
-  width: 11px;
-  height: 11px;
-  margin: -5.5px 0 0 -5.5px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
   border-radius: 50%;
-  background: radial-gradient(circle at 38% 34%, oklch(0.86 0.05 88) 0, var(--brass) 34%, var(--brass-deep) 80%);
+  background: radial-gradient(circle at 36% 30%, oklch(0.88 0.045 88) 0, var(--brass) 42%, var(--brass-deep) 100%);
   box-shadow:
     inset 0 0 0 0.5px oklch(0.3 0.03 70 / 0.6),
+    inset 0 -1px 1px oklch(0.3 0.03 70 / 0.25),
     1px 2px 1.5px oklch(0.23 0.01 65 / 0.4),
     3px 6px 5px oklch(0.23 0.01 65 / 0.15);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: oklch(0.22 0.03 65);
+  font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
 
@@ -672,10 +674,9 @@
 }
 
 .arrow {
-  fill: none;
+  fill: var(--stop-ink);
   stroke: var(--stop-ink);
-  stroke-width: 1.6px;
-  stroke-linecap: round;
+  stroke-width: 1px;
   stroke-linejoin: round;
 }
 
@@ -784,8 +785,7 @@
   }
 
   .thread,
-  .threadShadow,
-  .arrow {
+  .threadShadow {
     stroke-width: 2.2px;
   }
 
@@ -794,20 +794,19 @@
     margin-top: 40px;
   }
 
-  /* The cut, stamped in the middle of the gap, clear of both cards, just right of the slash across the chain, in a
-     dark PAID green: it lands with the slash (scale 1.4 to 1, no bounce). */
+  /* The cut, named in ink in the middle of the gap, clear of both cards, just right of the slash across the chain: it
+     inks in with the slash. */
   .cutTag {
     display: block;
     position: absolute;
-    left: 14px;
-    bottom: calc(100% + 18px);
+    left: 6px;
+    bottom: calc(100% + 21px);
+    font-size: 0.9375rem;
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: var(--ink);
     opacity: clamp(0, calc(var(--mk, 1) * 3), 1);
-    scale: var(--mks, 1);
-    transform-origin: 20% 50%;
-  }
-
-  .cutStamp {
-    color: var(--cut-ink);
   }
 
   .back {
@@ -987,10 +986,6 @@
     bottom: 5.4%;
     margin: 0;
     font-size: clamp(0.6875rem, 0.98cqw, 0.8125rem);
-  }
-
-  .num {
-    font-size: clamp(0.625rem, 0.9cqw, 0.75rem);
   }
 
   .stat {

@@ -98,12 +98,6 @@ export const outExpo = bezier(0.16, 1, 0.3, 1);
 export const outQuart = bezier(0.165, 0.84, 0.44, 1);
 export const inOutQuart = bezier(0.76, 0, 0.24, 1);
 
-/** A stamp landing: 1.4 to 0.96 (4% past rest), then settling at 1. No bounce. */
-export function stampScale(x: number) {
-  const k = clamp(x);
-  return k < 0.7 ? 1.4 - 0.44 * outQuart(k / 0.7) : 0.96 + 0.04 * outQuart((k - 0.7) / 0.3);
-}
-
 /**
  * The visible piece [from, to] of a path drawn with pathLength 1, as a dash and an offset. A gap-first pattern would
  * leave a round cap's dot at the path's start; a negative offset never does. Nothing to show returns null (hide it).
