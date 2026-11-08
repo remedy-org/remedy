@@ -12,7 +12,7 @@ export const SAMPLE_PAYOUT_UPDATED = "Sample claim: no PayPal status, because no
 export const SAMPLE_COPY: Record<string, { title: string; line: string }> = {
   genuine: { title: "Pillow cut in half, right code", line: "Pays $29.99 to your PayPal." },
   "wrong-code": { title: "Wrong code on the tag", line: "Remedy reads the tag and refuses it." },
-  "ai-no-session": { title: "Photo uploaded from the gallery", line: "Stopped before any check runs." },
+  "ai-no-session": { title: "Photo uploaded from the gallery", line: "Stopped at the first check." },
   reposted: { title: "The same photo, sent again", line: "Caught as a repeat of an earlier claim." },
 };
 

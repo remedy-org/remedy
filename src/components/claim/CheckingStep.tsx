@@ -6,10 +6,15 @@ import { useEffect, useState } from "react";
 import type { CheckSpec } from "@/lib/types";
 import { CheckList, outcomeWord, sixRows, type SixRow } from "./CheckList";
 import { StepTitle } from "./Exhibit";
+import styles from "./flow.module.css";
 import { cutInHalf, isDecided, nounOf, type ClaimView } from "./model";
 
-// Each row resolves on its own beat, one after another, in reduced motion too: there it is a plain swap.
-const STEP_MS = 420;
+// Each row resolves on its own beat, one after another, in reduced motion too: there it is a plain swap. The camera's
+// pre-checks are quick; the photo check's answers, and the refund after them, get a beat each to be read.
+const PRE_MS = 420;
+const STEP_MS = 650;
+// Only a wait this long earns "you can close this page".
+const SAVED_S = 10;
 // The finished list stays up this long before the result replaces it.
 const HOLD_MS = 1500;
 // Each poll reads the claim from the store, and those reads are capped per month.
@@ -39,6 +44,10 @@ export interface CheckingStepProps {
   sending?: boolean;
   /** Dev previews: no polling, no refresh, every known row shown, and a fixed elapsed time. */
   preview?: { elapsed?: number; offline?: boolean };
+  /** "Kikea Store", for a held claim's headline. */
+  company?: string;
+  /** Every row has resolved: the step meter moves on to the refund. */
+  onSettled?(): void;
 }
 
 /**
@@ -47,7 +56,7 @@ export interface CheckingStepProps {
  * first screen; from 1024px it sits whole beside the list. Once decided, the rows land in order, the finished list
  * holds for a moment, and the page re-renders as the result.
  */
-export function CheckingStep({ claimId, view: initial, spec, amount, startNow, photoUrls, sending, preview }: CheckingStepProps) {
+export function CheckingStep({ claimId, view: initial, spec, amount, startNow, photoUrls, sending, preview, company = "The company", onSettled }: CheckingStepProps) {
   const router = useRouter();
   const [view, setView] = useState(initial);
   const [offline, setOffline] = useState(preview?.offline ?? false);
@@ -66,12 +75,18 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
   const known = sending ? 0 : firstWaiting(all);
   const [shown, setShown] = useState(preview ? known : 0);
   const done = decided && shown >= all.length;
+  // Once a check has failed, nothing after it is pending: every later row (and the refund, not sent) lands with it.
+  const failAt = decided ? all.findIndex((r) => r.state === "reject" || r.state === "blocked") : -1;
 
   useEffect(() => {
     if (shown >= known) return;
-    const t = setTimeout(() => setShown((s) => s + 1), STEP_MS);
+    const t = setTimeout(() => setShown((s) => (failAt >= 0 && s >= failAt ? all.length : s + 1)), shown < 3 ? PRE_MS : STEP_MS);
     return () => clearTimeout(t);
-  }, [shown, known]);
+  }, [shown, known, failAt, all.length]);
+
+  useEffect(() => {
+    if (done) onSettled?.();
+  }, [done, onSettled]);
 
   // The row being checked stays on screen: a phone scrolls it up when it would fall below the fold.
   useEffect(() => {
@@ -143,17 +158,29 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
   const src = srcs[0];
   const count = Math.max(view.photos, srcs.length);
 
-  const title = sending ? `Sending your ${count > 1 ? "photos" : "photo"}` : done ? "Checks finished" : `Checking your ${count > 1 ? "photos" : "photo"}`;
+  // Once every row has landed the headline is the outcome, in the result's own words, so the result arrives under it.
+  const title = sending
+    ? `Sending your ${count > 1 ? "photos" : "photo"}`
+    : done
+      ? view.decision === "paid"
+        ? `${amount} is on its way to your PayPal`
+        : view.decision === "held"
+          ? `A person at ${company.replace(/ /g, "\u00a0")} will check this claim`
+          : "We couldn't pay this claim"
+      : `Checking your ${count > 1 ? "photos" : "photo"}`;
+  // Said only when the wait is long enough that someone might want to leave; never once the claim is decided.
   const lead =
-    elapsed !== null && elapsed > SLOW_S && !decided
-      ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn't answer."
-      : "Your claim is saved. You can close this page.";
+    decided || elapsed === null || elapsed <= SAVED_S
+      ? ""
+      : elapsed > SLOW_S
+        ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn't answer."
+        : "Your claim is saved. You can close this page.";
 
   // One line for a screen reader, rewritten as each row lands: the list itself stays quiet.
   const last = shown > 0 ? all[Math.min(shown, all.length) - 1] : null;
   const spoken = done
     ? view.decision === "paid"
-      ? `All 5 passed. Sending ${amount} to your PayPal.`
+      ? `All 5 checks passed. ${amount} is on its way to your PayPal.`
       : view.decision === "held"
         ? "Claim for review."
         : "Not paid."
@@ -191,10 +218,16 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
             <img src={src} alt="" className={clsx("size-18 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_70%] ring-1 ring-line [@media(max-height:600px)]:size-14", "lg:[@media(min-height:601px)]:hidden")} />
           )}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <StepTitle id="checking-title">{title}</StepTitle>
-            <p className="text-ui text-muted">{lead}</p>
+            <StepTitle id="checking-title">
+              <span key={title} className={clsx("block", styles.swap)}>
+                {title}
+              </span>
+            </StepTitle>
+            <p aria-hidden={!lead} className={clsx("text-ui text-muted", !lead && "invisible")}>
+              {lead || "\u00a0"}
+            </p>
           </div>
-          {elapsed !== null && (
+          {elapsed !== null && !done && (
             <span className="self-start pt-2 font-mono text-ui text-faint" aria-hidden="true">
               {clock(elapsed)}
             </span>

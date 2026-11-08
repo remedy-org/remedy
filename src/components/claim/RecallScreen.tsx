@@ -79,7 +79,7 @@ export function RecallView(props: ConsentCardProps) {
         {/* Refused by a limit, the next step isn't open: the meter stays on the first step. */}
         <StepMeter {...(claim ? claimMeter(claim) : ready && !props.refusal ? { current: 2, upcoming: true } : { current: 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
         {/* One bounded track on a phone, so the card's widest line can never widen the page. */}
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
           <RecallBrief recall={props.recall} />
           <ConsentCard {...props} />
         </div>

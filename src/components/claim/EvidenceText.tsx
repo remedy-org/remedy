@@ -1,5 +1,5 @@
 import type { Decision } from "@/lib/types";
-import type { CheckRow } from "./model";
+import type { SixRow } from "./CheckList";
 
 // Codes, claim ids and quoted text from the photos set in mono, so K7O and K7Q never look alike.
 const TOKEN = /(\b[A-Z][0-9][A-Z]\b|\bRM-\d{4}\b|"[^"]+")/g;
@@ -55,36 +55,29 @@ export function ModelQuote({ children }: { children: string }) {
   );
 }
 
-/** A recorded check's name in an owner's sentence: "the code", "whether it's cut in half". */
-export function checkName(id: string, cut: boolean): string {
-  if (id === "session") return "the live camera";
-  if (id === "duplicate_photo") return "a photo used before";
-  if (id === "label") return "the label";
-  if (id === "code") return "the code";
-  if (id === "same_item") return "whether it's the same item";
-  if (id === "screen") return "whether it's a real photo";
-  if (/^step_\d+$/.test(id)) return cut ? "whether it's cut in half" : "whether it's destroyed";
-  return "one claim per account";
-}
-
-/** "the label, the code and whether it's cut in half". */
-export const listOf = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : (names[0] ?? ""));
-
-/** The names of the recorded checks in these states, once each, in the order they ran. */
-export const namesIn = (rows: CheckRow[], states: CheckRow["state"][], cut: boolean) => [...new Set(rows.filter((r) => states.includes(r.state)).map((r) => checkName(r.id, cut)))];
+// What failed, as a sentence an owner can read aloud.
+const FAILED: Record<string, (cut: boolean) => string> = {
+  session: () => "Not taken on the live camera",
+  duplicate: () => "Photo used before",
+  account: () => "This PayPal account has claimed already",
+  code: () => "The tag doesn't match",
+  destroyed: (cut) => (cut ? "Not cut in half" : "Not destroyed"),
+};
 
 /**
- * The evidence in one line, beside its photo: "All 5 checks passed", "3 of 5 passed. Kikea Store will check the label
- * and the code.", "1 of 5 failed: the code. 4 passed.", "Failed: the live camera. The checks after it didn't run."
+ * The evidence in one line, beside its photo, counted from the five rows as they show: "All 5 checks passed", "3 of 5
+ * passed, 2 for review", "The tag doesn't match. 3 of 5 passed.", "Not taken on the live camera. 1 of 5 passed, 2
+ * didn't run." A row that ran after the failure counts as it ran; only rows with nothing recorded are "didn't run".
  */
-export function evidenceSummary(rows: CheckRow[], { decision, company, cut, passed, failed: n }: { decision: Decision; company: string; cut: boolean; passed: number; failed: number }): string {
+export function evidenceSummary(six: Pick<SixRow, "key" | "state" | "unrun">[], { decision, cut, unanswered }: { decision: Decision; cut: boolean; unanswered: boolean }): string {
   if (decision === "paid") return "All 5 checks passed";
-  if (rows.some((r) => r.id === "model")) return "The photo check didn't answer";
-  const failed = namesIn(rows, ["reject", "blocked"], cut);
-  const held = namesIn(rows, ["hold"], cut);
-  if (decision === "held" && held.length) return `${passed} of 5 passed. ${company} will check ${listOf(held)}.`;
-  // A refusal that stopped the claim early: the checks after it never ran, so a count would mislead.
-  if (failed.length && passed + n < 5) return `Failed: ${listOf(failed)}. The checks after it didn't run.`;
-  if (failed.length) return `${n} of 5 failed: ${listOf(failed)}.${passed ? ` ${passed} passed.` : ""}`;
-  return `${passed} of 5 passed`;
+  if (unanswered) return "The photo check didn't answer";
+  const checks = six.filter((r) => r.key !== "refund");
+  const passed = checks.filter((r) => r.state === "pass").length;
+  const failed = checks.filter((r) => r.state === "reject" || r.state === "blocked");
+  const review = checks.filter((r) => r.state === "hold").length;
+  const unrun = checks.filter((r) => r.unrun).length;
+  if (!failed.length) return review ? `${passed} of 5 passed, ${review} for review` : `${passed} of 5 passed`;
+  const what = failed.length > 1 ? `${failed.length} of 5 failed` : FAILED[failed[0].key](cut);
+  return `${what}. ${passed} of 5 passed${unrun ? `, ${unrun} didn't run` : ""}.`;
 }

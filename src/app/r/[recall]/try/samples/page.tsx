@@ -31,9 +31,6 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
     .slice(0, 12)
     .map((r) => ({ id: r.id, href: `/r/${recall.slug}/try/${r.id}`, title: demoSample(r.sample ?? "")?.title ?? "Sample claim", decision: r.decision, sample: r.photoHashes.length ? r.sample : undefined, unanswered: noModelAnswer(r.decision, [r.reason]) }));
   const ran = new Set(rows.filter((r) => r.photoHashes.length > 0).map((r) => r.sample));
-  // Rounds are per browser, so judges sharing the sandbox login each get the four outcomes: a fresh round here while
-  // this login has runs elsewhere says so, rather than look like those runs were lost.
-  const elsewhere = !rows.length && all.some((r) => r.demo === true && r.recallId === recall.id && r.payerId === session.payerId && r.demoRound !== round);
 
   const options: SampleOption[] = DEMO_SAMPLES.map((sample) => ({ sample, locked: notYet(sample, rows) ?? undefined }));
   const asked = typeof query.sample === "string" ? options.find((o) => o.sample.id === query.sample && !o.locked)?.sample.id : undefined;
@@ -47,9 +44,9 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
 
   return (
     <FlowShell company={companyName(recall)}>
-      <ClaimFrame>
+      <ClaimFrame narrow>
         <StepMeter current={2} steps={DEMO_STEPS} />
-        <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={refusal} elsewhere={elsewhere} />
+        <SamplePicker slug={recall.slug} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={refusal} />
       </ClaimFrame>
     </FlowShell>
   );

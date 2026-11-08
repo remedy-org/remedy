@@ -1,13 +1,22 @@
 "use client";
 
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { Stamp } from "@/components/ui";
 import styles from "./flow.module.css";
-import { payoutWords, receiptPollDelay, type ClaimStatus, type Tone } from "./model";
+import { payoutWords, receiptPollDelay, type ClaimStatus } from "./model";
 
-const DOT: Record<Tone, string> = { pay: "bg-pay-ink", hold: "bg-hold-ink", stop: "bg-stop-ink", muted: "bg-ink-muted" };
+interface Live {
+  status: string | null;
+  /** The status changed while this page was open: its change animates, once. */
+  changed: boolean;
+}
 
-export interface ReceiptLiveProps {
+const PayoutContext = createContext<Live>({ status: null, changed: false });
+
+const received = (status: string | null) => payoutWords(status).tone === "pay";
+
+export interface PayoutLiveProps {
   claimId: string;
   /** PayPal's status when the page rendered. */
   status: string | null;
@@ -15,18 +24,18 @@ export interface ReceiptLiveProps {
   live: boolean;
   /** "$29.99", for the sentence read out when it lands. */
   amount: string;
+  children: ReactNode;
 }
 
 /**
- * The receipt's payout status, live (Revolut's Pending to Completed on the same screen). It polls the claim's status
- * route: every 5 s for 30 s, then every 15 s, for 2 minutes at most, never while the tab is hidden, and stops on a
- * settled status. Each poll is one Blob read; the route asks PayPal at most once a minute.
+ * The paid result's one live fact, PayPal's payout status (Revolut's Pending to Completed on the same screen), shared
+ * by the headline, the receipt's status row and its stamp so they never disagree. It polls the claim's status route:
+ * every 5 s for 30 s, then every 15 s, for 2 minutes at most, never while the tab is hidden, and stops on a settled
+ * status. Each poll is one Blob read; the route asks PayPal at most once a minute.
  */
-export function ReceiptLive({ claimId, status: initial, live, amount }: ReceiptLiveProps) {
+export function PayoutLive({ claimId, status: initial, live, amount, children }: PayoutLiveProps) {
   const [status, setStatus] = useState(initial);
   const [changed, setChanged] = useState(false);
-  const words = payoutWords(status);
-  const settled = words.label !== "Processing at PayPal" && words.label !== "Unknown";
   const statusRef = useRef(status);
 
   useEffect(() => {
@@ -65,20 +74,50 @@ export function ReceiptLive({ claimId, status: initial, live, amount }: ReceiptL
   }, [claimId, live]);
 
   return (
+    <PayoutContext.Provider value={{ status, changed }}>
+      {children}
+      <p className="sr-only" aria-live="polite">
+        {changed ? (received(status) ? `Received. ${amount} is in your PayPal.` : `Payout status: ${payoutWords(status).label}.`) : ""}
+      </p>
+    </PayoutContext.Provider>
+  );
+}
+
+/** The headline: on its way while PayPal is finishing, in your PayPal once it has. The one change crossfades. */
+export function PaidTitle({ amount }: { amount: string }) {
+  const { status, changed } = useContext(PayoutContext);
+  const text = received(status) ? `${amount} is in your PayPal` : `${amount} is on its way to your PayPal`;
+  return (
+    <span key={text} className={clsx("block", changed && styles.swap)}>
+      {text}
+    </span>
+  );
+}
+
+/** PAID, stamped only once PayPal says the money arrived: before that the receipt says it's processing, never both. */
+export function PaidStamp({ arrive }: { arrive: boolean }) {
+  const { status, changed } = useContext(PayoutContext);
+  if (!received(status)) return null;
+  return (
+    <Stamp tone="pay" land={changed ? 0 : arrive ? 1060 : undefined}>
+      Paid
+    </Stamp>
+  );
+}
+
+/** The receipt's payout status row: a word, and while it's processing, one line of why. */
+export function PayoutRow() {
+  const { status, changed } = useContext(PayoutContext);
+  const words = payoutWords(status);
+  return (
     <div className="flex flex-col gap-1 border-b border-dashed border-paper-line py-3">
       <div className="flex items-baseline justify-between gap-4 text-ui">
         <dt className="shrink-0 text-ink-muted">Payout status</dt>
-        <dd key={words.label} className={clsx("inline-flex items-center gap-2 font-medium text-ink", changed && styles.swap)}>
-          <span className={clsx("relative size-2 shrink-0 rounded-full", DOT[words.tone], !settled && live && clsx("text-ink-muted", styles.pulse))} aria-hidden="true" />
+        <dd key={words.label} className={clsx("font-medium text-ink", changed && styles.swap)}>
           {words.label}
         </dd>
       </div>
-      {/* While it's processing, a line under the status says why the PAID stamp sits above it: Remedy sent it, PayPal is
-          finishing. Once it's received, the headline says so. */}
       {words.tone !== "pay" && words.note && <p className="mt-1 text-pretty text-ui text-ink-muted">{words.note}</p>}
-      <p className="sr-only" aria-live="polite">
-        {changed && words.tone === "pay" ? `Received. ${amount} is in your PayPal account.` : changed ? `Payout status: ${words.label}.` : ""}
-      </p>
     </div>
   );
 }

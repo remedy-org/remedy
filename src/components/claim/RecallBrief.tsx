@@ -1,6 +1,6 @@
 import { AlertIcon } from "@/components/ui";
 import type { Recall } from "@/lib/types";
-import { companyName, day, recallReason } from "./model";
+import { companyName, day, money, recallReason } from "./model";
 
 /** The recall's hazard from its own title, as the banner says it. Null when the title doesn't name one. */
 export const hazardLine = (recall: Pick<Recall, "title">) => {
@@ -45,6 +45,13 @@ export function RecallBrief({ recall }: { recall: Recall }) {
           </p>
         </div>
       </div>
+      {/* Phones: the proof this is a real recall, in one quiet line before anything is asked. */}
+      <p className="text-ui text-muted sm:hidden">
+        Recalled {day(recall.recallDate)} ·{" "}
+        <a href={recall.url} className="text-text underline decoration-line-strong underline-offset-4" rel="noopener noreferrer" target="_blank">
+          Read the notice on cpsc.gov
+        </a>
+      </p>
 
       {/* Tablets and laptops. */}
       <div className="flex flex-col gap-3 max-sm:hidden">
@@ -54,6 +61,8 @@ export function RecallBrief({ recall }: { recall: Recall }) {
         <p aria-hidden="true" className="max-w-[20ch] text-title font-semibold text-balance text-text">
           {recall.product}
         </p>
+        {/* Tablets and zoomed laptops, where the card comes after the brief: what you get, before the hazard. */}
+        <p className="text-body text-text lg:hidden">{money(recall.refund)} back, paid to your PayPal.</p>
       </div>
       {hazard && <Hazard text={hazard} />}
 

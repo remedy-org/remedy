@@ -5,13 +5,13 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { AlertIcon, Button } from "@/components/ui";
 import styles from "./flow.module.css";
 import { focusInView } from "./FocusTitle";
-import { CameraIcon, InfoIcon } from "./icons";
+import { InfoIcon } from "./icons";
 import { EvidenceText } from "./EvidenceText";
 import { coverCrop, photosTakenKey, type ClaimView } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
 import { useClaimArrival } from "./useClaimArrival";
 import { mmss, useCountdown } from "./useCountdown";
-import { CAMERA_FRAME, Cutout, Dock, GlassChip, InstructionBar } from "./Viewfinder";
+import { CAMERA_BACK, CAMERA_FRAME, CameraTopBar, Cutout, Dock, GlassChip, InstructionBar } from "./Viewfinder";
 
 export type CameraState = "starting" | "live" | "denied" | "nocamera" | "insecure" | "error";
 
@@ -56,6 +56,8 @@ export interface CaptureStepProps {
    * sent, in order, for the checking screen, which the caller frees.
    */
   onSent(view: ClaimView | null, photoUrls?: string[]): void;
+  /** Back to the code step (the code and its timer), from the camera's top bar or a camera that won't open. */
+  onBack(): void;
   /** Dev previews and screenshots: no camera, a fixed state. */
   preview?: CapturePreview;
 }
@@ -76,7 +78,7 @@ const platformOf = (): Platform => {
 };
 
 /** Live camera only: no upload control. Up to 3 shots, downscaled in the browser, sent with the session id. */
-export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, reminder, framing = { thing: "label", product: "destroyed product" }, onSent, preview }: CaptureStepProps) {
+export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, reminder, framing = { thing: "label", product: "destroyed product" }, onSent, onBack, preview }: CaptureStepProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [camera, setCamera] = useState<CameraState>(preview?.camera ?? "starting");
@@ -137,6 +139,16 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   useEffect(() => {
     if (camera === "denied" || camera === "nocamera" || camera === "insecure" || camera === "error") focusInView(document.getElementById("camera-message"));
   }, [camera]);
+
+  // "Use your phone's camera instead" on a laptop: the QR opens under the frame, so it's brought into view and focused.
+  useEffect(() => {
+    if (!phoneOpen || preview) return;
+    const el = document.getElementById("phone-handoff");
+    if (!el) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+    el.focus({ preventScroll: true });
+  }, [phoneOpen, preview]);
 
   // Photos sent from the phone or another tab: on to the checking step, with the claim as it now stands.
   useClaimArrival(
@@ -277,8 +289,16 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     <section aria-labelledby="capture-title" className="flex w-full max-w-[40rem] flex-col gap-5">
       {/* The camera is dark in both themes, like a camera's. Full bleed on a phone, a 4:3 frame on a laptop. */}
       <div data-theme="dark" data-camera="" className={CAMERA_FRAME}>
-        {/* A camera that won't open gives up its height, so the phone's QR under it stays in view. */}
-        <div className={clsx("relative overflow-hidden max-sm:min-h-0", failed && n === 0 && !expired ? "sm:min-h-40" : "sm:aspect-[4/3] sm:max-h-[55svh] sm:w-full [@media(max-height:600px)]:max-h-[40svh]")}>
+        <CameraTopBar
+          back={
+            <button type="button" onClick={onBack} className={CAMERA_BACK}>
+              <span aria-hidden="true">←</span> Back to your code
+            </button>
+          }
+        >
+          <span className="font-mono text-[oklch(0.96_0.006_85)]">{code}</span>
+        </CameraTopBar>
+        <div className="relative overflow-hidden max-sm:min-h-0 sm:aspect-[4/3] sm:max-h-[55svh] sm:w-full [@media(max-height:600px)]:max-h-[40svh]">
           <video ref={videoRef} playsInline muted aria-label="Camera preview" className={clsx("absolute inset-0 size-full object-cover", !live && "invisible")} />
           {preview?.still && live && (
             // Dev previews only: a still in place of the feed.
@@ -287,32 +307,26 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           )}
           {live ? (
             <Cutout>
-              {/* The photo the shutter takes next, numbered as the slots below are. */}
+              {/* The photo the shutter takes next, numbered as the slots below are; opposite it, the time left. */}
               {n < MAX_PHOTOS && <GlassChip className="absolute top-2 left-2">Photo {n + 1}</GlassChip>}
+              <GlassChip className={clsx("absolute top-2 right-2", left < 60_000 && "font-medium", left < 10_000 && styles.urgent)}>
+                <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`}>
+                  {mmss(left)}
+                </span>
+              </GlassChip>
             </Cutout>
-          ) : failed && n === 0 && !expired ? (
+          ) : (
+            // Why there's no picture, said inside the frame where the picture would be, with the way forward.
             <FrameMessage
-              camera={camera}
+              camera={expired || camera === "live" ? "expired" : camera}
               platform={platform}
               copyUrl={coarse ? phoneUrl : undefined}
-              inline
+              onBack={failed && n === 0 && !expired ? onBack : undefined}
               onRetry={() => {
                 setCamera("starting");
                 setAttempt((a) => a + 1);
               }}
             />
-          ) : (
-            <Cutout dashed>
-              <FrameMessage
-                camera={expired || camera === "live" ? "expired" : camera}
-                platform={platform}
-                copyUrl={coarse ? phoneUrl : undefined}
-                onRetry={() => {
-                  setCamera("starting");
-                  setAttempt((a) => a + 1);
-                }}
-              />
-            </Cutout>
           )}
           {/* Phones: a one-line hint, or the longer help from (i), over the foot of the feed, so the viewfinder never
               resizes (and the guide never moves) as they come and go. */}
@@ -373,7 +387,6 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             className="border-t border-[oklch(1_0_0/0.08)]"
             left={
               expired ? null : (
-                <div className="flex items-center gap-3">
                 <ul className="flex gap-2.5" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
                   {Array.from({ length: MAX_PHOTOS }, (_, i) => (
                     <li key={i} className="relative size-12 shrink-0 sm:size-14">
@@ -395,18 +408,6 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                     </li>
                   ))}
                 </ul>
-                <span className="flex flex-col gap-0.5 font-mono text-micro text-[oklch(0.74_0.005_80)]">
-                  {n > 0 && <span aria-hidden="true">{n}/{MAX_PHOTOS}</span>}
-                  <span
-                    role="timer"
-                    aria-live="off"
-                    aria-label={`${mmss(left)} left on the camera session`}
-                    className={clsx(left < 60_000 && "font-medium text-[oklch(0.96_0.006_85)]", left < 10_000 && styles.urgent)}
-                  >
-                    {mmss(left)}
-                  </span>
-                </span>
-                </div>
               )
             }
             middle={
@@ -493,7 +494,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
 
       {/* Laptops only: on a phone this already is the phone. */}
       {!coarse && !expired && (
-        <div className="max-sm:hidden">
+        <div id="phone-handoff" tabIndex={-1} aria-label={showPhone ? "Take the photo on your phone" : undefined} className="rounded-card outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus max-sm:hidden">
           {showPhone ? (
             <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} />
           ) : (
@@ -508,61 +509,65 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
 }
 
 const DENIED: Record<Platform, string> = {
-  ios: "In Safari, tap aA in the address bar, then Website Settings, and set Camera to Allow. Then try again.",
-  android: "Tap the icon to the left of the address bar, then Permissions, and turn on Camera. Then try again.",
-  other: "Allow the camera for this site from the icon in the address bar, then try again.",
+  ios: "In Safari, tap aA in the address bar, then Website Settings, and set Camera to Allow.",
+  android: "In Chrome, tap the settings icon left of the address bar, then Permissions, and turn on Camera.",
+  other: "Allow the camera for this site from the address bar, then try again.",
 };
 
-const MESSAGES: Record<Exclude<CameraState, "live"> | "expired", { title: string; body: string; retry?: boolean; tone?: "stop" }> = {
+const MESSAGES: Record<Exclude<CameraState, "live"> | "expired", { title: string; body: string; retry?: boolean }> = {
   starting: { title: "Waiting for the camera", body: "Your browser will ask to use it. Choose Allow." },
-  denied: { title: "Camera access is blocked", body: DENIED.other, retry: true, tone: "stop" },
-  nocamera: { title: "No camera found", body: "This device has no camera Remedy can use. Photos can only come from a live camera, never a file." },
+  denied: { title: "Camera is off for this site", body: DENIED.other, retry: true },
+  nocamera: { title: "No camera found", body: "Photos can only come from a live camera, never a file. Use a phone or a laptop with a camera." },
   insecure: { title: "The camera needs a secure page", body: "Browsers only open the camera over https. Open this page's https address, or use your phone." },
-  error: { title: "The camera didn't start", body: "Another app may be using it. Close that app, then try again.", retry: true, tone: "stop" },
-  expired: { title: "Your 10 minutes are up", body: "Codes only last 10 minutes, so photos can't be prepared in advance. Get a new code to start again." },
+  error: { title: "The camera didn't start", body: "Another app may be using it. Close that app, then try again.", retry: true },
+  expired: { title: "Your 10 minutes are up", body: "Codes last 10 minutes, so photos can't be taken in advance. Get a new code to start again." },
 };
 
+/** Inside the frame, left-aligned at its foot as the instruction bar is: what's wrong, how to fix it, and one action. */
 function FrameMessage({
   camera,
   platform,
   copyUrl,
-  inline,
+  onBack,
   onRetry,
 }: {
   camera: Exclude<CameraState, "live"> | "expired";
   platform: Platform;
   /** A phone or tablet with no camera to use: this claim's link, to open on another device. */
   copyUrl?: string;
-  /** In the flow, not over the frame: the frame gave up its height. */
-  inline?: boolean;
+  /** The camera won't open: the way back to the code and its timer. */
+  onBack?(): void;
   onRetry(): void;
 }) {
   const m = MESSAGES[camera];
   const [copied, setCopied] = useState(false);
   const copy = copyUrl && (camera === "nocamera" || camera === "insecure");
   return (
-    <div role={camera === "starting" ? "status" : "alert"} className={clsx("flex flex-col items-center justify-center gap-3 px-6 text-center", inline ? "relative py-8 max-sm:absolute max-sm:inset-0" : "absolute inset-0")}>
-      <span className={clsx("flex size-10 items-center justify-center rounded-full border", m.tone === "stop" ? "border-stop text-stop" : "border-line-strong text-muted", camera === "starting" && "animate-[skeleton-pulse_1.6s_ease-in-out_infinite]")}>
-        {m.tone === "stop" ? <AlertIcon /> : <CameraIcon />}
-      </span>
+    <div role={camera === "starting" ? "status" : "alert"} className="absolute inset-0 flex flex-col justify-end gap-2 p-5 text-left sm:p-6">
       <p id={camera === "starting" ? undefined : "camera-message"} tabIndex={-1} className="text-body font-medium text-text outline-none">
         {m.title}
       </p>
-      <p className="max-w-80 text-ui text-muted">{camera === "denied" ? DENIED[platform] : m.body}</p>
-      {m.retry && (
-        <Button variant="secondary" onClick={onRetry} className="mt-1">
-          Try again
-        </Button>
+      <p className="max-w-[30rem] text-ui text-pretty text-muted">{camera === "denied" ? DENIED[platform] : m.body}</p>
+      {(m.retry || copy || onBack) && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-3">
+          {m.retry && <Button onClick={onRetry}>Try again</Button>}
+          {copy && (
+            <Button variant="secondary" onClick={() => navigator.clipboard?.writeText(copyUrl).then(() => setCopied(true), () => {})}>
+              {copied ? "Link copied" : "Copy this claim's link"}
+            </Button>
+          )}
+          {onBack && (
+            // A phone has it in the camera's top bar already.
+            <button type="button" onClick={onBack} className="min-h-11 text-ui text-muted underline max-sm:hidden decoration-line-strong underline-offset-4 hover:text-text">
+              Back to your code
+            </button>
+          )}
+        </div>
       )}
       {copy && (
-        <>
-          <Button variant="secondary" onClick={() => navigator.clipboard?.writeText(copyUrl).then(() => setCopied(true), () => {})} className="mt-1">
-            {copied ? "Link copied" : "Copy this claim's link"}
-          </Button>
-          <p className="max-w-80 text-ui text-muted" aria-live="polite">
-            {copied ? "Open it on a phone with a camera, logged in with the same PayPal account." : "Open it on another device with a camera. Same code, same timer."}
-          </p>
-        </>
+        <p className="text-ui text-muted" aria-live="polite">
+          {copied ? "Open it on a phone with a camera, logged in with the same PayPal account." : "Open it on another device with a camera. Same code, same timer."}
+        </p>
       )}
     </div>
   );

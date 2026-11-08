@@ -16,21 +16,32 @@ const useLocal = () =>
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const two = (n: number) => String(n).padStart(2, "0");
 
+/** "Today", "Yesterday" or "7 Nov", in the viewer's own zone. */
+function dayWord(d: Date): string {
+  const at = (x: Date) => x.toDateString();
+  const now = new Date();
+  if (at(d) === at(now)) return "Today";
+  if (at(d) === at(new Date(now.getTime() - 86_400_000))) return "Yesterday";
+  return `${d.getDate()} ${MONTHS[d.getMonth()]},`;
+}
+
 /**
  * A claim's time in the viewer's own zone once the page has hydrated ("14:32", "7 Nov 2026, 14:32"); on the server and
  * through hydration the UTC stamp the console prints, so the two never mismatch. The UTC stamp stays in the title.
  */
-export function ClaimTime({ iso, format }: { iso: string; format: "clock" | "stamp" }) {
+export function ClaimTime({ iso, format }: { iso: string; format: "clock" | "day" | "stamp" }) {
   const local = useLocal();
   const d = new Date(iso);
   const hm = `${two(d.getHours())}:${two(d.getMinutes())}`;
   const text = local
     ? format === "clock"
       ? hm
-      : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${hm}`
-    : format === "clock"
-      ? `${clock(iso).slice(0, 5)} UTC`
-      : stamp(iso);
+      : format === "day"
+        ? `${dayWord(d)} ${hm}`
+        : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${hm}`
+    : format === "stamp"
+      ? stamp(iso)
+      : `${clock(iso).slice(0, 5)} UTC`;
   // A stamp breaks only after its comma, so on a narrow receipt the date and the time each stay whole.
   return (
     <time dateTime={iso} title={stamp(iso)} suppressHydrationWarning>

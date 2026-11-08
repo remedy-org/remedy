@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CheckIcon } from "@/components/ui";
+import { Button, CheckIcon } from "@/components/ui";
 
 /**
- * Copies this page's address, so an owner can come back to a held claim without finding the address bar. On paper: ink
- * text and a hairline underline, the paper's ink focus ring.
+ * Copies this page's address, so an owner can come back to a held claim without finding the address bar. A quiet button:
+ * underline is for links only.
  */
 export function CopyPageLink() {
   const [copied, setCopied] = useState<"yes" | "no" | null>(null);
@@ -19,14 +19,10 @@ export function CopyPageLink() {
   };
   return (
     <>
-      <button
-        type="button"
-        onClick={copy}
-        className="inline-flex min-h-11 items-center gap-1.5 self-start rounded-control text-ui font-medium text-text underline decoration-line-strong underline-offset-4 hover:decoration-text"
-      >
+      <Button variant="secondary" size="sm" onClick={copy}>
         {copied === "yes" && <CheckIcon size={14} className="text-pay" />}
         {copied === "yes" ? "Link copied" : copied === "no" ? "Couldn't copy: use the address bar" : "Copy this page's link"}
-      </button>
+      </Button>
       <span className="sr-only" aria-live="polite">
         {copied === "yes" ? "Link copied" : ""}
       </span>

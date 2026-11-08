@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { DemoSample } from "@/lib/demo";
 import type { CheckSpec } from "@/lib/types";
 import { CaptureStep, type CapturePreview } from "./CaptureStep";
@@ -31,6 +31,8 @@ export interface ClaimFlowProps {
   phoneUrl: string;
   newClaimHref: string;
   loginHref: string;
+  /** "Kikea Store": the checking screen's held headline. */
+  company?: string;
   sample?: DemoSample | null;
   /** Dev previews: start at a phase, with the camera or checks pinned. */
   preview?: { phase: Phase; capture?: CapturePreview; checking?: { elapsed?: number; offline?: boolean }; sending?: boolean; photoUrls?: string[] };
@@ -52,7 +54,10 @@ export function ClaimFlow(props: ClaimFlowProps) {
   const [photoUrls, setPhotoUrls] = useState<string[] | undefined>(preview?.photoUrls ?? (initial.photos > 0 && sample ? sample.photos : undefined));
   const demo = Boolean(sample);
   const steps = demo ? DEMO_STEPS : REAL_STEPS;
-  const current = phase === "checking" ? 4 : demo ? 3 : phase === "code" ? 2 : 3;
+  // The checks are part of the photo step: the meter reaches the refund only once every row has landed.
+  const [settled, setSettled] = useState(false);
+  const onSettled = useCallback(() => setSettled(true), []);
+  const current = phase === "checking" ? (settled ? 4 : 3) : demo ? 3 : phase === "code" ? 2 : 3;
   // One word for the thing the code goes on, everywhere: a hand-written label is the paper tag itself.
   const tag = handWrittenLabel(props.spec) !== null;
   // What the photo needs, in one line under the frame.
@@ -81,10 +86,11 @@ export function ClaimFlow(props: ClaimFlowProps) {
   useClaimArrival(claimId, props.expiresAt, (next) => sent(next), { off: demo || Boolean(preview) || phase !== "code" });
 
   return (
-    <ClaimFrame>
+    // The camera and a demo's photo are one 640px column; the meter narrows with them, so its edges stay on the content's.
+    <ClaimFrame narrow={phase === "capture"}>
       <StepMeter current={current} steps={steps} compact={phase === "capture"} />
       {phase === "code" && (
-        <div className="w-full lg:max-w-[55rem]">
+        <div className="w-full">
           <CodeStep
             claimId={claimId}
             code={code}
@@ -101,7 +107,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
       )}
       {phase === "capture" &&
         (sample ? (
-          <DemoCaptureStep claimId={claimId} code={code} sample={sample} onSent={sent} preview={preview && { sending: preview.sending }} />
+          <DemoCaptureStep claimId={claimId} code={code} sample={sample} onSent={sent} backHref={props.newClaimHref} preview={preview && { sending: preview.sending }} />
         ) : (
           <CaptureStep
             claimId={claimId}
@@ -116,6 +122,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
             reminder={reminder}
             framing={framing}
             onSent={sent}
+            onBack={() => go("code")}
             preview={preview?.capture}
           />
         ))}
@@ -128,6 +135,8 @@ export function ClaimFlow(props: ClaimFlowProps) {
           startNow={props.startNow}
           photoUrls={photoUrls}
           sending={preview?.sending}
+          company={props.company}
+          onSettled={onSettled}
           preview={preview?.checking ?? (preview ? {} : undefined)}
         />
       )}

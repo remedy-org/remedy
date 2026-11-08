@@ -12,7 +12,8 @@ export function NotFoundCard({
   action?: ReactNode;
 }) {
   return (
-    <section aria-labelledby="not-found-title" className="flex w-full max-w-claim flex-col gap-4 pt-8 sm:pt-16">
+    // On the claim flow's own 960px column, so its left edge is every step's.
+    <section aria-labelledby="not-found-title" className="mx-auto flex w-full max-w-[60rem] flex-col items-start gap-4 pt-8 sm:pt-16 [&>*]:max-w-claim">
       <h1 id="not-found-title" className="text-title font-semibold text-balance text-text">
         {title}
       </h1>

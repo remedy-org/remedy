@@ -7,13 +7,15 @@ import type { DemoSample } from "@/lib/demo";
 import { sampleTitle } from "@/lib/demo/sampleCopy";
 import styles from "./flow.module.css";
 import type { ClaimView } from "./model";
-import { CAMERA_FRAME, CAMERA_VIEW, Dock, GlassChip, InstructionBar } from "./Viewfinder";
+import { CAMERA_BACK, CAMERA_FRAME, CAMERA_VIEW, CameraTopBar, Dock, GlassChip, InstructionBar } from "./Viewfinder";
 
 export interface DemoCaptureStepProps {
   claimId: string;
   code: string;
   sample: DemoSample;
   onSent(view: ClaimView | null, photoUrls?: string[]): void;
+  /** The claim picker: the camera's top bar leads back to it on a phone. */
+  backHref: string;
   preview?: { sending?: boolean; sendError?: string };
 }
 
@@ -21,7 +23,7 @@ export interface DemoCaptureStepProps {
  * A demo claim's photo step: its photo in the same viewfinder chrome as the live camera, this claim's code beside what
  * the tag in the photo reads, and "Send photo" in place of the shutter. The server sends its own copy of the photo.
  */
-export function DemoCaptureStep({ claimId, code, sample, onSent, preview }: DemoCaptureStepProps) {
+export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, preview }: DemoCaptureStepProps) {
   const [sending, setSending] = useState(preview?.sending ?? false);
   const [error, setError] = useState<string | null>(preview?.sendError ?? null);
   const [flash, setFlash] = useState(false);
@@ -50,6 +52,15 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, preview }: Demo
   return (
     <section aria-labelledby="sample-title" className="flex w-full max-w-[40rem] flex-col gap-5">
       <div data-theme="dark" data-camera="" className={CAMERA_FRAME}>
+        <CameraTopBar
+          back={
+            <a href={backHref} className={CAMERA_BACK}>
+              <span aria-hidden="true">←</span> All four claims
+            </a>
+          }
+        >
+          <span className="font-mono text-[oklch(0.96_0.006_85)]">{code}</span>
+        </CameraTopBar>
         {/* On a short screen (a laptop at 200% zoom) the photo gives up height, so its heading and button fit beside it. */}
         <figure className={clsx(CAMERA_VIEW, "sm:max-h-[55svh] sm:w-full [@media(max-height:600px)]:max-h-[40svh]")}>
           {/* The photos are 2:3 portraits: framed from 70% down, so the tag and its code stay in the 4:3 frame. */}

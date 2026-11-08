@@ -165,7 +165,7 @@ export function readableReasons(reasons: Reason[], photos: number): Reason[] {
   const which = dupes.map((r) => /^Photo (\d+)\b/.exec(r.text)?.[1]).filter((n): n is string => Boolean(n));
   const text =
     dupes.length === photos
-      ? `All ${photos} photos were already used in another claim`
+      ? `${photos === 2 ? "Both photos" : `All ${["", "one", "two", "three"][photos] ?? photos} photos`} were already used in another claim`
       : which.length === dupes.length
         ? `Photos ${which.slice(0, -1).join(", ")} and ${which[which.length - 1]} were already used in another claim`
         : `${dupes.length} photos were already used in another claim`;
@@ -192,7 +192,7 @@ export function payoutHold(claim: Pick<Claim, "decision" | "reasons" | "events">
 // What to do next, per failed check. Keys are rule.ts check names (step_N share one).
 const ADVICE: Record<string, string> = {
   session: "Photos only count when they're taken on this page's camera within 10 minutes of getting the code. Start a new claim for a fresh code.",
-  duplicate_photo: "Each claim needs new photos of your own product. Start a new claim and take them on this page's camera.",
+  duplicate_photo: "Start a new claim with new photos of your own product.",
   payer: "Each PayPal account can claim once per recall, so your earlier claim is the one that counts.",
   payer_verified: "Verify your account with PayPal, then start a new claim.",
   state: "This claim was already decided. Its result stands.",

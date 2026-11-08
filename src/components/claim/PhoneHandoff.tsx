@@ -15,6 +15,13 @@ export interface PhoneHandoffProps {
   className?: string;
 }
 
+/** "remedy-recalls.vercel.app/…/claim/RM-1234": the host and the claim, the path between them elided. */
+const shortUrl = (url: string) => {
+  const { host, pathname } = new URL(url);
+  const parts = pathname.split("/").filter(Boolean);
+  return parts.length > 2 ? `${host}/…/${parts.slice(-2).join("/")}` : `${host}${pathname}`;
+};
+
 /** Continue the same claim on a phone: same code, same timer, same PayPal account. */
 export function PhoneHandoff({ qrSvg, url, code, primary, className }: PhoneHandoffProps) {
   const [copied, setCopied] = useState(false);
@@ -43,10 +50,10 @@ export function PhoneHandoff({ qrSvg, url, code, primary, className }: PhoneHand
             </>
           )}
         </p>
-        {/* The whole link, wrapping, to type into a phone or send to it. Named for what it is, so a screen reader doesn't
-            spell out the address. */}
-        <a href={url} aria-label="Open this claim on your phone" className="font-mono text-micro break-all text-faint underline decoration-line-2 underline-offset-4 hover:text-muted">
-          {url.replace(/^https?:\/\//, "")}
+        {/* The link on one line, its middle elided so it never breaks mid-word: Copy link carries the whole of it. Named for
+            what it is, so a screen reader doesn't spell out the address. */}
+        <a href={url} aria-label="Open this claim on your phone" className="truncate font-mono text-micro whitespace-nowrap text-faint underline decoration-line-2 underline-offset-4 hover:text-muted">
+          {shortUrl(url)}
         </a>
         <Button variant="tertiary" size="sm" onClick={() => navigator.clipboard?.writeText(url).then(() => setCopied(true), () => {})} className="self-start">
           {copied ? "Link copied" : "Copy link"}

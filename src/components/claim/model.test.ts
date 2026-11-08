@@ -41,13 +41,13 @@ describe("refusalHeadline", () => {
 describe("readableReasons", () => {
   const dupe = (n: number) => ({ check: "duplicate_photo", outcome: "reject" as const, text: `Photo ${n} was already used in another claim` });
   it("folds one repost line per photo into one", () => {
-    expect(readableReasons([dupe(1), dupe(2), dupe(3)], 3).map((r) => r.text)).toEqual(["All 3 photos were already used in another claim"]);
+    expect(readableReasons([dupe(1), dupe(2), dupe(3)], 3).map((r) => r.text)).toEqual(["All three photos were already used in another claim"]);
     expect(readableReasons([dupe(1), dupe(3)], 3).map((r) => r.text)).toEqual(["Photos 1 and 3 were already used in another claim"]);
   });
   it("leaves a single reason, and other checks, as they are", () => {
     const session = { check: "session", outcome: "reject" as const, text: "Not taken in this session" };
     expect(readableReasons([dupe(1)], 1)).toEqual([dupe(1)]);
-    expect(readableReasons([session, dupe(1), dupe(2)], 2).map((r) => r.text)).toEqual(["Not taken in this session", "All 2 photos were already used in another claim"]);
+    expect(readableReasons([session, dupe(1), dupe(2)], 2).map((r) => r.text)).toEqual(["Not taken in this session", "Both photos were already used in another claim"]);
   });
 });
 

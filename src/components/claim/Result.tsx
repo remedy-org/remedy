@@ -1,13 +1,13 @@
 import clsx from "clsx";
-import type { CSSProperties, ReactNode } from "react";
-import { Button, Card, CrossIcon, Money, Paper, Stamp } from "@/components/ui";
+import type { ReactNode } from "react";
+import { Button, Card, Money, Paper } from "@/components/ui";
 import { canAskForReview, reviewAsked } from "@/lib/appeal";
 import type { DemoSample } from "@/lib/demo";
 import { sampleTitle } from "@/lib/demo/sampleCopy";
 import type { Claim, Recall } from "@/lib/types";
 import { CheckList, sixRows, type SixRow } from "./CheckList";
 import { CopyPageLink } from "./CopyPageLink";
-import { EvidenceText, evidenceSummary, namesIn } from "./EvidenceText";
+import { EvidenceText, evidenceSummary } from "./EvidenceText";
 import { ClaimFrame, ExhibitPhoto, StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
 import { FocusTitle } from "./FocusTitle";
@@ -26,13 +26,12 @@ import {
   noModelAnswer,
   nounOf,
   payoutHold,
-  payoutWords,
   readableReasons,
   refusalHeadline,
   secondsBetween,
   type CheckRow,
 } from "./model";
-import { ReceiptLive } from "./ReceiptLive";
+import { PaidStamp, PaidTitle, PayoutLive, PayoutRow } from "./ReceiptLive";
 import { RevealDetails } from "./RevealDetails";
 import { nextSample, type RoundRun } from "./Scoreboard";
 
@@ -93,10 +92,8 @@ export function Result(props: ResultProps) {
   const cut = cutInHalf(recall.spec);
   const read = claim.verdict ? { label: claim.verdict.label.text_seen, code: claim.verdict.challenge_code.text_seen } : undefined;
   const six = sixRows(rows, { code: claim.code, noun: nounOf(recall.spec), cut, decided: true, held: claim.decision === "held", read });
-  const passed = six.slice(0, 5).filter((r) => r.state === "pass").length;
-  const failed = six.slice(0, 5).filter((r) => r.state === "reject" || r.state === "blocked").length;
   const repost = claim.decision !== "paid" && claim.reasons.some((r) => r.check === "duplicate_photo") && props.photoUrls.length > 0;
-  const summary = evidenceSummary(rows, { decision: claim.decision, company: companyName(recall), cut, passed, failed });
+  const summary = evidenceSummary(six, { decision: claim.decision, cut, unanswered: noModelAnswer(claim.decision, claim.reasons) });
   const body = claim.decision === "paid" ? <Paid {...props} /> : claim.decision === "held" ? <Held {...props} /> : <Refused {...props} />;
   return (
     <ClaimFrame>
@@ -107,15 +104,10 @@ export function Result(props: ResultProps) {
           {body}
         </section>
         {/* A repost shows its photo beside the earlier claim's already: the evidence doesn't repeat it. */}
-        <Evidence six={six} photoUrls={repost ? [] : props.photoUrls} summary={summary} company={companyName(recall)} amount={money(claim.payout?.amount ?? recall.refund)} />
+        <Evidence six={six} photoUrls={repost ? [] : props.photoUrls} summary={summary} company={companyName(recall)} amount={money(claim.payout?.amount ?? recall.refund)} claimId={claim.id} />
       </div>
     </ClaimFrame>
   );
-}
-
-/** The claim's number, once per screen, over a held or refused result. */
-function ClaimId({ id }: { id: string }) {
-  return <p className="font-mono text-micro text-faint">{id}</p>;
 }
 
 /* ------------------------------------------------------------------------------------------------ Paid */
@@ -128,12 +120,11 @@ function Paid({ claim, recall, payout, againHref, sample, round, now, sandbox, a
   // The one arrival moment: it prints only when it's news. A reload, or a later visit, shows it at rest.
   const arrive = Boolean(now && decidedAt && now - Date.parse(decidedAt) < 60_000);
   const status = payout?.status ?? claim.payout?.status ?? null;
-  const received = payoutWords(status).tone === "pay";
   const demo = Boolean(sample);
   return (
-    <>
+    <PayoutLive claimId={claim.id} status={status} live={Boolean(payout?.live)} amount={money(amount)}>
       <StepTitle id="result-title">
-        {money(amount)} is {received ? "in" : "on its way to"} your PayPal
+        <PaidTitle amount={money(amount)} />
       </StepTitle>
       <Paper variant="receipt" perforated padding="lg" className={clsx(arrive && styles.print)}>
         <div className="flex items-baseline justify-between gap-4 text-ui text-ink-muted">
@@ -141,37 +132,22 @@ function Paid({ claim, recall, payout, againHref, sample, round, now, sandbox, a
           <span className="font-mono text-micro">CPSC {recall.id}</span>
         </div>
 
-        <div className="relative mt-6 flex items-center gap-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-pay-ink" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path
-                d="M5 10.5l3.25 3.25L15 7"
-                stroke="oklch(1 0 0)"
-                strokeWidth="2.25"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                pathLength={1}
-                className={styles.draw}
-                style={{ "--draw-delay": arrive ? "420ms" : "0ms" } as CSSProperties}
-              />
-            </svg>
-          </span>
+        <div className="mt-6 flex items-center justify-between gap-4">
           <Money value={Number(amount.value)} currency={amount.currency} size="amount" className="text-ink" />
-          <span className="absolute top-1/2 right-0 -translate-y-1/2">
-            <Stamp tone="pay" land={arrive ? 1060 : undefined}>
-              Paid
-            </Stamp>
-          </span>
+          <PaidStamp arrive={arrive} />
         </div>
 
         <dl className="mt-6 border-t border-dashed border-paper-line">
-          <ReceiptLive claimId={claim.id} status={status} live={Boolean(payout?.live)} amount={money(amount)} />
+          <PayoutRow />
           <ReceiptRow label="Claim" mono>
             {claim.id}
           </ReceiptRow>
           {/* The PayPal login the owner knows, masked; without one, the payer ID's tail. */}
           <ReceiptRow label="Paid to" mono={!account}>
-            {account ? <Masked text={account} /> : maskPayer(claim.payerId)}
+            {account ? <Masked text={account} /> : <>
+                <span className="sr-only">PayPal account ending {claim.payerId.slice(-5)}</span>
+                <span aria-hidden="true">{maskPayer(claim.payerId)}</span>
+              </>}
           </ReceiptRow>
           {claim.payout && (
             <ReceiptRow label="PayPal reference" mono>
@@ -187,35 +163,46 @@ function Paid({ claim, recall, payout, againHref, sample, round, now, sandbox, a
         {took !== null && <p className="mt-3 text-ui text-ink-muted">Paid {took}s after your photo</p>}
         {payout && !payout.fresh && <p className="mt-3 text-ui text-ink-muted">PayPal didn&apos;t answer just now, so this is the last status we saved.</p>}
         {!sandbox && !demo && <p className="mt-3 text-ui text-ink-muted">PayPal emails you a receipt too.</p>}
+        {/* Said once, plainly: the demo account's refunds are real payouts that carry no real money. */}
         {(sandbox || demo) && (
-          <p className="mt-6 text-micro tracking-normal text-ink-muted">
-            {activityUrl ? (
-              <a href={activityUrl} target="_blank" rel="noreferrer" className="underline decoration-paper-line underline-offset-4 hover:decoration-ink">
-                PayPal sandbox payout<span className="sr-only"> (opens PayPal in a new tab)</span>
-              </a>
-            ) : (
-              "PayPal sandbox payout"
+          <p className="mt-6 text-ui text-ink-muted">
+            Demo account. No real money moved.
+            {activityUrl && (
+              <>
+                {" "}
+                <a href={activityUrl} target="_blank" rel="noreferrer" className="text-ink underline decoration-paper-line underline-offset-4 hover:decoration-ink">
+                  See it in PayPal<span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              </>
             )}
-            . No real money moved.
           </p>
         )}
       </Paper>
 
       {sample && <DemoActions sample={sample} slug={recall.slug} company={companyName(recall)} againHref={againHref} claimId={claim.id} round={round} />}
-    </>
+    </PayoutLive>
   );
 }
 
 /** "p••@owner.test": Schibsted's bullets sit wide apart, so the mask's run of them is set in mono, as the console's is. */
 function Masked({ text }: { text: string }) {
-  return text.split(/(•+)/).map((part, i) =>
+  // Read out as "d, hidden, @owner.test" rather than a run of bullets.
+  const spoken = text.replace(/•+/g, ", hidden, ");
+  return (
+    <>
+      <span className="sr-only">{spoken}</span>
+      <span aria-hidden="true">
+      {text.split(/(•+)/).map((part, i) =>
     part.startsWith("•") ? (
       <span key={i} className="font-mono tracking-[-0.08em]">
         {part}
       </span>
     ) : (
-      part
-    ),
+        part
+      ),
+      )}
+      </span>
+    </>
   );
 }
 
@@ -230,12 +217,12 @@ function ReceiptRow({ label, mono, children }: { label: string; mono?: boolean; 
 
 /* ------------------------------------------------------------------------------------------------ Held */
 
-function Held({ claim, recall, rows, againHref, sample, round }: ResultProps) {
+function Held({ claim, recall, againHref, sample, round }: ResultProps) {
   const reasons = decidingReasons(claim);
   const submitted = claim.events.find((e) => e.type === "photos_received")?.at ?? claim.createdAt;
   const checked = claim.events.find((e) => e.type === "decided")?.at ?? claim.events.find((e) => e.type === "checked")?.at;
   const company = companyName(recall);
-  const nb = company.replace(/ /g, " ");
+  const nb = company.replace(/ /g, "\u00a0");
   // The owner asked a person to look at a claim the rule refused: this screen is the confirmation.
   const asked = reviewAsked(claim) ? (claim.events.find((e) => e.type === "review_requested")?.at ?? submitted) : null;
   // The photos passed and only the payout failed: nothing waits on the photos, a person sends the refund.
@@ -243,9 +230,6 @@ function Held({ claim, recall, rows, againHref, sample, round }: ResultProps) {
   const unanswered = noModelAnswer(claim.decision, claim.reasons);
   const by = businessDaysAfter(asked ?? submitted, 2);
   const refund = money(recall.refund);
-  const cut = cutInHalf(recall.spec);
-  // What the person looks at, in the evidence line's own words.
-  const look = asked ? namesIn(rows, ["reject", "blocked"], cut) : namesIn(rows, ["hold"], cut);
   const lead = payout
     ? `${payout === "network" ? "Remedy couldn't reach PayPal to send it" : "PayPal didn't accept the transfer"}, so a person at ${company} will send ${refund} by ${by}. Nothing has been paid yet.${payout === "refused" ? " If your PayPal account shows a notice, sort it out there." : ""}`
     : unanswered
@@ -254,7 +238,6 @@ function Held({ claim, recall, rows, againHref, sample, round }: ResultProps) {
   return (
     <>
       <div className="flex flex-col gap-3">
-        <ClaimId id={claim.id} />
         <StepTitle id="result-title">{payout ? `Your photos passed. ${company} will send your refund` : <>A person at {nb} will check this claim</>}</StepTitle>
         <p className="text-body text-pretty text-muted">{lead}</p>
       </div>
@@ -268,25 +251,23 @@ function Held({ claim, recall, rows, againHref, sample, round }: ResultProps) {
           <TimelineRow state="next" label={`${payout ? "Refund sent" : "Decision"} by ${by}`} />
         </ol>
 
-        {!payout && !unanswered && look.length > 0 && (
-          <div className="flex flex-col gap-2 border-t border-line pt-5">
-            <h3 className="text-ui font-medium text-muted">What {company} will look at</h3>
-            <ul className="flex flex-col gap-1 text-body text-text">
-              {look.map((n) => (
-                <li key={n}>{n.charAt(0).toUpperCase() + n.slice(1)}</li>
-              ))}
-            </ul>
-          </div>
-        )}
         {asked && reasons.length > 0 && (
           <p className="text-ui text-muted">
             <EvidenceText>{reasons.map((r) => r.text).join(". ")}</EvidenceText>
           </p>
         )}
 
-        <div className="flex flex-col gap-1 border-t border-line pt-5">
-          <p className="text-ui text-muted">{payout ? "The payout shows" : "The decision shows"} on this page.</p>
-          <CopyPageLink />
+        {/* How the answer reaches the owner, in true facts only: this page shows it. */}
+        <div className="flex flex-col items-start gap-3 border-t border-line pt-5">
+          <p className="text-body text-text">
+            Bookmark this page. {payout ? "The payout" : "The decision"} shows here.
+          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <CopyPageLink />
+            <span className="text-ui text-faint">
+              Claim <span className="font-mono whitespace-nowrap">{claim.id}</span>
+            </span>
+          </div>
         </div>
       </Card>
 
@@ -299,11 +280,11 @@ function Held({ claim, recall, rows, againHref, sample, round }: ResultProps) {
 function TimelineRow({ state, label, time }: { state: "done" | "now" | "next"; label: string; time?: string }) {
   return (
     <li className="relative grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center text-ui">
-      <span aria-hidden="true" className={clsx("relative size-2 rounded-full", state === "done" ? "bg-muted" : state === "now" ? clsx("bg-hold text-hold", styles.pulse) : "border border-line-strong bg-surface")} />
+      <span aria-hidden="true" className={clsx("relative size-2 rounded-full", state === "done" ? "bg-muted" : state === "now" ? clsx("bg-text text-text", styles.pulse) : "border border-line-strong bg-surface")} />
       <span className={state === "done" ? "text-muted" : "text-text"}>{label}</span>
       {time && (
-        <span className="pl-3 font-mono text-micro text-faint">
-          <ClaimTime iso={time} format="clock" />
+        <span className="pl-3 text-ui text-faint">
+          <ClaimTime iso={time} format="day" />
         </span>
       )}
     </li>
@@ -364,13 +345,11 @@ function Refused({ claim, recall, photoUrls, againHref, sample, round, duplicate
   return (
     <>
       <div className="flex flex-col gap-3">
-        <ClaimId id={claim.id} />
         <StepTitle id="result-title">{reviewed ? `A person at ${company} looked at this and refused it` : "We couldn't pay this claim"}</StepTitle>
         <p className="text-body text-pretty text-muted">{body}</p>
       </div>
 
       {lead === "code" && <CodeDiff code={claim.code} seen={claim.verdict?.challenge_code.text_seen} />}
-      {lead === "session" && <Provenance claim={claim} />}
       {lead === "duplicate_photo" && photoUrls[0] && <DuplicatePair claimId={claim.id} photoUrls={photoUrls} duplicate={duplicate ?? null} />}
 
       {reasons.length > 1 && (
@@ -386,16 +365,12 @@ function Refused({ claim, recall, photoUrls, againHref, sample, round, duplicate
         </div>
       )}
 
-      {!sample && next.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <h3 className="text-ui font-medium text-muted">Next</h3>
-          {next.map((a) => (
-            <p key={a} className="text-body text-text">
-              {a}
-            </p>
-          ))}
-        </div>
-      )}
+      {!sample &&
+        next.map((a) => (
+          <p key={a} className="text-body text-text">
+            {a}
+          </p>
+        ))}
       {earlier && (
         <Button href={`/r/${recall.slug}/claim/${earlier}`} size="lg" block prefetch={false}>
           See your claim {earlier}
@@ -421,14 +396,17 @@ function Refused({ claim, recall, photoUrls, againHref, sample, round, duplicate
   );
 }
 
-/** The signature refusal: the claim's code beside what the photo check read on the tag, the differing cell in --stop. */
+/**
+ * The signature refusal: the claim's code beside what the photo check read on the tag, the differing cell in --stop.
+ * The boxes say it; the sentence naming the character is for a screen reader.
+ */
 function CodeDiff({ code, seen }: { code: string; seen: string | null | undefined }) {
   const { cells, caption, readable } = codeDiff(code, seen);
   const spoken = `Your code ${code.split("").join(", ")}. ${readable ? `Read on the tag ${cells.map((c) => c.seen || "nothing").join(", ")}.` : "Nothing readable on the tag."} ${caption}`;
   const cell = "flex h-13 w-11 items-center justify-center rounded-control font-mono text-[1.75rem] leading-none font-medium";
   return (
-    <figure className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5 sm:p-6">
-      <p className="sr-only">{spoken}</p>
+    <figure className="rounded-card border border-line bg-surface p-5 sm:p-6">
+      <figcaption className="sr-only">{spoken}</figcaption>
       <div aria-hidden="true" className="grid grid-cols-[auto_1fr] items-center gap-x-5 gap-y-2">
         <span className="text-ui text-muted">Yours</span>
         <span className="flex gap-2">
@@ -455,42 +433,6 @@ function CodeDiff({ code, seen }: { code: string; seen: string | null | undefine
           ))}
         </span>
       </div>
-      <figcaption className="flex gap-2.5 text-ui text-text">
-        <CrossIcon size={16} className="mt-0.5 shrink-0 text-stop" />
-        <span>{caption}</span>
-      </figcaption>
-    </figure>
-  );
-}
-
-/** The live-camera rule made visible: the code was issued here, the photo came from somewhere else. */
-function Provenance({ claim }: { claim: Pick<Claim, "code" | "events"> }) {
-  const issued = claim.events.find((e) => e.type === "code_issued")?.at;
-  return (
-    <figure className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-card border border-line bg-surface p-5 text-ui sm:p-6">
-      <span className="flex flex-col gap-1">
-        <span className="text-muted">This claim</span>
-        <span className="text-text">
-          Code <span className="font-mono">{claim.code}</span> issued
-          {issued ? (
-            <span className="font-mono whitespace-nowrap">
-              {" "}
-              <ClaimTime iso={issued} format="clock" />
-            </span>
-          ) : null}
-        </span>
-      </span>
-      <span aria-hidden="true" className="flex items-center gap-1">
-        <span className="w-6 border-t border-dashed border-line-strong sm:w-10" />
-        <span className="flex size-4 items-center justify-center text-stop">
-          <CrossIcon size={16} />
-        </span>
-        <span className="w-6 border-t border-dashed border-line-strong sm:w-10" />
-      </span>
-      <span className="flex flex-col gap-1 text-right">
-        <span className="text-muted">The photo</span>
-        <span className="text-text">Sent from outside the claim</span>
-      </span>
     </figure>
   );
 }
@@ -534,7 +476,7 @@ function DuplicatePair({ claimId, photoUrls, duplicate }: { claimId: string; pho
  * The photos and the six checks. From 1024px they sit open beside the result; below, they fold under it behind
  * "Show evidence". The rule's one line is said here, once.
  */
-function Evidence({ six, photoUrls, summary, company, amount }: { six: SixRow[]; photoUrls: string[]; summary: string; company: string; amount: string }) {
+function Evidence({ six, photoUrls, summary, company, amount, claimId }: { six: SixRow[]; photoUrls: string[]; summary: string; company: string; amount: string; claimId: string }) {
   const content = (
     <>
       {photoUrls.length > 0 && (
@@ -545,7 +487,9 @@ function Evidence({ six, photoUrls, summary, company, amount }: { six: SixRow[];
         </div>
       )}
       <CheckList rows={six} label="Checks for this claim" amount={amount} />
-      <p className="text-ui text-faint">The same rule decides every claim. Nobody at {company} picks who gets paid.</p>
+      <p className="text-ui text-faint">
+        Claim <span className="font-mono whitespace-nowrap">{claimId}</span>. The same rule decides every claim; nobody at {company} picks who gets paid.
+      </p>
     </>
   );
   return (
@@ -587,15 +531,14 @@ function RunSample({ slug, sample, children, secondary }: { slug: string; sample
 
 /**
  * A demo result's own action: the next claim in the order (genuine, wrong code, upload, repost), straight to its photo;
- * after the photo check didn't answer, this one again; once all four have run, the company's console. On a phone the
- * action rides in a bar at the foot of the screen.
+ * after the photo check didn't answer, this one again; once all four have run, back to the four, now with their
+ * outcomes. The company's view of the same claims is a quiet link, never the owner's main action.
  */
 function DemoActions({ sample, slug, company, againHref, claimId, round, unanswered }: { sample: DemoSample; slug: string; company: string; againHref: string; claimId: string; round?: DemoRound | null; unanswered?: boolean }) {
   const next = nextSample(round?.runs ?? [], sample.id);
-  // A fragment: the bar is the result column's own child, so on a phone it sticks for the column's whole height.
   return (
-    <>
-      <div data-action-bar="" className="z-10 flex flex-col gap-2 max-sm:sticky max-sm:bottom-0 max-sm:mx-[calc(var(--gutter)*-1)] max-sm:border-t max-sm:border-line max-sm:bg-bg max-sm:px-(--gutter) max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div className="flex flex-col items-start gap-4">
+      <div className="flex w-full flex-col gap-2">
         {unanswered ? (
           <RunSample slug={slug} sample={sample.id}>
             Run it again
@@ -605,19 +548,25 @@ function DemoActions({ sample, slug, company, againHref, claimId, round, unanswe
             Next claim
           </RunSample>
         ) : (
-          <Button href={`/console?claim=${claimId}`} size="lg" block prefetch={false}>
-            Open {company}&apos;s console
+          <Button href={againHref} size="lg" block prefetch={false}>
+            All four claims
           </Button>
         )}
+        {unanswered && next && (
+          <RunSample slug={slug} sample={next.id} secondary>
+            Next claim: {sampleTitle(next.id, next.title).toLowerCase()}
+          </RunSample>
+        )}
       </div>
-      {unanswered && next && (
-        <RunSample slug={slug} sample={next.id} secondary>
-          Next claim: {sampleTitle(next.id, next.title).toLowerCase()}
-        </RunSample>
+      {next || unanswered ? (
+        <Button href={againHref} variant="tertiary" size="sm" prefetch={false}>
+          All four claims
+        </Button>
+      ) : (
+        <a href={`/console?claim=${claimId}`} className="text-ui text-muted underline decoration-line-strong underline-offset-4 hover:text-text">
+          See these claims as {company}
+        </a>
       )}
-      <Button href={againHref} variant="tertiary" size="sm" prefetch={false} className="self-start">
-        All four claims
-      </Button>
-    </>
+    </div>
   );
 }

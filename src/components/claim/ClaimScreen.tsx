@@ -162,6 +162,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
         phoneUrl={phoneUrl}
         newClaimHref={againHref}
         loginHref={loginPath("owner", here)}
+        company={company}
         sample={sample}
       />
     </FlowShell>

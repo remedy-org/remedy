@@ -45,6 +45,9 @@ const RANK: CheckState[] = ["running", "waiting", "blocked", "reject", "hold", "
 
 const firstQuoted = (s?: string) => /"([^"]{1,24})"/.exec(s ?? "")?.[1];
 
+/** A quote's first sentence, so a line never ends mid-thought on an ellipsis. */
+const firstSentence = (s?: string) => (s ? (/^.+?[.!?](?=\s|$)/.exec(s.trim())?.[0] ?? s.trim()) : undefined);
+
 export interface SixOptions {
   code: string;
   /** The thing destroyed, capitalised: "Pillow". */
@@ -91,13 +94,24 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, read
     const out: SixRow = { ...b, state, detail };
     if (state === "waiting" || state === "running") return out;
     if (b.key === "code" && !model) {
-      const label = read?.label ?? firstQuoted(own.find((r) => r.id === "label")?.quote);
       const seen = read?.code ?? firstQuoted(own.find((r) => r.id === "code")?.quote);
+      // The label as read often carries the code too ("X-VESOLJE K7Q"): said once.
+      const label = (read?.label ?? firstQuoted(own.find((r) => r.id === "label")?.quote))?.replace(seen ?? "\u0000", "").trim();
       if (label || seen) out.read = [label, seen].filter(Boolean).join(" · ");
       // What was read says it: the pipeline's sentence would only repeat it.
       if (out.read && state === "reject") out.detail = undefined;
+      // Unsure: one plain line in Remedy's voice, not the pipeline's list. The model's words stay in the evidence.
+      if (state === "hold") {
+        const unsure = own.filter((r) => r.state === "hold").map((r) => (r.id === "code" ? code : "the label"));
+        out.detail = `We couldn't read ${unsure.join(" or ")} on the tag.`;
+        out.read = undefined;
+      }
     }
-    if (b.key === "destroyed" && !model) out.quote = own.find((r) => r.quote)?.quote;
+    if (b.key === "destroyed" && !model) {
+      const steps = own.filter((r) => /^step_\d+$/.test(r.id) && r.state !== "pass" && r.state !== "skipped");
+      if (steps.length) out.detail = steps.some((r) => r.state === "hold") ? `We couldn't see ${cut ? "the cut" : "that it's destroyed"} clearly.` : `The photo doesn't show it ${cut ? "cut in half" : "destroyed"}.`;
+      else if (state === "pass") out.quote = firstSentence(own.find((r) => r.quote)?.quote);
+    }
     if (b.key === "refund") out.reference = /PayPal reference (\S+)/.exec(own[0]?.detail ?? "")?.[1];
     if (b.key === "refund" && state === "hold") out.detail = own[0]?.detail;
     return out;
@@ -108,7 +122,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, read
 export function outcomeWord(r: Pick<SixRow, "key" | "state" | "unrun">, amount?: string): string {
   switch (r.state) {
     case "running":
-      return "Checking";
+      return r.key === "refund" ? "Sending" : "Checking";
     case "pass":
       return r.key === "refund" ? (amount ? `${amount} sent` : "Sent") : "Passed";
     case "reject":
@@ -117,25 +131,27 @@ export function outcomeWord(r: Pick<SixRow, "key" | "state" | "unrun">, amount?:
     case "hold":
       return "For review";
     case "skipped":
-      return r.key === "refund" ? "Not sent" : r.unrun ? "Not run" : "Skipped";
+      // A demo claim isn't held to one claim per account (one demo account sends all four): it doesn't count, it wasn't dodged.
+      return r.key === "refund" ? "Not sent" : r.unrun ? "Not run" : r.key === "account" ? "Not counted" : "Skipped";
     default:
-      return "";
+      return r.key === "refund" && amount ? amount : "";
   }
 }
 
-const TONE: Partial<Record<CheckState, string>> = { pass: "text-pay", reject: "text-stop", blocked: "text-stop", hold: "text-hold" };
+// Passed is quiet (a small green tick, muted word): the failure, or the refund, is the one loud thing on the list.
+const TONE: Partial<Record<CheckState, string>> = { pass: "text-muted", reject: "text-stop", blocked: "text-stop", hold: "text-hold" };
 
-/** A row's 16px mark: filled for an answer, a ring while it waits, a turning arc while it runs. */
+/** A row's 16px mark: a tick for a pass, filled for a failure or a hold, a ring while it waits, a turning arc while it runs. */
 function Glyph({ state }: { state: CheckState }) {
   const dot = "flex size-4 shrink-0 items-center justify-center rounded-full";
-  const path = (d: string) => (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  const path = (d: string, size = 10) => (
+    <svg width={size} height={size} viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d={d} />
     </svg>
   );
   switch (state) {
     case "pass":
-      return <span className={clsx(dot, "bg-pay text-bg")}>{path("M2.25 5.25l1.75 1.75 3.75-4")}</span>;
+      return <span className={clsx(dot, "text-pay")}>{path("M1.75 5.25l2.25 2.25 4.25-4.75", 14)}</span>;
     case "reject":
     case "blocked":
       return <span className={clsx(dot, "bg-stop text-bg")}>{path("M3 3l4 4M7 3l-4 4")}</span>;
@@ -154,43 +170,76 @@ function Glyph({ state }: { state: CheckState }) {
   }
 }
 
+/** Under a row: what was read, the photo check's own sentence, the PayPal reference, or why it failed. */
+function RowLines({ r, live }: { r: SixRow; live?: boolean }) {
+  return (
+    <>
+      {r.read && <span className={clsx("truncate font-mono text-micro text-faint", live && styles.rise)}>Read {r.read}</span>}
+      {r.quote && (
+        <q className={clsx("text-ui text-muted [@media(max-height:600px)]:line-clamp-1", live && styles.rise)}>
+          <ModelQuote>{r.quote}</ModelQuote>
+        </q>
+      )}
+      {r.reference && <span className={clsx("truncate font-mono text-micro text-faint", live && styles.rise)}>PayPal {r.reference}</span>}
+      {r.detail && (
+        <span className={clsx("text-ui text-muted", live && styles.rise)}>
+          <EvidenceText>{r.detail}</EvidenceText>
+        </span>
+      )}
+    </>
+  );
+}
+
 /**
- * The six rows: a mark, the check, its outcome on the right; under the code and the cut, one faint line of what the
- * photo check read; under the refund, the PayPal reference. `live`: the checking screen, where each answer lands as it
- * resolves (a 160ms settle of the mark, only under no-preference).
+ * The five checks, then the refund set apart as their outcome: no mark, the amount on the right. A check row is a mark,
+ * the check and its outcome; under the code and the cut, one line of what the photo check read or saw. `live`: the
+ * checking screen, where each answer lands as it resolves (a 160ms settle of the mark, only under no-preference).
  */
 export function CheckList({ rows, label = "Checks", amount, live, className }: { rows: SixRow[]; label?: string; amount?: string; live?: boolean; className?: string }) {
+  const checks = rows.filter((r) => r.key !== "refund");
+  const refund = rows.find((r) => r.key === "refund");
+  const word = (r: SixRow) => outcomeWord(r, amount);
   return (
-    <ol aria-label={label} className={clsx("flex flex-col border-t border-line", className)}>
-      {rows.map((r) => {
-        const waiting = r.state === "waiting";
-        const word = outcomeWord(r, amount);
-        return (
-          <li key={r.key} data-row={r.key} className="grid grid-cols-[1rem_minmax(0,1fr)_auto] gap-x-3 border-b border-line py-3 [@media(max-height:600px)]:py-2">
-            <span key={r.state} className={clsx("flex h-[1.55em] items-center text-body", live && !waiting && styles.settle)}>
-              <Glyph state={r.state} />
-            </span>
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className={clsx("text-body", waiting || r.unrun ? "text-faint" : "text-text")}>{r.label}</span>
-              {r.read && <span className={clsx("truncate font-mono text-micro text-faint", live && styles.rise)}>Read: {r.read}</span>}
-              {r.quote && (
-                <q className={clsx("line-clamp-2 text-ui text-muted [@media(max-height:600px)]:line-clamp-1", live && styles.rise)}>
-                  <ModelQuote>{r.quote}</ModelQuote>
-                </q>
-              )}
-              {r.reference && <span className={clsx("truncate font-mono text-micro text-faint", live && styles.rise)}>PayPal {r.reference}</span>}
-              {r.detail && (
-                <span className="text-ui text-muted">
-                  <EvidenceText>{r.detail}</EvidenceText>
-                </span>
-              )}
-            </span>
-            <span key={word} className={clsx("pt-[0.15em] text-right text-ui font-medium whitespace-nowrap", TONE[r.state] ?? "text-muted", live && word && styles.swap)}>
-              {word}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
+    <div className={clsx("flex flex-col", className)}>
+      <ol aria-label={label} className="flex flex-col border-t border-line">
+        {checks.map((r) => {
+          const waiting = r.state === "waiting";
+          const w = word(r);
+          return (
+            <li key={r.key} data-row={r.key} className="grid grid-cols-[1rem_minmax(0,1fr)_auto] gap-x-3 border-b border-line py-3 [@media(max-height:600px)]:py-2">
+              <span key={r.state} className={clsx("flex h-[1.55em] items-center text-body", live && !waiting && styles.settle)}>
+                <Glyph state={r.state} />
+              </span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className={clsx("text-body", waiting || r.unrun ? "text-faint" : "text-text")}>{r.label}</span>
+                <RowLines r={r} live={live} />
+              </span>
+              <span key={w} className={clsx("pt-[0.15em] text-right text-ui font-medium whitespace-nowrap", TONE[r.state] ?? "text-muted", live && w && styles.swap)}>
+                {w}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      {refund && (
+        <div data-row="refund" className="grid grid-cols-[1rem_minmax(0,1fr)_auto] gap-x-3 border-b border-line pt-7 pb-3">
+          <span className="col-start-2 flex min-w-0 flex-col gap-0.5">
+            <span className={clsx("text-body", refund.state === "waiting" || refund.state === "skipped" ? "text-muted" : "text-text")}>{refund.label}</span>
+            <RowLines r={refund} live={live} />
+          </span>
+          <span
+            key={word(refund)}
+            className={clsx(
+              "pt-[0.15em] text-right whitespace-nowrap",
+              refund.state === "pass" ? "text-body font-medium text-text" : refund.state === "hold" ? "text-ui font-medium text-hold" : "text-ui font-medium text-muted",
+              refund.state === "waiting" && "font-mono font-normal text-faint",
+              live && styles.swap,
+            )}
+          >
+            {word(refund)}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }

@@ -5,7 +5,7 @@ import type { Decision, Recall } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
-import { companyName, cutInHalf, handWrittenLabel, money, productNoun, taggedThing } from "./model";
+import { companyName, cutInHalf, money, productNoun, taggedThing } from "./model";
 
 export type AuthError = "denied" | "state" | "paypal" | "refused";
 
@@ -60,7 +60,7 @@ export function consentAction({ signedInAs, demo, unverified, yourClaim }: Pick<
 const thingOf = (recall: Recall) => (taggedThing(recall.spec)?.split(" ").pop() ?? productNoun(recall).split(" ").pop() ?? "product").toLowerCase();
 
 /**
- * The consent card: what the owner gets back, in one headline, how in one line and three steps, then one action. A
+ * The consent card: what the owner gets back, in one headline, how in one line, the one thing to have ready, then one action. A
  * returning owner sees only their claim and the way back to it.
  */
 export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin }: ConsentCardProps) {
@@ -68,18 +68,11 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   const action = consentAction({ signedInAs, demo, unverified, yourClaim });
   // Refused by a limit, a real owner's way on is the company's recall notice.
   const notice = demo ? undefined : { company, url: recall.url };
-  const error = authError ? AUTH_ERRORS[authError] : null;
+  // A cancelled login means nothing once a later one worked.
+  const error = authError && !signedInAs ? AUTH_ERRORS[authError] : null;
   const thing = thingOf(recall);
   const cut = cutInHalf(recall.spec);
-  const tag = handWrittenLabel(recall.spec) !== null;
   const how = `${cut ? `Cut the ${thing} in half` : `Destroy the ${thing} as the notice says`}, photograph it with a code we give you, and PayPal pays you${recall.autoPay ? "" : ` once ${company} approves it`}.`;
-  const steps: { text: string; note?: string }[] = demo
-    ? [{ text: "Log in with PayPal" }, { text: "Choose one of four claims" }, { text: "Watch the checks and the refund" }]
-    : [
-        { text: "Log in with PayPal" },
-        { text: tag ? "Write your code on a paper tag" : "Write your code on a piece of paper" },
-        { text: `Photograph the ${cut ? "cut " : "destroyed "}${thing} and the ${tag ? "tag" : "code"}`, note: `Have the ${thing} already ${cut ? "cut in half" : "destroyed"}.` },
-      ];
 
   if (yourClaim) {
     return (
@@ -99,17 +92,8 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <p className="text-body text-pretty text-muted">{demo ? "Run four claims through the real checks. One of them pays." : how}</p>
       </div>
 
-      <ol className="flex flex-col border-t border-line">
-        {steps.map((s, i) => (
-          <li key={s.text} className="grid grid-cols-[1.75rem_minmax(0,1fr)] border-b border-line py-3 text-body">
-            <span className="text-muted">{i + 1}</span>
-            <span className="flex flex-col gap-0.5">
-              <span className="text-text">{s.text}</span>
-              {s.note && <span className="text-ui text-muted">{s.note}</span>}
-            </span>
-          </li>
-        ))}
-      </ol>
+      {/* The meter above names the steps and the line above says how: the one thing left to say is what to do first. */}
+      {!demo && <p className="border-y border-line py-3 text-body text-text">Have the {thing} already {cut ? "cut in half" : "destroyed"}.</p>}
 
       {unverified && (
         <ErrorState
