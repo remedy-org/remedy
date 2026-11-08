@@ -1,5 +1,7 @@
 import { Button, NoBreakHyphens } from "@/components/ui";
 import type { JudgeLogin } from "@/lib/demo/judgeLogin";
+import { sampleTitle } from "@/lib/demo/sampleCopy";
+import { DEMO_SAMPLES } from "@/lib/demo/samples";
 import type { Refusal } from "@/lib/limits";
 import type { Decision, Recall } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
@@ -102,6 +104,19 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
           )}
         </p>
       </div>
+
+      {/* /try: the four claims about to be sent, so the page reads as the product, not a login form. */}
+      {demo && !signedInAs && (
+        <ul aria-label="The four claims" className="grid grid-cols-2 gap-x-4 gap-y-3">
+          {DEMO_SAMPLES.map((sample) => (
+            <li key={sample.id} className="flex min-w-0 items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={sample.photos[0]} alt="" width={40} height={40} className="size-10 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_65%] ring-1 ring-line" />
+              <span className="text-ui text-balance text-text-2">{sampleTitle(sample.id, sample.title)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {unverified && (
         <Notice title="This PayPal account isn't verified">PayPal only lets us refund verified accounts. Verify yours with PayPal (a confirmed email and a linked bank or card), then log in again.</Notice>

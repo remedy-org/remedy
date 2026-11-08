@@ -1,5 +1,6 @@
 import type { Recall } from "@/lib/types";
 import { companyName, day, recallReason } from "./model";
+import { RecallPhoto } from "./RecallPhoto";
 
 /** The recall's hazard from its own title, as the banner says it. Null when the title doesn't name one. */
 export const hazardLine = (recall: Pick<Recall, "title">) => {
@@ -31,7 +32,8 @@ export function RecallBrief({ recall, heading = "h1" }: { recall: Recall; headin
   const source = (
     <>
       CPSC <span className="font-mono">{recall.id}</span> · Recalled {day(recall.recallDate)} ·{" "}
-      <a href={recall.url} className="whitespace-nowrap text-text underline decoration-line-strong underline-offset-4 hover:decoration-text" rel="noopener noreferrer" target="_blank">
+      {/* py-3 on the inline link: a 44px target that doesn't change the line. */}
+      <a href={recall.url} className="py-3 whitespace-nowrap text-text underline decoration-line-strong underline-offset-4 hover:decoration-text" rel="noopener noreferrer" target="_blank">
         cpsc.gov<span className="sr-only"> recall notice (opens in a new tab)</span>
       </a>
     </>
@@ -41,15 +43,17 @@ export function RecallBrief({ recall, heading = "h1" }: { recall: Recall; headin
       <Heading id="recall-title" className="sr-only">
         {recall.product}
       </Heading>
-      {/* Phones: CPSC's photo on its paper plate, small, beside the line that proves it's a real recall. */}
+      {/* Phones: CPSC's photo on its paper plate, small (a tap opens it whole), beside the line that proves it's a real
+          recall, and who is recalling it and paying: from an email link, an unknown name and a payment login otherwise
+          read as a phishing page. */}
       <div className="flex items-center gap-3 sm:hidden">
-        {image && (
-          <span className="shrink-0 rounded-control bg-paper p-1 ring-1 ring-line">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.url} alt="" className="block size-12 object-contain mix-blend-multiply" />
-          </span>
-        )}
-        <p className="text-ui text-muted">{source}</p>
+        {image && <RecallPhoto url={image.url} caption={image.caption || undefined} product={recall.product} />}
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-ui text-muted">{source}</p>
+          <p className="text-ui text-muted">
+            Sold by <span className="text-text">{company}</span>, which pays these refunds through Remedy.
+          </p>
+        </div>
       </div>
 
       {/* Tablets and laptops: the product one step under the offer's size, so the offer is the one headline. */}
@@ -65,9 +69,10 @@ export function RecallBrief({ recall, heading = "h1" }: { recall: Recall; headin
         <figure className="flex flex-col gap-2 max-sm:hidden">
           {/* CPSC's own photo, hot-linked from cpsc.gov so it stays the official one. Multiplied into the plate, so its
               white studio background never reads as a slab brighter than the plate around it. The caption is its text. */}
-          <div className="rounded-control bg-paper p-4 ring-1 ring-line">
+          {/* The plate's height is fixed, so the page is laid out before cpsc.gov's photo arrives: nothing under it moves. */}
+          <div className="flex h-48 items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line lg:h-80">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.url} alt={image.caption ? "" : `The recalled ${recall.product}`} className="mx-auto block h-auto max-h-40 w-auto max-w-full object-contain mix-blend-multiply lg:max-h-72" />
+            <img src={image.url} alt={image.caption ? "" : `The recalled ${recall.product}`} className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
           </div>
           {image.caption && <figcaption className="max-w-read text-ui text-faint">{image.caption}</figcaption>}
         </figure>

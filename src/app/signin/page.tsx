@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CopyField } from "@/components/console/CopyField";
+import { JudgeLoginPanel } from "@/components/claim/JudgeLoginPanel";
 import { previewProps } from "@/components/console/preview";
 import { SigninPreview } from "@/components/console/SigninPreview";
 import { Button, CheckIcon, ErrorState, ThemeToggle, Wordmark } from "@/components/ui";
@@ -69,29 +69,20 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           </Button>
           <p className="mt-3 text-ui text-muted">Remedy reads your PayPal name and email to open your workspace.</p>
 
-          {/* The shared login sits under the real way in, never in front of it. */}
+          {/* The shared login sits under the real way in, never in front of it: the same rows as /try's, one tap apart. */}
           {login && (
-            <section aria-labelledby="demo-account" className="mt-10 flex flex-col gap-3 border-t border-line pt-6">
-              <div className="flex flex-col gap-1">
-                <h2 id="demo-account" className="text-ui font-medium">
-                  Demo account
-                </h2>
-                {fromClaim && <p className="text-ui text-muted">This claim is in the company console. Log in with the demo account to see it.</p>}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-micro text-muted">Email</span>
-                <CopyField value={login.email} label="Email" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-micro text-muted">Password</span>
-                <CopyField value={login.password} label="Password" secret />
-              </div>
-            </section>
+            <JudgeLoginPanel
+              login={login}
+              heading="h2"
+              why={fromClaim ? "This claim is in the company console. Log in with the demo account to see it." : undefined}
+              className="mt-10 border-t border-line pt-6"
+            />
           )}
 
+          {/* An owner's way in is the recall's own page, with its notice and PayPal login: never the demo. */}
           <p className="mt-10 border-t border-line pt-5 text-ui text-muted">
             Own a recalled product? Use the claim link on the recall notice, or{" "}
-            <Link href="/r/kikea-x-vesolje/try" className="text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
+            <Link href="/r/kikea-x-vesolje" className="py-3 text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
               file a claim
             </Link>
             .
