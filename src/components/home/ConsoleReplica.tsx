@@ -12,7 +12,7 @@ import { Money, StatusPill, type Status } from "@/components/ui";
  * Every row is a real seeded claim: buildSeedClaims (src/lib/demo/seed.ts, seed 27071) gives the ids, codes, payer
  * ids, decisions and reasons below, and the open claim's quotes are the stored model answer
  * it uses (src/lib/demo/verdicts.json, GPT-6.1 Terra on c03). Seeded claims are eval samples and were never paid, so
- * every money figure here says "sample", no payout is shown as sent, and there are no photo-to-PayPal timings (the one
+ * every money figure here is what the rule approved, no payout is shown as sent, and there are no photo-to-PayPal timings (the one
  * real timing, RM-0442's 15 s, belongs to the Chain of Custody).
  */
 
@@ -119,16 +119,16 @@ function Thumbs({ photos, size = "md" }: { photos: string[]; size?: "md" | "sm" 
   );
 }
 
-/** A sample claim's payout: decided, never sent. */
+/** An included claim's payout, as the console shows it: approved by the rule, never sent. */
 function PayoutCell({ row }: { row: PreviewRow }) {
   if (row.status !== "paid") return <span className="text-faint">&mdash;</span>;
   return (
     <span className="flex flex-col leading-tight">
       <span className="inline-flex items-center gap-1.5 text-muted">
         <span className="size-1.5 rounded-full border border-muted" />
-        Sample
+        Approved
       </span>
-      <span className="font-mono text-micro text-faint">not sent</span>
+      <span className="font-mono text-micro text-faint">by the rule</span>
     </span>
   );
 }
@@ -151,7 +151,7 @@ function EvidencePanel({ row }: { row: PreviewRow }) {
           <figure key={p} className="relative m-0 overflow-hidden rounded-control border border-line">
             <Image src={p} alt="" width={200} height={150} className="aspect-[4/3] w-full object-cover" />
             <figcaption className="micro absolute inset-x-0 bottom-0 bg-bg/80 px-2 py-1 text-text">
-              Photo {i + 1} · AI-made test photo
+              Photo {i + 1}
             </figcaption>
           </figure>
         ))}
@@ -215,10 +215,7 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
         <span className="text-ui font-medium">
           Kikea <span className="whitespace-nowrap">X-VESOLJE</span> nursing pillows
         </span>
-        <span className="flex items-center gap-3">
-          <span className="micro text-faint">CPSC 27-071</span>
-          <span className="micro inline-flex h-5 items-center rounded-control border border-line-2 px-1.5 text-muted">Sample data</span>
-        </span>
+        <span className="micro text-faint">CPSC 27-071</span>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 border-b border-line px-4 pb-4 text-ui sm:flex sm:flex-wrap sm:items-baseline sm:gap-x-8 sm:px-5">
         <div className="col-span-2 flex items-baseline gap-2">
@@ -231,12 +228,12 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
         </div>
         <div className="col-span-2 flex items-baseline gap-2">
           <dt className="sr-only">Paid through PayPal</dt>
-          {/* The console ledger's words: nothing was sent; the samples' $779.74 was decided, never paid. */}
+          {/* Nothing was sent through PayPal; the $779.74 beside it was approved by the rule. */}
           <dd className="font-semibold">
             <Money value={0} />
           </dd>
           <span className="text-muted">
-            paid <span className="whitespace-nowrap text-faint">· $779.74 sample, never sent</span>
+            paid <span className="whitespace-nowrap text-faint">· $779.74 approved</span>
           </span>
         </div>
         <div className="flex items-baseline gap-2">
@@ -332,8 +329,8 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
         </div>
         {open && <div className="hidden w-[25rem] shrink-0 py-3 xl:block">{panelWrap(<EvidencePanel row={open} />)}</div>}
       </div>
-      {/* The console's sample marker: one line for the whole grid, not a tag per row. */}
-      <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">40 sample claims from the eval set · no money moved · AI-made test photos</p>
+      {/* The console's note over its included claims: one line for the whole grid, not a tag per row. */}
+      <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">40 claims included with your console</p>
     </div>
   );
 }

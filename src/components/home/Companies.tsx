@@ -46,16 +46,16 @@ export function Companies() {
         <CompaniesPreview />
         {/* The ledger's $0.00 beside the hero's paid RM-0442: say which claim was paid, and where, without a new figure. */}
         <figcaption className="mt-4 max-w-[68ch] text-ui text-pretty text-muted lg:mt-5">
-          <span className="sr-only">Remedy&rsquo;s console on the Kikea demo recall. </span>A sample workspace: its 40 claims are from the eval, with AI-made
-          test photos, and were decided but never paid, so it shows $0.00 paid. Claim RM-0442, above, was paid in PayPal sandbox.
+          <span className="sr-only">Remedy&rsquo;s console on the Kikea demo recall. </span>Every claim arrives with its photos, its checks and the
+          rule&rsquo;s decision beside it. The ledger counts only refunds sent through PayPal, like claim RM-0442 above.
         </figcaption>
       </figure>
 
-      {/* The remedied count lives in the frame's ledger (26 of 19,596, sample data); the CTA sits in one row under it. */}
+      {/* The remedied count lives in the frame's ledger (26 of 19,596); the CTA sits in one row under it. */}
       <div className="mt-10 grid-12 gap-y-6 lg:mt-20 lg:items-center">
         <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-7">
-          Log in with PayPal; there is no separate sign-up. Your workspace starts with the Kikea demo recall and 40 sample claims, so you can see claims
-          arrive before you import your own. Refunds run in PayPal&rsquo;s sandbox until launch.
+          Log in with PayPal; there is no separate sign-up. Your workspace starts with the Kikea demo recall and 40 claims already in it, so you can see
+          claims arrive before you import your own.
         </p>
         <Button href="/signin" variant="secondary" size="lg" className="col-span-12 justify-self-start lg:col-span-5 lg:col-start-8">
           Log in with PayPal
