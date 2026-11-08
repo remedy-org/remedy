@@ -52,7 +52,7 @@ export function Reveal({ children, className, as: Tag = "div" }: { children: Rea
   );
 }
 
-/** Ink and drop moves inside a section: the wrapper that arms and plays them (styles.highlight, .stamp, .fall, …). */
+/** Ink moves inside a section: the wrapper that arms and plays them (styles.draw). */
 export function Enter({
   children,
   className,

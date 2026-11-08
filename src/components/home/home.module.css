@@ -1,14 +1,8 @@
 /*
- * The homepage's own moves (DESIGN.md, Motion): focus-in, ink and drop. Everything rests in its final state: a
+ * The homepage's own moves (DESIGN.md, Motion): focus-in and ink. Everything rests in its final state: a
  * section is only "armed" (hidden, waiting) when JS runs, motion is allowed and it starts below the fold (see
  * useEnter in Reveal.tsx), so no-JS visitors, reduced motion and full-page screenshots all see the finished page.
  */
-
-/* SPRING.drop (stiffness 320, damping 26) sampled every 20ms, as a CSS easing: 3.5% overshoot, settled by 460ms. */
-.reveal,
-.enter {
-  --drop: linear(0, 0.058, 0.185, 0.342, 0.5, 0.643, 0.763, 0.858, 0.928, 0.977, 1.008, 1.026, 1.034, 1.035, 1.032, 1.028, 1.022, 1.016, 1.012, 1.008, 1.004, 1.002, 1.001, 1);
-}
 
 @media (prefers-reduced-motion: no-preference) {
   /* 1. Focus-in: blur 10px, 12px down and transparent to rest, 700ms, 60ms apart per line. Text only. */
@@ -39,33 +33,6 @@
     translate: 0 8px;
   }
 
-  /* 3. Ink: the highlighter sweeps left to right, 700ms ease-out after 200ms. */
-  .highlight {
-    transition: background-size 700ms ease-out 200ms;
-  }
-
-  .enter[data-enter="armed"] .highlight {
-    background-size: 0% var(--hl-height);
-  }
-
-  /* 3. Ink: a stamp lands (scale 1.4 to 1, fade in, 200ms --ease-back); its tilt never moves. */
-  .enter[data-enter="armed"] .stamp {
-    opacity: 0;
-  }
-
-  .enter[data-enter="play"] .stamp {
-    animation: stamp-land 200ms var(--ease-back) var(--stamp-at, 500ms) both;
-  }
-
-  /* A pen note beside a stamp appears with it. */
-  .enter[data-enter="armed"] .note {
-    opacity: 0;
-  }
-
-  .enter[data-enter="play"] .note {
-    transition: opacity 200ms ease-out var(--stamp-at, 500ms);
-  }
-
   /* 3. Ink: a string or a leader draws in (pathLength 0 to 1, 600ms --ease-out-quart). */
   .enter[data-enter="armed"] .draw {
     stroke-dashoffset: 1;
@@ -75,78 +42,28 @@
     transition: stroke-dashoffset 600ms var(--ease-out-quart) var(--draw-at, 0ms);
   }
 
-  /* 4. Drop: a paper tag falls from the top of its lane and settles with SPRING.drop and a 2deg rotation. */
-  .enter[data-enter="armed"] .fall {
-    translate: 0 var(--fall, -120px);
-    rotate: 2deg;
-    opacity: 0;
-  }
-
-  .enter[data-enter="play"] .fall {
-    transition:
-      translate 460ms var(--drop) var(--fall-at, 0ms),
-      rotate 460ms var(--drop) var(--fall-at, 0ms),
-      opacity 160ms var(--ease-out-expo) var(--fall-at, 0ms);
-  }
-
-  /* The dashed trail behind a falling tag draws down with it. */
-  .enter[data-enter="armed"] .trail {
-    scale: 1 0;
-  }
-
-  .enter[data-enter="play"] .trail {
-    transition: scale var(--trail-for, 120ms) var(--ease-out-quart) var(--trail-at, 0ms);
-  }
-
-  /* The gate pipeline arms each lane on its own (Pipeline.tsx useLanes): data-go on every cell of the lane, and
-     --go-at staggers lanes that come into view together. */
-  .lane[data-go="armed"] .fall {
-    translate: 0 var(--fall, -120px);
-    rotate: 2deg;
-    opacity: 0;
-  }
-
-  .lane[data-go="play"] .fall {
-    transition:
-      translate 460ms var(--drop) calc(var(--go-at, 0ms) + var(--fall-at, 0ms)),
-      rotate 460ms var(--drop) calc(var(--go-at, 0ms) + var(--fall-at, 0ms)),
-      opacity 160ms var(--ease-out-expo) calc(var(--go-at, 0ms) + var(--fall-at, 0ms));
-  }
-
+  /* 3. Ink, Fraud checks: each claim's line draws down its lane, row by row at one steady pace, to the check that
+     stops it, and its outcome prints as the line arrives. Pipeline.tsx arms each lane on its own (data-go on every
+     cell of the lane; --go-at staggers lanes that come into view together). */
   .lane[data-go="armed"] .trail {
     scale: 1 0;
   }
 
   .lane[data-go="play"] .trail {
-    transition: scale var(--trail-for, 120ms) var(--ease-out-quart) calc(var(--go-at, 0ms) + var(--trail-at, 0ms));
+    transition: scale var(--trail-for, 120ms) linear calc(var(--go-at, 0ms) + var(--trail-at, 0ms));
   }
 
-  .lane[data-go="armed"] .stamp,
-  .lane[data-go="armed"] .note {
+  .lane[data-go="armed"] .outcome {
     opacity: 0;
+    translate: 0 4px;
   }
 
-  .lane[data-go="play"] .stamp {
-    animation: stamp-land 200ms var(--ease-back) calc(var(--go-at, 0ms) + var(--stamp-at, 500ms)) both;
+  .lane[data-go="play"] .outcome {
+    transition:
+      opacity 360ms var(--ease-out-quart),
+      translate 360ms var(--ease-out-quart);
+    transition-delay: calc(var(--go-at, 0ms) + var(--outcome-at, 600ms));
   }
-
-  .lane[data-go="play"] .note {
-    transition: opacity 200ms ease-out calc(var(--go-at, 0ms) + var(--stamp-at, 500ms));
-  }
-
-}
-
-/* The highlighter itself, drawn under the ink: --highlight on a band through the lower x-height. */
-.highlight {
-  --hl-height: 0.7em;
-  background-image: linear-gradient(var(--highlight), var(--highlight));
-  background-repeat: no-repeat;
-  background-position: 0 80%;
-  background-size: 100% var(--hl-height);
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-  padding-inline: 0.12em;
-  margin-inline: -0.12em;
 }
 
 .draw {
