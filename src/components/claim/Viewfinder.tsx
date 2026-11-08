@@ -1,15 +1,16 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
+import { EvidenceText } from "./EvidenceText";
 
-// The camera's chrome, shared by the live camera and the demo's sample: a dark frame in both themes, the cutout guide
-// (Stripe Identity's), the reminder chips, the instruction bar under it and the dock. Presentational only.
+// The camera's chrome, shared by the live camera and the demo's photo: a dark frame in both themes, the cutout guide
+// (Stripe Identity's), the instruction bar under it and the dock. Presentational only.
 
-/** Dark glass, 12px mono: chips that sit on the camera feed. */
+/** Dark glass, 12px mono: the data chips that sit on the camera feed (the photo number, the timer). */
 export function GlassChip({ children, className, tone }: { children: ReactNode; className?: string; tone?: "accent" }) {
   return (
     <span
       className={clsx(
-        "inline-flex h-7 items-center gap-1.5 rounded-control px-2.5 font-mono text-micro tracking-[0.06em] whitespace-nowrap uppercase tabular-nums backdrop-blur-sm",
+        "inline-flex h-7 items-center gap-1.5 rounded-control px-2.5 font-mono text-micro tracking-normal whitespace-nowrap tabular-nums backdrop-blur-sm",
         tone === "accent" ? "bg-accent text-accent-ink" : "bg-[oklch(0.12_0.004_75/0.72)] text-[oklch(0.96_0.006_85)]",
         className,
       )}
@@ -37,25 +38,13 @@ export function Cutout({ children, dashed, className }: { children?: ReactNode; 
   );
 }
 
-/**
- * What the photo needs, in the instruction bar: under the frame, never over the tag it points at. Reminders, never
- * checks: the browser verifies nothing.
- */
-export function Reminders({ items, id }: { items: string[]; id: string }) {
-  if (!items.length) return null;
+/** What the photo needs, in one line in the instruction bar: under the frame, never over the tag it points at. */
+export function Reminder({ text, id }: { text: string; id?: string }) {
+  if (!text) return null;
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1.5">
-      <span id={id} className="font-mono text-micro tracking-[0.06em] text-[oklch(0.74_0.005_80)] uppercase">
-        Must show
-      </span>
-      <ul aria-labelledby={id} className="flex flex-wrap justify-center gap-1.5">
-        {items.map((t) => (
-          <li key={t} className="inline-flex h-6 items-center rounded-control border border-[oklch(1_0_0/0.18)] px-2 font-mono text-micro tracking-[0.06em] whitespace-nowrap text-[oklch(0.86_0.005_80)] uppercase">
-            {t}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <p id={id} className="text-ui text-balance text-[oklch(0.86_0.005_80)]">
+      <EvidenceText>{text}</EvidenceText>
+    </p>
   );
 }
 
@@ -88,9 +77,23 @@ export function Dock({ left, middle, right, short, className }: { left?: ReactNo
 }
 
 /**
- * Phones: the camera fills the screen under the 64px header as a grid (viewfinder, instruction bar, dock), like a
- * camera app. From 640px it is a 4:3 card. FlowShell drops its footer and bottom padding while [data-camera] is on screen.
+ * Phones: the camera takes the whole screen, like a camera app, with its own bar on top (the way back, and this claim's
+ * code) in place of the site's header, which FlowShell hides with its footer while [data-camera] is on screen. Then the
+ * viewfinder, the instruction bar and the dock. From 640px it is a 4:3 card under the site's header.
  */
 export const CAMERA_FRAME =
-  "overflow-hidden bg-[oklch(0.12_0.004_75)] text-text max-sm:-mx-4 max-sm:-mt-8 max-sm:grid max-sm:h-[calc(100dvh-4rem-1px)] max-sm:grid-rows-[minmax(0,1fr)_auto_auto] sm:rounded-card sm:shadow-ring";
+  "overflow-hidden bg-[oklch(0.12_0.004_75)] text-text max-sm:mx-[calc(var(--gutter)*-1)] max-sm:-mt-8 max-sm:grid max-sm:h-dvh max-sm:grid-rows-[auto_minmax(0,1fr)_auto_auto] max-sm:[@media(max-height:600px)]:-mt-4 sm:rounded-card sm:shadow-ring";
 export const CAMERA_VIEW = "relative overflow-hidden max-sm:min-h-0 sm:aspect-[4/3]";
+
+/** The camera's own top bar on a phone: back on the left, the claim's code on the right. Hidden from 640px. */
+export function CameraTopBar({ back, children }: { back: ReactNode; children?: ReactNode }) {
+  return (
+    <div className="flex h-12 items-center justify-between gap-3 pr-4 pl-1 pt-[env(safe-area-inset-top)] text-ui text-[oklch(0.86_0.005_80)] sm:hidden">
+      {back}
+      {children}
+    </div>
+  );
+}
+
+/** The top bar's back control: a 44px target, an arrow and the word. */
+export const CAMERA_BACK = "inline-flex min-h-11 items-center gap-1.5 rounded-control px-3 text-ui font-medium text-[oklch(0.96_0.006_85)] focus-visible:outline-2 focus-visible:outline-focus";

@@ -1,13 +1,21 @@
 "use client";
 
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import styles from "./flow.module.css";
-import { payoutWords, receiptPollDelay, type ClaimStatus, type Tone } from "./model";
+import { payoutWords, receiptPollDelay, type ClaimStatus } from "./model";
 
-const DOT: Record<Tone, string> = { pay: "bg-pay-ink", hold: "bg-hold-ink", stop: "bg-stop-ink", muted: "bg-ink-muted" };
+interface Live {
+  status: string | null;
+  /** The status changed while this page was open: its change animates, once. */
+  changed: boolean;
+}
 
-export interface ReceiptLiveProps {
+const PayoutContext = createContext<Live>({ status: null, changed: false });
+
+const received = (status: string | null) => payoutWords(status).tone === "pay";
+
+export interface PayoutLiveProps {
   claimId: string;
   /** PayPal's status when the page rendered. */
   status: string | null;
@@ -15,22 +23,18 @@ export interface ReceiptLiveProps {
   live: boolean;
   /** "$29.99", for the sentence read out when it lands. */
   amount: string;
-  /** A sandbox build or a demo claim: the note points to the PayPal activity page instead of an email. */
-  sandbox?: boolean;
-  /** PayPal's activity page, linked from the note (a quiet ink link: the receipt has no amber). */
-  activityUrl?: string;
+  children: ReactNode;
 }
 
 /**
- * The receipt's payout status, live (Revolut's Pending to Completed on the same screen). It polls the claim's status
- * route: every 5 s for 30 s, then every 15 s, for 2 minutes at most, never while the tab is hidden, and stops on a
- * settled status. Each poll is one Blob read; the route asks PayPal at most once a minute.
+ * The paid result's one live fact, PayPal's payout status (Revolut's Pending to Completed on the same screen), shared
+ * by the headline and the receipt's status row so they never disagree. It polls the claim's status route:
+ * every 5 s for 30 s, then every 15 s, for 2 minutes at most, never while the tab is hidden, and stops on a settled
+ * status. Each poll is one Blob read; the route asks PayPal at most once a minute.
  */
-export function ReceiptLive({ claimId, status: initial, live, amount, sandbox, activityUrl }: ReceiptLiveProps) {
+export function PayoutLive({ claimId, status: initial, live, amount, children }: PayoutLiveProps) {
   const [status, setStatus] = useState(initial);
   const [changed, setChanged] = useState(false);
-  const words = payoutWords(status);
-  const settled = words.label !== "Processing at PayPal" && words.label !== "Unknown";
   const statusRef = useRef(status);
 
   useEffect(() => {
@@ -55,7 +59,7 @@ export function ReceiptLive({ claimId, status: initial, live, amount, sandbox, a
           if (next.toUpperCase() === "SUCCESS") navigator.vibrate?.([12, 40, 12]);
         }
         const w = payoutWords(next);
-        if (w.label !== "Processing at PayPal" && w.label !== "Unknown") return;
+        if (w.label !== "Sent" && w.label !== "Unknown") return;
       } catch {
         // Offline for a moment: the next tick tries again.
       }
@@ -69,36 +73,69 @@ export function ReceiptLive({ claimId, status: initial, live, amount, sandbox, a
   }, [claimId, live]);
 
   return (
-    <div className="flex flex-col gap-1 border-b border-dashed border-paper-line py-3">
+    <PayoutContext.Provider value={{ status, changed }}>
+      {children}
+      <p className="sr-only" aria-live="polite">
+        {changed ? (received(status) ? `Received. Your ${amount} refund is in your PayPal.` : `Payout status: ${payoutWords(status).label}.`) : ""}
+      </p>
+    </PayoutContext.Provider>
+  );
+}
+
+/** Words the headline, the refund row and the receipt share, so the three never disagree: Sent, then Received. */
+export const PAID_TITLE = { sent: "Refund sent to your PayPal", received: "Your refund is in your PayPal" };
+
+/** The headline: sent while PayPal is finishing, in your PayPal once it has. The amount is the receipt's. */
+export function PaidTitle() {
+  const { status, changed } = useContext(PayoutContext);
+  const text = received(status) ? PAID_TITLE.received : PAID_TITLE.sent;
+  return (
+    <span key={text} className={clsx("block", changed && styles.swap)}>
+      {text}
+    </span>
+  );
+}
+
+/** The refund row's word on the result: Sent, then Received in the paid colour. */
+export function PayoutWord() {
+  const { status, changed } = useContext(PayoutContext);
+  const got = received(status);
+  return (
+    <span key={String(got)} className={clsx(got && "text-pay", changed && styles.swap)}>
+      {got ? "Received" : "Sent"}
+    </span>
+  );
+}
+
+/** The receipt as it prints: brought into view once, so the money arriving is on screen, not under the fold. */
+export function BringIntoView({ id }: { id: string }) {
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const { bottom } = el.getBoundingClientRect();
+      if (bottom <= window.innerHeight) return;
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({ block: "end", behavior: reduced ? "auto" : "smooth" });
+    }, 360);
+    return () => clearTimeout(t);
+  }, [id]);
+  return null;
+}
+
+/** The receipt's payout status row: a word, and while it's processing, one line of why. */
+export function PayoutRow() {
+  const { status, changed } = useContext(PayoutContext);
+  const words = payoutWords(status);
+  return (
+    <div className="flex flex-col gap-1 border-b border-paper-line py-3">
       <div className="flex items-baseline justify-between gap-4 text-ui">
         <dt className="shrink-0 text-ink-muted">Payout status</dt>
-        <dd key={words.label} className={clsx("inline-flex items-center gap-2 font-medium text-ink", changed && styles.swap)}>
-          <span className={clsx("relative size-2 shrink-0 rounded-full", DOT[words.tone], !settled && live && clsx("text-ink-muted", styles.pulse))} aria-hidden="true" />
+        <dd key={words.label} className={clsx("font-medium text-ink", changed && styles.swap)}>
           {words.label}
         </dd>
       </div>
-      {/* A full-width line of its own, left-aligned under the status, so it reads as a sentence and never wraps ragged. */}
-      <p className="mt-1 text-pretty text-ui text-ink-muted">
-        {/* While it's processing, the note says why the PAID stamp sits above it: Remedy sent it, PayPal is finishing. */}
-        {sandbox ? (
-          <>
-            {settled ? "" : `${words.note} `}See it in your{" "}
-            {activityUrl ? (
-              <a href={activityUrl} target="_blank" rel="noreferrer" className="rounded-control text-ink underline decoration-paper-line underline-offset-4 hover:decoration-ink">
-                PayPal activity<span className="sr-only"> (opens PayPal in a new tab)</span>
-              </a>
-            ) : (
-              "PayPal activity"
-            )}
-            .
-          </>
-        ) : (
-          words.note
-        )}
-      </p>
-      <p className="sr-only" aria-live="polite">
-        {changed && words.tone === "pay" ? `Received. ${amount} is in your PayPal account.` : changed ? `Payout status: ${words.label}.` : ""}
-      </p>
+      {words.tone !== "pay" && words.note && <p className="mt-1 text-pretty text-ui text-ink-muted">{words.note}</p>}
     </div>
   );
 }

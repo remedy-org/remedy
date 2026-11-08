@@ -25,8 +25,8 @@ const wordButton =
   "relative inline-flex h-9 shrink-0 items-center gap-1.5 rounded-control border border-line-2 px-3 text-ui font-medium whitespace-nowrap text-text transition-colors duration-160 after:absolute after:-inset-x-px after:-inset-y-1.5 hover:bg-surface-2";
 
 /**
- * Below lg the nav's links live behind a Menu word button that opens a full-screen sheet: a native modal <dialog>, as
- * JudgesSheet, so the top layer, the focus trap, Esc and the inert page come for free. The sheet repeats the 64px bar
+ * Below lg the nav's links live behind a Menu word button that opens a full-screen sheet: a native modal <dialog>,
+ * so the top layer, the focus trap, Esc and the inert page come for free. The sheet repeats the 64px bar
  * (Close where Menu was), then the links with a line each, then the paths: a line for an owner with a real recall
  * (the claim link is on the company's notice), the amber "Try a claim" (the sheet covers the page,
  * so it is that screen's one amber), the companies' quiet sign-in, and the theme. Without JS, Menu is a link to the

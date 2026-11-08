@@ -2,36 +2,42 @@
 
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { Card } from "@/components/ui";
-import { CheckList } from "./CheckList";
-import { ModelQuote } from "./EvidenceText";
-import { ExhibitPhoto, StepTitle } from "./Exhibit";
+import { useEffect, useState } from "react";
+import type { CheckSpec } from "@/lib/types";
+import { CheckList, outcomeWord, sixRows, type SixRow } from "./CheckList";
+import { ClaimPhotos } from "./ClaimPhotos";
+import { CHECK_GRID, OutcomeHead, WIDE_ONLY } from "./Exhibit";
 import styles from "./flow.module.css";
-import { GlassChip } from "./Viewfinder";
-import { isDecided, type CheckRow, type ClaimView, type TimelineEvent } from "./model";
+import { cutInHalf, handWrittenLabel, isDecided, nounOf, type ClaimView } from "./model";
+import { PAID_TITLE } from "./ReceiptLive";
 
-// Each check appears as it resolves, one after another, rather than all at once.
-const STEP_MS = 420;
+// Each row resolves on its own beat, one after another, in reduced motion too: there it is a plain swap. The camera's
+// pre-checks are quick; the photo check's answers, and the refund after them, get a beat each to be read.
+const PRE_MS = 420;
+const STEP_MS = 650;
+// Only a wait this long earns "you can close this page".
+const SAVED_S = 10;
+// The finished list stays up this long before the result replaces it.
+const HOLD_MS = 1500;
 // Each poll reads the claim from the store, and those reads are capped per month.
 const POLL_MS = 2000;
-// The photo check's usual range, from the live runs: 15 to 40 seconds.
-const USUAL = [15, 40] as const;
+// Past this, the screen says it's taking longer than usual.
+const SLOW_S = 40;
 
-const subscribeMotion = (cb: () => void) => {
-  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-  mq.addEventListener("change", cb);
-  return () => mq.removeEventListener("change", cb);
-};
-
-const firstWaiting = (rows: CheckRow[]) => {
+const firstWaiting = (rows: SixRow[]) => {
   const i = rows.findIndex((r) => r.state === "waiting");
   return i < 0 ? rows.length : i;
 };
 
+/** "0:04": mono, so the digits never jump. */
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
 export interface CheckingStepProps {
   claimId: string;
   view: ClaimView;
+  spec: CheckSpec;
+  /** "$29.99", for the refund row. */
+  amount: string;
   /** The server clock at render (ms). */
   startNow: number;
   /** The photos sent, in order (local copies, or the sample's); else the owner's photo route for each. */
@@ -40,22 +46,24 @@ export interface CheckingStepProps {
   sending?: boolean;
   /** Dev previews: no polling, no refresh, every known row shown, and a fixed elapsed time. */
   preview?: { elapsed?: number; offline?: boolean };
+  /** "Kikea Store", for a held claim's headline. */
+  company?: string;
+  /** Every row has resolved: the step meter moves on to the refund. */
+  onSettled?(): void;
 }
 
 /**
- * The trust screen: photo 1 beside the checks, held in view while they run, with the model's quotes numbered under it.
- * While the model reads the photo an amber line scans it; an honest time line shows the elapsed seconds against the
- * usual 15 to 40 (never a percentage); each check group's header carries its time from the claim's own events. Once
- * decided, the checks reveal in order and the page re-renders as the result.
+ * The moment the claim is proved: the photo, and the five checks and the refund resolving one by one where the eye
+ * already is. On a phone (or a short screen) the photo is a 72px thumbnail beside the title, so every row is on the
+ * first screen; from 1024px it sits whole beside the list. Once decided, the rows land in order, the finished list
+ * holds for a moment, and the page re-renders as the result.
  */
-export function CheckingStep({ claimId, view: initial, startNow, photoUrls, sending, preview }: CheckingStepProps) {
+export function CheckingStep({ claimId, view: initial, spec, amount, startNow, photoUrls, sending, preview, company = "The company", onSettled }: CheckingStepProps) {
   const router = useRouter();
   const [view, setView] = useState(initial);
-  const [shown, setShown] = useState(preview ? firstWaiting(initial.rows) : 0);
   const [offline, setOffline] = useState(preview?.offline ?? false);
   // The server clock at render first, so server and client paint the same seconds.
   const [now, setNow] = useState(startNow);
-  const reduced = useSyncExternalStore(subscribeMotion, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => false);
 
   // A new answer from the parent (the upload's response) replaces the local one.
   const [seen, setSeen] = useState(initial);
@@ -64,17 +72,36 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrls, send
     setView(initial);
   }
 
-  const known = firstWaiting(view.rows);
   const decided = isDecided(view.decision);
-  const done = decided && shown >= view.rows.length;
+  const all = sixRows(view.rows, { code: view.code, noun: nounOf(spec), cut: cutInHalf(spec), decided, held: view.decision === "held", demo: view.demo, photos: Math.max(view.photos, photoUrls?.length ?? 0), written: handWrittenLabel(spec) });
+  const known = sending ? 0 : firstWaiting(all);
+  const [shown, setShown] = useState(preview ? known : 0);
+  const done = decided && shown >= all.length;
+  // Once a check has failed, nothing after it is pending: every later row (and the refund, not sent) lands with it.
+  const failAt = decided ? all.findIndex((r) => r.state === "reject" || r.state === "blocked") : -1;
 
   useEffect(() => {
     if (shown >= known) return;
-    const t = setTimeout(() => setShown((s) => s + 1), reduced ? 0 : STEP_MS);
+    const t = setTimeout(() => setShown((s) => (failAt >= 0 && s >= failAt ? all.length : s + 1)), shown < 3 ? PRE_MS : STEP_MS);
     return () => clearTimeout(t);
-  }, [shown, known, reduced]);
+  }, [shown, known, failAt, all.length]);
 
-  // The clock for the time line, 4 times a second, until the checks are done.
+  useEffect(() => {
+    if (done) onSettled?.();
+  }, [done, onSettled]);
+
+  // The row being checked stays on screen: a phone scrolls it up when it would fall below the fold.
+  useEffect(() => {
+    if (preview) return;
+    const el = document.querySelector<HTMLElement>(`[data-row="${all[Math.min(shown, all.length - 1)]?.key}"]`);
+    if (!el) return;
+    const { top, bottom } = el.getBoundingClientRect();
+    if (top < 0 || bottom > window.innerHeight) el.scrollIntoView({ block: "nearest" });
+    // Only when the active row changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown, preview]);
+
+  // The elapsed clock, 4 times a second, until the checks are done.
   useEffect(() => {
     if (preview || done) return;
     const t = setInterval(() => setNow(Date.now()), 250);
@@ -118,114 +145,80 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrls, send
 
   useEffect(() => {
     if (!done || preview) return;
-    const t = setTimeout(() => router.refresh(), reduced ? 300 : 1200);
+    const t = setTimeout(() => router.refresh(), HOLD_MS);
     return () => clearTimeout(t);
-  }, [done, preview, reduced, router]);
+  }, [done, preview, router]);
 
-  const rows: CheckRow[] = view.rows.map((r, i) =>
-    i < shown ? r : i === shown && !done ? { ...r, state: "running", detail: undefined, quote: undefined } : { ...r, state: "waiting", detail: undefined, quote: undefined },
+  const rows: SixRow[] = all.map((r, i) =>
+    i < shown ? r : i === shown && !done && !sending ? { key: r.key, name: r.name, label: r.label, state: "running" } : { key: r.key, name: r.name, label: r.label, state: "waiting" },
   );
-  const reading = !sending && !decided && view.photos > 0 && rows.some((r) => r.group === "model" && (r.state === "running" || r.state === "waiting"));
   // Seconds since the photos arrived, from the claim's own event, so a reload keeps counting. Until that is known (the
   // photos are still on their way from another device) there is no count, rather than one from when this page opened.
   const received = view.timeline.find((e) => e.type === "photos_received")?.at;
   const elapsed = preview?.elapsed ?? (received ? Math.max(0, (now - Date.parse(received)) / 1000) : null);
-  const blocked = view.decision === "blocked";
   const srcs = photoUrls?.length ? photoUrls : Array.from({ length: view.photos }, (_, i) => `/api/claims/${claimId}/photos/${i + 1}`);
-  const src = srcs[0];
   const count = Math.max(view.photos, srcs.length);
-  // The model's quotes for the annotations under photo 1: only the answers already revealed.
-  const notes = rows.filter((r) => r.group === "model" && r.quote && r.state !== "running" && r.state !== "waiting");
 
-  const title = sending ? "Sending your photos" : done ? "Checks finished" : `Checking your ${count > 1 ? "photos" : "photo"}`;
-  const lead = sending
-    ? "Uploading over a secure connection."
+  // Once every row has landed the headline is the outcome, in the result's own words, so the result arrives under it.
+  const title = sending
+    ? `Sending your ${count > 1 ? "photos" : "photo"}`
     : done
-      ? "Opening your result."
-      : elapsed !== null && elapsed > USUAL[1] && !decided
-        ? "Taking longer than usual. Nothing is lost: your claim is saved, and a person looks at it if the check doesn't answer."
-        : "Usually 15 to 40 seconds. Your claim is saved, so you can close this page.";
+      ? view.decision === "paid"
+        ? PAID_TITLE.sent
+        : view.decision === "held"
+          ? `A person at ${company.replace(/ /g, "\u00a0")} will check this claim`
+          : "We couldn't pay this claim"
+      : `Checking your ${count > 1 ? "photos" : "photo"}`;
+  // Said only when the wait is long enough that someone might want to leave; never once the claim is decided.
+  const lead =
+    decided || elapsed === null || elapsed <= SAVED_S
+      ? ""
+      : elapsed > SLOW_S
+        ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn't answer."
+        : "Your claim is saved. You can close this page.";
 
+  // One line for a screen reader, rewritten as each row lands: the list itself stays quiet. Checks are named, never
+  // numbered: nothing on screen numbers them.
+  const last = shown > 0 ? all[Math.min(shown, all.length) - 1] : null;
+  const checks = all.filter((r) => r.key !== "refund").length;
+  const spoken = done
+    ? view.decision === "paid"
+      ? `All ${checks} checks passed. ${amount} refund sent to your PayPal.`
+      : view.decision === "held"
+        ? "Claim for review."
+        : "Not paid."
+    : last && last.key !== "refund"
+      ? `${last.name[0].toUpperCase()}${last.name.slice(1)}: ${outcomeWord(last).toLowerCase() || "done"}.`
+      : "";
+
+  // Tall laptops (lg and over 600px high): the photo whole, beside the list. Phones and short screens: a thumbnail beside
+  // the headline. The result keeps this layout, so nothing moves when the outcome lands.
   return (
-    <section aria-labelledby="checking-title" aria-busy={!done} className="mx-auto grid w-full max-w-[60rem] gap-8 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:items-start lg:gap-14">
-      <div className="flex flex-col gap-3 lg:sticky lg:top-24">
-        {src ? (
-          // Whole: the photo being checked shows all of it, so a tag near a tall photo's edge stays in view.
-          <ExhibitPhoto src={src} alt={`Photo 1 of claim ${view.id}`} fit="contain" frame="h-60 lg:h-[21rem]">
-            {reading && !reduced && (
-              <span aria-hidden="true" className={clsx("absolute inset-0", styles.scan)}>
-                <span className={styles.scanLine} />
-              </span>
-            )}
-            {reading && (
-              <GlassChip className="absolute top-2 right-2">
-                {reduced && elapsed !== null ? (
-                  <>
-                    Reading the photo… <span className="normal-case">{Math.floor(elapsed)}s</span>
-                  </>
-                ) : (
-                  "Reading the photo"
-                )}
-              </GlassChip>
-            )}
-          </ExhibitPhoto>
-        ) : (
-          <div className="flex h-60 items-center justify-center rounded-control border border-dashed border-line-strong text-ui text-faint lg:aspect-[3/4] lg:h-auto">Your photos are on their way</div>
-        )}
-        {/* Every photo sent, numbered as the camera numbered them, so each one is seen to have arrived. */}
-        {srcs.length > 1 && (
-          <ul aria-label={`${srcs.length} photos received`} className="flex gap-2.5">
-            {srcs.map((s, i) => (
-              <li key={`${s}-${i}`} className="relative size-14 shrink-0 rounded-control bg-paper p-[2px] shadow-paper">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s} alt={`Photo ${i + 1}`} className="size-full rounded-[3px] bg-surface-2 object-contain" />
-                <span aria-hidden="true" className="absolute bottom-[3px] left-[3px] flex size-4 items-center justify-center rounded-[3px] bg-paper font-mono text-[10px] leading-none font-medium text-ink">
-                  {i + 1}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="font-mono text-micro text-faint">
-          {count > 1 ? `${count} photos` : "Photo 1"} · claim {view.id} · code {view.code}
-        </p>
-        {/* Laptops: what the model quoted from the photo, numbered under it as each answer arrives. Phones keep the quotes
-            in the checklist, under the photo already. */}
-        {notes.length > 0 && (
-          <ol aria-label="What the model read in photo 1" className="hidden flex-col gap-2.5 border-t border-line pt-3 lg:flex">
-            {notes.map((r, i) => (
-              <li key={r.id} className={clsx("grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-1 text-ui", styles.rise)}>
-                <span aria-hidden="true" className="mt-0.5 flex size-5 items-center justify-center rounded-full border border-line-strong font-mono text-[10px] leading-none text-muted">
-                  {i + 1}
-                </span>
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-text">{r.label}</span>
-                  <q className="line-clamp-2 text-ui leading-[1.55] text-muted">
-                    <ModelQuote>{r.quote ?? ""}</ModelQuote>
-                  </q>
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
+    <section aria-labelledby="checking-title" className={CHECK_GRID}>
+      <div className={clsx(WIDE_ONLY, "sticky top-8 min-w-0 flex-col gap-4")}>
+        <ClaimPhotos urls={srcs} claimId={view.id} />
       </div>
 
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-baseline justify-between gap-4">
-            <StepTitle id="checking-title">{title}</StepTitle>
-            {elapsed !== null && (
-              <span className="font-mono text-ui text-faint tabular-nums" aria-hidden="true">
-                {Math.floor(elapsed)}s
+      <div className="flex min-w-0 flex-col gap-5 [@media(max-height:600px)]:gap-3">
+        <OutcomeHead
+          id="checking-title"
+          thumb={srcs[0]}
+          small
+          title={
+            <span key={title} className={clsx("block", styles.swap)}>
+              {title}
+            </span>
+          }
+          lead={lead || undefined}
+          aside={
+            elapsed !== null &&
+            !done && (
+              <span className="self-start pt-2 font-mono text-ui text-faint" aria-hidden="true">
+                {clock(elapsed)}
               </span>
-            )}
-          </div>
-          <p className="text-body text-muted" aria-live="polite">
-            {lead}
-          </p>
-        </div>
-
-        {!sending && !blocked && elapsed !== null && <TimeLine elapsed={elapsed} done={decided} />}
+            )
+          }
+        />
 
         {offline && (
           <p role="status" className="rounded-control border border-line bg-surface-2 px-3 py-2.5 text-ui text-muted">
@@ -233,54 +226,11 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrls, send
           </p>
         )}
 
-        <Card padding="md">
-          <CheckList rows={rows} label={`Checks for claim ${view.id}`} code={view.code} times={sending ? undefined : groupTimes(view.timeline, rows)} quoteClassName="lg:hidden" />
-        </Card>
-
-        {blocked && shown >= view.rows.length && <p className="text-ui text-muted">The photos never reached the photo check: a claim that fails these first checks stops here.</p>}
+        <CheckList rows={rows} label={`Checks for claim ${view.id}`} amount={amount} live />
+        <p role="status" className="sr-only">
+          {spoken}
+        </p>
       </div>
     </section>
   );
-}
-
-/**
- * Elapsed time against the usual range, like Wise's arrival estimate: a 4px track over 60 seconds (120 past a minute),
- * the usual 15 to 40 seconds shaded, a tick for now. It never claims a percentage done.
- */
-function TimeLine({ elapsed, done }: { elapsed: number; done: boolean }) {
-  const scale = elapsed > 60 ? 120 : 60;
-  const at = (s: number) => `${(Math.min(s, scale) / scale) * 100}%`;
-  return (
-    <div className="flex flex-col gap-1.5" role="img" aria-label={`${Math.floor(elapsed)} seconds so far. The photo check usually takes 15 to 40 seconds.`}>
-      <div className="relative h-4">
-        <span className="micro absolute bottom-0 -translate-x-1/2 text-faint" style={{ left: `calc(${at(USUAL[0])} + (${at(USUAL[1])} - ${at(USUAL[0])}) / 2)` }}>
-          Usual
-        </span>
-      </div>
-      <div className="relative h-1 rounded-full bg-line">
-        <span className="absolute inset-y-0 rounded-full bg-surface-2 ring-1 ring-line-strong/60" style={{ left: at(USUAL[0]), width: `calc(${at(USUAL[1])} - ${at(USUAL[0])})` }} />
-        <span className={clsx("absolute -top-1.5 h-4 w-0.5 -translate-x-1/2 rounded-full", done ? "bg-pay" : "bg-text", styles.tick)} style={{ left: at(elapsed) }} />
-      </div>
-      <div className="flex justify-between font-mono text-micro text-faint tabular-nums">
-        <span>0s</span>
-        <span>{scale}s</span>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Each check group's time since the photos arrived, from the claim's own events, for the group headers ("+0.4s"); "now"
- * for the group being run. The pipeline saves "decided" after the payout it allowed, so the refund's time is the payout's.
- */
-function groupTimes(timeline: TimelineEvent[], rows: CheckRow[]): Partial<Record<CheckRow["group"], string>> {
-  const t0 = timeline.find((e) => e.type === "photos_received")?.at;
-  const at = (types: string[]) => timeline.filter((e) => types.includes(e.type)).map((e) => e.at).sort()[0];
-  const rel = (a: string | undefined) => (a && t0 ? `+${Math.max(0, (Date.parse(a) - Date.parse(t0)) / 1000).toFixed(1)}s` : undefined);
-  const now = (g: CheckRow["group"]) => (rows.some((r) => r.group === g && r.state === "running") ? "now" : undefined);
-  return {
-    pre: rel(at(["prechecked", "blocked"])) ?? now("pre"),
-    model: rel(at(["checked"])) ?? now("model"),
-    pay: rel(at(["payout_sent"])) ?? now("pay"),
-  };
 }

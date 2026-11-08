@@ -2,76 +2,68 @@ import clsx from "clsx";
 import type { Decision } from "@/lib/types";
 import styles from "./flow.module.css";
 
-export const REAL_STEPS = ["PayPal", "Code", "Photos", "Refund"] as const;
-export const DEMO_STEPS = ["PayPal", "Claim", "Photo", "Refund"] as const;
+// One set of names for a real claim and a demo one: the code is the claim's, and a demo claim is chosen with its code.
+export const REAL_STEPS = ["PayPal", "Claim", "Photo", "Refund"] as const;
+export const DEMO_STEPS = REAL_STEPS;
 
-/** How the last step ended: held for a person (waiting), or refused (stopped). Paid is simply every step done. */
-export type StepOutcome = "waiting" | "stopped";
+/** How the last step ended: paid (done, in the paid colour), held for a person (waiting), or refused (stopped). */
+export type StepOutcome = "paid" | "waiting" | "stopped";
 
 export interface StepMeterProps {
   /** 1-based; past the last step means everything is done. */
   current: number;
   steps?: readonly string[];
-  /** The current step didn't finish as a step does: it shows in the held or refused colour, with its word. */
+  /** The current step didn't finish as a step does: its bar shows in the held or refused colour. */
   outcome?: StepOutcome;
-  /** Phones on the camera step: hidden (still read out), so the camera gets the whole screen; it shows its own chip. */
+  /** The current step is next but hasn't opened yet (logged in on the recall screen): shown as next. */
+  upcoming?: boolean;
+  /** Phones on the camera step: hidden (still read out), so the camera gets the whole screen. */
   compact?: boolean;
-  /** The recall screen: the meter spans its two columns instead of the centred 640px frame. */
-  span?: boolean;
-  /** The step's content width, when it isn't 640px (the checks' 960px, a result's 480px): the meter shares its edges. */
-  width?: string;
 }
 
-// The word the step takes in place of its name, so the outcome is never shown by colour alone.
-const OUTCOME = { waiting: { word: "Held", sr: "Waiting: ", bar: "bg-hold", text: "text-hold" }, stopped: { word: "Not paid", sr: "Stopped: ", bar: "bg-stop", text: "text-stop" } };
+// What a screen reader hears for an ended step; the bar's colour is its only mark on screen, and the headline says it.
+const OUTCOME = { paid: { sr: "Done: ", bar: "bg-pay" }, waiting: { sr: "Waiting for a person: ", bar: "bg-hold" }, stopped: { sr: "Stopped: ", bar: "bg-stop" } };
 
-/** The meter for a claim's result: every step done when paid; held waits on the refund, refused stops there. */
+/** The meter for a claim's result: the refund ends paid, held (waiting on a person) or refused (stopped). */
 export function resultMeter(decision: Decision, steps: readonly string[]): Pick<StepMeterProps, "current" | "outcome"> {
-  if (decision === "paid") return { current: steps.length + 1 };
-  return { current: steps.length, outcome: decision === "held" ? "waiting" : "stopped" };
+  return { current: steps.length, outcome: decision === "paid" ? "paid" : decision === "held" ? "waiting" : "stopped" };
 }
 
 /**
- * The steps of a claim as hairline segments: done and current in text colour (the current one fills in), the rest
- * faint. From 640px a quiet mono counter, "2/4", leads them. Centred, on the step's own column (640px unless `width`
- * says otherwise), so its edges always sit on the content's; the recall screen's two columns it spans.
+ * The steps of a claim as hairline segments with their names under them: done in muted, the current one filled in
+ * text colour, the rest faint. It fills its frame, so its edges sit on the content's.
  */
-export function StepMeter({ current, steps = REAL_STEPS, outcome, compact, span, width = "max-w-[40rem]" }: StepMeterProps) {
+export function StepMeter({ current, steps = REAL_STEPS, outcome, upcoming, compact }: StepMeterProps) {
   const at = Math.min(current, steps.length);
-  const label = `Step ${at} of ${steps.length}`;
   const end = outcome ? OUTCOME[outcome] : null;
   return (
-    <div className={clsx("mx-auto flex w-full items-end gap-4", !span && width, compact && "max-sm:sr-only")}>
-      <span aria-hidden="true" className="micro w-7 shrink-0 text-faint tabular-nums max-sm:hidden">
-        <span className="text-text">{at}</span>/{steps.length}
-      </span>
-      <ol aria-label={label} className="grid flex-1 gap-2" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
+    <>
+      {/* A short screen (a laptop at 200% zoom): one muted line in the meter's place, so the step is still on screen. */}
+      <p className={clsx("hidden text-ui text-muted [@media(max-height:600px)]:block", compact && "max-sm:sr-only")}>
+        Step {at} of {steps.length} · {steps[at - 1]}
+      </p>
+      <ol
+        aria-label={`Step ${at} of ${steps.length}`}
+        className={clsx("grid w-full gap-2 [@media(max-height:600px)]:hidden", compact && "max-sm:sr-only")}
+        style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+      >
         {steps.map((s, i) => {
           const n = i + 1;
-          const state = n < current ? "done" : n === current ? "current" : "next";
+          const state = n < current ? "done" : n === current && !upcoming ? "current" : "next";
           const ended = state === "current" ? end : null;
           return (
             <li key={s} aria-current={state === "current" ? "step" : undefined} className="flex min-w-0 flex-col gap-2">
               <span className="relative h-0.5 overflow-hidden rounded-full bg-line">
-                {state !== "next" && (
-                  <span className={clsx("absolute inset-0 rounded-full", state === "done" ? "bg-muted" : ended ? ended.bar : clsx("bg-text", styles.fill))} />
-                )}
+                {state !== "next" && <span className={clsx("absolute inset-0 rounded-full", state === "done" ? "bg-muted" : ended ? ended.bar : clsx("bg-text", styles.fill))} />}
               </span>
-              <span className={clsx("micro truncate", ended ? ended.text : state === "current" ? "text-text" : state === "done" ? "text-muted" : "text-faint")}>
+              <span className={clsx("truncate text-ui font-medium", state === "current" ? "text-text" : state === "done" ? "text-muted" : "text-faint")}>
                 <span className="sr-only">{ended ? ended.sr : state === "done" ? "Done: " : state === "current" ? "Current: " : "Next: "}</span>
-                {ended ? (
-                  <>
-                    <span className="sr-only">{s}, </span>
-                    {ended.word}
-                  </>
-                ) : (
-                  s
-                )}
+                {s}
               </span>
             </li>
           );
         })}
       </ol>
-    </div>
+    </>
   );
 }

@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Recall not found" };
 // Where /api/claims/start sends an unknown recall. Static, so it never matches /r/[recall] and reads no recall.
 export default function RecallNotFound() {
   return (
-    <FlowShell bare>
+    <FlowShell>
       <NotFoundCard />
     </FlowShell>
   );

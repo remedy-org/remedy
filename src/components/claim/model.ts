@@ -165,7 +165,7 @@ export function readableReasons(reasons: Reason[], photos: number): Reason[] {
   const which = dupes.map((r) => /^Photo (\d+)\b/.exec(r.text)?.[1]).filter((n): n is string => Boolean(n));
   const text =
     dupes.length === photos
-      ? `All ${photos} photos were already used in another claim`
+      ? `${photos === 2 ? "Both photos" : `All ${["", "one", "two", "three"][photos] ?? photos} photos`} were already used in another claim`
       : which.length === dupes.length
         ? `Photos ${which.slice(0, -1).join(", ")} and ${which[which.length - 1]} were already used in another claim`
         : `${dupes.length} photos were already used in another claim`;
@@ -191,8 +191,8 @@ export function payoutHold(claim: Pick<Claim, "decision" | "reasons" | "events">
 
 // What to do next, per failed check. Keys are rule.ts check names (step_N share one).
 const ADVICE: Record<string, string> = {
-  session: "Photos only count when they're taken on this page's camera within 10 minutes of getting the code. Start a new claim for a fresh code.",
-  duplicate_photo: "Each claim needs new photos of your own product. Start a new claim and take them on this page's camera.",
+  session: "Only photos taken in the claim, within 10 minutes of its code, count. A new claim gives you a new code.",
+  duplicate_photo: "Start a new claim with new photos of your own product.",
   payer: "Each PayPal account can claim once per recall, so your earlier claim is the one that counts.",
   payer_verified: "Verify your account with PayPal, then start a new claim.",
   state: "This claim was already decided. Its result stands.",
@@ -232,7 +232,7 @@ export function payoutWords(status: string | null | undefined): { label: string;
     case "":
       return { label: "Unknown", tone: "muted", note: "" };
     default:
-      return { label: "Processing at PayPal", tone: "muted", note: "Remedy has sent it. PayPal is finishing the transfer, which usually takes a few minutes." };
+      return { label: "Sent", tone: "muted", note: "PayPal usually finishes in a few minutes." };
   }
 }
 
@@ -349,6 +349,12 @@ export function taggedThing(spec: Pick<CheckSpec, "proof_steps">): string | null
   return null;
 }
 
+/** "Pillow", from the shot list's "cut pillow"; "Product" when the notice names no tagged thing. */
+export const nounOf = (spec: Pick<CheckSpec, "proof_steps">) => {
+  const word = taggedThing(spec)?.split(" ").pop() ?? "product";
+  return word.charAt(0).toUpperCase() + word.slice(1);
+};
+
 /**
  * sessionStorage: this tab took photos on this claim that weren't sent yet. A reload (or iOS reclaiming the tab) drops
  * them, so the code step says so. Set and cleared by the camera; read by the code step.
@@ -392,7 +398,7 @@ export function refusalHeadline(claim: Pick<Claim, "decision" | "reasons" | "pho
     case "same_item":
       return "The photos show different items";
     case "session":
-      return "This photo wasn't taken on this page's camera";
+      return claim.photos.length > 1 ? "These photos weren't sent from Remedy's camera" : "This photo wasn't sent from Remedy's camera";
     case "duplicate_photo":
       return claim.photos.length > 1 ? "These photos were already used in another claim" : "This photo was already used in another claim";
     case "payer":

@@ -15,13 +15,15 @@ import { ClaimFlow } from "./ClaimFlow";
 import { ContinueCard } from "./ContinueCard";
 import { ExpiredCard } from "./ExpiredCard";
 import { FlowShell } from "./FlowShell";
-import { WithJudges } from "./Judges";
-import { checkRows, companyName, maskEmail, maskPayer, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
+import { ClaimFrame, STEP_GRID } from "./Exhibit";
+import { RecallBrief } from "./RecallBrief";
+import { checkRows, companyName, maskEmail, maskPayer, money, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
 import { markAsked } from "./payout-live";
 import { Result, type DemoRound, type Duplicate, type PayoutLive } from "./Result";
 import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter } from "./StepMeter";
 
-const QR_COLORS = { dark: "#15181d", light: "#ffffff" };
+// Ink modules on a clear ground: the plate under it is the tag's paper.
+const QR_COLORS = { dark: "#15181d", light: "#00000000" };
 // Request time: this page is rendered per request (it reads the session cookie), never cached.
 const requestTime = () => Date.now();
 
@@ -71,16 +73,26 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   if (!session || (ours && ours.payerId !== session.payerId)) {
     const expiresAt = ours && !demo && !ours.photos.length && ours.decision === "pending" ? ours.captureSession?.expiresAt : undefined;
     return (
-      <FlowShell demo={demo} company={companyName(recall)}>
-        <ContinueCard
-          id={id}
-          product={productNoun(recall)}
-          company={companyName(recall)}
-          loginHref={loginPath("owner", here)}
-          expiresAt={expiresAt}
-          startNow={requestTime()}
-          signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : undefined}
-        />
+      <FlowShell>
+        {/* On the flow's own frame, under the meter: the PayPal login is the step this screen leads to. */}
+        <ClaimFrame>
+          <StepMeter current={1} steps={demo ? DEMO_STEPS : REAL_STEPS} />
+          {/* A laptop: the recall it's for on the left, as on the recall page. A phone: the login alone. */}
+          <div className={STEP_GRID}>
+            <div className="max-lg:hidden">
+              <RecallBrief recall={recall} heading="h2" />
+            </div>
+            <ContinueCard
+              id={id}
+              product={productNoun(recall)}
+              company={companyName(recall)}
+              loginHref={loginPath("owner", here)}
+              expiresAt={expiresAt}
+              startNow={requestTime()}
+              signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : undefined}
+            />
+          </div>
+        </ClaimFrame>
       </FlowShell>
     );
   }
@@ -111,7 +123,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           : null,
     };
     return (
-      <FlowShell demo={demo} company={company}>
+      <FlowShell>
         <Result
           claim={claim}
           recall={recall}
@@ -123,7 +135,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           round={round}
           duplicate={duplicate}
           now={now}
-          meter={<StepMeter {...resultMeter(claim.decision, steps)} steps={steps} width="max-w-claim" />}
+          meter={<StepMeter {...resultMeter(claim.decision, steps)} steps={steps} />}
           sandbox={sandbox}
           activityUrl={sandbox && claim.decision === "paid" ? activityUrl() : undefined}
           account={session.email ? maskEmail(session.email) : null}
@@ -135,13 +147,11 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   const session10 = claim.captureSession;
   if (!claim.photos.length && (!session10 || Date.parse(session10.expiresAt) <= now)) {
     return (
-      <FlowShell demo={demo} company={company}>
-        <WithJudges demo={demo} step="code">
-          <div className="flex flex-col gap-6">
-            <StepMeter current={demo ? 3 : 2} steps={steps} width="max-w-claim" />
-            <ExpiredCard code={claim.code} againHref={againHref} demo={demo} />
-          </div>
-        </WithJudges>
+      <FlowShell>
+        <ClaimFrame>
+          <StepMeter current={demo ? 3 : 2} steps={steps} />
+          <ExpiredCard code={claim.code} againHref={againHref} demo={demo} />
+        </ClaimFrame>
       </FlowShell>
     );
   }
@@ -149,7 +159,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   const phoneUrl = new URL(here, env().APP_URL).toString();
   const qrSvg = demo ? "" : await QRCode.toString(phoneUrl, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: QR_COLORS });
   return (
-    <FlowShell demo={demo} company={company}>
+    <FlowShell>
       <ClaimFlow
         claimId={claim.id}
         code={claim.code}
@@ -157,11 +167,13 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
         expiresAt={session10?.expiresAt ?? new Date(now).toISOString()}
         startNow={now}
         spec={recall.spec}
+        amount={money(recall.refund)}
         view={toView(claim, recall.spec)}
         qrSvg={qrSvg}
         phoneUrl={phoneUrl}
         newClaimHref={againHref}
         loginHref={loginPath("owner", here)}
+        company={company}
         sample={sample}
       />
     </FlowShell>

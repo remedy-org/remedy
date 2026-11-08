@@ -13,7 +13,10 @@ export function focusInView(el: HTMLElement | null) {
   if (top < 0 || bottom > window.innerHeight) el.scrollIntoView({ block: "center" });
 }
 
-/** Moves focus to a screen's h2 once it mounts: the result replaces the checking step after router.refresh(). */
+/** The first of these elements that is on screen: a step's title can live in a different place on a phone and a laptop. */
+export const firstShown = (...ids: string[]) => ids.map((id) => document.getElementById(id)).find((el) => el && el.getClientRects().length > 0) ?? null;
+
+/** Moves focus to a screen's h1 once it mounts: the result replaces the checking step after router.refresh(). */
 export function FocusTitle({ id }: { id: string }) {
   useEffect(() => {
     focusInView(document.getElementById(id));

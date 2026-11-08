@@ -21,9 +21,14 @@
     animation: draw var(--draw-ms, 360ms) var(--ease-out-expo) var(--draw-delay, 0ms) both;
   }
 
-  /* The photo check reading photo 1: a 1px amber line with a 24px trail, top to bottom and back. */
-  .scan {
-    animation: scan 2.8s ease-in-out infinite alternate;
+  /* The check running now: an arc turning on its ring. */
+  .turn {
+    animation: turn 900ms linear infinite;
+  }
+
+  /* A check's mark landing as it resolves: from 60% to full size, 160ms. */
+  .settle > * {
+    animation: settle 160ms var(--ease-snap) both;
   }
 
   /* The current stage of the timeline: a ring breathing out. */
@@ -41,7 +46,7 @@
     animation: drop 420ms var(--ease-snap) both;
   }
 
-  /* A row of the checking screen's evidence fading in. */
+  /* A line of the checking screen's evidence fading in. */
   .rise {
     animation: rise 200ms var(--ease-snap) both;
   }
@@ -49,15 +54,6 @@
   /* The payout status word changing. */
   .swap {
     animation: swap 160ms var(--ease-snap) both;
-  }
-
-  /* A code cell turning to the paid colour, one after another. */
-  .flip {
-    transition:
-      background-color 160ms ease-out,
-      border-color 160ms ease-out,
-      color 160ms ease-out;
-    transition-delay: var(--flip-delay, 0ms);
   }
 
   /* The capture flash: 40ms in, 200ms out. */
@@ -82,24 +78,6 @@
   }
 }
 
-/* The scan line's resting place, and the trail above it. */
-.scanLine {
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 1px;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
-}
-.scanLine::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: 1px;
-  height: 24px;
-  background: linear-gradient(to top, color-mix(in oklch, var(--accent) 20%, transparent), transparent);
-}
-
 /* The countdown's depletion line: state, so it moves even under reduced motion; it just doesn't ease. */
 .deplete {
   transform-origin: left center;
@@ -109,11 +87,6 @@
   .deplete {
     transition: none;
   }
-}
-
-/* The checking screen's elapsed tick slides with the clock. */
-.tick {
-  transition: left 250ms linear;
 }
 
 @keyframes fill {
@@ -142,12 +115,16 @@
   }
 }
 
-@keyframes scan {
-  from {
-    transform: translateY(0);
-  }
+@keyframes turn {
   to {
-    transform: translateY(100%);
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes settle {
+  from {
+    opacity: 0.4;
+    transform: scale(0.6);
   }
 }
 

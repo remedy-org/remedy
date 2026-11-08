@@ -37,13 +37,6 @@ export const EyeIcon = (p: IconProps) => (
   </Icon>
 );
 
-export const PhoneIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <rect x="4.5" y="1.75" width="7" height="12.5" rx="1.5" />
-    <path d="M7.25 11.75h1.5" />
-  </Icon>
-);
-
 export const PayoutIcon = (p: IconProps) => (
   <Icon {...p}>
     <rect x="1.75" y="4" width="12.5" height="8" rx="1" />

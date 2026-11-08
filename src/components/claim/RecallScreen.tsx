@@ -5,9 +5,9 @@ import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
-import { consentAction, ConsentCard, JUDGE_LOGIN_ID, SampleList, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
+import { consentAction, ConsentCard, JUDGE_LOGIN_ID, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
+import { ClaimFrame, STEP_GRID } from "./Exhibit";
 import { FlowShell } from "./FlowShell";
-import { WithJudges } from "./Judges";
 import { MobileCta } from "./MobileCta";
 import { businessDaysAfter, companyName, day, maskPayer } from "./model";
 import { RecallBrief } from "./RecallBrief";
@@ -67,32 +67,25 @@ function claimMeter(c: YourClaim): Pick<StepMeterProps, "current" | "outcome"> {
 
 /**
  * The recall screen's layout: the step meter in the same place as on every step, then the brief beside the consent card
- * on a laptop, stacked on a phone. Logged in (and verified, for a real claim), the PayPal step is done and the judges'
- * rail moves on to the samples.
+ * on a laptop, stacked on a phone. Logged in (and verified, for a real claim), the PayPal step is done and the next one
+ * waits until it opens.
  */
 export function RecallView(props: ConsentCardProps) {
   const ready = Boolean(props.signedInAs) && !props.unverified;
   const claim = props.yourClaim;
   return (
-    <FlowShell demo={props.demo} company={companyName(props.recall)}>
-      {/* The demo account is in the card, just before its login button, at every width; from 1200px the four
-          samples move to the rail to keep that button on a laptop's first screen (below, the card has them, so the notes'
-          sheet doesn't repeat them). */}
-      <WithJudges demo={Boolean(props.demo)} step={ready ? "samples" : "consent"} extra={props.demo ? <SampleList rail className="border-t border-line pt-4 max-[1199px]:hidden" /> : undefined}>
-        <div className="flex flex-col gap-6">
-          {/* Refused by a limit, the code step isn't next: the meter stays on the first step. It spans both columns, so
-              its edges sit on theirs. */}
-          <StepMeter {...(claim ? claimMeter(claim) : { current: ready && !props.refusal ? 2 : 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} span />
-          {/* One bounded track on a phone, so the card's widest line can never widen the page. */}
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
-            <RecallBrief recall={props.recall} demo={props.demo} />
-            <ConsentCard {...props} />
-          </div>
+    <FlowShell>
+      <ClaimFrame>
+        {/* Refused by a limit, the next step isn't open: the meter stays on the first step. */}
+        <StepMeter {...(claim ? claimMeter(claim) : ready && !props.refusal ? { current: 2, upcoming: true } : { current: 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
+        {/* One bounded track on a phone, so the card's widest line can never widen the page. */}
+        <div className={STEP_GRID}>
+          <RecallBrief recall={props.recall} />
+          <ConsentCard {...props} />
         </div>
-      </WithJudges>
-      {/* Refused by a limit, there's nothing to tap until it resets: the notice in the card says when. On the demo, the
-          demo account sits under the four demo claims on a phone: the bar's first tap brings it up, so nobody reaches
-          PayPal's page without the login it asks for. */}
+      </ClaimFrame>
+      {/* Refused by a limit, there's nothing to tap until it resets: the notice in the card says when. On /try, the bar's
+          first tap brings the demo account into view, so nobody reaches PayPal's page without the login it asks for. */}
       {!(props.refusal && !claim) && (
         <MobileCta
           target="consent-cta"
