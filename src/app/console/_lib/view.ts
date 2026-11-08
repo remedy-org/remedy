@@ -380,7 +380,7 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
   switch (c.decision) {
     case "paid":
       // A seeded sample was decided by the rule like any claim, but its PayPal account is made up and nothing was sent.
-      if (c.seeded) return `Every check passed, so the rule would pay ${amount}. This is a sample claim: no money was sent.`;
+      if (c.seeded) return `Every check passed, so the rule approved ${amount}.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `Every check passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
       // The rule refused it and the owner asked a person to look (src/lib/appeal.ts): the rule's reason stands beside it.
@@ -439,12 +439,12 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
     // Seeded claims share a handful of sample photos, so the fingerprint check was never run on them: say so rather
     // than show a pass next to another claim with the same photo.
     c.seeded
-      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Sample photo shared by the seeded claims, so this check wasn't run" }
+      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Not run on this claim" }
       : // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the
         // same sample photo once: say that, next to the other rounds' claims with the same photo and code. The company
         // reads a round as a demo session.
         c.demo
-        ? row("duplicate_photo", "Photo not seen before", "No other claim in this demo session used these photos. Every demo session sends the same sample photos, so each is compared on its own")
+        ? row("duplicate_photo", "Photo not seen before", "No other claim in this demo session used these photos. Every demo session sends the same photos, so each is compared on its own")
         : row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
     // In the demo only the genuine sample is held to one claim, within its round (pipeline.ts receivePhotos). A person's
     // approve checks every sample (review.ts), and a conflict it found shows here.
@@ -453,7 +453,7 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
       : oneClaimChecked(c) || failed("payer")
         ? row("payer", "One claim per account", "Checked within this demo session: no other paid or open genuine claim from this PayPal account")
         : ran
-          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "Skipped for demo samples: one judge's account sends all four, so this check would stop the rest" }
+          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "Skipped on the demo: one demo account runs all four claims, so this check would stop the rest" }
           : row("payer", "One claim per account", ""),
     row("payer_verified", "Verified PayPal account", "PayPal says the account is verified"),
   ];

@@ -1,0 +1,46 @@
+# Remedy
+
+> Remedy replaces mail-in coupons and inbox photo checks with a live refund program for any CPSC recall. Owners prove the product destroyed on a live camera with a one-time code. Five checks stop stolen and generated photos, and PayPal Payouts sends the refund within a minute. Recall teams run it all from one console, with analytics and a CPSC report drafted for them.
+
+## The problem
+- [PIRG, Too Much to Recall (2024)](https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf): only 6–10% of recalled products are ever returned or destroyed. The rest stay in homes.
+- [CPSC recalls, 1 Oct – 5 Nov 2026](https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2026-10-01&RecallDateEnd=2026-11-05): 20 of 27 refund recalls that asked for a photo had owners email it to an inbox, where a person checks each one by hand.
+- [CPSC request for information CPSC-2026-0067](https://public-inspection.federalregister.gov/2026-07328.pdf): the regulator names artificially generated images of product destruction as a fraud risk, and warns that fraud controls can reduce recall participation.
+- An inbox claim waits on a person, and an image model can now draw the photo it asks for.
+
+## How Remedy works
+- The owner opens the recall's claim link and logs in with PayPal. Remedy reads the PayPal name, email, account ID and verified status, never the password, balance or cards.
+- Remedy issues a three-character code. The owner writes it on a tag with the product label and photographs the destroyed product in the page's own camera, inside a 10-minute session. There is no upload button.
+- Five checks run in order: a live camera session; a photo never seen before (fingerprinted and compared with every earlier claim); one claim per verified PayPal account; the code and label read character by character; the destruction step the notice asks for, and not a photo of a screen or a print.
+- The first three checks run before any AI. The model only describes the photo; a fixed rule decides. Any "no" rejects, any "unclear" holds the claim for a person, and the model never moves money.
+- Paid claims go to the owner's verified PayPal account through PayPal Payouts. Claim RM-0442 was paid 15 seconds after its photo.
+
+## Why Remedy wins
+- Proof instead of paperwork: a live photo with a one-time code replaces mail-in coupons, receipts and inbox review.
+- A fake has to beat the camera first. A stolen, reposted or uploaded photo is refused before any model sees it.
+- Fraud benchmark, 7 Nov 2026, on real owner photos, official recall photos, photos of screens, wrong codes and deliberate fakes: every genuine claim paid, no stolen web photo paid, every wrong code, label and product rejected, about 1.1¢ to check a claim ([results](https://remedy-recalls.vercel.app/llms-full.txt)).
+- Built for the recall team: a claims queue on AG Grid with the photos, checks and payout for every claim; Insights on AG Studio with a recall analyst; a CPSC progress report drafted from the claim records; import a recall straight from its CPSC notice; approve or reject held claims and pay in one step.
+- PayPal end to end: Log in with PayPal for identity, PayPal Payouts for the money.
+
+## Where Remedy is going
+- Every US refund recall on Remedy: one claim link per recall, live the day the CPSC notice is published.
+- Next: each company pays from its own PayPal business account.
+- Next: retailer and marketplace order data, so owners are matched to what they bought.
+- Built for recall scale: a single CPSC recall can cover 19,596 units (27-071), and one claim link can pay every owner through PayPal Payouts.
+
+## Try it
+- [Try a claim](https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try): run four claims, one genuine and three fakes, on a demo recall built on public CPSC recall 27-071 (X-VESOLJE nursing pillow). The demo account is on the page.
+- [Company sign-in](https://remedy-recalls.vercel.app/signin): open the console with the demo business account shown on the page.
+- [Recall claim page](https://remedy-recalls.vercel.app/r/kikea-x-vesolje): the owner's claim page for the demo recall.
+
+## Site
+- [How it works](https://remedy-recalls.vercel.app/#how): one claim from PayPal login to payout.
+- [Problem](https://remedy-recalls.vercel.app/#problem)
+- [Fraud checks](https://remedy-recalls.vercel.app/#checks)
+- [Results](https://remedy-recalls.vercel.app/#proof)
+- [For companies](https://remedy-recalls.vercel.app/#companies)
+
+## Optional
+- [llms-full.txt](https://remedy-recalls.vercel.app/llms-full.txt): every check, the decision rule, the benchmark results and the console.
+- [Privacy](https://remedy-recalls.vercel.app/privacy)
+- [Terms](https://remedy-recalls.vercel.app/terms)

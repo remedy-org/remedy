@@ -126,7 +126,6 @@ export function ClaimFlow(props: ClaimFlowProps) {
             view={view}
             startNow={props.startNow}
             photoUrls={photoUrls}
-            sample={demo}
             sending={preview?.sending}
             preview={preview?.checking ?? (preview ? {} : undefined)}
           />

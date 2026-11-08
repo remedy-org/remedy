@@ -31,7 +31,7 @@ type Render = () => ReactNode | Promise<ReactNode>;
 async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "preview">, claim: Claim = fx.open) {
   const phoneUrl = `http://127.0.0.1:3000/r/${fx.recall.slug}/claim/${claim.id}`;
   return (
-    <FlowShell demo={Boolean(over.sample)} sandbox={isSandboxBuild()} company="Kikea Store">
+    <FlowShell demo={Boolean(over.sample)} company="Kikea Store">
       <ClaimFlow
         claimId={claim.id}
         code={claim.code}
@@ -56,7 +56,7 @@ function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultPr
   // A demo claim shows its sample's own photo, as ClaimScreen does.
   const photoUrls = over.sample ? d.photoUrls.map(() => over.sample!.photos[0]) : d.photoUrls;
   return (
-    <FlowShell demo={demo} sandbox={isSandboxBuild()} company="Kikea Store">
+    <FlowShell demo={demo} company="Kikea Store">
       <Result
         claim={d.claim}
         recall={fx.recall}
@@ -84,10 +84,10 @@ const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug">) => (
   </FlowShell>
 );
 
-const consent = (over: Partial<Parameters<typeof RecallView>[0]> = {}) => <RecallView recall={fx.recall} href="#" sandbox={isSandboxBuild()} {...over} />;
+const consent = (over: Partial<Parameters<typeof RecallView>[0]> = {}) => <RecallView recall={fx.recall} href="#" {...over} />;
 const genuine = demoSample("genuine")!;
 const handoff = (signedInAs?: string) => (
-  <FlowShell sandbox={isSandboxBuild()} company="Kikea Store">
+  <FlowShell company="Kikea Store">
     <ContinueCard id={fx.open.id} product="X-VESOLJE Nursing Pillow" company="Kikea Store" loginHref="#" expiresAt={new Date(Date.now() + 8 * 60_000 + 12_000).toISOString()} startNow={Date.now()} signedInAs={signedInAs} />
   </FlowShell>
 );
@@ -181,7 +181,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     group: "Code",
     note: "Session ended before any photo",
     render: () => (
-      <FlowShell sandbox={isSandboxBuild()} company="Kikea Store">
+      <FlowShell company="Kikea Store">
         <div className="flex flex-col gap-6">
           <StepMeter current={2} />
           <ExpiredCard code="M4T" againHref="#" />
@@ -269,7 +269,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   },
   loading: { group: "States", note: "Loading skeleton: a step", render: () => <FlowSkeleton /> },
   "loading-recall": { group: "States", note: "Loading skeleton: the recall screen", render: () => <FlowSkeleton wide /> },
-  "not-found": { group: "States", note: "Unknown link", render: () => <FlowShell><NotFoundCard /></FlowShell> },
+  "not-found": { group: "States", note: "Unknown link", render: () => <FlowShell bare><NotFoundCard /></FlowShell> },
   error: {
     group: "States",
     note: "Page failed to render",

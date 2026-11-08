@@ -1,0 +1,44 @@
+# Remedy
+
+> Remedy replaces mail-in coupons and inbox photo checks with a live refund program for any CPSC recall. Owners prove the product destroyed on a live camera with a one-time code. Five checks stop stolen and generated photos, and PayPal Payouts sends the refund within a minute. Recall teams run it all from one console, with analytics and a CPSC report drafted for them.
+
+This is the long version of https://remedy-recalls.vercel.app/llms.txt.
+
+## Checks
+Every claim runs the same five checks, in this order. The first three run before any AI.
+1. Live camera session. Photos must arrive inside this claim's 10-minute camera session. An image made anywhere else is refused before the model sees it.
+2. Never seen before. Every photo is fingerprinted and compared with every earlier claim. A reposted or lightly edited photo is refused.
+3. One claim per verified PayPal account. PayPal must report the account as verified, and it gets one claim per recall. A claim farm would need a verified PayPal account for every claim.
+4. The code, character by character. The model reads the hand-written code and the product label. K7Q written on a claim issued K7P is a reject.
+5. Destroyed as the notice says. The model confirms each step the notice asks for, such as "cut fully in half", and that the photo isn't of a screen or a print.
+
+## Decision rule
+- AI reads the photo. It never moves the money.
+- Any "no" rejects the claim.
+- Any "unclear" holds the claim for a person at the company.
+- Only a claim where every check passes is paid.
+
+## Results (fraud benchmark, 7 Nov 2026)
+Remedy's photo check faced real owner photos, official recall photos, photos of screens and monitors, other pillows, AI fakes from news coverage, wrong codes, misspelt labels and models that aren't recalled.
+- Genuine claims: every one paid.
+- Stolen web photos: none paid. No public photo carries a claim's one-time code.
+- Wrong codes: every one rejected. The code is read character by character, so K7Q on a claim issued K7P is refused.
+- Wrong labels and unrecalled models: every one rejected, including a misspelt X-VESOLIE label.
+- Cost: about 1.1¢ to check a claim.
+- Speed: claim RM-0442 was paid 15 seconds after its photo.
+- Photos that show a claim code were generated for the benchmark, since no public photo carries one. The rest are real web photos and official recall photos.
+
+## Why the camera is the defence
+- Remedy never trusts a model alone with the money. Photos enter only through the claim's live camera, inside a 10-minute session, with a one-time code, from a verified PayPal account, and a fixed rule moves the money.
+
+## Console features
+- Claims queue on AG Grid: every claim with its photos, each check's result, the model's quoted answers and the payout.
+- Evidence panel: the photos at full size, the code the tag must read, and what decided a held or refused claim.
+- Review: approve or reject a held claim. Approving runs the duplicate and account checks again, then pays through PayPal Payouts in one step.
+- Insights on AG Studio: recall progress against units sold, where claims stop, why claims were refused, time from photo to PayPal, and a recall analyst that answers from the claim records.
+- CPSC progress report: a draft built from the claim records, ready to print or save as a PDF.
+- Import a recall from its CPSC notice: Remedy drafts the checks from the notice, and the company publishes one claim link.
+
+## Payouts
+- Refunds go to each owner's verified PayPal account through PayPal Payouts.
+- Terms, including how payouts run on this site: https://remedy-recalls.vercel.app/terms

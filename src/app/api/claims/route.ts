@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   const form = await request.formData().catch(() => null);
   const slug = String(form?.get("recall") ?? "");
   const sample = demoSample(String(form?.get("sample") ?? ""));
-  if (!sample) return json(400, "Pick one of the sample claims");
+  if (!sample) return json(400, "Pick one of the demo claims");
   try {
     const deps = await liveDeps();
     const recall = await getRecallBySlug(slug, deps.store);

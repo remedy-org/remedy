@@ -3,7 +3,7 @@ import type { Decision } from "@/lib/types";
 import styles from "./flow.module.css";
 
 export const REAL_STEPS = ["PayPal", "Code", "Photos", "Refund"] as const;
-export const DEMO_STEPS = ["PayPal", "Sample", "Photo", "Refund"] as const;
+export const DEMO_STEPS = ["PayPal", "Claim", "Photo", "Refund"] as const;
 
 /** How the last step ended: held for a person (waiting), or refused (stopped). Paid is simply every step done. */
 export type StepOutcome = "waiting" | "stopped";

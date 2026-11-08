@@ -84,7 +84,7 @@ export function Scoreboard({ runs, complete, className }: { runs: RoundRun[]; co
   const { text } = scoreLine(runs);
   return (
     <div className={clsx("flex flex-col gap-3", className)}>
-      <ol className="flex flex-col" aria-label="This round's samples">
+      <ol className="flex flex-col" aria-label="This round's claims">
         {DEMO_SAMPLES.map((s, i) => {
           const run = latest.get(s.id);
           const letter = String.fromCharCode(65 + i);
@@ -95,10 +95,10 @@ export function Scoreboard({ runs, complete, className }: { runs: RoundRun[]; co
               </span>
               <span className="flex min-w-0 flex-col gap-1.5">
                 <span className="text-text">
-                  <span className="sr-only">Sample {letter}: </span>
+                  <span className="sr-only">Claim {letter}: </span>
                   {s.title}
                 </span>
-                {run ? <RunResult sample={s} run={run} className="flex-wrap" /> : <span className="text-faint">Not run yet · should be {statusLabel(s.expect).toLowerCase()}</span>}
+                {run ? <RunResult sample={s} run={run} className="flex-wrap" /> : <span className="text-faint">Not run yet · ends {statusLabel(s.expect).toLowerCase()}</span>}
               </span>
             </li>
           );

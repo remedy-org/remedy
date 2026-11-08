@@ -20,7 +20,7 @@ export interface DemoCaptureStepProps {
 /**
  * Demo mode's stand-in for the camera, and the demo claim's first screen: the sample's photo inside the same viewfinder
  * chrome, labelled as an AI-made sample, with this claim's code, what the photo must show, and what the tag in it
- * actually reads; "Send this sample" in place of the shutter. The server sends its own copy of the photo.
+ * actually reads; "Send this photo" in place of the shutter. The server sends its own copy of the photo.
  */
 export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent, preview }: DemoCaptureStepProps) {
   const [sending, setSending] = useState(preview?.sending ?? false);
@@ -37,7 +37,7 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
       const body = await res.json().catch(() => null);
       if (res.status === 409) return onSent(null, sample.photos);
       if (!res.ok) {
-        setError(body?.error ?? "The sample didn't send. Try again.");
+        setError(body?.error ?? "The photo didn't send. Try again.");
         setSending(false);
         return;
       }
@@ -56,13 +56,10 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
           {/* The samples are 2:3 portraits: framed from 70% down, so the tag and its code stay in the 4:3 frame. */}
           {/* A short name: the description under the frame says what it shows, so a screen reader hears it once. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={sample.photos[0]} alt={`Sample photo: ${sample.title}`} className="absolute inset-0 size-full object-cover object-[50%_70%]" />
+          <img src={sample.photos[0]} alt={`Photo 1: ${sample.title}`} className="absolute inset-0 size-full object-cover object-[50%_70%]" />
           <Cutout>
             <GlassChip className="absolute top-2 left-2">Photo 1</GlassChip>
           </Cutout>
-          <figcaption className="absolute top-3 left-3">
-            <GlassChip>AI-made sample · not from a camera</GlassChip>
-          </figcaption>
           <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
         </figure>
         <InstructionBar className="flex-col gap-2">
@@ -81,26 +78,26 @@ export function DemoCaptureStep({ claimId, code, sample, reminders = [], onSent,
           className="border-t border-[oklch(1_0_0/0.08)]"
           left={
             <ExhibitLabel leader="none" className="max-sm:hidden">
-              Sample · code {code}
+              Demo claim · code {code}
             </ExhibitLabel>
           }
           middle={
-            <Button size="lg" onClick={send} pending={sending} pendingLabel="Sending the sample…" className="min-w-56">
-              Send this sample
+            <Button size="lg" onClick={send} pending={sending} pendingLabel="Sending the photo…" className="min-w-56">
+              Send this photo
             </Button>
           }
         />
       </div>
       <div className="flex flex-col gap-2 max-sm:pt-1">
         <p className="text-body text-muted">{sample.description}</p>
-        {/* Every sample photo is AI-made: what sets this one apart for the live-camera check is how it's sent. */}
+        {/* What sets the upload apart for the live-camera check is how it's sent. */}
         <p className="text-ui text-faint">
           {sample.liveSession
             ? "Sent as if taken on this claim's camera, inside its session. Only the uploaded photo is sent from outside."
-            : "Sent as an outside file, as an upload would be. The other samples are sent as if taken on this claim's camera."}
+            : "Sent as an outside file, as an upload would be. The other demo claims are sent as if taken on this claim's camera."}
         </p>
       </div>
-      {error && <ErrorState variant="inline" title="The sample didn't send" description={error} />}
+      {error && <ErrorState variant="inline" title="The photo didn't send" description={error} />}
     </section>
   );
 }

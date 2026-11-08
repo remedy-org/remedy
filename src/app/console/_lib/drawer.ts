@@ -66,7 +66,7 @@ export interface DrawerClaim {
   // The owner asked a person to look at a claim the rule refused (src/lib/appeal.ts): when, or null.
   appealedAt: string | null;
   // Approve and reject for held claims. A seeded one's review is a sample: answered, but never paid or saved.
-  review: { sample: boolean; note: string | null } | null;
+  review: { sample: boolean } | null;
   recall: { id: string; autoPay: boolean };
   // Payouts in this build go to PayPal's sandbox: the approve step says so beside the amount.
   sandbox: boolean;
@@ -178,7 +178,7 @@ function plainEvents(events: Claim["events"]): DrawerEvent[] {
   return events.map((e) => {
     if (e.type === "demo_sample") {
       const title = demoSample(e.detail)?.title;
-      return { ...e, detail: title ? `Filed with the judges' sample "${title}"` : "Filed with a judges' sample" };
+      return { ...e, detail: title ? `Filed from the demo: "${title}"` : "Filed from the demo" };
     }
     const failed = e.type === "payout_failed" ? payoutFailureWords(e.detail) : null;
     if (failed) {
@@ -244,9 +244,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     duplicate: null,
     review:
       c.decision === "held"
-        ? c.seeded
-          ? { sample: true, note: "Seeded sample, in every company's console, with a made-up PayPal account. Approve or reject shows what each does; no money moves and nothing is saved." }
-          : { sample: false, note: null }
+        ? { sample: Boolean(c.seeded) }
         : null,
     recall: { id: recall.id, autoPay: recall.autoPay },
     sandbox: isSandboxBuild(),

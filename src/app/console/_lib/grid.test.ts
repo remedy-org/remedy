@@ -115,6 +115,6 @@ describe("the ledger and live updates", () => {
   });
 
   it("say a sample claim's payout was never sent", () => {
-    expect(decisionSentence(seededPaid, recall)).toBe("Every check passed, so the rule would pay $29.99. This is a sample claim: no money was sent.");
+    expect(decisionSentence(seededPaid, recall)).toBe("Every check passed, so the rule approved $29.99.");
   });
 });

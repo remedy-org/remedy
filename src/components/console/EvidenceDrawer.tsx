@@ -231,8 +231,6 @@ function EvidenceContent({
               {id}
             </h2>
             {claim ? <StatusPill status={claim.decision} /> : <Skeleton className="h-6 w-16 rounded-full" />}
-            {claim?.seeded && <span className="micro rounded-control border border-line px-1.5 py-px text-faint">Sample, never paid</span>}
-            {claim?.demo && <span className="micro rounded-control border border-line px-1.5 py-px text-faint">Demo · sandbox</span>}
           </div>
           {claim ? (
             // One line in the 440px panel, so the evidence keeps the height: "Unverified" only when it's true, as in the
@@ -295,7 +293,7 @@ function EvidenceContent({
               {justSaved.decision === "paid" ? "Approved and paid" : "Rejected"} · saved at <span className="font-mono">{formatClock(justSaved.at)}</span> UTC.
             </span>{" "}
             {justSaved.decision === "paid"
-              ? `${claim.amount} sent through PayPal${claim.sandbox ? " sandbox" : ""}.`
+              ? `${claim.amount} sent through PayPal.`
               : "The owner sees your reason on their claim page."}
             {nextHeld === null && " No held claims are left in this list."}
           </p>
@@ -346,7 +344,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
     { label: "Model", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "A pre-check stopped it: the photos never reached the model." : undefined },
     { label: "Rule", at: decided },
   ];
-  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "A sample claim: the rule decided to pay, and no money was sent." : undefined }];
+  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "No payout sent." : undefined }];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
   const failure = payoutFailure(claim);
   if (failure) {
@@ -509,13 +507,13 @@ function Evidence({
       <section ref={photosRef} className="flex scroll-mt-4 flex-col gap-3" aria-label="Photos">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <ExhibitLabel leader="right" leaderLength={24}>
-            {claim.photos.length ? `${claim.photos.length === 1 ? "Photo 1" : `Photos 1 to ${claim.photos.length}`} · ${sample ? "sample" : "live"}` : "No photos yet"}
+            {claim.photos.length ? `${claim.photos.length === 1 ? "Photo 1" : `Photos 1 to ${claim.photos.length}`}${sample ? "" : " · live"}` : "No photos yet"}
           </ExhibitLabel>
           {/* A person deciding a held claim reads the tag against this: one glance, beside the photos. */}
           {claim.review && claim.photos.length > 0 && <TagCode code={claim.code} />}
         </div>
         {claim.duplicate ? (
-          <Duplicate claim={claim} sample={sample} onOpen={onOpen} onView={(n) => setViewing({ id: claim.id, n })} />
+          <Duplicate claim={claim} onOpen={onOpen} onView={(n) => setViewing({ id: claim.id, n })} />
         ) : claim.photos.length ? (
           <div className={claim.photos.length === 1 ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
             {claim.photos.map((src, i) => (
@@ -524,7 +522,6 @@ function Evidence({
                 src={src}
                 n={i + 1}
                 of={claim.photos.length}
-                sample={sample}
                 tall={claim.photos.length === 2}
                 onOpen={() => setViewing({ id: claim.id, n: i })}
                 className={claim.photos.length === 3 && i === 0 ? "col-span-2" : undefined}
@@ -536,13 +533,11 @@ function Evidence({
             The owner has code <span className="font-mono text-text">{claim.code}</span> and an open camera session. Photos appear here when they arrive.
           </p>
         )}
-        {claim.seeded && <p className="text-ui text-muted">Sample photos from the eval set, shared by several seeded claims.</p>}
         {viewer !== null && (
           <PhotoViewer
             claimId={claim.id}
             photos={claim.photos}
             start={viewer}
-            sample={sample}
             code={claim.code}
             question={d && { lead: d.lead, text: d.text }}
             labels={claim.review ? reviewLabels(claim) : undefined}
@@ -604,7 +599,6 @@ function Evidence({
 
       <Section title="Decision">
         <p className="text-body text-text">{claim.sentence}</p>
-        {claim.review?.note && <p className="text-ui text-muted">{claim.review.note}</p>}
         {claim.payout && (
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-control border border-line px-4 py-3 text-ui">
             <dt className="text-muted">PayPal batch</dt>
@@ -660,18 +654,18 @@ function TagCode({ code }: { code: string }) {
 
 /** A blocked repost: its photo beside the earlier claim's matching one, each with its photo number and claim id; the
  * earlier claim's id opens its row. */
-function Duplicate({ claim, sample, onOpen, onView }: { claim: DrawerClaim; sample: boolean; onOpen?: (id: string) => void; onView: (n: number) => void }) {
+function Duplicate({ claim, onOpen, onView }: { claim: DrawerClaim; onOpen?: (id: string) => void; onView: (n: number) => void }) {
   const dup = claim.duplicate!;
   const mine = Math.min(dup.photo, claim.photos.length) - 1;
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="flex min-w-0 flex-col gap-1">
-        <EvidencePhoto src={claim.photos[mine]} n={mine + 1} of={claim.photos.length} sample={sample} tall onOpen={() => onView(mine)} />
+        <EvidencePhoto src={claim.photos[mine]} n={mine + 1} of={claim.photos.length} tall onOpen={() => onView(mine)} />
         <p className="font-mono text-micro text-muted">This claim, {claim.id}</p>
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         {dup.src ? (
-          <EvidencePhoto src={dup.src} n={dup.theirs} of={dup.of} sample={sample} tall />
+          <EvidencePhoto src={dup.src} n={dup.theirs} of={dup.of} tall />
         ) : (
           <p className="flex aspect-[3/4] items-center justify-center rounded-control border border-dashed border-line-strong px-3 text-center text-ui text-muted">The earlier photo isn&apos;t available</p>
         )}

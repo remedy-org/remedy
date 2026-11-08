@@ -49,14 +49,15 @@ export interface Report {
 
 const share = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : "—");
 
-export function buildReport(claims: ClaimSummary[], recall: Recall, { sandbox = false } = {}): Report {
+export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const stats = statsOf(claims, recall);
   const refund = cents(recall.refund);
   const paid = claims.filter((c) => c.decision === "paid");
   const sent = paid.filter((c) => !c.seeded);
   const samples = paid.filter((c) => c.seeded);
   const sum = (list: ClaimSummary[]) => list.reduce((s, c) => s + cents(amountOf(c.payoutAmount, recall)), 0);
-  const paidNote = `Refund sent through PayPal${sandbox ? " sandbox" : ""}; the unit is destroyed${samples.length ? ". Sample claims were decided, never sent" : ""}`;
+  // Starter claims are approved by the rule and never pay out, so with any among them the row says approved, not sent.
+  const paidNote = samples.length ? "Approved by the rule; the unit is destroyed" : "Refund sent through PayPal; the unit is destroyed";
   const rows: [Decision, string, number, string][] = [
     ["paid", "Paid", stats.remedied, paidNote],
     ["held", "Held for review", stats.held, "An answer was unclear, a check couldn't run, PayPal didn't take the payout, or auto-pay was off"],

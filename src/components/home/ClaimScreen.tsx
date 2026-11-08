@@ -82,9 +82,6 @@ export function ClaimScreen({ phase }: { phase: number }) {
                 Code M4T
               </span>
             </span>
-            <span className="absolute bottom-[1.4em] left-[1.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] text-text uppercase">
-              AI-made test photo
-            </span>
           </div>
           <div className="flex flex-1 items-center justify-between">
             <span className="font-mono text-[1.05em] tracking-[0.06em] text-faint uppercase">Photo 1 of 3</span>

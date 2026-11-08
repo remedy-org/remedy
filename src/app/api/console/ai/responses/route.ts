@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const message =
       taken.scope === "session"
         ? `The analyst answers at most a few questions a minute for one login. Try again in ${wait}.`
-        : `The analyst has used today's budget for this live demo. Try again in ${wait}.`;
+        : `The analyst has reached today's limit. Try again in ${wait}.`;
     return error(429, message, { "Retry-After": String(taken.retryAfter) });
   }
 

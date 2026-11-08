@@ -6,7 +6,6 @@ import { createPortal } from "react-dom";
 import { Button, CrossIcon, ThemeToggle, useTheme, Wordmark } from "@/components/ui";
 import styles from "./home.module.css";
 import { SCROLL_LOCK_EVENT } from "./SmoothScroll";
-import { TryNote } from "./TryNote";
 
 export interface NavMenuLink<Id extends string> {
   id: Id;
@@ -20,7 +19,7 @@ export interface NavMenuLink<Id extends string> {
 const noop = () => () => {};
 const lockScroll = (locked: boolean) => window.dispatchEvent(new CustomEvent(SCROLL_LOCK_EVENT, { detail: { locked } }));
 
-// Menu and Close are the same word button, in the same spot: 36px, as "Try a sample claim" beside it, with a 44px hit
+// Menu and Close are the same word button, in the same spot: 36px, as "Try a claim" beside it, with a 44px hit
 // area.
 const wordButton =
   "relative inline-flex h-9 shrink-0 items-center gap-1.5 rounded-control border border-line-2 px-3 text-ui font-medium whitespace-nowrap text-text transition-colors duration-160 after:absolute after:-inset-x-px after:-inset-y-1.5 hover:bg-surface-2";
@@ -29,7 +28,7 @@ const wordButton =
  * Below lg the nav's links live behind a Menu word button that opens a full-screen sheet: a native modal <dialog>, as
  * JudgesSheet, so the top layer, the focus trap, Esc and the inert page come for free. The sheet repeats the 64px bar
  * (Close where Menu was), then the links with a line each, then the paths: a line for an owner with a real recall
- * (the claim link is on the company's notice), the amber "Try a claim with sample photos" (the sheet covers the page,
+ * (the claim link is on the company's notice), the amber "Try a claim" (the sheet covers the page,
  * so it is that screen's one amber), the companies' quiet sign-in, and the theme. Without JS, Menu is a link to the
  * footer's sitemap. The sheet renders into <body>, outside the header, so the header's scroll margin
  * (globals.css) stays off its rows.
@@ -138,9 +137,8 @@ export function NavMenu<Id extends string>({ links, current, onPick }: { links: 
               block
               className="max-sm:h-auto max-sm:min-h-12 max-sm:px-3 max-sm:py-2.5 max-sm:text-center max-sm:text-balance max-sm:whitespace-normal"
             >
-              Try a claim with sample photos
+              Try a claim
             </Button>
-            <TryNote className="mt-2" />
             <Button href="/signin" variant="secondary" size="lg" block className="mt-4">
               Company sign in
             </Button>

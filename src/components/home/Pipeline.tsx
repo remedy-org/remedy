@@ -16,12 +16,12 @@ const GATES: { title: string; text: string; ai: boolean }[] = [
   },
   {
     title: "Never seen before",
-    text: "A perceptual fingerprint compares every photo with every earlier claim, so a reposted or lightly edited photo is refused.",
+    text: "Every photo is fingerprinted and compared with every earlier claim. A reposted or lightly edited photo is refused.",
     ai: false,
   },
   {
     title: "One claim per verified PayPal account",
-    text: "PayPal must report the account as verified, and it gets one claim per recall. A claim farm needs many verified PayPal accounts, not many email addresses.",
+    text: "PayPal must report the account as verified, and it gets one claim per recall. A claim farm would need a verified PayPal account for every claim.",
     ai: false,
   },
   {
@@ -30,13 +30,13 @@ const GATES: { title: string; text: string; ai: boolean }[] = [
     ai: true,
   },
   {
-    title: "Really destroyed",
+    title: "Destroyed as the notice says",
     text: "The model confirms each step the notice asks for, such as “cut fully in half”, and that the photo isn't of a screen or a print.",
     ai: true,
   },
 ];
 
-// The judges' four demo samples (src/lib/demo/samples.ts), the gate that stops each (its decidedBy check: session,
+// The four demo claims (src/lib/demo/samples.ts), the gate that stops each (its decidedBy check: session,
 // duplicate_photo, code) and the reason rule.ts gives. stop is a gate index; 5 is past every gate, to the payout.
 interface Sample {
   lane: string;
@@ -74,7 +74,7 @@ const SAMPLES: Sample[] = [
     tone: "pay",
     reason: (
       <>
-        <Money value={29.99} /> sent to the owner&rsquo;s PayPal account, in sandbox money
+        <Money value={29.99} /> sent to the owner&rsquo;s PayPal account
       </>
     ),
   },
@@ -82,7 +82,7 @@ const SAMPLES: Sample[] = [
 
 const RULE = (
   <>
-    any &ldquo;no&rdquo; &rarr; reject <span className="text-faint">·</span> any &ldquo;unclear&rdquo; &rarr; hold <span className="text-faint">·</span> <span className="whitespace-nowrap">the model never moves money</span>
+    any &ldquo;no&rdquo; &rarr; reject <span className="text-faint">·</span> any &ldquo;unclear&rdquo; &rarr; hold for a person
   </>
 );
 
@@ -93,16 +93,14 @@ const FALL_FOR = 460;
 const vars = (v: Record<string, string | number>) => v as CSSProperties;
 const TILT = [-1.5, 1.2, -0.8, 1.5];
 
-/** A 56px sample photo on a paper tag, labelled as a sample on the tag itself, with the gate's stamp under it. */
+/** A 56px claim photo on a paper tag, labelled with its lane, with the gate's stamp under it. */
 function SampleTag({ sample, tilt }: { sample: Sample; tilt: number }) {
   return (
     <Paper variant="tag" hole padding="none" tilt={tilt} className="w-32 [--tag-cut:12px]">
       <div className="flex items-end gap-2 px-2.5 pt-7">
         <Image src={sample.photo} alt="" width={56} height={56} className="size-14 shrink-0 rounded-[3px] object-cover" />
         <span className="font-mono text-micro leading-[1.15] tracking-[0.04em] text-ink-muted uppercase">
-          Sample
-          <br />
-          photo
+          {sample.lane}
         </span>
       </div>
       <div className="flex h-12 items-center justify-center">
@@ -120,7 +118,7 @@ const LANES = "col-span-6 grid grid-cols-4";
 
 /**
  * "What stops a fake" as a pipeline (laptops): five gates as hairlines across the page, each marked No AI or Model
- * reads, and the judges' four samples falling down their lanes on scroll until the gate that stops them. Every resting state is in the markup; the drop only plays when motion is allowed.
+ * reads, and the four demo claims falling down their lanes on scroll until the gate that stops them. Every resting state is in the markup; the drop only plays when motion is allowed.
  */
 /**
  * Arms each lane separately: a lane's tag falls only once the gate that stops it is in view (its top above 70% of the
@@ -188,7 +186,7 @@ export function Pipeline() {
                 <div className={GATE}>
                   <div className="col-start-2 py-6 pr-12">
                     <h3 className="text-head-sm font-medium">Then a fixed rule decides.</h3>
-                    <p className="mt-1 max-w-[52ch] text-ui text-muted">The model only describes what it sees. The rule reads its answers:</p>
+                    <p className="mt-1 max-w-[52ch] text-ui text-muted">AI reads the photo. It never moves the money.</p>
                     <p className="mt-4 inline-block rounded-control bg-surface px-3 py-2 font-mono text-micro leading-relaxed text-text shadow-ring">{RULE}</p>
                   </div>
                 </div>
@@ -231,7 +229,7 @@ export function Pipeline() {
                             </p>
                           )}
                           <p className="sr-only">
-                            Sample: {s.title}. {s.stamp} here: {s.reason}.
+                            {s.title}. {s.stamp} here: {s.reason}.
                           </p>
                         </div>
                       )}
@@ -248,7 +246,7 @@ export function Pipeline() {
         <div className={styles.fall} style={vars({ "--fall-at": `${FALL_FOR}ms`, "--fall": "-24px" })}>
           <Paper variant="tag" hole padding="none" tilt={-2} className="w-40 [--tag-cut:12px]">
             <div className="px-4 pt-9 pb-4">
-              <p className="micro text-ink-muted">Refund · sandbox</p>
+              <p className="micro text-ink-muted">Refund</p>
               <p className="mt-1 text-head-sm font-medium text-ink">
                 <Money value={29.99} />
               </p>
@@ -261,7 +259,7 @@ export function Pipeline() {
   );
 }
 
-/** Phones and tablets: the gates as a list, each sample as a row under the gate that stopped it. */
+/** Phones and tablets: the gates as a list, each demo claim as a row under the gate that stopped it. */
 export function PipelineList() {
   const stoppedAt = (row: number) => SAMPLES.filter((s) => s.stop === row);
   const rows = (row: number, label: string) =>
@@ -273,7 +271,7 @@ export function PipelineList() {
             <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-3 p-3">
               <span className="flex flex-col gap-1">
                 <Image src={s.photo} alt="" width={48} height={48} className="size-12 rounded-[3px] object-cover" />
-                <span className="font-mono text-micro leading-[1.15] tracking-[0.04em] text-ink-muted uppercase">Sample</span>
+                <span className="font-mono text-micro leading-[1.15] tracking-[0.04em] text-ink-muted uppercase">{s.lane}</span>
               </span>
               <span className="min-w-0">
                 <span className="block text-ui font-medium text-ink">{s.title}</span>
@@ -309,7 +307,7 @@ export function PipelineList() {
       })}
       <li className="border-t border-line py-6">
         <h3 className="text-body font-medium">Then a fixed rule decides.</h3>
-        <p className="mt-1 text-ui text-muted">The model only describes what it sees.</p>
+        <p className="mt-1 text-ui text-muted">AI reads the photo. It never moves the money.</p>
         <p className="mt-3 rounded-control bg-surface px-3 py-2 font-mono text-micro leading-relaxed shadow-ring">{RULE}</p>
         {rows(5, "Passed every gate")}
       </li>

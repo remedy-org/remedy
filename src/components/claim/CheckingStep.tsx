@@ -36,8 +36,6 @@ export interface CheckingStepProps {
   startNow: number;
   /** The photos sent, in order (local copies, or the sample's); else the owner's photo route for each. */
   photoUrls?: string[];
-  /** A judges' sample: the photo carries its AI-made label. */
-  sample?: boolean;
   /** The photos are still on their way up: nothing has resolved yet. */
   sending?: boolean;
   /** Dev previews: no polling, no refresh, every known row shown, and a fixed elapsed time. */
@@ -50,7 +48,7 @@ export interface CheckingStepProps {
  * usual 15 to 40 (never a percentage); each check group's header carries its time from the claim's own events. Once
  * decided, the checks reveal in order and the page re-renders as the result.
  */
-export function CheckingStep({ claimId, view: initial, startNow, photoUrls, sample, sending, preview }: CheckingStepProps) {
+export function CheckingStep({ claimId, view: initial, startNow, photoUrls, sending, preview }: CheckingStepProps) {
   const router = useRouter();
   const [view, setView] = useState(initial);
   const [shown, setShown] = useState(preview ? firstWaiting(initial.rows) : 0);
@@ -138,8 +136,6 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrls, samp
   const count = Math.max(view.photos, srcs.length);
   // The model's quotes for the annotations under photo 1: only the answers already revealed.
   const notes = rows.filter((r) => r.group === "model" && r.quote && r.state !== "running" && r.state !== "waiting");
-  // A sample (or a preview's stand-in from /demo, which only holds AI-made samples) carries its label on the photo.
-  const aiMade = Boolean(sample) || Boolean(src?.startsWith("/demo/"));
 
   const title = sending ? "Sending your photos" : done ? "Checks finished" : `Checking your ${count > 1 ? "photos" : "photo"}`;
   const lead = sending
@@ -155,7 +151,7 @@ export function CheckingStep({ claimId, view: initial, startNow, photoUrls, samp
       <div className="flex flex-col gap-3 lg:sticky lg:top-24">
         {src ? (
           // Whole: the photo being checked shows all of it, so a tag near a tall photo's edge stays in view.
-          <ExhibitPhoto src={src} alt={`Photo 1: the ${sample ? "sample" : "first"} photo of claim ${view.id}`} sample={aiMade} fit="contain" frame="h-60 lg:h-[21rem]">
+          <ExhibitPhoto src={src} alt={`Photo 1 of claim ${view.id}`} fit="contain" frame="h-60 lg:h-[21rem]">
             {reading && !reduced && (
               <span aria-hidden="true" className={clsx("absolute inset-0", styles.scan)}>
                 <span className={styles.scanLine} />

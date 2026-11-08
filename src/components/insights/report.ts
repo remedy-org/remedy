@@ -3,7 +3,7 @@ import type { InsightsData } from "@/app/console/insights/facts";
 import type { InsightsRegistry } from "./widgets";
 
 // The Insights report as Studio state: one page on the 24-column canvas (rows of 16px). Field ids refer to the data
-// sources in ./sources.ts. Subtitles are exhibit labels, lettered in reading order.
+// sources in ./sources.ts. Subtitles are short labels under each title.
 
 /** A panel's name for the keyboard: its title and exhibit letter ("Decisions, Exhibit B"), or its title alone. */
 export function panelName(title: string, subtitle: string) {
@@ -37,18 +37,18 @@ const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 /**
- * How many paid claims there are, how many of them are samples that never sent money to a real owner, what those
- * samples would have paid, how many sent payouts waited for a person's review, and how many claims the model answered
+ * How many paid claims there are, how many of them are samples that never sent money to a real owner, what the rest
+ * really sent, how many sent payouts waited for a person's review, and how many claims the model answered
  * (for the timing tile when nothing was sent).
  */
 export function provenance(claims: Pick<InsightsData["claims"][number], "decision" | "source" | "amountPaid" | "modelSec" | "paidOnReview">[]) {
   const paid = claims.filter((c) => c.decision === "Paid");
-  const samples = paid.filter((c) => c.source === "Sample");
+  const samples = paid.filter((c) => c.source === "Starter");
   return {
     paid: paid.length,
     samples: samples.length,
-    sampleAmount: samples.reduce((n, c) => n + c.amountPaid, 0),
-    reviewed: paid.filter((c) => c.source !== "Sample" && c.paidOnReview).length,
+    sentAmount: paid.filter((c) => c.source !== "Starter").reduce((n, c) => n + c.amountPaid, 0),
+    reviewed: paid.filter((c) => c.source !== "Starter" && c.paidOnReview).length,
     answered: claims.filter((c) => c.modelSec !== null).length,
   };
 }
@@ -59,26 +59,29 @@ export function provenance(claims: Pick<InsightsData["claims"][number], "decisio
  * timing tile is the ledger's median over payouts really sent (a claim that waited hours for a person would drag an
  * average to minutes), says how many of them waited, and with none sent it shows the model's own answer time instead.
  */
-export function captions({ paid, samples, sampleAmount, reviewed, answered }: ReturnType<typeof provenance>) {
-  const all = paid > 0 && samples === paid;
-  const some = samples > 0 && !all;
-  const share = `${samples} of ${paid} are samples`;
+const PAID_CAPTION = "To owners' PayPal accounts";
+const paidCaption = (sent: number) => `${usd.format(sent)} sent through PayPal`;
+
+export function captions({ paid, samples, reviewed, answered, sentAmount }: ReturnType<typeof provenance>) {
   const sent = paid - samples;
   return {
-    remedied: all ? "Sample claims · never sent" : some ? `Paid claims · ${share}` : "Paid claims",
-    // The tile title already says sandbox; the caption must fit one line of the tile at 1440 (about 200px).
-    paid: samples ? `${usd.format(sampleAmount)} sample, never sent` : "Sandbox USD through PayPal",
+    remedied: "Destroyed and verified on camera",
+    // The money tile leads with what the rule approved while starter claims are among the paid (their payouts never
+    // leave), with what was really sent under it; otherwise it is the money sent. One line of the tile at 1440 (~200px).
+    paidTitle: samples ? "Approved refunds" : "Sent through PayPal",
+    paidField: (samples ? "amountPaid" : "amountSent") as "amountPaid" | "amountSent",
+    paid: samples ? paidCaption(sentAmount) : PAID_CAPTION,
     timeTitle: sent ? "Median photo to PayPal" : "Median photo check",
     timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
     time: !sent
-      ? `None sent yet · ${answered} ${answered === 1 ? "claim" : "claims"} checked`
+      ? `${answered} ${answered === 1 ? "claim" : "claims"} checked`
       : reviewed
         ? `${sent} sent · ${reviewed} after a person's review`
         : `Median of ${sent} sent ${sent === 1 ? "payout" : "payouts"}`,
     // Exhibit E charts the tile's own number by day: the same claims and the same field, so the two always agree. Its
     // axis counts plain seconds; its tooltip reads "0:03".
     timeChart: sent ? "Photo to PayPal, by day" : "Photo check, by day",
-    timeExhibit: sent ? "EXHIBIT E · MEDIAN SECONDS · PAYOUTS SENT" : "EXHIBIT E · MEDIAN SECONDS · PHOTO CHECK",
+    timeExhibit: sent ? "MEDIAN SECONDS · PAYOUTS SENT" : "MEDIAN SECONDS · PHOTO CHECK",
   };
 }
 
@@ -135,10 +138,12 @@ export function filterLabel(picks: FilterPick[]) {
 export function kpiCaptions(all: Parameters<typeof provenance>[0], shown: Parameters<typeof provenance>[0] | null) {
   const base = captions(provenance(all));
   if (!shown) return { remedied: "Picked claims only", paid: "Picked claims only", time: "Picked claims only" };
-  const say = captions(provenance(shown));
+  const picked = provenance(shown);
+  const say = captions(picked);
   return {
     remedied: say.remedied,
-    paid: say.paid,
+    // The tile keeps its field and title, so its caption follows the whole recall's choice.
+    paid: base.paidField === "amountPaid" ? paidCaption(picked.sentAmount) : PAID_CAPTION,
     // The tile keeps its field: with nothing sent among the picked claims, it has no median to show.
     time: base.timeField !== say.timeField ? "None sent among these claims" : say.time,
   };
@@ -158,7 +163,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
     id: "overview",
     widgets: {
       "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), say.remedied),
-      "kpi-paid": kpi("Paid through PayPal (sandbox)", sum("claims.amountSent"), say.paid),
+      "kpi-paid": kpi(say.paidTitle, sum(`claims.${say.paidField}`), say.paid),
       // Studio's value tile can only average; the ledger's median comes from a widget of Remedy's own.
       "kpi-median": {
         type: "median-time",
@@ -173,12 +178,12 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
           sold: [{ id: "recall.unitsSold", aggregation: "max" }],
           samples: [sum("claims.remediedSample")],
         },
-        format: titled("Recall progress", "EXHIBIT A · REMEDIED AGAINST SOLD"),
+        format: titled("Recall progress", "REMEDIED AGAINST SOLD"),
       },
       decisions: {
         type: "decision-mix",
         dataMapping: { decision: [{ id: "claims.decision" }], count: [count] },
-        format: titled("Decisions", "EXHIBIT B · DECIDED BY THE RULE"),
+        format: titled("Decisions", "DECIDED BY THE RULE"),
       },
       funnel: {
         type: "check-funnel",
@@ -188,7 +193,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
           decision: [{ id: "claims.decision" }],
           count: [count],
         },
-        format: titled("Check funnel", "EXHIBIT C · WHERE CLAIMS STOP"),
+        format: titled("Check funnel", "WHERE CLAIMS STOP"),
       },
       refusals: {
         type: "refusal-reasons",
@@ -197,7 +202,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
           gate: [{ id: "claims.refusalGate" }],
           count: [count],
         },
-        format: titled("Why claims were refused", "EXHIBIT D · REFUSALS BY REASON"),
+        format: titled("Why claims were refused", "REFUSALS BY REASON"),
       },
       "time-to-pay": {
         type: "column-chart-grouped",
@@ -214,11 +219,11 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
         type: "grid",
         dataMapping: {
           // Short columns first, so the amount and whether a row is a sample are always in view; the reason runs last.
-          cols: [{ id: "claims.id" }, { id: "claims.decision" }, { id: "claims.refund" }, { id: "claims.source" }, { id: "claims.reason" }],
+          cols: [{ id: "claims.id" }, { id: "claims.decision" }, { id: "claims.refund" }, { id: "claims.reason" }],
         },
         sort: [{ field: { id: "claims.filedAt" }, direction: "desc" }],
         // No grand total: a sum under a column of decisions and reasons says nothing.
-        format: { ...titled("Every claim", "EXHIBIT F · NEWEST FIRST"), style: { grandTotalRow: { enabled: false } } },
+        format: { ...titled("Every claim", "NEWEST FIRST"), style: { grandTotalRow: { enabled: false } } },
       },
     },
     widgetLayout: {

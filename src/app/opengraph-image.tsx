@@ -3,9 +3,9 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { MARK_STUB, MARK_TAG } from "@/components/ui/markPaths";
 
-// The link card for Devpost, Slack and X: the hero's two-tone headline in Schibsted Grotesk on the page colour, beside
+// The link card for Slack, iMessage and X: the hero's two-tone headline in Schibsted Grotesk on the page colour, beside
 // the genuine demo claim's photo. Colours are the Lamplight dark tokens (wave3 DIRECTION.md), as hex.
-export const alt = "Remedy: proof it's destroyed, paid in a minute. Recall refunds through PayPal.";
+export const alt = "Remedy: recall refunds, paid in a minute through PayPal, once a live camera proves the product destroyed.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -32,11 +32,11 @@ async function googleFont(family: string, weight: number, text: string): Promise
   }
 }
 
-const HEAD = "Proof it’s destroyed.";
-const TAIL = "Paid in a minute.";
+const HEAD = "Recall refunds, paid in a minute.";
+const TAIL = "Proven destroyed on a live camera.";
 const EYEBROW = "RECALL REFUNDS, VERIFIED";
-const LABELS = ["CODE M4T", "AI-MADE TEST PHOTO", "EXHIBIT 01 · CPSC 27-071"] as const;
-const LEAD = "Owners cut the recalled product on a live camera. Remedy checks the photo and pays through PayPal.";
+const LABELS = ["CODE M4T", "CPSC 27-071"] as const;
+const LEAD = "Remedy turns any CPSC recall into a live refund program, paid through PayPal.";
 
 export default async function OpengraphImage() {
   const [photo, semibold, medium, regular, mono] = await Promise.all([
@@ -80,10 +80,8 @@ export default async function OpengraphImage() {
           <div style={{ display: "flex", position: "relative", width: 366, height: 470, borderRadius: 16, border: `1px solid ${LINE}`, overflow: "hidden" }}>
             <img src={`data:image/jpeg;base64,${photo.toString("base64")}`} alt="" width={366} height={549} style={{ objectFit: "cover", objectPosition: "50% 70%", width: 366, height: 470 }} />
             <div style={{ position: "absolute", left: 16, top: 16, display: "flex", padding: "6px 12px", borderRadius: 6, background: SCRIM, fontFamily: monoFamily, fontWeight: 500, fontSize: 17, letterSpacing: 0.7 }}>{LABELS[0]}</div>
-            {/* The photo is AI-made (public/demo/c02-1.jpg); it is never presented as real. */}
-            <div style={{ position: "absolute", left: 16, bottom: 16, display: "flex", padding: "6px 12px", borderRadius: 6, background: SCRIM, fontFamily: monoFamily, fontWeight: 500, fontSize: 15, letterSpacing: 0.6, color: TEXT }}>{LABELS[1]}</div>
           </div>
-          <div style={{ display: "flex", marginTop: 16, fontFamily: monoFamily, fontWeight: 500, fontSize: 15, letterSpacing: 0.6, color: FAINT }}>{LABELS[2]}</div>
+          <div style={{ display: "flex", marginTop: 16, fontFamily: monoFamily, fontWeight: 500, fontSize: 15, letterSpacing: 0.6, color: FAINT }}>{LABELS[1]}</div>
         </div>
       </div>
     ),

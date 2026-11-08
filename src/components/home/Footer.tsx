@@ -3,23 +3,31 @@ import { ArrowRightIcon, Button, Paper, Wordmark } from "@/components/ui";
 import styles from "./home.module.css";
 import { Enter } from "./Reveal";
 
-// In page order, in the nav's words, then the two pages, named as the nav names them.
-const PRODUCT = [
-  { href: "#how", label: "How it works" },
-  { href: "#problem", label: "The problem" },
-  { href: "#checks", label: "Stopping fakes" },
-  { href: "#proof", label: "Test results" },
-  { href: "#companies", label: "For companies" },
-  { href: "/r/kikea-x-vesolje/try", label: "Try a sample claim" },
-  { href: "/signin", label: "Company sign in" },
-];
-
-const SOURCES = [
-  { href: "https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf", label: "PIRG, Too Much to Recall" },
-  { href: "https://public-inspection.federalregister.gov/2026-07328.pdf", label: "CPSC request for information, 2026" },
+// The sitemap in three columns; the section names match the nav and the section eyebrows.
+const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
-    href: "https://www.cpsc.gov/Recalls/2027/Kikea-Store-Recalls-X-VESOLJE-Nursing-Pillows-Due-to-Risk-of-Serious-Injury-or-Death-from-Suffocation-Violate-Mandatory-Standards-for-Nursing-Pillows",
-    label: "CPSC recall 27-071",
+    title: "Product",
+    links: [
+      { href: "#how", label: "How it works" },
+      { href: "#problem", label: "Problem" },
+      { href: "#checks", label: "Fraud checks" },
+      { href: "#proof", label: "Results" },
+      { href: "/r/kikea-x-vesolje/try", label: "Try a claim" },
+    ],
+  },
+  {
+    title: "For companies",
+    links: [
+      { href: "#companies", label: "Overview" },
+      { href: "/signin", label: "Sign in" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { href: "/privacy", label: "Privacy" },
+      { href: "/terms", label: "Terms" },
+    ],
   },
 ];
 
@@ -35,10 +43,10 @@ function CtaTag() {
       <Paper variant="tag" hole padding="none" className="sm:-rotate-1">
         <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
           <div>
-            <p className="micro text-ink-muted">Your turn</p>
-            <h2 className="mt-4 text-title-lg font-medium text-balance">Run a claim yourself.</h2>
+            <p className="micro text-ink-muted">Try it</p>
+            <h2 className="mt-4 text-title-lg font-medium text-balance">See a refund land in a minute.</h2>
             <p className="mt-3 max-w-[40ch] text-body text-pretty text-ink-muted">
-              Four sample claims with AI-made test photos go through the same five checks. Refunds are sandbox money.
+              Run four claims, one of them genuine. Remedy pays it through PayPal and stops the three fakes.
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-3">
@@ -50,7 +58,7 @@ function CtaTag() {
               data-try-cta=""
               className="shadow-[0_0_0_1px_var(--paper-line)] focus-visible:outline-ink max-sm:h-auto max-sm:min-h-12 max-sm:w-full max-sm:px-3 max-sm:py-3 max-sm:text-center max-sm:text-balance max-sm:whitespace-normal"
             >
-              Try a claim with sample photos
+              Try a claim
             </Button>
             <Link
               href="/signin"
@@ -94,56 +102,44 @@ export function Footer() {
           <CtaTag />
         </div>
       </div>
-      {/* One row under the tag: the brand and its line, then the sitemap in the nav's order; the sources and the
-          colophon on a hairline under them; then the disclaimer. */}
+      {/* Under the tag: the brand and its line, then the sitemap in three columns; the copyright on a hairline under
+          them. */}
       <div className="page mt-24">
-        <div className="grid-12 gap-y-6 md:items-start">
-          <div className="col-span-12 md:col-span-6 lg:col-span-7">
+        <div className="grid-12 gap-y-10 md:items-start">
+          <div className="col-span-12 md:col-span-5 lg:col-span-6">
             <Wordmark size="md" />
             <p className="mt-3 max-w-[44ch] text-ui text-muted">
-              Recall refunds paid within a minute of a live photo. A fake has to beat a live camera, a photo fingerprint and a verified PayPal account before the model even looks.
+              Recall refunds, proven and paid. Remedy gives any US product recall its own claim link and pays owners through PayPal within a minute.
             </p>
           </div>
           {/* #footer-nav: where the nav's Menu link goes without JS. */}
-          <nav id="footer-nav" aria-label="Footer" className="col-span-12 md:col-span-6 lg:col-span-5 lg:col-start-8">
-            <h2 className="sr-only">Remedy</h2>
-            <ul className="flex flex-wrap gap-x-6 md:-mt-2.5">
-              {PRODUCT.map((l) => (
-                <li key={l.href}>
-                  {l.href.startsWith("#") ? (
-                    <a href={l.href} className={linkClass}>
-                      {l.label}
-                    </a>
-                  ) : (
-                    <Link href={l.href} className={linkClass}>
-                      {l.label}
-                    </Link>
-                  )}
-                </li>
-              ))}
-            </ul>
+          <nav id="footer-nav" aria-label="Footer" className="col-span-12 grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:col-span-7 lg:col-span-5 lg:col-start-8">
+            {COLUMNS.map((c) => (
+              <div key={c.title}>
+                <h2 className="micro text-faint">{c.title}</h2>
+                <ul className="mt-2 flex flex-col">
+                  {c.links.map((l) => (
+                    <li key={l.href}>
+                      {l.href.startsWith("#") ? (
+                        <a href={l.href} className={linkClass}>
+                          {l.label}
+                        </a>
+                      ) : (
+                        <Link href={l.href} className={linkClass}>
+                          {l.label}
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </nav>
         </div>
-        <div className="mt-10 flex flex-col gap-x-6 md:flex-row md:flex-wrap md:items-center">
-          <h2 className="micro pt-3 text-faint md:pt-0">Sources</h2>
-          <ul className="flex flex-col md:flex-row md:flex-wrap md:gap-x-6">
-            {SOURCES.map((s) => (
-              <li key={s.href}>
-                <a href={s.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
-                  <span>
-                    {s.label}
-                    <span aria-hidden="true">&nbsp;↗</span>
-                  </span>
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="py-3 font-mono text-micro text-faint md:ml-auto md:py-0">Case file: Remedy · PayPal AI Hackathon · Filed 13 Nov 2026</p>
+        <div className="mt-12 flex flex-col gap-1 border-t border-line pt-5 pb-10 text-ui text-faint sm:flex-row sm:items-center sm:justify-between">
+          <p>&copy; 2026 Remedy</p>
+          <p>Started at the PayPal AI Hackathon.</p>
         </div>
-        <p className="pt-4 pb-10 text-ui text-faint">
-          Built for the PayPal AI Hackathon, November 2026. Remedy is not made by PayPal; PayPal is a trademark of PayPal, Inc.
-        </p>
       </div>
     </footer>
   );

@@ -97,7 +97,7 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
       <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
         <div>
           <h2 className="text-body font-medium">Refund and claim link</h2>
-          <p className="mt-1 text-ui text-muted">Refunds go through PayPal Payouts to each owner&apos;s PayPal account. In this build they&apos;re sent from Remedy&apos;s PayPal account, so auto-pay starts off.</p>
+          <p className="mt-1 text-ui text-muted">Refunds go through PayPal Payouts to each owner&apos;s PayPal account. Auto-pay starts off, so your team approves each payout until you turn it on.</p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Refund per unit" help="In US dollars, paid through PayPal." error={f?.refund}>

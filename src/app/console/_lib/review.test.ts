@@ -52,7 +52,7 @@ describe("approveClaim", () => {
     await store.putClaim(claim);
     const pay = vi.fn();
     const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
-    expect(result).toMatchObject({ ok: true, claim: { decision: "held" }, sample: expect.stringContaining("sent no money") });
+    expect(result).toMatchObject({ ok: true, claim: { decision: "held" }, sample: expect.stringContaining("nothing was sent") });
     expect(pay).not.toHaveBeenCalled();
     expect(await store.getClaim("RM-0412")).toEqual(claim);
   });
@@ -110,7 +110,7 @@ describe("approveClaim", () => {
     await store.putClaim(claim);
     const pay = vi.fn(async () => sent);
     await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
-    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ note: "Recall refund for X-VESOLJE Nursing Pillows (CPSC 27-071), claim RM-0412, demo mode" }));
+    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ note: "Recall refund for X-VESOLJE Nursing Pillows (CPSC 27-071), claim RM-0412" }));
   });
 
   it("holds instead of paying when sendCheck finds another live claim from the account", async () => {

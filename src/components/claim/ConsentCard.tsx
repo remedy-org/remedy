@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { Button, Card, ClockIcon, ErrorState, Money, NoBreakHyphens, Paper, StatusPill, statusLabel } from "@/components/ui";
 import { RemedyMark } from "@/components/ui/Wordmark";
-import { DEMO_SAMPLES } from "@/lib/demo";
+import { DEMO_RECALL_ID, DEMO_SAMPLES } from "@/lib/demo";
 import type { Refusal } from "@/lib/limits";
 import type { JudgeLogin } from "@/lib/demo/judgeLogin";
 import type { Decision, Recall } from "@/lib/types";
@@ -10,7 +10,7 @@ import { InfoIcon, LockIcon } from "./icons";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
 import { companyName, cutInHalf, handWrittenLabel, money, productNoun, SANDBOX_ACCOUNTS_URL } from "./model";
-import { SAMPLE_TESTS } from "./SamplePicker";
+import { SAMPLE_OUTCOME } from "./SamplePicker";
 
 export type AuthError = "denied" | "state" | "paypal" | "refused";
 
@@ -46,33 +46,34 @@ export interface ConsentCardProps {
   refusal?: Refusal | null;
   /** Logged in with a claim for this recall already: the card leads with it. */
   yourClaim?: YourClaim | null;
-  /** Demo: the judges' sandbox login to show before the login button. Null keeps the "in the submission notes" line. */
+  /** Demo: the demo account to show before the login button. Null keeps the fallback line. */
   judgeLogin?: JudgeLogin | null;
-  /** Payouts go to PayPal's sandbox in this build: a limit is this sandbox's. */
-  sandbox?: boolean;
 }
 
-/** The judges' sandbox login in the card: the phone's bar shows it before it offers the PayPal login. */
+/** The demo account in the card: the phone's bar shows it before it offers the PayPal login. */
 export const JUDGE_LOGIN_ID = "judge-login";
 
 /** The primary button's words, shared with the phone's sticky bar. */
 export function consentAction({ signedInAs, demo, unverified, yourClaim }: Pick<ConsentCardProps, "signedInAs" | "demo" | "unverified" | "yourClaim">): string {
   if (yourClaim) return yourClaim.decision === "pending" && !yourClaim.photos ? "Continue your claim" : "See your claim";
   if (unverified) return "Log in with a verified account";
-  if (signedInAs) return demo ? "Choose a sample claim" : "Continue to your code";
-  return demo ? "Log in with PayPal sandbox" : "Log in with PayPal";
+  if (signedInAs) return demo ? "Choose a claim to run" : "Continue to your code";
+  return "Log in with PayPal";
 }
 
 /**
  * The consent card, after Stripe Identity and Plaid: the refund first, a two-tone promise, the two parties as
- * overlapping marks, three numbered steps (the four samples in the demo), one full-width action and a privacy line.
+ * overlapping marks, three numbered steps (the four demo claims in the demo), one full-width action and a privacy line.
  */
-export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin, sandbox }: ConsentCardProps) {
+export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin }: ConsentCardProps) {
   const company = companyName(recall);
   const action = consentAction({ signedInAs, demo, unverified, yourClaim });
   // Refused by a limit, a real owner's way on is the company's recall notice.
   const notice = demo ? undefined : { company, url: recall.url };
   const amount = money(recall.refund);
+  // The demo recall is built on a public CPSC notice: its company is never shown as working with Remedy.
+  const demoRecall = recall.id === DEMO_RECALL_ID;
+  const forCompany = demoRecall ? "" : ` for ${company}`;
   const error = authError ? AUTH_ERRORS[authError] : null;
   const steps = [
     cutInHalf(recall.spec) ? "Cut it in half, as the notice says" : "Destroy it, as the notice says",
@@ -84,7 +85,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       {yourClaim && <ClaimStatus claim={yourClaim} company={company} action={action} />}
       {/* On a phone the recall row above already shows the refund. */}
       <div className="flex flex-col gap-2 max-sm:hidden">
-        <span className="micro text-faint">{demo ? "Refund · sandbox money" : "Your refund"}</span>
+        <span className="micro text-faint">{demo ? "Refund" : "Your refund"}</span>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Money value={Number(recall.refund.value)} currency={recall.refund.currency} size="amount" className="text-text" />
           <span className="inline-flex h-6 items-center rounded-full border border-line px-2.5 font-mono text-micro whitespace-nowrap text-muted">
@@ -96,23 +97,21 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <StepTitle id="consent-title" className="text-pretty">
-            {demo ? "Try a claim with sample photos" : <NoBreakHyphens>{`Get ${amount} back for your ${productNoun(recall)}.`}</NoBreakHyphens>}
+            {demo ? "Run four claims. One is genuine." : <NoBreakHyphens>{`Get ${amount} back for your ${productNoun(recall)}.`}</NoBreakHyphens>}
           </StepTitle>
           <p className="text-body text-pretty text-muted">
             {demo
-              ? `Real checks, a real PayPal sandbox payout of ${amount}, on photos we provide. About 2 minutes.`
+              ? `Remedy pays the genuine one ${amount} through PayPal and stops the three fakes. Each runs the same five checks.`
               : recall.autoPay
-                ? `Remedy sends it through PayPal for ${company} once your photo shows it's destroyed.`
-                : `Remedy sends it through PayPal for ${company} once your photo is checked and ${company} approves it.`}
+                ? `Remedy sends it through PayPal${forCompany} once your photo shows it's destroyed.`
+                : `Remedy sends it through PayPal${forCompany} once your photo is checked and ${company} approves it.`}
           </p>
-          {/* The SANDBOX labels on this screen, said once in words. */}
-          {sandbox && !demo && <p className="text-ui text-muted">Sandbox means PayPal&apos;s test money: no real payment is made.</p>}
         </div>
-        <Parties company={company} />
+        {!demoRecall && <Parties company={company} />}
       </div>
 
-      {/* The demo's four samples come before the login, so the card shows what a judge is about to run, not a wall. From
-          1200px they sit in the judges' rail beside it instead, so the login and its button stay on a laptop's first screen. */}
+      {/* The demo's four claims come before the login, so the card shows what you are about to run, not a wall. From
+          1200px they sit in the guide rail beside it instead, so the login and its button stay on a laptop's first screen. */}
       {demo ? (
         <SampleList className="border-t border-line pt-6 min-[1200px]:hidden" />
       ) : (
@@ -134,7 +133,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         />
       )}
       {error && <ErrorState variant="inline" title={error.title} description={error.description} />}
-      {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} sandbox={sandbox} notice={notice} />}
+      {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} notice={notice} />}
 
       {/* With a claim under way its own button leads, at the top, and nothing new starts here. */}
       {!yourClaim && (
@@ -147,11 +146,9 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
             <div className="flex gap-3 rounded-card bg-surface-2 p-4 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] max-sm:order-last">
               <InfoIcon className="mt-0.5 shrink-0 text-muted" />
               <div className="flex flex-col gap-1">
-                <p className="font-medium text-text">
-                  Log in with a PayPal <strong className="font-medium">sandbox</strong> personal account.
-                </p>
+                <p className="font-medium text-text">Log in with a PayPal demo account.</p>
                 <p className="text-muted">
-                  The judges&apos; test login is in the submission notes. Your real PayPal login won&apos;t work here. No login?{" "}
+                  Your personal PayPal login won&apos;t work on the demo. No demo account?{" "}
                   <a href={SANDBOX_ACCOUNTS_URL} className="text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
                     Make one at developer.paypal.com
                   </a>
@@ -174,14 +171,14 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
           {refusal ? (
             <LimitNextStep demo={Boolean(demo)} notice={notice} />
           ) : (
-            // Below 360px "Log in with PayPal sandbox" is wider than the card: it wraps rather than run off the card.
+            // Below 360px a long label is wider than the card: it wraps rather than run off the card.
             <Button id="consent-cta" href={href} size="lg" block prefetch={false} className="max-[359px]:h-auto max-[359px]:min-h-12 max-[359px]:py-3 max-[359px]:text-center max-[359px]:text-balance max-[359px]:whitespace-normal">
               {action}
             </Button>
           )}
         </div>
       )}
-      {/* Under the button; on a phone after the demo's sandbox note, which follows the button there. */}
+      {/* Under the button; on a phone after the demo's login note, which follows the button there. */}
       <p className="-mt-3 flex gap-2.5 text-ui text-faint max-sm:order-last">
         <LockIcon className="mt-0.5 shrink-0" />
         <span>
@@ -193,24 +190,23 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   );
 }
 
-/** The four samples a judge is about to run: in the demo's consent card, or in the judges' rail beside it from 1200px. */
+/** The four demo claims you are about to run: in the demo's consent card, or in the guide rail beside it from 1200px. */
 export function SampleList({ rail, className }: { rail?: boolean; className?: string }) {
   return (
     <div className={clsx("flex flex-col gap-3", className)}>
-      <h3 className="micro text-faint">Four sample claims you&apos;ll run</h3>
+      <h3 className="micro text-faint">The four claims you&apos;ll run</h3>
       <ul className={clsx("grid gap-x-4 gap-y-3", !rail && "sm:grid-cols-2 sm:gap-y-4")}>
         {DEMO_SAMPLES.map((s) => (
           <li key={s.id} className="flex min-w-0 items-start gap-3">
             <SampleTag src={s.photos[0]} />
             <span className="flex min-w-0 flex-col items-start gap-1.5">
               <span className="text-ui leading-tight font-medium text-text">{s.title}</span>
-              <span className="text-ui leading-tight text-muted">Tests {SAMPLE_TESTS[s.id] ?? s.decidedBy}</span>
-              <StatusPill status={s.expect} label={`Should be ${statusLabel(s.expect).toLowerCase()}`} />
+              <span className="text-ui leading-tight text-muted">{SAMPLE_OUTCOME[s.id] ?? s.decidedBy}</span>
+              <StatusPill status={s.expect} label={`Ends ${statusLabel(s.expect).toLowerCase()}`} />
             </span>
           </li>
         ))}
       </ul>
-      <p className="text-ui text-faint">All four photos are AI-made samples, never a real owner&apos;s.</p>
     </div>
   );
 }
@@ -275,7 +271,7 @@ function Parties({ company }: { company: string }) {
   );
 }
 
-/** A sample's photo as a small paper tag: what the judge will run. */
+/** A demo claim's photo as a small paper tag: what you will run. */
 export function SampleTag({ src, className }: { src: string; className?: string }) {
   return (
     <Paper variant="tag" padding="none" className={clsx("w-10 shrink-0 [--tag-cut:6px]", className)}>

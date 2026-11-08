@@ -23,21 +23,17 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
   const { dataMapping, widgetApi } = params;
   const remedied = dataMapping.remedied?.[0];
   const sold = dataMapping.sold?.[0];
-  const samples = dataMapping.samples?.[0];
-  const rows = useRows(widgetApi, () => (remedied && sold ? [{ fields: [remedied] }, { fields: [sold] }, ...(samples ? [{ fields: [samples] }] : [])] : null), [params]);
+  const rows = useRows(widgetApi, () => (remedied && sold ? [{ fields: [remedied] }, { fields: [sold] }] : null), [params]);
   if (!rows || !remedied || !sold) return null;
 
   const done = num(rows[0][0]?.[remedied.key]);
   const total = num(rows[1][0]?.[sold.key]);
   const share = total > 0 ? done / total : 0;
-  // Sample claims count as remedied in the console, but no money reached a real owner: say how many of them there are.
-  const fromSamples = samples ? num(rows[2]?.[0]?.[samples.key]) : 0;
-  const sampleNote = !fromSamples ? null : fromSamples === done ? "all samples" : `${fromSamples} of ${done} are samples`;
 
   return (
     <div className="flex h-full min-h-0 flex-col justify-between gap-4 px-1.5 pb-1">
       <p className="sr-only">
-        {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}{sampleNote ? ` (${sampleNote})` : ""}. Recalls typically reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
+        {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}. Most recalls only ever reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
       </p>
       <div aria-hidden="true" className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
         <p className="flex items-baseline gap-2">
@@ -62,11 +58,11 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
         </div>
         <div className="absolute top-0 bottom-6 w-px bg-pay" style={{ left: `max(1px, ${at(share)})` }}>
           <span className="micro absolute -top-0.5 left-2 whitespace-nowrap text-pay">
-            Remedy so far{sampleNote && <span className="text-faint"> · {sampleNote}</span>}
+            Remedy so far
           </span>
         </div>
         <div className="absolute top-0 -translate-x-1/2 text-center" style={{ left: `calc((${at(TYPICAL_RETURN.from)} + ${at(TYPICAL_RETURN.to)}) / 2)` }}>
-          <span className="micro whitespace-nowrap text-muted">Typical recall</span>
+          <span className="micro whitespace-nowrap text-muted">Where most recalls end</span>
         </div>
         {TICKS.map((t) => (
           <div key={t} className={clsx("absolute bottom-0 flex flex-col gap-1", t === 0 ? "items-start" : "-translate-x-1/2 items-center")} style={{ left: at(t) }}>

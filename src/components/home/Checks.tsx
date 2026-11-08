@@ -1,24 +1,22 @@
 import { Button } from "@/components/ui";
 import { Pipeline, PipelineList } from "./Pipeline";
 import { Section } from "./Section";
-import { TryNote } from "./TryNote";
 
 export function Checks() {
   return (
     <Section
       id="checks"
-      exhibit="Stopping fakes"
-      title="Five checks, in order."
-      muted="The first three need no AI."
-      lead="We don't claim the model can spot an AI image: in our tests, it couldn't. A fake has to beat the live camera, the fingerprint and a verified PayPal account before the model even looks."
+      exhibit="Fraud checks"
+      title="A fake has to beat five checks."
+      muted="The first three run before any AI."
+      lead="Anyone can now generate a photo of a cut-up pillow. So Remedy takes photos only from the claim's own live camera, refuses any photo it has seen before, and pays only verified PayPal accounts."
     >
       <Pipeline />
       <PipelineList />
       <div className="mt-10 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-8 lg:mt-6">
         <Button href="/r/kikea-x-vesolje/try" variant="tertiary" size="lg" data-try-cta="">
-          Try a sample claim
+          Try to fool it
         </Button>
-        <TryNote />
       </div>
     </Section>
   );

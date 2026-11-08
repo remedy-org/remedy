@@ -71,13 +71,12 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   if (!session || (ours && ours.payerId !== session.payerId)) {
     const expiresAt = ours && !demo && !ours.photos.length && ours.decision === "pending" ? ours.captureSession?.expiresAt : undefined;
     return (
-      <FlowShell demo={demo} sandbox={isSandboxBuild()} company={companyName(recall)}>
+      <FlowShell demo={demo} company={companyName(recall)}>
         <ContinueCard
           id={id}
           product={productNoun(recall)}
           company={companyName(recall)}
           loginHref={loginPath("owner", here)}
-          demo={demo}
           expiresAt={expiresAt}
           startNow={requestTime()}
           signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : undefined}
@@ -112,7 +111,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
           : null,
     };
     return (
-      <FlowShell demo={demo} sandbox={sandbox} company={company}>
+      <FlowShell demo={demo} company={company}>
         <Result
           claim={claim}
           recall={recall}
@@ -136,7 +135,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   const session10 = claim.captureSession;
   if (!claim.photos.length && (!session10 || Date.parse(session10.expiresAt) <= now)) {
     return (
-      <FlowShell demo={demo} sandbox={sandbox} company={company}>
+      <FlowShell demo={demo} company={company}>
         <WithJudges demo={demo} step="code">
           <div className="flex flex-col gap-6">
             <StepMeter current={demo ? 3 : 2} steps={steps} width="max-w-claim" />
@@ -150,7 +149,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   const phoneUrl = new URL(here, env().APP_URL).toString();
   const qrSvg = demo ? "" : await QRCode.toString(phoneUrl, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: QR_COLORS });
   return (
-    <FlowShell demo={demo} sandbox={sandbox} company={company}>
+    <FlowShell demo={demo} company={company}>
       <ClaimFlow
         claimId={claim.id}
         code={claim.code}

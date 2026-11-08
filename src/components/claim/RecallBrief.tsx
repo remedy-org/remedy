@@ -21,7 +21,7 @@ function Hazard({ text }: { text: string }) {
  * What was recalled and why: on a laptop the left column (notice line, product, hazard banner, the CPSC photo on a paper
  * plate, facts); on a phone one 64px row with the refund, then the hazard banner, so the action stays above the fold.
  */
-export function RecallBrief({ recall, sandbox, demo }: { recall: Recall; sandbox?: boolean; demo?: boolean }) {
+export function RecallBrief({ recall, demo }: { recall: Recall; demo?: boolean }) {
   const hazard = hazardLine(recall);
   const image = recall.images[0];
   const company = companyName(recall);
@@ -46,7 +46,6 @@ export function RecallBrief({ recall, sandbox, demo }: { recall: Recall; sandbox
         </div>
         <span className="flex shrink-0 flex-col items-end gap-0.5">
           <Money value={Number(recall.refund.value)} currency={recall.refund.currency} size="inline" className="text-body font-medium text-text" />
-          {sandbox && <span className="micro text-faint">Sandbox</span>}
         </span>
       </div>
 
@@ -68,10 +67,9 @@ export function RecallBrief({ recall, sandbox, demo }: { recall: Recall; sandbox
             <img src={image.url} alt={image.caption || `The recalled ${recall.product}`} className="block h-auto max-h-40 w-auto max-w-full object-contain mix-blend-multiply lg:max-h-80" />
           </Paper>
           <figcaption className="flex flex-col gap-1.5 pl-1">
-            <ExhibitLabel leaderLength={24}>Exhibit · recalled product</ExhibitLabel>
+            <ExhibitLabel leaderLength={24}>Recalled product</ExhibitLabel>
             {image.caption && <span className="max-w-read text-ui text-faint">{image.caption}</span>}
-            {/* The samples' AI-made pillow is a plain stand-in, not these covers: say so before the photos look like another recall. */}
-            {demo && <span className="max-w-read text-ui text-muted">The sample photos show an AI-made stand-in of this pillow; these are the real recalled covers.</span>}
+            {demo && <span className="max-w-read text-ui text-muted">CPSC&apos;s photo of the recalled covers.</span>}
           </figcaption>
         </figure>
       )}

@@ -8,13 +8,13 @@ import { NavMenu, type NavMenuLink } from "./NavMenu";
 
 type SectionId = "how" | "problem" | "checks" | "proof" | "companies";
 
-// In page order, in plain words; each section's eyebrow says the same. The problem is in the sheet always, and in the bar
+// In page order, in plain words; each section's eyebrow says the same. Problem is in the sheet always, and in the bar
 // from xl only: at 1024 the four others and the right side fill it.
 const NAV_LINKS: readonly NavMenuLink<SectionId>[] = [
   { id: "how", label: "How it works", note: "One real claim, photo to PayPal payout" },
-  { id: "problem", label: "The problem", note: "Refunds run on an inbox of photos, and AI broke it", bar: "xl" },
-  { id: "checks", label: "Stopping fakes", note: "Each check in detail, with four samples" },
-  { id: "proof", label: "Test results", note: "36 claims tested, 0 web photos paid" },
+  { id: "problem", label: "Problem", note: "Refunds run on an inbox of photos, and AI broke it", bar: "xl" },
+  { id: "checks", label: "Fraud checks", note: "The five checks a fake has to beat, and four claims to try" },
+  { id: "proof", label: "Results", note: "Every genuine claim paid, every stolen photo stopped" },
   { id: "companies", label: "For companies", note: "Every claim with its evidence, and the CPSC report" },
 ];
 
@@ -158,9 +158,8 @@ const linkClass = clsx(
 /**
  * The homepage nav on the page frame: the wordmark on the first grid line, a flat table of contents in plain words
  * beside it (the current one chipped), then the theme, a hairline, the companies' sign-in as quiet text and "Try a
- * sample claim" as the quiet button: the short form of the hero's amber "Try a claim with sample photos", the screen's
- * one action (the nav's never turns amber: below the hero, amber is already on almost every screen). Below lg a Menu
- * sheet holds the links and the theme, and the bar names the current section where it has room; "Try a sample claim"
+ * claim" as the quiet button: the same words as the hero's amber "Try a claim", the screen's one action (the nav's never turns amber: below the hero, amber is already on almost every screen). Below lg a Menu
+ * sheet holds the links and the theme, and the bar names the current section where it has room; "Try a claim"
  * steps aside while an on-page try button is in view.
  * No rule under it, a solid page tone (a translucent bar turned grey-brown over the cream paper band), and it never
  * hides: the pinned stage is laid out against a constant 64px header.
@@ -214,7 +213,7 @@ export function Nav() {
               tryInView !== false && "max-lg:invisible max-lg:opacity-0",
             )}
           >
-            Try a sample claim
+            Try a claim
           </Button>
           <NavMenu links={NAV_LINKS} current={current} onPick={pick} />
         </div>

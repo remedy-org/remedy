@@ -24,10 +24,10 @@ const ERRORS: Record<string, { title: string; description: string }> = {
 
 const FACTS = [
   <>
-    Your workspace opens with the Kikea <span className="whitespace-nowrap">X-VESOLJE</span> demo recall and 40 sample claims to explore.
+    Your console opens on the <span className="whitespace-nowrap">X-VESOLJE</span> pillow recall, with 40 claims already in the queue.
   </>,
-  "In this build, refunds are sent from Remedy's PayPal sandbox business account. At launch each company connects its own through PayPal.",
-  "Remedy reads your PayPal name, email and account id to open your workspace. Nothing else.",
+  "Refunds land in each owner's PayPal account through PayPal Payouts. Next: fund them straight from your PayPal business account.",
+  "Remedy reads your PayPal name, email and account ID to open your console. Nothing else.",
 ];
 
 export default async function SignInPage({ searchParams }: PageProps<"/signin">) {
@@ -39,7 +39,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   const error = ERRORS[one(params.auth_error) ?? ""];
   const signedOut = !error && one(params.signedout) === "1";
   const start = `/api/auth/paypal/start?${new URLSearchParams({ as: "company", next })}`;
-  // The judges' business sandbox login. From a try result's "see this claim" link, it says why the console needs it.
+  // The demo business account. From a try result's "see this claim" link, it says why the console needs it.
   const login = judgeLogin("business");
   const fromClaim = new URL(next, "http://n").searchParams.has("claim");
 
@@ -78,7 +78,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
               <JudgeLoginPanel
                 login={login}
                 className="mt-6"
-                why={fromClaim ? "The console is the company's side. Log in with the business sandbox account to see this claim." : undefined}
+                why={fromClaim ? "The console is the company's side. Use the demo business account to see this claim." : undefined}
               />
             )}
 
@@ -114,7 +114,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
         <aside aria-hidden="true" inert className="hidden lg:col-span-6 lg:col-start-7 lg:block">
           <div className="w-[48rem] rotate-2 lg:[zoom:0.57] xl:[zoom:0.71] min-[85rem]:[zoom:0.76] min-[90rem]:[zoom:0.8]">
             <ExhibitLabel leader="right" leaderLength={48} className="mb-5 ml-8">
-              40 sample claims waiting
+              Your console, with 40 claims to work through
             </ExhibitLabel>
             <ConsoleReplica rows={PREVIEW_ROWS.slice(0, 8)} className="opacity-80" />
           </div>

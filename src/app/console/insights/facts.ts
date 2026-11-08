@@ -39,7 +39,7 @@ export const refusalLabel = (check: string) => REFUSAL[check.startsWith("step_")
 
 const PRE_CHECKS = new Set(["session", "duplicate_photo", "payer", "payer_verified"]);
 
-export type Source = "Sample" | "Judges' demo" | "Owner";
+export type Source = "Starter" | "Demo" | "Owner";
 
 export interface ClaimFact {
   id: string;
@@ -131,7 +131,7 @@ export interface InsightsData {
 const seconds = (from: string | undefined, to: string | undefined) => (from && to ? Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 1000)) : null);
 const at = (c: Claim, type: string) => c.events.find((e) => e.type === type)?.at;
 
-export const sourceOf = (c: Pick<Claim, "seeded" | "demo">): Source => (c.seeded ? "Sample" : c.demo ? "Judges' demo" : "Owner");
+export const sourceOf = (c: Pick<Claim, "seeded" | "demo">): Source => (c.seeded ? "Starter" : c.demo ? "Demo" : "Owner");
 
 function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
   if (c.decision === "paid") return { stage: "Paid", stopReason: null };
@@ -170,9 +170,12 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     verified: c.payerVerified,
     amountPaid: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
     amountSent: c.decision === "paid" && !c.seeded ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
-    // As the queue's amount column: what a paid or held claim pays, and "not sent" while nothing has gone through PayPal.
+    // As the queue's payout column: what a paid or held claim pays; "approved" on a starter claim (the rule approved it, and
+    // starter claims never pay out) and "not sent" on a held one.
     refund:
-      c.decision !== "paid" && c.decision !== "held" ? "—" : `${dollars.format(cents(amountOf(c.payout?.amount, recall)) / 100)}${c.seeded || c.decision === "held" ? " · not sent" : ""}`,
+      c.decision !== "paid" && c.decision !== "held"
+        ? "—"
+        : `${dollars.format(cents(amountOf(c.payout?.amount, recall)) / 100)}${c.decision === "held" ? " · not sent" : c.seeded ? " · approved" : ""}`,
     remedied: c.decision === "paid" ? 1 : 0,
     remediedSample: c.decision === "paid" && c.seeded ? 1 : 0,
     refused: refused ? 1 : 0,

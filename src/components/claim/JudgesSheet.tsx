@@ -4,14 +4,14 @@ import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "r
 import { createPortal } from "react-dom";
 import { Button, CrossIcon } from "@/components/ui";
 
-/** FlowShell's header slot beside the SANDBOX DEMO status, where the button docks so it never floats over a step. */
+/** FlowShell's header slot beside the wordmark, where the Guide button docks so it never floats over a step. */
 export const JUDGES_DOCK_ID = "judges-dock";
 
 const noop = () => () => {};
 
 /**
- * Below 1200px the judges' notes live behind a quiet 36px button in the header (a button's shape, not a status pill's)
- * that opens them as a bottom sheet (a modal dialog). It renders into the header's slot once the page has hydrated.
+ * Below 1200px the guide lives behind a quiet 36px button in the header (a button's shape, not a status pill's) that
+ * opens it as a bottom sheet (a modal dialog). It renders into the header's slot once the page has hydrated.
  */
 export function JudgesSheet({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -35,8 +35,7 @@ export function JudgesSheet({ children }: { children: ReactNode }) {
       aria-controls={id}
       className="shrink-0 px-3"
     >
-      <span className="max-[399px]:hidden">For judges</span>
-      <span className="min-[400px]:hidden">Judges</span>
+      Guide
     </Button>
   );
   return (
@@ -47,7 +46,7 @@ export function JudgesSheet({ children }: { children: ReactNode }) {
         ref={ref}
         id={id}
         tabIndex={-1}
-        aria-label="Notes for judges"
+        aria-label="Guide"
         onClick={(e) => e.target === ref.current && ref.current?.close()}
         onClose={() => setOpen(false)}
         className="fixed inset-x-0 top-auto bottom-0 m-0 max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-[16px] bg-surface p-0 text-text shadow-float outline-none backdrop:bg-[oklch(0_0_0/0.5)]"

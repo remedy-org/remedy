@@ -14,7 +14,7 @@ describe("skip link targets", () => {
   });
 
   // The homepage, the company sign-in, every claim page and not-found (FlowShell), and every console page (its layout).
-  it.each(["app/(marketing)/page.tsx", "app/signin/page.tsx", "components/claim/FlowShell.tsx", "app/console/layout.tsx"])(
+  it.each(["app/(marketing)/page.tsx", "app/signin/page.tsx", "components/claim/FlowShell.tsx", "components/legal/LegalPage.tsx", "app/console/layout.tsx"])(
     "%s holds a focusable #main",
     (path) => {
       expect(src(path)).toMatch(target("main"));
