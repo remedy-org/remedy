@@ -52,7 +52,7 @@ function Marker({ state }: { state: CheckState }) {
 
 /** One row per check: its icon, its name, a word only for an exception, and what it found when there is something to
  * say. The result is also in each row's accessible name, so the icon never carries it alone. */
-export function CheckList({ steps, label, className }: { steps: CheckStep[]; label: string; className?: string }) {
+export function CheckList({ steps, label, words, className }: { steps: CheckStep[]; label: string; words?: Partial<Record<CheckState, string>>; className?: string }) {
   return (
     <ol aria-label={label} className={clsx("flex flex-col", className)}>
       {steps.map((s) => (
@@ -61,7 +61,7 @@ export function CheckList({ steps, label, className }: { steps: CheckStep[]; lab
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-3">
               <span className={clsx("text-ui font-medium", s.state === "waiting" ? "text-faint" : "text-text")}>{s.label}</span>
-              {word[s.state] ? <span className="shrink-0 text-micro text-muted">{word[s.state]}</span> : <span className="sr-only">Passed</span>}
+              {(words?.[s.state] ?? word[s.state]) ? <span className="shrink-0 text-micro text-muted">{words?.[s.state] ?? word[s.state]}</span> : <span className="sr-only">Passed</span>}
             </div>
             {s.detail && <Detail>{s.detail}</Detail>}
           </div>

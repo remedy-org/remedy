@@ -288,6 +288,7 @@ describe("recall import", () => {
 
   it("makes slugs unique and short", () => {
     expect(slugify("Gourmia Stainless Steel Digital 9 Slice Digital Air Fryer Ovens")).toBe("gourmia-stainless-steel-digital-9-slice-digital");
+    expect(slugify("Ekouaer Girls’ Nightgowns")).toBe("ekouaer-girls-nightgowns");
     expect(uniqueSlug("pillows", [{ slug: "pillows", id: "27-071" }], "27-099")).toBe("pillows-2");
     expect(uniqueSlug("pillows", [{ slug: "pillows", id: "27-071" }], "27-071")).toBe("pillows");
   });

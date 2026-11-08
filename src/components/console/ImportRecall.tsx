@@ -4,9 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import type { ApiError } from "@/app/console/_lib/api";
 import type { CpscSummary } from "@/app/console/_lib/recalls";
-import { Button, CheckProgress, ErrorState, Field } from "@/components/ui";
+import Link from "next/link";
+import { Button, ErrorState, Field, type CheckStep } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
 import { api } from "./api";
+import { CheckList } from "./CheckList";
+import { formatCount } from "./format";
 import { CpscNotice } from "./CpscNotice";
 import { PublishForm } from "./PublishForm";
 
@@ -16,6 +19,19 @@ type Step =
   | { at: "drafting"; notice: CpscSummary }
   | { at: "draft_failed"; notice: CpscSummary; error: ApiError }
   | { at: "edit"; notice: CpscSummary; spec: CheckSpec; drafted: boolean };
+
+const units = (n: CpscSummary) => (n.unitsSold ? `about ${formatCount(n.unitsSold)} units` : "no unit count given");
+
+/** The import's three steps, named for what each one does, with where this import has got to. */
+function importSteps(at: Step["at"], notice?: CpscSummary): CheckStep[] {
+  const read = at === "reading" ? "running" : notice ? "pass" : "waiting";
+  const draft = at === "drafting" ? "running" : at === "draft_failed" ? "hold" : "waiting";
+  return [
+    { id: "cpsc", label: "Read CPSC's record", state: read, detail: notice ? `Recall ${notice.id}, ${units(notice)}` : "Product, units sold and the remedy" },
+    { id: "draft", label: "Draft the photo checks", state: draft, detail: at === "draft_failed" ? "No draft came back" : "The model reads the notice and its photos, about 15 seconds" },
+    { id: "review", label: "You review and publish", state: "waiting", detail: "Nothing goes live until you publish" },
+  ];
+}
 
 const blankSpec = (n: CpscSummary): CheckSpec => ({
   recall: `${n.product || n.title} (CPSC ${n.id})`,
@@ -70,19 +86,7 @@ export function ImportRecall({ example }: { example: string }) {
             <h2 className="text-body font-medium">Drafting the photo checks</h2>
             <p className="mt-1 text-ui text-muted">The model reads the notice and its photos, then writes what an owner&apos;s photos must show. You review every line before it goes live.</p>
           </div>
-          <CheckProgress
-            label="Import progress"
-            steps={[
-              { id: "cpsc", label: "Read CPSC's record", state: "pass", detail: `Recall ${step.notice.id}, ${step.notice.units || "unit count not given"}` },
-              {
-                id: "draft",
-                label: "Draft the checks",
-                state: step.at === "drafting" ? "running" : "hold",
-                detail: step.at === "drafting" ? "About 15 seconds" : "No draft came back",
-              },
-              { id: "review", label: "You review and publish", state: "waiting" },
-            ]}
-          />
+          <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn't finish" }} />
           {step.at === "draft_failed" && (
             <ErrorState
               variant="inline"
@@ -106,7 +110,7 @@ export function ImportRecall({ example }: { example: string }) {
 
   const error = step.at === "find" ? step.error : undefined;
   return (
-    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,40rem)_22rem] lg:gap-16">
+    <div className="flex max-w-[40rem] flex-col gap-8">
       <form onSubmit={read} className="flex flex-col gap-6" noValidate>
         <Field
           label="CPSC recall URL or number"
@@ -114,24 +118,25 @@ export function ImportRecall({ example }: { example: string }) {
           value={ref}
           onChange={(e) => setRef(e.target.value)}
           error={error?.fields?.ref}
-          help="The notice's page on cpsc.gov, or its number, such as 27-071."
           mono
           autoComplete="off"
           spellCheck={false}
           required
           disabled={step.at === "reading"}
         />
-        {error && !error.fields?.ref && (
+        {/* A recall already here isn't a failure: say where it is. */}
+        {error?.existing && (
+          <p className="text-ui text-text-2">
+            <span className="font-mono">{error.existing}</span> is already in your workspace.{" "}
+            <Link href={`/console/recalls/${error.existing}`} className="font-medium text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
+              Open it <span aria-hidden="true">→</span>
+            </Link>
+          </p>
+        )}
+        {error && !error.fields?.ref && !error.existing && (
           <ErrorState
             variant="inline"
             title={error.error}
-            action={
-              error.existing ? (
-                <Button href={`/console/recalls/${error.existing}`} variant="tertiary" size="sm">
-                  Open recall {error.existing}
-                </Button>
-              ) : undefined
-            }
           />
         )}
         <div>
@@ -140,18 +145,7 @@ export function ImportRecall({ example }: { example: string }) {
           </Button>
         </div>
       </form>
-      <aside className="rounded-card border border-line p-6">
-        <h2 className="text-ui font-medium text-text">What happens next</h2>
-        <CheckProgress
-          label="Import steps"
-          className="mt-2"
-          steps={[
-            { id: "cpsc", label: "Read CPSC's record", state: step.at === "reading" ? "running" : "waiting", detail: "Product, units sold and the remedy" },
-            { id: "draft", label: "Draft the checks", state: "waiting", detail: "The model reads the notice and its photos" },
-            { id: "review", label: "You review and publish", state: "waiting", detail: "Nothing goes live until you publish" },
-          ]}
-        />
-      </aside>
+      {step.at === "reading" && <CheckList label="Import progress" steps={importSteps(step.at)} className="rounded-card border border-line bg-surface px-6 py-2" />}
     </div>
   );
 }

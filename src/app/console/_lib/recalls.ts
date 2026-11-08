@@ -80,6 +80,8 @@ export function slugify(text: string): string {
   const words = text
     .normalize("NFKD")
     .toLowerCase()
+    // "Girls' Nightgowns" is one word each side of the apostrophe, not "girl-s".
+    .replace(/['’]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .split(" ")
