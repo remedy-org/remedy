@@ -692,8 +692,8 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
     </button>
   );
   return (
-    <span className="inline-flex items-center gap-2">
-      <span aria-hidden="true" className={clsx("size-1.5 rounded-full", state === "live" && !failed ? "bg-pay" : "border border-faint")} />
+    <span className="inline-flex items-baseline gap-2">
+      <span aria-hidden="true" className={clsx("size-1.5 shrink-0 -translate-y-px self-center rounded-full", state === "live" && !failed ? "bg-pay" : "border border-faint")} />
       {failed ? (
         <>Couldn&apos;t update · {refresh}</>
       ) : state === "live" ? (
@@ -706,7 +706,8 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
         <>Live updates stopped after 10 minutes · {refresh}</>
       ) : (
         <>
-          Up to date · updated <Ago key={at} at={at} /> · {refresh}
+          <span className="max-sm:hidden">Up to date · updated</span>
+          <span className="sm:hidden">Updated</span> <Ago key={at} at={at} /> · {refresh}
         </>
       )}
     </span>

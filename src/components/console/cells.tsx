@@ -375,7 +375,7 @@ export function CardRow({ data }: Cell) {
           <span className="font-mono text-ui font-medium">{data.id}</span>
           <span className="shrink-0">{data.amount ? <AmountText amount={data.amount} tone={toneOf(data)} /> : <span className="text-faint">—</span>}</span>
         </span>
-        <span className="verdict-track is-mark">
+        <span className="verdict-track is-mark is-card">
           <VerdictMark verdict={verdict} className={EXCEPTION.has(data.decision) ? "text-text" : undefined} />
           {note && (
             <span className="min-w-0 truncate text-ui text-muted">
@@ -464,7 +464,7 @@ export function ChecksTooltip({ data, location, value, context }: CustomTooltipP
     { title: "Photo check", bars: model },
   ].filter((g) => g.bars.length);
   return (
-    <div className="w-[296px] rounded-card bg-surface px-3.5 py-3 shadow-float">
+    <div className="w-[328px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <p className="text-ui text-text">{barsSentence(data.bars)}</p>
       {groups.map((g) => (
         <div key={g.title} className="mt-3">

@@ -149,6 +149,11 @@
   grid-template-columns: 6.5rem minmax(0, 1fr);
 }
 
+/* A card row (phones) has no column to line up with: the reason follows its mark, so a 320px screen keeps its words. */
+.verdict-track.is-mark.is-card {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
 /* The homepage tour's arriving claim (components/console/preview.ts ARRIVE_ID): as its checks come back, the two
    groups of its checks strip fill (the pre-checks, then the photo check's answers 160ms later), each bar over
    --dur-ui, before its verdict turns. Every cell the arrival changes flashes the one neutral tint. Scoped to the
