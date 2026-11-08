@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { MARK_STUB, MARK_TAG } from "@/components/ui/markPaths";
 
 // The link card for Devpost, Slack and X: the hero's two-tone headline in Schibsted Grotesk on the page colour, beside
 // the genuine demo claim's photo. Colours are the Lamplight dark tokens (wave3 DIRECTION.md), as hex.
@@ -17,10 +18,6 @@ const LINE = "rgba(248,241,227,0.08)"; // --line
 const SCRIM = "rgba(13,12,10,0.78)"; // --photo-scrim
 const PAPER = "#efebe1"; // --paper: the mark's tag
 const ACCENT = "#ebb75b"; // --accent (brass): the mark's stub, the only amber on the card
-
-// The Claim Check mark, the same 21 x 14 geometry as ui/Wordmark.tsx: the tag (proof) and the torn amber stub (refund).
-const MARK_TAG = "M0 3L3 0H11.15A1.6 1.6 0 0 0 12 1.413V12.587A1.6 1.6 0 0 0 11.15 14H3L0 11ZM5 7A1.25 1.25 0 1 0 2.5 7A1.25 1.25 0 1 0 5 7Z";
-const MARK_STUB = "M14.35 0H20A1 1 0 0 1 21 1V13A1 1 0 0 1 20 14H14.35A1.6 1.6 0 0 0 13.5 12.587V1.413A1.6 1.6 0 0 0 14.35 0Z";
 
 // Schibsted Grotesk for the words, JetBrains Mono for the micro labels and codes, as on the site.
 // ImageResponse needs TTF or OTF; Google's CSS API serves TTF to a client that doesn't ask for woff2. If the font
@@ -61,9 +58,12 @@ export default async function OpengraphImage() {
     (
       <div style={{ display: "flex", width: "100%", height: "100%", background: BG, color: TEXT, fontFamily: fonts.length ? "Schibsted Grotesk" : undefined }}>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, padding: "64px 56px 56px 72px" }}>
-          {/* The lockup at 30px: the mark is the cap height (0.727em), 0.3em from the name, its foot on the baseline. */}
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 9, fontSize: 30, fontWeight: 600, letterSpacing: -0.75, lineHeight: 1 }}>
-            <svg width="33" height="22" viewBox="0 0 21 14" style={{ marginBottom: 1 }}>
+          {/* The lockup at 44px, so the master lands on 2px a unit (a fractional scale blurred the teeth into a seam): the
+              tag is the cap height plus overshoot (0.727em, 32px), 0.25em from the name, its foot on the baseline. The
+              viewBox opens 1.5 units above the tag for the stub's lift. flex-end aligns the svg with the line box's foot,
+              under the baseline here, hence the margin. */}
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 11, fontSize: 44, fontWeight: 600, letterSpacing: -1.1, lineHeight: 1 }}>
+            <svg width="48" height="35" viewBox="0 -1.5 24 17.5" style={{ marginBottom: 6 }}>
               <path fillRule="evenodd" fill={PAPER} d={MARK_TAG} />
               <path fill={ACCENT} d={MARK_STUB} />
             </svg>
