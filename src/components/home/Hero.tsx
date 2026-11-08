@@ -18,19 +18,17 @@ export function Hero() {
     <>
       {/* Set line by line on one column start, so the breaks are the same at every width (a narrow phone wraps the long
           lines on their own). */}
-      <h1 id="hero-title" className={clsx("text-display font-medium", styles.focusIn)} style={line(0)}>
+      {/* A big monitor gets a bigger headline: up to 72px from 1600px wide. */}
+      <h1 id="hero-title" className={clsx("text-display font-medium min-[1600px]:text-[clamp(3.5rem,3.75vw,4.5rem)]", styles.focusIn)} style={line(0)}>
         Recall refunds, <br />
         paid in a minute.
       </h1>
       <p className={clsx("mt-4 text-head-sm font-medium text-balance text-text lg:mt-5", styles.focusIn)} style={line(1)}>
         Proof of destruction, on a live camera.
       </p>
-      <p className={clsx("mt-5 max-w-[34ch] text-body lg:max-w-[42ch] text-pretty text-text-2 sm:text-lead lg:mt-6", styles.focusIn)} style={line(1)}>
-        {/* Two blocks on phones, one paragraph from sm: each half stays smaller than the h1, so the h1 is the LCP. */}
-        <span className="block sm:inline">Remedy turns any CPSC recall into a live refund program.</span>{" "}
-        <span className="block sm:inline">
-          The owner photographs the cut-up product with a one-time code, and the refund lands in their PayPal account.
-        </span>
+      {/* A step under the subhead (18px, the second tone) and three lines at most, so the subhead stays the sharpest line. */}
+      <p className={clsx("mt-5 max-w-[40ch] text-body text-pretty text-text-2 sm:text-[1.125rem] sm:leading-[1.55] lg:mt-6", styles.focusIn)} style={line(1)}>
+        The owner photographs the cut-up product with a one-time code, and the refund lands in their PayPal account.
       </p>
       <div className={clsx("mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 lg:mt-10", styles.focusIn)} style={line(2)}>
         {/* The owner's path is the screen's one amber action; companies get a quieter link to their section, the nav's

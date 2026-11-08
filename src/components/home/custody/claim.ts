@@ -19,6 +19,8 @@ export const CLAIM = {
   company: "Kikea Store",
   units: "About 19,596",
   recalled: "5 Nov 2026",
+  /** CPSC's own product photo, as the recall page shows it (hot-linked from cpsc.gov, so it stays the official one). */
+  cpscPhoto: "https://www.cpsc.gov/s3fs-public/Kikea1.png?VersionId=fn.ALOuj6jGY0PDI69W9G92X7BBbt49Q",
 } as const;
 
 /** The chapter rail, the static captions and the screen-reader list: the claim's five chapters, then the console. */

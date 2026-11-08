@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { VerdictMark } from "@/components/console/VerdictMark";
-import { AlertIcon, ClockIcon, DURATION, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
+import { ClockIcon, DURATION, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
 import { CLAIM, CODE_AT, CONSENT_AT, CONSENT_STAGGER, CONSOLE_ROWS, SHOT_AT, WRITE_AT } from "./claim";
 import { ENTER, useGate } from "./gate";
 
@@ -93,15 +93,17 @@ export function ConsentChapter({ p }: { p?: Progress }) {
             <span className="font-mono">{CLAIM.recall}</span> · Recalled {CLAIM.recalled}
           </span>
           <p className="text-h2 font-medium">{CLAIM.product}</p>
-          <p className="flex gap-3 rounded-card bg-stop-soft p-4 text-body font-medium text-text">
-            <AlertIcon className="mt-1 shrink-0 text-stop" />
-            Risk of serious injury or death from suffocation. Stop using it now.
-          </p>
-          <dl className={clsx("grid grid-cols-3 border-t border-line text-ui", compact && "hidden")}>
+          {/* The live recall page's own hazard (RecallBrief.tsx): one sentence on a red rule, no box, no icon. */}
+          <p className="border-l-2 border-stop pl-4 text-body font-medium text-pretty text-text">Risk of serious injury or death from suffocation. Stop using it now.</p>
+          {/* CPSC's photo on its paper plate, as the live page shows it under the hazard; a short screen gives it way. */}
+          <div className={clsx("flex h-44 items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line brightness-[0.84] in-data-[theme=light]:brightness-100", compact && "hidden")}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={CLAIM.cpscPhoto} alt="" loading="lazy" className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
+          </div>
+          <dl className={clsx("grid grid-cols-2 border-t border-line text-ui", compact && "hidden")}>
             {[
               ["Units recalled", CLAIM.units],
               ["Sold by", CLAIM.company],
-              ["Claim takes", "About 5 minutes"],
             ].map(([k, v]) => (
               <div key={k} className="flex flex-col gap-1 border-b border-line py-3">
                 <dt className="text-faint">{k}</dt>
@@ -128,7 +130,7 @@ export function ConsentChapter({ p }: { p?: Progress }) {
             <p className="text-title font-medium text-pretty">
               $29.99 back for your <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> pillow
             </p>
-            <p className="text-body text-pretty text-text-2">Cut the pillow in half first, then photograph it with a code we give you, and PayPal pays you.</p>
+            <p className="text-body text-pretty text-text-2">Cut the pillow in half, photograph it with the code we give you, and PayPal pays you in seconds.</p>
           </div>
           <StepLine p={p} at={CONSENT_AT} stagger={CONSENT_STAGGER} steps={CONSENT_STEPS} card className={clsx("font-medium", compact && "@max-[719px]:hidden")} />
           {/* The claim page's own button, as it looks there: brass, the screen's one amber. A picture, so it is no control

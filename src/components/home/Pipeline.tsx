@@ -49,7 +49,7 @@ interface Sample {
 }
 
 const SAMPLES: Sample[] = [
-  { name: "Photo pulled from the web", photo: "/demo/c08-1.jpg", stop: 0, reason: "Not taken in this claim\u2019s camera" },
+  { name: "A photo from the web", photo: "/demo/web-1.jpg", stop: 0, reason: "Not taken in this claim\u2019s camera" },
   { name: "A photo used before", photo: "/demo/c02-1.jpg", stop: 1, reason: "Same photo as an earlier claim" },
   { name: "Wrong code on the tag", photo: "/demo/c11-1.jpg", stop: 3, reason: <>The tag reads <span className="font-mono">K7Q</span>; the code is <span className="font-mono">K7P</span></> },
   { name: "A genuine claim", photo: "/demo/c02-1.jpg", stop: 5, paid: true, reason: <><Money value={29.99} /> to the owner&rsquo;s PayPal</> },

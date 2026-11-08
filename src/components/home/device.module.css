@@ -41,10 +41,12 @@
   --deck-bottom: oklch(0.31 0.004 75);
   --hinge-a: oklch(0.15 0.004 75);
   --hinge-b: oklch(0.24 0.004 75);
-  --key: oklch(0.19 0.004 75);
-  --key-edge: oklch(1 0 0 / 0.06);
-  --pad: oklch(0.355 0.004 75);
-  --pad-edge: oklch(1 0 0 / 0.1);
+  --well-top: oklch(0.3 0.004 75);
+  --well-bottom: oklch(0.285 0.004 75);
+  --well-shade: oklch(0 0 0 / 0.35);
+  --well-rim: oklch(1 0 0 / 0.05);
+  --pad: oklch(0.345 0.004 75);
+  --pad-edge: oklch(1 0 0 / 0.06);
   --lip: oklch(0.24 0.004 75);
   --lip-low: oklch(0.17 0.004 75);
   --rim: oklch(0.62 0.006 240 / 0.6);
@@ -61,15 +63,17 @@
 :global([data-theme="light"]) .view {
   --lid: oklch(0.2 0.004 75);
   --lid-edge: oklch(0.23 0.01 65 / 0.3);
-  /* Silver, lighter at the back, with mid-grey keys: texture, not the strongest contrast on the right of the page. */
+  /* Silver, lighter at the back, with a soft keyboard well: texture, not the strongest contrast on the right of the page. */
   --deck-top: oklch(0.9 0.004 75);
   --deck-bottom: oklch(0.84 0.004 75);
   --hinge-a: oklch(0.6 0.004 75);
   --hinge-b: oklch(0.76 0.004 75);
-  --key: oklch(0.56 0.004 75);
-  --key-edge: oklch(1 0 0 / 0.35);
-  --pad: oklch(0.87 0.004 75);
-  --pad-edge: oklch(0.23 0.01 65 / 0.1);
+  --well-top: oklch(0.8 0.004 75);
+  --well-bottom: oklch(0.82 0.004 75);
+  --well-shade: oklch(0.23 0.01 65 / 0.22);
+  --well-rim: oklch(1 0 0 / 0.5);
+  --pad: oklch(0.86 0.004 75);
+  --pad-edge: oklch(0.23 0.01 65 / 0.07);
   --lip: oklch(0.8 0.004 75);
   --lip-low: oklch(0.7 0.004 75);
   --rim: oklch(1 0 0 / 0.9);
@@ -262,12 +266,18 @@
   box-shadow: inset 0 -1px 0 var(--rim);
 }
 
+/* The keyboard well: one soft inset, a step darker than the deck, with no keys drawn in it. */
 .keys {
   position: absolute;
   left: 4em;
   right: 4em;
   top: 2.6em;
   height: 19.8em;
+  border-radius: 0.9em;
+  background: linear-gradient(var(--well-top), var(--well-bottom));
+  box-shadow:
+    inset 0 0.2em 0.5em var(--well-shade),
+    inset 0 -1px 0 var(--well-rim);
 }
 
 .pad {
