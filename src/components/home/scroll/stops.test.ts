@@ -7,9 +7,11 @@ import { ANCHORED, framed, LINE, MERGE, nearestClean, STOPS, tidy, type Page } f
 const page: Page = {
   top: () => 0,
   beat: (f) => 64 + f * 7316,
+  beats: () => undefined,
   sheet: (t) => 8280 - 900 + (t / 100) * 900,
   line: (_, under = LINE) => framed(10000, 64, under),
   past: () => 0,
+  foot: () => 0,
   end: () => 13487,
   fit: (y) => y,
 };
@@ -64,13 +66,13 @@ describe("scroll stops", () => {
   });
 
   it("stops the wheel on every beat Space and Page Down stop on in the Chain of Custody, in order", () => {
-    const custody = STOPS.filter((s) => s.name.startsWith("Chain of Custody")).map((s) => s.at(page));
+    const custody = STOPS.filter((s) => /^Chain of Custody \d/.test(s.name)).map((s) => s.at(page));
     expect(custody).toEqual(PAGE_STOPS.slice(1).map((f) => 64 + f * 7316));
     expect(custody).toHaveLength(10); // 01, 02, the exhibit's seven beats, the console
   });
 
   it("lands the Problem sheet open where the nav's Problem does, then on the closed loop, then cut and paid off", () => {
-    const sheet = STOPS.filter((s) => s.name.startsWith("Problem")).map((s) => s.at(page)!);
+    const sheet = STOPS.filter((s) => s.name.startsWith("Problem")).map((s) => s.at(page) as number);
     // Where the nav's Problem lands (t = ANCHOR_AT, the section's top 20vh above the nav line), a hair before card 4.
     expect(8280 + 0.2 * 900 - sheet[0]).toBeGreaterThan(1);
     expect(8280 + 0.2 * 900 - sheet[0]).toBeLessThan(5);
@@ -105,10 +107,17 @@ describe("scroll stops", () => {
       // Results, framed clean: For companies' heading (12530) kept just under the screen's foot.
       fit: (y, frame) => (y === framed(11940, 64, LINE) && frame?.before === "#companies header" ? 12530 - 900 : y),
     };
-    const ys = STOPS.map((s) => s.at(real)).filter((y) => y !== undefined);
-    expect(ys).toHaveLength(STOPS.length);
+    const ys = STOPS.map((s) => s.at(real)).filter((y) => typeof y === "number");
+    // Every stop but the phone sequence's, which this laid-out laptop page doesn't have.
+    expect(ys).toHaveLength(STOPS.length - 1);
     expect([...ys].sort((a, b) => a - b)).toEqual(ys);
     // Results keeps For companies below the fold: its heading sits under the screen's foot.
     expect(STOPS.find((s) => s.name === "Results")!.at(real)).toBe(12530 - 900);
+  });
+
+  it("takes the phone sequence's own paging stops where it pins", () => {
+    const phone = STOPS.find((s) => s.name === "Chain of Custody, phone")!;
+    expect(phone.at({ ...page, beats: (sel) => (sel.includes("data-scroll-stops") ? [700, 1400] : undefined) })).toEqual([700, 1400]);
+    expect(phone.at(page)).toBeUndefined();
   });
 });

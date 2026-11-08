@@ -10,7 +10,8 @@ const TAU_ = TAU * (1 - Math.exp(-1 / TAU));
  * never jolts and from rest it eases in.
  */
 export function landing(s0: number) {
-  const v = Math.min(8, Math.max(0, s0));
+  // Up to 16 times the landing's average speed: the glide after the brake stays forward-moving up to about 28.
+  const v = Math.min(16, Math.max(0, s0));
   const glide = (1 - v * TAU_) / (0.5 - TAU_);
   const brake = v - glide;
   return (t: number) => brake * TAU * (1 - Math.exp(-t / TAU)) + glide * (t - (t * t) / 2);

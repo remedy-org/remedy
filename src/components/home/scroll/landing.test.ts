@@ -3,7 +3,7 @@ import { landing, landingTime, warp } from "./landing";
 
 describe("landing", () => {
   it("starts at 0, ends exactly on the stop and never turns back, from rest to a hard fling", () => {
-    for (const s0 of [0, 1, 2, 4, 8, 20]) {
+    for (const s0 of [0, 1, 2, 4, 8, 16, 30]) {
       const e = landing(s0);
       expect(e(0)).toBeCloseTo(0, 9);
       expect(e(1)).toBeCloseTo(1, 9);
@@ -19,7 +19,7 @@ describe("landing", () => {
 
   it("enters at the page's own speed", () => {
     const h = 1e-5;
-    for (const s0 of [0, 2, 5]) expect(landing(s0)(h) / h).toBeCloseTo(s0, 2);
+    for (const s0 of [0, 2, 5, 12]) expect(landing(s0)(h) / h).toBeCloseTo(s0, 2);
   });
 
   it("then slows evenly: after the brake, each tenth of the time is slower than the last by the same step", () => {

@@ -36,8 +36,12 @@ const NEAR = 0.15;
 const MOMENTUM = 0.35;
 /** A fling is taken to a stop only when its projected travel covers at least this share of the way there. */
 const CARRY = 0.5;
-/** A stop the page would reach within this many seconds at its own speed is too close to land softly: it goes on. */
-const CATCH = 0.1;
+/**
+ * A stop the page would reach within this many seconds at its own speed is too close to land softly: it goes on. Short,
+ * since the landing's brake sheds a hard fling's speed in about 50 ms: at 0.1 s a fling that Lenis had already sped up
+ * passed the Problem sheet's cut (350px from the stop before it on a 1080px screen).
+ */
+const CATCH = 0.05;
 /** Lenis's lerp, 0.1 (SmoothScroll.tsx): each 60 Hz frame covers this share of the way left to its target. */
 const LERP_STEP = 1 - Math.exp(-0.1);
 /** px a native scroll may differ from where Lenis last put the page before it counts as someone else's. */

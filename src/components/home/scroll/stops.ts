@@ -31,27 +31,39 @@ export type Page = {
   top(sel: string): number | undefined;
   /** A point (0 to 1) on the pinned Chain of Custody's scroll, while the sequence is pinned. */
   beat(f: number): number | undefined;
+  /** The beats a pinned runway lists for its own paging (data-scroll-stops: the phone sequence's), while it pins. */
+  beats(sel: string): number[] | undefined;
   /** A point t on the Problem sheet's timeline (problemTimeline.ts), while the sheet is pinned. */
   sheet(t: number): number | undefined;
   /** The first visible match's top `under` px below the nav (LINE by default; -1 tucks a hairline under it). */
   line(sel: string, under?: number): number | undefined;
   /** The scrollY at which the first visible match has just gone under the nav. */
   past(sel: string): number | undefined;
+  /** The scrollY that puts the first visible match's foot `at` of the way down the screen. */
+  foot(sel: string, at: number): number | undefined;
   /** The page end, while `sel` is on the page. */
   end(sel: string): number | undefined;
   /** The clean frame nearest `prefer`: no line of text and no paper tag or console cut by the nav or the screen's foot. */
   fit(prefer: number | undefined, frame?: Frame): number | undefined;
 };
 
-export type Stop = { name: string; at: (page: Page) => number | undefined };
+export type Stop = { name: string; at: (page: Page) => number | readonly number[] | undefined };
 
-/** Fraud checks, Results and For companies: their text, and their objects (the tags, the refund, the console). */
+/**
+ * The sections a frame is fitted to: their text, and their objects (the sheet's cards when it isn't pinned, the tags and
+ * the refund, the tour's tabs and console, the footer's tag).
+ */
 const TEXT = [
   "#checks header p, #checks h2, #checks [data-lanes-top] span, #checks ol > li h3, #checks ol > li p:not(.sr-only), #checks [data-try-cta]",
   "#proof h2, #proof p, #proof dt, #proof dd",
   "#companies header p, #companies h2, #companies [role=tab], #companies [data-story] ~ div > *",
+  "main ~ footer h2, main ~ footer p, main ~ footer li a",
 ].join(", ");
-const OBJECTS = "#checks [data-tag], #checks div[aria-hidden][data-lane], #companies [data-step]";
+const OBJECTS = "#checks [data-tag], #checks div[aria-hidden][data-lane], #companies [role=tablist], #companies [data-step], main ~ footer > div:first-child";
+/** The Problem sheet's, only while it isn't pinned: pinned, its stage sticks, so its layout positions follow the scroll
+ * and it is covered by Fraud checks wherever a section frame could meet it. */
+const PROBLEM_TEXT = "#problem h2, #problem p:not(.sr-only)";
+const PROBLEM_OBJECTS = "#problem [data-card]";
 /** A gate's heading and its text, kept together (the block less its 24px padding): never a heading alone at the foot. */
 const GATE_TEXT = "#checks ol > li > div:first-child > div";
 
@@ -70,12 +82,23 @@ export const STOPS: readonly Stop[] = [
   // the same beats: 01 and 02 with every line lit, the exhibit's live photo and five checks at their holds, the paid
   // receipt, then the console. Its first stop is the runway's top, the page top.
   ...PAGE_STOPS.slice(1).map((f, i) => ({ name: `Chain of Custody ${i + 1}`, at: (p: Page) => p.beat(f) })),
+  // Laptops under 700px tall and windows under 1024px wide get the phone sequence: its chapters 01 and 02, then the
+  // exhibit's beats, the stops its own Space and Page Down use (PhoneRunway).
+  { name: "Chain of Custody, phone", at: (p) => p.beats("div[data-runway][data-scroll-stops]") },
   // Problem, pinned: the sheet open (where the nav's Problem lands), the loop closed with its sources printed, then cut,
   // the payoff printed and the lamp down. Each a hair before the next beat starts, so a whole pixel of rounding never
-  // shows card 4 or the slash beginning. Not pinned, the sheet plays as it comes up: one stop at its name.
-  { name: "Problem, the sheet open", at: (p) => p.sheet(ANCHOR_AT - 0.4) ?? p.line("#problem .eyebrow") },
+  // shows card 4 or the slash beginning. Not pinned (laptops under 700px tall), the sheet plays as it comes up: a stop
+  // at its name, then its lower half whole, its foot from 78% of the screen up, past where the payoff has printed
+  // (Problem.tsx).
+  {
+    name: "Problem, the sheet open",
+    at: (p) => p.sheet(ANCHOR_AT - 0.4) ?? p.fit(p.line("#problem .eyebrow"), { min: p.line("#problem", 0), max: p.line("#problem .eyebrow", 16) }),
+  },
   { name: "Problem, the loop closed", at: (p) => p.sheet(T.mark[0] - 0.4) },
-  { name: "Problem, the loop cut", at: (p) => p.sheet(REST + 2) },
+  {
+    name: "Problem, the loop cut",
+    at: (p) => p.sheet(REST + 2) ?? p.fit(p.foot("#problem article", 0.78), { min: p.foot("#problem article", 0.8), max: p.foot("#problem article", 0.45) }),
+  },
   // Fraud checks: the heading on the top line over the gates that need no AI, their tags dropped. Never so high that
   // the Problem sheet shows above the section's edge, and the heading at least 16px under the nav.
   {
@@ -98,8 +121,9 @@ export const STOPS: readonly Stop[] = [
   // For companies: the tour whole, its tabs 16px under the nav and the console frame under them (the frame is sized to
   // fit this, home.module.css .stage). Phones and narrow windows, which get the story instead, stop at its heading.
   { name: "For companies", at: (p) => p.fit(p.line("#companies [data-tour]", 16) ?? p.line("#companies header")) },
-  // The footer's tag: "See a refund land in a minute." and Try a claim, at the page end.
-  { name: "Footer", at: (p) => p.end("footer") },
+  // The footer's tag: "See a refund land in a minute." and Try a claim, at the page end; on a short screen, the tag
+  // whole nearest the end.
+  { name: "Footer", at: (p) => p.fit(p.end("footer")) },
 ];
 
 /**
@@ -178,7 +202,7 @@ const AIR = 8;
 
 /** The intervals a frame edge may not fall inside: each line's ink, each object with its shadow. Tags not yet dropped
  * (their lane armed, Pipeline.tsx) are not there. */
-function atoms(): [number, number][] {
+function atoms(sheet: boolean): [number, number][] {
   const out: [number, number][] = [];
   const add = (sel: string, grow: number) => {
     for (const el of document.querySelectorAll<HTMLElement>(sel)) {
@@ -191,6 +215,11 @@ function atoms(): [number, number][] {
   add(TEXT, -INK);
   add(GATE_TEXT, -22);
   add(OBJECTS, AIR);
+  if (sheet) {
+    // The sheet lies tilted, which lifts or drops a card's corner by up to 13px off its layout box.
+    add(PROBLEM_TEXT, -INK + 13);
+    add(PROBLEM_OBJECTS, AIR + 13);
+  }
   return out;
 }
 
@@ -226,15 +255,23 @@ export function readPage(): Page {
   return {
     top: (sel) => (document.querySelector(sel) ? 0 : undefined),
     beat: (f) => (runway ? runway.top + f * runway.travel : undefined),
+    beats: (sel) => {
+      const el = visible(sel);
+      const rw = el && pinned(el);
+      return rw ? el.dataset.scrollStops!.split(" ").map((f) => rw.top + Number(f) * rw.travel) : undefined;
+    },
     // problemTimeline.ts: t is vh of scroll from the moment the section's top enters the foot of the screen.
     sheet: (t) => (problem ? problem.top - innerHeight + (t / 100) * innerHeight : undefined),
     line: (sel, under = LINE) => at(sel, (el) => framed(docTop(el), n, under)),
     past: (sel) => at(sel, (el) => docTop(el) + el.offsetHeight - n),
+    foot: (sel, f) => at(sel, (el) => docTop(el) + el.offsetHeight - f * innerHeight),
     end: (sel) => (document.querySelector(sel) ? document.documentElement.scrollHeight - innerHeight : undefined),
-    fit: (prefer, { min, max, before } = {}) => {
+    fit: (prefer, { min = 0, max = Infinity, before } = {}) => {
       if (prefer === undefined) return undefined;
       const cap = before ? at(before, (el) => docTop(el) - innerHeight) : undefined;
-      return nearestClean(prefer, atoms(), [n, innerHeight], { min, max, cap });
+      // Never past the page's own ends, where the frame couldn't be.
+      const limit = document.documentElement.scrollHeight - innerHeight;
+      return nearestClean(prefer, atoms(!problem), [n, innerHeight], { min: Math.max(0, min), max: Math.min(limit, max), cap });
     },
   };
 }
@@ -260,7 +297,7 @@ function readAll<V>(list: readonly { name: string; at: (page: Page) => V | undef
 
 /** The stops as scrollY values for the page as laid out now. */
 export function resolveStops(list: readonly Stop[] = STOPS, page = readPage()): number[] {
-  return tidy(readAll(list, page).filter(Number.isFinite), document.documentElement.scrollHeight - innerHeight);
+  return tidy(readAll(list, page).flat().filter(Number.isFinite), document.documentElement.scrollHeight - innerHeight);
 }
 
 /** The stops and the slow stretches between them, read once when a gesture starts (gate.ts). */
@@ -280,5 +317,5 @@ export function alignAnchor(hash: string) {
   if (!stop || !section) return;
   const y = stop.at(readPage());
   // html's scroll-padding-top (the nav) and the section's margin together put its top at y.
-  if (y !== undefined) section.style.scrollMarginTop = `${docTop(section) - nav() - y}px`;
+  if (typeof y === "number") section.style.scrollMarginTop = `${docTop(section) - nav() - y}px`;
 }

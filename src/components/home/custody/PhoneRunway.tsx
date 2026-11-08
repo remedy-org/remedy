@@ -36,7 +36,8 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
   useMotionValueEvent(scrollYProgress, "change", (v) => setAt(v < split ? Math.min(1, Math.floor((v / split) * 2)) : 2));
   const exhibitP = useTransform(scrollYProgress, [split, 1], [0, 1], { clamp: true });
   // Space and Page Down: chapter 01, chapter 02, then each of the exhibit's beats at its hold.
-  useBeatPaging(() => ref.current, [split * 0.25, split * 0.75, ...EXHIBIT_BEATS.map((b) => split + holdOf(b.id) * (1 - split))]);
+  const beats = [split * 0.25, split * 0.75, ...EXHIBIT_BEATS.map((b) => split + holdOf(b.id) * (1 - split))];
+  useBeatPaging(() => ref.current, beats);
   useEffect(() => {
     const el = well.current;
     if (!el) return;
@@ -53,7 +54,7 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
   };
   const c = CHAPTERS[Math.min(at, 1)];
   return (
-    <div ref={ref} className={styles.phoneRunway} style={{ "--scroll": `${2 * CHAPTER_VH + exhibitVh}vh` } as CSSProperties} data-runway>
+    <div ref={ref} className={styles.phoneRunway} style={{ "--scroll": `${2 * CHAPTER_VH + exhibitVh}vh` } as CSSProperties} data-runway data-scroll-stops={beats.join(" ")}>
       <div className={styles.phoneStage}>
         <div className="flex w-80 max-w-full items-baseline justify-between gap-4 px-1" aria-hidden="true">
           <span key={c.n} className={`eyebrow text-muted ${styles.chapterIn}`}>
