@@ -36,6 +36,8 @@ export function EvidencePhoto({
   const frame = clsx(
     "relative block w-full overflow-hidden rounded-control border border-line bg-surface-2",
     tall ? "aspect-[3/4]" : "aspect-[4/3]",
+    // A short window: the photo stays within 45% of its height, so it is seen whole beside the panel's header and footer.
+    "[@media(max-height:600px)]:max-h-[45vh]",
     state === "loading" && "animate-[skeleton-pulse_1.6s_ease-in-out_infinite]",
   );
   const inner = (

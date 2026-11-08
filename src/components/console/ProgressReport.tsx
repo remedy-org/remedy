@@ -4,10 +4,10 @@ import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
 import { NoBreakHyphens, StatusPill } from "@/components/ui";
 import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
-import { formatCount, formatDate, formatDayET, plural } from "./format";
+import { formatCount, formatDate, plural } from "./format";
 
 function H({ children }: { children: ReactNode }) {
-  return <h2 className="text-body font-medium">{children}</h2>;
+  return <h3 className="text-body font-medium">{children}</h3>;
 }
 
 const th = "py-2 pr-4 text-left text-micro font-medium text-muted last:pr-0";
@@ -33,16 +33,17 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
     >
       <header className="flex flex-col gap-3 border-b border-line pb-8">
         <p className="text-ui text-muted">Draft · generated {generated}</p>
-        <h1 className="text-h2 font-medium text-balance">
+        <h2 className="text-h2 font-medium text-balance">
           CPSC {recall.id}: <NoBreakHyphens>{recall.product}</NoBreakHyphens>
-        </h1>
+        </h2>
         <p className="text-ui text-muted">{recall.title}</p>
         <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-ui sm:grid-cols-4">
           {[
             ["Recall date", formatDate(recall.recallDate)],
             ["Remedy", "Refund for destroyed units"],
             ["Refund per unit", formatMoney(recall.refund)],
-            ["Claims period (ET)", report.firstClaim && report.lastClaim ? `${formatDayET(report.firstClaim)} to ${formatDayET(report.lastClaim)}` : "No claims yet"],
+            // The period the report covers: from the recall's date to the day it was drawn up, as CPSC's monthly report reads.
+            ["Reporting period", `${formatDate(recall.recallDate)} to ${generated}`],
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="text-muted">{k}</dt>

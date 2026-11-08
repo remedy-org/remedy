@@ -48,88 +48,81 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
         recalls={[recall]}
         basePath="/console"
         actions={
-          <Button href={`/console?recall=${recall.id}`} variant="secondary" size="sm">
+          <Button href={`/console?recall=${recall.id}`} variant="tertiary" size="sm">
             Claims
           </Button>
         }
       />
 
-      {/* One column of sections, each opened by a hairline: the link owners use, the settings, then what a photo must show. */}
-      <div className="flex max-w-[48rem] flex-col">
-        <Section title="Claim link">
-          <CopyField value={url} label="Claim link" />
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            <ClaimQr url={url} name={recall.slug} />
-            <Button href={`/r/${recall.slug}`} variant="tertiary" size="sm" target="_blank" className="self-start sm:self-auto">
-              Open the claim page
-            </Button>
-          </div>
-        </Section>
-
-        <Section title="Settings">
-          {recall.owner === null ? (
-            <>
-              <p className="text-ui text-muted">Set when the recall was published.</p>
-              <dl className="grid gap-6 text-ui sm:grid-cols-2">
-                <div>
-                  <dt className="text-muted">Refund per unit</dt>
-                  <dd className="mt-1 font-mono text-body">{formatMoney(recall.refund)}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted">Auto-pay</dt>
-                  <dd className="mt-1 text-body">{recall.autoPay ? "On: passing claims are paid at once" : "Off: passing claims wait for approval"}</dd>
-                </div>
-              </dl>
-              <Button href="/console/recalls/new" variant="tertiary" size="sm" className="self-start">
-                Import a recall
+      {/* Two columns from 1024px: the link owners use on the left, what the recall pays and what a photo must show on the
+          right. One column of hairline sections below. */}
+      <div className="grid gap-x-16 lg:grid-cols-2">
+        <div className="flex flex-col">
+          <Section title="Claim link">
+            <CopyField value={url} label="Claim link" />
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <ClaimQr url={url} name={recall.slug} />
+              <Button href={`/r/${recall.slug}`} variant="tertiary" size="sm" target="_blank" className="self-start sm:self-auto">
+                Open the claim page
               </Button>
-            </>
-          ) : (
-            <RecallSettingsForm recallId={recall.id} refund={recall.refund.value} autoPay={recall.autoPay} />
-          )}
-        </Section>
-
-        <Section title="Photo checks">
-          <dl className="flex flex-col gap-5 text-ui">
-            <div>
-              <dt className="text-muted">Product</dt>
-              <dd className="mt-1 max-w-read">{spec.product}</dd>
             </div>
-            <div>
-              <dt className="text-muted">The label must show</dt>
-              <dd className="mt-1">
-                {spec.label_must_show.length ? (
+          </Section>
+        </div>
+
+        <div className="flex flex-col max-lg:border-t max-lg:border-line max-lg:pt-8">
+          <Section title="Refund">
+            {recall.owner === null ? (
+              <p className="text-ui text-text-2">
+                <span className="font-mono text-text">{formatMoney(recall.refund)}</span> per unit, auto-pay {recall.autoPay ? "on" : "off"}. Both are fixed for
+                this recall.
+              </p>
+            ) : (
+              <RecallSettingsForm recallId={recall.id} refund={recall.refund.value} autoPay={recall.autoPay} />
+            )}
+          </Section>
+
+          <Section title="Photo checks">
+            <dl className="flex flex-col gap-5 text-ui">
+              <div>
+                <dt className="text-muted">Product</dt>
+                <dd className="mt-1 max-w-read">{spec.product}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">The label must show</dt>
+                <dd className="mt-1">
+                  {spec.label_must_show.length ? (
+                    <ul className="flex flex-col gap-1">
+                      {spec.label_must_show.map((l) => (
+                        <li key={l}>{l}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    "No label: matched on its look"
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">Proof steps</dt>
+                <dd className="mt-1">
                   <ul className="flex flex-col gap-1">
-                    {spec.label_must_show.map((l) => (
-                      <li key={l}>{l}</li>
+                    {recall.spec.proof_steps.map((step) => (
+                      <li key={step}>{step}</li>
                     ))}
                   </ul>
-                ) : (
-                  "No label: matched on its look"
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">Proof steps</dt>
-              <dd className="mt-1">
-                <ul className="flex flex-col gap-1">
-                  {recall.spec.proof_steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ul>
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">From CPSC</dt>
-              <dd className="mt-1">
-                {recall.unitsSold ? `About ${formatCount(recall.unitsSold)} units sold.` : "CPSC gives no unit count."}{" "}
-                <a href={recall.url} target="_blank" rel="noreferrer" className="underline decoration-line-strong underline-offset-4 hover:decoration-text">
-                  Read the notice
-                </a>
-              </dd>
-            </div>
-          </dl>
-        </Section>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">From CPSC</dt>
+                <dd className="mt-1">
+                  {recall.unitsSold ? `About ${formatCount(recall.unitsSold)} units sold.` : "CPSC gives no unit count."}{" "}
+                  <a href={recall.url} target="_blank" rel="noreferrer" className="underline decoration-line-strong underline-offset-4 hover:decoration-text">
+                    Read the notice
+                  </a>
+                </dd>
+              </div>
+            </dl>
+          </Section>
+        </div>
       </div>
     </main>
   );

@@ -117,8 +117,25 @@
   pointer-events: none;
 }
 
-/* The grid's header labels read as the Claims grid's: mono uppercase with +0.06em tracking. */
-.insights-report .ag-header-cell-text {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+/*
+ * The ledger's hairline already closes the figures above the canvas, so the first row of panels starts on it, without a
+ * rule of its own: Studio's 32px top padding there left an empty band between two rules.
+ */
+.insights-report .ag-studio-layout-content-container {
+  top: 0;
+}
+
+.insights-report .ag-studio-layout-widget[style*="top: 0px"] .ag-studio-layout-widget-container {
+  border-top: 0;
+}
+
+/* An answer that couldn't be had is a quiet line under the question, marked by one rule in the refusal colour, not a
+ * red box: nothing on the page is wrong, and the figures stay current. */
+.insights-report .ag-studio-ai-output-message-error {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: inset 2px 0 0 var(--stop);
+  padding: 2px 0 2px 12px;
+  color: var(--text-2);
 }

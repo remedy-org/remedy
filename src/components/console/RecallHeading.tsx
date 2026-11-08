@@ -32,8 +32,6 @@ export function RecallHeading({ recall, recalls, basePath, actions }: RecallHead
           </span>
           <span aria-hidden="true" className="text-faint">·</span>
           <span>Auto-pay {recall.autoPay ? "on" : "off"}</span>
-          <span aria-hidden="true" className="text-faint">·</span>
-          <span className="font-mono">/r/{recall.slug}</span>
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">

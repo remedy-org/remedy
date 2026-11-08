@@ -8,13 +8,13 @@ import {
   CsvExportModule,
   CustomFilterModule,
   HighlightChangesModule,
+  LocaleModule,
   ModuleRegistry,
   QuickFilterModule,
   RowApiModule,
   RowSelectionModule,
   RowStyleModule,
   ScrollApiModule,
-  TextFilterModule,
   TooltipModule,
   ValidationModule,
   type CellFocusedEvent,
@@ -58,14 +58,14 @@ import {
   type GroupTotal,
 } from "./cells";
 import { SkeletonGrid } from "./ConsoleSkeleton";
-import { DecisionFilter, reasonKey, type DecisionModel } from "./DecisionFilter";
+import { ClaimFilter, claimFilterPass, DecisionFilter, decisionFilterPass, reasonGroup, reasonKey, type DecisionModel } from "./DecisionFilter";
 import { formatDate } from "./format";
 import { gridTheme } from "./gridTheme";
 import "./claims-grid.css";
 
-// Community modules only (no Enterprise, no licence): filters (text, number, the Verdict column's own, the quick
-// filter behind search), pinned totals, CSV export, the column API the tabs use to set the Verdict filter, photo
-// tooltips and the payout cell flash. Group by is built from full-width rows, which are Community too.
+// Community modules only (no Enterprise, no licence): the Claim and Verdict columns' faceted filters, the quick filter
+// behind search, CSV export, the column API the tabs use to set the Verdict filter, photo tooltips and the payout cell
+// flash. Group by is built from full-width rows, which are Community too.
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   ClientSideRowModelApiModule,
@@ -76,11 +76,11 @@ ModuleRegistry.registerModules([
   CellStyleModule,
   TooltipModule,
   HighlightChangesModule,
-  TextFilterModule,
   CustomFilterModule,
   QuickFilterModule,
   CsvExportModule,
   ColumnApiModule,
+  LocaleModule,
   ...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
 
@@ -90,13 +90,16 @@ export const CARD_BELOW = 720;
 // and amount 96, plus the verdict: at least 260 (144 in the homepage's still, which keeps columns down to 592px). Each
 // optional column is added, in order, while it fits; in the queue only while the verdict keeps 360px, room for a reason
 // like "Couldn't tell if both photos show the same item" beside its pill: the reason is what a reviewer reads first.
-// The verdict takes the spare width, so the data columns sit together at the right beside the amount they describe;
-// beside the open panel the payout state stays (it is the money's question) and the PayPal account goes first.
+// In the queue the verdict grows to VERDICT_MAX (the longest reason on one line) and no further: the data columns sit
+// right after the reason they qualify, and any width left over falls after the amount, so the eye never crosses an
+// empty band to finish a row. Beside the open panel the payout state stays (it is the money's question) and the
+// PayPal account goes first.
 const VERDICT_MIN = { queue: 260, still: 144 };
 const VERDICT_WANT = { queue: 360, still: 144 };
+const VERDICT_MAX = 560;
 const BASE = 220 + 136 + 96;
 const OPTIONAL = {
-  queue: { time: 88, payoutStatus: 112, payer: 132 } as Record<string, number>,
+  queue: { time: 104, payoutStatus: 148, payer: 132 } as Record<string, number>,
   still: { time: 88, payoutStatus: 112, payer: 132 } as Record<string, number>,
 };
 const ORDER = { queue: ["payoutStatus", "time", "payer"], still: ["payoutStatus", "time", "payer"] };
@@ -116,7 +119,7 @@ export type GroupBy = "none" | "reason" | "code" | "day";
 
 /** A claim's group under a Group by: its key (what sorts the groups) and its heading. */
 function groupOf(r: ClaimRow, by: GroupBy): { key: string; label: string } {
-  if (by === "reason") return { key: reasonKey(r), label: reasonKey(r) };
+  if (by === "reason") return { key: reasonGroup(r), label: reasonGroup(r) };
   if (by === "code") return r.code ? { key: r.code, label: `Code ${r.code}` } : { key: "~", label: "No code" };
   const day = r.createdAt.slice(0, 10);
   return { key: day, label: `Filed ${formatDate(day)}` };
@@ -198,6 +201,8 @@ const isClaim = (n: IRowNode<GridRow> | null | undefined) => Boolean(n?.data && 
 const rowId = (p: GetRowIdParams<GridRow>) => p.data.id;
 const isGroupNode = (n: IRowNode<GridRow>) => Boolean(n.data?.group);
 const noTab = () => false;
+// What a screen reader hears on a focused row: what Enter does here, not AG Grid's "Press SPACE to select this row".
+const LOCALE = { ariaRowSelect: "Enter opens this claim", ariaRowDeselect: "This claim is open", ariaRowToggleSelection: "Enter opens this claim" };
 const ROW_SELECTION = { mode: "singleRow", checkboxes: false, enableClickSelection: false, isRowSelectable: (n: IRowNode<GridRow>) => isClaim(n) } as const;
 
 /** Where the page scrolls rather than the grid (autoHeight: card rows, short windows), keeps the focused row on screen.
@@ -305,7 +310,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         fileName: `remedy-claims-${new Date().toISOString().slice(0, 10)}.csv`,
         allColumns: true,
         skipPinnedBottom: true,
-        columnKeys: ["createdAt", "filedAt", "code", "decision", "reason", "checks", "time", "payer", "payoutStatus", "amount"],
+        columnKeys: ["createdAt", "filedAt", "code", "decision", "reason", "checks", "time", "toPay", "payer", "payoutStatus", "amount"],
         shouldRowBeSkipped: (p) => Boolean(p.node.data?.group),
         processHeaderCallback: (p) => CSV_HEADERS[p.column.getColId()] ?? p.column.getColDef().headerName ?? "",
         processCellCallback: (p) => csvCell(p.column.getColId(), p.node?.data),
@@ -351,6 +356,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         colId: "createdAt",
         // The second line's time is UTC (cells.tsx): said once here, so every row's line fits the column.
         headerName: "Claim · UTC",
+        headerTooltip: still ? undefined : "The claim, the code on its tag, and when it was filed (UTC).",
         field: "createdAt",
         cellRenderer: ClaimCell,
         width: 220,
@@ -365,9 +371,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         // Claims filed in the same minute: the claim id breaks the tie, so a run of identical photos and codes doesn't
         // sit together.
         comparator: (a: string, b: string, na, nb) => a.localeCompare(b) || (na.data?.id ?? "").localeCompare(nb.data?.id ?? ""),
-        filter: still ? undefined : "agTextColumnFilter",
-        filterValueGetter: (p) => (p.data ? `${p.data.id} ${p.data.code ?? ""}` : ""),
-        filterParams: { filterOptions: ["contains", "startsWith", "equals"], maxNumConditions: 1, buttons: ["clear"] },
+        // Search already finds ids and codes; the column's own filter picks codes and days, with their counts.
+        filter: still ? undefined : { component: ClaimFilter, doesFilterPass: claimFilterPass },
         getQuickFilterText: (p) => (p.data ? `${p.data.id} ${p.data.code ?? ""} ${p.data.payer} ${p.data.reason} ${p.data.note ?? ""}` : ""),
         tooltip: (p) => (!still && p.data?.photos.length ? p.data.id : undefined),
         tooltipComponent: PhotoTooltip,
@@ -379,14 +384,16 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         // line changes on its own (a refused payout).
         valueGetter: (p) => (p.data ? `${p.data.decision} ${p.data.note ?? ""}` : null),
         cellRenderer: VerdictCell,
-        // Every spare pixel: the reason is what a reviewer reads first, and the columns after it stay beside the amount.
-        flex: 1,
+        // The spare width up to VERDICT_MAX: the reason is what a reviewer reads first. Its flex outweighs the spacer's, so
+        // the spacer only takes what the verdict can't use.
+        flex: still ? 1 : 1000,
         minWidth: still ? VERDICT_MIN.still : VERDICT_MIN.queue,
+        maxWidth: still ? undefined : VERDICT_MAX,
         sortable: !still,
         sortingOrder: ["asc", "desc", null],
         comparator: (_a, _b, na, nb) =>
           na.data && nb.data ? DECISION_ORDER[na.data.decision] - DECISION_ORDER[nb.data.decision] || reasonKey(na.data).localeCompare(reasonKey(nb.data)) : 0,
-        filter: still ? undefined : DecisionFilter,
+        filter: still ? undefined : { component: DecisionFilter, doesFilterPass: decisionFilterPass },
         enableCellChangeFlash: true,
         // The flash is the paid colour only when the claim became paid; any other change (a refused approve, a reject)
         // flashes neutral, since no money moved (claims-grid.css).
@@ -396,7 +403,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       {
         colId: "checks",
         headerName: "Checks",
-        headerTooltip: still ? undefined : "The four pre-checks, then the model's answers. Filled passed, half held, slashed failed, outline waiting, dotted not run.",
+        headerTooltip: still ? undefined : "The pre-checks, then the photo check's answers. Filled passed, half held, slashed failed, outline waiting.",
         cellRenderer: ChecksCell,
         width: 136,
         tooltip: (p) => (!still && p.data?.bars ? p.data.id : undefined),
@@ -405,15 +412,15 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       },
       {
         colId: "time",
-        headerName: "Time",
-        headerTooltip: still ? undefined : "Photos to PayPal payout. With no payout to time, the model's answer time, in grey.",
+        headerName: "Answered in",
+        headerTooltip: still ? undefined : "How long the photo check took to answer. Hover a row for every step to the payout.",
         cellRenderer: TimeCell,
-        width: 88,
+        width: OPTIONAL[still ? "still" : "queue"].time,
         type: "rightAligned",
         tooltip: (p) => (!still && p.data?.timeline ? p.data.id : undefined),
         tooltipComponent: TimelineTooltip,
         sortable: !still,
-        valueGetter: (p) => p.data?.toPay ?? p.data?.modelSec ?? null,
+        valueGetter: (p) => p.data?.modelSec ?? null,
         // Claims with no time last, whichever way.
         comparator: (a: number | null, b: number | null, _na, _nb, desc) =>
           a === null ? (b === null ? 0 : desc ? -1 : 1) : b === null ? (desc ? 1 : -1) : a - b,
@@ -443,15 +450,19 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         field: "cents",
         cellRenderer: AmountCell,
         width: 96,
-        pinned: "right",
+        // Pinned in the still, whose verdict takes the spare width; in the queue it closes the row's data, and the
+        // spacer after it takes what is left.
+        pinned: still ? "right" : undefined,
         lockPinned: true,
         suppressMovable: true,
         sortable: !still,
         type: "rightAligned",
         getQuickFilterText: () => "",
       },
+      ...(still ? [] : [{ colId: "spacer", headerName: "", flex: 1, minWidth: 0, resizable: false, suppressHeaderMenuButton: true, cellRenderer: null, valueGetter: () => null } as ColDef<GridRow>]),
       // For the CSV only: the claim's code, when it was filed and the reason as their own columns.
       { colId: "code", headerName: "Code", valueGetter: (p) => p.data?.code ?? "", hide: true },
+      { colId: "toPay", headerName: "Photos to payout (s)", valueGetter: (p) => p.data?.toPay ?? null, hide: true },
       { colId: "filedAt", headerName: "Filed (UTC)", field: "createdAt", hide: true },
       { colId: "reason", headerName: "Reason", valueGetter: (p) => (p.data ? reasonKey(p.data) : ""), hide: true },
     ];
@@ -484,7 +495,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         groups.set(key, {
           ...g,
           count: g.count + 1,
-          cents: g.cents + (r.decision === "paid" || r.decision === "held" ? (r.cents ?? 0) : 0),
+          // Approved money only, as the footer counts it: a held claim's refund isn't owed until a person approves it.
+          cents: g.cents + (r.decision === "paid" ? (r.cents ?? 0) : 0),
           mix: { ...g.mix, [r.decision]: (g.mix[r.decision] ?? 0) + 1 },
         });
       }
@@ -557,9 +569,13 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         latest.current.onReady?.();
         // A deep link (/console?claim=RM-1460) opens with its row in view: after this render pass, since
         // scrolling redraws the rows.
+        // Its index is read then, not now: the tab's filter (set in onGridReady) may still be reordering the rows.
         const id = latest.current.openId;
-        const n = id && !still ? e.api.getRowNode(id)?.rowIndex : null;
-        if (n != null) window.setTimeout(() => !e.api.isDestroyed() && e.api.ensureIndexVisible(n, "middle"), 0);
+        if (!id || still) return;
+        window.setTimeout(() => {
+          const n = e.api.isDestroyed() ? null : e.api.getRowNode(id)?.rowIndex;
+          if (n != null) e.api.ensureIndexVisible(n, "middle");
+        }, 0);
       },
       // Measured after the grid's own render pass: setting React state inside it would flush mid-render.
       onModelUpdated(e: ModelUpdatedEvent<GridRow>) {
@@ -587,6 +603,17 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         if (!still && (key === "Enter" || key === " ") && isClaim(e.node)) {
           e.event?.preventDefault();
           latest.current.onOpen(e.data!.id);
+        }
+        // j and k walk the claims like ↓ and ↑, skipping group headings (the ? sheet lists them).
+        if (!still && (key === "j" || key === "k") && e.rowIndex != null) {
+          e.event?.preventDefault();
+          const step = key === "j" ? 1 : -1;
+          for (let i = e.rowIndex + step; i >= 0 && i < e.api.getDisplayedRowCount(); i += step) {
+            if (!isClaim(e.api.getDisplayedRowAtIndex(i))) continue;
+            e.api.ensureIndexVisible(i);
+            e.api.setFocusedCell(i, "createdAt");
+            break;
+          }
         }
       },
       onCellFocused(e: CellFocusedEvent<GridRow>) {
@@ -641,7 +668,10 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
             // A group's heading stays while any of its claims pass; postSortRows drops a heading left with none.
             alwaysPassFilter={isGroupNode}
             postSortRows={postSortRows}
+            // Filters run as handlers: a tab's filter applies on its first click, before any filter menu has opened.
+            enableFilterHandlers
             rowSelection={ROW_SELECTION}
+            localeText={LOCALE}
             tooltipShowDelay={250}
             tooltipHideDelay={2000}
             onGridReady={handlers.onGridReady}
@@ -683,7 +713,8 @@ const CSV_HEADERS: Record<string, string> = {
   decision: "Verdict",
   reason: "Reason",
   checks: "Checks",
-  time: "Photos to payout (s)",
+  time: "Photo check answered in (s)",
+  toPay: "Photos to payout (s)",
   payer: "PayPal account",
   payoutStatus: "Payout",
   amount: "Amount (USD)",
@@ -706,11 +737,13 @@ function csvCell(colId: string, r: GridRow | undefined): string {
     case "checks":
       return r.bars ? `${r.bars.filter((b) => b.state === "pass").length} of ${r.bars.length} passed` : "";
     case "time":
+      return r.modelSec === null ? "" : String(r.modelSec);
+    case "toPay":
       return r.toPay === null ? "" : String(r.toPay);
     case "payer":
       return r.payer.replace(/•/g, "*");
     case "payoutStatus":
-      return r.payoutFailedAt ? "Not sent (PayPal refused)" : sent(r) ? (r.payoutStatus ?? "") : r.decision === "paid" ? "Not sent" : "";
+      return r.payoutFailedAt ? "Not sent (PayPal refused)" : sent(r) ? (r.payoutStatus ?? "") : r.decision === "paid" ? "Not sent (payee can't receive payouts)" : "";
     case "amount":
       return r.cents === null ? "" : (r.cents / 100).toFixed(2);
   }

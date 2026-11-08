@@ -84,7 +84,6 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
 
         <ListEditor
           legend="Proof steps"
-          help="The destruction the notice asks for, then one step for each label that must be visible. One fact per step."
           items={spec.proof_steps}
           onChange={(proof_steps) => setSpec({ ...spec, proof_steps })}
           addLabel="Add a step"
@@ -95,19 +94,16 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
         {f?.["spec.proof_steps"] && <p className="-mt-4 text-ui text-stop">{f["spec.proof_steps"]}</p>}
 
         {spec.note !== undefined && (
-          <Field label="Note from the draft" hint="Optional" help="What the draft changed from the notice's wording, and why. Shown to reviewers, never to owners.">
+          <Field label="Note from the draft" hint="Reviewers only">
             {(c) => <Textarea {...c} rows={2} className="field-sizing-content" value={spec.note ?? ""} onChange={(e) => setSpec({ ...spec, note: e.target.value })} />}
           </Field>
         )}
       </section>
 
       <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
-        <div>
-          <h2 className="text-body font-medium">Refund and claim link</h2>
-          <p className="mt-1 text-ui text-muted">Refunds go through PayPal Payouts to each owner&apos;s PayPal account. Auto-pay starts off, so a person approves each passing claim until you turn it on.</p>
-        </div>
+        <h2 className="text-body font-medium">Refund and claim link</h2>
         <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Refund per unit" help="In US dollars, paid through PayPal." error={f?.refund}>
+          <Field label="Refund per unit" error={f?.refund}>
             {(c) => (
               <div className="relative">
                 <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-body text-muted">$</span>
@@ -115,11 +111,11 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
               </div>
             )}
           </Field>
-          <Field label="Auto-pay" help={autoPay ? "A claim that passes every check is paid at once." : "Every passing claim waits for a person to approve it."}>
+          <Field label="Auto-pay" help={autoPay ? "Passing claims are paid at once." : "A person approves each passing claim."}>
             {(c) => <Switch id={c.id} aria-describedby={c["aria-describedby"]} checked={autoPay} onChange={setAutoPay} />}
           </Field>
         </div>
-        <Field label="Claim link" help="Lowercase letters, numbers and dashes. Owners open this from the notice or a QR code." error={f?.slug}>
+        <Field label="Claim link" error={f?.slug}>
           {(c) => (
             <div className="flex min-w-0 items-stretch overflow-hidden rounded-control border border-line-strong focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus">
               <span className="flex items-center border-r border-line-strong bg-surface-2 px-3 font-mono text-ui text-muted">/r/</span>
@@ -141,7 +137,16 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
       {error && f && <ErrorState variant="inline" title="Some fields need a fix" description="Each one is marked above." />}
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <Button type="submit" size="lg" pending={busy} pendingLabel="Publishing" disabled={Boolean(missing)} aria-describedby={missing ? "publish-missing" : undefined}>
+        {/* Not ready: a neutral button, not a dimmed amber; the line beside it says what's missing. */}
+        <Button
+          type="submit"
+          size="lg"
+          variant={missing ? "secondary" : "primary"}
+          pending={busy}
+          pendingLabel="Publishing"
+          disabled={Boolean(missing)}
+          aria-describedby={missing ? "publish-missing" : undefined}
+        >
           Publish the claim page
         </Button>
         {missing && (

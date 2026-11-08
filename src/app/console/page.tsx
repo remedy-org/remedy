@@ -51,7 +51,7 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
               CPSC report
             </Button>
             <Button href={`/console/recalls/${recall.id}`} variant="secondary" size="sm">
-              Recall settings
+              Recall details
             </Button>
           </>
         }

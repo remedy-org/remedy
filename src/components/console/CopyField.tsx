@@ -16,7 +16,8 @@ export function CopyField({ value, label }: { value: string; label: string }) {
     setTimeout(() => setCopied(null), 2000);
   };
   return (
-    <div className="flex min-w-0 items-stretch overflow-hidden rounded-control border border-line-strong bg-surface">
+    // The value takes the app's focus ring on the whole field when focused, as the Copy button does on its own.
+    <div className="flex min-w-0 items-stretch overflow-hidden rounded-control border border-line-strong bg-surface has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-focus">
       <input
         readOnly
         value={value}

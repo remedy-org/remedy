@@ -42,7 +42,7 @@ describe("POST /api/console/recalls/draft", () => {
 
     const second = await post();
     expect(second.status).toBe(429);
-    expect((await second.json()).error).toMatch(/^Remedy drafts at most 1 recall a day .* Write the checks yourself, or try the draft again in (under an hour|about \d+ hours)\.$/);
+    expect((await second.json()).error).toMatch(/^Today's recall draft is used\. Write the checks yourself, or try the draft again in (under an hour|about \d+ hours)\.$/);
     expect(draftSpec).toHaveBeenCalledTimes(1);
     expect((await store.getUsage(day)).draft).toBe(1);
   });

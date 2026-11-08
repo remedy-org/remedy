@@ -35,13 +35,11 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
       <p className="sr-only">
         {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}. Recalls typically reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
       </p>
-      <div aria-hidden="true" className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
-        <p className="flex items-baseline gap-2">
-          <span className="text-head-sm leading-none font-medium">{done.toLocaleString("en-US")}</span>
-          <span className="text-ui text-muted">of {total.toLocaleString("en-US")} units remedied</span>
-        </p>
-        <p className="font-mono text-ui text-text tabular-nums">{pct(share)}</p>
-      </div>
+      {/* The units themselves are the ledger's first figure, right above: the panel gives the share they make. */}
+      <p aria-hidden="true" className="flex items-baseline gap-2">
+        <span className="text-head-sm leading-none font-medium">{pct(share)}</span>
+        <span className="text-ui text-muted">of units sold remedied so far</span>
+      </p>
 
       <div aria-hidden="true" className="relative pt-5 pb-6">
         <div className="relative h-2 rounded-full bg-surface-2">

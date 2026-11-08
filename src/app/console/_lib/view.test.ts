@@ -254,10 +254,12 @@ describe("timing", () => {
     expect(median([4, 3, 2, 4007])).toBe(3);
   });
 
-  it("prints a duration as a clock, and in hours and minutes past an hour", () => {
-    expect(duration(3)).toBe("0:03");
-    expect(duration(448)).toBe("7:28");
-    expect(duration(4007)).toBe("1h 06m");
+  it("prints a duration in seconds, minutes, and hours and minutes past an hour", () => {
+    expect(duration(3)).toBe("3 s");
+    expect(duration(10.8)).toBe("11 s");
+    expect(duration(120)).toBe("2 min");
+    expect(duration(448)).toBe("7 min 28 s");
+    expect(duration(4007)).toBe("1 h 06 min");
   });
 });
 

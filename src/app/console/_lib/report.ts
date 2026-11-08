@@ -1,21 +1,8 @@
 import type { ClaimSummary } from "@/lib/store";
 import type { Decision, Recall } from "@/lib/types";
-import { amountOf, cents, statsOf, type Stats } from "./view";
+import { amountOf, cents, refusalLabel, statsOf, type Stats } from "./view";
 
 // The CPSC progress-report draft, computed from the claims' index rows. Pure, so the numbers are unit-tested.
-
-const REFUSAL: Record<string, string> = {
-  code: "One-time code missing or wrong",
-  screen: "Photo of a screen or a print",
-  label: "Label missing or not the recalled product",
-  same_item: "Photos showed different items",
-  step: "Destruction not shown",
-  session: "Photos outside the live camera session",
-  duplicate_photo: "Photo already used in another claim",
-  payer: "Second claim from one PayPal account",
-  payer_verified: "PayPal account not verified",
-  review: "Rejected by a person on review",
-};
 
 export interface OutcomeRow {
   decision: Decision;
@@ -43,8 +30,6 @@ export interface Report {
   samplesPaid: number;
   seeded: number;
   demo: number;
-  firstClaim: string | null;
-  lastClaim: string | null;
 }
 
 const share = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : "—");
@@ -72,11 +57,10 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   for (const c of claims) {
     if (c.decision !== "rejected" && c.decision !== "blocked") continue;
     const check = c.reason?.check ?? "";
-    const reason = REFUSAL[check.startsWith("step_") ? "step" : check] ?? "Other";
+    const reason = refusalLabel(check);
     tally.set(reason, (tally.get(reason) ?? 0) + 1);
   }
 
-  const times = claims.map((c) => c.createdAt).sort();
   const paidAmounts = new Set(paid.map((c) => cents(amountOf(c.payoutAmount, recall))));
   const settled = sent.filter((c) => c.payoutStatus === "SUCCESS");
   return {
@@ -93,7 +77,5 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
     samplesPaid: samples.length,
     seeded: claims.filter((c) => c.seeded).length,
     demo: claims.filter((c) => c.demo).length,
-    firstClaim: times[0] ?? null,
-    lastClaim: times.at(-1) ?? null,
   };
 }

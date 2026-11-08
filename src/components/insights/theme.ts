@@ -13,7 +13,6 @@ export type Resolve = (css: string) => string;
 /** The font stacks next/font set up, resolved too: charts draw text on a canvas, which can't read var(). */
 export interface Fonts {
   sans: string;
-  mono: string;
 }
 
 // A decision has the same colour in every chart, pill and barcode: paid, held, rejected, blocked, in progress, then
@@ -31,7 +30,7 @@ const PALETTE = [
   "color-mix(in oklch, var(--text) 20%, var(--surface))",
 ];
 
-export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans: SANS, mono: MONO }: Fonts) {
+export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans: SANS }: Fonts) {
   const token = (name: string) => resolve(`var(--${name})`);
   const line = (name: string) => ({ width: 1, color: token(name) });
   const palette = Object.fromEntries(
@@ -127,13 +126,14 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   studioAiPanelButtonHoverBackgroundColor: token("surface-2"),
   studioAiPanelRichTextAccentBackgroundColor: token("surface-2"),
 
-  // Grid widgets: the Claims grid's header row (mono labels in --faint on --surface-2), hairline rows, no zebra.
+  // Grid widgets: the Claims grid's header row (sentence-case sans labels in --muted on --surface-2), hairline rows,
+  // no zebra.
   gridFontFamily: SANS,
   gridFontSize: 14,
   gridCellTextColor: token("text"),
   gridHeaderBackgroundColor: token("surface-2"),
-  gridHeaderTextColor: token("faint"),
-  gridHeaderFontFamily: MONO,
+  gridHeaderTextColor: token("muted"),
+  gridHeaderFontFamily: SANS,
   gridHeaderFontSize: 12,
   gridHeaderFontWeight: 500,
   gridRowHeight: 44,

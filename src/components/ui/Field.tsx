@@ -77,7 +77,8 @@ export function Field({ label, help, error, hint, id, children, className, ...in
       </label>
       {children ? children(wiring) : <Input {...input} {...wiring} />}
       {error && (
-        <p id={errorId} className="text-ui text-stop">
+        // Announced as it appears, and linked to the control (aria-describedby) for when focus comes back to it.
+        <p id={errorId} role="alert" className="text-ui text-stop">
           {error}
         </p>
       )}

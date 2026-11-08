@@ -1,5 +1,5 @@
-import { duration, formatCents } from "@/app/console/_lib/view";
-import { LedgerItem, LedgerStrip, SentAside } from "@/components/console/Ledger";
+import { formatCents } from "@/app/console/_lib/view";
+import { durationFigure, LedgerItem, LedgerStrip, sentAside } from "@/components/console/Ledger";
 import { formatCount } from "@/components/console/format";
 import { insightsLedger } from "./report";
 
@@ -12,7 +12,6 @@ export function InsightsLedger({ claims, unitsSold, className }: { claims: Rows;
   return (
     <LedgerStrip className={className}>
       <LedgerItem
-        className="col-span-2"
         value={
           <>
             {formatCount(l.remedied)}
@@ -22,15 +21,13 @@ export function InsightsLedger({ claims, unitsSold, className }: { claims: Rows;
         label="remedied"
       />
       <LedgerItem
-        className="col-span-2"
         value={formatCents(l.paidCents + l.unsentCents)}
         label={`approved · ${formatCount(l.remedied)} ${l.remedied === 1 ? "refund" : "refunds"}`}
-        aside={<SentAside cents={l.paidCents} />}
+        aside={sentAside(l.paidCents, l.unsentCents)}
       />
       {l.median !== null && (
         <LedgerItem
-          className="col-span-2"
-          value={<span className="font-mono">{duration(l.median)}</span>}
+          value={durationFigure(l.median)}
           label={`${l.timeLabel} · ${formatCount(l.timed)} ${l.timed === 1 ? l.timedOne : `${l.timedOne}s`}`}
         />
       )}

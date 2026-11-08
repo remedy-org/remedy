@@ -8,7 +8,7 @@ import type { ApiError } from "@/app/console/_lib/api";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { duration, type PreCheckState } from "@/app/console/_lib/view";
 import { api } from "./api";
-import { verdictLabel } from "./cells";
+import { CANT_RECEIVE, verdictLabel } from "./cells";
 import { CheckList } from "./CheckList";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { formatClock, formatTime } from "./format";
@@ -224,7 +224,9 @@ function EvidenceContent({
   const pad = variant === "panel" ? "px-5" : "px-4 sm:px-6";
 
   return (
-    <div className="flex h-full min-h-0 flex-col" aria-busy={load.state === "loading" || undefined}>
+    // On a short window (under 600px) the panel scrolls as one, header and footer included, so the evidence isn't
+    // squeezed between them; the reject form's buttons stay in view (ReviewActions).
+    <div className="flex h-full min-h-0 flex-col [@media(max-height:600px)]:overflow-y-auto" aria-busy={load.state === "loading" || undefined}>
       <header className={clsx("flex items-start gap-3 border-b border-line py-3", pad)}>
         <div className="min-w-0 flex-1">
           {back && onBack && (
@@ -252,12 +254,13 @@ function EvidenceContent({
             // One line in the 440px panel, so the evidence keeps the height: "Unverified" only when it's true, as in the
             // grid (the pre-checks say verified).
             <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-ui text-muted">
-              <span>Filed {formatTime(claim.createdAt)}</span>
-              <span aria-label={`PayPal account ending ${claim.payer.slice(-4)}${claim.verified ? "" : ", unverified"}`}>
-                <span aria-hidden="true">
-                  <span className="font-mono">{claim.payer}</span>
-                  {!claim.verified && <span className="text-stop"> unverified</span>}
+              <span>{formatTime(claim.createdAt)}</span>
+              <span>
+                PayPal <span className="sr-only">account ending {claim.payer.slice(-4)}</span>
+                <span aria-hidden="true" className="font-mono">
+                  {claim.payer}
                 </span>
+                {!claim.verified && <span className="text-stop"> unverified</span>}
               </span>
               <span>
                 Code <span className="font-mono text-text">{claim.code}</span>
@@ -279,7 +282,7 @@ function EvidenceContent({
 
       {/* Positioned, so its absolutely placed descendants (screen-reader text, the photo badges) scroll and clip with it:
           without a containing block of its own they reached past the window and the whole page scrolled into a void. */}
-      <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain [@media(max-height:600px)]:flex-none [@media(max-height:600px)]:overflow-visible">
         {load.state === "error" && (
           <div className={clsx("py-6", pad)}>
             <ErrorState
@@ -325,7 +328,10 @@ function EvidenceContent({
       {/* The keys: one compact line on a laptop's shorter window, so the evidence keeps the height; the footer's ?
           lists them all. */}
       {variant === "panel" && (
-        <p className={clsx("flex h-9 shrink-0 items-center gap-4 border-t border-line text-micro text-faint [@media(max-height:960px)]:h-8", pad)} aria-hidden="true">
+        <p
+          className={clsx("flex h-9 shrink-0 items-center gap-4 border-t border-line text-micro text-faint [@media(max-height:600px)]:hidden [@media(max-height:960px)]:h-8", pad)}
+          aria-hidden="true"
+        >
           <Keys k={["↑", "↓"]}>Next claim</Keys>
           {labels && !labels.blocked && <Keys k={["A"]}>{labels.approveKey}</Keys>}
           {labels && <Keys k={["R"]}>Reject</Keys>}
@@ -335,6 +341,13 @@ function EvidenceContent({
     </div>
   );
 }
+
+// The rule's outcome under Decision, when the reason itself already leads the panel.
+const OUTCOME: Partial<Record<DrawerClaim["decision"], string>> = {
+  held: "Held for your review. Nothing is paid until a person approves it.",
+  rejected: "Rejected. No money moves.",
+  blocked: "Blocked before the photo check. No money moves.",
+};
 
 function Section({ title, children, aside }: { title: ReactNode; children: ReactNode; aside?: ReactNode }) {
   return (
@@ -362,7 +375,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
     { label: "Model", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "A pre-check stopped it: the photos never reached the model." : undefined },
     { label: "Rule", at: decided },
   ];
-  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "Not sent: the payee's PayPal account isn't live." : undefined, value: claim.decision === "paid" ? "Not sent" : undefined }];
+  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? CANT_RECEIVE : undefined, value: claim.decision === "paid" ? "Not sent" : undefined }];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
   const failure = payoutFailure(claim);
   if (failure) {
@@ -406,7 +419,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
               </span>
               <span className={clsx("truncate text-micro", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
               <span className="font-mono text-micro text-muted tabular-nums">
-                {!done ? <span className="text-faint">{s.value ?? "—"}</span> : s.failed ? formatClock(s.at!) : i === 0 ? "0:00" : `+${duration(plus!)}`}
+                {!done ? <span className="text-faint">{s.value ?? "—"}</span> : s.failed ? formatClock(s.at!) : i === 0 ? "0 s" : `+${duration(plus!)}`}
               </span>
             </li>
           );
@@ -485,7 +498,7 @@ function PassedToggle({ count, open, onToggle }: { count: number; open: boolean;
       <span aria-hidden="true" className={clsx("inline-block transition-transform", open && "rotate-90")}>
         ›
       </span>
-      {open ? "Hide what the passed checks found" : `Show what the ${count === 1 ? "passed check" : `${count} passed checks`} found`}
+      {open ? "Hide details" : "Details"}
     </button>
   );
 }
@@ -587,8 +600,9 @@ function Evidence({
                 id: c.id,
                 label: c.label,
                 state: c.outcome === "reject" ? "reject" : c.outcome,
+                // The answer that decided the claim is quoted once, at the top: here it is its name and state alone.
                 detail:
-                  c.outcome === "pass" && !open.model ? undefined : (
+                  (c.outcome === "pass" && !open.model) || (d && c.rule === d.title && (c.evidence ?? null) === d.evidence) ? undefined : (
                     <>
                       {link(c.rule)}
                       {c.evidence && <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">{c.evidence}</q>}
@@ -616,7 +630,8 @@ function Evidence({
       </Section>
 
       <Section title="Decision">
-        <p className="text-body text-text">{claim.sentence}</p>
+        {/* What decided a held or refused claim leads the panel; here, only what the rule did with it. */}
+        <p className="text-ui text-text-2">{d ? OUTCOME[claim.decision] ?? claim.sentence : claim.sentence}</p>
         {claim.review?.note && <p className="text-ui text-muted">{claim.review.note}</p>}
         {claim.payout && (
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-control border border-line px-4 py-3 text-ui">
@@ -646,7 +661,8 @@ function Evidence({
                 {formatClock(e.at)}
               </time>
               <span className="min-w-0 text-muted">
-                {e.detail}
+                {/* One format for a span, as the grid and timeline print it ("11 s", not "10.8 s"). */}
+                <LinkedIds text={e.detail.replace(/(\d+\.\d+) s\b/, (_, n: string) => duration(Number(n)))} onOpen={onOpen} self={claim.id} />
                 {e.raw && (
                   <details className="mt-1">
                     <summary className="cursor-pointer text-micro text-faint hover:text-muted">Service&apos;s answer</summary>

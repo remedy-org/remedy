@@ -362,8 +362,31 @@ export function ledgerOf(rows: ClaimRow[], recall: Pick<Recall, "unitsSold">): L
 /** "0:41", "1:05", "12:00": a duration as a clock. */
 export const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 
-/** "0:41"; "2h 05m" past an hour (a held claim a person approved later). */
-export const duration = (sec: number) => (sec >= 3600 ? `${Math.floor(sec / 3600)}h ${String(Math.floor((sec % 3600) / 60)).padStart(2, "0")}m` : clock(sec));
+/** One format for every span the console shows (grid, timeline, history, ledger): "11 s", "7 min 28 s", "1 h 06 min"
+ * past an hour (a held claim a person approved later). */
+export function duration(sec: number): string {
+  const s = Math.round(sec);
+  if (s >= 3600) return `${Math.floor(s / 3600)} h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")} min`;
+  if (s >= 60) return s % 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s / 60} min`;
+  return `${s} s`;
+}
+
+// Why a claim was refused, by the check that refused it: one wording for the grid's filter and grouping, Insights and
+// the CPSC report, so the three never disagree.
+const REFUSAL: Record<string, string> = {
+  code: "One-time code missing or wrong",
+  screen: "Photo of a screen or a print",
+  label: "Label missing or not the recalled product",
+  same_item: "Photos showed different items",
+  step: "Destruction not shown",
+  session: "Photos outside the live camera session",
+  duplicate_photo: "Photo already used in another claim",
+  payer: "Second claim from one PayPal account",
+  payer_verified: "PayPal account not verified",
+  review: "Rejected by a person on review",
+};
+
+export const refusalLabel = (check: string) => REFUSAL[check.startsWith("step_") ? "step" : check] ?? "Other";
 
 export interface Stats {
   total: number;

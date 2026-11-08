@@ -276,7 +276,6 @@ export function ReviewActions({
                 <Button key="reject" variant={stuck ? "primary" : "secondary"} onClick={openReject} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
                   {labels.reject}
                 </Button>
-                {review.sample && !sample && <span className="text-micro text-muted">Payout off for this account</span>}
               </>
             )}
           </div>
@@ -294,7 +293,7 @@ export function ReviewActions({
             <Button onClick={openReject} autoFocus className="flex-1 sm:flex-none">
               {labels.reject}
             </Button>
-            <Button variant="secondary" onClick={reset} className="flex-1 sm:flex-none">
+            <Button variant="tertiary" arrow={false} onClick={reset}>
               Cancel
             </Button>
           </div>
@@ -304,7 +303,7 @@ export function ReviewActions({
       {mode === "approve" && !labels.blocked && (
         <>
           {review.sample ? (
-            <p className="text-ui text-muted">The payee&apos;s PayPal isn&apos;t connected, so the refund stays held.</p>
+            <p className="text-ui text-muted">Approving records the decision. This payee&apos;s PayPal account can&apos;t receive payouts, so no refund is sent.</p>
           ) : (
             <p className="text-ui text-muted">
               Sends <span className="font-mono text-text">{claim.amount}</span> to <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts.
@@ -317,7 +316,7 @@ export function ReviewActions({
           )}
           <div className="flex flex-wrap items-center gap-3">
             {review.sample ? (
-              <Button variant="secondary" onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Approving" autoFocus className="flex-1 sm:flex-none">
+              <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Approving" autoFocus className="flex-1 sm:flex-none">
                 Approve
               </Button>
             ) : (
@@ -325,7 +324,7 @@ export function ReviewActions({
                 Pay {claim.amount}
               </Button>
             )}
-            <Button variant="secondary" onClick={reset} disabled={busy} className="flex-1 sm:flex-none">
+            <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>
               Cancel
             </Button>
           </div>
@@ -350,7 +349,7 @@ export function ReviewActions({
         >
           {/* On a short window the reason and the quick reasons scroll, so the photos keep their room and the buttons stay in
               view below them. The padding keeps the field's focus ring inside the scroller. */}
-          <div className="-m-1 flex max-h-[max(7.5rem,calc(100dvh-34rem))] flex-col gap-3 overflow-y-auto overscroll-contain p-1">
+          <div className="-m-1 flex max-h-[max(7.5rem,calc(100dvh-34rem))] flex-col gap-3 overflow-y-auto overscroll-contain p-1 [@media(max-height:600px)]:max-h-none [@media(max-height:600px)]:overflow-visible">
             <Field
               label="Why it's rejected"
               hint="The owner reads this on their claim page"
@@ -381,8 +380,9 @@ export function ReviewActions({
               })}
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" variant="secondary" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
+          {/* On a short window the panel scrolls as one: these two stay in view at its foot. */}
+          <div className="flex flex-wrap gap-3 [@media(max-height:600px)]:sticky [@media(max-height:600px)]:bottom-0 [@media(max-height:600px)]:-mb-4 [@media(max-height:600px)]:bg-surface [@media(max-height:600px)]:py-3">
+            <Button type="submit" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
               Reject claim
             </Button>
             <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>

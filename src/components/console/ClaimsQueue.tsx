@@ -2,8 +2,8 @@
 
 import clsx from "clsx";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Button, CrossIcon, EmptyState } from "@/components/ui";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { CrossIcon } from "@/components/ui";
 import { formatCents, ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
 import { ClaimsGrid, type ClaimsGridHandle, type GridTotals, type GroupBy } from "./ClaimsGrid";
@@ -126,6 +126,9 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   }, [hint]);
   const grid = useRef<ClaimsGridHandle>(null);
   const searchBox = useRef<HTMLInputElement>(null);
+  // Beside the docked panel the toolbar has the grid's width only: an empty search folds to its icon, so the tabs and
+  // controls never crowd it into "Search cla". It opens on a click or /, and stays open while it holds words.
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const ledger = useMemo(() => ledgerOf(rows, recall), [rows, recall]);
   // Search: every word must appear in the claim id, code, PayPal account's last four or reason. It applies to every
@@ -148,6 +151,9 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const found = useMemo(() => (tab === "all" ? searched : searched.filter((r) => r.decision === tab)), [searched, tab]);
   const filtered = filter !== null && tabOf(filter) === "all";
   const openRow = rows.find((r) => r.id === open) ?? null;
+  const compact = wide && open !== null && !search && !searchOpen;
+  // A search with nothing in this tab: where its matches are instead, so an empty tab is never a dead end.
+  const elsewhere = tab !== "all" && search ? TABS.filter((t) => t.id !== "all" && t.id !== tab && counts[t.id] > 0) : [];
 
   const close = useCallback(() => {
     const id = open;
@@ -258,7 +264,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
       if (typing(e.target)) return;
       if (e.key === "/") {
         e.preventDefault();
-        searchBox.current?.focus();
+        setSearchOpen(true);
+        requestAnimationFrame(() => searchBox.current?.focus());
       } else if (/^[1-6]$/.test(e.key)) {
         changeTab(TABS[Number(e.key) - 1].id);
       } else if ((e.key === "j" || (e.key === "ArrowDown" && fill)) && outsideList(e.target)) {
@@ -331,45 +338,61 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                 Export CSV
               </button>
             </div>
-            <div className="relative mb-1.5 flex w-full items-center sm:w-auto sm:max-w-64 sm:grow sm:basis-28">
-              <label className="w-full">
-                <span className="sr-only">Search claims by id, code, PayPal account or reason</span>
-                <input
-                  ref={searchBox}
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    // Esc clears the box and goes back to the list, so the next j or ↓ walks the claims; ↓ goes there too.
-                    if (e.key !== "Escape" && e.key !== "ArrowDown") return;
-                    e.preventDefault();
-                    if (e.key === "Escape") setSearch("");
-                    if (open) grid.current?.focusRow(open);
-                    else grid.current?.focusFirst();
-                  }}
-                  placeholder="Search claims, codes…"
-                  className="h-9 w-full rounded-control border border-line bg-surface pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0 [&::-webkit-search-cancel-button]:appearance-none"
-                />
-              </label>
-              {/* Clear shows whenever there is text, focused or not (the browser's own × hides on blur). */}
-              {search ? (
-                <button
-                  type="button"
-                  onClick={clearSearch}
-                  aria-label="Clear search"
-                  className="absolute right-1 inline-flex size-7 items-center justify-center rounded-[4px] text-muted hover:bg-surface-2 hover:text-text"
-                >
-                  <CrossIcon className="size-3.5" />
-                </button>
-              ) : (
-                <kbd
-                  className="pointer-events-none absolute right-2 hidden h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro text-faint sm:inline-flex"
-                  aria-hidden="true"
-                >
-                  /
-                </kbd>
-              )}
-            </div>
+            {compact ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchOpen(true);
+                  requestAnimationFrame(() => searchBox.current?.focus());
+                }}
+                aria-label="Search claims (/)"
+                title="Search claims (/)"
+                className="mb-1.5 inline-flex size-9 shrink-0 items-center justify-center rounded-control text-muted shadow-[inset_0_0_0_1px_var(--line)] hover:text-text max-sm:hidden"
+              >
+                <SearchGlyph />
+              </button>
+            ) : (
+              <div className="relative mb-1.5 flex w-full items-center sm:w-auto sm:max-w-64 sm:grow sm:basis-40">
+                <label className="w-full">
+                  <span className="sr-only">Search claims by id, code, PayPal account or reason</span>
+                  <input
+                    ref={searchBox}
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onBlur={() => setSearchOpen(false)}
+                    onKeyDown={(e) => {
+                      // Esc clears the box and goes back to the list, so the next j or ↓ walks the claims; ↓ goes there too.
+                      if (e.key !== "Escape" && e.key !== "ArrowDown") return;
+                      e.preventDefault();
+                      if (e.key === "Escape") setSearch("");
+                      if (open) grid.current?.focusRow(open);
+                      else grid.current?.focusFirst();
+                    }}
+                    placeholder="Search claims, codes…"
+                    className="h-9 w-full rounded-control border border-line bg-surface pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0 [&::-webkit-search-cancel-button]:appearance-none"
+                  />
+                </label>
+                {/* Clear shows whenever there is text, focused or not (the browser's own × hides on blur). */}
+                {search ? (
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    aria-label="Clear search"
+                    className="absolute right-1 inline-flex size-7 items-center justify-center rounded-[4px] text-muted hover:bg-surface-2 hover:text-text"
+                  >
+                    <CrossIcon className="size-3.5" />
+                  </button>
+                ) : (
+                  <kbd
+                    className="pointer-events-none absolute right-2 hidden h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro text-faint sm:inline-flex"
+                    aria-hidden="true"
+                  >
+                    /
+                  </kbd>
+                )}
+              </div>
+            )}
           </div>
 
           <div
@@ -421,21 +444,42 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               onShown={setTotals}
             />
             {shown === 0 && (
-              <div className="absolute inset-0 z-10 flex justify-center bg-bg px-4 pt-10">
-                {!tabRows.length && !filtered ? (
-                  <EmptyState title={EMPTY_TAB[tab as Exclude<Tab, "all">].title} description={EMPTY_TAB[tab as Exclude<Tab, "all">].description} />
-                ) : (
-                  <EmptyState
-                    title="No claims match"
-                    description={
-                      search
-                        ? `Nothing in ${tab === "all" ? "this recall" : `the ${TABS.find((t) => t.id === tab)?.label} tab`} matches “${search}”. Search by claim id, code, the PayPal account's last four or the reason.`
-                        : "No claim passes the column filters. Clear them to see every claim."
-                    }
+              // Under the header row, sized to its words: the grid's frame stays, with the note where the rows would be.
+              <div className="absolute inset-x-px top-[37px] bottom-px z-10 rounded-b-card bg-surface px-6 pt-8">
+                {!tabRows.length && !filtered && !search ? (
+                  <Note title={EMPTY_TAB[tab as Exclude<Tab, "all">].title}>{EMPTY_TAB[tab as Exclude<Tab, "all">].description}</Note>
+                ) : search ? (
+                  <Note
+                    title={`No claims in ${tab === "all" ? "this recall" : TABS.find((t) => t.id === tab)?.label} match “${search}”`}
                     action={
-                      <Button variant="secondary" size="sm" onClick={search ? clearSearch : () => changeTab("all")}>
-                        {search ? "Clear search" : "Clear filters"}
-                      </Button>
+                      <>
+                        {elsewhere.map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => changeTab(t.id)}
+                            className="text-text underline decoration-line-strong underline-offset-2 hover:decoration-text"
+                          >
+                            {plural(counts[t.id], "match", "matches")} in {t.label}
+                          </button>
+                        ))}
+                        <button type="button" onClick={clearSearch} className="text-muted hover:text-text">
+                          Clear search
+                        </button>
+                      </>
+                    }
+                  />
+                ) : (
+                  <Note
+                    title="No claims pass the column filters"
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => changeTab("all")}
+                        className="text-text underline decoration-line-strong underline-offset-2 hover:decoration-text"
+                      >
+                        Clear filters
+                      </button>
                     }
                   />
                 )}
@@ -446,14 +490,24 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           {/* One bar under the grid: what the filters show and its money on the left; freshness and the keys on the right. */}
           <footer className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-micro text-muted">
             <span>
-              <span className="text-text-2">{shown === null || shown === rows.length ? plural(rows.length, "claim") : `${formatCount(shown)} of ${plural(rows.length, "claim")}`}</span>
+              <span className="text-text-2">
+                {shown === null || shown === rows.length ? plural(rows.length, "claim") : `${formatCount(shown)} of ${plural(rows.length, "claim")}`}
+              </span>
               {totals && totals.approvedCents > 0 && (
                 <>
                   {" · "}
-                  <span className="font-mono">{formatCents(totals.approvedCents)}</span> approved · <span className="font-mono">{formatCents(totals.sentCents)}</span> sent
+                  <span className="font-mono">{formatCents(totals.approvedCents)}</span> approved
+                  {/* What PayPal took, only once it took something: the strip above says why nothing has. */}
+                  {totals.sentCents > 0 && (
+                    <>
+                      {" · "}
+                      <span className="font-mono">{formatCents(totals.sentCents)}</span> paid out
+                    </>
+                  )}
                 </>
               )}
               {ledger.settling > 0 && ` · ${formatCount(ledger.settling)} settling at PayPal`}
+              {tab === "held" && " · oldest first"}
             </span>
             {hint && <span className="text-text-2">{hint}</span>}
             <span className="ml-auto inline-flex items-center gap-4">
@@ -520,7 +574,11 @@ function Ago({ at }: { at: number }) {
 
 function Status({ state, at, failed, onRefresh }: { state: PollState; at: number; failed: boolean; onRefresh: () => void }) {
   const refresh = (
-    <button type="button" onClick={onRefresh} className="text-text-2 underline decoration-line-strong underline-offset-2 hover:text-text">
+    <button
+      type="button"
+      onClick={onRefresh}
+      className="-my-1 inline-flex min-h-6 items-center text-text-2 underline decoration-line-strong underline-offset-2 hover:text-text"
+    >
       Refresh
     </button>
   );
@@ -550,6 +608,7 @@ const SHORTCUTS: [string[], string][] = [
   [["/"], "Search"],
   [["1", "6"], "Status tab"],
   [["↑", "↓"], "Next / previous claim"],
+  [["J", "K"], "Next / previous claim"],
   [["Enter"], "Open claim"],
   [["Esc"], "Close"],
   [["A"], "Approve (press twice)"],
@@ -585,7 +644,7 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
       </div>
       <dl className="flex flex-col gap-3 px-5 py-4">
         {SHORTCUTS.map(([keys, what]) => (
-          <div key={what} className="grid grid-cols-[88px_1fr] items-center gap-3 text-ui">
+          <div key={keys.join()} className="grid grid-cols-[88px_1fr] items-center gap-3 text-ui">
             <dt className="flex gap-1">
               {keys.map((k, i) => (
                 <span key={k} className="inline-flex items-center gap-1">
@@ -623,9 +682,30 @@ function GroupControl({ value, onChange }: { value: GroupBy; onChange: (g: Group
           </option>
         ))}
       </select>
-      <span aria-hidden="true" className="pointer-events-none absolute right-2.5 text-micro text-faint">
-        ▾
-      </span>
+      <svg aria-hidden="true" viewBox="0 0 10 6" className="pointer-events-none absolute right-2.5 h-1.5 w-2.5 text-muted">
+        <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </label>
+  );
+}
+
+/** A magnifier drawn for the folded search: one 1.5px stroke, the weight of the select's chevron. */
+function SearchGlyph() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4">
+      <circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10.25 10.25L13.5 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** The grid's empty note: a line, what it means, and what to do, on the left where the rows would start. */
+function Note({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex max-w-read flex-col gap-1.5 text-ui">
+      <p className="font-medium text-text">{title}</p>
+      {children && <p className="text-muted">{children}</p>}
+      {action && <p className="mt-1.5 flex flex-wrap gap-x-5 gap-y-2">{action}</p>}
+    </div>
   );
 }

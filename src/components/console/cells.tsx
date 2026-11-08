@@ -5,7 +5,8 @@ import { useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { StatusPill } from "@/components/ui";
 import { barsSentence, duration, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
-import { formatClock, formatTime, plural } from "./format";
+import { formatClock, formatDayTime, formatTime, plural } from "./format";
+import { LinkedIds } from "./LinkedIds";
 
 // The claims grid's cells (DESIGN.md "AG Grid", UI-SPEC §3.3). Every cell renders from the index row alone; nothing
 // here fetches except the thumbnails, which are sealed, cached, 96px and lazy (only rows AG Grid renders load them).
@@ -74,16 +75,15 @@ export function ClaimCell({ data }: Cell) {
       <Thumbs row={data} />
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="font-mono text-ui font-medium">{data.id}</span>
-        {/* The code on the tag, then the time it was filed (UTC, as the column header says; the full date is in the
-            title), so the line fits the column. */}
+        {/* The code on the tag, then the day and time it was filed (UTC, as the column header says): a list spans days,
+            and a time alone made it look unsorted. */}
         <span className="mt-0.5 truncate font-mono text-micro whitespace-nowrap text-faint" title={`Filed ${formatTime(data.createdAt)}`}>
-          {data.code ? (
+          {data.code && (
             <>
-              <span className="text-muted">{data.code}</span> · {formatClock(data.createdAt).slice(0, 5)}
+              <span className="text-muted">{data.code}</span> ·{" "}
             </>
-          ) : (
-            formatTime(data.createdAt)
           )}
+          {formatDayTime(data.createdAt)}
         </span>
       </span>
     </span>
@@ -110,12 +110,13 @@ export function VerdictCell({ data, context }: Cell) {
       </span>
     );
   }
+  // An approved claim's line ("All checks passed") repeats down the list: faint, so the exceptions stand out.
   return (
     <span className="verdict-track h-full">
-      <StatusPill status={data.decision} label={verdictLabel(data)} />
+      <StatusPill status={data.decision} label={verdictLabel(data)} className={data.decision === "pending" ? "pill-pending" : undefined} />
       {data.note && (
-        <span className="min-w-0 truncate text-ui text-muted" title={data.note}>
-          {data.note}
+        <span className={clsx("min-w-0 truncate text-ui", data.decision === "paid" ? "text-faint" : "text-muted")} title={data.note}>
+          <LinkedIds text={data.note} />
         </span>
       )}
     </span>
@@ -178,17 +179,14 @@ export function ChecksCell({ data, context }: Cell) {
   );
 }
 
-/** The time from the photos to the payout ("0:11"), right-aligned mono; with no payout to time, the model's answer
- * time, muted. The hover card breaks it down. */
+/** How long the photo check took to answer ("11 s"), right-aligned mono. The hover card has every step to the payout. */
 export function TimeCell({ data }: Cell) {
   if (!data) return null;
-  if (!data.timeline) return <span className="font-mono text-ui text-faint">—</span>;
-  const paid = data.toPay !== null;
-  const sec = data.toPay ?? data.modelSec;
+  if (!data.timeline || data.modelSec === null) return <span className="font-mono text-ui text-faint">—</span>;
   return (
-    <span className={clsx("font-mono text-ui tabular-nums", paid ? "text-text" : "text-muted")}>
-      <span className="sr-only">{paid ? "Photos to payout: " : "Model answered in "}</span>
-      {sec === null ? "—" : duration(sec)}
+    <span className="font-mono text-ui text-text-2 tabular-nums">
+      <span className="sr-only">Photo check answered in </span>
+      {duration(data.modelSec)}
     </span>
   );
 }
@@ -205,14 +203,17 @@ export function PayerCell({ data }: Cell) {
 }
 
 const FAILED = new Set(["FAILED", "RETURNED", "BLOCKED", "DENIED", "REVERSED", "REFUNDED", "CANCELED"]);
-const NOT_LIVE = "Not sent: the payee's PayPal account isn't live.";
+// The one wording for an approved refund that wasn't paid out because its payee's PayPal can't take it: here, in the
+// drawer's timeline and history, and in the CSV.
+export const CANT_RECEIVE = "This payee's PayPal account can't receive payouts, so nothing was sent.";
 
 /** Whether money left for this claim (a payout PayPal took). */
 export const sent = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) => r.decision === "paid" && Boolean(r.payoutStatus) && !r.seeded;
 
 /** Where the money is: Sent, Settling or Failed at PayPal; Not sent (red, with PayPal's time) when PayPal refused an
- * approve; Not sent (muted) for an approved claim whose payee's account isn't live; a dash while nothing is owed. */
-export function PayoutCell({ data }: Cell) {
+ * approve; Not sent with its reason under it for an approved claim whose payee can't receive; a dash while nothing is
+ * owed. */
+export function PayoutCell({ data, context }: Cell) {
   if (!data) return null;
   if (data.payoutFailedAt) {
     return (
@@ -226,11 +227,12 @@ export function PayoutCell({ data }: Cell) {
     );
   }
   if (data.decision === "paid" && !sent(data)) {
+    // The homepage's still keeps its narrower column: the word alone, the reason in its title.
+    if (context?.stacked) return <span className="inline-flex h-full items-center text-ui text-muted" title={CANT_RECEIVE}>Not sent</span>;
     return (
-      <span className="inline-flex h-full items-center gap-2 text-ui text-muted" title={NOT_LIVE}>
-        <span className="size-1.5 shrink-0 rounded-full border border-faint" aria-hidden="true" />
-        Not sent
-        <span className="sr-only">: {NOT_LIVE}</span>
+      <span className="flex h-full min-w-0 flex-col justify-center leading-tight" title={CANT_RECEIVE}>
+        <span className="text-ui text-muted">Not sent</span>
+        <span className="truncate text-micro text-faint">Payee can&apos;t receive</span>
       </span>
     );
   }
@@ -245,24 +247,28 @@ export function PayoutCell({ data }: Cell) {
   );
 }
 
-/** "$29.99" with the cents at 73%, raised (Mercury's table cents). Money that hasn't left is muted. */
-export function AmountText({ amount, muted }: { amount: string; muted?: boolean }) {
-  const dot = amount.lastIndexOf(".");
+type AmountTone = "sent" | "approved" | "owed";
+
+/** "$29.99" as a plain tabular figure, so a column of amounts lines up and copies as it reads. Its tone says where the
+ * money is: sent through PayPal (full ink), approved (second tone), or only owed once a person approves (muted). */
+export function AmountText({ amount, tone }: { amount: string; tone: AmountTone }) {
   return (
-    <span className={clsx("font-mono text-ui whitespace-nowrap tabular-nums", muted ? "text-muted" : "text-text")}>
-      <span className="sr-only">{amount}</span>
-      <span aria-hidden="true">
-        {amount.slice(0, dot)}
-        <span className="relative -top-[0.2em] text-[length:max(12px,0.73em)]">{amount.slice(dot)}</span>
-      </span>
+    <span className={clsx("font-mono text-ui whitespace-nowrap tabular-nums", tone === "sent" ? "text-text" : tone === "approved" ? "text-text-2" : "text-faint")}>
+      {amount}
     </span>
   );
 }
 
+const toneOf = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">): AmountTone => (sent(r) ? "sent" : r.decision === "paid" ? "approved" : "owed");
+
 export function AmountCell({ data }: Cell) {
   if (!data) return null;
   if (!data.amount) return <span className="text-faint" aria-label="No amount">—</span>;
-  return <AmountText amount={data.amount} muted={!sent(data)} />;
+  return (
+    <span title={data.decision === "held" ? "Owed once a person approves it" : undefined}>
+      <AmountText amount={data.amount} tone={toneOf(data)} />
+    </span>
+  );
 }
 
 /** Narrow grids: one 88px card per claim. Photo, id and amount; then the pill in its track and the reason; then code, time and payout. */
@@ -274,15 +280,17 @@ export function CardRow({ data }: Cell) {
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex items-baseline justify-between gap-3">
           <span className="font-mono text-ui font-medium">{data.id}</span>
-          <span className="shrink-0">{data.amount ? <AmountText amount={data.amount} muted={!sent(data)} /> : <span className="text-faint">—</span>}</span>
+          <span className="shrink-0">{data.amount ? <AmountText amount={data.amount} tone={toneOf(data)} /> : <span className="text-faint">—</span>}</span>
         </span>
         <span className="verdict-track">
           <StatusPill status={data.decision} label={verdictLabel(data)} />
-          <span className="min-w-0 truncate text-ui text-muted">{data.note ?? data.reason}</span>
+          <span className="min-w-0 truncate text-ui text-muted">
+            <LinkedIds text={data.note ?? data.reason} />
+          </span>
         </span>
         {/* What the columns say on a wider grid, in one line: the code, the time to payout and where the money is. */}
         <span className="truncate font-mono text-micro text-faint">
-          {[data.code, data.toPay !== null ? duration(data.toPay) : data.modelSec !== null ? duration(data.modelSec) : null, payoutWord(data)].filter(Boolean).join(" · ")}
+          {[data.code, formatDayTime(data.createdAt), payoutWord(data)].filter(Boolean).join(" · ")}
         </span>
       </span>
     </span>
@@ -292,7 +300,7 @@ export function CardRow({ data }: Cell) {
 /** The payout column's word, for the card row's line and the CSV. */
 export function payoutWord(r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "payoutFailedAt">): string | null {
   if (r.payoutFailedAt) return "Not sent";
-  if (r.decision === "paid" && !sent(r)) return "Not sent";
+  if (r.decision === "paid" && !sent(r)) return "Payee can't receive";
   if (!r.payoutStatus) return null;
   return r.payoutStatus === "SUCCESS" ? "Sent" : FAILED.has(r.payoutStatus) ? "Failed" : "Settling";
 }
@@ -314,13 +322,20 @@ export function GroupRow({ data, context }: Cell) {
       <span aria-hidden="true" className={clsx("inline-block w-3 text-muted transition-transform duration-160", !folded && "rotate-90")}>
         ›
       </span>
-      <span className="min-w-0 truncate text-ui font-medium text-text">{data.group.label}</span>
+      <span className="min-w-0 truncate text-ui font-medium text-text">
+        <LinkedIds text={data.group.label} />
+      </span>
       <span className="shrink-0 text-ui text-muted">
-        · {plural(total?.count ?? 0, "claim")}
-        <span className="sr-only">{folded ? ", folded: Enter shows them" : ", group heading"}</span>
+        <span aria-hidden="true">· </span>
+        {plural(total?.count ?? 0, "claim")}
+        <span className="sr-only">{folded ? ", folded" : ", expanded"}</span>
       </span>
       {total && total.count > 0 && <VerdictMix mix={total.mix} count={total.count} />}
-      {total && total.cents > 0 && <span className="ml-auto shrink-0 font-mono text-ui text-muted tabular-nums">{formatCents(total.cents)}</span>}
+      {total && total.cents > 0 && (
+        <span className="ml-auto shrink-0 text-ui text-muted">
+          <span className="font-mono tabular-nums">{formatCents(total.cents)}</span> approved
+        </span>
+      )}
     </span>
   );
 }
@@ -394,7 +409,7 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Gr
           ["PayPal settled", t.settled],
         ] as [string, number | null][])),
   ];
-  const tail = data.decision === "paid" && !sent(data) ? "Approved · not sent" : t.end === "held" ? "Waiting for a person to approve or reject." : null;
+  const tail = data.decision === "paid" && !sent(data) ? CANT_RECEIVE : t.end === "held" ? "Waiting for a person to approve or reject." : null;
   return (
     <div className="w-[240px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-ui">

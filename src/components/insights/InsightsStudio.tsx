@@ -24,7 +24,14 @@ const LICENSE = process.env.NEXT_PUBLIC_AG_STUDIO_LICENSE;
 if (LICENSE) lib.AgStudioLicenseManager.setLicenseKey(LICENSE);
 
 // Studio's own words for the rail, in the console's voice.
-const LOCALE = { panelTitleAi: "Recall analyst", aiMessageInputPlaceholder: "Ask about this recall's claims…" };
+// The thread picker names an untitled thread "This conversation" and the button beside it "Start over": Studio's own
+// "New chat" next to "New" read as the same control twice.
+const LOCALE = {
+  panelTitleAi: "Recall analyst",
+  aiMessageInputPlaceholder: "Ask about this recall's claims…",
+  aiNewChat: "This conversation",
+  aiNewThreadButton: "Start over",
+};
 
 // The analyst's rail lives in Studio's edit-mode panels (view mode's panels take only filters); the report opens there
 // with only that panel shown, and insights.css takes the editor chrome off the read-only panels.
@@ -60,7 +67,7 @@ function fonts() {
     const family = root.getPropertyValue(name).trim();
     return family ? `${family}, ${fallback}` : fallback;
   };
-  return { sans: stack("--font-schibsted", "ui-sans-serif, system-ui, sans-serif"), mono: stack("--font-jetbrains", "ui-monospace, Menlo, monospace") };
+  return { sans: stack("--font-schibsted", "ui-sans-serif, system-ui, sans-serif") };
 }
 
 // Studio's keyboard model for the canvas: Tab goes from panel to panel, Enter goes into a panel's controls and Esc comes

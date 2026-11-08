@@ -32,10 +32,10 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
   const report = buildReport(claims, recall);
 
   return (
-    // The sheet and a narrow rail beside it, centred as one on the page: the rail carries what the sheet is and the
-    // print action, aligned to the sheet's top edge.
+    // The sheet and a narrow rail beside it, on the page's left gutter as every console page is: the rail carries the
+    // print action (and the recall picker), aligned to the sheet's top edge. The sheet itself names the recall and date.
     <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8 print:p-0">
-      <div className="mx-auto grid w-full max-w-[52rem] gap-6 lg:max-w-[70rem] lg:grid-cols-[minmax(0,52rem)_minmax(0,1fr)] lg:gap-12 print:block print:max-w-none">
+      <div className="grid w-full max-w-[52rem] gap-6 lg:max-w-[70rem] lg:grid-cols-[minmax(0,52rem)_minmax(0,1fr)] lg:gap-12 print:block print:max-w-none">
         <div className="lg:col-span-2 print:hidden">
           <h1 className="text-h2 font-medium">CPSC progress report</h1>
           <p className="mt-1 text-ui text-muted">A draft from your claim records, laid out for the monthly report.</p>
@@ -43,16 +43,6 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
         <ProgressReport recall={recall} report={report} generated={`${formatDayET(new Date().toISOString())} (ET)`} />
         <aside className="flex flex-col gap-5 text-ui lg:sticky lg:top-6 lg:self-start print:hidden">
           <PrintButton />
-          <dl className="flex flex-col gap-3 border-t border-line pt-4">
-            <div>
-              <dt className="text-muted">Recall</dt>
-              <dd className="mt-0.5 font-mono">{recall.id}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Generated</dt>
-              <dd className="mt-0.5">{formatDayET(new Date().toISOString())} (ET)</dd>
-            </div>
-          </dl>
           {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/report" />}
         </aside>
       </div>

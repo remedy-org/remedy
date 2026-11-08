@@ -2,14 +2,14 @@ import { themeQuartz } from "ag-grid-community";
 
 // AG Grid's Quartz theme mapped to the Evidence Room tokens (DESIGN.md). Every colour is a CSS variable, so the one
 // theme follows the app's dark and light tokens as data-theme flips: no second theme, no flash on toggle.
-// The header is a quiet mono label row one surface step up (--surface-2, DESIGN.md's console layers); rows are
-// 52px for two-line cells with thumbnails (Mercury 51, HR 65). claims-grid.css adds the uppercase tracking, the open
-// row's ink edge and the filter icons that show on hover. The filter popups, inputs and checkboxes use the same tokens:
+// The header is a quiet sentence-case label row in the sans face, one surface step up (--surface-2, DESIGN.md's console
+// layers): mono is for data. Rows are 52px for two-line cells with thumbnails (Mercury 51, HR 65). claims-grid.css adds
+// the open row's ink edge and the filter icons that show on hover. The filter popups, inputs and checkboxes use the same tokens:
 // ink, not amber, since amber is the one action's.
 export const gridTheme = themeQuartz.withParams({
   browserColorScheme: "inherit",
   fontFamily: "var(--font-sans)",
-  headerFontFamily: "var(--font-mono)",
+  headerFontFamily: "var(--font-sans)",
   fontSize: 14,
   dataFontSize: 14,
   headerFontSize: 12,
@@ -30,7 +30,7 @@ export const gridTheme = themeQuartz.withParams({
   borderColor: "var(--line)",
   chromeBackgroundColor: "var(--surface)",
   headerBackgroundColor: "var(--surface-2)",
-  headerTextColor: "var(--faint)",
+  headerTextColor: "var(--muted)",
   headerCellHoverBackgroundColor: "color-mix(in oklch, var(--text) 3%, transparent)",
   iconColor: "var(--faint)",
 

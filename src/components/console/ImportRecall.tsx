@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { ApiError } from "@/app/console/_lib/api";
 import type { CpscSummary } from "@/app/console/_lib/recalls";
 import Link from "next/link";
-import { Button, ErrorState, Field, type CheckStep } from "@/components/ui";
+import { Button, Field, type CheckStep } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
 import { api } from "./api";
 import { CheckList } from "./CheckList";
@@ -33,6 +33,17 @@ function importSteps(at: Step["at"], notice?: CpscSummary): CheckStep[] {
   ];
 }
 
+/**
+ * A remedy other than a refund, from the notice's own words: "contact Sleep Technologies to receive a free cover" ->
+ * "free cover". Remedy pays refunds for destroyed units, so a recall whose remedy is a repair, a cover or a replacement
+ * needs a second look before its claim page goes live. Null when the notice offers a refund.
+ */
+export function otherRemedy(remedy: string): string | null {
+  if (/\brefund/i.test(remedy)) return null;
+  const m = remedy.match(/\bfree\s+(?:[a-z-]+\s+){0,2}?(?:cover|repair|replacement|kit|part|retrofit|inspection)s?\b|\brepair kit\b|\breplacement\b|\brepair\b|\bretrofit\b/i);
+  return m ? m[0].toLowerCase() : null;
+}
+
 const blankSpec = (n: CpscSummary): CheckSpec => ({
   recall: `${n.product || n.title} (CPSC ${n.id})`,
   source: n.url,
@@ -46,6 +57,12 @@ export function ImportRecall({ example }: { example: string }) {
   const router = useRouter();
   const [ref, setRef] = useState("");
   const [step, setStep] = useState<Step>({ at: "find" });
+  // Each new stage takes focus at its heading, so a screen reader hears where the import is; the field keeps it while
+  // CPSC is read.
+  const stage = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (step.at === "drafting" || step.at === "draft_failed" || step.at === "edit") stage.current?.focus();
+  }, [step.at]);
 
   const draft = async (notice: CpscSummary) => {
     setStep({ at: "drafting", notice });
@@ -66,6 +83,9 @@ export function ImportRecall({ example }: { example: string }) {
   if (step.at === "edit") {
     return (
       <Layout notice={step.notice}>
+        <h2 ref={stage} tabIndex={-1} className="sr-only">
+          Review the photo checks
+        </h2>
         <PublishForm
           cpscRef={ref}
           notice={step.notice}
@@ -83,25 +103,27 @@ export function ImportRecall({ example }: { example: string }) {
       <Layout notice={step.notice}>
         <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
           <div>
-            <h2 className="text-body font-medium">Drafting the photo checks</h2>
+            <h2 ref={stage} tabIndex={-1} className="text-body font-medium outline-none">
+              Drafting the photo checks
+            </h2>
             <p className="mt-1 text-ui text-muted">The model reads the notice and its photos, then writes what an owner&apos;s photos must show. You review every line before it goes live.</p>
           </div>
           <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn't finish" }} />
+          {/* The failure in the card's own type, one line and its two ways on: no box inside the box. */}
           {step.at === "draft_failed" && (
-            <ErrorState
-              variant="inline"
-              title={step.error.error}
-              action={
-                <div className="flex flex-wrap gap-3">
-                  <Button variant="secondary" size="sm" onClick={() => draft(step.notice)}>
-                    Try the draft again
-                  </Button>
-                  <Button variant="tertiary" size="sm" onClick={() => setStep({ at: "edit", notice: step.notice, spec: blankSpec(step.notice), drafted: false })}>
-                    Write the checks yourself
-                  </Button>
-                </div>
-              }
-            />
+            <div className="flex flex-col gap-3">
+              <p role="alert" className="text-ui text-stop">
+                {step.error.error}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="secondary" size="sm" onClick={() => draft(step.notice)}>
+                  Try the draft again
+                </Button>
+                <Button variant="tertiary" size="sm" onClick={() => setStep({ at: "edit", notice: step.notice, spec: blankSpec(step.notice), drafted: false })}>
+                  Write the checks yourself
+                </Button>
+              </div>
+            </div>
           )}
         </section>
       </Layout>
@@ -122,23 +144,25 @@ export function ImportRecall({ example }: { example: string }) {
           autoComplete="off"
           spellCheck={false}
           required
-          disabled={step.at === "reading"}
+          // Read-only, not disabled, while CPSC is read: focus stays in the field rather than dropping to the page.
+          readOnly={step.at === "reading"}
         />
-        {/* A recall already here isn't a failure: say where it is. */}
-        {error?.existing && (
-          <p className="text-ui text-text-2">
-            <span className="font-mono">{error.existing}</span> is already in your workspace.{" "}
-            <Link href={`/console/recalls/${error.existing}`} className="font-medium text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
-              Open it <span aria-hidden="true">→</span>
-            </Link>
-          </p>
-        )}
-        {error && !error.fields?.ref && !error.existing && (
-          <ErrorState
-            variant="inline"
-            title={error.error}
-          />
-        )}
+        {/* What happened, announced: a recall already here isn't a failure, so it says where it is. */}
+        <div role="status">
+          {error?.existing && (
+            <p className="text-ui text-text-2">
+              <span className="font-mono">{error.existing}</span> is already in your workspace.{" "}
+              <Link href={`/console/recalls/${error.existing}`} className="font-medium text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
+                Open it <span aria-hidden="true">→</span>
+              </Link>
+            </p>
+          )}
+          {error && !error.fields?.ref && !error.existing && (
+            <p role="alert" className="text-ui text-stop">
+              {error.error}
+            </p>
+          )}
+        </div>
         <div>
           <Button type="submit" size="lg" pending={step.at === "reading"} pendingLabel="Reading the notice">
             Read the notice
@@ -151,9 +175,19 @@ export function ImportRecall({ example }: { example: string }) {
 }
 
 function Layout({ notice, children }: { notice: CpscSummary; children: ReactNode }) {
+  const other = otherRemedy(notice.remedy);
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
-      <div className="order-2 min-w-0 lg:order-1">{children}</div>
+      <div className="order-2 flex min-w-0 flex-col gap-6 lg:order-1">
+        {/* The first thing on the page when it applies: a claim page here would pay owners to destroy what the
+            recall repairs. Publishing stays possible; the company decides. */}
+        {other && (
+          <p className="border-l-2 border-hold pl-3 text-ui text-text">
+            CPSC lists a {other} as this recall&apos;s remedy. Remedy pays refunds for destroyed units.
+          </p>
+        )}
+        {children}
+      </div>
       <aside className="order-1 lg:sticky lg:top-6 lg:order-2">
         <CpscNotice notice={notice} />
       </aside>

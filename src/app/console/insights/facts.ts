@@ -1,5 +1,5 @@
 import { toDrawerClaim } from "@/app/console/_lib/drawer";
-import { amountOf, cents, reasonOf } from "@/app/console/_lib/view";
+import { amountOf, cents, reasonOf, refusalLabel } from "@/app/console/_lib/view";
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { summarize } from "@/lib/store/store";
 import type { Claim, Decision, Recall } from "@/lib/types";
@@ -21,21 +21,8 @@ export const DECISION_LABEL: Record<Decision, string> = {
 // The order every chart, the funnel and the agent list decisions in, which is also the chart palette's order.
 export const DECISION_RANK: Record<Decision, number> = { paid: 1, held: 2, rejected: 3, blocked: 4, pending: 5 };
 
-// The same wording as the CPSC report (console/_lib/report.ts), so the two pages never disagree.
-const REFUSAL: Record<string, string> = {
-  code: "One-time code missing or wrong",
-  screen: "Photo of a screen or a print",
-  label: "Label missing or not the recalled product",
-  same_item: "Photos showed different items",
-  step: "Destruction not shown",
-  session: "Photos outside the live camera session",
-  duplicate_photo: "Photo already used in another claim",
-  payer: "Second claim from one PayPal account",
-  payer_verified: "PayPal account not verified",
-  review: "Rejected by a person on review",
-};
-
-export const refusalLabel = (check: string) => REFUSAL[check.startsWith("step_") ? "step" : check] ?? "Other";
+// The same wording as the CPSC report and the claims grid's filter (console/_lib/view.ts), so they never disagree.
+export { refusalLabel };
 
 const PRE_CHECKS = new Set(["session", "duplicate_photo", "payer", "payer_verified"]);
 

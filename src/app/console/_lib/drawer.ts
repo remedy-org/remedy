@@ -94,7 +94,7 @@ export function photoUrl(claimId: string, n: number) {
 }
 
 /**
- * A seeded claim's history as it happened: its payee's PayPal account isn't live, so no payout left and no PayPal
+ * A seeded claim's history as it happened: its payee's PayPal account can't receive payouts, so no payout left and no PayPal
  * status exists. The stored lines (lib/demo/sampleCopy.ts) are rewritten in the console's words.
  */
 function sampleEvents(c: Claim, amount: string): Claim["events"] {
@@ -107,7 +107,7 @@ function sampleEvents(c: Claim, amount: string): Claim["events"] {
         : e.type === "prechecked"
           ? { ...e, detail: "Pre-checks passed" }
           : e.type === "payout_sent"
-            ? { ...e, detail: `Approved for ${amount} · not sent` }
+            ? { ...e, detail: `Approved for ${amount}. Payout not sent: this PayPal account can't receive payouts.` }
             : e,
     );
 }
