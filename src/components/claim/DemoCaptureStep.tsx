@@ -7,8 +7,9 @@ import type { DemoSample } from "@/lib/demo";
 import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import { rememberAspect } from "./ClaimPhotos";
 import { CodeTag } from "./CodeTag";
-import { photoWidth } from "./Exhibit";
+import { PHOTO_TRANSITION, photoWidth } from "./Exhibit";
 import styles from "./flow.module.css";
+import { MobileCta } from "./MobileCta";
 import type { ClaimView } from "./model";
 import { Notice } from "./Notice";
 import { CAMERA_BACK, CAMERA_FRAME, CameraTopBar, Cutout, Dock, InstructionBar } from "./Viewfinder";
@@ -30,8 +31,10 @@ const ASPECT = 2 / 3;
 // Long enough for the photo to drop into its slot before the checks take over the screen.
 const DROP_MS = 480;
 // From 640px to 1024px the camera card hugs its photo (as wide as photoWidth draws it, plus the dock's room), so it
-// isn't a wide black box around a narrow strip. Spelled out so Tailwind finds it.
-const HUG = "sm:max-lg:mx-auto sm:max-lg:w-[min(100%,calc(min(55svh,100svh_-_18rem)*2/3_+_10rem))]";
+// isn't a wide black box around a narrow strip; from 1024px it is the photo's own width (never narrower than the dock
+// needs), on the column's left edge, so the photo is where the checking screen keeps it. Spelled out so Tailwind finds it.
+const HUG =
+  "sm:max-lg:mx-auto sm:max-lg:w-[min(100%,calc(min(55svh,100svh_-_18rem)*2/3_+_10rem))] lg:w-[max(16rem,min(100%,calc(min(55svh,100svh_-_18rem)*2/3)))]";
 
 /**
  * A demo claim's photo step. A claim photographed in the claim's camera shows in the live camera's own chrome: the
@@ -47,6 +50,8 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
   const upload = !sample.liveSession;
 
   async function send() {
+    // The shutter stays focusable while the photo goes (aria-disabled, never disabled), so focus never drops to the page
+    // before the checking screen's heading takes it: a second press just does nothing.
     if (sending) return;
     setSending(true);
     setError(null);
@@ -94,17 +99,29 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
             </h1>
             <p className="text-body text-pretty text-muted">{line}</p>
           </div>
-          <figure className="flex flex-col gap-2">
+          {/* Phones: the code this claim was issued, which the result's tag check names (a laptop has the tag beside it). */}
+          <p className="text-ui text-pretty text-muted lg:hidden">
+            Your one-time code is <span className="font-mono whitespace-nowrap text-text">{code}</span>. Only a photo taken in this claim&apos;s camera can carry it.
+          </p>
+          {/* A phone: the picture and its button on the text's own width, the picture no taller than leaves the button on
+              the first screen. A laptop: the picture at the camera's size, and the button as wide as it. */}
+          <figure className="flex flex-col gap-2 lg:w-(--photo-w)" style={{ ["--photo-w" as string]: photoWidth(ASPECT) }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={sample.photos[0]} alt={`The picture: ${title.toLowerCase()}`} style={{ aspectRatio: ASPECT, width: photoWidth(ASPECT) }} className="block h-auto rounded-card bg-surface-2 object-cover ring-1 ring-line" />
+            <img
+              src={sample.photos[0]}
+              alt={`The picture: ${title.toLowerCase()}`}
+              style={{ viewTransitionName: PHOTO_TRANSITION }}
+              className="block aspect-[2/3] h-auto w-full rounded-card bg-surface-2 object-cover object-[50%_62%] ring-1 ring-line max-lg:max-h-[44svh]"
+            />
             <figcaption className="text-ui text-muted">A picture file, not a photo from this claim&apos;s camera</figcaption>
           </figure>
-          {/* As wide as the picture above it, never narrower than its label needs. */}
-          <div className="max-w-full" style={{ width: `max(min(100%, 16rem), ${photoWidth(ASPECT)})` }}>
-            <Button onClick={send} pending={sending} pendingLabel="Sending…" size="lg" block>
+          <div className="w-full lg:w-[max(16rem,var(--photo-w))]" style={{ ["--photo-w" as string]: photoWidth(ASPECT) }}>
+            {/* Busy, not disabled: focus stays on it until the checking screen's heading takes it. */}
+            <Button id="send-picture" onClick={send} aria-busy={sending || undefined} data-pending={sending ? "" : undefined} size="lg" block>
               Send this picture
             </Button>
           </div>
+          <MobileCta target="send-picture" label="Send this picture" onClick={send} disabled={sending} />
         </div>
       ) : (
         <div data-theme="dark" data-camera="" className={clsx(CAMERA_FRAME, HUG, "lg:row-span-2")}>
@@ -119,8 +136,9 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
           <div className="relative flex min-h-0 justify-center overflow-hidden max-sm:items-center">
             <figure className="relative" style={{ aspectRatio: ASPECT, width: photoWidth(ASPECT) }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={sample.photos[0]} alt={`Photo: ${title.toLowerCase()}`} className="absolute inset-0 size-full object-contain" />
-              <Cutout className="inset-x-[4%] inset-y-[5%]" />
+              <img src={sample.photos[0]} alt={SAMPLE_COPY[sample.id]?.alt ?? `Photo: ${title.toLowerCase()}`} style={{ viewTransitionName: PHOTO_TRANSITION }} className="absolute inset-0 size-full object-contain" />
+              {/* A photo already taken: the guide frames all of it, so it never cuts across the tag. */}
+              <Cutout inset="inset-x-[3%] inset-y-[2%]" />
               <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
             </figure>
           </div>
@@ -148,10 +166,10 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
               <button
                 type="button"
                 onClick={send}
-                disabled={sending}
+                aria-disabled={sending || undefined}
                 aria-label="Take the photo and send it"
                 className={clsx(
-                  "flex size-[4.5rem] items-center justify-center rounded-full border-4 border-[oklch(1_0_0/0.9)] transition-opacity duration-160 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus disabled:opacity-35",
+                  "flex size-[4.5rem] items-center justify-center rounded-full border-4 border-[oklch(1_0_0/0.9)] transition-opacity duration-160 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus aria-disabled:opacity-35",
                   styles.shutter,
                 )}
               >
@@ -176,7 +194,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
         <figure className="flex flex-col gap-3">
           <CodeTag code={code} written={written} />
           <figcaption className="text-ui text-muted">
-            {upload ? "Your one-time code. Only a photo taken in this claim's camera can carry it." : "Your one-time code. Write it on the tag, then press the shutter."}
+            {upload ? "Your one-time code. Only a photo taken in this claim's camera can carry it." : "Your one-time code. This photo's tag is already written. Press the shutter to send it."}
           </figcaption>
         </figure>
       </div>

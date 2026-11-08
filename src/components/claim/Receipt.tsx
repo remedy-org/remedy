@@ -1,13 +1,11 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { Money, Paper, Stamp } from "@/components/ui";
+import { Money, Paper } from "@/components/ui";
 import type { CheckState } from "@/components/ui";
 import styles from "./flow.module.css";
 import { ClaimTime } from "./LocalTime";
-import { PayoutRow } from "./ReceiptLive";
-
-/** How long the receipt takes to feed out of its slot; the PAID stamp lands after it. */
-export const FEED_MS = 900;
+import { FEED_MS } from "./model";
+import { PaidStamp, PayoutRow } from "./ReceiptLive";
 
 // The refund row's words, one per state: the amount waits on the checks, then goes, or doesn't.
 const REFUND_WORD: Partial<Record<CheckState, string>> = {
@@ -22,13 +20,14 @@ const REFUND_WORD: Partial<Record<CheckState, string>> = {
 
 /**
  * The refund while the checks run: what it is, its state in one word, and the amount, once, between hairlines. Its top
- * hairline is the slot the receipt prints out of: the paid result draws the receipt from the same line.
+ * hairline is the slot the receipt prints out of: the paid result draws the receipt from the same line. On a phone it
+ * comes right under the checks, whose last hairline is that slot, so it draws only its own foot there.
  */
 export function RefundRow({ amount, state, className }: { amount: { value: string; currency: string }; state: CheckState; className?: string }) {
   const word = REFUND_WORD[state] ?? "After the checks";
   const sent = state === "pass";
   return (
-    <div data-row="refund" className={clsx("flex items-center justify-between gap-4 border-y border-line-2 py-4", className)}>
+    <div data-row="refund" className={clsx("flex items-center justify-between gap-4 border-b border-line-2 py-4 lg:[@media(min-height:601px)]:border-t", className)}>
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="text-body text-text">Refund to your PayPal</span>
         <span key={word} className={clsx("text-ui", sent ? "text-text" : state === "hold" ? "text-hold" : "text-muted", styles.swap)}>
@@ -71,7 +70,7 @@ export interface ReceiptProps {
 export function Receipt({ amount, recallId, claimId, account, payerTail, payoutId, sentAt, took, arrive, foot }: ReceiptProps) {
   return (
     // The slot's lip stays where the refund row's top hairline was; the paper feeds down out of it.
-    <div id="receipt" className={clsx("scroll-mt-24 border-t border-line-2", arrive && styles.feed)} style={{ ["--feed-ms" as string]: `${FEED_MS}ms` }}>
+    <div id="receipt" className={clsx("scroll-mt-24 border-line-2 lg:[@media(min-height:601px)]:border-t", arrive && styles.feed)} style={{ ["--feed-ms" as string]: `${FEED_MS}ms` }}>
       <div>
         <Paper
           variant="receipt"
@@ -80,9 +79,7 @@ export function Receipt({ amount, recallId, claimId, account, payerTail, payoutI
           as="article"
           aria-label="Refund receipt"
           data-paper=""
-          // Focus follows it when the page brings it into view (BringIntoView).
-          tabIndex={-1}
-          className="w-full outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
+          className="w-full"
         >
           <div className="flex flex-col px-6 pt-8 pb-6 sm:px-7">
             <div className="flex items-baseline justify-between gap-4 text-ui text-ink-muted">
@@ -93,9 +90,7 @@ export function Receipt({ amount, recallId, claimId, account, payerTail, payoutI
             </div>
             <div className="mt-3 flex items-center justify-between gap-4">
               <Money value={Number(amount.value)} currency={amount.currency} size="amount" className="text-ink" />
-              <Stamp tone="pay" land={arrive ? FEED_MS : undefined} className="mr-1">
-                Paid
-              </Stamp>
+              <PaidStamp arrive={arrive} />
             </div>
             <dl className="mt-5 border-t border-dashed border-paper-line text-ui">
               <PayoutRow />

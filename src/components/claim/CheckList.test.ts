@@ -3,7 +3,7 @@ import { sixRows } from "./CheckList";
 import type { CheckRow } from "./model";
 
 // The owner's five checks: always five rows (the list never shrinks between claims), one fixed line per outcome in
-// Remedy's words, and a demo run's passes scoped to that run.
+// Remedy's words, the same on a demo claim as on a real one.
 
 const pre = (account: CheckRow["state"], detail?: string): CheckRow[] => [
   { id: "session", group: "pre", label: "", state: "pass" },
@@ -25,13 +25,16 @@ describe("sixRows", () => {
     const account = rows.find((r) => r.key === "account")!;
     expect(account.state).toBe("skipped");
     expect(account.unrun).toBeFalsy();
-    expect(account.detail).toBe("Checked on the genuine claim: all four share one account.");
+    expect(account.detail).toBe("Counted once, on your genuine claim.");
   });
 
-  it("says a demo run's passes are within the run", () => {
-    const rows = sixRows([...pre("pass"), ...model("pass")], { ...base, demo: true });
-    expect(rows.find((r) => r.key === "duplicate")!.because).toBe("No earlier claim in this run has this photo.");
-    expect(rows.find((r) => r.key === "account")!.because).toBe("No other claim from this account in this run.");
+  it("words a demo claim's passes as a real claim's, with no test-run language", () => {
+    for (const demo of [true, false]) {
+      const rows = sixRows([...pre("pass"), ...model("pass")], { ...base, demo });
+      expect(rows.find((r) => r.key === "duplicate")!.because).toBe("No earlier claim has this photo.");
+      expect(rows.find((r) => r.key === "account")!.because).toBe("No other claim from this PayPal account.");
+      expect(rows.map((r) => `${r.because ?? ""} ${r.detail ?? ""}`).join(" ")).not.toMatch(/this run|all four/);
+    }
   });
 
   it("gives the cut a fixed line, never the photo check's sentence", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import type { DemoSample } from "@/lib/demo";
 import type { CheckSpec } from "@/lib/types";
 import { CaptureStep, type CapturePreview } from "./CaptureStep";
@@ -74,9 +75,19 @@ export function ClaimFlow(props: ClaimFlowProps) {
     window.scrollTo({ top: 0 });
   };
   const sent = (next: ClaimView | null, urls?: string[]) => {
-    if (next) setView(next);
-    if (urls?.length) setPhotoUrls(urls);
-    go("checking");
+    const apply = () => {
+      if (next) setView(next);
+      if (urls?.length) setPhotoUrls(urls);
+      go("checking");
+    };
+    // From the camera, the photo just taken carries into the checking screen (a View Transition: the still and the
+    // checking screen's photo share a name, PHOTO_TRANSITION) while the camera's dark gives way to the page, so the
+    // object never leaves the eye. Without the API, or for photos that came from another device, it simply swaps.
+    if (phase === "capture" && typeof document.startViewTransition === "function" && document.visibilityState === "visible") {
+      document.startViewTransition(() => flushSync(apply));
+      return;
+    }
+    apply();
   };
   // The code step on a laptop while the phone takes the photos (the QR handoff): on to checking once they arrive. The
   // camera step polls for itself, since it knows when this tab is sending.

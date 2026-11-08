@@ -57,10 +57,7 @@ export interface SixOptions {
   /** The claim is decided: a row with nothing recorded didn't run. */
   decided: boolean;
   held?: boolean;
-  /**
-   * A demo claim: one account sends all four, so the account check runs on the genuine one only (the others say so), and
-   * every check is against this run of four, which the passes say.
-   */
+  /** A demo claim: one account sends all four, so the account check counts once, on the genuine one (the others say so). */
   demo?: boolean;
   /** How many photos were sent: a repost names its photo only when there were several. */
   photos?: number;
@@ -74,18 +71,19 @@ export interface SixOptions {
   read?: { label?: string | null; code?: string | null };
 }
 
+/** The account check on a demo claim after the genuine one: one account sends all four, and it counts once. */
+export const DEMO_ACCOUNT = "Counted once, on your genuine claim.";
+
 /** The six rows from a claim's recorded checks. */
 export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo, photos = 1, earlier, explained, written, read }: SixOptions): SixRow[] {
   const of = (key: SixKey) => rows.filter((r) => KEY_OF(r.id) === key);
   const model = rows.find((r) => r.id === "model");
   const these = photos > 1 ? "these photos" : "this photo";
-  // A demo run is four claims from one account: what the checks can say is that nothing else in this run matched.
-  const run = demo ? " in this run" : "";
   const base: { key: SixKey; name: string; label: ReactNode; because?: string }[] = [
     // One name, demo and real: what the check can know is that the photo came through this claim's own camera.
     { key: "session", name: CHECK_NAMES.session.toLowerCase().replace("remedy", "Remedy"), label: CHECK_NAMES.session, because: "Taken in this claim's camera, inside its 10 minutes." },
-    { key: "duplicate", name: CHECK_NAMES.duplicate.toLowerCase(), label: CHECK_NAMES.duplicate, because: `No earlier claim${run} has ${these}.` },
-    { key: "account", name: CHECK_NAMES.account.toLowerCase().replace("paypal", "PayPal"), label: CHECK_NAMES.account, because: demo ? "No other claim from this account in this run." : "No other claim from this PayPal account." },
+    { key: "duplicate", name: CHECK_NAMES.duplicate.toLowerCase(), label: CHECK_NAMES.duplicate, because: `No earlier claim has ${these}.` },
+    { key: "account", name: CHECK_NAMES.account.toLowerCase().replace("paypal", "PayPal"), label: CHECK_NAMES.account, because: "No other claim from this PayPal account." },
     {
       key: "code",
       name: CHECK_NAMES.code(code, written).replace(/^T|^L/, (c) => c.toLowerCase()),
@@ -147,7 +145,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
       if (steps.length) out.detail = steps.some((r) => r.state === "hold") ? `We couldn't see ${cut ? "the cut" : "that it's destroyed"} clearly.` : `We couldn't see the ${noun.toLowerCase()} ${cut ? "cut in half" : "destroyed"}.`;
     }
     // The demo's other three claims skip it (one account sends all four): said on the row, which stays in the list.
-    if (b.key === "account" && demo && state === "skipped") out.detail = "Checked on the genuine claim: all four share one account.";
+    if (b.key === "account" && demo && state === "skipped") out.detail = DEMO_ACCOUNT;
     if (model && (b.key === "code" || b.key === "destroyed")) out.detail = "The photo check didn't answer.";
     if (b.key === "refund") out.reference = /PayPal reference (\S+)/.exec(own[0]?.detail ?? "")?.[1];
     if (b.key === "refund" && state === "hold") out.detail = own[0]?.detail;
@@ -160,7 +158,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
     return out;
   });
   // A demo claim's account check that didn't run for it (the claim stopped before it) still says why it never would.
-  return six.map((r) => (demo && r.key === "account" && r.state === "skipped" && !r.detail ? { ...r, unrun: false, detail: "Checked on the genuine claim: all four share one account." } : r));
+  return six.map((r) => (demo && r.key === "account" && r.state === "skipped" && !r.detail ? { ...r, unrun: false, detail: DEMO_ACCOUNT } : r));
 }
 
 /** A row's state as one word, for the screen reader's line and the list's hidden text. */
@@ -184,7 +182,7 @@ export function outcomeWord(r: Pick<SixRow, "key" | "state" | "unrun">): string 
 
 /**
  * A row's 16px mark, one family of bare strokes at one weight: a tick for a pass, a cross for a failure, a pause for a
- * hold, a ring while it waits, a turning arc while it runs, a dashed ring when it was skipped.
+ * hold, a ring while it waits, a turning arc while it runs, a dash when it didn't run (the console strip's dash).
  */
 function Glyph({ state }: { state: CheckState }) {
   const dot = "flex size-4 shrink-0 items-center justify-center rounded-full";
@@ -208,7 +206,7 @@ function Glyph({ state }: { state: CheckState }) {
         </span>
       );
     case "skipped":
-      return <span className={clsx(dot, "border border-dashed border-line-strong")} />;
+      return <span className={clsx(dot, "text-muted")}>{path("M2.75 5h4.5")}</span>;
     default:
       return <span className={clsx(dot, "ring-1 ring-line-strong ring-inset")} />;
   }

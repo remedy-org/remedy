@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
-import { evidenceWidth } from "./Exhibit";
+import { evidenceWidth, PHOTO_TRANSITION } from "./Exhibit";
 
 // A photo's shape, remembered for this page's life: the camera knows it as it takes the photo, so the checking screen
 // and the result after it draw the photo at its own size from the first frame, and nothing reflows when it loads.
@@ -53,7 +53,8 @@ export function ClaimPhotos({ urls, claimId }: { urls: string[]; claimId: string
         src={urls[active]}
         alt={`Photo ${active + 1} of claim ${claimId}`}
         onLoad={(e) => measure(e.currentTarget, active + 1)}
-        style={{ aspectRatio: aspect, width: evidenceWidth(aspect) }}
+        // The first photo is the one the camera's still carries into this screen.
+        style={{ aspectRatio: aspect, width: evidenceWidth(aspect), viewTransitionName: active === 0 ? PHOTO_TRANSITION : undefined }}
         className="block h-auto rounded-card bg-surface-2 object-contain ring-1 ring-line"
       />
       {urls.length > 1 && (

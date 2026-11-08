@@ -472,3 +472,6 @@ export function receiptPollDelay(elapsed: number): number | null {
 
 /** A payout the receipt keeps asking about: sent less than 10 minutes ago and not settled. */
 export const RECEIPT_LIVE_MS = 10 * 60_000;
+
+/** How long the paid receipt takes to feed out of its slot; the PAID stamp lands after it, once PayPal says Received. */
+export const FEED_MS = 900;

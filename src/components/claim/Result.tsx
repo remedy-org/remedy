@@ -1,14 +1,14 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui";
+import { ArrowLeftIcon, Button } from "@/components/ui";
 import { canAskForReview, reviewAsked } from "@/lib/appeal";
 import type { DemoSample } from "@/lib/demo";
-import { sampleTitle } from "@/lib/demo/sampleCopy";
+import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import type { Claim, Recall, Reason } from "@/lib/types";
 import { CheckList, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
 import { evidenceSummary } from "./EvidenceText";
-import { ClaimFrame, ClaimLayout, NARROW_ONLY, OutcomeHead } from "./Exhibit";
+import { ClaimFrame, ClaimLayout, NARROW_ONLY, OutcomeHead, WIDE_TOP_RULE } from "./Exhibit";
 import styles from "./flow.module.css";
 import { FocusTitle } from "./FocusTitle";
 import {
@@ -137,15 +137,11 @@ export function Result(props: ResultProps) {
         <>
           {parts.under && <div className={clsx(NARROW_ONLY, "flex flex-col gap-4")}>{parts.under}</div>}
           <CheckList rows={six} label={`Checks for this claim: ${summary}`} />
-        </>
-      }
-      // The claim's number under its photo on a laptop, so the photo sits right under the checks.
-      photo={
-        <>
-          {parts.side}
+          {/* The claim's number under the checks on a laptop, so the checks sit right under the photo. */}
           {parts.meta && <Meta id={claim.id} className={WIDE_BLOCK} />}
         </>
       }
+      photo={parts.side}
       outcome={
         (parts.next || parts.meta) && (
           <>
@@ -198,7 +194,7 @@ function paidParts({ claim, recall, photoUrls, againHref, sample, round, now, sa
         <p>
           See it in your{" "}
           {activityUrl ? (
-            <a href={activityUrl} target="_blank" rel="noreferrer" className="text-ink underline decoration-paper-line underline-offset-4 hover:decoration-ink">
+            <a href={activityUrl} target="_blank" rel="noreferrer" className="text-link text-ink underline decoration-paper-line underline-offset-4 hover:decoration-ink">
               PayPal activity<span className="sr-only"> (opens PayPal in a new tab)</span>
             </a>
           ) : (
@@ -274,7 +270,8 @@ function heldParts({ claim, recall, photoUrls, againHref, sample, round }: Resul
     meta: true,
     next: (
       <>
-        <p className="border-t border-line pt-5 text-body text-pretty text-muted">{next}</p>
+        {/* A rule under the lead on a laptop; on a phone the checks' last hairline is right above it, so none of its own. */}
+        <p className={clsx("border-line text-body text-pretty text-muted", WIDE_TOP_RULE, "lg:[@media(min-height:601px)]:pt-5")}>{next}</p>
         {sample && <DemoActions sample={sample} slug={recall.slug} againHref={againHref} round={round} unanswered={unanswered} />}
       </>
     ),
@@ -299,7 +296,19 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
   // Each PayPal account claims once per recall: the way forward is the claim that counts (same account, so it's theirs).
   const earlier = !sample ? /\((RM-\d+)\)/.exec(reasons.find((r) => r.check === "payer")?.text ?? "")?.[1] : undefined;
   const seen = codeDiff(claim.code, claim.verdict?.challenge_code.text_seen);
-  const tagRead = seen.cells.map((c) => c.seen).join("");
+  // The catch at a glance: the characters that differ, marked in both lines (the tag's in red), and said in words.
+  const marked = (side: "seen" | "yours") =>
+    seen.cells.map((c, i) =>
+      c.same ? (
+        c[side]
+      ) : (
+        <span key={i} className={clsx("underline decoration-2 underline-offset-[5px]", side === "seen" ? "text-stop decoration-stop" : "decoration-text-2")}>
+          {c[side]}
+        </span>
+      ),
+    );
+  // A demo claim's photo whose tag is known: the tag itself, enlarged, under the two lines.
+  const tag = sample && lead === "code" && seen.readable ? SAMPLE_COPY[sample.id]?.tag : undefined;
   // What we saw and what's wrong, in one or two sentences: the deciding reason first, then any other, each once.
   const first = reviewed ? (
     `${asked ? "You asked for a review, and" : "Your claim was held for a person, and"} ${company} refused it: ${reasons[0]?.text ?? ""}`
@@ -308,11 +317,12 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
       // Two lines, read against each other: what the tag says, then what it should say.
       <>
         <span className="block">
-          The tag in your photo reads <span className="font-mono whitespace-nowrap">{tagRead}</span>.
+          The tag in your photo reads <span className="font-mono whitespace-nowrap">{marked("seen")}</span>.
         </span>
         <span className="block">
-          Your claim&apos;s code is <span className="font-mono whitespace-nowrap">{claim.code}</span>.
+          Your claim&apos;s code is <span className="font-mono whitespace-nowrap">{marked("yours")}</span>.
         </span>
+        <span className="sr-only">{seen.caption}</span>
       </>
     ) : (
       <>
@@ -368,8 +378,7 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
               {a}
             </p>
           ))}
-        {/* The likeliest honest mistake: what an owner who wrote it wrong would do. */}
-        {sample && lead === "code" && <p className="text-body text-pretty text-text">Wrote it wrong? Start a new claim: you&apos;ll get a new code to write on the tag.</p>}
+        {tag && photoUrls[0] && <TagCrop src={photoUrls[0]} tag={tag} read={`${claim.verdict?.label.text_seen ?? ""} ${seen.cells.map((c) => c.seen).join("")}`.trim()} />}
         {earlier && (
           <Button href={`/r/${recall.slug}/claim/${earlier}`} size="lg" block prefetch={false}>
             {duplicate?.earlier?.id === earlier ? "See your earlier claim" : `See your claim ${earlier}`}
@@ -429,6 +438,27 @@ function DuplicatePair({ claimId, photoUrls, earlier, n }: { claimId: string; ph
   );
 }
 
+/**
+ * The tag in the claim's photo, enlarged (about three times the photo beside the checks, at the photo file's own pixels),
+ * so the code that stopped the claim can be read without squinting. A demo photo's tag is framed in its copy.
+ */
+function TagCrop({ src, tag, read }: { src: string; tag: { x: number; y: number; w: number }; read: string }) {
+  // 3:2, the tag's own shape; the demo photos are 2:3 portrait.
+  const W = 240;
+  const H = 160;
+  const width = W / tag.w;
+  const height = width * 1.5;
+  return (
+    <figure className="flex flex-col gap-2">
+      <div className="relative max-w-full overflow-hidden rounded-card bg-surface-2 ring-1 ring-line" style={{ width: W, height: H }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt={`The tag in your photo, enlarged: it reads ${read}`} className="absolute max-w-none" style={{ width, height, left: W / 2 - tag.x * width, top: H / 2 - tag.y * height }} />
+      </div>
+      <figcaption className="text-micro text-muted">The tag in your photo, enlarged</figcaption>
+    </figure>
+  );
+}
+
 /* ------------------------------------------------------------------------------------------ Demo */
 
 /** A form that files a demo claim and lands on its photo step (POST /api/claims, as the picker does). */
@@ -459,8 +489,9 @@ function DemoActions({ sample, slug, againHref, round, unanswered }: { sample: D
             Try this claim again
           </RunSample>
         ) : next ? (
+          // Named, so the button says where it goes: the next claim, not this one again.
           <RunSample slug={slug} sample={next.id}>
-            Next claim
+            Next claim: {sampleTitle(next.id, next.title).toLowerCase()}
           </RunSample>
         ) : (
           <Button href={againHref} size="lg" block native>
@@ -474,8 +505,11 @@ function DemoActions({ sample, slug, againHref, round, unanswered }: { sample: D
         )}
       </div>
       {(next || unanswered) && (
-        <Button href={againHref} variant="tertiary" size="sm" native>
-          All four claims
+        // Back to the four, as the camera's bar says it: a back arrow, on the left.
+        <Button href={againHref} variant="tertiary" size="sm" native arrow={false}>
+          <span className="inline-flex items-center gap-1.5">
+            <ArrowLeftIcon className="shrink-0" /> All four claims
+          </span>
         </Button>
       )}
     </div>

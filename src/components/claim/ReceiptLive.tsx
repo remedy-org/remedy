@@ -2,8 +2,9 @@
 
 import clsx from "clsx";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { Stamp } from "@/components/ui";
 import styles from "./flow.module.css";
-import { payoutWords, receiptPollDelay, type ClaimStatus } from "./model";
+import { FEED_MS, payoutWords, receiptPollDelay, type ClaimStatus } from "./model";
 
 interface Live {
   status: string | null;
@@ -98,8 +99,9 @@ export function PaidTitle() {
 
 /**
  * The receipt as it starts to print: when its paper would end under the fold (a phone, where it prints under the
- * checks), the slot is brought up near the top first, so the whole receipt comes out on screen. Once. Focus moves with
- * it (the receipt itself, which reads out its label), so a keyboard or magnifier user's place is where the eye is.
+ * checks), the slot is brought up near the top first, so the whole receipt comes out on screen. Once. Focus stays on the
+ * result's heading, as on every result, so a screen reader reads the headline and the checks before the receipt; the
+ * polite line says when PayPal confirms it.
  */
 export function BringIntoView({ id }: { id: string }) {
   useEffect(() => {
@@ -110,11 +112,25 @@ export function BringIntoView({ id }: { id: string }) {
       if (el.getBoundingClientRect().top + paper.offsetHeight <= window.innerHeight) return;
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       el.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
-      paper.focus({ preventScroll: true });
     }, 80);
     return () => clearTimeout(t);
   }, [id]);
   return null;
+}
+
+/**
+ * The PAID stamp: it lands when PayPal says the money arrived (Received), never beside "On its way", so the receipt never
+ * argues with itself and the stamp is the second moment. Its room is kept until then, so the amount never moves. On a
+ * receipt printing now with PayPal already done, it lands as the paper finishes feeding out.
+ */
+export function PaidStamp({ arrive }: { arrive: boolean }) {
+  const { status, changed } = useContext(PayoutContext);
+  if (!received(status)) return <span aria-hidden="true" className="h-8 w-[4.75rem] shrink-0" />;
+  return (
+    <Stamp tone="pay" land={changed ? 0 : arrive ? FEED_MS : undefined} className="mr-1">
+      Paid
+    </Stamp>
+  );
 }
 
 /**

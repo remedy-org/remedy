@@ -61,32 +61,39 @@ export const NARROW_ONLY = "lg:[@media(min-height:601px)]:hidden";
 export const photoWidth = (aspect: number) => `min(100%, calc(55svh * ${aspect}), calc((100svh - 18rem) * ${aspect}))`;
 
 /**
- * The photo on a laptop, under the five checks: as tall as keeps it on the first screen under them (about 22rem at
- * 1440x900), never under 14rem nor over 26rem, and as wide as its shape makes it.
+ * The photo on a laptop, over the five checks in the column the viewfinder held: as tall as keeps the checks on the first
+ * screen under it (about 22rem at 1440x900), never under 14rem nor over 26rem, and as wide as its shape makes it.
  */
 export const evidenceWidth = (aspect: number) => `min(100%, calc(clamp(14rem, 100svh - 34rem, 26rem) * ${aspect}))`;
 
+/** The two columns' media query: from 1024px wide and 601px tall. Spelled out where it's used, so Tailwind finds it. */
+export const WIDE_TOP_RULE = "lg:[@media(min-height:601px)]:border-t";
+
+/** The photo being checked, one element from the camera's shutter to the result: the View Transition carries it. */
+export const PHOTO_TRANSITION = "claim-photo";
+
 /**
- * One layout from the checking screen to the result, so the outcome lands in place. On a laptop, one 960px grid: on the
- * left the headline and the refund row (which the paid receipt prints out of, or the way on replaces); on the right the
- * five checks, level with the headline, and the photo being checked under them. The photo never changes column: only
- * the left one changes when the outcome lands. On a phone (or a short screen), one column in the DOM's order: the
- * headline with a small photo, the checks, then the refund row, the way a receipt comes out under a till's last line.
- * The photo is the laptop's alone (the phone has its thumbnail).
+ * One layout from the checking screen to the result, so the outcome lands in place. On a laptop, the step grid's two
+ * halves: on the left, where the camera's viewfinder was, the photo being checked and the five checks under it; on the
+ * right, where the camera's title was, the headline and the refund row (which the paid receipt prints out of, or the way
+ * on replaces). The photo never changes column from the shutter to the result: only the right one changes when the
+ * outcome lands. On a phone (or a short screen), one column in the DOM's order: the headline with a small photo, the
+ * checks, then the refund row, the way a receipt comes out under a till's last line. The photo is the laptop's alone
+ * (the phone has its thumbnail).
  */
 export function ClaimLayout({ labelledBy, head, checks, outcome, photo }: { labelledBy: string; head: ReactNode; checks: ReactNode; outcome?: ReactNode; photo?: ReactNode }) {
   return (
     <section
       aria-labelledby={labelledBy}
       // Spelled out so Tailwind finds them: the two columns are lg:[@media(min-height:601px)] only.
-      className="grid grid-cols-[minmax(0,1fr)] items-start gap-y-6 lg:[@media(min-height:601px)]:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] lg:[@media(min-height:601px)]:grid-rows-[auto_auto_1fr] lg:[@media(min-height:601px)]:gap-x-16 lg:[@media(min-height:601px)]:gap-y-8 [@media(max-height:600px)]:gap-y-4"
+      className="grid grid-cols-[minmax(0,1fr)] items-start gap-y-6 lg:[@media(min-height:601px)]:grid-cols-2 lg:[@media(min-height:601px)]:grid-rows-[auto_1fr] lg:[@media(min-height:601px)]:gap-x-16 lg:[@media(min-height:601px)]:gap-y-6 [@media(max-height:600px)]:gap-y-4"
     >
-      <div className="min-w-0 lg:[@media(min-height:601px)]:col-start-1 lg:[@media(min-height:601px)]:row-start-1">{head}</div>
-      <div className="flex min-w-0 flex-col gap-5 lg:[@media(min-height:601px)]:col-start-2 lg:[@media(min-height:601px)]:row-span-3 lg:[@media(min-height:601px)]:row-start-1">
+      <div className="min-w-0 lg:[@media(min-height:601px)]:col-start-2 lg:[@media(min-height:601px)]:row-start-1">{head}</div>
+      <div className="flex min-w-0 flex-col gap-6 lg:[@media(min-height:601px)]:col-start-1 lg:[@media(min-height:601px)]:row-span-2 lg:[@media(min-height:601px)]:row-start-1">
+        {photo && <div className={clsx(WIDE_ONLY, "min-w-0 flex-col gap-3")}>{photo}</div>}
         {checks}
-        {photo && <div className={clsx(WIDE_ONLY, "min-w-0 flex-col gap-4")}>{photo}</div>}
       </div>
-      {outcome && <div className="flex min-w-0 flex-col gap-6 lg:[@media(min-height:601px)]:col-start-1 lg:[@media(min-height:601px)]:row-start-2">{outcome}</div>}
+      {outcome && <div className="flex min-w-0 flex-col gap-6 lg:[@media(min-height:601px)]:col-start-2 lg:[@media(min-height:601px)]:row-start-2">{outcome}</div>}
     </section>
   );
 }
@@ -107,6 +114,7 @@ export function OutcomeHead({ id, thumb, title, lead, small, aside }: { id: stri
         <img
           src={thumb}
           alt=""
+          style={{ viewTransitionName: PHOTO_TRANSITION }}
           className={clsx(
             "col-start-1 row-start-1 mr-4 size-18 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_70%] ring-1 ring-line [@media(max-height:600px)]:size-14",
             wide ? "sm:row-span-2" : "row-span-2",

@@ -24,14 +24,15 @@ export function GlassChip({ children, className, tone, mono }: { children: React
 }
 
 /**
- * Where the product goes: an inset rectangle (8% from the sides, 12% from top and bottom), 2px white at 85%, with the
- * feed outside it dimmed. `dashed` is the same frame holding a message instead of a picture.
+ * Where the product goes: an inset rectangle (8% from the sides, 12% from top and bottom, or `inset`), 2px white at 85%,
+ * with the feed outside it dimmed. `dashed` is the same frame holding a message instead of a picture.
  */
-export function Cutout({ children, dashed, className }: { children?: ReactNode; dashed?: boolean; className?: string }) {
+export function Cutout({ children, dashed, inset = "inset-x-[8%] inset-y-[12%]", className }: { children?: ReactNode; dashed?: boolean; inset?: string; className?: string }) {
   return (
     <div
       className={clsx(
-        "absolute inset-x-[8%] inset-y-[12%] rounded-frame",
+        "absolute rounded-frame",
+        inset,
         dashed ? "border-2 border-dashed border-[oklch(1_0_0/0.4)]" : "border-2 border-[oklch(1_0_0/0.85)] shadow-[0_0_0_100vmax_oklch(0_0_0/0.45)]",
         className,
       )}

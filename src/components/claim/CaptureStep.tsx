@@ -288,7 +288,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const n = shots.length;
   const showPhone = !coarse && (phoneOpen || (!expired && (camera === "denied" || camera === "nocamera" || camera === "insecure")));
   const sendLabel = `Send ${n === 1 ? "photo" : `${n} photos`}`;
-  const helpText = n === 0 ? `Up to ${MAX_PHOTOS} photos. One with the ${framing.thing} and the ${framing.product} is enough.` : "Open a photo to check it or retake it.";
+  // Said before the first shot, not behind (i): one photo is enough, so nobody thinks the three slots must be filled.
+  const helpText = n === 0 ? `One photo of the ${framing.thing} and the ${framing.product} is enough.` : "Open a photo to check it or retake it.";
   const errorTitle = sendError?.status === 401 ? "Your PayPal login has expired" : "The photos didn't send";
   const errorText = sendError?.status === 401 ? "Log in again to send them. You'll need to retake them afterwards." : sendError?.message;
   const shown = viewing !== null ? shots[viewing] : undefined;
@@ -367,7 +368,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               resizes (and the guide never moves) as they come and go. */}
           <p
             id="capture-help"
-            hidden={!help || Boolean(sendError) || expired}
+            hidden={!(help || (n === 0 && live)) || Boolean(sendError) || expired}
             className="absolute inset-x-3 bottom-3 z-10 rounded-control bg-[oklch(0.12_0.004_75/0.86)] px-3 py-2 text-ui text-pretty text-[oklch(0.86_0.005_80)] backdrop-blur-sm sm:hidden"
           >
             {helpText}
@@ -408,7 +409,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             <button
               type="button"
               onClick={() => setHelp((h) => !h)}
-              aria-expanded={help}
+              aria-expanded={help || (n === 0 && live)}
               aria-controls="capture-help"
               aria-label="About the camera"
               className="flex size-11 shrink-0 items-center justify-center rounded-full text-[oklch(0.74_0.005_80)] hover:text-[oklch(0.96_0.006_85)] sm:hidden"
@@ -441,7 +442,9 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                           <img src={shots[i].url} alt="" className={clsx("block size-full rounded-control object-cover", i === n - 1 ? "ring-2 ring-[oklch(1_0_0)]" : "ring-1 ring-[oklch(1_0_0/0.18)]", styles.drop)} />
                         </button>
                       ) : (
-                        <span className="block size-full rounded-control border border-[oklch(1_0_0/0.18)]" />
+                        // The next slot is a plain outline; the ones after it are dashed and fainter: room for more,
+                        // never a row of three to fill.
+                        <span className={clsx("block size-full rounded-control border", i === n ? "border-[oklch(1_0_0/0.18)]" : "border-dashed border-[oklch(1_0_0/0.1)]")} />
                       )}
                     </li>
                   ))}
@@ -460,7 +463,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                     type="button"
                     onClick={capture}
                     disabled={!live || sending || n >= MAX_PHOTOS}
-                    aria-label={n >= MAX_PHOTOS ? "Three photos taken" : `Take photo ${n + 1} of ${MAX_PHOTOS}`}
+                    aria-label={n >= MAX_PHOTOS ? "Three photos taken" : n === 0 ? "Take a photo" : "Take another photo"}
                     aria-keyshortcuts="Space"
                     className={clsx(
                       "peer flex size-[4.5rem] items-center justify-center rounded-full border-4 border-[oklch(1_0_0/0.9)] transition-opacity duration-160 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus disabled:opacity-35",
@@ -479,7 +482,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             right={
               n > 0 &&
               !expired && (
-                <Button onClick={send} pending={sending} pendingLabel="Sending…" aria-label={sendError ? `Send ${n === 1 ? "the photo" : `the ${n} photos`} again` : sendLabel} className={clsx("max-sm:px-3", styles.rise)}>
+                // Busy, not disabled, while the photos go: focus stays here until the checking screen's heading takes it.
+                <Button onClick={send} aria-busy={sending || undefined} data-pending={sending ? "" : undefined} aria-label={sendError ? `Send ${n === 1 ? "the photo" : `the ${n} photos`} again` : sendLabel} className={clsx("max-sm:px-3", styles.rise)}>
                   <span className="sm:hidden">{sendError ? "Retry" : "Send"}</span>
                   <span className="max-sm:hidden">{sendError ? "Send again" : sendLabel}</span>
                 </Button>
