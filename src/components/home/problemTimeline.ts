@@ -5,40 +5,45 @@
 
 export type Range = readonly [number, number];
 
-export const SECTION_VH = 320;
+export const SECTION_VH = 302;
 export const OVERLAP_VH = 50;
-/** Where the nav's "A Problem" link lands: the sheet open, before the first card. */
-export const ANCHOR_AT = 131;
+/** Where the nav's "A Problem" link lands: the pin's first frame, the sheet open and card 1 landing. */
+export const ANCHOR_AT = 100;
 
 export const T = {
-  // Entrance (about 100vh): out of the dark, rising 30vh, leaning back 14deg, tilted -5.5deg, the lower half folded
-  // up over the heading. It settles at -1.2deg, flat and open, on the site's entrance curve.
-  rise: [30, 118],
-  shade: [30, 108],
-  lean: [30, 122],
-  tilt: [30, 130],
-  fold: [48, 128],
-  sources: [124, 134],
-  // The read (about 90vh): cards land clockwise and the string draws between them in reading order.
-  card1: [132, 142],
-  fig: [136, 145],
-  span1: [143, 151],
-  card2: [149, 159],
-  hl: [157, 165],
-  stamp: [165, 170],
-  line2: [169, 176],
-  span2: [176, 183],
-  card3: [181, 190],
-  span3: [189, 197],
-  card4: [195, 203],
-  ret: [203, 213],
-  ring: [211, 221],
-  // The closed loop holds for 15vh, then the cut and the payoff (the sheet dims toward the room, the payoff prints
-  // over the gap and holds until section B covers it).
-  snip: [236, 246],
-  dim: [242, 262],
-  payoff: [246, 264],
+  // Entrance (85vh): out of the dark, rising 12vh, leaning back 14deg, tilted -5.5deg, the lower half folded up over
+  // the heading. It settles at -1.2deg, flat and open, on the site's entrance curve, as card 1 lands.
+  rise: [15, 95],
+  shade: [15, 80],
+  lean: [15, 100],
+  tilt: [15, 104],
+  fold: [40, 100],
+  // The read (90vh): cards land clockwise and the string draws between them in reading order. Each card is on the
+  // sheet before the string reaches it, and card 2 lands with its count printed.
+  card1: [90, 100],
+  fig: [94, 103],
+  card2: [106, 116],
+  span1: [108, 116],
+  hl: [116, 124],
+  stamp: [124, 129],
+  card3: [131, 140],
+  span2: [133, 141],
+  card4: [143, 151],
+  span3: [145, 153],
+  ret: [154, 164],
+  ring: [163, 173],
+  // Citations print after the claims they back.
+  sources: [172, 180],
+  // The cut (72vh, to B's arrival): the closed loop holds, a slash marks the span, the string snaps and its ends droop,
+  // the lamp narrows to a pool on the cut, and the payoff prints under it.
+  mark: [186, 191],
+  snip: [190, 195],
+  droop: [191, 201],
+  dim: [195, 212],
+  payoff: [204, 220],
   cover: [SECTION_VH - OVERLAP_VH, SECTION_VH],
+  // The payoff lifts away before B's edge reaches it, so it is never sliced.
+  leave: [SECTION_VH - OVERLAP_VH + 14, SECTION_VH - OVERLAP_VH + 28],
 } as const satisfies Record<string, Range>;
 
 /** The finished state: everything printed, the string cut, the payoff shown. */

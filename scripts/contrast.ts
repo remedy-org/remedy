@@ -157,8 +157,7 @@ const paper: Pair[] = [
 
 // The aged sheet: text sits only where the paper is lit. The worst case under any sheet text is the grain at its
 // darkest (it multiplies by 0.84) with the warm edge band over it, as along the sources line. The cards and the clipping
-// carry the rest; the stamp is 100% stop ink on the clipping. The payoff prints over the sheet once it is dimmed to 74%
-// of the room's colour, so it is checked against the dimmed paper and the dimmed cards.
+// carry the rest; the stamp is 100% stop ink on the clipping.
 const sheetPaper = ["--aged", "--aged+--grain-floor", "--aged+--aged-edge@0.2+--grain-floor"];
 const agedSheet: Pair[] = [
   ...["--ink", "--sheet-muted"].flatMap((fg) => sheetPaper.map((bg) => ({ fg, bg, min: 4.5, note: "Exhibit A sheet" }))),
@@ -166,7 +165,16 @@ const agedSheet: Pair[] = [
   { fg: "--stop-ink", bg: "--evidence-clip", min: 4.5, note: "RECEIVED stamp, full ink" },
   { fg: "--ink", bg: "--evidence-clip+--highlight", min: 4.5, note: "highlighted address" },
   { fg: "--sheet-muted", bg: "--aged-back+--grain-floor", min: 4.5, note: "docket on the folded sheet" },
-  ...["--aged", "--evidence-card", "--evidence-clip"].map((bg) => ({ fg: "--text", bg: `${bg}+--bg@0.74`, min: 4.5, note: "payoff over the dimmed sheet" })),
+  // The payoff prints in ink inside the lamp's last pool; its farthest letters sit where the room is at most 14% of the
+  // dim's 0.88.
+  { fg: "--ink", bg: "--aged+--grain-floor+--room@0.13", min: 4.5, note: "payoff at the edge of the lamp's pool" },
+  // Card 4's "Back to 01" (stacked) is in the string's ink.
+  { fg: "--stop-ink", bg: "--evidence-card", min: 4.5, note: "card 4's way back to card 1" },
+];
+// In light the desk under the sheet is two steps down from the page; the exhibit label there is --muted.
+const lightDesk: Pair[] = [
+  { fg: "--muted", bg: "--desk-light", min: 4.5, note: "Exhibit A label on the light desk" },
+  { fg: "--text", bg: "--desk-light", min: 4.5, note: "text on the light desk" },
 ];
 
 let failed = 0;
@@ -194,7 +202,7 @@ if (Math.abs(ratio(white, black) - 21) > 0.01) throw new Error("contrast maths i
 report("Paper and ink, dark", themes.dark, paper);
 report("Paper and ink, light", themes.light, paper);
 report("Exhibit A sheet, dark", withSheet(themes.dark), agedSheet);
-report("Exhibit A sheet, light", withSheet(themes.light), agedSheet);
+report("Exhibit A sheet, light", withSheet(themes.light), [...agedSheet, ...lightDesk]);
 report("App tokens, dark", themes.dark, [...app, ...ringOnAccent(0)]);
 report("App tokens, light", themes.light, [...app, ...ringOnAccent(3)]);
 
