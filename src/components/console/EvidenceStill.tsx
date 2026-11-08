@@ -35,7 +35,7 @@ export function decidingSentence(text: string) {
 
 /**
  * The model's quoted answer. Docked in the tour's frame, where a short laptop screen leaves it a few lines, it falls back
- * to the one sentence that decides the claim, whole (home.module.css .dock), rather than a cut one; on its own (a phone)
+ * to the one sentence that decides the claim, whole (home/tour.module.css .dock), rather than a cut one; on its own (a phone)
  * it is always whole.
  */
 function Quote({ text, docked }: { text: string; docked: boolean }) {
