@@ -291,13 +291,13 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   group.lookAt(0.0, 0.02, 0.02);
 
   const lineMat = new THREE.LineBasicMaterial({
-    color: 0xf1b23c,
+    color: 0xebb75b,
     transparent: true,
     opacity: 0,
   });
   const lines = new THREE.LineSegments(new THREE.BufferGeometry(), lineMat);
   const sheetMat = new THREE.MeshBasicMaterial({
-    color: 0xf1b23c,
+    color: 0xebb75b,
     transparent: true,
     opacity: 0,
     side: THREE.DoubleSide,

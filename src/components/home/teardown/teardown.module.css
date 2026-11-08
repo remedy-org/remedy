@@ -254,15 +254,11 @@
   gap: 16px;
 }
 
-.honesty {
-  margin: 0;
-}
-
-/* The honesty label, and the pin's skip link at the right of the same line. */
+/* The pin's skip link, at the right of the line above the check row. */
 .footLine {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 24px;
   min-height: 44px;
 }
@@ -470,7 +466,7 @@ button.cellBody:hover .label {
 }
 
 /* The receipt lies over the still's empty lower right (columns 4 to 7), as on the hero's light table, clear of the
-   evidence and of the honesty caption, which keeps columns 1 to 4. */
+   evidence, which keeps columns 1 to 4. */
 .staticReceipt {
   position: relative;
   z-index: 1;

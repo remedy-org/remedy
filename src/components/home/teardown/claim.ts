@@ -1,10 +1,10 @@
-// The facts the Opened Exhibit shows, and where each one comes from. Nothing here is invented for the illustration.
+// The facts the Opened Exhibit shows, and where each one comes from. Nothing here is invented.
 //
-// - Claim RM-0442: filed through the judges' demo on 7 Nov 2026 with the "genuine" sample (src/lib/demo/samples.ts:
-//   photo c02, code M4T) on the Kikea X-VESOLJE recall (CPSC 27-071). 15 s from the photo to the PayPal payout, in
-//   sandbox money. The same facts as src/components/home/custody/claim.ts.
-// - The photo (public/demo/c02-1.jpg) is AI-made test data (eval case c02-pillow-cut-lamplight), so the exhibit is
-//   labelled as an illustration in every frame.
+// - Claim RM-0442: filed through the demo on 7 Nov 2026 with the genuine claim (src/lib/demo/samples.ts: photo c02,
+//   code M4T) on the X-VESOLJE recall (CPSC 27-071). 15 s from the photo to the PayPal payout. The same facts as
+//   src/components/home/custody/claim.ts.
+// - The photo (public/demo/c02-1.jpg) is generated (benchmark case c02-pillow-cut-lamplight, docs/EVAL.md). It carries
+//   no label (owner rule: no internal labels; the site's one sandbox line is in /terms).
 // - The two quotes are GPT-6.1 Sol's own words on that photo, copied verbatim from the stored run
 //   eval/out/runs/spike2-gpt-6.1-sol-r1.json (case c02-pillow-cut-lamplight): verdict.challenge_code.evidence and the
 //   first sentence of verdict.steps[0].evidence. Only the typography changed (straight quotes set as curly ones).
@@ -28,7 +28,6 @@ export const EXHIBIT = {
   earlierHashes: ["e4a7694b37e6f6ff", "8f3f7c9e13c3e9f9", "b5752b27352fbbc1"],
   earlierDistance: [33, 33, 34],
   samePhotoBar: 8,
-  honesty: "Illustration of claim RM-0442 · its photo is AI-made test data · sandbox money",
 } as const;
 
 export type CheckId = "live" | "fp" | "acct" | "code" | "torn";
@@ -58,7 +57,7 @@ export const CHECKS: readonly Check[] = [
     n: "02",
     label: "Photo not seen before",
     ai: false,
-    note: "Its 64-bit fingerprint differs from every earlier photo in the workspace by 33 or 34 bits. The same picture differs by 8 or fewer.",
+    note: "Its fingerprint matches no photo on any earlier claim. A reposted or lightly edited copy would match.",
   },
   {
     id: "acct",
@@ -91,8 +90,8 @@ export const RECEIPT_ROWS: readonly [string, string][] = [
   ["Recall", EXHIBIT.recall],
   ["Code", EXHIBIT.code],
   ["Checks", "5 of 5 passed"],
-  ["Decision", "Fixed rule: pay"],
+  ["Decision", "Paid by the rule"],
   ["Sent", "Through PayPal"],
   ["Photo to payout", `${EXHIBIT.seconds} s`],
-  ["Money", "Sandbox"],
+  ["Paid to", "Verified PayPal account"],
 ];

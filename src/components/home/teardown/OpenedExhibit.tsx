@@ -11,7 +11,7 @@ import { createFrameWatch, stageLayers } from "./watch";
 import styles from "./teardown.module.css";
 
 // The Opened Exhibit (wave 3, concept 1): claim RM-0442's evidence in 3D, each of the five checks opening the part it
-// is about, then the fixed rule and the sandbox payout. One input, claim progress p in [0, 1], drives the scene, the
+// is about, then the fixed rule and the payout. One input, claim progress p in [0, 1], drives the scene, the
 // readouts, the check row, the callouts and the receipt (model.ts). See README.md for where it mounts.
 //
 // Forms, chosen after mount (the server renders the static one):
@@ -81,7 +81,7 @@ function readColors(el: HTMLElement): Colors {
   const lum = (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
   return {
     dark: lum < 0.5,
-    accent: resolveColor(v("--accent"), "#f3aa40"),
+    accent: resolveColor(v("--accent"), "#ebb75b"),
     paper: resolveColor(v("--paper"), "#efebe1"),
     ink: resolveColor(v("--ink"), "#201c18"),
     faint: resolveColor(v("--faint"), "#9a9895"),
@@ -139,12 +139,11 @@ function Receipt({ stamped, className, style }: { stamped: boolean; className?: 
             </div>
           ))}
         </dl>
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <p className="text-micro text-ink-muted">Illustration · not a real receipt</p>
+        <div className="mt-4 flex items-center justify-end gap-4">
           <span className={styles.stampSlot}>
             {stamped && (
               <Stamp tone="pay" land>
-                PAID · SANDBOX
+                PAID
               </Stamp>
             )}
           </span>
@@ -158,7 +157,6 @@ function Receipt({ stamped, className, style }: { stamped: boolean; className?: 
 function ScreenReaderSummary() {
   return (
     <div className="sr-only">
-      <p>{EXHIBIT.honesty}.</p>
       <ol>
         {CHECKS.map((c) => (
           <li key={c.id}>
@@ -167,7 +165,7 @@ function ScreenReaderSummary() {
         ))}
       </ol>
       <p>
-        A fixed rule decided to pay. ${EXHIBIT.amount} was sent through PayPal {EXHIBIT.seconds} seconds after the photo, in sandbox money.
+        A fixed rule approved it. ${EXHIBIT.amount} went to the owner&rsquo;s PayPal account {EXHIBIT.seconds} seconds after the photo.
       </p>
     </div>
   );
@@ -184,9 +182,9 @@ function chapterOf(beat: BeatId, total: number) {
 function Header({ compact, chapter }: { compact?: boolean; chapter?: string }) {
   return (
     <div className="min-w-0">
-      <p className="micro text-faint whitespace-nowrap">{chapter ?? `Exhibit · Claim ${EXHIBIT.id}`}</p>
+      <p className="micro text-faint whitespace-nowrap">{chapter ?? "How it works"}</p>
       <h2 className={clsx("mt-3 max-w-[26ch] text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>
-        Claim {EXHIBIT.id}, opened. <span className="text-muted">Each check on the part it is about.</span>
+        Five checks passed. <span className="text-muted">Then PayPal paid ${EXHIBIT.amount}.</span>
       </h2>
     </div>
   );
@@ -217,7 +215,7 @@ function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done"
       "Payout",
       s.sent ? (
         <span key="p">
-          <Money value={EXHIBIT.amount} /> · sandbox
+          <Money value={EXHIBIT.amount} />
         </span>
       ) : (
         "Not sent"
@@ -626,7 +624,6 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
         </div>
         <footer className={styles.foot}>
           <div className={styles.footLine}>
-            <p className={clsx(styles.honesty, "micro text-faint")}>{EXHIBIT.honesty}</p>
             {skip}
           </div>
           <ol className={styles.row}>
@@ -645,7 +642,7 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
 
 function StaticExhibit({ chain }: { chain: boolean }) {
   return (
-    <section className={styles.static} aria-label={`Exhibit: claim ${EXHIBIT.id}`}>
+    <section className={styles.static} aria-label="How it works: five checks and the payout">
       <Header chapter={chain ? "03–05 · Live photo, five checks, paid" : undefined} />
       <div className={styles.staticGrid}>
         <figure className={styles.staticFigure}>
@@ -655,14 +652,13 @@ function StaticExhibit({ chain }: { chain: boolean }) {
             <img
               className={styles.onDark}
               src={posterSrc("paid", true, false)}
-              alt={`Illustration: the X-VESOLJE nursing pillow from claim ${EXHIBIT.id}, cut in half, with its paper tag reading X-VESOLJE M4T.`}
+              alt="The X-VESOLJE nursing pillow, cut in half, with its paper tag reading X-VESOLJE M4T."
             />
           </picture>
           <picture>
             <source media="(max-width: 767px)" srcSet={posterSrc("paid", false, true)} />
             <img className={styles.onLight} src={posterSrc("paid", false, false)} alt="" aria-hidden="true" />
           </picture>
-          <figcaption className="micro mt-4 text-faint">{EXHIBIT.honesty}</figcaption>
         </figure>
         <ol className={clsx(styles.staticChecks, "flex flex-col")}>
             {CHECKS.map((c) => (
@@ -727,11 +723,11 @@ function SelfPinned({ mode, small, capture }: { mode: "live" | "poster"; small: 
       ref={runway}
       className={styles.runway}
       style={{ height: `calc(${vh}vh + 100svh)` }}
-      aria-label={`Exhibit: claim ${EXHIBIT.id}, five checks and the payout`}
+      aria-label="How it works: five checks and the payout"
       data-exhibit-runway
     >
       <a href={`#${skipId}-after`} className={styles.skip}>
-        Skip the exhibit
+        Skip the five checks
       </a>
       <div className={styles.sticky}>
         <Stage p={scrollYProgress} mode={mode} small={small} onSeek={seek} capture={capture} />

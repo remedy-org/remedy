@@ -1,7 +1,7 @@
 # Opened Exhibit
 
 Claim RM-0442's evidence in 3D. Each of the five checks opens the physical part it is about, then the fixed rule
-pays $29.99 in sandbox money. This is wave 3's judged concept 1, built from the prototype in
+pays $29.99. This is wave 3's judged concept 1, built from the prototype in
 `scratchpad/wave3/concepts/opened-exhibit/`.
 
 One export: `OpenedExhibit` from `@/components/home/teardown`.
@@ -16,7 +16,7 @@ It goes in chapters 03 to 05 (Live photo, Five checks, Paid) of the pinned Chain
 - the 160px serif `$29.99`. The receipt in the Paid beat takes its place.
 
 Chapters 01 and 02 keep the real claim screens, and so does the hero's laptop. That way the product on the page stays
-real, and the exhibit is a labelled illustration.
+real; the exhibit is its evidence, opened.
 
 **Driven by the custody pin (the intended mount).** Map the custody progress for chapters 03 to 05 to 0..1 and pass
 it in:
@@ -31,7 +31,7 @@ const exhibitP = useTransform(p, [STARTS[2], STARTS[5]], [0, 1]);
   DESIGN.md's 70vh floor. It ends on the paid pose; the pin cuts to the console from there.
 
 **On its own.** `<OpenedExhibit />` renders its own pinned section, `TOTAL_VH + 100svh` tall (400vh + 100svh on
-phones). It includes a "Skip the exhibit" link, and the check row's buttons jump to each check.
+phones). It includes a "Skip the five checks" link, and the check row's buttons jump to each check.
 
 **Preview.** `/dev/teardown` shows it pinned. `/dev/teardown?capture=1` shows one fixed frame for the capture tool.
 Both return 404 in production, like `/dev/ui`. The page's wrapper previews DIRECTION.md's Lamplight palette and the
@@ -98,8 +98,8 @@ The server always renders the static form.
 
 ### Honesty
 
-- The label "Illustration of claim RM-0442 · its photo is AI-made test data · sandbox money" is on screen in every
-  frame and every form.
+- No label on the exhibit (owner rule: no internal labels on the site). The photo is generated (docs/EVAL.md), and
+  the sandbox payout is stated once, in /terms.
 - The two quotes are the model's stored words on that photo. `claim.ts` gives the run file and the field each one
   comes from.
 - The fingerprints are the real dHash values of the demo photos, computed with `src/lib/fingerprint.ts`.

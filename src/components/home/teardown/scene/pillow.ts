@@ -127,7 +127,7 @@ export async function pillowMaterials(THREE: Three): Promise<PillowMaterials> {
   });
   contact.alphaMap = contact.map;
   const rim = new THREE.LineBasicMaterial({
-    color: 0xf1b23c,
+    color: 0xebb75b,
     transparent: true,
     opacity: 0,
     depthTest: true,
