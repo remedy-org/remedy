@@ -12,10 +12,10 @@ import { idsIn, LinkedIds } from "./LinkedIds";
 type Mode = "idle" | "approve" | "reject";
 
 // The reject route's own minimum (reject/route.ts), checked here first so an empty reason never sends a request.
-const REASON_MIN = 8;
-const REASON_SHORT = "Say why in a few words, so the owner knows what to fix";
+export const REASON_MIN = 8;
+export const REASON_SHORT = "Say why in a few words, so the owner knows what to fix";
 // One-click reasons for the common refusals, in the words the owner reads; the reviewer can edit them.
-const QUICK: { label: string; text: (code: string) => string }[] = [
+export const QUICK: { label: string; text: (code: string) => string }[] = [
   { label: "Wrong code", text: (code) => `The tag in the photo doesn't read ${code}, this claim's code.` },
   { label: "No tag", text: (code) => `The tag with the code ${code} isn't in the photo.` },
   { label: "Not destroyed", text: () => "The photos don't show the product destroyed as the recall asks." },

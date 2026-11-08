@@ -3,12 +3,12 @@
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Button, CrossIcon, ErrorState, Skeleton, SkeletonText, StatusPill, type CheckState } from "@/components/ui";
+import { Button, CrossIcon, ErrorState, Skeleton, SkeletonText, type CheckState } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { duration, type PreCheckState } from "@/app/console/_lib/view";
 import { api } from "./api";
-import { NO_PAYOUT, verdictLabel } from "./cells";
+import { EXCEPTION, NO_PAYOUT } from "./cells";
 import { CheckList } from "./CheckList";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { formatClock, formatTime } from "./format";
@@ -16,6 +16,7 @@ import { Keys } from "./Keys";
 import { LinkedIds } from "./LinkedIds";
 import { PhotoViewer } from "./PhotoViewer";
 import { payoutFailure, ReviewActions, reviewLabels, type ReviewIntent } from "./ReviewActions";
+import { VerdictMark, verdictOf } from "./VerdictMark";
 
 // The evidence for one claim: on laptops a non-modal panel docked beside the grid (Mercury's detail card), so ↑/↓
 // keeps walking the queue; on phones and tablets a full-screen modal. Both show the same content: the money's
@@ -240,12 +241,15 @@ function EvidenceContent({
             <h2 ref={heading} id={variant === "sheet" ? "drawer-title" : undefined} className="font-mono text-body font-medium outline-none" tabIndex={-1}>
               {id}
             </h2>
-            {/* In the grid's pill track, so walking the queue never moves it. */}
-            <span className="inline-flex w-(--verdict-pill-w)">
+            {/* In the grid's verdict track, so walking the queue never moves it. */}
+            <span className="inline-flex w-[6.5rem]">
               {claim ? (
-                <StatusPill status={claim.decision} label={verdictLabel({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null, seeded: claim.seeded })} />
+                <VerdictMark
+                  verdict={verdictOf({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null, seeded: Boolean(claim.seeded) })}
+                  className={EXCEPTION.has(claim.decision) ? "text-text" : undefined}
+                />
               ) : (
-                <Skeleton className="h-[22px] w-20 rounded-full" />
+                <Skeleton className="h-4 w-20" />
               )}
             </span>
             {claim && <MoneyLine claim={claim} />}
@@ -372,7 +376,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
   const decided = at((e) => e.type === "decided" || e.type === "blocked" || e.type === "rejected");
   const steps: Step[] = [
     { label: "Photos in", at: photos },
-    { label: "Photo check", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "A pre-check stopped it, so the photos were never read." : undefined },
+    { label: "Photo check", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "The account checks stopped it, so the photos were never read." : undefined },
     { label: "Decision", at: decided },
   ];
   if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? NO_PAYOUT : undefined }];
@@ -596,12 +600,12 @@ function Evidence({
       </Section>
 
       {waiting && <p className="-mb-4 text-ui text-muted">Checks run when the photos arrive.</p>}
-      <Section title="Pre-checks" aside={preRan.length ? `${preRan.filter((p) => p.state === "pass").length} of ${preRan.length}` : undefined}>
+      <Section title="Account checks" aside={preRan.length ? `${preRan.filter((p) => p.state === "pass").length} of ${preRan.length}` : undefined}>
         <CheckList
-          label={`Pre-checks for ${claim.id}`}
+          label={`Account checks for ${claim.id}`}
           steps={claim.preChecks.map((p) => ({ id: p.id, label: p.label, state: PRE_STATE[p.state], detail: (p.state === "pass" && !open.pre) || !p.detail ? undefined : link(p.detail) }))}
         />
-        <PassedToggle name="Pre-check" count={claim.preChecks.filter((p) => p.state === "pass").length} open={open.pre} onToggle={() => toggle("pre")} />
+        <PassedToggle name="Account check" count={claim.preChecks.filter((p) => p.state === "pass").length} open={open.pre} onToggle={() => toggle("pre")} />
       </Section>
 
       <Section title="Photo check" aside={answers.length ? `${passed} of ${answers.length}` : claim.checks.length ? "No answer" : undefined}>
@@ -633,7 +637,7 @@ function Evidence({
           </>
         ) : (
           <p className="text-ui text-muted">
-            {claim.decision === "blocked" ? "Not run. A pre-check stopped this claim, so its photos were never read." : claim.photos.length ? "Reading the photos now." : "Waiting for photos."}
+            {claim.decision === "blocked" ? "Not run. The account checks stopped this claim, so its photos were never read." : claim.photos.length ? "Reading the photos now." : "Waiting for photos."}
           </p>
         )}
       </Section>
@@ -642,19 +646,28 @@ function Evidence({
         {/* What decided a held or refused claim leads the panel; here, only what the rule did with it. */}
         <p className="text-ui text-text-2">{d ? OUTCOME[claim.decision] ?? claim.sentence : claim.sentence}</p>
         {claim.review?.note && <p className="text-ui text-muted">{claim.review.note}</p>}
-        {claim.payout && (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-control border border-line px-4 py-3 text-ui">
-            <dt className="text-muted">PayPal batch</dt>
-            <dd className="truncate font-mono">{claim.payout.batchId}</dd>
-            <dt className="text-muted">Status</dt>
-            <dd className="text-muted">
-              {claim.payout.status === "SUCCESS" ? "Sent" : "Settling at PayPal"} <span className="font-mono">· {claim.payout.status}</span>
-            </dd>
-            <dt className="text-muted">Updated</dt>
-            <dd className="font-mono">{formatTime(claim.payout.updatedAt)}</dd>
-          </dl>
-        )}
       </Section>
+
+      {claim.payout && !claim.seeded && (
+        // The payout as PayPal knows it, on hairlines: what support asks for, and nothing else.
+        <Section title="PayPal" aside={claim.payout.status === "SUCCESS" ? "Settled" : "Settling"}>
+          <dl className="grid grid-cols-[7rem_minmax(0,1fr)] text-ui">
+            {(
+              [
+                [claim.payout.itemId ? "Payout" : "Batch", <span key="v" className="truncate font-mono text-text">{claim.payout.itemId ?? claim.payout.batchId}</span>],
+                ...(claim.payout.itemId ? [["Batch", <span key="v" className="truncate font-mono text-text-2">{claim.payout.batchId}</span>]] : []),
+                ["Status", <span key="v" className="font-mono text-text-2">{claim.payout.status}</span>],
+                ["Updated", <span key="v" className="font-mono text-text-2">{formatTime(claim.payout.updatedAt)}</span>],
+              ] as [string, ReactNode][]
+            ).map(([k, v], i) => (
+              <div key={i} className="contents">
+                <dt className="border-t border-line py-2 text-muted">{k}</dt>
+                <dd className="flex min-w-0 border-t border-line py-2">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </Section>
+      )}
 
       <details className="group">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-ui font-medium text-text [&::-webkit-details-marker]:hidden">

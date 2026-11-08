@@ -45,11 +45,12 @@ export interface DrawerClaim {
   checks: DrawerCheck[];
   // The model's own one-line summary, when it answered.
   summary: string | null;
-  // The checks in one line, as the grid's barcode counts them: "Pre-checks 4 of 4 · Model answers 4 of 5".
+  // The checks in one line, as the grid's barcode counts them: "Account checks 4 of 4 · Photo check 4 of 5".
   five: string;
   sentence: string;
   amount: string;
-  payout: { batchId: string; status: string; updatedAt: string } | null;
+  // itemId: PayPal's id for this one payout (older claims have only the batch's).
+  payout: { batchId: string; itemId?: string; status: string; updatedAt: string } | null;
   events: DrawerEvent[];
   // A held claim whose last approve the checks stopped before the payout (review.ts): when, and what they found.
   refused: { at: string; text: string } | null;
@@ -105,7 +106,7 @@ function sampleEvents(c: Claim, amount: string): Claim["events"] {
       e.type === "photos_received"
         ? { ...e, detail: `${n} ${n === 1 ? "photo" : "photos"} received` }
         : e.type === "prechecked"
-          ? { ...e, detail: "Pre-checks passed" }
+          ? { ...e, detail: "Account checks passed" }
           : e.type === "payout_sent"
             ? { ...e, detail: `Approved for ${amount}. No payout: this claim came with your console.` }
             : e,
@@ -235,7 +236,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,
     // A seeded sample's PayPal batch and status are made up by the seed: nothing was sent, so there is none to show.
-    payout: c.payout && !c.seeded ? { batchId: c.payout.batchId, status: c.payout.status, updatedAt: c.payout.updatedAt } : null,
+    payout: c.payout && !c.seeded ? { batchId: c.payout.batchId, ...(c.payout.itemId ? { itemId: c.payout.itemId } : {}), status: c.payout.status, updatedAt: c.payout.updatedAt } : null,
     events: plainEvents(c.seeded ? sampleEvents(c, amount) : c.events),
     refused,
     stops: c.decision === "held" && !c.seeded ? stops : [],
