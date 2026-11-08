@@ -74,7 +74,8 @@
    with the pillow's body running off the top of the shot: there the fade starts lower and runs shorter, so the body
    is out of the picture (never a slab hanging under the headline) and the tag, further down, is whole. The left edge
    fades later there too (--m-edge), so the left half's stuffing, at the frame's edge in that shot, is gone rather
-   than cut off. They are registered lengths, so the change eases with the camera instead of jumping. */
+   than cut off. OpenedExhibit.tsx writes the three from p, easing with the camera (model.ts macroAt), never on a
+   clock. */
 @property --m-in {
   syntax: "<length>";
   inherits: true;
@@ -89,17 +90,6 @@
   syntax: "<length-percentage>";
   inherits: true;
   initial-value: 0px;
-}
-.stage {
-  transition:
-    --m-in 360ms var(--ease-out-quart),
-    --m-len 360ms var(--ease-out-quart),
-    --m-edge 360ms var(--ease-out-quart);
-}
-.stage[data-beat="code"] {
-  --m-in: 56px;
-  --m-len: 48px;
-  --m-edge: 10%;
 }
 .stage:not(.small) .canvas,
 .stage:not(.small) .posters {
@@ -125,7 +115,7 @@
 
 .canvas {
   opacity: 0;
-  transition: opacity 400ms var(--ease-out-quart);
+  transition: opacity 400ms var(--ease-out-expo);
 }
 
 .canvasOn {
@@ -416,15 +406,16 @@ button.cellBody:hover .label {
   object-fit: contain;
 }
 
-/* At 85%, from the foot, and without the rows the stats and check row already say (recall, code, sent), so the
-   pillow's cut edge still shows above it and the stats row keeps a gap of its own. */
+/* Compact, at 80% from the bottom right, with only the two rows the readouts don't already say (checks, photo to
+   payout), so it sits in the still's lower right corner and both halves of the evidence stay in view above it. */
 .small .receipt {
-  max-width: 100%;
-  scale: 0.85;
-  transform-origin: 50% 100%;
+  max-width: 15rem;
+  margin-left: auto;
+  scale: 0.8;
+  transform-origin: 100% 100%;
 }
 
-.small .receipt dl > :is(:nth-child(2), :nth-child(3), :nth-child(6)) {
+.small .receipt dl > :not(:nth-child(4), :nth-child(7)) {
   display: none;
 }
 

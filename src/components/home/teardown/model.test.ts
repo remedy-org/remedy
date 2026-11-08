@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHECKS, EXHIBIT } from "./claim";
-import { BEATS, RANGES, TOTAL_VH, clock, holdOf, stateAt } from "./model";
+import { BEATS, RANGES, RECEIPT_FADE, SHOTS, TOTAL_VH, clock, holdOf, shotAt, stateAt } from "./model";
 
 describe("Opened Exhibit model", () => {
   it("lays the beats end to end over p 0..1, about 70vh a beat", () => {
@@ -45,10 +45,66 @@ describe("Opened Exhibit model", () => {
       const [a, z] = RANGES[id];
       // Right up to the hand-off, the outgoing callout is at full strength.
       expect(stateAt(a - 0.0005).callout).toBe(1);
-      // The incoming one is in after 5% of its beat, and holds until the next hand-off (the last check closes before
-      // the payout).
-      for (let t = 0.05; t <= (id === "torn" ? 0.88 : 0.999); t += 0.01) expect(stateAt(a + t * (z - a)).callout).toBeCloseTo(1, 5);
+      // The incoming one is in after 5% of its beat, and holds until the next hand-off.
+      for (let t = 0.05; t <= 0.999; t += 0.01) expect(stateAt(a + t * (z - a)).callout).toBeCloseTo(1, 5);
     }
+  });
+
+  it("hands the last check's column to the receipt with no blank frame, and rules Pay before the stamp lands", () => {
+    const [a, z] = RANGES.paid;
+    for (let t = 0; t <= 1; t += 0.005) {
+      const s = stateAt(a + t * (z - a));
+      // The receipt's opacity is receipt * RECEIPT_FADE (OpenedExhibit.tsx); the outgoing words leave as it arrives.
+      expect(s.callout + Math.min(1, s.receipt * RECEIPT_FADE)).toBeGreaterThan(0.99);
+      if (s.stamped) {
+        expect(s.decision).toBe("pay");
+        expect(s.sent).toBe(true);
+      }
+    }
+    expect(stateAt(a + 0.24 * (z - a)).receipt).toBeCloseTo(1, 5);
+  });
+
+  it("draws a check's leader only once the camera has nearly arrived on its part, and lifts it as the part closes", () => {
+    for (const c of CHECKS) {
+      const [a, z] = RANGES[c.id];
+      const at = (t: number) => stateAt(a + t * (z - a));
+      expect(at(0.03).leader).toBe(0);
+      expect(at(0.11).leader).toBe(0);
+      expect(at(0.22).leader).toBeCloseTo(1, 5);
+      expect(at(0.6).leader).toBeCloseTo(1, 5);
+      expect(at(0.999).leader).toBeLessThan(0.01);
+    }
+    expect(stateAt(holdOf("intro")).leader).toBe(0);
+    expect(stateAt(holdOf("paid")).leader).toBe(0);
+  });
+
+  it("pulls the camera back mid-move between distant subjects, never tighter than the wider end", () => {
+    const keys = BEATS.flatMap((b) => [RANGES[b.id][0] + 0.22 * (RANGES[b.id][1] - RANGES[b.id][0]), RANGES[b.id][0] + 0.88 * (RANGES[b.id][1] - RANGES[b.id][0])]);
+    for (let i = 1; i < keys.length - 1; i += 2) {
+      const [from, to] = [keys[i], keys[i + 1]];
+      const a = shotAt(from);
+      const b = shotAt(to);
+      for (let p = from; p <= to; p += (to - from) / 40) expect(shotAt(p).rx).toBeGreaterThanOrEqual(Math.min(a.rx, b.rx) - 1e-9);
+    }
+    // Live to the prints, the longest move: mid-way, both subjects fit, wider than either end.
+    const mid = (RANGES.live[0] + 0.88 * (RANGES.live[1] - RANGES.live[0]) + RANGES.fp[0] + 0.22 * (RANGES.fp[1] - RANGES.fp[0])) / 2;
+    expect(shotAt(mid).rx).toBeGreaterThan(Math.max(shotAt(holdOf("live")).rx, shotAt(holdOf("fp")).rx));
+    // At the keys themselves, the shot is exactly the beat's.
+    expect(shotAt(RANGES.code[0] + 0.22 * (RANGES.code[1] - RANGES.code[0])).rx).toBeCloseTo(SHOTS.code.rx, 9);
+  });
+
+  it("moves the stage's mask with the camera onto and off the tag macro", () => {
+    expect(stateAt(holdOf("acct")).macro).toBe(0);
+    expect(stateAt(RANGES.code[0]).macro).toBeGreaterThan(0);
+    expect(stateAt(RANGES.code[0]).macro).toBeLessThan(1);
+    expect(stateAt(holdOf("code")).macro).toBe(1);
+    expect(stateAt(RANGES.torn[0]).macro).toBeGreaterThan(0);
+    expect(stateAt(holdOf("torn")).macro).toBe(0);
+  });
+
+  it("closes the prints before the camera's move carries them off the frame", () => {
+    const [a, z] = RANGES.acct;
+    expect(stateAt(a + 0.12 * (z - a)).fp).toBe(0);
   });
 
   it("reads the code one character at a time, M then 4 then T", () => {

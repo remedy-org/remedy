@@ -68,10 +68,14 @@ const CONSENT_STEPS = ["Cut it in half, as the notice says", "Write your one-tim
 /** `p` lights the steps in turn (the pinned laptop); without it they are all lit. */
 export function ConsentChapter({ p }: { p?: Progress }) {
   const compact = useContext(Compact);
+  // In the pinned sequence the product column comes in only once the screen's clip has grown to the grid (0.2), so
+  // while it grows from the laptop's screen the clip holds the consent card alone, and never slices this column's words.
+  const done = useDone();
+  const product = useTransform(p ?? done, (v) => outQuart(ramp(v, 0.195, 0.205)));
   return (
     <div className="@container">
       <div className="grid items-center gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
-        <div className={clsx("hidden flex-col @min-[720px]:flex", compact ? "gap-4" : "gap-6")}>
+        <motion.div className={clsx("hidden flex-col @min-[720px]:flex", compact ? "gap-4" : "gap-6")} style={{ opacity: product }}>
           <span className="micro text-faint">
             {CLAIM.recall} · Recalled {CLAIM.recalled}
           </span>
@@ -92,7 +96,7 @@ export function ConsentChapter({ p }: { p?: Progress }) {
               </div>
             ))}
           </dl>
-        </div>
+        </motion.div>
 
         <div
           data-dolly-target
@@ -349,9 +353,10 @@ export function ConsoleChapter({ p }: { p: Progress }) {
   const height = useTransform(p, (v) => `${(outQuart(ramp(v, 0.905, 0.94)) * (compact ? 3 : 3.5)).toFixed(3)}rem`);
   const opacity = useTransform(p, (v) => ramp(v, 0.92, 0.94));
   const flash = useTransform(p, (v) => `color-mix(in oklch, var(--accent) ${(14 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
+  // It fills the stage down to its foot, so as the pin releases the stage never shows an empty band under it.
   return (
-    <div className="@container">
-      <div className="flex flex-col gap-6">
+    <div className="h-full @container">
+      <div className="flex h-full flex-col gap-6">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
           <p className="text-head-sm font-medium">
             And Kikea Store sees it here. <span className="text-muted">Every claim, with its evidence.</span>
@@ -361,7 +366,7 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             eval claims, never paid
           </span>
         </div>
-        <div className="overflow-hidden rounded-card bg-surface shadow-card">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card bg-surface shadow-card">
           <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-3">
             <span className="text-ui font-medium">
               <NoBreakHyphens>Kikea X-VESOLJE nursing pillows</NoBreakHyphens>
@@ -390,6 +395,10 @@ export function ConsoleChapter({ p }: { p: Progress }) {
           {CONSOLE_ROWS.map((r) => (
             <ConsoleRow key={r.id} row={r} />
           ))}
+          <p className="mt-auto flex items-center justify-between gap-4 border-t border-line px-4 py-3 text-micro text-faint">
+            <span>{CONSOLE_ROWS.length + 1} claims</span>
+            <span>RM-0442 paid in sandbox · the samples never paid</span>
+          </p>
         </div>
       </div>
     </div>

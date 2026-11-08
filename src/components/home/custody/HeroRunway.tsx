@@ -89,7 +89,9 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
       x: useTransform(k, (t) => t * target.current.x),
       y: useTransform(k, (t) => t * target.current.y),
       scale: useTransform(k, (t) => 1 + (SCALE - 1) * t),
-      opacity: useTransform(p, (v) => 1 - ramp(v, 0.13, 0.18)),
+      // Gone by 0.15, while the screen layer's clip has barely moved: past that its right edge pulls in from beyond the
+      // viewport and would uncover the laptop's own screen there, its words cut by the viewport's edge.
+      opacity: useTransform(p, (v) => 1 - ramp(v, 0.13, 0.15)),
       "--tilt-k": useTransform(p, (v) => 1 - easeInOut(ramp(v, DOLLY[0], 0.15))),
       willChange: useTransform(p, (v) => (v > 0.02 && v < 0.22 ? "transform, opacity" : "auto")),
     },

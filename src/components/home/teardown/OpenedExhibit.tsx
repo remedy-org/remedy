@@ -5,7 +5,7 @@ import { useScroll, type MotionValue } from "motion/react";
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
 import { CHECKS, EXHIBIT, RECEIPT_ROWS } from "./claim";
-import { BEATS, RANGES, TOTAL_VH, clock, holdOf, stateAt, type BeatId, type ExhibitState, type Shot } from "./model";
+import { BEATS, RANGES, RECEIPT_FADE, TOTAL_VH, clock, holdOf, stateAt, type BeatId, type ExhibitState, type Shot } from "./model";
 import type { Colors, Exhibit, Rect, Tier } from "./scene";
 import { createFrameWatch, stageLayers } from "./watch";
 import styles from "./teardown.module.css";
@@ -139,7 +139,7 @@ function Receipt({ stamped, className, style }: { stamped: boolean; className?: 
             </div>
           ))}
         </dl>
-        <div className="mt-4 flex items-center justify-between gap-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <p className="text-micro text-ink-muted">Illustration · not a real receipt</p>
           <span className={styles.stampSlot}>
             {stamped && (
@@ -260,7 +260,8 @@ function IntroCallout({ framed }: { framed: number }) {
 
 function Callout({ s }: { s: ExhibitState }) {
   if (s.beat === "intro") return <IntroCallout framed={s.framed} />;
-  const i = s.active;
+  // Check 5's words hold into the payout until the receipt lands over them.
+  const i = s.beat === "paid" ? CHECKS.length - 1 : s.active;
   if (i < 0) return null;
   const c = CHECKS[i];
   return (
@@ -367,11 +368,12 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
       anchor = ex.render(st, rect).anchor;
       watchFrames(ex);
     }
-    // Leader: from the part to the callout's first line, drawn on like ink as the part opens.
+    // Leader: from the part to the callout's first line, drawn on like ink once the camera has nearly arrived on the
+    // part, and lifted as it closes (model.ts leaderAt), so it never points into a moving frame.
     const box = calloutBox.current?.getBoundingClientRect();
     const path = leader.current;
     if (path && dot.current) {
-      const vis = anchor && box && st.callout > 0.01 ? st.callout : 0;
+      const vis = anchor && box ? st.leader * st.callout : 0;
       if (anchor && box && vis) {
         const tx = box.left - stage.left - 12;
         const ty = box.top - stage.top + 9;
@@ -383,12 +385,18 @@ function Stage({ p, mode, small, onSeek, chain, skip, capture }: StageProps) {
       path.style.opacity = vis ? "1" : "0";
       dot.current.style.opacity = String(vis);
     }
+    // The mask over the scene follows the camera onto the tag macro and off it (model.ts macroAt): there the top fade
+    // starts lower and runs shorter, so the pillow's body is out of the picture and the tag, further down, is whole, and
+    // the left edge fades later, so the left half's stuffing is gone rather than cut off.
+    el.style.setProperty("--m-in", `${(4 + 52 * st.macro).toFixed(1)}px`);
+    el.style.setProperty("--m-len", `${(128 - 80 * st.macro).toFixed(1)}px`);
+    el.style.setProperty("--m-edge", `${(10 * st.macro).toFixed(2)}%`);
     if (calloutBox.current) {
       calloutBox.current.style.opacity = String(st.callout);
       calloutBox.current.style.transform = `translateY(${((1 - st.callout) * 8).toFixed(1)}px)`;
     }
     if (receipt.current) {
-      receipt.current.style.opacity = String(Math.min(1, st.receipt * 1.4));
+      receipt.current.style.opacity = String(Math.min(1, st.receipt * RECEIPT_FADE));
       receipt.current.style.transform = `translateY(${((1 - st.receipt) * 48).toFixed(1)}px) rotate(${(1.2 - st.receipt * 2.4).toFixed(2)}deg)`;
     }
     // Active check's bar fills with its beat.

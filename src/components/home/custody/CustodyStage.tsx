@@ -19,22 +19,24 @@ import styles from "./custody.module.css";
 // up or down. The rail takes columns 1 to 3 and the screen columns 4 to 12 of the page grid, like every section.
 
 const HANDOFF = [0.12, 0.2] as const;
-/** The consent screen wipes down over the laptop's own screen, top to bottom, like a page loading: no blank frame
- * and no double exposure between the two screens. */
-const WIPE = 0.015;
+/** The consent screen dissolves in over the laptop's own screen, inside that screen's rect (state to state), before the
+ * clip starts to grow: never a hard edge wiping across the laptop's photo. */
+const DISSOLVE = 0.012;
+/** The state-to-state curve, cubic-bezier(0.65, 0, 0.35, 1). */
+const inOutCubic = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
 /** The rail's chapter list comes in once the hero copy has gone (it fades out by 0.16). */
 const RAIL_IN = 0.17;
 
 const inOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
 
-function Layer({ p, i, compact, children }: { p: Progress; i: number; compact: boolean; children: ReactNode }) {
+function Layer({ p, i, compact, fill, children }: { p: Progress; i: number; compact: boolean; fill?: boolean; children: ReactNode }) {
   const opacity = useTransform(p, (v) => share(v, i));
   const y = useTransform(p, (v) => (i === 0 ? 0 : Math.round(8 * (1 - clamp01((v - (i === 5 ? CONSOLE_AT : STARTS[i])) / IN)))));
   const visibility = useTransform(opacity, (o) => (o > 0 ? "visible" : "hidden"));
   return (
     // Top-aligned under the app bar, as a page loads: centred, a tall frame left an empty band under the bar.
     <motion.div data-layer={i} className={clsx("absolute inset-0 flex items-start justify-center px-8", compact ? "pt-6 pb-4" : "pt-12 pb-8")} style={{ opacity, y, visibility }}>
-      <div className="w-full max-w-[66rem]">{children}</div>
+      <div className={clsx("w-full max-w-[66rem]", fill && "h-full")}>{children}</div>
     </motion.div>
   );
 }
@@ -80,8 +82,9 @@ function RailCaption({ p, i }: { p: Progress; i: number }) {
 
 /**
  * The screen's clip: the laptop screen's live rect at 0.12, the screen's place on the grid (columns 4 to 12) at 0.20,
- * with the first WIPE of it opening from the top down. Written straight to the element, so scrolling never re-renders
- * React.
+ * the layer dissolving in over the first DISSOLVE of it. Only the consent card shows while the clip grows (chapter
+ * 01's other column comes in once it has reached the grid, ConsentChapter), so no text is ever sliced by its edge.
+ * Written straight to the element, so scrolling never re-renders React.
  */
 function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
   if (!el || !st) return;
@@ -94,7 +97,7 @@ function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
     return;
   }
   el.style.visibility = "visible";
-  el.style.opacity = "1";
+  el.style.opacity = inOutCubic(clamp01((v - HANDOFF[0]) / DISSOLVE)).toFixed(3);
   el.style.pointerEvents = "auto";
   const S = st.getBoundingClientRect();
   const inner = el.querySelector("[data-screen-inner]")?.getBoundingClientRect();
@@ -109,7 +112,6 @@ function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
       const from = { t: lap.top - S.top, r: S.right - lap.right, b: S.bottom - lap.bottom, l: lap.left - S.left, round: 6 };
       box = { t: 0, r: 0, b: 0, l: 0, round: 0 };
       for (const key of Object.keys(end) as (keyof typeof end)[]) box[key] = from[key] + (end[key] - from[key]) * k;
-      box.b += (1 - clamp01((v - HANDOFF[0]) / WIPE)) * (S.height - box.t - box.b);
     }
   }
   el.style.clipPath = `inset(${box.t.toFixed(1)}px ${box.r.toFixed(1)}px ${box.b.toFixed(1)}px ${box.l.toFixed(1)}px round ${box.round.toFixed(1)}px)`;
@@ -145,7 +147,11 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
   const screen = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const [chapter, setChapter] = useState(0);
-  useBeatPaging(() => stage.current?.parentElement, PAGE_STOPS);
+  useBeatPaging(
+    () => stage.current?.parentElement,
+    PAGE_STOPS,
+    () => stage.current?.parentElement?.nextElementSibling as HTMLElement | null,
+  );
 
   useMotionValueEvent(p, "change", (v) => {
     // After Motion has written this frame's styles, so the laptop is measured where it is now, not a frame ago.
@@ -175,8 +181,10 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
   const frame = useTransform(p, [HANDOFF[1] - 0.01, HANDOFF[1]], [0, 1]);
   const railHead = useTransform(p, [RAIL_IN, RAIL_IN + 0.03], [0, 1]);
   const bar = useTransform(p, [0.16, 0.19], [0, 1]);
-  // The rail's skip link hides while the exhibit covers it: the exhibit carries the same link in its own foot.
+  // The rail's skip link hides while the exhibit covers it: the exhibit carries the same link in its own foot. Past the
+  // console it has nothing left to skip, so it fades out as the pin releases, never left alone on the stage.
   const skipVisibility = useTransform(p, (v) => (exhibitPage(v) > 0 ? "hidden" : "visible"));
+  const skipOpacity = useTransform(p, (v) => clamp01((v - RAIL_IN) / 0.03) * (1 - clamp01((v - 0.97) / 0.03)));
 
   return (
     <>
@@ -195,7 +203,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
                 <CodeChapter p={p} />
               </Layer>
               {/* Chapters 03 to 05 are the Opened Exhibit, a full-stage layer above the screen and the rail (below). */}
-              <Layer p={p} i={5} compact={compact}>
+              <Layer p={p} i={5} compact={compact} fill>
                 <ConsoleChapter p={p} />
               </Layer>
             </Compact.Provider>
@@ -219,7 +227,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
             </div>
           </div>
         </motion.div>
-        <motion.div className="pointer-events-auto pt-4 focus-within:!opacity-100" style={{ opacity: railHead, visibility: skipVisibility }}>
+        <motion.div className="pointer-events-auto pt-4 focus-within:!opacity-100" style={{ opacity: skipOpacity, visibility: skipVisibility }}>
           {skip}
         </motion.div>
       </div>

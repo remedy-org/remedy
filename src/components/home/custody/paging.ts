@@ -28,13 +28,17 @@ const PRESSABLE = "button, summary, [role='button'], [role='checkbox'], [role='s
 
 /**
  * Pages `runway` beat by beat. `stops` are where each beat is best read, as fractions (0 to 1) of the runway's scroll
- * travel. A held key or quick presses step from the stop last aimed at, not from wherever the smooth scroll is.
+ * travel. A held key or quick presses step from the stop last aimed at, not from wherever the smooth scroll is. `next`,
+ * the section after the pin, is one more stop: its top under the nav, so a page from the last beat lands on it rather
+ * than on the stage's tail half-way out of the pin.
  */
-export function useBeatPaging(runway: () => HTMLElement | null | undefined, stops: readonly number[]) {
+export function useBeatPaging(runway: () => HTMLElement | null | undefined, stops: readonly number[], next?: () => HTMLElement | null | undefined) {
   const aim = useRef<{ at: number; t: number } | null>(null);
   const get = useRef(runway);
+  const getNext = useRef(next);
   useEffect(() => {
     get.current = runway;
+    getNext.current = next;
   });
   const key = stops.join(",");
   useEffect(() => {
@@ -54,7 +58,9 @@ export function useBeatPaging(runway: () => HTMLElement | null | undefined, stop
       const now = Math.max(0, -r.top / travel);
       const last = aim.current;
       const from = last && performance.now() - last.t < 900 ? last.at : now;
-      const to = nextStop(list, from, dir);
+      const after = getNext.current?.();
+      const all = after ? [...list, (after.getBoundingClientRect().top - r.top - nav) / travel] : list;
+      const to = nextStop(all, from, dir);
       if (to === null) return;
       e.preventDefault();
       aim.current = { at: to, t: performance.now() };
