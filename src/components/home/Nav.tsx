@@ -12,7 +12,7 @@ type SectionId = "how" | "problem" | "checks" | "proof" | "companies";
 // from xl only: at 1024 the four others and the right side fill it.
 const NAV_LINKS: readonly NavMenuLink<SectionId>[] = [
   { id: "how", label: "How it works", note: "One claim, photo to PayPal payout" },
-  { id: "problem", label: "Problem", note: "Refunds run on an inbox of photos, and AI broke it", bar: "xl" },
+  { id: "problem", label: "Problem", note: "Refunds stuck in a loop: easy ones get faked, hard ones skipped", bar: "xl" },
   { id: "checks", label: "Fraud checks", note: "The five checks a fake has to beat, and four claims to try" },
   { id: "proof", label: "Results", note: "Every genuine claim paid, every stolen photo stopped" },
   { id: "companies", label: "For companies", note: "Every claim with its evidence, and the CPSC report" },

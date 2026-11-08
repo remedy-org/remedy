@@ -70,6 +70,13 @@ const themes = {
   light: { ...block('[data-theme="light"]'), ...shared },
 };
 
+// The Problem section's aged sheet keeps its tokens in its own module (src/components/home/problem.module.css, the section's
+// first block), the same in both themes.
+const sheetCss = readFileSync(resolve(import.meta.dirname, "../src/components/home/problem.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+const sheet: Record<string, string> = {};
+for (const d of (sheetCss.match(/\.section\s*\{([^{}]*)\}/)?.[1] ?? "").matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) sheet[d[1]] = d[2].trim();
+const withSheet = (tokens: Record<string, string>) => ({ ...tokens, ...sheet });
+
 function resolveColor(tokens: Record<string, string>, value: string, depth = 0): RGBA {
   if (depth > 8) throw new Error(`token loop at ${value}`);
   const v = value.trim();
@@ -154,6 +161,30 @@ const paper: Pair[] = [
   { fg: "--accent-text", bg: "--paper", min: 0, note: "info: amber text never sits on paper" },
 ];
 
+// The aged sheet: text sits only where the paper is lit. The worst case under any sheet text is the grain at its
+// darkest (it multiplies by 0.84) with the warm edge band over it, as along the sources line. The cards and the clipping
+// carry the rest; the stamp is 100% stop ink on the clipping.
+const sheetPaper = ["--aged", "--aged+--grain-floor", "--aged+--aged-edge@0.2+--grain-floor"];
+const agedSheet: Pair[] = [
+  ...["--ink", "--sheet-muted"].flatMap((fg) => sheetPaper.map((bg) => ({ fg, bg, min: 4.5, note: "Problem sheet" }))),
+  ...["--ink", "--ink-muted"].flatMap((fg) => ["--evidence-card", "--evidence-clip"].map((bg) => ({ fg, bg, min: 4.5, note: "Problem card" }))),
+  { fg: "--ink", bg: "--evidence-clip+--highlight", min: 4.5, note: "highlighted address" },
+  // The payoff prints in ink inside the lamp's last pool; its farthest letters sit where the room is at most 14% of the
+  // dim's 0.88.
+  { fg: "--ink", bg: "--aged+--grain-floor+--room@0.13", min: 4.5, note: "payoff at the edge of the lamp's pool" },
+  // Stacked, the chain's "Back to 01" is the string's red a step darker and the cut's stamp PAID's green a step darker,
+  // both on the sheet at its darkest.
+  { fg: "--loop-ink", bg: "--aged+--aged-edge@0.2+--grain-floor", min: 4.5, note: "Back to 01 on the sheet" },
+  { fg: "--cut-ink", bg: "--aged+--aged-edge@0.2+--grain-floor", min: 4.5, note: "CUT BY REMEDY stamp on the sheet" },
+  // In light the lamp goes down to --dim-light; the payoff's farthest letters sit where it is at most 14% of the 0.6.
+  { fg: "--ink", bg: "--aged+--grain-floor+--dim-light@0.09", min: 4.5, note: "payoff at the edge of the pool, light" },
+];
+// In light the desk under the sheet is two steps down from the page; the eyebrow there is --muted.
+const lightDesk: Pair[] = [
+  { fg: "--muted", bg: "--desk-light", min: 4.5, note: "Problem eyebrow on the light desk" },
+  { fg: "--text", bg: "--desk-light", min: 4.5, note: "text on the light desk" },
+];
+
 let failed = 0;
 
 function report(title: string, tokens: Record<string, string>, pairs: Pair[]) {
@@ -178,6 +209,8 @@ if (Math.abs(ratio(white, black) - 21) > 0.01) throw new Error("contrast maths i
 
 report("Paper and ink, dark", themes.dark, paper);
 report("Paper and ink, light", themes.light, paper);
+report("Problem sheet, dark", withSheet(themes.dark), agedSheet);
+report("Problem sheet, light", withSheet(themes.light), [...agedSheet, ...lightDesk]);
 report("App tokens, dark", themes.dark, [...app, ...ringOnAccent(0)]);
 report("App tokens, light", themes.light, [...app, ...ringOnAccent(3)]);
 
