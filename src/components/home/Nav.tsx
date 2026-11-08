@@ -8,11 +8,11 @@ import { NavMenu, type NavMenuLink } from "./NavMenu";
 
 type SectionId = "how" | "problem" | "checks" | "proof" | "companies";
 
-// In page order, in plain words; each section's eyebrow says the same. Problem is in the sheet always, and in the bar
+// In page order, in plain words; each section's eyebrow says the same. Why recalls stall is in the sheet always, and in the bar
 // from xl only: at 1024 the four others and the right side fill it.
 const NAV_LINKS: readonly NavMenuLink<SectionId>[] = [
   { id: "how", label: "How it works", note: "One claim, photo to PayPal payout" },
-  { id: "problem", label: "Problem", note: "Why recall refunds stay stuck, and where Remedy cuts the loop", bar: "xl" },
+  { id: "problem", label: "Why recalls stall", note: "Why recall refunds stay stuck, and where Remedy cuts the loop", bar: "xl" },
   { id: "checks", label: "Fraud checks", note: "The five checks a fake has to beat, and four claims to try" },
   { id: "proof", label: "Results", note: "Every genuine claim paid, every stolen photo stopped" },
   { id: "companies", label: "For companies", note: "Every claim with its evidence, and the CPSC report" },

@@ -3,14 +3,14 @@
 import clsx from "clsx";
 import { animate, motion, useInView, useMotionTemplate, useMotionValue, useSpring, type MotionValue } from "motion/react";
 import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from "react";
-import { Money, Paper } from "@/components/ui";
+import { Money, Paper, Stamp } from "@/components/ui";
 import { CLAIM } from "./custody/claim";
 import { ClaimScreen, FINAL_PHASE } from "./ClaimScreen";
 import { Laptop } from "./Laptop";
 import styles from "./device.module.css";
 
 // The hero moment (DESIGN.md, Motion): once the device is in view the five checks tick in 450ms apart, then the payout
-// chip lands, and a paper receipt tag leaves the screen to rest on the light table (spec H1). It plays once and rests on
+// chip lands, and the paid receipt leaves the screen to rest on the light table (spec H1). It plays once and rests on
 // its final frame, which is what a return visit finds. Reduced motion shows the final state and no tilt; without JS the
 // <noscript> style below shows it too. Laptops only: below 1024px the hero shows a phone instead (HeroPhone).
 
@@ -53,7 +53,7 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
     return () => timers.forEach(clearTimeout);
   }, [inView, reduced]);
 
-  // The payout leaves the screen: a paper tag starts at the chip's size and place on the screen, and flies out over
+  // The payout leaves the screen: the receipt starts at the chip's size and place on the screen, and flies out over
   // the bezel to its rest on the table, 520ms --ease-snap, its shadow fading in as it lands. Only ever scaled up to
   // its rest size, so its text stays sharp.
   useEffect(() => {
@@ -137,17 +137,20 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
           {/* With motion the flight owns these styles (React never changes them after mount); reduced motion rests them. */}
           <span ref={shadowRef} data-seq="show" className={styles.receiptShadow} style={reduced ? undefined : { opacity: 0 }} />
           <div ref={tagRef} data-seq="show" className="origin-center" style={reduced ? { rotate: "-2deg" } : { opacity: 0 }}>
-            {/* The money, said once in the hero: the screen says the checks passed, the facts give the time. */}
-            <Paper variant="tag" hole padding="none" className="w-[13.5rem]">
-              <div className="flex flex-col px-4 pt-10 pb-3.5">
+            {/* The money, said once in the hero, as the claim's own climax: the paid receipt, perforated where it tore
+                off the roll, with its PAID stamp. The screen says the checks passed. */}
+            <Paper variant="receipt" perforated padding="none" className="w-[13.5rem]">
+              <div className="flex flex-col px-4 pt-5 pb-4">
                 <span className="flex items-baseline justify-between gap-3 text-[0.75rem] leading-none text-ink-muted">
-                  Refund
+                  Refund receipt
                   <span className="font-mono font-medium text-ink">{CLAIM.id}</span>
                 </span>
-                <span className="mt-2.5 text-[1.75rem] leading-none font-medium tracking-[-0.02em]">
-                  <Money value={CLAIM.amount} size="inline" />
+                <span className="mt-3 flex items-center justify-between gap-3">
+                  <span className="text-[1.75rem] leading-none font-medium tracking-[-0.02em] text-ink">
+                    <Money value={CLAIM.amount} size="inline" />
+                  </span>
+                  <Stamp tone="pay">Paid</Stamp>
                 </span>
-                <span className="mt-2 text-[0.75rem] leading-none font-medium text-pay-ink">Paid to PayPal</span>
               </div>
             </Paper>
           </div>

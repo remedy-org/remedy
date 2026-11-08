@@ -569,7 +569,7 @@ export function Problem() {
       <div className={clsx(s.stage, "page")}>
         <div aria-hidden="true" className={s.pool} />
         {/* The section's name on the page gutter, in the nav's words, like every other section's eyebrow. */}
-        <p className={clsx("eyebrow", s.eyebrow)}>Problem</p>
+        <p className={clsx("eyebrow", s.eyebrow)}>Why recalls stall</p>
         <div className={s.column}>
           <div className={s.board}>
             <div className={s.persp}>

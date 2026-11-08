@@ -11,14 +11,17 @@ const FIGURES: { figure: string; text: string; short: string }[] = [
   { figure: "1.1¢", text: "Remedy's cost to check a claim", short: "cost per claim" },
 ];
 
-/** The footnote mark: a 24px hit area around the small figure, jumping to the method line at the section's foot. */
-function Note() {
+/**
+ * The footnote mark: a 24px hit area around the small figure (wider still on a touch screen), jumping to the method line
+ * at the section's foot. Its name says which figure it sources, so a list of the page's links tells the two apart.
+ */
+function Note({ figure }: { figure: string }) {
   return (
     <sup className="ml-0.5 text-micro">
       <a
         href="#proof-note"
-        aria-label="Note 1"
-        className="relative px-0.5 text-faint no-underline transition-colors duration-160 before:absolute before:-inset-x-1.5 before:-inset-y-1 before:content-[''] hover:text-text-2"
+        aria-label={`Note 1: the source for ${figure}`}
+        className="relative px-0.5 text-faint no-underline transition-colors duration-160 before:absolute before:-inset-x-2 before:-inset-y-2 before:content-[''] hover:text-text-2"
       >
         1
       </a>
@@ -44,7 +47,7 @@ export function Proof() {
           </p>
           <p className={clsx(styles.line, "max-w-[24ch] text-head-sm font-medium text-balance")} style={{ "--line": 1 } as CSSProperties}>
             <span className="sr-only">0 </span>stolen web photos paid out.
-            <Note />
+            <Note figure="0 stolen web photos paid out" />
           </p>
         </Reveal>
 
@@ -55,7 +58,7 @@ export function Proof() {
               <dd className="mt-1.5 max-w-[28ch] text-[0.75rem]/[1.4] text-pretty text-faint sm:mt-2 sm:text-ui sm:text-muted">
                 <span className="sm:hidden">{f.short}</span>
                 <span className="hidden sm:inline">{f.text}</span>
-                {i === FIGURES.length - 1 && <Note />}
+                {i === FIGURES.length - 1 && <Note figure={`${f.figure} ${f.text}`} />}
               </dd>
             </div>
           ))}

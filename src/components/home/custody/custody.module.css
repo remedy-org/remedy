@@ -5,26 +5,20 @@
 
 /* ---------------------------------------------------------------- Focus-in: the hero's first paint, CSS only. */
 /*
- * The h1, then the lead, 80ms apart. It starts at 1% opacity, not 0, so the browser counts the h1 as painted on the
- * first frame: the LCP is the headline at first paint, not whichever image is opaque first.
+ * The h1, then the lead, 60ms apart: a short fade, nothing else (no blur, no rise). It starts at 1% opacity, not 0, so
+ * the browser counts the h1 as painted on the first frame: the LCP is the headline at first paint, not whichever image
+ * is opaque first.
  */
 @media (prefers-reduced-motion: no-preference) {
   .focusIn {
-    animation: focus-in 900ms var(--ease-out-expo) both;
-    animation-delay: calc(var(--line, 0) * 80ms);
+    animation: focus-in 150ms ease-out both;
+    animation-delay: calc(var(--line, 0) * 60ms);
   }
 }
 
 @keyframes focus-in {
   from {
     opacity: 0.01;
-    filter: blur(10px);
-    translate: 0 12px;
-  }
-  to {
-    opacity: 1;
-    filter: none;
-    translate: none;
   }
 }
 
@@ -43,13 +37,6 @@
 .copy {
   position: relative;
   z-index: 1;
-}
-
-/* Positioned, so it paints above the device's table plane, which runs under it. */
-.facts {
-  position: relative;
-  z-index: 1;
-  margin-top: 3rem;
 }
 
 .device {
@@ -72,13 +59,6 @@
     grid-column: 1 / span 6;
     grid-row: 1;
     padding-top: 1rem;
-  }
-
-  .facts {
-    grid-column: 1 / span 5;
-    grid-row: 2;
-    margin-top: 0;
-    padding-bottom: 2.5rem;
   }
 
   /* The device bleeds from column 7 toward the viewport's edge, held to the screen's height and to 46rem: past that

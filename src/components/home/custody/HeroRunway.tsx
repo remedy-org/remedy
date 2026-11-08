@@ -81,11 +81,12 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
     return () => ro.disconnect();
   }, [p, stage, device]);
 
-  const k = useTransform(p, (v) => inOut(ramp(v, DOLLY[0], DOLLY[1])));
-  // The hero copy, its facts and the laptop's labels leave in time as the dolly starts, and come back the same way: a
-  // scrubbed fade held the headline blurred at half strength wherever the reader paused. The copy leaves at half the
-  // focus-in's length and comes back as a reveal; the labels (paper on the light table) go at once, never left
-  // half-transparent over the keyboard.
+  // Out of the gate at once (ease-out): the laptop is well on its way to the centre by the time the copy has gone, so no
+  // frame holds an empty left half beside a parked laptop; it settles into the screen as it arrives.
+  const k = useTransform(p, (v) => 1 - (1 - ramp(v, DOLLY[0], DOLLY[1])) ** 3);
+  // The hero copy and the laptop's labels leave in time as the dolly starts, and come back the same way: a scrubbed fade
+  // held the headline at half strength wherever the reader paused. The copy fades and lifts away (no blur) and comes
+  // back as a reveal; the labels (paper on the light table) go at once, never left half-transparent over the keyboard.
   const copy = useGate(p, (v) => v < DOLLY[0] + 0.005, { duration: 0.7, ease: EASE.outExpo }, { duration: 0.36, ease: IN_OUT });
   const labels = useGate(p, (v) => v < DOLLY[0] + 0.005, ENTER, LEAVE);
   // The laptop goes once the consent screen has dissolved in over its screen (at 0.12, CustodyStage), before the clip's
@@ -95,8 +96,7 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
     text: {
       y: useTransform(copy, (c) => -24 * (1 - c)),
       opacity: copy,
-      filter: useTransform(copy, (c) => (c < 1 ? `blur(${(6 * (1 - c)).toFixed(2)}px)` : "none")),
-      willChange: useTransform(p, (v) => (v > 0.02 && v < 0.22 ? "transform, opacity, filter" : "auto")),
+      willChange: useTransform(p, (v) => (v > 0.02 && v < 0.22 ? "transform, opacity" : "auto")),
     },
     device: {
       x: useTransform(k, (t) => t * target.current.x),
@@ -110,7 +110,7 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
   };
 }
 
-export function HeroRunway({ copy, facts }: { copy: ReactNode; facts: ReactNode }) {
+export function HeroRunway({ copy }: { copy: ReactNode }) {
   const wide = useMedia("(min-width: 1024px) and (min-height: 700px)");
   const motionOk = useMedia("(prefers-reduced-motion: no-preference)");
   const mode: Mode = !motionOk ? "static" : wide ? "pinned" : "phone";
@@ -148,10 +148,6 @@ export function HeroRunway({ copy, facts }: { copy: ReactNode; facts: ReactNode 
           <div className="mt-12 lg:hidden">
             <HeroPhone />
           </div>
-          {/* After the phone on small screens, so the product is above the fold there. */}
-          <motion.div className={styles.facts} style={pinned ? { opacity: dolly.text.opacity } : undefined}>
-            {facts}
-          </motion.div>
         </div>
         {pinned && <CustodyStage p={p} stage={stage} skip={<SkipLink />} />}
       </div>

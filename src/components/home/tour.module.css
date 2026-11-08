@@ -607,7 +607,6 @@
 @keyframes focus-in {
   from {
     opacity: 0;
-    filter: blur(10px);
-    translate: 0 12px;
+    translate: 0 8px;
   }
 }

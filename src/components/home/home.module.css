@@ -5,19 +5,17 @@
  */
 
 @media (prefers-reduced-motion: no-preference) {
-  /* 1. Focus-in: blur 10px, 12px down and transparent to rest, 700ms, 60ms apart per line. Text only. */
+  /* 1. Focus-in: a fade and 8px up to rest, 360ms, 60ms apart per line. Text only, and never a blur. */
   .line {
     transition:
-      opacity 700ms var(--ease-out-expo),
-      filter 700ms var(--ease-out-expo),
-      translate 700ms var(--ease-out-expo);
+      opacity 360ms var(--ease-out-quart),
+      translate 360ms var(--ease-out-quart);
     transition-delay: calc(var(--line, 0) * 60ms);
   }
 
   .reveal[data-enter="armed"] .line {
     opacity: 0;
-    filter: blur(10px);
-    translate: 0 12px;
+    translate: 0 8px;
   }
 
   /* 1b. Rise: a plain fade and 8px up, 360ms, 60ms apart per line (the For companies heading: no blur). */

@@ -9,7 +9,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Product",
     links: [
       { href: "#how", label: "How it works" },
-      { href: "#problem", label: "Problem" },
+      { href: "#problem", label: "Why recalls stall" },
       { href: "#checks", label: "Fraud checks" },
       { href: "#proof", label: "Results" },
       { href: "/r/kikea-x-vesolje/try", label: "Try a claim" },
