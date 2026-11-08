@@ -9,6 +9,7 @@ export { Money, splitMoney, type MoneyProps, type MoneySize } from "./Money";
 export { DURATION, EASE, SPRING } from "./motion";
 export { Paper, type PaperProps, type PaperVariant } from "./Paper";
 export { CheckProgress, Meter, type CheckProgressProps, type CheckState, type CheckStep, type MeterProps } from "./Progress";
+export { NavCode } from "./NavCode";
 export { NoBreakHyphens } from "./NoBreakHyphens";
 export { SkipLink } from "./SkipLink";
 export { Skeleton, SkeletonText, type SkeletonProps, type SkeletonTextProps } from "./Skeleton";

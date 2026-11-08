@@ -38,8 +38,8 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label={`Switch to ${next} theme`}
       title={`Switch to ${next} theme`}
       className={clsx(
-        "relative inline-flex size-9 shrink-0 items-center justify-center rounded-control text-muted",
-        "transition-[background-color,color,transform] duration-160 ease-snap hover:bg-surface-2 hover:text-text active:translate-y-px",
+        "relative inline-flex size-9 shrink-0 items-center justify-center rounded-button text-muted",
+        "transition-[background-color,color,scale] duration-160 ease-snap hover:bg-surface-2 hover:text-text active:scale-[0.96] active:duration-75",
         "after:absolute after:-inset-1 after:content-['']",
         className,
       )}

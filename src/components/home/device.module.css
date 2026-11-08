@@ -21,10 +21,14 @@
   font-size: calc(100cqw / 80);
   position: absolute;
   inset: 0;
-  perspective: 240em;
-  perspective-origin: 50% 20%;
-  --rx: -15deg;
-  --ry: 16deg;
+  /*
+   * A long lens and a shallow turn, as a product shot: the deck's front edge stays within 1.1x of the lid's width (a
+   * short lens made the keyboard look longer than the screen), and its front corner stays inside the page frame.
+   */
+  perspective: 420em;
+  perspective-origin: 50% 38%;
+  --rx: -10deg;
+  --ry: 6deg;
   --scene-top: 8%;
   /* The laptop: warm space grey (hue 75, chroma 0.004, like the room). */
   --lid: oklch(0.13 0.004 75);
@@ -40,6 +44,7 @@
   --table: var(--surface);
   --grid-major: color-mix(in oklch, var(--text) 7%, transparent);
   --grid-minor: color-mix(in oklch, var(--text) 3.5%, transparent);
+  --contact: oklch(0.05 0.004 75 / 0.65);
 }
 
 /* In light the laptop is silver: the same object a step lighter, so it sits on a light table, not as a hole in it. */
@@ -50,10 +55,14 @@
   --deck-bottom: oklch(0.8 0.004 75);
   --hinge-a: oklch(0.55 0.004 75);
   --hinge-b: oklch(0.72 0.004 75);
-  --key: oklch(0.32 0.004 75);
+  --key: oklch(0.42 0.004 75);
   --pad: oklch(0.83 0.004 75);
   --lip: oklch(0.7 0.004 75);
   --table: var(--surface-2);
+  /* On the near-white table only the 5cm lines show: a 1cm mesh at this contrast reads as noise, not a grid. */
+  --grid-major: color-mix(in oklch, var(--text) 7%, transparent);
+  --grid-minor: transparent;
+  --contact: oklch(0.3 0.01 70 / 0.42);
 }
 
 .scene {
@@ -61,8 +70,9 @@
   left: 50%;
   top: var(--scene-top);
   width: 64em;
-  height: 40em;
-  margin-left: -31em;
+  /* The lid is 64 x 43em (a 1.53 screen, as on a laptop), set left of centre so the turned deck ends inside the frame. */
+  height: 43em;
+  margin-left: -38.5em;
   transform-style: preserve-3d;
   /* --tilt-k (0 to 1) takes the resting tilt out as the Chain of Custody dollies in. */
   transform: rotateX(calc(var(--rx) * var(--tilt-k, 1))) rotateY(calc(var(--ry) * var(--tilt-k, 1)));
@@ -99,8 +109,8 @@
     2.4em 2.4em;
   background-position: var(--pool-at, 36% 76%), -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px, -0.5px -0.5px;
   background-repeat: no-repeat, repeat, repeat, repeat, repeat;
-  -webkit-mask-image: radial-gradient(ellipse 40% 42% at 50% 55%, #000 55%, transparent 100%);
-  mask-image: radial-gradient(ellipse 40% 42% at 50% 55%, #000 55%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 32% 36% at 50% 52%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 32% 36% at 50% 52%, #000 55%, transparent 100%);
 }
 
 /*
@@ -109,12 +119,12 @@
  * out at its own edge (closest-side): no seam, no motion.
  */
 
-/* The refund receipt resting on the table, off the laptop's front-left corner. */
+/* The refund receipt resting on the table, over the laptop's front-left corner but clear of the trackpad. */
 .receipt {
   position: absolute;
   z-index: 2;
-  left: -12%;
-  top: 74%;
+  left: -14%;
+  top: 76%;
   transform-origin: 0 0;
 }
 
@@ -169,7 +179,7 @@
   position: absolute;
   inset: 0;
   transform-origin: 50% 100%;
-  transform: rotateX(5deg);
+  transform: rotateX(10deg);
   border-radius: 1.6em;
   background: var(--lid);
   border: 1px solid var(--lid-edge);
@@ -199,10 +209,10 @@
 /* The deck lies flat on the table, hinged to the lid's bottom edge. */
 .deck {
   position: absolute;
-  left: -3em;
-  right: -3em;
+  left: 0;
+  right: 0;
   top: 100%;
-  height: 43em;
+  height: 41em;
   transform-origin: 50% 0;
   transform: rotateX(90deg);
   transform-style: preserve-3d;
@@ -212,10 +222,22 @@
   box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.06);
 }
 
+/* The laptop's contact shadow on the table, a little wider than the deck and just under it. */
+.deck::before {
+  content: "";
+  position: absolute;
+  inset: 1.5em -1.5em -2.5em;
+  transform: translateZ(-1em);
+  border-radius: 3em;
+  background: radial-gradient(closest-side, var(--contact), transparent);
+  filter: blur(0.8em);
+  pointer-events: none;
+}
+
 .hinge {
   position: absolute;
-  left: 3em;
-  right: 3em;
+  left: 2em;
+  right: 2em;
   top: 0;
   height: 1.4em;
   background: linear-gradient(var(--hinge-a), var(--hinge-b));
@@ -223,10 +245,10 @@
 
 .keys {
   position: absolute;
-  left: 6em;
-  right: 6em;
-  top: 3em;
-  height: 20.5em;
+  left: 4em;
+  right: 4em;
+  top: 2.6em;
+  height: 19.8em;
 }
 
 .pad {
@@ -234,8 +256,8 @@
   left: 50%;
   width: 26em;
   margin-left: -13em;
-  top: 26em;
-  height: 14.5em;
+  top: 24.4em;
+  height: 13.4em;
   border-radius: 1em;
   background: var(--pad);
   border: 1px solid var(--line);

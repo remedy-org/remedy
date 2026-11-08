@@ -27,7 +27,7 @@ function Corner({ className }: { className: string }) {
 
 function CheckRow({ label, state }: { label: string; state: "waiting" | "running" | "pass" }) {
   return (
-    <li className="flex items-center gap-[0.9em] border-b border-line py-[0.95em] last:border-b-0">
+    <li className="flex items-center gap-[0.9em] border-b border-line py-[1.05em] last:border-b-0">
       <span className="relative flex size-[1.9em] shrink-0 items-center justify-center">
         <span
           className={clsx(
@@ -45,7 +45,7 @@ function CheckRow({ label, state }: { label: string; state: "waiting" | "running
           <CheckIcon size={16} className="size-[1.25em]" />
         </motion.span>
       </span>
-      <span className={clsx("text-[1.2em] leading-tight transition-colors duration-160", state === "waiting" ? "text-faint" : "text-text")}>{label}</span>
+      <span className={clsx("text-[1.35em] leading-tight transition-colors duration-160", state === "waiting" ? "text-faint" : "text-text")}>{label}</span>
     </li>
   );
 }
@@ -82,8 +82,9 @@ export function ClaimScreen({ phase }: { phase: number }) {
             <Corner className="right-[1em] top-[1em] border-r border-t" />
             <Corner className="bottom-[1em] left-[1em] border-b border-l" />
             <Corner className="bottom-[1em] right-[1em] border-b border-r" />
-            {/* The marked code region (DESIGN.md: an amber active state): a 1.5px box on the tag's code, labelled on it. */}
-            <span className="absolute top-[53%] left-[69%] h-[25%] w-[24.5%] rounded-[0.35em] border-[1.5px] border-accent" aria-hidden="true">
+            {/* The marked code region: a 1.5px box on the tag's code, labelled on it. In --text, not amber: the hero's CTA
+                is the viewport's one amber. */}
+            <span className="absolute top-[53%] left-[69%] h-[25%] w-[24.5%] rounded-[0.35em] border-[1.5px] border-text/70" aria-hidden="true">
               <span className="absolute bottom-full left-[-1.5px] mb-[0.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.35em] font-mono text-[1.05em] tracking-[0.06em] whitespace-nowrap text-text uppercase">
                 Code M4T
               </span>

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { EASE, Money, Paper, Stamp, ThemeToggle, Wordmark } from "@/components/ui";
+import { Button, EASE, Money, NavCode, Paper, Stamp, ThemeToggle, Wordmark } from "@/components/ui";
 import { StampReplay } from "./StampReplay";
 
 // /dev/ui: the foundation pieces from DESIGN.md (Money, Paper, Stamp, the type scale, the mark), for screenshots and
@@ -291,6 +291,39 @@ export default function DevUiPage() {
                 </span>
               </li>
             ))}
+          </ul>
+        </Block>
+
+        <Block n="07" title="Buttons" note="Radius grows with height: 8px at 36 and 44px, 10px at 48px. Hover, press (98%, deeper) and Tab for the focus ring.">
+          {(["primary", "secondary", "tertiary"] as const).map((variant) => (
+            <Spec key={variant} name={`variant="${variant}"`} detail="sm 36px, md 44px, lg 48px; then disabled and pending.">
+              <div className="flex flex-wrap items-center gap-4" data-buttons={variant}>
+                <Button variant={variant} size="sm">Try a claim</Button>
+                <Button variant={variant} size="md">Log in with PayPal</Button>
+                <Button variant={variant} size="lg">Try a claim with sample photos</Button>
+                <Button variant={variant} size="md" disabled>Disabled</Button>
+                <Button variant={variant} size="md" pending pendingLabel="Sending…">Send</Button>
+              </div>
+            </Spec>
+          ))}
+        </Block>
+
+        <Block n="08" title="Nav links" note=".nav-link: a 32px --surface-2 chip on hover and focus, 44px hit area. NavCode runs the exhibit letter through the claim-code alphabet on pointer enter.">
+          <ul className="-ml-2.5 flex flex-wrap items-center gap-1" data-nav-demo>
+            <li>
+              <a href="#" className="nav-link">How it works</a>
+            </li>
+            {[["A", "Problem"], ["B", "Checks"], ["C", "Proof"], ["D", "For companies"]].map(([letter, label]) => (
+              <li key={letter}>
+                <a href="#" className="nav-link">
+                  <NavCode>{letter}</NavCode>
+                  {label}
+                </a>
+              </li>
+            ))}
+            <li>
+              <a href="#" className="nav-link">Company sign in</a>
+            </li>
           </ul>
         </Block>
       </main>

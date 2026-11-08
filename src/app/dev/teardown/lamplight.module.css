@@ -15,10 +15,10 @@
   --text-2: oklch(0.86 0.005 80);
   --muted: oklch(0.74 0.005 80);
   --faint: oklch(0.68 0.005 80);
-  --accent: oklch(0.79 0.145 72);
-  --accent-text: oklch(0.82 0.12 76);
-  --pay: oklch(0.79 0.15 150);
-  --pool: oklch(0.8 0.1 75 / 0.12);
+  --accent: oklch(0.81 0.125 80);
+  --accent-text: oklch(0.86 0.11 82);
+  --pay: oklch(0.79 0.13 150);
+  --pool: oklch(0.8 0.1 78 / 0.13);
   --paper: oklch(0.94 0.014 85);
   --paper-2: oklch(0.9 0.016 85);
   --paper-line: oklch(0.23 0.01 65 / 0.18);
@@ -34,10 +34,10 @@
 }
 
 :global(html[data-theme="light"]) .lamplight {
-  --bg: oklch(0.975 0.006 85);
-  --surface: oklch(0.995 0.003 85);
-  --surface-2: oklch(0.955 0.007 85);
-  --surface-3: oklch(0.93 0.008 85);
+  --bg: oklch(0.985 0.003 85);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.962 0.004 85);
+  --surface-3: oklch(0.935 0.005 85);
   --line: oklch(0.25 0.02 65 / 0.11);
   --line-2: oklch(0.25 0.02 65 / 0.18);
   --line-strong: oklch(0.62 0.008 70);
@@ -45,10 +45,10 @@
   --text-2: oklch(0.33 0.008 65);
   --muted: oklch(0.45 0.008 65);
   --faint: oklch(0.51 0.008 65);
-  --accent: oklch(0.77 0.145 70);
-  --accent-text: oklch(0.5 0.12 60);
+  --accent: oklch(0.81 0.12 80);
+  --accent-text: oklch(0.5 0.11 68);
   --pay: oklch(0.45 0.13 150);
-  --pool: oklch(0.86 0.09 78 / 0.24);
+  --pool: oklch(0.9 0.06 85 / 0.22);
   --paper: oklch(0.94 0.02 85);
   --paper-2: oklch(0.9 0.022 85);
   --paper-drop: drop-shadow(0 0 0.5px oklch(0.23 0.01 65 / 0.5)) drop-shadow(0 1px 2px oklch(0.23 0.01 65 / 0.1))
