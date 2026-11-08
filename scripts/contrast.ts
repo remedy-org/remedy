@@ -168,8 +168,9 @@ const agedSheet: Pair[] = [
   // The payoff prints in ink inside the lamp's last pool; its farthest letters sit where the room is at most 14% of the
   // dim's 0.88.
   { fg: "--ink", bg: "--aged+--grain-floor+--room@0.13", min: 4.5, note: "payoff at the edge of the lamp's pool" },
-  // Card 4's "Back to 01" (stacked) is in the string's ink.
-  { fg: "--stop-ink", bg: "--evidence-card", min: 4.5, note: "card 4's way back to card 1" },
+  // Card 4's "Back to 01" (stacked) is muted ink on the card (covered above); the stacked cut's stamp is PAID's green a step darker,
+  // on the sheet, at its darkest.
+  { fg: "--cut-ink", bg: "--aged+--aged-edge@0.2+--grain-floor", min: 4.5, note: "CUT BY REMEDY stamp on the sheet" },
 ];
 // In light the desk under the sheet is two steps down from the page; the exhibit label there is --muted.
 const lightDesk: Pair[] = [

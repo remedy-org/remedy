@@ -1,30 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { ANCHOR_AT, dash, outExpo, outQuart, OVERLAP_VH, piecewise, REST, SECTION_VH, seg, stampScale, T } from "./problemTimeline";
+import { ANCHOR_AT, dash, outExpo, outQuart, OVERLAP_VH, PAYOFF_LEAD, PAYOFF_REST, piecewise, REST, SECTION_VH, seg, stampScale, T } from "./problemTimeline";
 
 // DESIGN.md: a pinned beat gets at least about 70vh of scroll, exits run half as long as entrances, and the second
-// pinned sequence (this one) holds for about 200vh.
+// pinned sequence (this one) holds for about 150vh before section B scrolls over it.
 describe("Exhibit A timeline", () => {
   const PIN_START = 100;
 
-  it("holds the pin for about 200vh, B's slide-over included", () => {
-    expect(SECTION_VH - PIN_START).toBeLessThanOrEqual(220);
+  it("holds the sheet for about 150vh before B arrives, and B then covers it fully at reading speed", () => {
+    expect(SECTION_VH - OVERLAP_VH - PIN_START).toBeLessThanOrEqual(170);
+    // B covers the whole screen before the pin lets go, so the sheet is never carried off sliced by B's edge.
+    expect(OVERLAP_VH).toBe(100);
+    expect(T.cover).toEqual([SECTION_VH - OVERLAP_VH, SECTION_VH]);
   });
 
   it("gives the entrance, the read and the cut each at least 70vh", () => {
     expect(T.fold[1] - T.rise[0]).toBeGreaterThanOrEqual(70);
     expect(T.ring[1] - T.card1[0]).toBeGreaterThanOrEqual(70);
-    // The cut and payoff run from the snip until B's edge reaches the payoff, about 45vh into the cover.
-    expect(T.cover[0] + 0.9 * OVERLAP_VH - T.snip[0]).toBeGreaterThanOrEqual(70);
+    // The cut and payoff run from the snip until B's edge nears the payoff, about 25vh into the cover.
+    expect(T.cover[0] + 25 - T.snip[0]).toBeGreaterThanOrEqual(70);
   });
 
-  it("exits in about half the entrance", () => {
+  it("sinks the sheet under B in about half the entrance", () => {
     const entrance = T.fold[1] - T.rise[0];
-    expect(OVERLAP_VH).toBeGreaterThanOrEqual(entrance * 0.4);
-    expect(OVERLAP_VH).toBeLessThanOrEqual(entrance * 0.6);
+    const exit = T.sink[1] - T.sink[0];
+    expect(exit).toBeGreaterThanOrEqual(entrance * 0.4);
+    expect(exit).toBeLessThanOrEqual(entrance * 0.6);
+    expect(T.sink[0]).toBe(T.cover[0]);
   });
 
-  it("runs the eye path in order: open, card 1, card 2 and the string to it, its ink, card 3 and its string, card 4 and its string, the return, the ring, the sources, the cut, the payoff", () => {
-    const order = [T.fold, T.card1, T.card2, T.span1, T.hl, T.stamp, T.card3, T.span2, T.card4, T.span3, T.ret, T.ring, T.sources, T.mark, T.snip, T.droop, T.dim, T.payoff];
+  it("runs the eye path in order: open, card 1, card 2 and the string to it, its ink, card 3 and its string, card 4 and its string, the return, the ring, the sources, the cut, the payoff, the lamp", () => {
+    const order = [T.fold, T.card1, T.card2, T.span1, T.hl, T.stamp, T.card3, T.span2, T.card4, T.span3, T.ret, T.ring, T.sources, T.mark, T.snip, T.droop, T.payoff, T.dim];
     for (let i = 1; i < order.length; i++) expect(order[i][0]).toBeGreaterThanOrEqual(order[i - 1][0]);
     // Card 1 lands as the flap settles (never on an empty open sheet), and every card is on the sheet before the
     // string reaching it is halfway there.
@@ -38,19 +43,19 @@ describe("Exhibit A timeline", () => {
       expect(card[0]).toBeLessThanOrEqual((span[0] + span[1]) / 2 - 2);
   });
 
-  it("gives the cut its own beat before the lamp goes down, and prints the payoff once the dim is mostly done", () => {
+  it("names the cut as it happens: the payoff's lead prints with the snap, and the lamp goes down after it", () => {
     expect(T.mark[0]).toBeGreaterThanOrEqual(T.sources[1]);
+    expect(T.payoff[0]).toBeGreaterThanOrEqual(T.snip[0]);
+    expect(T.payoff[0]).toBeLessThanOrEqual(T.snip[1]);
+    expect(T.payoff[0] + PAYOFF_LEAD).toBeLessThanOrEqual(T.snip[1] + 8);
     expect(T.dim[0]).toBeGreaterThanOrEqual(T.snip[1]);
-    expect(T.payoff[0]).toBeGreaterThanOrEqual(T.dim[0] + 0.5 * (T.dim[1] - T.dim[0]));
+    expect(T.payoff[1] - PAYOFF_REST).toBeGreaterThanOrEqual(T.payoff[0] + PAYOFF_LEAD / 2);
   });
 
-  it("prints the payoff after the loop closes and lifts it away before section B reaches it", () => {
+  it("prints the payoff after the loop closes and finishes it before section B arrives", () => {
     expect(T.snip[0]).toBeGreaterThanOrEqual(T.ring[1]);
     expect(T.payoff[1]).toBeLessThanOrEqual(T.cover[0]);
     expect(REST).toBe(T.payoff[1]);
-    expect(T.leave[0]).toBeGreaterThanOrEqual(T.payoff[1]);
-    // B's edge crosses the payoff (about 70% down the screen) about 30vh into the cover.
-    expect(T.leave[1]).toBeLessThanOrEqual(T.cover[0] + 0.3 * 100);
   });
 
   it("lands the nav's anchor on the open sheet, as card 1 lands", () => {

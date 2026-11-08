@@ -1,27 +1,31 @@
 // Exhibit A's timeline (Problem.tsx). Every beat is a range of t, in vh of scroll from the moment the section's top
 // enters the bottom of the viewport (t = 0). On a pinned laptop the section is SECTION_VH tall: it scrolls into place
-// over t 0 to 100, holds from 100 to SECTION_VH, and its last OVERLAP_VH run under section B, which slides over it.
+// over t 0 to 100, holds from 100 to SECTION_VH, and its last OVERLAP_VH (a full screen) run under section B, which
+// scrolls over the held sheet until it fills the screen. The page is no longer for it: the section's negative margin
+// takes back the same OVERLAP_VH.
 // problem.module.css mirrors SECTION_VH, OVERLAP_VH and the anchor offset (t = ANCHOR_AT).
 
 export type Range = readonly [number, number];
 
-export const SECTION_VH = 302;
-export const OVERLAP_VH = 50;
+export const SECTION_VH = 352;
+/** Section B scrolls fully over the held sheet, so the sheet is never sliced by B's edge and carried off half-covered. */
+export const OVERLAP_VH = 100;
 /** Where the nav's "A Problem" link lands: the pin's first frame, the sheet open and card 1 landing. */
 export const ANCHOR_AT = 100;
 
 export const T = {
-  // Entrance (85vh): out of the dark, rising 12vh, leaning back 14deg, tilted -5.5deg, the lower half folded up over
-  // the heading. It settles at -1.2deg, flat and open, on the site's entrance curve, as card 1 lands.
-  rise: [15, 95],
-  shade: [15, 80],
-  lean: [15, 100],
-  tilt: [15, 104],
-  fold: [40, 100],
-  // The read (90vh): cards land clockwise and the string draws between them in reading order. Each card is on the
-  // sheet before the string reaches it, and card 2 lands with its count printed.
-  card1: [90, 100],
-  fig: [94, 103],
+  // Entrance (96vh): rising 6vh out of the desk's shade as soon as it is on screen, leaning back 14deg, tilted
+  // -5.5deg, the lower half folded up short of the heading (so the claim reads from the first frame). It settles at
+  // -1.2deg, flat and open, on the site's entrance curve, as card 1 lands.
+  rise: [0, 90],
+  shade: [0, 45],
+  lean: [0, 96],
+  tilt: [0, 100],
+  fold: [26, 96],
+  // The read (about 90vh): cards land clockwise and the string draws between them in reading order. Each card is on
+  // the sheet before the string reaches it, and card 2 lands with its count printed.
+  card1: [88, 98],
+  fig: [92, 101],
   card2: [106, 116],
   span1: [108, 116],
   hl: [116, 124],
@@ -34,17 +38,22 @@ export const T = {
   ring: [163, 173],
   // Citations print after the claims they back.
   sources: [172, 180],
-  // The cut (72vh, to B's arrival): the closed loop holds, a slash marks the span, the string snaps and its ends droop,
-  // the lamp narrows to a pool on the cut, and the payoff prints under it.
-  mark: [186, 191],
-  snip: [190, 195],
-  droop: [191, 201],
-  dim: [195, 212],
-  payoff: [204, 220],
+  // The cut (to B's arrival): the closed loop holds, a bold slash crosses the span, the string snaps and its ends
+  // recoil and fall. The payoff's first line prints under the cut as it snaps, so the cut is never unexplained; then
+  // the lamp narrows to a pool on it and the rest of the payoff prints.
+  mark: [184, 190],
+  snip: [189, 194],
+  droop: [190, 204],
+  payoff: [190, 210],
+  dim: [198, 214],
+  // B scrolls over the held sheet at reading speed; the sheet sinks over its first half (half the entrance).
   cover: [SECTION_VH - OVERLAP_VH, SECTION_VH],
-  // The payoff lifts away before B's edge reaches it, so it is never sliced.
-  leave: [SECTION_VH - OVERLAP_VH + 14, SECTION_VH - OVERLAP_VH + 28],
+  sink: [SECTION_VH - OVERLAP_VH, SECTION_VH - OVERLAP_VH / 2],
 } as const satisfies Record<string, Range>;
+
+/** The payoff's lead line prints over its first 10vh (with the snap), the rest over its last 12vh. */
+export const PAYOFF_LEAD = 10;
+export const PAYOFF_REST = 12;
 
 /** The finished state: everything printed, the string cut, the payoff shown. */
 export const REST = T.payoff[1];

@@ -20,6 +20,8 @@
   /* Muted ink for text printed straight on the aged sheet (the sub-line, the sources, the docket): a step darker than
      --ink-muted, so it holds 4.5:1 on the grain's darkest and the warm edge band. */
   --sheet-muted: oklch(0.36 0.012 65);
+  /* The stacked cut's stamp: PAID's green a step darker, so it holds 4.5:1 on the sheet's warm edge band. */
+  --cut-ink: oklch(0.36 0.11 150);
   --crease-dark: oklch(0.23 0.01 65 / 0.085);
   --crease-light: oklch(1 0 0 / 0.5);
   --evidence-card: oklch(0.962 0.009 88);
@@ -34,8 +36,10 @@
   /* Foxing: sparse warm blotches from thresholded low-frequency noise. Masked to the corners below. */
   --foxing: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.06' numOctaves='3' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.29 0 0 0 0 0.13 -16 0 0 0 5.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
   --tilt-rest: -0.6deg;
-  /* The room the lamp goes down into, the same in both themes, and how far it falls over the sheet. */
+  /* The room the lamp goes down into, and how far it falls over the sheet. In light the lamp narrows by washing the
+     sheet toward the desk instead (--dim-tone), so the paper never turns brown and the headline holds 3:1. */
   --room: oklch(0.16 0.006 70);
+  --dim-tone: var(--room);
   --dim-max: 0.88;
   /* The desk under the sheet. Dark: the page. Light: two steps down from the page, so the cream sheet lifts off it. */
   --desk-light: oklch(0.87 0.008 80);
@@ -50,7 +54,8 @@
 :global([data-theme="light"]) .section {
   --desk: var(--desk-light);
   --desk-shadow: oklch(0.23 0.01 65 / 0.42);
-  --dim-max: 0.8;
+  --dim-tone: var(--desk-light);
+  --dim-max: 0.5;
 }
 
 .eyebrow {
@@ -359,6 +364,17 @@
   transition: text-decoration-color 160ms var(--ease-snap);
 }
 
+/* On the board the links are one short line: each gets a 28px-tall hit area without moving the type. */
+.sources a {
+  position: relative;
+}
+
+.sources a::after {
+  content: "";
+  position: absolute;
+  inset: -5px -3px;
+}
+
 .sources a:hover {
   text-decoration-color: var(--ink);
 }
@@ -450,7 +466,8 @@
   vertical-align: 0.08em;
 }
 
-/* Card 4's way back to card 1, said in words where the board can't draw it (stacked). */
+/* Card 4's way back to card 1, said in words where the board can't draw it (stacked). Muted and unlinked, so it never
+   reads as a link. */
 .back {
   display: none;
   margin: 10px 0 0;
@@ -458,11 +475,11 @@
   font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--stop-ink);
+  color: var(--ink-muted);
   opacity: clamp(0, calc((var(--c4, 1) - 0.6) * 2.5), 1);
 }
 
-/* The cut, named where it happens (stacked): in the gap above card 4, beside the slash. */
+/* The cut, stamped where it happens (stacked): in the gap above card 4, beside the slash. */
 .cutTag {
   display: none;
 }
@@ -477,7 +494,7 @@
 
 /* Card 1's figure at the Problem stats' size (DESIGN.md's title-lg), with room round it for the ring. */
 .stat {
-  margin: 12px 0 0;
+  margin: 16px 0 0;
   padding-left: 0.3em;
   font-size: 2rem;
   line-height: 1.1;
@@ -490,9 +507,11 @@
   margin-top: 8px;
 }
 
+/* Room after "Only" for the ring's left swing, so it never crosses the word. */
 .figure {
   position: relative;
   display: inline-block;
+  margin-left: 0.22em;
   white-space: nowrap;
 }
 
@@ -516,6 +535,8 @@
 }
 
 .ring path {
+  /* Hidden until it starts drawing, so its round start cap never sits under the label as a stray dot. */
+  opacity: clamp(0, calc(var(--ring, 1) * 40), 1);
   fill: none;
   stroke: var(--stop-ink);
   stroke-width: 1.5;
@@ -731,11 +752,11 @@
   stroke-linejoin: round;
 }
 
-/* The cut mark, in ink across the red: where Remedy steps in. */
+/* The cut mark, a bold stroke of ink across the red: where Remedy steps in. */
 .slash {
   fill: none;
   stroke: var(--ink);
-  stroke-width: 2px;
+  stroke-width: 3.5px;
   stroke-linecap: round;
 }
 
@@ -748,9 +769,22 @@
   max-width: 30ch;
   color: var(--ink);
   text-wrap: balance;
-  opacity: calc(var(--po, 1) * (1 - var(--pq, 0)));
-  filter: blur(calc((1 - var(--po, 1)) * 8px));
-  translate: 0 calc((1 - var(--po, 1)) * 10px - var(--pq, 0) * 12px);
+  /* B's edge coming up under it fades it in place. */
+  opacity: calc(1 - var(--pq, 0));
+}
+
+/* Each line prints in ink: from a 6px spread and 8px low to sharp. The lead goes with the snap, the rest after. */
+.payoffLead,
+.payoffRest {
+  opacity: var(--po, 1);
+  filter: blur(calc((1 - var(--po, 1)) * 6px));
+  translate: 0 calc((1 - var(--po, 1)) * 8px);
+}
+
+.payoffRest {
+  opacity: var(--po2, 1);
+  filter: blur(calc((1 - var(--po2, 1)) * 6px));
+  translate: 0 calc((1 - var(--po2, 1)) * 8px);
 }
 
 .payoffLead {
@@ -789,16 +823,16 @@
   background: radial-gradient(
     46% 44% at var(--cut-x, 50%) calc(var(--cut-y, 67%) + 10%),
     transparent 0 38%,
-    color-mix(in oklch, var(--room) 14%, transparent) 52%,
-    color-mix(in oklch, var(--room) 40%, transparent) 66%,
-    color-mix(in oklch, var(--room) 72%, transparent) 82%,
-    var(--room) 100%
+    color-mix(in oklch, var(--dim-tone) 14%, transparent) 52%,
+    color-mix(in oklch, var(--dim-tone) 40%, transparent) 66%,
+    color-mix(in oklch, var(--dim-tone) 72%, transparent) 82%,
+    var(--dim-tone) 100%
   );
   opacity: calc(var(--dim, 0) * var(--dim-max));
 }
 
 .dim {
-  background: var(--room);
+  background: var(--dim-tone);
   opacity: var(--dimx, 0);
 }
 
@@ -825,21 +859,24 @@
     stroke-width: 2.2px;
   }
 
-  /* Room above card 4 for the cut and its name. */
+  /* Room above card 4 for the cut and its stamp. */
   .slot4 {
-    margin-top: 14px;
+    margin-top: 34px;
   }
 
+  /* The cut, stamped beside the slash in a dark PAID green: it lands with the slash (scale 1.4 to 1, no bounce). */
   .cutTag {
     display: block;
     position: absolute;
-    left: 0;
-    bottom: calc(100% + 13px);
-    font-size: 0.875rem;
-    line-height: 1.2;
-    font-weight: 500;
-    color: var(--ink);
-    opacity: var(--mk, 1);
+    left: 2px;
+    bottom: calc(100% + 6px);
+    opacity: clamp(0, calc(var(--mk, 1) * 3), 1);
+    scale: var(--mks, 1);
+    transform-origin: 20% 50%;
+  }
+
+  .cutStamp {
+    color: var(--cut-ink);
   }
 
   .back {
@@ -860,9 +897,14 @@
     display: none;
   }
 
-  /* One source a line, wrapping inside the sheet at 320px. */
+  /* One source a line, wrapping inside the sheet at 320px, each a 32px tap target. */
   .source > span {
     white-space: normal;
+  }
+
+  .sources a {
+    display: inline-block;
+    padding-block: 5px;
   }
 }
 
@@ -931,7 +973,7 @@
 
   .slot1 {
     left: 6%;
-    top: 37%;
+    top: 34%;
     width: 25.5%;
     rotate: -0.8deg;
   }
@@ -952,7 +994,7 @@
 
   .slot4 {
     left: 7%;
-    top: 67.5%;
+    top: 70.5%;
     width: 25%;
     rotate: 0.7deg;
   }
@@ -1021,7 +1063,7 @@
   }
 
   .stat {
-    margin-top: 0.9cqw;
+    margin-top: 1.4cqw;
     font-size: clamp(1.75rem, 3.6cqw, 3.25rem);
   }
 
@@ -1047,7 +1089,7 @@
     margin: 0;
     text-align: center;
     pointer-events: none;
-    translate: -50% calc((1 - var(--po, 1)) * 10px - var(--pq, 0) * 12px);
+    translate: -50% 0;
   }
 
   .payoffLead {
@@ -1064,9 +1106,10 @@
 
 @media (min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference) {
   .section {
-    /* problemTimeline.ts: SECTION_VH tall, the last OVERLAP_VH under section B; the anchor lands at t = ANCHOR_AT. */
-    height: 302vh;
-    margin-bottom: -50vh;
+    /* problemTimeline.ts: SECTION_VH tall, the last OVERLAP_VH (a full screen) under section B, which takes it back
+       with this margin; the anchor lands at t = ANCHOR_AT. */
+    height: 352vh;
+    margin-bottom: -100vh;
     scroll-margin-top: 0;
   }
 
@@ -1144,7 +1187,8 @@
   }
 
   /* Section B is a page laid over this one: opaque, above, a lit hairline on its leading edge and its shadow falling
-     on the sheet, so it reads as a sheet sliding over in both themes. */
+     on the sheet, so it reads as a sheet sliding over in both themes. It covers the whole held sheet before the pin
+     lets go, so the sheet is never carried off sliced. */
   .section + section {
     position: relative;
     z-index: 2;
