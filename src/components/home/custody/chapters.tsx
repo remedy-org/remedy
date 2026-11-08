@@ -205,9 +205,15 @@ export function CodeChapter({ p }: { p: Progress }) {
             animate={swung ? { rotate: 0, y: 0, opacity: 1 } : { rotate: -6, y: -28, opacity: 0 }}
             transition={swung ? SPRING.drop : { duration: 0.16 }}
           >
-            {/* The string, from the punched hole up and off the top of the frame. */}
-            <svg className="absolute bottom-[calc(100%-19px)] left-1/2 h-20 w-10 -translate-x-[3px] overflow-visible" viewBox="0 0 40 80" aria-hidden="true">
-              <path d="M3 80 C 6 52, -6 30, 10 0" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" />
+            {/* The string, from the punched hole up and off the top of the frame; shorter on a short phone, where the
+                tag sits closer under the code, so it never crosses the code's cells. */}
+            <svg
+              className={clsx("absolute bottom-[calc(100%-19px)] left-1/2 w-10 -translate-x-[3px] overflow-visible", compact ? "h-14" : "h-20")}
+              viewBox="0 0 40 80"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path d="M3 80 C 6 52, -6 30, 10 0" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
             </svg>
             <CodeTag wipe={wipe} short={compact} />
           </motion.div>
