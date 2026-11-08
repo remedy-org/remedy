@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { barsSentence, duration, formatCents, isPreCheck, NO_PAYOUT, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
+import { checkOf, FIVE_CHECKS } from "@/lib/fiveChecks";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
 import { VerdictMark, verdictOf, verdictWord } from "./VerdictMark";
@@ -461,15 +462,14 @@ export function PayoutTooltip({ location, value, data }: CustomTooltipProps<Grid
   return <HeaderTip text={p.title} />;
 }
 
-/** Hovering the strip: the count, then each check by name with its result, pre-checks first. */
+/** Hovering the strip: the count, then each check by name with its result, under the five checks the homepage and the
+ * owner's receipt name (Live camera, Never seen before, One claim per account, Code and label, Really destroyed). A
+ * check that doesn't apply to this claim keeps its dash in the strip but isn't listed. */
 export function ChecksTooltip({ data, location, value }: CustomTooltipProps<GridRow>) {
   if (location === "header") return <HeaderTip text={value} />;
   if (!data?.bars) return null;
-  const { pre, model } = splitBars(data.bars);
-  const groups = [
-    { title: "Account checks", bars: pre },
-    { title: "Photo check", bars: model },
-  ].filter((g) => g.bars.length);
+  const shown = data.bars.filter((b) => !(isPreCheck(b.id) && b.state === "skipped"));
+  const groups = FIVE_CHECKS.map((c) => ({ title: c.short, bars: shown.filter((b) => checkOf(b.id) === c.n) })).filter((g) => g.bars.length);
   return (
     <div className="w-[328px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <p className="text-ui text-text">{barsSentence(data.bars)}</p>
