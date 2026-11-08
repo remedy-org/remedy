@@ -37,15 +37,17 @@ export function DecisionFilter({ model, onModelChange, api }: CustomFilterProps<
   const doesFilterPass = useCallback((p: IDoesFilterPassParams<GridRow>) => passesDecision(model, p.data), [model]);
   useGridFilter({ doesFilterPass });
 
-  // Every reason on the recall, most common first, with how many claims give it.
-  const reasons = useMemo(() => {
+  // Every reason on the recall, most common first, with how many claims give it; and each verdict's count.
+  const { reasons, verdicts } = useMemo(() => {
     const n = new Map<string, number>();
+    const v = new Map<Decision, number>();
     api.forEachNode((node) => {
       if (!node.data || node.data.group) return;
       const k = reasonKey(node.data);
       n.set(k, (n.get(k) ?? 0) + 1);
+      v.set(node.data.decision, (v.get(node.data.decision) ?? 0) + 1);
     });
-    return [...n].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    return { reasons: [...n].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])), verdicts: v };
   }, [api]);
 
   const current = model ?? { decisions: [], reasons: [] };
@@ -56,11 +58,12 @@ export function DecisionFilter({ model, onModelChange, api }: CustomFilterProps<
   };
 
   return (
-    <div className="flex w-[300px] flex-col py-2 text-ui text-text-2">
+    // Wide enough for the longest reason on one line, and a reason that runs longer wraps rather than being cut.
+    <div className="flex w-[400px] max-w-[calc(100vw-2rem)] flex-col py-2 text-ui text-text-2">
       <fieldset className="px-3">
-        <legend className="py-1 text-micro text-faint">Decision</legend>
+        <legend className="py-1 text-micro text-faint">Verdict</legend>
         {DECISION_WORDS.map(([d, word]) => (
-          <Check key={d} checked={current.decisions.includes(d)} onChange={() => toggle("decisions", d)} label={word} />
+          <Check key={d} checked={current.decisions.includes(d)} onChange={() => toggle("decisions", d)} label={word} count={verdicts.get(d) ?? 0} />
         ))}
       </fieldset>
       <fieldset className="mt-2 border-t border-line px-3 pt-2">
@@ -87,9 +90,9 @@ export function DecisionFilter({ model, onModelChange, api }: CustomFilterProps<
 
 function Check({ checked, onChange, label, count }: { checked: boolean; onChange: () => void; label: string; count?: number }) {
   return (
-    <label className="flex min-h-8 cursor-pointer items-center gap-2.5 rounded-control hover:text-text">
+    <label className="flex min-h-8 cursor-pointer items-center gap-2.5 rounded-control py-1 hover:text-text">
       <input type="checkbox" checked={checked} onChange={onChange} className="size-3.5 shrink-0 accent-[var(--text)]" />
-      <span className="min-w-0 flex-1 truncate" title={label}>
+      <span className="line-clamp-2 min-w-0 flex-1 leading-snug" title={label}>
         {label}
       </span>
       {count !== undefined && <span className="shrink-0 font-mono text-micro text-faint tabular-nums">{count}</span>}

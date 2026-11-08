@@ -1,11 +1,12 @@
 import { duration, formatCents } from "@/app/console/_lib/view";
-import { AmountValue, LedgerItem, LedgerStrip } from "@/components/console/Ledger";
+import { LedgerItem, LedgerStrip, SentAside } from "@/components/console/Ledger";
 import { formatCount } from "@/components/console/format";
 import { insightsLedger } from "./report";
 
 type Rows = Parameters<typeof insightsLedger>[0];
 
-/** The report's figures, in the Claims page ledger's type: remedied of sold, paid out, the median time and refusals. */
+/** The report's figures, in the Claims page ledger's type: remedied of sold, approved and sent, the median time and
+ * refusals. */
 export function InsightsLedger({ claims, unitsSold, className }: { claims: Rows; unitsSold: number; className?: string }) {
   const l = insightsLedger(claims);
   return (
@@ -22,9 +23,9 @@ export function InsightsLedger({ claims, unitsSold, className }: { claims: Rows;
       />
       <LedgerItem
         className="col-span-2"
-        value={<AmountValue cents={l.paidCents} />}
-        label="paid through PayPal"
-        aside={l.unsentCents > 0 ? `· ${formatCents(l.unsentCents)} approved, not sent` : undefined}
+        value={formatCents(l.paidCents + l.unsentCents)}
+        label={`approved · ${formatCount(l.remedied)} ${l.remedied === 1 ? "refund" : "refunds"}`}
+        aside={<SentAside cents={l.paidCents} />}
       />
       {l.median !== null && (
         <LedgerItem
@@ -33,7 +34,7 @@ export function InsightsLedger({ claims, unitsSold, className }: { claims: Rows;
           label={`${l.timeLabel} · ${formatCount(l.timed)} ${l.timed === 1 ? l.timedOne : `${l.timedOne}s`}`}
         />
       )}
-      <LedgerItem value={formatCount(l.refused)} label="refused" />
+      <LedgerItem value={formatCount(l.refused)} label="rejected or blocked" />
     </LedgerStrip>
   );
 }

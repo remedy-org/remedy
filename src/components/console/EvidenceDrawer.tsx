@@ -246,15 +246,18 @@ function EvidenceContent({
                 <Skeleton className="h-[22px] w-20 rounded-full" />
               )}
             </span>
+            {claim && <MoneyLine claim={claim} />}
           </div>
           {claim ? (
             // One line in the 440px panel, so the evidence keeps the height: "Unverified" only when it's true, as in the
             // grid (the pre-checks say verified).
             <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-ui text-muted">
               <span>Filed {formatTime(claim.createdAt)}</span>
-              <span>
-                <span className="font-mono">{claim.payer}</span>
-                {!claim.verified && <span className="text-stop"> unverified</span>}
+              <span aria-label={`PayPal account ending ${claim.payer.slice(-4)}${claim.verified ? "" : ", unverified"}`}>
+                <span aria-hidden="true">
+                  <span className="font-mono">{claim.payer}</span>
+                  {!claim.verified && <span className="text-stop"> unverified</span>}
+                </span>
               </span>
               <span>
                 Code <span className="font-mono text-text">{claim.code}</span>
@@ -274,7 +277,9 @@ function EvidenceContent({
         </button>
       </header>
 
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      {/* Positioned, so its absolutely placed descendants (screen-reader text, the photo badges) scroll and clip with it:
+          without a containing block of its own they reached past the window and the whole page scrolled into a void. */}
+      <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {load.state === "error" && (
           <div className={clsx("py-6", pad)}>
             <ErrorState
@@ -345,7 +350,7 @@ function Section({ title, children, aside }: { title: ReactNode; children: React
 
 const PRE_STATE: Record<PreCheckState, CheckState> = { pass: "pass", hold: "hold", reject: "blocked", waiting: "waiting", skipped: "skipped" };
 
-type Step = { label: string; at: string | null; note?: string; failed?: boolean };
+type Step = { label: string; at: string | null; note?: string; failed?: boolean; value?: string };
 
 /** The money's path for this claim, from its events: photos in, model answered, rule decided, PayPal sent, settled. */
 function moneySteps(claim: DrawerClaim): Step[] {
@@ -357,7 +362,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
     { label: "Model", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "A pre-check stopped it: the photos never reached the model." : undefined },
     { label: "Rule", at: decided },
   ];
-  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "Not sent: the payee's PayPal account isn't live." : undefined }];
+  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "Not sent: the payee's PayPal account isn't live." : undefined, value: claim.decision === "paid" ? "Not sent" : undefined }];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
   const failure = payoutFailure(claim);
   if (failure) {
@@ -374,15 +379,15 @@ function moneySteps(claim: DrawerClaim): Step[] {
   ];
 }
 
-/** The money's path as one row of dots (Mercury's money timeline, laid flat to leave room for the photos): each step,
- * then its time after the photos arrived. A step not reached is a hollow dot. */
+/** The claim's path as one row of dots (Mercury's money timeline, laid flat to leave room for the photos): each step,
+ * then its time after the photos arrived, from 0:00. A step not reached is a hollow dot. */
 function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
   const steps = moneySteps(claim);
   const start = steps[0].at ? Date.parse(steps[0].at) : null;
   const note = steps.find((s) => s.note)?.note;
   return (
     <div>
-      <ol className="grid" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label="The money's timeline">
+      <ol className="grid" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label={`Timeline for ${claim.id}`}>
         {steps.map((s, i) => {
           const done = s.at !== null;
           const next = steps[i + 1];
@@ -401,7 +406,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
               </span>
               <span className={clsx("truncate text-micro", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
               <span className="font-mono text-micro text-muted tabular-nums">
-                {!done ? <span className="text-faint">—</span> : i === 0 || s.failed ? formatClock(s.at!) : `+${duration(plus!)}`}
+                {!done ? <span className="text-faint">{s.value ?? "—"}</span> : s.failed ? formatClock(s.at!) : i === 0 ? "0:00" : `+${duration(plus!)}`}
               </span>
             </li>
           );
@@ -467,7 +472,7 @@ function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: string)
         </p>
       )}
       {d.evidence && <q className="block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">{d.evidence}</q>}
-      {claim.five && <p className="mt-1 font-mono text-micro text-faint">{claim.five}</p>}
+      {claim.five && <p className="mt-1 text-micro text-muted">{claim.five}</p>}
     </section>
   );
 }
@@ -561,7 +566,7 @@ function Evidence({
         )}
       </section>
 
-      <Section title="The money" aside={claim.payout ? (claim.payout.status === "SUCCESS" ? "Sent through PayPal" : "Settling at PayPal") : undefined}>
+      <Section title="Timeline" aside={claim.payout ? (claim.payout.status === "SUCCESS" ? "Sent through PayPal" : "Settling at PayPal") : undefined}>
         <MoneyTimeline claim={claim} />
       </Section>
 
@@ -654,6 +659,18 @@ function Evidence({
         </ol>
       </details>
     </div>
+  );
+}
+
+/** The header's money: what the claim pays and where that money is ("$29.99 · Sent"); nothing for a refused claim. */
+function MoneyLine({ claim }: { claim: DrawerClaim }) {
+  if (claim.decision !== "paid" && claim.decision !== "held") return null;
+  const state = claim.decision === "held" ? null : claim.payout ? (claim.payout.status === "SUCCESS" ? "Sent" : "Settling") : "Not sent";
+  return (
+    <span className="ml-auto inline-flex items-baseline gap-1.5 text-ui">
+      <span className="font-mono text-text">{claim.amount}</span>
+      {state && <span className="text-muted">· {state}</span>}
+    </span>
   );
 }
 

@@ -5,6 +5,8 @@ import type { CheckFunnelDef, DecisionMixDef, InsightsRegistry, MedianTimeDef, R
 import { MedianTime } from "./MedianTime";
 import { RecallProgress } from "./RecallProgress";
 import { RefusalReasons } from "./RefusalReasons";
+import { pillClasses } from "@/components/ui/StatusPill";
+import type { Decision } from "@/lib/types";
 import { shownAs } from "../funnel";
 import { reactComp } from "../reactComp";
 import type { StudioLib } from "../studio-lib";
@@ -193,7 +195,8 @@ const claimLinks = <T extends AgBaseWidgetDefinition>(def: T): T => ({
   options: {
     ...(def.options as object | undefined),
     createCellRenderer: (field: { context?: { claimOf?: string; decision?: boolean } }) => {
-      if (field.context?.decision) return ({ value }: { value: unknown }) => (typeof value === "string" ? shownAs(value) : "");
+      // The Claims grid's pill, in its fixed track, so the two grids speak one language.
+      if (field.context?.decision) return ({ value }: { value: unknown }) => (typeof value === "string" ? pillElement(value) : "");
       const recall = field.context?.claimOf;
       if (!recall) return undefined;
       return ({ value }: { value: unknown }) => {
@@ -201,9 +204,28 @@ const claimLinks = <T extends AgBaseWidgetDefinition>(def: T): T => ({
         const a = document.createElement("a");
         a.href = `/console?recall=${encodeURIComponent(recall)}&claim=${encodeURIComponent(value)}`;
         a.textContent = value;
-        a.className = "font-mono font-medium whitespace-nowrap text-text underline decoration-line-strong underline-offset-2 hover:decoration-text";
+        a.className = "font-mono font-medium whitespace-nowrap text-text decoration-line-strong underline-offset-2 hover:underline";
         return a;
       };
     },
   },
 });
+
+const DECISION_OF: Record<string, Decision> = { Paid: "paid", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
+
+/** A decision as the console's StatusPill draws it, as DOM for Studio's grid. */
+function pillElement(value: string): HTMLElement | string {
+  const decision = DECISION_OF[value];
+  if (!decision) return shownAs(value);
+  const { className, dot } = pillClasses(decision);
+  const track = document.createElement("span");
+  track.className = "inline-flex w-(--verdict-pill-w)";
+  const pill = document.createElement("span");
+  pill.className = `inline-flex h-[22px] items-center gap-1.5 rounded-full px-2.5 text-micro font-medium whitespace-nowrap ${className}`;
+  const mark = document.createElement("span");
+  mark.className = `size-1.5 shrink-0 rounded-full ${dot}`;
+  mark.setAttribute("aria-hidden", "true");
+  pill.append(mark, shownAs(value));
+  track.append(pill);
+  return track;
+}

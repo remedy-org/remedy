@@ -21,10 +21,10 @@ describe("figures", () => {
 describe("layout", () => {
   it("gives the refusals row room for every reason, never less than the 22-row default", () => {
     expect(refusalRows(0)).toBe(22);
-    expect(refusalRows(5)).toBe(22);
-    expect(refusalRows(7)).toBeGreaterThan(22);
-    // Every reason (about 39px each) fits in the 224px the 22-row card leaves on a 1280px laptop, plus 16px a row.
-    for (let n = 6; n <= 11; n++) expect(224 + (refusalRows(n) - 22) * 16).toBeGreaterThanOrEqual(n * 39);
+    expect(refusalRows(3)).toBe(22);
+    expect(refusalRows(5)).toBeGreaterThan(22);
+    // Every reason (its full text over the check that caught it, about 58px) fits in the 224px the 22-row card leaves on a 1280px laptop, plus 16px a row.
+    for (let n = 4; n <= 11; n++) expect(224 + (refusalRows(n) - 22) * 16).toBeGreaterThanOrEqual(n * 58);
   });
 
   it("names a panel's keyboard stop by its title", () => {
@@ -33,7 +33,7 @@ describe("layout", () => {
 });
 
 describe("cross-filter", () => {
-  const claim = (id: string, decision: string, refusalReason: string | null, source: "Sample" | "Judges' demo" | "Owner", filedAt = "2026-11-07T10:00:00Z") => ({
+  const claim = (id: string, decision: string, refusalReason: string | null, source: "Sample" | "Live demo" | "Owner", filedAt = "2026-11-07T10:00:00Z") => ({
     id,
     decision,
     refusalReason,
@@ -46,8 +46,8 @@ describe("cross-filter", () => {
   });
   const claims = [
     claim("RM-1", "Paid", null, "Sample", "2026-11-04T23:59:00Z"),
-    claim("RM-2", "Paid", null, "Judges' demo"),
-    claim("RM-3", "Rejected", "Rejected by a person on review", "Judges' demo"),
+    claim("RM-2", "Paid", null, "Live demo"),
+    claim("RM-3", "Rejected", "Rejected by a person on review", "Live demo"),
     claim("RM-4", "Rejected", "Photo of a screen or a print", "Owner"),
   ];
   const value = (id: string, ...values: string[]) => ({ type: "value" as const, group: 0, field: { id }, values });
@@ -63,14 +63,14 @@ describe("cross-filter", () => {
   it("leaves the claims every pick matches, and can't check a pick it can't read", () => {
     const reason = { field: "claims.refusalReason", values: ["Rejected by a person on review"] };
     expect(filterClaims(claims, [reason])?.map((c) => c.id)).toEqual(["RM-3"]);
-    expect(filterClaims(claims, [{ field: "claims.decision", values: ["Paid", "Rejected"] }, { field: "claims.source", values: ["Judges' demo"] }])?.map((c) => c.id)).toEqual(["RM-2", "RM-3"]);
+    expect(filterClaims(claims, [{ field: "claims.decision", values: ["Paid", "Rejected"] }, { field: "claims.source", values: ["Live demo"] }])?.map((c) => c.id)).toEqual(["RM-2", "RM-3"]);
     expect(filterClaims(claims, [{ field: "calendar::day", values: ["20261104"] }])?.map((c) => c.id)).toEqual(["RM-1"]);
     expect(filterClaims(claims, [reason, { field: "", values: [] }])).toBeNull();
   });
 
   it("names the picks in the bar", () => {
     expect(filterLabel([{ field: "claims.refusalReason", values: ["Rejected by a person on review"] }])).toBe("Rejected by a person on review");
-    expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("Furthest stage: Photos sent · Decision: Held or Blocked");
+    expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("Furthest stage: Photos sent · Verdict: Held or Blocked");
     expect(filterLabel([{ field: "calendar::day", values: ["20261107", "20261104"] }])).toBe("Filed 7 Nov or 4 Nov");
     expect(filterLabel([{ field: "", values: [] }])).toBe("A pick on a chart");
   });

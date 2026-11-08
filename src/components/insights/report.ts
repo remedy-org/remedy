@@ -80,7 +80,7 @@ export function filterClaims<T extends Partial<Claim>>(claims: T[], picks: Filte
 const or = (values: string[]) => values.map(shownAs).join(" or ");
 const PICK_LABEL: Record<string, (values: string[]) => string> = {
   "claims.stage": (v) => `Furthest stage: ${or(v)}`,
-  "claims.decision": (v) => `Decision: ${or(v)}`,
+  "claims.decision": (v) => `Verdict: ${or(v)}`,
   [DAY]: (v) => `Filed ${or(v.map((d) => `${Number(d.slice(6))} ${MONTHS[Number(d.slice(4, 6)) - 1] ?? ""}`.trim()))}`,
 };
 
@@ -91,10 +91,10 @@ export function filterLabel(picks: FilterPick[]) {
 
 /**
  * Rows (16px each) for the row the funnel and the refusals share, tall enough to list every refusal reason with none cut off at the
- * card's foot: a reason takes about 39px, and the 22-row minimum leaves 224px for the list on a 1280px laptop, where
- * the card's intro wraps.
+ * panel's foot: a reason takes about 58px (the reason, where it was caught, its bar), and the 22-row minimum leaves
+ * 224px for the list on a 1280px laptop.
  */
-export const refusalRows = (reasons: number) => Math.max(22, 22 + Math.ceil((reasons * 39 - 224) / 16));
+export const refusalRows = (reasons: number) => Math.max(22, 22 + Math.ceil((reasons * 58 - 224) / 16));
 
 const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
   const tall = refusalRows(new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size);
@@ -159,7 +159,8 @@ export const insightsReport = (data: InsightsData): AgReportState<InsightsRegist
   selectedPageId: "overview",
   pages: [overview(data)],
   panels: {
-    ai: { collapsed: false },
+    // The analyst opens on demand from the rail's edge: the report leads, not an empty chat.
+    ai: { collapsed: true },
     filters: { collapsed: true },
     edit: { collapsed: true },
     data: { collapsed: true },

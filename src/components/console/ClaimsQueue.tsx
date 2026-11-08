@@ -4,9 +4,9 @@ import clsx from "clsx";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Button, CrossIcon, EmptyState } from "@/components/ui";
-import { ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
+import { formatCents, ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
-import { ClaimsGrid, type ClaimsGridHandle, type GroupBy } from "./ClaimsGrid";
+import { ClaimsGrid, type ClaimsGridHandle, type GridTotals, type GroupBy } from "./ClaimsGrid";
 import type { DecisionModel } from "./DecisionFilter";
 import { Keys } from "./Keys";
 import { formatCount, plural } from "./format";
@@ -112,8 +112,9 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const [filter, setFilter] = useState<DecisionModel | null>(() => tabFilter(isTab(initialTab) ? initialTab : "all"));
   const [search, setSearch] = useState(initialSearch);
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
-  // How many claims the grid shows after its filters.
-  const [shown, setShown] = useState<number | null>(null);
+  // What the grid shows after its filters: how many claims, and the money they approved and sent.
+  const [totals, setTotals] = useState<GridTotals | null>(null);
+  const shown = totals?.count ?? null;
   const [intent, setIntent] = useState<ReviewIntent | null>(null);
   const [help, setHelp] = useState(false);
   // A or R on a claim they can't act on: said in the footer for a few seconds, so a key never seems to do something silently.
@@ -317,9 +318,10 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           reach. */}
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="mt-1 flex flex-wrap items-end gap-x-6 gap-y-2 border-b border-line">
+          {/* One row while it fits: the search narrows first, and only a narrow queue wraps the controls to a second line. */}
+          <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-line">
             <StatusTabs value={tab} counts={counts} onChange={changeTab} controls="claims-panel" />
-            <div className="mb-1.5 ml-auto flex items-center gap-4 max-sm:hidden">
+            <div className="mb-1.5 ml-auto flex shrink-0 items-center gap-3 max-sm:hidden">
               <GroupControl value={groupBy} onChange={setGroupBy} />
               <button
                 type="button"
@@ -329,7 +331,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                 Export CSV
               </button>
             </div>
-            <div className="relative mb-1.5 flex w-full items-center sm:w-64">
+            <div className="relative mb-1.5 flex w-full items-center sm:w-auto sm:max-w-64 sm:grow sm:basis-28">
               <label className="w-full">
                 <span className="sr-only">Search claims by id, code, PayPal account or reason</span>
                 <input
@@ -338,11 +340,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => {
-                    // Esc clears the box and stays in it; on an empty box it goes on into the list.
-                    if (e.key !== "Escape") return;
+                    // Esc clears the box and goes back to the list, so the next j or ↓ walks the claims; ↓ goes there too.
+                    if (e.key !== "Escape" && e.key !== "ArrowDown") return;
                     e.preventDefault();
-                    if (search) setSearch("");
-                    else if (open) grid.current?.focusRow(open);
+                    if (e.key === "Escape") setSearch("");
+                    if (open) grid.current?.focusRow(open);
                     else grid.current?.focusFirst();
                   }}
                   placeholder="Search claims, codes…"
@@ -416,7 +418,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               decisionFilter={filter}
               onDecisionFilter={onDecisionFilter}
               groupBy={groupBy}
-              onShown={setShown}
+              onShown={setTotals}
             />
             {shown === 0 && (
               <div className="absolute inset-0 z-10 flex justify-center bg-bg px-4 pt-10">
@@ -441,20 +443,30 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
             )}
           </div>
 
-          <footer className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 pt-2 font-mono text-micro text-faint" aria-live="polite">
+          {/* One bar under the grid: what the filters show and its money on the left; freshness and the keys on the right. */}
+          <footer className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-micro text-muted">
             <span>
-              {shown === null || shown === rows.length ? plural(rows.length, "claim") : `${formatCount(shown)} of ${plural(rows.length, "claim")}`}
+              <span className="text-text-2">{shown === null || shown === rows.length ? plural(rows.length, "claim") : `${formatCount(shown)} of ${plural(rows.length, "claim")}`}</span>
+              {totals && totals.approvedCents > 0 && (
+                <>
+                  {" · "}
+                  <span className="font-mono">{formatCents(totals.approvedCents)}</span> approved · <span className="font-mono">{formatCents(totals.sentCents)}</span> sent
+                </>
+              )}
               {ledger.settling > 0 && ` · ${formatCount(ledger.settling)} settling at PayPal`}
             </span>
-            <Status state={state} at={at} failed={failed} onRefresh={refresh} />
-            {hint && <span className="text-muted">{hint}</span>}
-            <button
-              type="button"
-              onClick={() => setHelp(true)}
-              className="-my-1 ml-auto inline-flex h-8 items-center gap-1.5 rounded-control px-2 hover:text-muted"
-            >
-              <Keys k={["?"]}>Shortcuts</Keys>
-            </button>
+            {hint && <span className="text-text-2">{hint}</span>}
+            <span className="ml-auto inline-flex items-center gap-4">
+              <Status state={state} at={at} failed={failed} onRefresh={refresh} />
+              <button type="button" onClick={() => setHelp(true)} className="-my-1 inline-flex h-8 items-center gap-1.5 rounded-control px-2 hover:text-text">
+                <Keys k={["?"]}>Shortcuts</Keys>
+              </button>
+            </span>
+            {/* What a screen reader hears: the count after a search or filter, and new claims. Never the clock. */}
+            <span className="sr-only" role="status">
+              {shown !== null && shown !== rows.length ? `${formatCount(shown)} of ${plural(rows.length, "claim")}` : ""}
+              {pending > 0 ? ` New claims: ${pending}` : ""}
+            </span>
           </footer>
         </div>
 
@@ -495,19 +507,20 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   );
 }
 
+/** "just now", then "2 min ago": a calm clock, redrawn every 15 s rather than ticking each second. */
 function Ago({ at }: { at: number }) {
   const [now, setNow] = useState(at);
   useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    const t = window.setInterval(() => setNow(Date.now()), 15_000);
     return () => window.clearInterval(t);
   }, []);
-  const s = Math.max(0, Math.round((now - at) / 1000));
-  return <>{s < 60 ? `${s} s` : `${Math.floor(s / 60)} min`} ago</>;
+  const min = Math.floor(Math.max(0, now - at) / 60_000);
+  return <>{min < 1 ? "just now" : `${min} min ago`}</>;
 }
 
 function Status({ state, at, failed, onRefresh }: { state: PollState; at: number; failed: boolean; onRefresh: () => void }) {
   const refresh = (
-    <button type="button" onClick={onRefresh} className="text-muted underline decoration-line-strong underline-offset-2 hover:text-text">
+    <button type="button" onClick={onRefresh} className="text-text-2 underline decoration-line-strong underline-offset-2 hover:text-text">
       Refresh
     </button>
   );
@@ -534,13 +547,13 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
 }
 
 const SHORTCUTS: [string[], string][] = [
-  [["/"], "Search claims"],
-  [["1", "6"], "Switch status tab"],
-  [["↑", "↓"], "Move between claims; the panel follows. ↓ or j from anywhere starts the list"],
-  [["Enter"], "Open a claim's evidence"],
-  [["Esc"], "Close the evidence"],
-  [["A"], "Approve the focused or open held claim: A opens the confirm, A again sends it"],
-  [["R"], "Reject the focused or open held claim"],
+  [["/"], "Search"],
+  [["1", "6"], "Status tab"],
+  [["↑", "↓"], "Next / previous claim"],
+  [["Enter"], "Open claim"],
+  [["Esc"], "Close"],
+  [["A"], "Approve (press twice)"],
+  [["R"], "Reject"],
 ];
 
 function ShortcutSheet({ onClose }: { onClose: () => void }) {
@@ -591,30 +604,28 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Group by: a quiet segmented control, one choice at a time. */
+/** Group by: one compact select, so the toolbar keeps to one row beside the open panel. */
 function GroupControl({ value, onChange }: { value: GroupBy; onChange: (g: GroupBy) => void }) {
   return (
-    <div role="radiogroup" aria-label="Group claims by" className="flex items-center gap-2 text-ui">
-      <span className="text-muted" aria-hidden="true">
-        Group
-      </span>
-      <span className="inline-flex rounded-control bg-surface p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
+    <label className="relative inline-flex h-8 items-center text-ui">
+      <span className="sr-only">Group claims by</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as GroupBy)}
+        className={clsx(
+          "h-8 appearance-none rounded-control bg-surface pr-7 pl-2.5 text-ui shadow-[inset_0_0_0_1px_var(--line)] hover:text-text",
+          value === "none" ? "text-muted" : "text-text",
+        )}
+      >
         {GROUPS.map((g) => (
-          <button
-            key={g.id}
-            type="button"
-            role="radio"
-            aria-checked={value === g.id}
-            onClick={() => onChange(g.id)}
-            className={clsx(
-              "inline-flex h-7 items-center rounded-[4px] px-2.5 transition-colors",
-              value === g.id ? "bg-surface-2 text-text shadow-[inset_0_0_0_1px_var(--line-2)]" : "text-muted hover:text-text",
-            )}
-          >
-            {g.label}
-          </button>
+          <option key={g.id} value={g.id}>
+            {g.id === "none" ? "No grouping" : `Group: ${g.label}`}
+          </option>
         ))}
+      </select>
+      <span aria-hidden="true" className="pointer-events-none absolute right-2.5 text-micro text-faint">
+        ▾
       </span>
-    </div>
+    </label>
   );
 }

@@ -105,9 +105,9 @@ function sampleEvents(c: Claim, amount: string): Claim["events"] {
       e.type === "photos_received"
         ? { ...e, detail: `${n} ${n === 1 ? "photo" : "photos"} received` }
         : e.type === "prechecked"
-          ? { ...e, detail: "Pre-checks passed; the photo fingerprint check was not run" }
+          ? { ...e, detail: "Pre-checks passed" }
           : e.type === "payout_sent"
-            ? { ...e, detail: `Approved for ${amount}. Not sent: the payee's PayPal account isn't live` }
+            ? { ...e, detail: `Approved for ${amount} · not sent` }
             : e,
     );
 }
@@ -244,8 +244,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     review:
       c.decision === "held"
         ? c.seeded
-          ? { sample: true, note: "This payee's PayPal account isn't live, so approve and reject show their result without sending money or saving." }
-
+          ? { sample: true, note: null }
           : { sample: false, note: null }
         : null,
     recall: { id: recall.id, autoPay: recall.autoPay },

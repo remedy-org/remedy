@@ -31,3 +31,6 @@ export function StatusPill({ status, label, className }: StatusPillProps) {
 }
 
 export const statusLabel = (status: Status) => styles[status].label;
+
+/** The pill's colour classes, for a pill drawn outside React (AG Studio's grid cells). */
+export const pillClasses = (status: Status) => ({ className: styles[status].className, dot: styles[status].dot });

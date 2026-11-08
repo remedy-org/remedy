@@ -67,8 +67,8 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   menuTextColor: token("text"),
   menuBorder: line("line"),
 
-  // No frame: the canvas is the page's own background, and its padding plus Studio's 16px around each widget puts
-  // the widgets' edges on the page's 32px gutter.
+  // No frame: the canvas is the page's own background, and its 32px padding puts every section's edge on the page's
+  // gutter.
   studioWrapperBorder: false,
   studioWrapperBorderRadius: 0,
   studioWrapperSpacing: 0,
@@ -77,15 +77,17 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   studioCanvasBorderRadius: 0,
   studioCanvasShadow: false,
   studioCanvasBackgroundColor: token("bg"),
-  studioCanvasPadding: 16,
+  studioCanvasPadding: 32,
   studioCanvasRowHeight: 16,
   studioCanvasFontFamily: SANS,
   studioCanvasGridLineColor: token("line"),
 
-  studioWidgetBackgroundColor: token("surface"),
-  studioWidgetBorder: line("line"),
-  studioWidgetBorderRadius: 10,
-  studioWidgetPadding: 16,
+  // No cards: each panel is a hairline-topped section on the page itself, as the Claims queue and the report are
+  // (insights.css draws the rule and the space under it).
+  studioWidgetBackgroundColor: token("bg"),
+  studioWidgetBorder: false,
+  studioWidgetBorderRadius: 0,
+  studioWidgetPadding: 0,
   studioWidgetTitleFontFamily: SANS,
   studioWidgetTitleFontSize: 14,
   studioWidgetTitleFontWeight: 500,
@@ -100,12 +102,12 @@ export function buildTheme({ studioTheme }: StudioLib, resolve: Resolve, { sans:
   studioWidgetResizeBorderColor: token("line-2"),
   studioWidgetToolbarBackgroundColor: token("surface-2"),
   studioWidgetToolbarBorder: line("line"),
-  studioWidgetLoadingOverlayBackgroundColor: token("surface"),
-  studioWidgetNoDataOverlayBackgroundColor: token("surface"),
+  studioWidgetLoadingOverlayBackgroundColor: token("bg"),
+  studioWidgetNoDataOverlayBackgroundColor: token("bg"),
   // An analyst's value tile: the ledger's 22, not a display number.
   studioValueWidgetFontSize: 22,
 
-  studioPanelContainerBackgroundColor: token("surface"),
+  studioPanelContainerBackgroundColor: token("bg"),
   studioPanelContainerBorder: line("line"),
   studioPanelContainerBorderRadius: 0,
   studioPanelDividerColor: token("line"),

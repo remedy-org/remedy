@@ -49,7 +49,7 @@ const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 /**
  * One name for each review action, the same on the panel's buttons, the photo viewer's and the key hints: "Pay
  * $29.99…" (or "Try again: pay…" after a payout that failed on the way to PayPal), "Reject…"; where the payee's PayPal
- * account isn't live, "Approve…", since nothing is paid. blocked: approve's checks would stop the payout now
+ * can't receive money, "Approve…", since nothing is paid. blocked: approve's checks would stop the payout now
  * (DrawerClaim.stops), so Reject leads and approve isn't offered as a button.
  */
 export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "decision" | "events" | "stops">) {
@@ -247,7 +247,7 @@ export function ReviewActions({
               <p className="mt-1 font-mono break-words">{failure.raw}</p>
             </details>
           ) : null}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {labels.blocked ? (
               // Approve isn't a button while its checks would stop the payout: Reject leads, and the claim they name opens
               // beside it. The A key still opens the confirm, which says why.
@@ -265,7 +265,8 @@ export function ReviewActions({
               <>
                 <Button
                   key="approve"
-                  variant={stuck ? "secondary" : "primary"}
+                  // Where the payee's PayPal can't receive money, approve sends nothing: never the screen's amber action.
+                  variant={stuck || review.sample ? "secondary" : "primary"}
                   onClick={() => (setSample(null), setNotPaid(null), setMode("approve"))}
                   autoFocus={back === "approve"}
                   className="flex-1 sm:flex-none"
@@ -275,6 +276,7 @@ export function ReviewActions({
                 <Button key="reject" variant={stuck ? "primary" : "secondary"} onClick={openReject} autoFocus={back === "reject"} className="flex-1 sm:flex-none">
                   {labels.reject}
                 </Button>
+                {review.sample && !sample && <span className="text-micro text-muted">Payout off for this account</span>}
               </>
             )}
           </div>
@@ -302,7 +304,7 @@ export function ReviewActions({
       {mode === "approve" && !labels.blocked && (
         <>
           {review.sample ? (
-            <p className="text-ui text-muted">This payee&apos;s PayPal account isn&apos;t live, so nothing is sent and the claim stays held.</p>
+            <p className="text-ui text-muted">The payee&apos;s PayPal isn&apos;t connected, so the refund stays held.</p>
           ) : (
             <p className="text-ui text-muted">
               Sends <span className="font-mono text-text">{claim.amount}</span> to <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts.
@@ -315,7 +317,7 @@ export function ReviewActions({
           )}
           <div className="flex flex-wrap items-center gap-3">
             {review.sample ? (
-              <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Approving" autoFocus className="flex-1 sm:flex-none">
+              <Button variant="secondary" onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Approving" autoFocus className="flex-1 sm:flex-none">
                 Approve
               </Button>
             ) : (

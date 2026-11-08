@@ -32,7 +32,7 @@ export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; 
     <div
       role="tablist"
       aria-label="Filter claims by decision"
-      className="-mx-4 -my-1 flex overflow-x-auto px-4 py-1 [scrollbar-width:none] after:w-8 after:shrink-0 after:content-[''] max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] sm:-mx-1 sm:px-1 sm:after:hidden"
+      className="-mx-4 -my-1 flex overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:shrink-0 after:w-8 after:shrink-0 after:content-[''] max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] sm:-mx-1 sm:px-1 sm:after:hidden"
     >
       {TABS.map((t, i) => {
         const active = t.id === value;

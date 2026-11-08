@@ -203,7 +203,7 @@ export default function InsightsStudio({ data }: { data: InsightsData }) {
           </>
         )}
       </div>
-      <div ref={host} className="insights-report min-h-0 w-full flex-1 [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!" />
+      <div ref={host} className="insights-report min-h-0 w-full flex-1 pr-8 [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!" />
       <p id={PANEL_KEYS} hidden>
         Press Enter to use this panel&apos;s controls, the arrow keys or Tab to move between them, and Escape to come back out. A pick filters the whole page until you
         pick it again or press Clear filter above the report.

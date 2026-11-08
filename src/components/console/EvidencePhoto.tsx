@@ -69,7 +69,7 @@ export function EvidencePhoto({
           {inner}
         </a>
       )}
-      <figcaption className="font-mono text-micro text-muted">{label}</figcaption>
+      <figcaption className="text-micro text-muted">{label}</figcaption>
     </figure>
   );
 }

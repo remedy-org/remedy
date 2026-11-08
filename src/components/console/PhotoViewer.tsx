@@ -120,7 +120,7 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt={`Photo ${i + 1} of ${photos.length} for ${claimId}`} className="absolute inset-0 size-full object-contain" />
             </div>
-            <figcaption className={clsx("font-mono text-micro", i === current ? "text-text" : "text-muted")}>
+            <figcaption className={clsx("text-micro", i === current ? "text-text" : "text-muted")}>
               Photo {i + 1} of {photos.length}
             </figcaption>
           </figure>

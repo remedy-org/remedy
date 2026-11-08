@@ -96,8 +96,8 @@ describe("POST /api/console/ai/responses", () => {
     expect(res.status).toBe(502);
     const body = JSON.stringify(await res.json());
     expect(body).not.toContain("sk-test");
-    // A key problem says the analyst isn't connected, never that something was "refused".
-    expect(body).toContain("isn't connected");
+    // A key problem says the analyst is unavailable, never that something was "refused".
+    expect(body).toContain("unavailable right now");
     expect(body).not.toMatch(/refused/i);
   });
 });

@@ -11,12 +11,7 @@ import { formatClock, formatTime, plural } from "./format";
 // here fetches except the thumbnails, which are sealed, cached, 96px and lazy (only rows AG Grid renders load them).
 
 /** A grid row: a claim, or (with Group by) the full-width row that heads a group of them. */
-export type GridRow = ClaimRow & { group?: { key: string; label: string }; total?: GridTotal };
-export interface GridTotal {
-  count: number;
-  approvedCents: number;
-  sentCents: number;
-}
+export type GridRow = ClaimRow & { group?: { key: string; label: string } };
 
 /** What the grid hands every renderer: the homepage still's stacked layout, the checks' slot counts for this recall (so
  * every row's strip has the same length), and the live group totals (a store the group rows subscribe to). */
@@ -29,6 +24,8 @@ export interface GridContext {
 export interface GroupTotal {
   count: number;
   cents: number;
+  mix: Partial<Record<ClaimRow["decision"], number>>;
+  folded: boolean;
 }
 export interface GroupStats {
   get(key: string): GroupTotal | undefined;
@@ -208,7 +205,7 @@ export function PayerCell({ data }: Cell) {
 }
 
 const FAILED = new Set(["FAILED", "RETURNED", "BLOCKED", "DENIED", "REVERSED", "REFUNDED", "CANCELED"]);
-const NOT_LIVE = "The payee's PayPal account isn't live, so no payout was sent.";
+const NOT_LIVE = "Not sent: the payee's PayPal account isn't live.";
 
 /** Whether money left for this claim (a payout PayPal took). */
 export const sent = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) => r.decision === "paid" && Boolean(r.payoutStatus) && !r.seeded;
@@ -268,13 +265,13 @@ export function AmountCell({ data }: Cell) {
   return <AmountText amount={data.amount} muted={!sent(data)} />;
 }
 
-/** Narrow grids: one 72px card per claim. Photo, id and amount; then the pill in its track and the reason. */
+/** Narrow grids: one 88px card per claim. Photo, id and amount; then the pill in its track and the reason; then code, time and payout. */
 export function CardRow({ data }: Cell) {
   if (!data) return null;
   return (
     <span className="flex h-full items-center gap-3 px-4">
       <Thumbs row={data} size="lg" />
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex items-baseline justify-between gap-3">
           <span className="font-mono text-ui font-medium">{data.id}</span>
           <span className="shrink-0">{data.amount ? <AmountText amount={data.amount} muted={!sent(data)} /> : <span className="text-faint">—</span>}</span>
@@ -283,12 +280,25 @@ export function CardRow({ data }: Cell) {
           <StatusPill status={data.decision} label={verdictLabel(data)} />
           <span className="min-w-0 truncate text-ui text-muted">{data.note ?? data.reason}</span>
         </span>
+        {/* What the columns say on a wider grid, in one line: the code, the time to payout and where the money is. */}
+        <span className="truncate font-mono text-micro text-faint">
+          {[data.code, data.toPay !== null ? duration(data.toPay) : data.modelSec !== null ? duration(data.modelSec) : null, payoutWord(data)].filter(Boolean).join(" · ")}
+        </span>
       </span>
     </span>
   );
 }
 
-/** Group by: the row heading a group. Its name, how many claims it holds now (filters apply) and what they add up to. */
+/** The payout column's word, for the card row's line and the CSV. */
+export function payoutWord(r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "payoutFailedAt">): string | null {
+  if (r.payoutFailedAt) return "Not sent";
+  if (r.decision === "paid" && !sent(r)) return "Not sent";
+  if (!r.payoutStatus) return null;
+  return r.payoutStatus === "SUCCESS" ? "Sent" : FAILED.has(r.payoutStatus) ? "Failed" : "Settling";
+}
+
+/** Group by: the row heading a group, which folds it (a click, Enter, → and ←). Its name, how many claims it holds
+ * now (filters apply), a bar of their verdicts and what they add up to. */
 export function GroupRow({ data, context }: Cell) {
   const key = data?.group?.key ?? "";
   const stats = context?.groups;
@@ -298,30 +308,40 @@ export function GroupRow({ data, context }: Cell) {
     () => stats?.get(key),
   );
   if (!data?.group) return null;
+  const folded = Boolean(total?.folded);
   return (
-    <span className="flex h-full items-center gap-2 border-t border-line-2 bg-surface-2/60 px-3">
+    <span className="flex h-full cursor-pointer items-center gap-2 border-t border-line-2 bg-surface-2/60 px-3">
+      <span aria-hidden="true" className={clsx("inline-block w-3 text-muted transition-transform duration-160", !folded && "rotate-90")}>
+        ›
+      </span>
       <span className="min-w-0 truncate text-ui font-medium text-text">{data.group.label}</span>
-      <span className="shrink-0 text-ui text-muted">· {plural(total?.count ?? 0, "claim")}</span>
+      <span className="shrink-0 text-ui text-muted">
+        · {plural(total?.count ?? 0, "claim")}
+        <span className="sr-only">{folded ? ", folded: Enter shows them" : ", group heading"}</span>
+      </span>
+      {total && total.count > 0 && <VerdictMix mix={total.mix} count={total.count} />}
       {total && total.cents > 0 && <span className="ml-auto shrink-0 font-mono text-ui text-muted tabular-nums">{formatCents(total.cents)}</span>}
     </span>
   );
 }
 
-const noop = () => () => {};
+const MIX_ORDER: ClaimRow["decision"][] = ["paid", "held", "rejected", "blocked", "pending"];
+const MIX_FILL: Record<ClaimRow["decision"], string> = { paid: "bg-pay/70", held: "bg-hold", rejected: "bg-stop", blocked: "bg-stop/60", pending: "bg-line-strong" };
+const MIX_WORD: Record<ClaimRow["decision"], string> = { paid: "approved", held: "held", rejected: "rejected", blocked: "blocked", pending: "in progress" };
 
-/** The totals pinned under the grid, over the claims the filters show. */
-export function TotalRow({ data }: { data?: GridTotal }) {
-  if (!data) return null;
+/** A group's verdicts as one 64px bar, in the checks strip's colours; the words are for screen readers and the title. */
+function VerdictMix({ mix, count }: { mix: Partial<Record<ClaimRow["decision"], number>>; count: number }) {
+  const words = MIX_ORDER.filter((d) => mix[d]).map((d) => `${mix[d]} ${MIX_WORD[d]}`).join(", ");
   return (
-    <span className="flex h-full items-center gap-2 px-3 font-mono text-micro text-muted tabular-nums">
-      <span className="text-text-2">{plural(data.count, "claim")}</span>
-      <span aria-hidden="true">·</span>
-      <span>{formatCents(data.approvedCents)} approved</span>
-      <span aria-hidden="true">·</span>
-      <span>{formatCents(data.sentCents)} sent</span>
+    <span className="ml-2 inline-flex h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-surface-3" role="img" aria-label={words} title={words}>
+      {MIX_ORDER.filter((d) => mix[d]).map((d) => (
+        <span key={d} className={MIX_FILL[d]} style={{ width: `${((mix[d] ?? 0) / count) * 100}%` }} />
+      ))}
     </span>
   );
 }
+
+const noop = () => () => {};
 
 /** A column header's legend (headerTooltip): the column's tooltip component draws the header's too. */
 function HeaderTip({ text }: { text: unknown }) {
@@ -374,7 +394,7 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Gr
           ["PayPal settled", t.settled],
         ] as [string, number | null][])),
   ];
-  const tail = data.decision === "paid" && !sent(data) ? "Approved. No payout: the payee's PayPal account isn't live." : t.end === "held" ? "Waiting for a person to approve or reject." : null;
+  const tail = data.decision === "paid" && !sent(data) ? "Approved · not sent" : t.end === "held" ? "Waiting for a person to approve or reject." : null;
   return (
     <div className="w-[240px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-ui">

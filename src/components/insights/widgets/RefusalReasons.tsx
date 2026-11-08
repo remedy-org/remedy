@@ -53,11 +53,10 @@ export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
                 selected.size > 0 && !selected.has(i.reason) && "opacity-45",
               )}
             >
-              <span className="min-w-0 truncate text-ui text-text">
-                {i.reason}
-                {GATE_LABEL[i.gate] && <span className="text-muted"> · {GATE_LABEL[i.gate]}</span>}
-              </span>
-              <span className="text-right font-mono text-ui text-text tabular-nums">{i.count}</span>
+              {/* The reason whole, its count beside it, and where it was caught on the line under it: never cut off. */}
+              <span className="min-w-0 text-ui text-text">{i.reason}</span>
+              <span className="self-start text-right font-mono text-ui text-text tabular-nums">{i.count}</span>
+              {GATE_LABEL[i.gate] && <span className="col-span-2 -mt-1 text-micro text-muted">Caught {GATE_LABEL[i.gate]}</span>}
               <span aria-hidden="true" className="col-span-2 h-1.5 rounded-full bg-surface-2">
                 <span className="block h-full rounded-full bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]" style={{ width: `${(i.count / max) * 100}%` }} />
               </span>

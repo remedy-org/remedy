@@ -9,8 +9,6 @@ import {
   CustomFilterModule,
   HighlightChangesModule,
   ModuleRegistry,
-  NumberFilterModule,
-  PinnedRowModule,
   QuickFilterModule,
   RowApiModule,
   RowSelectionModule,
@@ -22,9 +20,19 @@ import {
   type CellFocusedEvent,
   type CellKeyDownEvent,
   type ColDef,
+  type FilterChangedEvent,
+  type FirstDataRenderedEvent,
+  type FocusGridInnerElementParams,
+  type GetRowIdParams,
   type GridApi,
+  type GridReadyEvent,
   type IRowNode,
+  type IsFullWidthRowParams,
+  type ModelUpdatedEvent,
+  type PostSortRowsParams,
+  type RowClassParams,
   type RowClickedEvent,
+  type RowHeightParams,
 } from "ag-grid-community";
 import { AgGridReact, type CustomCellRendererProps } from "ag-grid-react";
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -42,7 +50,6 @@ import {
   sent,
   TimeCell,
   TimelineTooltip,
-  TotalRow,
   verdictLabel,
   VerdictCell,
   type GridContext,
@@ -70,10 +77,8 @@ ModuleRegistry.registerModules([
   TooltipModule,
   HighlightChangesModule,
   TextFilterModule,
-  NumberFilterModule,
   CustomFilterModule,
   QuickFilterModule,
-  PinnedRowModule,
   CsvExportModule,
   ColumnApiModule,
   ...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
@@ -85,15 +90,16 @@ export const CARD_BELOW = 720;
 // and amount 96, plus the verdict: at least 260 (144 in the homepage's still, which keeps columns down to 592px). Each
 // optional column is added, in order, while it fits; in the queue only while the verdict keeps 360px, room for a reason
 // like "Couldn't tell if both photos show the same item" beside its pill: the reason is what a reviewer reads first.
+// The verdict takes the spare width, so the data columns sit together at the right beside the amount they describe;
+// beside the open panel the payout state stays (it is the money's question) and the PayPal account goes first.
 const VERDICT_MIN = { queue: 260, still: 144 };
 const VERDICT_WANT = { queue: 360, still: 144 };
-const VERDICT_MAX = 560;
 const BASE = 220 + 136 + 96;
 const OPTIONAL = {
-  queue: { time: 88, payoutStatus: 200, payer: 132 } as Record<string, number>,
+  queue: { time: 88, payoutStatus: 112, payer: 132 } as Record<string, number>,
   still: { time: 88, payoutStatus: 112, payer: 132 } as Record<string, number>,
 };
-const ORDER = { queue: ["time", "payoutStatus", "payer"], still: ["payoutStatus", "time", "payer"] };
+const ORDER = { queue: ["payoutStatus", "time", "payer"], still: ["payoutStatus", "time", "payer"] };
 
 function hiddenAt(width: number, still: boolean): Set<string> {
   const mode = still ? "still" : "queue";
@@ -117,6 +123,12 @@ function groupOf(r: ClaimRow, by: GroupBy): { key: string; label: string } {
 }
 
 const DECISION_ORDER: Record<ClaimRow["decision"], number> = { held: 0, pending: 1, paid: 2, rejected: 3, blocked: 4 };
+
+export interface GridTotals {
+  count: number;
+  approvedCents: number;
+  sentCents: number;
+}
 
 export interface ClaimsGridHandle {
   /** Puts keyboard focus back on a claim's row (after the panel closes). */
@@ -150,8 +162,8 @@ export interface ClaimsGridProps {
   decisionFilter?: DecisionModel | null;
   onDecisionFilter?: (model: DecisionModel | null) => void;
   groupBy?: GroupBy;
-  /** How many claims the grid shows after its filters. */
-  onShown?: (count: number) => void;
+  /** What the grid shows after its filters: the claims, the money they approved and the money sent. */
+  onShown?: (totals: GridTotals) => void;
   /** The first rows are drawn (the skeleton has gone). */
   onReady?: () => void;
   className?: string;
@@ -176,14 +188,26 @@ function groupStore(): GroupStats & { set(next: Map<string, GroupTotal>): void }
   };
 }
 
-/** Full-width rows: the pinned totals, a group's heading, or a whole claim as a card. */
+/** Full-width rows: a group's heading, or a whole claim as a card. */
 function FullWidthRow(p: CustomCellRendererProps<GridRow, unknown, GridContext>) {
-  if (p.node.rowPinned) return <TotalRow data={p.data?.total} />;
   if (p.data?.group) return <GroupRow {...p} />;
   return <CardRow {...p} />;
 }
 
 const isClaim = (n: IRowNode<GridRow> | null | undefined) => Boolean(n?.data && !n.data.group && !n.rowPinned);
+const rowId = (p: GetRowIdParams<GridRow>) => p.data.id;
+const isGroupNode = (n: IRowNode<GridRow>) => Boolean(n.data?.group);
+const noTab = () => false;
+const ROW_SELECTION = { mode: "singleRow", checkboxes: false, enableClickSelection: false, isRowSelectable: (n: IRowNode<GridRow>) => isClaim(n) } as const;
+
+/** Where the page scrolls rather than the grid (autoHeight: card rows, short windows), keeps the focused row on screen.
+ * AG Grid's ensureIndexVisible only scrolls the grid's own viewport, which under autoHeight never scrolls. */
+function keepInView(root: HTMLElement | null, id: string) {
+  const row = root?.querySelector<HTMLElement>(`.ag-row[row-id="${CSS.escape(id)}"]`);
+  if (!row) return;
+  const r = row.getBoundingClientRect();
+  if (r.top < 0 || r.bottom > window.innerHeight) row.scrollIntoView({ block: "nearest" });
+}
 
 export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function ClaimsGrid(
   { rows, openId, onOpen, onFocusRow, fill = false, still = false, oldestFirst = false, search = "", decisionFilter, onDecisionFilter, groupBy = "none", onShown, onReady, className },
@@ -197,7 +221,6 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
   const [ready, setReady] = useState(false);
   const [animate] = useState(() => !reducedMotion());
   const [stats] = useState(groupStore);
-  const [total, setTotal] = useState<{ count: number; approvedCents: number; sentCents: number } | null>(null);
 
   useLayoutEffect(() => {
     const el = wrap.current;
@@ -215,7 +238,10 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
   const grouping = still ? "none" : groupBy;
   const groupRef = useRef(grouping);
   const order = useRef(new Map<string, number>());
+  // The groups folded to their heading: postSortRows leaves their claims out. A new Group by starts unfolded.
+  const folded = useRef(new Set<string>());
   const rowData = useMemo<GridRow[]>(() => {
+    if (groupRef.current !== grouping) folded.current = new Set();
     groupRef.current = grouping;
     if (grouping === "none") return rows;
     const heads = new Map<string, { label: string; n: number }>();
@@ -353,10 +379,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         // line changes on its own (a refused payout).
         valueGetter: (p) => (p.data ? `${p.data.decision} ${p.data.note ?? ""}` : null),
         cellRenderer: VerdictCell,
-        // Twice the payout column's share of the spare width, up to 560px: the reason is what a reviewer reads first.
-        flex: 2,
+        // Every spare pixel: the reason is what a reviewer reads first, and the columns after it stay beside the amount.
+        flex: 1,
         minWidth: still ? VERDICT_MIN.still : VERDICT_MIN.queue,
-        maxWidth: still ? undefined : VERDICT_MAX,
         sortable: !still,
         sortingOrder: ["asc", "desc", null],
         comparator: (_a, _b, na, nb) =>
@@ -407,7 +432,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         headerName: "Payout",
         valueGetter: (p) => (p.data ? (p.data.payoutFailedAt ? `not sent ${p.data.payoutFailedAt}` : p.data.payoutStatus) : null),
         cellRenderer: PayoutCell,
-        ...(still ? { width: OPTIONAL.still.payoutStatus } : { flex: 1, minWidth: OPTIONAL.queue.payoutStatus }),
+        width: OPTIONAL[still ? "still" : "queue"].payoutStatus,
         enableCellChangeFlash: true,
         cellClass: (p) => (p.data?.payoutStatus === "SUCCESS" ? undefined : "flash-neutral"),
         getQuickFilterText: () => "",
@@ -423,10 +448,6 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         suppressMovable: true,
         sortable: !still,
         type: "rightAligned",
-        filter: still ? undefined : "agNumberColumnFilter",
-        // In dollars, as the column reads; a refused claim owes nothing.
-        filterValueGetter: (p) => (p.data?.cents ?? 0) / 100,
-        filterParams: { filterOptions: ["greaterThan", "lessThan", "equals", "inRange"], maxNumConditions: 1, buttons: ["clear"] },
         getQuickFilterText: () => "",
       },
       // For the CSV only: the claim's code, when it was filed and the reason as their own columns.
@@ -459,17 +480,23 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       if (sent(r)) sentCents += r.cents ?? 0;
       if (groupRef.current !== "none") {
         const key = groupOf(r, groupRef.current).key;
-        const g = groups.get(key) ?? { count: 0, cents: 0 };
-        groups.set(key, { count: g.count + 1, cents: g.cents + (r.decision === "paid" || r.decision === "held" ? (r.cents ?? 0) : 0) });
+        const g = groups.get(key) ?? { count: 0, cents: 0, mix: {}, folded: folded.current.has(key) };
+        groups.set(key, {
+          ...g,
+          count: g.count + 1,
+          cents: g.cents + (r.decision === "paid" || r.decision === "held" ? (r.cents ?? 0) : 0),
+          mix: { ...g.mix, [r.decision]: (g.mix[r.decision] ?? 0) + 1 },
+        });
       }
     });
     stats.set(groups);
-    setTotal((t) => (t && t.count === count && t.approvedCents === approvedCents && t.sentCents === sentCents ? t : { count, approvedCents, sentCents }));
-    onShown?.(count);
+    const last = lastTotals.current;
+    if (last && last.count === count && last.approvedCents === approvedCents && last.sentCents === sentCents) return;
+    lastTotals.current = { count, approvedCents, sentCents };
+    onShown?.(lastTotals.current);
   };
 
-  const pinned = useMemo(() => (still || !total || cards ? undefined : [{ id: "__total", total } as unknown as GridRow]), [still, total, cards]);
-
+  const lastTotals = useRef<GridTotals | null>(null);
   const focusTimer = useRef<number | undefined>(undefined);
   const measureTimer = useRef<number | undefined>(undefined);
   useEffect(
@@ -478,6 +505,112 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       window.clearTimeout(measureTimer.current);
     },
     [],
+  );
+
+  // Every function and object handed to AG Grid keeps its identity across renders. A new one is a changed grid option,
+  // and AG Grid reacts to some (rowSelection, postSortRows) by rebuilding state mid-gesture: the queue re-renders when
+  // the pointer or focus enters the grid, between a click's press and release, and that first click opened nothing.
+  // The handlers read the latest props through a ref instead.
+  const latest = useRef({ onOpen, onFocusRow, onReady, onDecisionFilter, measure, filterJson, openId, decisionFilter });
+  useLayoutEffect(() => {
+    latest.current = { onOpen, onFocusRow, onReady, onDecisionFilter, measure, filterJson, openId, decisionFilter };
+  });
+  const getRowHeight = useMemo(() => (p: RowHeightParams<GridRow>) => (p.node.rowPinned ? 36 : p.data?.group ? 40 : cards ? 88 : 52), [cards]);
+  const isFullWidthRow = useMemo(() => (p: IsFullWidthRowParams<GridRow>) => cards || Boolean(p.rowNode.data?.group) || Boolean(p.rowNode.rowPinned), [cards]);
+  const getRowClass = useMemo(() => (p: RowClassParams<GridRow>) => (still || !isClaim(p.node) ? undefined : "cursor-pointer"), [still]);
+  const postSortRows = useMemo(
+    () => (p: PostSortRowsParams<GridRow>) => {
+      if (groupRef.current === "none") return;
+      const heads = new Map<string, IRowNode<GridRow>>();
+      const members = new Map<string, IRowNode<GridRow>[]>();
+      for (const n of p.nodes) {
+        const r = n.data;
+        if (!r) continue;
+        if (r.group) heads.set(r.group.key, n);
+        else {
+          const key = groupOf(r, groupRef.current).key;
+          members.set(key, [...(members.get(key) ?? []), n]);
+        }
+      }
+      const keys = [...heads.keys()].filter((k) => members.get(k)?.length).sort((a, b) => (order.current.get(a) ?? 0) - (order.current.get(b) ?? 0));
+      p.nodes.splice(0, p.nodes.length, ...keys.flatMap((k) => [heads.get(k)!, ...(folded.current.has(k) ? [] : members.get(k)!)]));
+    },
+    [],
+  );
+  const toggleGroup = (grid: GridApi<GridRow>, key: string, open?: boolean) => {
+    const isOpen = !folded.current.has(key);
+    if (open === isOpen) return;
+    if (isOpen) folded.current.add(key);
+    else folded.current.delete(key);
+    grid.refreshClientSideRowModel("sort");
+  };
+  const handlers = useMemo(
+    () => ({
+      onGridReady(e: GridReadyEvent<GridRow>) {
+        api.current = e.api;
+        const { openId: id, decisionFilter: model } = latest.current;
+        if (id) e.api.getRowNode(id)?.setSelected(true, true);
+        if (model) e.api.setColumnFilterModel("decision", model).then(() => e.api.onFilterChanged());
+      },
+      onFirstDataRendered(e: FirstDataRenderedEvent<GridRow>) {
+        setReady(true);
+        latest.current.onReady?.();
+        // A deep link (/console?claim=RM-1460) opens with its row in view: after this render pass, since
+        // scrolling redraws the rows.
+        const id = latest.current.openId;
+        const n = id && !still ? e.api.getRowNode(id)?.rowIndex : null;
+        if (n != null) window.setTimeout(() => !e.api.isDestroyed() && e.api.ensureIndexVisible(n, "middle"), 0);
+      },
+      // Measured after the grid's own render pass: setting React state inside it would flush mid-render.
+      onModelUpdated(e: ModelUpdatedEvent<GridRow>) {
+        window.clearTimeout(measureTimer.current);
+        measureTimer.current = window.setTimeout(() => !e.api.isDestroyed() && latest.current.measure(e.api), 0);
+      },
+      onFilterChanged(e: FilterChangedEvent<GridRow>) {
+        if (still || !e.columns?.some((c) => c.getColId() === "decision")) return;
+        const model = (e.api.getColumnFilterModel("decision") as DecisionModel | null) ?? null;
+        if (JSON.stringify(model) !== latest.current.filterJson) latest.current.onDecisionFilter?.(model);
+      },
+      onRowClicked(e: RowClickedEvent<GridRow>) {
+        if (still) return;
+        if (e.data?.group) toggleGroup(e.api, e.data.group.key);
+        else if (isClaim(e.node)) latest.current.onOpen(e.data!.id);
+      },
+      onCellKeyDown(e: CellKeyDownEvent<GridRow>) {
+        const key = (e.event as KeyboardEvent | null)?.key;
+        // A group's heading folds and unfolds like a tree row: Enter or Space toggles, → opens, ← folds.
+        if (!still && e.data?.group && (key === "Enter" || key === " " || key === "ArrowRight" || key === "ArrowLeft")) {
+          e.event?.preventDefault();
+          toggleGroup(e.api, e.data.group.key, key === "ArrowRight" ? true : key === "ArrowLeft" ? false : undefined);
+          return;
+        }
+        if (!still && (key === "Enter" || key === " ") && isClaim(e.node)) {
+          e.event?.preventDefault();
+          latest.current.onOpen(e.data!.id);
+        }
+      },
+      onCellFocused(e: CellFocusedEvent<GridRow>) {
+        if (e.rowIndex == null || e.rowPinned) return;
+        const node = e.api.getDisplayedRowAtIndex(e.rowIndex);
+        if (!isClaim(node)) return;
+        keepInView(wrap.current, node!.data!.id);
+        const onFocus = latest.current.onFocusRow;
+        if (!onFocus) return;
+        const id = node!.data!.id;
+        // Holding ↓ walks many rows: the panel follows only where the focus settles (120ms).
+        window.clearTimeout(focusTimer.current);
+        focusTimer.current = window.setTimeout(() => onFocus(id), 120);
+      },
+      focusGridInnerElement(p: FocusGridInnerElementParams<GridRow>) {
+        if (still || !p.api.getDisplayedRowCount()) return false;
+        let row = (openRef.current ? p.api.getRowNode(openRef.current)?.rowIndex : null) ?? -1;
+        if (row < 0) for (row = 0; row < p.api.getDisplayedRowCount() && !isClaim(p.api.getDisplayedRowAtIndex(row)); row++);
+        p.api.ensureIndexVisible(row);
+        p.api.setFocusedCell(row, "createdAt");
+        return true;
+      },
+    }),
+    [still],
   );
 
   return (
@@ -496,83 +629,29 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
             theme={gridTheme}
             rowData={rowData}
             columnDefs={columns}
-            getRowId={(p) => p.data.id}
+            getRowId={rowId}
             context={context}
             domLayout={fill && !cards ? "normal" : "autoHeight"}
-            getRowHeight={(p) => (p.node.rowPinned ? 36 : p.data?.group ? 40 : cards ? 72 : 52)}
+            getRowHeight={getRowHeight}
             headerHeight={cards ? 0 : 36}
-            isFullWidthRow={(p) => cards || Boolean(p.rowNode.data?.group) || Boolean(p.rowNode.rowPinned)}
+            isFullWidthRow={isFullWidthRow}
             fullWidthCellRenderer={FullWidthRow}
-            pinnedBottomRowData={pinned}
             quickFilterText={still ? undefined : search}
             cacheQuickFilter
             // A group's heading stays while any of its claims pass; postSortRows drops a heading left with none.
-            alwaysPassFilter={(n) => Boolean(n.data?.group)}
-            postSortRows={(p) => {
-              if (groupRef.current === "none") return;
-              const heads = new Map<string, IRowNode<GridRow>>();
-              const members = new Map<string, IRowNode<GridRow>[]>();
-              for (const n of p.nodes) {
-                const r = n.data;
-                if (!r) continue;
-                if (r.group) heads.set(r.group.key, n);
-                else {
-                  const key = groupOf(r, groupRef.current).key;
-                  members.set(key, [...(members.get(key) ?? []), n]);
-                }
-              }
-              const keys = [...heads.keys()].filter((k) => members.get(k)?.length).sort((a, b) => (order.current.get(a) ?? 0) - (order.current.get(b) ?? 0));
-              p.nodes.splice(0, p.nodes.length, ...keys.flatMap((k) => [heads.get(k)!, ...members.get(k)!]));
-            }}
-            rowSelection={{
-              mode: "singleRow",
-              checkboxes: false,
-              enableClickSelection: false,
-              isRowSelectable: (n) => isClaim(n),
-            }}
+            alwaysPassFilter={isGroupNode}
+            postSortRows={postSortRows}
+            rowSelection={ROW_SELECTION}
             tooltipShowDelay={250}
-            tooltipHideDelay={8000}
-            onGridReady={(e) => {
-              api.current = e.api;
-              if (openId) e.api.getRowNode(openId)?.setSelected(true, true);
-              if (decisionFilter) e.api.setColumnFilterModel("decision", decisionFilter).then(() => e.api.onFilterChanged());
-            }}
-            onFirstDataRendered={(e) => {
-              setReady(true);
-              onReady?.();
-              // A deep link (/console?claim=RM-1460) opens with its row in view: after this render pass, since
-              // scrolling redraws the rows.
-              const n = openId && !still ? e.api.getRowNode(openId)?.rowIndex : null;
-              if (n != null) window.setTimeout(() => !e.api.isDestroyed() && e.api.ensureIndexVisible(n, "middle"), 0);
-            }}
-            // Measured after the grid's own render pass: setting React state inside it would flush mid-render.
-            onModelUpdated={(e) => {
-              window.clearTimeout(measureTimer.current);
-              measureTimer.current = window.setTimeout(() => measure(e.api), 0);
-            }}
-            onFilterChanged={(e) => {
-              if (still || !e.columns?.some((c) => c.getColId() === "decision")) return;
-              const model = (e.api.getColumnFilterModel("decision") as DecisionModel | null) ?? null;
-              if (JSON.stringify(model) !== filterJson) onDecisionFilter?.(model);
-            }}
-            onRowClicked={(e: RowClickedEvent<GridRow>) => !still && isClaim(e.node) && onOpen(e.data!.id)}
-            onCellKeyDown={(e: CellKeyDownEvent<GridRow>) => {
-              const key = (e.event as KeyboardEvent | null)?.key;
-              if (!still && (key === "Enter" || key === " ") && isClaim(e.node)) {
-                e.event?.preventDefault();
-                onOpen(e.data!.id);
-              }
-            }}
-            onCellFocused={(e: CellFocusedEvent<GridRow>) => {
-              if (!onFocusRow || e.rowIndex == null || e.rowPinned) return;
-              const node = e.api.getDisplayedRowAtIndex(e.rowIndex);
-              if (!isClaim(node)) return;
-              const id = node!.data!.id;
-              // Holding ↓ walks many rows: the panel follows only where the focus settles (120ms).
-              window.clearTimeout(focusTimer.current);
-              focusTimer.current = window.setTimeout(() => onFocusRow(id), 120);
-            }}
-            getRowClass={(p) => (still || !isClaim(p.node) ? undefined : "cursor-pointer")}
+            tooltipHideDelay={2000}
+            onGridReady={handlers.onGridReady}
+            onFirstDataRendered={handlers.onFirstDataRendered}
+            onModelUpdated={handlers.onModelUpdated}
+            onFilterChanged={handlers.onFilterChanged}
+            onRowClicked={handlers.onRowClicked}
+            onCellKeyDown={handlers.onCellKeyDown}
+            onCellFocused={handlers.onCellFocused}
+            getRowClass={getRowClass}
             // Nor does a row light up under the pointer: the still's rows open nothing.
             suppressRowHoverHighlight={still}
             // The homepage's still is a picture: no cell or header takes focus. In both, Tab leaves the grid in one step
@@ -581,16 +660,11 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
             // first column, the claim's, which every layout keeps.
             suppressCellFocus={still}
             suppressHeaderFocus={still || cards}
-            tabToNextCell={() => false}
-            focusGridInnerElement={(p) => {
-              if (still || !p.api.getDisplayedRowCount()) return false;
-              let row = (openRef.current ? p.api.getRowNode(openRef.current)?.rowIndex : null) ?? -1;
-              if (row < 0) for (row = 0; row < p.api.getDisplayedRowCount() && !isClaim(p.api.getDisplayedRowAtIndex(row)); row++);
-              p.api.ensureIndexVisible(row);
-              p.api.setFocusedCell(row, "createdAt");
-              return true;
-            }}
+            tabToNextCell={noTab}
+            focusGridInnerElement={handlers.focusGridInnerElement}
             overlayNoRowsTemplate="<span></span>"
+            // The DOM follows the rows' order on screen, so a screen reader meets each group's heading before its claims.
+            ensureDomOrder
             animateRows={animate}
             cellFlashDuration={600}
             cellFadeDuration={900}
@@ -606,7 +680,7 @@ const CSV_HEADERS: Record<string, string> = {
   createdAt: "Claim",
   filedAt: "Filed (UTC)",
   code: "Code",
-  decision: "Decision",
+  decision: "Verdict",
   reason: "Reason",
   checks: "Checks",
   time: "Photos to payout (s)",

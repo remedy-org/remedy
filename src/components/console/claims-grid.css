@@ -45,11 +45,11 @@
   box-shadow: inset 0 0 0 2px var(--focus);
 }
 
-/* Filters: a column's filter icon shows while the pointer or keyboard is on its header, and stays while a filter is on,
-   so a quiet header row never carries a row of funnels. */
+/* Filters: a filterable column always shows its icon, faint, so the filters can be found at a glance; it brightens on
+   hover or focus and stays bright while a filter is on. */
 .claims-grid .ag-header-cell .ag-header-cell-filter-button,
 .claims-grid .ag-header-cell .ag-header-cell-menu-button {
-  opacity: 0;
+  opacity: 0.45;
   transition: opacity var(--dur-ui) ease-out;
 }
 

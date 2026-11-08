@@ -120,14 +120,15 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
   const code = c.code ?? "";
   const ran = c.photoHashes.length > 0 || c.decision === "blocked";
   const failed = (id: string) => c.checks?.find((r) => r.check === id && r.outcome !== "pass");
-  const pre = PRE_CHECKS.map(([id, label]): CheckBar => {
+  // A pre-check that doesn't apply to a claim is left out of its strip, as the drawer leaves it out of the list
+  // (preChecksOf): the seeded claims' fingerprint check, and one claim per account on a demo sample but the genuine
+  // one. A hollow "not run" box beside every approved claim read as a check switched off.
+  const pre = PRE_CHECKS.flatMap(([id, label]): CheckBar[] => {
     const f = failed(id);
-    if (f) return { id, label, state: f.outcome };
-    // Seeded claims share a few sample photos, so their fingerprint check was never run (preChecksOf says so too).
-    if (id === "duplicate_photo" && c.seeded) return { id, label, state: "skipped" };
-    // Only a round's genuine demo claim is held to one claim per account (the drawer's pre-checks say so too).
-    if (id === "payer" && c.demo && c.sample !== "genuine" && ran) return { id, label, state: "skipped" };
-    return { id, label, state: ran ? "pass" : "waiting" };
+    if (f) return [{ id, label, state: f.outcome }];
+    if (id === "duplicate_photo" && c.seeded && ran) return [];
+    if (id === "payer" && c.demo && c.sample !== "genuine" && ran) return [];
+    return [{ id, label, state: ran ? "pass" : "waiting" }];
   });
   const answered = c.checks.filter((r) => !PRE_IDS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK);
   const steps = recall.spec.proof_steps;
@@ -153,7 +154,10 @@ export function checkCount(items: { id: string; state: BarState | PreCheckState 
     return `${name} ${ran.filter((b) => b.state === "pass").length} of ${ran.length}`;
   };
   const model = items.filter((b) => !PRE_IDS.has(b.id) && !PROCESS.has(b.id));
-  return `${group("Pre-checks", items.filter((b) => PRE_IDS.has(b.id)))} · ${model.length ? group("Model answers", model) : "Model answers waiting"}`;
+  const pre = items.filter((b) => PRE_IDS.has(b.id));
+  // A pre-check that stopped the claim means the model never ran, which isn't waiting.
+  const none = pre.some((b) => b.state === "reject") ? "Model answers not run" : "Model answers waiting";
+  return `${group("Pre-checks", pre)} · ${model.length ? group("Model answers", model) : none}`;
 }
 
 /** The barcode as a sentence, for screen readers: the console's one count. */
@@ -204,9 +208,9 @@ const first = (reasons: Reason[], outcome: Reason["outcome"]) => reasons.find((r
 export function reasonOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes">, recall: Pick<Recall, "autoPay">): string {
   switch (c.decision) {
     case "paid":
-      return c.reason ? "Approved on review" : "Every check passed";
+      return c.reason ? "Approved on review" : "All checks passed";
     case "held":
-      return c.reason ? companyReasonText(c.reason, "held", true) : recall.autoPay ? "Every check passed; held for a person" : "Every check passed; auto-pay is off";
+      return c.reason ? companyReasonText(c.reason, "held", true) : recall.autoPay ? "All checks passed; held for a person" : "All checks passed; auto-pay is off";
     case "rejected":
     case "blocked":
       return c.reason?.text ?? "Refused";
@@ -407,8 +411,9 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
   switch (c.decision) {
     case "paid":
       // A seeded claim was decided by the rule like any claim, but its payee's PayPal account isn't live: nothing was sent.
-      if (c.seeded) return `Every check passed, so the rule approved the ${amount} refund. The payee's PayPal account isn't live, so no payout was sent.`;
-      return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `Every check passed, so Remedy paid ${amount} through PayPal.`;
+      // A seeded claim was decided by the rule like any claim; its payout state is said once, on the timeline's PayPal step.
+      if (c.seeded) return `All checks passed, so the rule approved the ${amount} refund.`;
+      return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `All checks passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
       // The rule refused it and the owner asked a person to look (src/lib/appeal.ts): the rule's reason stands beside it.
       const refused = c.reasons.find((r) => r.outcome === "reject");
@@ -419,12 +424,12 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
       // conflict the checks before the payout found. Each gets its own sentence.
       const holds = c.reasons.filter((r) => r.outcome === "hold");
       const hold = holds.find((r) => !PROCESS_HOLD.has(r.check)) ?? holds[0];
-      if (hold?.check === "auto_pay") return `Every check passed. Auto-pay is off, so a person approves the ${amount} refund.`;
-      if (hold?.check === "payout") return "Every check passed, but PayPal didn't accept the payout, so a person will send it.";
+      if (hold?.check === "auto_pay") return `All checks passed. Auto-pay is off, so a person approves the ${amount} refund.`;
+      if (hold?.check === "payout") return "All checks passed, but PayPal didn't accept the payout, so a person will send it.";
       if (hold && PROCESS_HOLD.has(hold.check)) return `A check before the payout found a conflict, so a person decides: ${lower(hold.text)}.`;
       if (hold?.check === "model") return `The photo check gave no answer, so the rule couldn't decide: a person approves or rejects the ${amount} refund.`;
       if (hold) return `One answer was unclear, so a person decides: ${lower(hold.text)}.`;
-      return recall.autoPay ? "Every check passed, but the claim is held for a person." : `Every check passed. Auto-pay is off, so a person approves the ${amount} refund.`;
+      return recall.autoPay ? "All checks passed, but the claim is held for a person." : `All checks passed. Auto-pay is off, so a person approves the ${amount} refund.`;
     }
     case "rejected":
       return reviewed ? `Rejected on review: ${stripPrefix(reviewed.text).replace(/[.\s]+$/, "")}.` : `A check failed, so no money moves: ${lower(first(c.reasons, "reject") ?? "refused")}.`;
@@ -451,8 +456,13 @@ export interface PreCheckRow {
   detail: string;
 }
 
-// The four cheap checks that run before any photo reaches the model, rebuilt from the claim's reasons.
+// The four cheap checks that run before any photo reaches the model, rebuilt from the claim's reasons. A check that
+// doesn't apply to this claim is left out, never listed as "not run" (the strip leaves it out too, barsOf).
 export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified" | "seeded" | "demo" | "events">): PreCheckRow[] {
+  return allPreChecks(c).filter((r) => r.state !== "skipped");
+}
+
+function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified" | "seeded" | "demo" | "events">): PreCheckRow[] {
   const ran = c.photos.length > 0 || c.decision === "blocked";
   // preCheck rejects (the claim is blocked); sendCheck, run again right before a payout, holds.
   const failed = (check: string) => c.reasons.find((r) => r.check === check && r.outcome !== "pass");
@@ -463,10 +473,10 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
   };
   return [
     row("session", "Live camera session", "Taken in this claim's camera session, before it expired"),
-    // Seeded claims share a handful of sample photos, so the fingerprint check was never run on them: say so rather
-    // than show a pass next to another claim with the same photo.
-    c.seeded
-      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Not run: this photo set is shared by several claims on this recall" }
+    // Seeded claims share a handful of reference photos, so the fingerprint check was never run on them: it is left out
+    // rather than shown as a pass next to another claim with the same photo.
+    c.seeded && ran
+      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "" }
       : // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the
         // same sample photo once: say that, next to the other rounds' claims with the same photo and code. The company
         // reads a round as a demo session.
@@ -480,7 +490,7 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
       : oneClaimChecked(c) || failed("payer")
         ? row("payer", "One claim per account", "Checked within this session: no other paid or open claim from this PayPal account")
         : ran
-          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "Not run: one account files every claim in this session" }
+          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "" }
 
           : row("payer", "One claim per account", ""),
     row("payer_verified", "Verified PayPal account", "PayPal says the account is verified"),
@@ -493,7 +503,9 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
  */
 export const shownSpec = <T extends { product: string; label_must_show: string[]; note?: string }>(spec: T): T => ({
   ...spec,
-  product: spec.product.replace(/\.?\s*In this demo recall[^.]*\.?$/, "."),
+  // The shared recall accepts a plain stand-in pillow (the real one isn't sold any more): said as the product's own rule,
+  // so an approved claim's sage pillow never contradicts the three prints above it.
+  product: spec.product.replace(/\.?\s*In this demo recall,? a plain ([^.]*?) stand-in pillow of any colour counts when it carries the ([^.]*?) tag\.?$/, ". A plain $1 pillow of any colour also counts when it carries the $2 tag.").replace(/\.?\s*In this demo recall[^.]*\.?$/, "."),
   label_must_show: spec.label_must_show.map((l) => l.replace(/\(this demo stand-in's label\)/, "(the product's label)")),
   ...(spec.note !== undefined && /\bdemo\b/.test(spec.note) ? { note: "" } : {}),
 });

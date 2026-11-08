@@ -22,8 +22,51 @@
 }
 
 .insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-container {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: 2px solid var(--text-2);
+  outline-offset: 4px;
+}
+
+/* No cards: every panel is a section under a hairline, on the page's own background (theme.ts drops the fill). */
+.insights-report .ag-studio-layout-widget-container {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+/* A panel's title starts on the section's own left edge, the page's 32px gutter, as the ledger above it does. */
+.insights-report .ag-studio-layout-widget-header {
+  margin-inline: 0;
+}
+
+/* The analyst's rail sits inside the page's gutter, set off by one hairline on its left, never a filled box. */
+.insights-report .ag-studio-ai-panel {
+  border: 0;
+  box-shadow: inset 1px 0 0 var(--line);
+}
+
+/* The analyst's starting questions: a plain list of text links, not a row of pills. */
+.insights-report .ag-studio-ai-prompt-starters {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.insights-report .ag-studio-ai-prompt-starter {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  padding: 4px 0;
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+
+.insights-report .ag-studio-ai-prompt-starter:hover {
+  background: none;
+  color: var(--text);
+  text-decoration-color: var(--text);
 }
 
 .insights-report .ag-studio-layout-widget-overlay-resize,

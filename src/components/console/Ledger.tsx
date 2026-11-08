@@ -9,7 +9,8 @@ export function LedgerItem({ value, label, aside, title, className }: { value: R
   return (
     <div className={clsx("flex min-w-0 flex-wrap items-baseline gap-x-2 sm:flex-nowrap sm:whitespace-nowrap", className)} title={title}>
       <dt className="order-2 text-micro text-muted">{label}</dt>
-      <dd className="order-1 text-head-sm leading-7 font-medium tabular-nums">{value}</dd>
+      {/* Proportional figures: Schibsted's tabular set spaces the comma and point ("19 , 596"). */}
+      <dd className="order-1 text-head-sm leading-7 font-medium">{value}</dd>
       {aside && <dd className="order-3 text-micro text-muted">{aside}</dd>}
     </div>
   );
@@ -21,8 +22,8 @@ export function LedgerStrip({ className, children }: { className?: string; child
 }
 
 /**
- * The ledger over the grid: units remedied of units sold, money paid out through PayPal (with what was approved and
- * not sent beside it), the median time from photos to PayPal, held and refused.
+ * The ledger over the grid: units remedied of units sold, the refunds approved (with what PayPal sent beside it), the
+ * median time from photos to PayPal, held, and rejected or blocked.
  */
 export function Ledger({ ledger, className }: { ledger: LedgerData; className?: string }) {
   const known = ledger.unitsSold > 0;
@@ -40,9 +41,9 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
       />
       <LedgerItem
         className="col-span-2"
-        value={<AmountValue cents={ledger.paidCents} />}
-        label="paid out"
-        aside={ledger.sampleCents > 0 ? `· ${formatCents(ledger.sampleCents)} approved, not sent` : undefined}
+        value={formatCents(ledger.paidCents + ledger.sampleCents)}
+        label={`approved · ${formatCount(ledger.remedied)} ${ledger.remedied === 1 ? "refund" : "refunds"}`}
+        aside={<SentAside cents={ledger.paidCents} />}
       />
       {ledger.medianToPay !== null && (
         <LedgerItem
@@ -52,21 +53,16 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
         />
       )}
       <LedgerItem value={formatCount(ledger.held)} label="held" className={ledger.held ? undefined : "text-muted"} />
-      <LedgerItem value={formatCount(ledger.refused)} label="refused" />
+      <LedgerItem value={formatCount(ledger.refused)} label="rejected or blocked" />
     </LedgerStrip>
   );
 }
 
-export function AmountValue({ cents }: { cents: number }) {
-  const text = formatCents(cents);
-  const dot = text.lastIndexOf(".");
+/** The money PayPal took, beside what was approved: the quiet second value. */
+export function SentAside({ cents }: { cents: number }) {
   return (
     <>
-      <span className="sr-only">{text}</span>
-      <span aria-hidden="true">
-        {text.slice(0, dot)}
-        <span className="relative -top-[0.2em] text-[0.73em]">{text.slice(dot)}</span>
-      </span>
+      · <span className="font-mono">{formatCents(cents)}</span> sent
     </>
   );
 }

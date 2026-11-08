@@ -56,11 +56,10 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const sent = paid.filter((c) => !c.seeded);
   const samples = paid.filter((c) => c.seeded);
   const sum = (list: ClaimSummary[]) => list.reduce((s, c) => s + cents(amountOf(c.payoutAmount, recall)), 0);
-  // "Paid" is said only beside a payout really sent: the outcome is the rule's approval, and the note says what was sent.
+  // "Paid" is said only beside a payout really sent: the outcome is the rule's approval. What was sent is the Refunds
+  // section's to say, in numbers.
   const unsent = samples.length;
-  const paidNote = !unsent
-    ? "The unit is destroyed and the refund sent through PayPal"
-    : `The unit is destroyed and the refund approved; ${unsent === paid.length ? "not sent, as the payees' PayPal accounts" : `${unsent} not sent, as those payees' PayPal accounts`} aren't live`;
+  const paidNote = !unsent ? "Unit destroyed on camera; refund sent through PayPal" : "Unit destroyed on camera; refund approved";
   const rows: [Decision, string, number, string][] = [
     ["paid", "Approved", stats.remedied, paidNote],
     ["held", "Held", stats.held, "Waiting for a person: an answer was unclear, a check couldn't run, PayPal didn't take the payout, or auto-pay was off"],

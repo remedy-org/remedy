@@ -200,6 +200,32 @@ async function main() {
         }
       });
 
+    if (company)
+      // The first thing a new reviewer does: one click on a fresh load opens that claim, and the docked panel scrolls
+      // inside itself, never the page.
+      for (const [width, height] of [
+        [1440, 900],
+        [1920, 1080],
+      ])
+        await check(`at ${width}x${height}, one click on a fresh queue opens the claim`, async () => {
+          const { context, page, errors } = await load(browser, "/console", [cookie("remedy_company", company)]);
+          try {
+            await page.setViewportSize({ width, height });
+            const row = page.locator(".claims-grid .ag-row[row-id^='RM-']").first();
+            await row.waitFor({ timeout: 10_000 });
+            const id = await row.getAttribute("row-id");
+            await row.click({ position: { x: 40, y: 26 } });
+            await page.waitForURL((u) => u.searchParams.get("claim") === id, { timeout: 5_000 });
+            await page.locator(".evidence-panel").first().waitFor({ timeout: 10_000 });
+            const overflow = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+            assert(overflow <= 0, `the page scrolls ${overflow}px with the panel open`);
+            assert(!errors.length, `console: ${errors.join(" | ")}`);
+            return id ?? "";
+          } finally {
+            await context.close();
+          }
+        });
+
     if (!owner) skip("demo samples", "no owner session (--owner or --mint)");
     else
       for (const sample of DEMO_SAMPLES) {

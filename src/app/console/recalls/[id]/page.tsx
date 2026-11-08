@@ -69,9 +69,7 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
         <Section title="Settings">
           {recall.owner === null ? (
             <>
-              <p className="text-ui text-text-2">
-                These settings are locked for <span className="font-mono">{recall.id}</span>. Import a recall to set your own.
-              </p>
+              <p className="text-ui text-muted">Set when the recall was published.</p>
               <dl className="grid gap-6 text-ui sm:grid-cols-2">
                 <div>
                   <dt className="text-muted">Refund per unit</dt>

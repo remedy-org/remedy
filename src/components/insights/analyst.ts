@@ -21,7 +21,7 @@ const RULES = `You can't approve, reject or pay a claim. A person does that in t
 function instructions(api: AgStudioApi, data: InsightsData) {
   const n = (k: "remedied" | "refused" | "held") => data.claims.reduce((sum, c) => sum + c[k], 0);
   const samples = data.claims.filter((c) => c.source === "Sample").length;
-  const demo = data.claims.filter((c) => c.source === "Judges' demo").length;
+  const demo = data.claims.filter((c) => c.source === "Live demo").length;
   const tables = api
     .getAiContext()
     .schema()

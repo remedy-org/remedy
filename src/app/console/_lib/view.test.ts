@@ -50,12 +50,12 @@ describe("console view", () => {
   it("gives each row its reason and amount", () => {
     const row = toRow(summarize(sampleClaim({ decision: "rejected", reasons: [{ check: "label", outcome: "pass", text: "ok" }, reject("code", "Written code reads K7O")] })), recall);
     expect(row).toMatchObject({ decision: "rejected", reason: "Written code reads K7O", amount: null, payer: "•••• UJ3Q" });
-    expect(toRow(summarize(sampleClaim({ decision: "held" })), { ...recall, autoPay: false }).reason).toBe("Every check passed; auto-pay is off");
+    expect(toRow(summarize(sampleClaim({ decision: "held" })), { ...recall, autoPay: false }).reason).toBe("All checks passed; auto-pay is off");
     expect(reasonOf(summarize(sampleClaim({ decision: "pending", photos: [] })), recall)).toBe("Waiting for photos");
   });
 
   it("says the rule's decision in one sentence", () => {
-    expect(decisionSentence(sampleClaim({ decision: "paid" }), recall)).toBe("Every check passed, so Remedy paid $29.99 through PayPal.");
+    expect(decisionSentence(sampleClaim({ decision: "paid" }), recall)).toBe("All checks passed, so Remedy paid $29.99 through PayPal.");
     expect(decisionSentence(sampleClaim({ decision: "blocked", reasons: [reject("payer_verified", "This PayPal account isn't verified")] }), recall)).toBe(
       "Stopped before the photos reached the model: this PayPal account isn't verified.",
     );
@@ -67,10 +67,10 @@ describe("console view", () => {
   it("says why a claim is held: the model, auto-pay, PayPal or a conflict before the payout", () => {
     const held = (check: string, text: string) => sampleClaim({ decision: "held", reasons: [{ check: "label", outcome: "pass", text: "ok" }, { check, outcome: "hold", text }] });
     expect(decisionSentence(held("payout", "PayPal didn't accept the payout, so a person will send it"), recall)).toBe(
-      "Every check passed, but PayPal didn't accept the payout, so a person will send it.",
+      "All checks passed, but PayPal didn't accept the payout, so a person will send it.",
     );
     expect(decisionSentence(held("auto_pay", "Auto-pay is off for this recall, so a person approves each refund"), recall)).toBe(
-      "Every check passed. Auto-pay is off, so a person approves the $29.99 refund.",
+      "All checks passed. Auto-pay is off, so a person approves the $29.99 refund.",
     );
     expect(decisionSentence(held("payer", "PayPal account already has a claim"), recall)).toBe(
       "A check before the payout found a conflict, so a person decides: PayPal account already has a claim.",
@@ -89,7 +89,8 @@ describe("console view", () => {
       ["payer_verified", "pass"],
     ]);
     expect(preChecksOf(sampleClaim({ photos: [] })).every((r) => r.state === "waiting")).toBe(true);
-    expect(preChecksOf(sampleClaim({ seeded: true })).find((r) => r.id === "duplicate_photo")?.state).toBe("skipped");
+    // A check that didn't run isn't listed.
+    expect(preChecksOf(sampleClaim({ seeded: true })).find((r) => r.id === "duplicate_photo")).toBeUndefined();
   });
 
   it("says what the one-claim check covered: paid or open claims, the round for the genuine sample, nothing for the others", () => {
@@ -97,13 +98,13 @@ describe("console view", () => {
     const demo = (sample: string) => ({ demo: true, events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] });
     expect(payer({})).toMatchObject({ state: "pass", detail: "No other paid or open claim for this recall from this PayPal account" });
     expect(payer(demo("genuine"))).toMatchObject({ state: "pass", detail: expect.stringMatching(/^Checked within this session/) });
-    expect(payer(demo("wrong-code")).state).toBe("skipped");
+    expect(payer(demo("wrong-code"))).toBeUndefined();
     expect(payer({ ...demo("wrong-code"), photos: [] }).state).toBe("waiting");
   });
 
   it("offers review only on held claims, and only a sample review on a seeded one", () => {
     expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false, note: null });
-    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toMatchObject({ sample: true, note: expect.stringContaining("without sending money or saving") });
+    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toEqual({ sample: true, note: null });
     expect(toDrawerClaim(sampleClaim({ decision: "paid" }), recall).review).toBeNull();
     expect(toDrawerClaim(sampleClaim(), recall).photos).toEqual(["/api/console/claims/RM-0412/photos/0"]);
   });

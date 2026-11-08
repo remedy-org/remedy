@@ -33,8 +33,7 @@ describe("the grid's evidence cells", () => {
     const row = toRow(summarize(seededPaid), recall);
     expect(row.bars?.map((b) => `${b.id}:${b.state}`)).toEqual([
       "session:pass",
-      // Seeded claims share sample photos: their fingerprint check never ran.
-      "duplicate_photo:skipped",
+      // Seeded claims share sample photos: their fingerprint check never ran, so it has no bar.
       "payer:pass",
       "payer_verified:pass",
       "label:pass",
@@ -59,7 +58,8 @@ describe("the grid's evidence cells", () => {
   it("count a demo sample's checks as its receipt does: one claim per account is skipped unless it's the genuine one", () => {
     const demo = (sample: string) =>
       toRow(summarize(sampleClaim({ decision: "rejected", demo: true, reasons: [{ check: "label", outcome: "pass", text: "" }, reject("code", "Written code reads K7Q"), { check: "step_1", outcome: "pass", text: "" }, { check: "screen", outcome: "pass", text: "" }], events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] })), recall);
-    expect(demo("wrong-code").bars?.find((b) => b.id === "payer")?.state).toBe("skipped");
+    // A check that didn't run has no bar.
+    expect(demo("wrong-code").bars?.find((b) => b.id === "payer")).toBeUndefined();
     expect(barsSentence(demo("wrong-code").bars!)).toBe("Pre-checks 3 of 3 · Model answers 3 of 4");
     expect(demo("genuine").bars?.find((b) => b.id === "payer")?.state).toBe("pass");
   });
@@ -115,6 +115,6 @@ describe("the ledger and live updates", () => {
   });
 
   it("say a seeded claim's payout was never sent", () => {
-    expect(decisionSentence(seededPaid, recall)).toBe("Every check passed, so the rule approved the $29.99 refund. The payee's PayPal account isn't live, so no payout was sent.");
+    expect(decisionSentence(seededPaid, recall)).toBe("All checks passed, so the rule approved the $29.99 refund.");
   });
 });
