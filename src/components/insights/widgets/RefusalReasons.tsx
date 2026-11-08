@@ -9,7 +9,8 @@ import { num, useRows } from "./useRows";
 
 // Custom widget 3: why claims were refused (RefusalReasonsView draws it). Clicking a reason cross-filters the page.
 
-export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
+// `params` is kept whole (not destructured with a rest), so its identity, which useRows re-runs on, is Studio's own.
+export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef> & { flush?: boolean }) {
   const { dataMapping, widgetApi } = params;
   const reason = dataMapping.reason?.[0];
   const gate = dataMapping.gate?.[0];
@@ -28,5 +29,12 @@ export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef>) {
     widgetApi.toggleCrossFilter({ type: "value", field: reason, value, group: 0, reset: !(e.metaKey || e.ctrlKey) });
   };
 
-  return <RefusalReasonsView items={items} selected={selected} onToggle={toggle} onReset={() => widgetApi.resetCrossFilter()} onKeyDown={moveBetweenItems} />;
+  return <RefusalReasonsView items={items} selected={selected} onToggle={toggle} onReset={() => widgetApi.resetCrossFilter()} onKeyDown={moveBetweenItems} flush={params.flush} />;
 }
+
+/** The homepage's refusal reasons, on the panel title's edge. */
+export const HomeRefusalReasons = (params: AgWidgetParams<RefusalReasonsDef>) => (
+  <div className="h-full px-2 pb-2">
+    <RefusalReasons {...params} flush />
+  </div>
+);

@@ -6,6 +6,12 @@
   letter-spacing: 0.06em;
 }
 
+/* The homepage's still (gridTheme.ts stillTheme): sentence case in the sans face. */
+.claims-grid[data-still] .ag-header-cell-text {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 /* The open claim, and the row the keyboard is on: a 2px amber edge on the left, like the edge of an evidence tag. */
 .claims-grid .ag-row.ag-row-selected::before,
 .claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible)::before {
@@ -116,17 +122,20 @@
   }
 }
 
-/* The arriving row waits, transparent, while the rows below slide down to make its slot (AG Grid's 400ms row
-   animation), then fades in: never drawn over the row it is displacing. */
+/* The arriving row opens its own slot: it is uncovered top down exactly as fast as the rows below slide away (AG Grid's
+   400ms row animation), so there is never a blank row and it is never drawn over the row it displaces. */
 @media (prefers-reduced-motion: no-preference) {
   [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] {
-    animation: row-in var(--dur-ui) var(--ease-snap) 380ms both;
+    animation: row-open 400ms ease both;
   }
 }
 
-@keyframes row-in {
+@keyframes row-open {
   from {
-    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
   }
 }
 

@@ -65,7 +65,7 @@ export function Thumbs({ row, size = "md" }: { row: Pick<ClaimRow, "photos" | "p
 }
 
 /** Thumbnails, the claim id (mono 14/500) and when it was filed (mono 12, faint). */
-export function ClaimCell({ data }: Cell) {
+export function ClaimCell({ data, context }: Cell & { context?: { compact?: boolean } }) {
   if (!data) return null;
   return (
     <span className="flex h-full items-center gap-3">
@@ -80,7 +80,9 @@ export function ClaimCell({ data }: Cell) {
         <span className="mt-0.5 truncate font-mono text-micro whitespace-nowrap text-faint" title={`Filed ${formatTime(data.createdAt)}`}>
           {data.code ? (
             <>
-              <span className="text-muted">Code {data.code}</span> · {formatClock(data.createdAt).slice(0, 5)}
+              <span className="text-muted">Code {data.code}</span>
+              {/* A phone's still has room for the code alone. */}
+              {!context?.compact && <> · {formatClock(data.createdAt).slice(0, 5)}</>}
             </>
           ) : (
             formatTime(data.createdAt)

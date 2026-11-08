@@ -43,10 +43,29 @@ describe("homepage console tour data", () => {
     expect(report.sentCents).toBe(ledger!.paidCents);
   });
 
-  it("keeps Studio's home report to five widgets, titled, with two value KPIs", () => {
-    const page = homeInsightsReport(insightsPreview()).pages![0];
+  it("starts every claim on or after the recall's date", () => {
+    const { recall, report } = reportPreview();
+    expect(report.firstClaim!.slice(0, 10) >= recall.recallDate).toBe(true);
+  });
+
+  it("opens a held claim whose recorded answers name only what the photos show", () => {
+    const open = previewProps().rows.find((r) => r.id === PREVIEW_OPEN_ID)!.evidence!;
+    expect(open.decision).toBe("held");
+    const read = { checks: open.checks, summary: open.summary, sentence: open.sentence, events: open.events };
+    expect(JSON.stringify(read)).not.toMatch(/\b(demo|sample|test)\b/i);
+  });
+
+  it("puts all 40 claims in the grid", () => {
+    expect(previewProps().rows).toHaveLength(40);
+  });
+
+  it("keeps Studio's home report to six widgets, titled, with two value KPIs and the day chart, fitted to its rows", () => {
+    const state = homeInsightsReport(insightsPreview(), 36);
+    const page = state.pages![0];
     const widgets = Object.values(page.widgets ?? {}) as { type?: string; format?: { subtitle?: unknown } }[];
-    expect(Object.keys(page.widgets ?? {})).toHaveLength(5);
+    expect(Object.keys(page.widgets ?? {})).toHaveLength(6);
+    const layout = Object.values(page.widgetLayout ?? {}) as { yTrack: number; ySpan: number }[];
+    expect(Math.max(...layout.map((l) => l.yTrack + l.ySpan))).toBe(36);
     expect(widgets.every((w) => !w.format?.subtitle)).toBe(true);
     expect(widgets.filter((w) => w.type === "value")).toHaveLength(2);
   });

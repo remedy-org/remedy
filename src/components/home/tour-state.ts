@@ -1,6 +1,6 @@
 // The console tour's steps as data (ConsoleTour.tsx plays them; tour-state.test.ts checks the rules): which console
-// page the frame's chrome underlines, which body shows, what the claims grid filters to and opens, where the arriving
-// claim is, and the step's one amber subject (DESIGN.md: one amber per viewport).
+// page the frame's chrome underlines, which body shows, which claim the grid opens, where the arriving claim is, and the
+// step's one amber subject (DESIGN.md: one amber per viewport).
 
 export type Step = 0 | 1 | 2 | 3;
 export const STEPS: Step[] = [0, 1, 2, 3];
@@ -8,9 +8,8 @@ export const STEPS: Step[] = [0, 1, 2, 3];
 export interface StepState {
   /** The in-frame chrome's underlined page. */
   page: "claims" | "insights" | "report";
-  /** The body in the frame's fixed slot: 01 and 02 share the claims grid. */
+  /** The body in the frame's fixed slot: 01 and 02 share the claims grid, which keeps every row and its width on both. */
   body: "claims" | "insights" | "report";
-  filter: "held" | null;
   /** The claim whose row is selected and whose evidence is docked. */
   openId: string | null;
   /** Where the arriving claim is (step 01 only; elsewhere it is simply in the queue). */
@@ -34,20 +33,19 @@ export function stateAt(step: Step, at: "start" | "final", { openId, reduced = f
   const final = at === "final" || reduced;
   switch (step) {
     case 0:
-      return { page: "claims", body: "claims", filter: null, openId: null, arrival: final ? "final" : "before", amber: null };
+      return { page: "claims", body: "claims", openId: null, arrival: final ? "final" : "before", amber: null };
     case 1:
       return {
         page: "claims",
         body: "claims",
-        filter: "held",
         openId: final ? openId : null,
         arrival: "final",
         amber: final ? `${openId} row` : null,
       };
     case 2:
-      return { page: "insights", body: "insights", filter: null, openId: null, arrival: "final", amber: null };
+      return { page: "insights", body: "insights", openId: null, arrival: "final", amber: null };
     case 3:
-      return { page: "report", body: "report", filter: null, openId: null, arrival: "final", amber: null };
+      return { page: "report", body: "report", openId: null, arrival: "final", amber: null };
   }
 }
 

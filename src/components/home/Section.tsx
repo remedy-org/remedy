@@ -20,6 +20,8 @@ export interface SectionProps {
   headingSpan?: 7 | 9;
   /** The space between the heading and the section's content, replacing 48px (64px on laptops). */
   bodyClassName?: string;
+  /** How the heading enters: focus-in (blur to sharp, 900ms), or a plain rise (fade and 8px up, 360ms, no blur). */
+  reveal?: "focus" | "rise";
 }
 
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
@@ -30,8 +32,9 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
  * phones). The heading takes columns 1 to 7 and the lead columns 8 to 12, bottom-aligned, so every section's text
  * starts on the same two grid lines. The heading is 40px, two-tone, and focuses in.
  */
-export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className, headingSpan = 7, bodyClassName = "mt-12 lg:mt-16" }: SectionProps) {
+export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className, headingSpan = 7, bodyClassName = "mt-12 lg:mt-16", reveal = "focus" }: SectionProps) {
   const headingId = `${id}-title`;
+  const enter = reveal === "rise" ? styles.rise : styles.line;
   const paper = tone === "paper";
   const [letter, name] = exhibit?.split(" · ") ?? [];
   return (
@@ -40,17 +43,17 @@ export function Section({ id, exhibit, title, muted, lead, tone = "dark", childr
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
           <div className={clsx("col-span-12", headingSpan === 9 ? "lg:col-span-9" : "lg:col-span-7")}>
             {exhibit && (
-              <p className={clsx(styles.line, "mb-5 micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
+              <p className={clsx(enter, "mb-5 micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
                 Exhibit <span className={paper ? "text-ink" : "text-text-2"}>{letter}</span>
                 {name && <> · {name}</>}
               </p>
             )}
             <h2 id={headingId} className="text-title-lg font-medium text-balance">
-              <span className={clsx(styles.line, "block")} style={line(1)}>
+              <span className={clsx(enter, "block")} style={line(1)}>
                 {title}
               </span>{" "}
               {muted && (
-                <span className={clsx(styles.line, "block", paper ? "text-ink-muted" : "text-muted")} style={line(2)}>
+                <span className={clsx(enter, "block", paper ? "text-ink-muted" : "text-muted")} style={line(2)}>
                   {muted}
                 </span>
               )}
@@ -58,7 +61,7 @@ export function Section({ id, exhibit, title, muted, lead, tone = "dark", childr
           </div>
           {lead && (
             <p
-              className={clsx(styles.line, "col-span-12 max-w-[60ch] text-body text-pretty lg:col-span-5 lg:col-start-8 lg:pb-1", paper ? "text-ink-muted" : "text-text-2")}
+              className={clsx(enter, "col-span-12 max-w-[60ch] text-body text-pretty lg:col-span-5 lg:col-start-8 lg:pb-1", paper ? "text-ink-muted" : "text-text-2")}
               style={line(3)}
             >
               {lead}

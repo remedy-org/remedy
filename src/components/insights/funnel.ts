@@ -50,8 +50,20 @@ export function reasonSummary(tally: ReadonlyMap<string, number>): string {
   return `${word(tied)} reasons tied at ${n}, and ${sorted.length - tied} more`;
 }
 
-/** Rows are claims, or groups of claims with a count (as a Studio query returns them). */
-export function funnel(rows: { stage: string; stopReason: string | null; decision?: string | null; count?: number }[]): FunnelStep[] {
+/** Every reason with its count, commonest first: "Photo already used in another claim (2), PayPal account not verified (1)". */
+export function reasonList(tally: ReadonlyMap<string, number>): string {
+  const sorted = [...tally].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  return sorted.length === 1 ? sorted[0][0] : sorted.map(([r, n]) => `${r} (${n})`).join(", ");
+}
+
+/**
+ * Rows are claims, or groups of claims with a count (as a Studio query returns them). `summarize` words each drop's
+ * reasons: by default the commonest (reasonSummary); the homepage names every one (reasonList).
+ */
+export function funnel(
+  rows: { stage: string; stopReason: string | null; decision?: string | null; count?: number }[],
+  summarize: (tally: ReadonlyMap<string, number>) => string = reasonSummary,
+): FunnelStep[] {
   const weight = (r: { count?: number }) => r.count ?? 1;
   return STAGES.map((stage, i) => {
     const reached = rows.filter((r) => STAGES.indexOf(r.stage as Stage) >= i).reduce((n, r) => n + weight(r), 0);
@@ -69,7 +81,7 @@ export function funnel(rows: { stage: string; stopReason: string | null; decisio
       const tally = tallies.get(kind);
       if (!tally) return [];
       const count = [...tally.values()].reduce((a, b) => a + b, 0);
-      return [{ kind, count, summary: reasonSummary(tally) }];
+      return [{ kind, count, summary: summarize(tally) }];
     });
     return { stage, reached, stopped, groups };
   });

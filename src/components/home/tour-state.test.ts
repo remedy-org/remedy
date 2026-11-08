@@ -3,7 +3,7 @@ import { barcodeWords } from "./ConsoleReplica";
 import { stepSentences, TOUR } from "./tour-copy";
 import { nextTab, stateAt, STEPS } from "./tour-state";
 
-const openId = "RM-9629";
+const openId = "RM-8843";
 
 describe("tour steps", () => {
   it("has at most one amber subject, and only on 02 at rest", () => {
@@ -24,8 +24,8 @@ describe("tour steps", () => {
 
   it("starts 01 before the claim arrives and 02 before the held claim opens", () => {
     expect(stateAt(0, "start", { openId }).arrival).toBe("before");
-    expect(stateAt(1, "start", { openId })).toMatchObject({ filter: "held", openId: null });
-    expect(stateAt(1, "final", { openId })).toMatchObject({ filter: "held", openId });
+    expect(stateAt(1, "start", { openId })).toMatchObject({ body: "claims", openId: null });
+    expect(stateAt(1, "final", { openId })).toMatchObject({ body: "claims", openId });
   });
 });
 
@@ -56,6 +56,7 @@ describe("tour copy", () => {
   it("names the sponsor SDKs where they do the work: AG Grid on the queue, AG Studio on Insights", () => {
     expect(TOUR.steps[0].sentence).toMatch(/AG Grid/);
     expect(TOUR.steps[2].sentence).toMatch(/AG Studio/);
+    expect(TOUR.credit).toEqual(["Built on AG Grid", "Built on AG Grid", "Built on AG Studio", null]);
   });
 
   it("names a barcode in words, never by colour alone", () => {

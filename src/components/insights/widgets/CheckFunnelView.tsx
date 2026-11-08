@@ -21,10 +21,13 @@ export interface CheckFunnelViewProps {
   compact?: boolean;
   /** Spread the stages over the card's height (the console's canvas); off, they sit 16px apart from the top. */
   spread?: boolean;
+  /** The homepage: on the card's own content edge (no inset), figures in the sans face, no ↳ marks. */
+  flush?: boolean;
 }
 
-export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset, onKeyDown, compact, spread = true }: CheckFunnelViewProps) {
+export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset, onKeyDown, compact, spread = true, flush = false }: CheckFunnelViewProps) {
   const filed = steps[0]?.reached || 1;
+  const figure = flush ? "tabular-nums" : "font-mono tabular-nums";
   if (compact) {
     return (
       <ol className="flex flex-col gap-2">
@@ -32,7 +35,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
           <li key={s.stage} className="flex flex-col gap-1">
             <div className="grid grid-cols-[1fr_2rem] items-center gap-2 text-ui">
               <span>{s.stage}</span>
-              <span className="text-right font-mono tabular-nums">{s.reached}</span>
+              <span className={clsx("text-right", figure)}>{s.reached}</span>
             </div>
             <span aria-hidden="true" className="h-2 rounded-[3px] bg-surface-2">
               <span
@@ -43,7 +46,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
             {i < steps.length - 1 &&
               s.groups.map((g) => (
                 <p key={g.kind} className="text-micro text-muted">
-                  <span className={clsx("font-mono", TONE[g.kind])}>−{g.count}</span> <span className={TONE[g.kind]}>{KIND_LABEL[g.kind]}</span> · {g.summary}
+                  <span className={clsx(figure, TONE[g.kind])}>−{g.count}</span> <span className={TONE[g.kind]}>{KIND_LABEL[g.kind]}</span> · {g.summary}
                 </p>
               ))}
           </li>
@@ -53,14 +56,14 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
   }
   const Drop = onToggle ? "button" : "div";
   return (
-    <ol className={clsx("flex h-full min-h-0 flex-col px-1.5 pb-1", spread ? "justify-between gap-0.5" : "gap-4")} onClick={onReset} onKeyDown={onKeyDown}>
+    <ol className={clsx("flex h-full min-h-0 flex-col", !flush && "px-1.5 pb-1", spread ? "justify-between gap-0.5" : "gap-4")} onClick={onReset} onKeyDown={onKeyDown}>
       {steps.map((s, i) => {
         const last = i === steps.length - 1;
         return (
           <li key={s.stage} className="flex flex-col gap-1">
             <div className="grid grid-cols-[9.5rem_2.5rem_1fr] items-center gap-3">
               <span className="truncate text-ui text-text">{s.stage}</span>
-              <span className="text-right font-mono text-ui text-text tabular-nums">{s.reached}</span>
+              <span className={clsx("text-right text-ui text-text", figure)}>{s.reached}</span>
               <span className="relative h-3 rounded-[3px] bg-surface-2" aria-hidden="true">
                 <span
                   data-bar="funnel"
@@ -82,17 +85,22 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                     }
                   : {})}
                 className={clsx(
-                  "group ml-[9.5rem] flex min-h-6 items-center gap-2 rounded-control px-2 py-0.5 text-left text-micro transition-colors",
+                  "group ml-[9.5rem] flex min-h-6 items-center gap-2 rounded-control py-0.5 text-left text-micro transition-colors",
+                  flush ? "pl-3" : "px-2",
                   onToggle && "disabled:cursor-default enabled:hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
                   selected.has(s.stage) ? "bg-accent-soft ring-1 ring-accent" : "",
                 )}
               >
-                <span aria-hidden="true" className="self-start font-mono text-faint">↳</span>
+                {!flush && (
+                  <span aria-hidden="true" className="self-start font-mono text-faint">
+                    ↳
+                  </span>
+                )}
                 {s.stopped ? (
                   <span className="flex min-w-0 flex-col">
                     {s.groups.map((g) => (
                       <span key={g.kind} className="flex min-w-0 items-baseline gap-2">
-                        <span className={clsx("shrink-0 font-mono tabular-nums", TONE[g.kind])}>−{g.count}</span>
+                        <span className={clsx("shrink-0", figure, TONE[g.kind])}>−{g.count}</span>
                         <span className={clsx("shrink-0", TONE[g.kind])}>{KIND_LABEL[g.kind]}</span>
                         <span className={clsx("line-clamp-2 text-muted", onToggle && "group-enabled:group-hover:text-text")}>{g.summary}</span>
                       </span>
@@ -100,7 +108,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                   </span>
                 ) : (
                   <span className="flex items-baseline gap-2">
-                    <span className="font-mono text-faint tabular-nums">0</span>
+                    <span className={clsx("text-faint", figure)}>0</span>
                     <span className="text-muted">none stopped here</span>
                   </span>
                 )}

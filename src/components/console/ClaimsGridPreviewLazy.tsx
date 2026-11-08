@@ -23,6 +23,7 @@ export function ClaimsGridPreviewLazy({
   from = 720,
   onSwap,
   swapOnPick = false,
+  interactive = false,
   className,
   ...props
 }: ClaimsGridPreviewProps & {
@@ -32,6 +33,12 @@ export function ClaimsGridPreviewLazy({
   onSwap?: () => void;
   /** The visitor has picked a step: the grid may take the still's place now, in view, with a 160ms fade. */
   swapOnPick?: boolean;
+  /**
+   * Once the real grid is in, a visitor may touch it: scroll its rows, sort a column, see a row light up under the
+   * pointer. Nothing in it takes a tab stop (the grid's cells and headers take no focus in its still mode). Otherwise
+   * it is a picture: inert.
+   */
+  interactive?: boolean;
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -82,7 +89,7 @@ export function ClaimsGridPreviewLazy({
   }, []);
 
   return (
-    <div ref={ref} className={clsx("relative", className)} inert>
+    <div ref={ref} className={clsx("relative", className)} inert={!(interactive && swapped && stillGone)}>
       {(!swapped || (props.bare && !stillGone)) && (fallback ?? <Placeholder height={props.height} />)}
       {near && (
         // Opacity as well as visibility: AG Grid's scrollbars set their own visibility, which shows through a hidden parent.

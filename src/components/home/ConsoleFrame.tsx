@@ -40,16 +40,19 @@ export interface ConsoleFrameProps extends HTMLAttributes<HTMLDivElement> {
   page: FramePage;
   /** What the step shows, for screen readers: the frame itself is a picture. Announced on each change. */
   description: string;
+  /** The SDK the step is built on, said quietly at the end of the recall's row ("Built on AG Grid"). */
+  credit?: string | null;
   children: ReactNode;
 }
 
 /**
  * The homepage tour's one console window (ConsoleTour.tsx): chrome, the recall's title row and a body slot, at a fixed
  * height (776px, or less on a short laptop screen: --frame-h, home.module.css .stage). It never re-mounts and never
- * changes height: only the body inside it changes. The chrome is an echo inside the inert picture: the tour's own tabs
- * above the frame are the controls.
+ * changes height: only the body inside it changes. The chrome is an echo inside an inert picture: the tour's own tabs
+ * above the frame are the controls. Each body says itself what in it a visitor may touch (the claims grid's rows on
+ * step 01, the report's pages); the rest is inert.
  */
-export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(function ConsoleFrame({ page, description, children, className, ...panel }, ref) {
+export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(function ConsoleFrame({ page, description, credit, children, className, ...panel }, ref) {
   const pages = TOUR.chrome.pages;
   const { row, bar } = useSlider<HTMLSpanElement>(pages.indexOf(page));
   return (
@@ -57,9 +60,9 @@ export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(functi
       <p className="sr-only" aria-live="polite">
         {description}
       </p>
-      {/* The picture: nothing in it takes a click, a tab stop or a screen reader's attention. */}
-      <div inert className="flex min-h-0 flex-1 flex-col">
-        <div className="flex h-12 shrink-0 items-center gap-6 border-b border-line px-5">
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* The chrome: a picture, nothing in it takes a click, a tab stop or a screen reader's attention. */}
+        <div inert className="flex h-12 shrink-0 items-center gap-6 border-b border-line px-5">
           <span className="font-semibold">{TOUR.chrome.app}</span>
           <span ref={row} className={clsx("relative flex h-full items-center gap-5 text-ui font-medium", styles.slideRow)}>
             {pages.map((p) => (
@@ -71,11 +74,18 @@ export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(functi
           </span>
           <span className="ml-auto text-ui whitespace-nowrap text-muted">{TOUR.chrome.company}</span>
         </div>
-        <div className="flex h-11 shrink-0 items-end justify-between gap-6 px-5">
-          <span className="text-ui font-medium">
-            Kikea <span className="whitespace-nowrap">X-VESOLJE</span> nursing pillows
+        <div inert className="flex h-11 shrink-0 items-end justify-between gap-6 px-5">
+          <span className="text-ui">
+            <span className="font-medium">
+              Kikea <span className="whitespace-nowrap">X-VESOLJE</span> nursing pillows
+            </span>
+            <span className="ml-2 whitespace-nowrap text-muted">{TOUR.recall.id}</span>
           </span>
-          <span className="font-mono text-micro whitespace-nowrap text-faint">{TOUR.recall.id}</span>
+          {credit && (
+            <span key={credit} className={clsx("text-ui whitespace-nowrap text-muted", styles.credit)}>
+              {credit}
+            </span>
+          )}
         </div>
         <div className="relative min-h-0 flex-1">{children}</div>
       </div>

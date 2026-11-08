@@ -82,7 +82,8 @@ function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady }
       // The tour moves it to "final" itself; the long fallback only guards a lost update.
       settle.current = handle.arrive(interimOf(final), final, Math.max(0, rows.indexOf(final)), 60_000);
     } else if (from === "interim") settle.current();
-    else handle.arrive(final, final, Math.max(0, rows.indexOf(final)), 0)();
+    // Straight to its place, unanimated: put back while out of sight, or a step that simply shows the queue.
+    else handle.arrive(final, final, Math.max(0, rows.indexOf(final)), 0, true)();
   }, [ready, arrival, final, rows]);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { ARRIVE_ID, PREVIEW_OPEN_ID, previewProps, replicaRows, reportPreview } from "@/components/console/preview";
+import { ARRIVE_ID, PREVIEW_OPEN_ID, previewProps, reportPreview, STILL_ROWS } from "@/components/console/preview";
 import { ProgressReport } from "@/components/console/ProgressReport";
 import { STUDIO_ON_HOME } from "@/components/insights/InsightsPreviewLazy";
 import { InsightsStill } from "@/components/insights/InsightsStill";
@@ -11,9 +11,6 @@ import { ConsoleTour } from "./ConsoleTour";
 import { Section } from "./Section";
 import { describe, stepSentences, TOUR } from "./tour-copy";
 
-// The Insights canvas in Studio's 16px rows: the frame's body (776px less chrome and title row) less its padding.
-const STUDIO_ROWS = 40;
-
 // Without JS the tour's tabs can't work: the story shows at every width instead (the HeroDevice.tsx pattern), its
 // photos shown (they fade in on load, which needs JS).
 const NOSCRIPT = `<style>[data-tour]{display:none!important}[data-story]{display:block!important}[data-story] img{opacity:1!important}</style>`;
@@ -25,39 +22,44 @@ const NOSCRIPT = `<style>[data-tour]{display:none!important}[data-story]{display
  */
 export function Companies() {
   const grid = previewProps();
-  const replica = replicaRows(grid.rows);
   const still = insightsStill(insightsPreview());
   const { recall, report, generated } = reportPreview();
   const evidence = grid.rows.find((r) => r.id === PREVIEW_OPEN_ID)?.evidence ?? null;
   // Step 03 names the recall analyst only when its recorded answer is there to show.
   const sentences = stepSentences(Boolean(RECORDING));
   const descriptions = describe(still.totals, { id: PREVIEW_OPEN_ID, amount: evidence?.amount ?? "" }, RECORDING);
-  const sheet = <ProgressReport recall={recall} report={report} generated={generated} />;
+  const sheet = <ProgressReport recall={recall} report={report} generated={generated} home />;
 
   return (
-    <Section id="companies" title={TOUR.title} muted={TOUR.muted} headingSpan={9} bodyClassName="mt-12">
+    <Section id="companies" title={TOUR.title} muted={TOUR.muted} headingSpan={9} bodyClassName="mt-12" reveal="rise">
       <noscript dangerouslySetInnerHTML={{ __html: NOSCRIPT }} />
       <div data-tour className="hidden lg:block">
         <ConsoleTour
           rows={grid.rows}
+          stillRows={STILL_ROWS}
           sentences={sentences}
-          ledger={grid.ledger!}
-          counts={grid.counts!}
+          unitsSold={recall.unitsSold}
           openId={PREVIEW_OPEN_ID}
           arriveId={ARRIVE_ID}
           descriptions={descriptions}
-          insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail /> : undefined} refusalNote={TOUR.refusalNote} />}
+          insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail /> : undefined} />}
           report={sheet}
-          studio={STUDIO_ON_HOME ? { data: insightsPreviewForStudio(), rows: STUDIO_ROWS } : null}
+          studio={STUDIO_ON_HOME ? { data: insightsPreviewForStudio() } : null}
         />
       </div>
       <div data-story className="max-w-[720px] lg:hidden">
-        <ConsoleStory replica={replica} sentences={sentences} evidence={evidence} insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" />} report={sheet} />
+        <ConsoleStory
+          rows={grid.rows}
+          sentences={sentences}
+          evidence={evidence}
+          insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" />}
+          report={sheet}
+        />
       </div>
 
       <div className="mt-14 grid-12 gap-y-6 lg:mt-16 lg:items-center">
         <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-7">{TOUR.cta.body}</p>
-        <Button href="/signin" variant="secondary" size="lg" className="col-span-12 w-full justify-center sm:w-auto sm:justify-self-start lg:col-span-5 lg:col-start-8 lg:justify-self-end">
+        <Button href="/signin" size="lg" className="col-span-12 w-full justify-center sm:w-auto sm:justify-self-start lg:col-span-5 lg:col-start-8 lg:justify-self-end">
           {TOUR.cta.button}
         </Button>
       </div>

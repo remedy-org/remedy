@@ -47,3 +47,11 @@ export const gridTheme = themeQuartz.withParams({
   valueChangeValueHighlightBackgroundColor: "var(--pay-soft)",
   focusShadow: { radius: 0, spread: 2, color: "var(--focus)" },
 });
+
+// The homepage's still: the same grid, its header labels in the UI's sans face, sentence case, muted (claims-grid.css
+// drops the uppercase for it), so mono is left to the ids, codes, times and money in the cells.
+export const stillTheme = gridTheme.withParams({
+  headerFontFamily: "var(--font-sans)",
+  headerFontSize: 13,
+  headerTextColor: "var(--muted)",
+});

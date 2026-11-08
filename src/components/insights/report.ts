@@ -248,17 +248,30 @@ export const insightsReport = (data: InsightsData): AgReportState<InsightsRegist
   },
 });
 
+/** The homepage's day chart's title, in Studio and in the still that stands in for it (InsightsStill.tsx). */
+export const PAID_BY_DAY = "Paid through PayPal, by day";
+
+/** The Refused tile's caption on the homepage: how the refusals split between the photo check and the pre-checks. */
+export const refusedSplit = (photo: number, pre: number) => `${photo} rejected by the photo check, ${pre} blocked by pre-checks`;
+
+/** The homepage's refusal reasons card, in 16px rows: its title, the intro line and each reason with its bar. */
+export const homeRefusalRows = (reasons: number) => 6 + Math.ceil((reasons * 38) / 16);
+
 /**
- * The homepage's Insights, as Studio state (InsightsPreview.tsx): five widgets on one page, no exhibit letters. Units
- * remedied and Refused are Studio's own value KPI tiles; the median is Remedy's tile (Studio's can only average); the
- * funnel and the refusal reasons are the console's own widgets. `rows` is the canvas height in 16px tracks, measured
- * from the tour's fixed frame, so the page fills it with nothing cut off.
+ * The homepage's Insights, as Studio state (InsightsPreview.tsx): six widgets on one page. Units remedied and Refused
+ * are Studio's own value KPI tiles; the median is Remedy's tile (Studio's can only average); the funnel and the refusal
+ * reasons are the console's own widgets; the dollars paid by day are Studio's column chart. `rows` is the canvas height
+ * in 16px tracks, measured from the tour's fixed frame, so the page fills it with nothing cut off.
  */
 export function homeInsightsReport(data: InsightsData, rows = 40): AgReportState<InsightsRegistry> {
   const say = captions(provenance(data.claims));
   const widgets = overview(data).widgets!;
-  const kpiRows = 6;
+  const kpiRows = 8;
   const median = widgets["kpi-median"];
+  const refused = (gate: string) => data.claims.filter((c) => c.refused && c.refusalGate === gate).length;
+  const reasons = new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size;
+  const body = Math.max(24, rows - kpiRows);
+  const refusalRows = Math.min(body - 10, homeRefusalRows(reasons));
   return {
     selectedPageId: "overview",
     pages: [
@@ -267,16 +280,22 @@ export function homeInsightsReport(data: InsightsData, rows = 40): AgReportState
         widgets: {
           "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), `of ${data.recall.unitsSold.toLocaleString("en-US")} sold`),
           "kpi-median": { ...median, format: { title: { enabled: true, text: say.timeTitle }, caption: { enabled: true, text: kpiCaption(data) } } },
-          "kpi-refused": kpi("Refused", sum("claims.refused"), "stopped before any money moved"),
+          "kpi-refused": kpi("Refused", sum("claims.refused"), refusedSplit(refused("Photo check"), refused("Pre-check"))),
           funnel: { ...widgets.funnel, format: titled("Check funnel") },
           refusals: { ...widgets.refusals, format: titled("Why claims were refused") },
+          "paid-by-day": {
+            type: "column-chart-grouped",
+            dataMapping: { categoryKey: [{ id: "calendar::day" }], valueKey: [sum("claims.amountSent")] },
+            format: titled(PAID_BY_DAY),
+          },
         } as AgPageState<InsightsRegistry>["widgets"],
         widgetLayout: {
           "kpi-remedied": at(0, 0, 8, kpiRows),
           "kpi-median": at(8, 0, 8, kpiRows),
           "kpi-refused": at(16, 0, 8, kpiRows),
-          funnel: at(0, kpiRows, 14, Math.max(16, rows - kpiRows)),
-          refusals: at(14, kpiRows, 10, Math.max(16, rows - kpiRows)),
+          funnel: at(0, kpiRows, 14, body),
+          refusals: at(14, kpiRows, 10, refusalRows),
+          "paid-by-day": at(14, kpiRows + refusalRows, 10, body - refusalRows),
         },
       },
     ],
@@ -284,9 +303,9 @@ export function homeInsightsReport(data: InsightsData, rows = 40): AgReportState
   };
 }
 
-// "35 claims checked": how many claims the median tile's time covers.
+// "26 payouts": how many claims the median tile's time covers.
 const kpiCaption = (data: InsightsData) => {
   const { timeField } = captions(provenance(data.claims));
   const n = data.claims.filter((c) => c[timeField] !== null).length;
-  return `${n} ${n === 1 ? "claim" : "claims"} checked`;
+  return timeField === "timeToSendSec" ? `across ${n} ${n === 1 ? "payout" : "payouts"}` : `${n} ${n === 1 ? "claim" : "claims"} checked`;
 };

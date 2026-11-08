@@ -26,6 +26,19 @@
     translate: 0 12px;
   }
 
+  /* 1b. Rise: a plain fade and 8px up, 360ms, 60ms apart per line (the For companies heading: no blur). */
+  .rise {
+    transition:
+      opacity 360ms var(--ease-out-quart),
+      translate 360ms var(--ease-out-quart);
+    transition-delay: calc(var(--line, 0) * 60ms);
+  }
+
+  .reveal[data-enter="armed"] .rise {
+    opacity: 0;
+    translate: 0 8px;
+  }
+
   /* 3. Ink: the highlighter sweeps left to right, 700ms ease-out after 200ms. */
   .highlight {
     transition: background-size 700ms ease-out 200ms;
@@ -180,30 +193,22 @@
 }
 
 /*
- * The console tour (ConsoleTour.tsx, Exhibit D). Inside a product frame the product's own motions (row insert, cell
+ * The console tour (ConsoleTour.tsx, For companies). Inside a product frame the product's own motions (row insert, cell
  * flash, row animation, the 160ms panel) may run once on entering view or on a visitor's pick; they are not a fifth
  * homepage move. Each runs only when motion is allowed, and the resting state is always the final one.
  */
 
-/* The rail: four tabs that look pressable (a pointer, a --surface wash on hover reaching 12px past the text, the
-   inactive ones quieter until hovered). Docked under the 64px nav when a tab or the panel takes focus. */
+/* The rail: four tabs. The underline is the one selection mark; hover only brings an inactive tab's words up to full
+   colour (the pointer says it can be pressed). Docked under the 64px nav when a tab or the panel takes focus. */
 .rail {
   isolation: isolate;
   scroll-margin-top: 80px;
 }
 
-.tab::before {
-  content: "";
-  position: absolute;
-  inset: -12px -12px 0;
-  z-index: -1;
-  border-radius: 10px;
-  background: var(--surface);
-  opacity: 0;
-}
-
-.tab[aria-selected="false"]:hover::before {
-  opacity: 1;
+/* The keyboard's ring stands clear of the words: 6px out, inside the 24px gutter between tabs. */
+.tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 6px;
 }
 
 /*
@@ -270,17 +275,30 @@
   opacity: 1;
 }
 
-/* The report's sheet fades into the frame's bottom edge over 96px. */
+/* The report's sheet scrolls inside the frame like a document, its foot clipped clean by the frame's edge. */
 .reportBody {
-  overflow: hidden;
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 96px), transparent);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
 }
 
-/* The phone story's report: its head, fading out, until "Read the whole draft" opens it in place. */
+/* In the dark theme the paper sits under dimmer light: a warm sheet about 85% as bright, so it doesn't glare. */
+:global(html[data-theme="dark"]) .sheet article,
+:global(html[data-theme="dark"]) .peekClip article {
+  background: color-mix(in srgb, var(--paper) 87%, #17130d);
+}
+
+/* The frame's quiet credit (the SDK a step is built on) fades in as the step changes. */
+.credit {
+  animation: credit-in var(--dur-ui) var(--ease-snap) both;
+}
+
+/* The phone story's report: its head, cut at the end of the recall's details with a short fade, until "Read the whole
+   draft" opens it in place. */
 .peekClip {
   height: 360px;
   overflow: hidden;
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }
 
 .peek:has(details[open]) .peekClip {
@@ -321,7 +339,40 @@
   }
 }
 
-/* Step 02's payout path: Approve, a drawn line, PayPal Payouts, a line, the amount. */
+/* Step 02's payout path: Approve, a drawn line, PayPal Payouts, a line, the amount. One line from 384px; on a narrower
+   phone a short rail, top to bottom, its connectors 16px down strokes. */
+.flowPath {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-ui);
+  white-space: nowrap;
+}
+
+@media (max-width: 383px) {
+  .flowPath {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .flowPath .flowLine {
+    flex: none;
+    width: 1px;
+    min-width: 0;
+    height: 16px;
+    margin-left: 6px;
+    transform-origin: top;
+  }
+
+  .flowPath .flowLine::after {
+    right: -3px;
+    top: auto;
+    bottom: 0;
+    rotate: 135deg;
+  }
+}
+
 .flowLine {
   position: relative;
   flex: 1 1 0;
@@ -344,10 +395,6 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .tab::before {
-    transition: opacity var(--dur-ui) var(--ease-snap);
-  }
-
   /* E1, E3: the rail bar and the measured underlines glide, 160ms. */
   .railBar,
   .slider {
@@ -410,14 +457,25 @@
     animation-delay: calc(300ms + var(--i, 0) * 80ms);
   }
 
+  .stage[data-step="2"] [data-still] [data-bar="day"] {
+    transform-origin: bottom;
+    animation: column-grow 600ms var(--ease-out-quart) both;
+    animation-delay: calc(500ms + var(--i, 0) * 80ms);
+  }
+
   .stage[data-step="2"] .answerLine {
     animation: focus-in var(--dur-reveal) var(--ease-out-expo) both;
     animation-delay: calc(300ms + var(--line, 0) * 80ms);
   }
 
-  /* E8: the draft rises into place. */
+  /* E8: the draft rises into place, by transform only: the paper is never seen half-transparent (grey) over the frame.
+     Its body shows at once instead of crossfading. */
+  .reportBody[data-on] {
+    transition: visibility 0s;
+  }
+
   .stage[data-step="3"] .sheet {
-    animation: sheet-rise 520ms var(--ease-out-expo) both;
+    animation: sheet-rise 420ms var(--ease-out-expo) both;
   }
 }
 
@@ -462,7 +520,18 @@
 
 @keyframes sheet-rise {
   from {
+    translate: 0 24px;
+  }
+}
+
+@keyframes column-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes credit-in {
+  from {
     opacity: 0;
-    translate: 0 16px;
   }
 }

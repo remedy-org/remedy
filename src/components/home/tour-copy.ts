@@ -14,14 +14,14 @@ export const TOUR = {
   ],
   chrome: { app: "Remedy", pages: ["Claims", "Insights", "Report"] as const, company: "Kikea Store" },
   recall: { product: "Kikea X-VESOLJE nursing pillows", id: "CPSC 27-071" },
+  /** The frame's quiet credit, per step: the SDK that step is built on (none on the report, which is Remedy's own). */
+  credit: ["Built on AG Grid", "Built on AG Grid", "Built on AG Studio", null] as const,
   /** Step 03's sentence goes on to the analyst only when a recorded answer is there to show (AnalystRail.tsx). */
   analystSentence: " Then ask the recall analyst why.",
   cta: {
-    body: "Log in with PayPal; there’s no separate sign-up. Your console opens on a working recall, so you can try every view here before you import your own.",
+    body: "No separate sign-up. Your console opens on a working recall, ready the moment you import your own.",
     button: "Log in with PayPal",
   },
-  /** Under the refusal reasons in step 03: what a refusal means for the money. */
-  refusalNote: "A refused claim moves no money. The owner is told the exact reason and how to claim again.",
   /** Step 02's payout path under the evidence (PayoutsNote.tsx); the sentence below says it in full for screen readers. */
   payouts: { approve: "Approve", via: "PayPal Payouts", reference: "Payout reference" },
   analyst: { title: "Recall analyst", limit: "Can’t approve or pay", recorded: "Recorded answer" },
@@ -46,10 +46,10 @@ export interface TourTotals {
 /** What each step's panel says to a screen reader: the frame is a picture, so this carries its content. */
 export function describe(t: TourTotals, open: { id: string; amount: string }, analyst?: { question: string; answer: string } | null) {
   return [
-    `The claims queue for the Kikea recall: ${t.claims} claims, ${t.paid} paid, ${t.held} held, ${t.refused} refused, newest first.`,
+    `The claims queue for the Kikea recall, in AG Grid: ${t.claims} claims, ${t.paid} paid, ${t.held} held, ${t.refused} refused. Scroll it, or sort by claim, verdict or amount.`,
     `Claim ${open.id}, held: photos 1 and 2, and the model’s answer that it couldn’t tell if both photos show the same item. A person approves or rejects it; approving pays ${open.amount} through PayPal Payouts.`,
-    `Insights: of ${t.claims} claims, ${t.photos} sent photos, ${t.preChecked} passed the pre-checks, ${t.paid} passed the photo check and were paid; ${t.refused} were refused before any money moved.` +
+    `Insights, in AG Studio: of ${t.claims} claims, ${t.photos} sent photos, ${t.preChecked} passed the pre-checks, ${t.paid} passed the photo check and were paid; ${t.refused} were refused. Payouts by day beside it.` +
       (analyst ? ` Recall analyst, asked “${analyst.question}”: ${analyst.answer}` : ""),
-    `The CPSC progress report draft for recall 27-071, built from the same ${t.claims} claims.`,
+    `The CPSC progress report draft for recall 27-071, built from the same ${t.claims} claims: units remedied, claims by outcome, refunds paid and why claims were refused.`,
   ];
 }

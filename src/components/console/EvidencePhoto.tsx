@@ -26,6 +26,7 @@ export function EvidencePhoto({
   tall,
   onOpen,
   className,
+  captionClassName,
 }: {
   src: string;
   n: number;
@@ -35,6 +36,8 @@ export function EvidencePhoto({
   tall?: boolean;
   onOpen?: () => void;
   className?: string;
+  /** The caption's face and colour, when not the console's mono label (the homepage sets it in the sans face). */
+  captionClassName?: string;
 }) {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const label = `Photo ${n} of ${of}`;
@@ -82,7 +85,7 @@ export function EvidencePhoto({
           {inner}
         </a>
       )}
-      <figcaption className="font-mono text-micro text-muted">
+      <figcaption className={captionClassName ?? "font-mono text-micro text-muted"}>
         {label}
         {/* The cue the zoom cursor alone didn't give; the button's name says it to screen readers. */}
         {onOpen && (

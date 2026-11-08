@@ -26,7 +26,7 @@ import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, u
 import type { ClaimRow } from "@/app/console/_lib/view";
 import { AmountCell, CardRow, ChecksCell, ChecksTooltip, ClaimCell, PayerCell, PayoutCell, PhotoTooltip, TimelineCell, TimelineTooltip, VerdictCell } from "./cells";
 import { SkeletonGrid } from "./ConsoleSkeleton";
-import { gridTheme } from "./gridTheme";
+import { gridTheme, stillTheme } from "./gridTheme";
 import "./claims-grid.css";
 
 // Community modules only (no Enterprise): photo tooltips and the payout cell flash on top of the core, and the scroll
@@ -60,15 +60,18 @@ export const CARD_BELOW = 720;
 const VERDICT_MIN = { queue: 260, still: 144 };
 const VERDICT_WANT = { queue: 360, still: 144 };
 const BASE = 220 + 132 + 96;
-const OPTIONAL: Record<string, number> = { timeline: 168, payoutStatus: 112, payer: 132 };
+// The still's PayPal column is wider: "•••• 78AV" and "Unverified" side by side, never cut mid-word.
+const PAYER = { queue: 132, still: 172 };
+const OPTIONAL = (still: boolean): Record<string, number> => ({ timeline: 168, payoutStatus: 112, payer: still ? PAYER.still : PAYER.queue });
 const ORDER = { queue: ["timeline", "payoutStatus", "payer"], still: ["payoutStatus", "timeline", "payer"] };
 
 function hiddenAt(width: number, still: boolean): Set<string> {
   const order = still ? ORDER.still : ORDER.queue;
   let room = width - BASE - (still ? VERDICT_WANT.still : VERDICT_WANT.queue);
   const hidden = new Set<string>();
+  const optional = OPTIONAL(still);
   for (const id of order) {
-    if ((still || !hidden.size) && room >= OPTIONAL[id]) room -= OPTIONAL[id];
+    if ((still || !hidden.size) && room >= optional[id]) room -= optional[id];
     else hidden.add(id);
   }
   return hidden;
@@ -82,8 +85,9 @@ export interface ClaimsGridHandle {
   /** The claim whose row has keyboard focus, if any (A and R act on it). */
   focusedRowId(): string | null;
   /** The homepage's still: a claim arrives at `index` as `interim`, then becomes `final` after `after` ms (its changed
-   * cells flash). Returns settle(), which applies the final row at once. */
-  arrive(interim: ClaimRow, final: ClaimRow, index: number, after?: number): () => void;
+   * cells flash). Returns settle(), which applies the final row at once. `instant`: no row animation (the grid is out
+   * of sight, or the claim is simply put back). */
+  arrive(interim: ClaimRow, final: ClaimRow, index: number, after?: number, instant?: boolean): () => void;
   /** The homepage's still: takes a row out (to replay its arrival). */
   remove(id: string): void;
   /** The homepage's still: shows only the rows that pass (null for all), animating the change. */
@@ -158,9 +162,13 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       if (!cell || cell.rowPinned) return null;
       return api.current?.getDisplayedRowAtIndex(cell.rowIndex)?.data?.id ?? null;
     },
-    arrive(interim, final, index, after = 900) {
+    arrive(interim, final, index, after = 900, instant = false) {
       const grid = api.current;
       if (!grid) return () => {};
+      if (instant && animate) {
+        grid.setGridOption("animateRows", false);
+        requestAnimationFrame(() => api.current?.setGridOption("animateRows", true));
+      }
       if (!grid.getRowNode(final.id)) grid.applyTransaction({ add: [interim], addIndex: index });
       let done = false;
       const settle = () => {
@@ -211,18 +219,20 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     const all: ColDef<ClaimRow>[] = [
       {
         colId: "createdAt",
-        // The second line's time is UTC (cells.tsx): said once here, so every row's line fits the column.
-        headerName: "Claim · UTC",
+        // The second line's time is UTC (cells.tsx): said once here, so every row's line fits the column. The homepage's
+        // still names the column alone, in the sans face.
+        headerName: still ? "Claim" : "Claim · UTC",
         field: "createdAt",
         cellRenderer: ClaimCell,
         width: 220,
         pinned: "left",
         lockPinned: true,
-        sortable: !still,
+        sortable: true,
         // The queue is newest first, the held tab oldest first; the homepage's still keeps the order its rows come in
-        // (curated in preview.ts). A header click flips the order, with no unsorted step between.
+        // (curated in preview.ts) until a visitor sorts it, and a third click on the header gives that order back. In
+        // the queue a header click flips the order, with no unsorted step between.
         sort: still ? undefined : oldestFirst ? "asc" : "desc",
-        sortingOrder: ["desc", "asc"],
+        sortingOrder: still ? ["desc", "asc", null] : ["desc", "asc"],
         tooltip: (p) => (!still && p.data?.photos.length ? p.data.id : undefined),
         tooltipComponent: PhotoTooltip,
       },
@@ -235,6 +245,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         cellRenderer: VerdictCell,
         flex: 1,
         minWidth: still ? VERDICT_MIN.still : VERDICT_MIN.queue,
+        // The homepage's still sorts by verdict too (paid, held, refused: a visitor's quickest check that it's a grid).
+        sortable: still,
+        sortingOrder: ["asc", "desc", null],
         enableCellChangeFlash: true,
         // The flash is the paid colour only when the claim became paid; any other change (a refused approve, a reject)
         // flashes neutral, since no money moved (claims-grid.css).
@@ -273,7 +286,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         headerName: "PayPal",
         field: "payer",
         cellRenderer: PayerCell,
-        width: 132,
+        width: still ? PAYER.still : PAYER.queue,
       },
       {
         colId: "payoutStatus",
@@ -295,6 +308,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         pinned: "right",
         lockPinned: true,
         sortable: true,
+        sortingOrder: still ? ["desc", "asc", null] : undefined,
         type: "rightAligned",
       },
     ];
@@ -316,6 +330,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       ref={wrap}
       className={className ?? (fill ? `claims-grid relative h-full w-full${ready ? "" : " overflow-hidden"}` : "claims-grid relative w-full")}
       aria-busy={!ready || undefined}
+      data-still={still || undefined}
     >
       {!ready && <SkeletonGrid rows={Math.min(rows.length, 12)} cards={cards} />}
       {width !== null && (
@@ -326,7 +341,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
             modules={still ? STILL_MODULES : undefined}
             isExternalFilterPresent={still ? () => filter.current !== null : undefined}
             doesExternalFilterPass={still ? (node: IRowNode<ClaimRow>) => (node.data ? (filter.current?.(node.data) ?? true) : true) : undefined}
-            theme={gridTheme}
+            theme={still ? stillTheme : gridTheme}
             rowData={rows}
             columnDefs={columns}
             getRowId={(p) => p.data.id}
@@ -371,8 +386,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
               focusTimer.current = window.setTimeout(() => onFocusRow(id), 120);
             }}
             rowClass={still ? undefined : "cursor-pointer"}
-            // Nor does a row light up under the pointer: the still's rows open nothing.
-            suppressRowHoverHighlight={still}
+            // The still's rows light up under the pointer when the homepage lets the visitor touch the grid (it is inert
+            // otherwise, so nothing hovers); they open nothing.
             // The homepage's still is a picture: no cell or header takes focus. In both, Tab leaves the grid in one step
             // (to the evidence panel and the footer); the arrow keys move between cells.
             // Card rows have no header (0px tall): it must never be a tab stop. A full-width row is focused through its
