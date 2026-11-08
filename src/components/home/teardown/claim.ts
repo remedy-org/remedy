@@ -84,14 +84,15 @@ export const CHECKS: readonly Check[] = [
   },
 ];
 
-/** The receipt's lines, all from the claim above. */
-export const RECEIPT_ROWS: readonly [string, string][] = [
-  ["Claim", EXHIBIT.id],
-  ["Recall", EXHIBIT.recall],
-  ["Code", EXHIBIT.code],
-  ["Checks", "5 of 5 passed"],
-  ["Decision", "Paid by the rule"],
-  ["Sent", "Through PayPal"],
-  ["Photo to payout", `${EXHIBIT.seconds} s`],
-  ["Paid to", "Verified PayPal account"],
+/**
+ * The receipt's lines, all from the claim above: label, value, and whether the value is data (set in mono). The claim id
+ * is the receipt's header, so it is not a row.
+ */
+export const RECEIPT_ROWS: readonly [string, string, boolean][] = [
+  ["Recall", EXHIBIT.recall, true],
+  ["Code", EXHIBIT.code, true],
+  ["Checks", "All 5 passed", false],
+  ["Decision", "Approved by the rule", false],
+  ["Photo to payout", `${EXHIBIT.seconds} s`, true],
+  ["Paid to", "Verified PayPal account", false],
 ];

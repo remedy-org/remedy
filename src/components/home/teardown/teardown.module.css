@@ -344,7 +344,7 @@
 
 .cellBody {
   display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 4px;
   width: 100%;
@@ -411,13 +411,14 @@ button.cellBody:hover .label {
   gap: 8px;
 }
 
+/* Phones: five bars with a tick under each passed one; the names are in the callout above. */
 .small .cellBody {
-  grid-template-columns: auto auto;
-  justify-content: space-between;
+  grid-template-columns: auto;
+  justify-content: end;
   min-height: 32px;
 }
 
-.small .cellBody > span:nth-child(2) {
+.small .cellBody > span:first-child {
   display: none;
 }
 

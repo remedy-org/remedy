@@ -88,12 +88,11 @@ function readColors(el: HTMLElement): Colors {
   };
 }
 
-/** One check in the row along the foot: number, name, who reads it, and a tick once passed. */
+/** One check in the row along the foot: its name, who reads it, and a tick once passed. The row's order is the count. */
 function CheckCell({ i, done, active, onSeek }: { i: number; done: boolean; active: boolean; onSeek?: (i: number) => void }) {
   const c = CHECKS[i];
   const body = (
     <>
-      <span className={clsx("font-mono text-micro whitespace-nowrap", active ? "text-accent-text" : "text-faint")}>{c.n}</span>
       <span className="min-w-0">
         <span className={clsx("block truncate text-ui font-medium", done || active ? "text-text" : "text-muted")}>{c.label}</span>
         <span className="block text-micro text-faint">{c.ai ? "The model reads" : "No AI"}</span>
@@ -124,15 +123,18 @@ function Receipt({ stamped, className, style }: { stamped: boolean; className?: 
   return (
     <div className={clsx(styles.receipt, className)} style={style}>
       <Paper variant="receipt" perforated padding="md" className="w-full">
-        <p className="micro text-ink-muted">Refund · {EXHIBIT.id}</p>
+        <p className="flex items-baseline justify-between gap-4 text-ui text-ink-muted">
+          Refund
+          <span className="font-mono text-micro font-medium text-ink">{EXHIBIT.id}</span>
+        </p>
         <p className="mt-3 text-ink">
           <Money value={EXHIBIT.amount} size="amount" />
         </p>
         <dl className="mt-5 border-t border-dashed border-paper-line">
-          {RECEIPT_ROWS.map(([k, v]) => (
+          {RECEIPT_ROWS.map(([k, v, data]) => (
             <div key={k} className="flex items-baseline justify-between gap-4 border-b border-dashed border-paper-line py-1.5 text-ui">
               <dt className="text-ink-muted">{k}</dt>
-              <dd className="font-mono text-ink">{v}</dd>
+              <dd className={clsx("text-ink", data && "font-mono")}>{v}</dd>
             </div>
           ))}
         </dl>
@@ -157,12 +159,12 @@ function ScreenReaderSummary() {
       <ol>
         {CHECKS.map((c) => (
           <li key={c.id}>
-            Check {c.n}, {c.label}, {c.ai ? "read by the model" : "no AI"}: passed. {c.note} {c.quote ? `The model’s words: “${c.quote}”` : ""}
+            {c.label}, {c.ai ? "read by the model" : "no AI"}: passed. {c.note} {c.quote ? `The model’s words: “${c.quote}”` : ""}
           </li>
         ))}
       </ol>
       <p>
-        A fixed rule approved it. ${EXHIBIT.amount} went to the owner&rsquo;s PayPal account {EXHIBIT.seconds} seconds after the photo.
+        A fixed rule approved it, and PayPal paid ${EXHIBIT.amount} to the owner&rsquo;s account {EXHIBIT.seconds} seconds after the photo.
       </p>
     </div>
   );
@@ -174,7 +176,7 @@ function Header({ compact, chapter }: { compact?: boolean; chapter?: string }) {
       <p className="eyebrow text-muted whitespace-nowrap">{chapter ?? "How it works"}</p>
       {/* Each half its own block on one column start, as the section headings set them, so both lines start alike. */}
       <h2 className={clsx("mt-3 text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>
-        <span className="block max-w-[26ch]">Five checks passed.</span> <span className="block max-w-[26ch] text-muted">Then PayPal paid ${EXHIBIT.amount}.</span>
+        <span className="block max-w-[26ch]">Five checks pass.</span> <span className="block max-w-[26ch] text-muted">Then PayPal pays the owner.</span>
       </h2>
     </div>
   );
@@ -191,9 +193,7 @@ function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done"
     [
       "Decision",
       s.decision === "pay" ? (
-        <span key="d" className="text-pay">
-          Pay
-        </span>
+        "Approved"
       ) : s.decision === "checking" ? (
         // The check being run, as the hero's laptop counts it.
         `Checking ${s.active >= 0 ? s.active + 1 : Math.min(5, s.done + 1)} of 5`
@@ -203,9 +203,10 @@ function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done"
     ],
     [
       "Payout",
+      // The amount is the receipt's, which lands with it: here only the state.
       s.sent ? (
-        <span key="p">
-          <Money value={EXHIBIT.amount} />
+        <span key="p" className="text-pay">
+          Sent
         </span>
       ) : (
         "Waiting"
@@ -216,7 +217,7 @@ function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done"
     <dl className={styles.readouts} aria-hidden="true">
       {items.map(([k, v]) => (
         <div key={k}>
-          <dt className="micro text-faint">{k}</dt>
+          <dt className="text-ui text-muted">{k}</dt>
           <dd className="mt-1.5 text-body font-medium whitespace-nowrap">{v}</dd>
         </div>
       ))}
@@ -234,10 +235,13 @@ function IntroCallout({ framed }: { framed: number }) {
       <p className="text-ui text-muted">In the claim page&rsquo;s camera</p>
       <p className="mt-2 text-body font-medium text-text">The owner cuts the pillow and frames it, tag and all.</p>
       <p className="mt-1 text-ui text-muted">Nothing is checked or paid until the photo is taken.</p>
-      <ol className="mt-4 flex flex-col gap-1.5">
+      {/* On a hairline, each thing's node lighting as it comes into the frame (no numerals: the order is the line). */}
+      <ol className="relative mt-4 flex flex-col gap-2.5 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-line">
         {FRAME_LIST.map((f, i) => (
-          <li key={f} className={clsx("grid grid-cols-[1.75rem_minmax(0,1fr)] items-baseline text-ui transition-opacity duration-160", i < framed ? "opacity-100" : "opacity-35")}>
-            <span className="font-mono text-micro text-faint">{String(i + 1).padStart(2, "0")}</span>
+          <li key={f} className={clsx("relative grid grid-cols-[1.25rem_minmax(0,1fr)] text-ui transition-opacity duration-160", i < framed ? "opacity-100" : "opacity-35")}>
+            <span className="mt-1.5 flex size-2 rounded-full bg-bg">
+              <span className="block size-2 rounded-full border border-text-2" />
+            </span>
             {f}
           </li>
         ))}
@@ -382,7 +386,8 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
     if (calloutBox.current) calloutBox.current.toggleAttribute("data-on", st.callout > 0);
     if (receipt.current) {
       receipt.current.style.opacity = String(Math.min(1, st.receipt * RECEIPT_FADE));
-      receipt.current.style.transform = `translateY(${((1 - st.receipt) * 48).toFixed(1)}px) rotate(${(1.2 - st.receipt * 2.4).toFixed(2)}deg)`;
+      // It settles level, so its figures read crisp at rest.
+      receipt.current.style.transform = `translateY(${((1 - st.receipt) * 48).toFixed(1)}px) rotate(${(1.6 * (1 - st.receipt)).toFixed(2)}deg)`;
     }
     // Active check's bar fills with its beat.
     el.querySelectorAll<HTMLElement>("[data-fill]").forEach((f) => {
@@ -639,7 +644,7 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
 function StaticExhibit({ chain }: { chain: boolean }) {
   return (
     <section className={styles.static} aria-label="How it works: five checks and the payout">
-      <Header chapter={chain ? "03–05 · Live photo, five checks, paid" : undefined} />
+      <Header chapter={chain ? "Live photo, five checks, paid" : undefined} />
       <div className={styles.staticGrid}>
         <figure className={styles.staticFigure}>
           <div className={styles.pool} aria-hidden="true" />
@@ -658,8 +663,7 @@ function StaticExhibit({ chain }: { chain: boolean }) {
         </figure>
         <ol className={clsx(styles.staticChecks, "flex flex-col")}>
             {CHECKS.map((c) => (
-            <li key={c.id} className="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-x-2 border-t border-line py-4">
-              <span className="font-mono text-micro text-faint">{c.n}</span>
+            <li key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 border-t border-line py-4">
               <div>
                 <p className="text-body font-medium">{c.label}</p>
                 <p className="mt-1 text-ui text-muted">{c.note}</p>
