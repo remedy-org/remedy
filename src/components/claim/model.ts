@@ -85,7 +85,7 @@ export function checkRows(claim: ClaimLike, spec: CheckSpec): CheckRow[] {
     if (claim.demo && p.id === "account") {
       return oneClaimChecked(claim)
         ? { id: p.id, group: "pre", label: p.label, state: "pass", detail: "A verified PayPal account. Checked within this demo round: no other paid or open genuine claim" }
-        : { id: p.id, group: "pre", label: p.label, state: "skipped", detail: "A verified PayPal account. One claim per account is skipped for demo samples: one judge's account sends all four, so this check would stop the rest" };
+        : { id: p.id, group: "pre", label: p.label, state: "skipped", detail: "A verified PayPal account. One claim per account is skipped for demo claims: one demo account sends all four, so this check would stop the rest" };
     }
     return { id: p.id, group: "pre", label: p.label, state: "pass", detail: claim.demo && p.id === "session" ? "Sent inside this claim's 10-minute session" : p.pass };
   });
@@ -348,6 +348,12 @@ export function taggedThing(spec: Pick<CheckSpec, "proof_steps">): string | null
   }
   return null;
 }
+
+/** "Pillow", from the shot list's "cut pillow"; "Product" when the notice names no tagged thing. */
+export const nounOf = (spec: Pick<CheckSpec, "proof_steps">) => {
+  const word = taggedThing(spec)?.split(" ").pop() ?? "product";
+  return word.charAt(0).toUpperCase() + word.slice(1);
+};
 
 /**
  * sessionStorage: this tab took photos on this claim that weren't sent yet. A reload (or iOS reclaiming the tab) drops

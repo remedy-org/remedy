@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sampleClaim } from "@/lib/__fixtures__/claim";
 import { DEMO_SPEC } from "@/lib/demo/kikea";
 import { acceptsStandIn, businessDaysAfter, codeDiff, coverCrop, handWrittenLabel, maskEmail, misreadOf, ownerLabel, payoutHold, productNoun, readableReasons, receiptPollDelay, refusalHeadline, taggedThing, timelineOf } from "./model";
-import { nextSample, roundLine, scoreLine } from "./Scoreboard";
+import { nextSample, ranLine } from "./Scoreboard";
 
 describe("codeDiff", () => {
   it("marks the one character the model read differently, and says which", () => {
@@ -99,32 +99,18 @@ describe("the code step's instruction", () => {
 });
 
 describe("the demo round", () => {
-  it("scores this round's runs against what each sample should do", () => {
-    expect(scoreLine([]).text).toBe("0 of 4 run");
-    expect(scoreLine([{ sample: "genuine", decision: "paid" }]).text).toBe("1 of 4 run · all as expected");
-    expect(scoreLine([{ sample: "genuine", decision: "held" }]).text).toBe("1 of 4 run · 0 of 1 as expected");
+  it("says how far this round has got, counting each sample's latest decided run once", () => {
+    expect(ranLine([])).toBe("0 of 4 run");
+    expect(ranLine([{ sample: "genuine", decision: "paid" }])).toBe("1 of 4 run");
+    expect(ranLine([{ sample: "genuine", decision: "paid" }, { sample: "genuine", decision: "held", unanswered: true }])).toBe("1 of 4 run");
+    expect(ranLine([{ sample: "wrong-code", decision: "pending" }])).toBe("0 of 4 run");
     const all = [
       { sample: "reposted", decision: "blocked" },
       { sample: "ai-no-session", decision: "blocked" },
       { sample: "wrong-code", decision: "rejected" },
       { sample: "genuine", decision: "paid" },
     ] as const;
-    expect(scoreLine([...all]).text).toBe("All 4 run · 4 of 4 as expected");
-    expect(roundLine([...all])).toBe("Round complete: 4 of 4 as expected");
-    expect(roundLine([{ sample: "genuine", decision: "held" }, ...all.slice(0, 3)])).toBe("Round complete: 3 of 4 as expected");
-  });
-  it("counts a run the model never answered as model unavailable, not as a miss", () => {
-    expect(scoreLine([{ sample: "genuine", decision: "held", unanswered: true }]).text).toBe("1 of 4 run · 1 model unavailable");
-    const round = [
-      { sample: "reposted", decision: "blocked" },
-      { sample: "ai-no-session", decision: "blocked" },
-      { sample: "wrong-code", decision: "held", unanswered: true },
-      { sample: "genuine", decision: "held", unanswered: true },
-    ] as const;
-    expect(scoreLine([...round])).toMatchObject({ expected: 2, unanswered: 2, text: "All 4 run · 2 of 2 as expected · 2 model unavailable" });
-    // A run again that the model answered replaces it.
-    expect(scoreLine([{ sample: "genuine", decision: "paid" }, ...round]).text).toBe("All 4 run · 3 of 3 as expected · 1 model unavailable");
-    expect(roundLine([{ sample: "genuine", decision: "paid" }, ...round])).toBe("Round complete: 3 of 3 as expected · 1 model unavailable");
+    expect(ranLine([...all])).toBe("4 of 4 run");
   });
   it("suggests the next unrun sample in the guided order", () => {
     expect(nextSample([{ sample: "genuine", decision: "paid" }], "genuine")?.id).toBe("wrong-code");
