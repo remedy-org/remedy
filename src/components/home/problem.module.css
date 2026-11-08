@@ -673,7 +673,8 @@
   transform: translate(2px, 4px);
 }
 
-.arrow {
+/* Filled, so each span reads as one pin leading to the next (.string path would otherwise leave it hollow). */
+.string .arrow {
   fill: var(--stop-ink);
   stroke: var(--stop-ink);
   stroke-width: 1px;
