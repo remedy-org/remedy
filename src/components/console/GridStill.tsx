@@ -39,8 +39,22 @@ const PHONE: Column[] = [
 
 const props = (row: ClaimRow, compact: boolean) => ({ data: row, context: { stacked: true, compact } }) as unknown as Cell;
 
-export function GridStill({ rows, openId, phone = false, className }: { rows: ClaimRow[]; openId?: string | null; phone?: boolean; className?: string }) {
+export function GridStill({
+  rows,
+  openId,
+  filter = null,
+  phone = false,
+  className,
+}: {
+  rows: ClaimRow[];
+  openId?: string | null;
+  /** Only the claims with this decision, as the live grid's status filter shows them. */
+  filter?: ClaimRow["decision"] | null;
+  phone?: boolean;
+  className?: string;
+}) {
   const columns = phone ? PHONE : COLUMNS;
+  const shown = filter ? rows.filter((r) => r.decision === filter) : rows;
   return (
     <div aria-hidden="true" className={clsx("claims-grid @container overflow-hidden rounded-[10px] border border-line bg-surface", !phone && "h-full", className)}>
       <div className="flex h-9 border-b border-line bg-surface-2">
@@ -50,7 +64,7 @@ export function GridStill({ rows, openId, phone = false, className }: { rows: Cl
           </span>
         ))}
       </div>
-      {rows.map((r) => (
+      {shown.map((r) => (
         <div
           key={r.id}
           className={clsx(

@@ -158,7 +158,7 @@ export function ProgressReport({
         <H n={1} home={home}>Units remedied</H>
         <div data-peek-row className="grid gap-6 sm:grid-cols-3">
           <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={cpscUnits(recall, s.unitsSold)} home={home} />
-          <Figure home={home} label="Units remedied" value={formatCount(s.remedied)} note={report.samplesPaid ? `Destroyed on camera; ${plural(report.samplesPaid, "sample")} never refunded` : "Destroyed on camera and refunded"} />
+          <Figure home={home} label={home ? "Remedied" : "Units remedied"} value={formatCount(s.remedied)} note={report.samplesPaid ? `Destroyed on camera; ${plural(report.samplesPaid, "sample")} never refunded` : "Destroyed on camera and refunded"} />
           <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} home={home} />
         </div>
         {s.unitsSold > 0 && !home && <Meter value={s.remedied} max={s.unitsSold} label="Units remedied of units sold" />}

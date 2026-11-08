@@ -92,6 +92,8 @@ export interface ClaimsGridHandle {
   arrive(interim: ClaimRow, final: ClaimRow, index: number, after?: number, instant?: boolean): () => void;
   /** The homepage's still: takes a row out (to replay its arrival). */
   remove(id: string): void;
+  /** The homepage's still: redraws a row in place (its changed cells flash). */
+  update(row: ClaimRow): void;
   /** The homepage's still: shows only the rows that pass (null for all), animating the change. */
   setFilter(pass: ((row: ClaimRow) => boolean) | null): void;
   /** The homepage's still: selects a claim's row (the open row's tint and edge) and scrolls it into view; null clears. */
@@ -195,6 +197,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     remove(id) {
       const node = api.current?.getRowNode(id);
       if (node?.data) api.current?.applyTransaction({ remove: [node.data] });
+    },
+    update(row) {
+      if (api.current?.getRowNode(row.id)) api.current.applyTransaction({ update: [row] });
     },
     setFilter(pass) {
       filter.current = pass;

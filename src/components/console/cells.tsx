@@ -67,13 +67,22 @@ export function Thumbs({ row, size = "md" }: { row: Pick<ClaimRow, "photos" | "p
   );
 }
 
+/** A phone's still: one 40px square of the claim's first photo (its tag), so every row's photo reads and lines up. */
+function TagThumb({ row }: { row: Pick<ClaimRow, "photos"> }) {
+  const first = row.photos[0];
+  if (!first) return <span aria-hidden="true" className="size-10 shrink-0 rounded-[6px] border border-dashed border-line-strong" />;
+  // A private, session-checked route: next/image's optimizer can't fetch it with the company's cookie.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={first.thumb} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" className="size-10 shrink-0 rounded-[6px] bg-surface-2 object-cover ring-1 ring-line" />;
+}
+
 /** Thumbnails, the claim id (mono 14/500) and when it was filed (mono 12, faint). */
 export function ClaimCell({ data, context }: Cell & Home) {
   if (!data) return null;
   if (context?.stacked) {
     return (
       <span className="flex h-full items-center gap-3">
-        <Thumbs row={data} />
+        {context.compact ? <TagThumb row={data} /> : <Thumbs row={data} />}
         <span className="flex min-w-0 flex-col leading-tight">
           <span className="font-mono text-ui font-medium">{data.id}</span>
           <span className="mt-1 truncate text-micro whitespace-nowrap text-muted" title={`Filed ${formatTime(data.createdAt)}`}>
@@ -309,7 +318,8 @@ export function PayoutCell({ data }: Cell) {
 /** "$29.99" with the cents at 73%, raised (Mercury's table cents). Sample and unpaid amounts are muted. `plain`: the
  * homepage's still, as a finance console prints money: "$29.99" in the sans, cents on the line. */
 export function AmountText({ amount, muted, plain }: { amount: string; muted?: boolean; plain?: boolean }) {
-  if (plain) return <span className={clsx("text-ui whitespace-nowrap", muted ? "text-muted" : "text-text")}>{amount}</span>;
+  // Proportional figures, said outright: the grid's right-aligned cells set tabular ones, which space the stop like mono.
+  if (plain) return <span className={clsx("text-ui whitespace-nowrap [font-variant-numeric:normal]", muted ? "text-muted" : "text-text")}>{amount}</span>;
   const dot = amount.lastIndexOf(".");
   return (
     <span className={clsx("font-mono text-ui whitespace-nowrap tabular-nums", muted ? "text-muted" : "text-text")}>

@@ -1,7 +1,7 @@
-import { duration, median } from "@/app/console/_lib/view";
+import { median } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
 import { funnel, reasonList, type FunnelStep } from "./funnel";
-import { captions, provenance, refusedSplit } from "./report";
+import { captions, homeKpiCaptions, provenance, spokenTime } from "./report";
 import type { RefusalItem } from "./widgets/RefusalReasonsView";
 
 // What the homepage's Insights still shows, from the same facts the console's Insights page reads: three KPI tiles, the
@@ -10,6 +10,8 @@ import type { RefusalItem } from "./widgets/RefusalReasonsView";
 export interface StillKpi {
   id: "remedied" | "median" | "refused";
   title: string;
+  /** A shorter title for a phone's narrow tile. */
+  phone?: string;
   value: string;
   caption: string;
 }
@@ -66,12 +68,12 @@ export function insightsStill(data: InsightsData): InsightsStillData {
   const reached = (stage: FunnelStep["stage"]) => steps.find((s) => s.stage === stage)?.reached ?? 0;
   const remedied = sum("remedied");
   const refused = sum("refused");
-  const byGate = (gate: string) => data.claims.filter((c) => c.refused && c.refusalGate === gate).length;
+  const home = homeKpiCaptions(data.claims);
   return {
     kpis: [
       { id: "remedied", title: "Units remedied", value: remedied.toLocaleString("en-US"), caption: `of ${data.recall.unitsSold.toLocaleString("en-US")} sold` },
-      { id: "median", title: say.timeTitle, value: mid === null ? "—" : duration(Math.round(mid)), caption: say.timeField === "timeToSendSec" ? `across ${times.length} ${times.length === 1 ? "payout" : "payouts"}` : `${times.length} ${times.length === 1 ? "claim" : "claims"} checked` },
-      { id: "refused", title: "Refused", value: refused.toLocaleString("en-US"), caption: refusedSplit(byGate("Photo check"), byGate("Pre-check")) },
+      { id: "median", title: say.timeTitle, phone: say.timeField === "timeToSendSec" ? "Median to payout" : undefined, value: mid === null ? "—" : spokenTime(Math.round(mid)), caption: home.median },
+      { id: "refused", title: "Refused", value: refused.toLocaleString("en-US"), caption: home.refused },
     ],
     steps,
     refusals: refusalItems(data.claims),

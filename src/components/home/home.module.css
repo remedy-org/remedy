@@ -236,6 +236,12 @@
   scrollbar-width: none;
 }
 
+/* The checks popover stays shut while the evidence is open, while a claim arrives, and until the pointer has moved over
+   the queue (ConsoleTour.tsx tips). */
+.gate[data-quiet] :global(.ag-tooltip-custom) {
+  display: none;
+}
+
 .gate :global(.ag-grid-viewport)::-webkit-scrollbar {
   display: none;
 }
@@ -249,28 +255,6 @@
   height: 2px;
   background: var(--text);
   transform: translateX(calc(var(--i, 0) * (100% + var(--col-gap))));
-}
-
-/* A measured underline (useSlider): a 100px bar placed by translateX and scaleX. Until it is measured (no JS), the
-   active item draws its own. */
-.slider {
-  position: absolute;
-  left: 0;
-  width: 100px;
-  height: 1px;
-  background: var(--text);
-  transform-origin: left;
-  opacity: 0;
-}
-
-.slideRow[data-measured] .slider {
-  opacity: 1;
-}
-
-.slideRow:not([data-measured]) .chromePage[data-on] {
-  text-decoration: underline;
-  text-underline-offset: 15px;
-  text-decoration-thickness: 1px;
 }
 
 /* The frame's bodies, stacked in its fixed slot: the active one shown, the rest hidden (and out of the AT tree). */
@@ -294,13 +278,36 @@
   opacity: 1;
 }
 
-/* The report's sheet scrolls inside the frame like a document: it fades out over the frame's last 48px, so the page
-   reads as continuing, and in under its first 24px once scrolled, so nothing is sliced by a hard edge. */
+/* A chart's tooltip opens in the top layer over its column: while it is open, the card's toolbar (Export CSV, Save
+   image) steps back instead of showing half-covered under it. */
+.studio :global(.ag-studio-layout-widget:has(.ag-charts-tooltip:popover-open) .ag-studio-widget-toolbar) {
+  opacity: 0;
+}
+
+/* The homepage's cards keep one download, the chart's CSV, which fits beside its title on a 1024px screen too. */
+.studio :global(.ag-studio-widget-toolbar-button[aria-label="Save image"]) {
+  display: none;
+}
+
+/* A tile's caption wraps (a 1024px screen's Refused tile) rather than ending in an ellipsis. */
+.studio :global(.ag-studio-layout-widget-caption) {
+  white-space: normal;
+  text-overflow: clip;
+  text-wrap: pretty;
+}
+
+/* The report's sheet scrolls inside the frame like a document in a viewer: the paper runs on past the frame's foot, so
+   the page reads as continuing, and once scrolled it passes under a hairline at the body's top edge. No fade: paper
+   faded into the frame turns into a grey band. */
 .reportBody {
   overflow-y: auto;
   scrollbar-width: none;
   outline: none;
-  mask-image: linear-gradient(to bottom, transparent, #000 24px, #000 calc(100% - 48px), transparent);
+  border-top: 1px solid transparent;
+}
+
+.reportBody[data-scrolled] {
+  border-top-color: var(--line);
 }
 
 .reportBody::-webkit-scrollbar {
@@ -361,10 +368,19 @@
   display: none;
 }
 
-/* Closed, the three unit figures stand in one row, their notes left for the whole draft. */
+/* Closed, the three unit figures stand in one row, their notes left for the whole draft, their values on one line
+   however their labels wrap (each figure's label and value on the row's shared tracks). */
 .peek:not(:has(details[open])) .peekClip [data-peek-row] {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-rows: auto auto;
+  gap: 4px 16px;
+}
+
+.peek:not(:has(details[open])) .peekClip [data-peek-row] > * {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  gap: 4px;
 }
 
 .peek:has(details[open]) .peekClip {
@@ -399,50 +415,56 @@
   container-type: size;
 }
 
+.dock [data-quote-key] {
+  display: none;
+}
+
 @container (max-height: 540px) {
   .dock figcaption {
     display: none;
   }
 
-  .dock figure > a {
+  .dock figure > :first-child {
     aspect-ratio: 16 / 10;
   }
 }
 
-/* The dock at a laptop's frame height (at most about 520px): the model's answer keeps four lines (three on a short
-   screen), so the checks that passed and the payout path stay in view under it; the full answer is the console's. */
+/* The dock at a laptop's frame height (at most about 520px): the model's answer gives way to its one deciding sentence,
+   whole (EvidenceStill.tsx), so the checks that passed and the payout path stay in view under it. */
 @container (max-height: 560px) {
-  .dock [data-quote] {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    overflow: hidden;
+  .dock [data-quote-full] {
+    display: none;
   }
 
-  .dock figure > a {
+  .dock [data-quote-key] {
+    display: inline;
+  }
+
+  .dock figure > :first-child {
     aspect-ratio: 2 / 1;
   }
 }
 
-@container (max-height: 460px) {
-  .dock [data-quote] {
-    -webkit-line-clamp: 3;
+/* A frame that keeps the heading in view on a 900px screen: the checks that passed leave for the deciding sentence. */
+@container (max-height: 470px) {
+  .dock [data-passed] {
+    display: none;
   }
 }
 
-/* The shortest dock (a 1024x768 screen, under the status tabs): the photos as a strip, the model's answer in two lines;
-   the checks that passed leave for it. */
+/* The shortest dock (a 768px-tall screen): the photos as a strip, and the rule's sentence leaves too (the quote above
+   and the payout path below say what it says). */
 @container (max-height: 380px) {
-  .dock figure > a {
+  .dock figure > :first-child {
     aspect-ratio: 3 / 1;
   }
 
-  .dock [data-quote] {
-    -webkit-line-clamp: 2;
+  .dock [data-rule] {
+    display: none;
   }
 
-  .dock [data-passed] {
-    display: none;
+  .dock [data-rule] + * {
+    margin-top: 0;
   }
 }
 
@@ -492,9 +514,8 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* E1, E3: the rail bar and the measured underlines glide, 160ms. */
-  .railBar,
-  .slider {
+  /* E1: the rail bar glides, 160ms. */
+  .railBar {
     transition: transform var(--dur-ui) var(--ease-snap);
   }
 

@@ -4,13 +4,13 @@
 
 export const TOUR = {
   title: "Run the whole recall from one console.",
-  muted: "Every claim with its evidence, every refund through PayPal.",
+  muted: "Every claim, its evidence and its PayPal refund.",
   tablist: "A tour of the Remedy console",
   steps: [
-    { name: "Claims queue", sentence: "Every claim arrives with a decision: paid, held for a person, or refused by a named check. All of it in one AG Grid queue." },
-    { name: "Evidence", sentence: "Open a held claim to see its photos and the model’s own words. Approve, and PayPal Payouts sends the refund." },
-    { name: "Insights", sentence: "An AG Studio dashboard shows where claims stop, why each was refused, and what PayPal paid out each day." },
-    { name: "CPSC report", sentence: "Your monthly CPSC progress report drafts itself from the claim records. Review it, then file." },
+    { name: "Claims queue", sentence: "Every claim lands decided in one AG Grid queue: paid, held for a person, or refused." },
+    { name: "Evidence", sentence: "See a held claim’s photos and the model’s words. Approve, and PayPal Payouts refunds it." },
+    { name: "Insights", sentence: "AG Studio shows where claims stop, why each was refused, and what PayPal paid each day." },
+    { name: "CPSC report", sentence: "The monthly CPSC progress report drafts itself from the claims. Review it, then file." },
   ],
   chrome: { app: "Remedy", pages: ["Claims", "Insights", "Report"] as const, company: "Kikea Store" },
   recall: { product: "Kikea X-VESOLJE nursing pillows", id: "CPSC 27-071" },
@@ -26,6 +26,9 @@ export const TOUR = {
   payouts: { approve: "Approve", via: "PayPal Payouts", reference: "Payout reference" },
   analyst: { title: "Recall analyst", limit: "Can’t approve or pay", recorded: "Recorded answer" },
 } as const;
+
+/** Step 02 on a phone, where nothing opens: the held claim, tinted in the queue above, shown open. */
+export const storyEvidence = (id: string) => `The held claim, ${id}, opens to its photos and the model’s own words. Approve, and PayPal Payouts sends the refund.`;
 
 /** The four steps' sentences: step 03 names the recall analyst only when its recorded answer is on screen. */
 export const stepSentences = (analyst: boolean) => TOUR.steps.map((s, i) => s.sentence + (i === 2 && analyst ? TOUR.analystSentence : ""));

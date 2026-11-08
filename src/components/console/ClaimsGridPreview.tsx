@@ -36,8 +36,9 @@ export interface ClaimsGridPreviewProps {
   onRowClick?: (row: ClaimRow) => void;
   /** bare: changes when the tour leaves the queue, which puts back the order a visitor's sort changed. */
   sortEpoch?: number;
-  /** bare: where the arriving claim is: "before" (not in the grid), "interim" (just in, being checked) or "final". */
-  arrival?: { id: string; phase: "before" | "interim" | "final" };
+  /** bare: where the arriving claim is: "before" (not in the grid), "interim" (just in, being checked), "checked" (its
+   * checks back, the verdict still to come) or "final". */
+  arrival?: { id: string; phase: "before" | "interim" | "checked" | "final" };
   /** bare: the arrival is playing (claims-grid.css fills its barcode). */
   live?: boolean;
   /** bare: what sits beside the grid (the tour's evidence panel). */
@@ -59,6 +60,9 @@ function interimOf(row: ClaimRow): ClaimRow {
     modelSec: null,
   };
 }
+
+// The same claim once its checks are back: every bar filled, the verdict, payout and amount still to come.
+const checkedOf = (row: ClaimRow): ClaimRow => ({ ...interimOf(row), bars: row.bars });
 
 // A click opens the claims that carry their evidence (every held one, preview.ts).
 const OPENS = (r: ClaimRow) => Boolean((r as PreviewRow).evidence);
@@ -84,9 +88,12 @@ function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady, 
       settle.current = () => {};
       handle.remove(final.id);
     } else if (arrival.phase === "interim") {
-      // The tour moves it to "final" itself; the long fallback only guards a lost update.
+      // The tour moves it on itself; the long fallback only guards a lost update.
       settle.current = handle.arrive(interimOf(final), final, Math.max(0, rows.indexOf(final)), 60_000);
-    } else if (from === "interim") settle.current();
+    } else if (arrival.phase === "checked") {
+      // Its checks fill first (claims-grid.css), so the verdict that follows has its evidence beside it.
+      if (from === "interim") handle.update(checkedOf(final));
+    } else if (from === "interim" || from === "checked") settle.current();
     // Straight to its place, unanimated: put back while out of sight, or a step that simply shows the queue.
     else handle.arrive(final, final, Math.max(0, rows.indexOf(final)), 0, true)();
   }, [ready, arrival, final, rows]);

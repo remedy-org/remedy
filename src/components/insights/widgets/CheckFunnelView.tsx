@@ -45,7 +45,8 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
             </span>
             {i < steps.length - 1 &&
               s.groups.map((g) => (
-                <p key={g.kind} className={clsx("text-micro text-muted", flush && "truncate")} title={flush ? g.summary : undefined}>
+                // Every reason in full, wrapping: a phone has no hover to read a cut one.
+                <p key={g.kind} className="text-micro text-pretty text-muted">
                   <span className={clsx(figure, TONE[g.kind])}>−{g.count}</span> <span className={TONE[g.kind]}>{KIND_LABEL[g.kind]}</span> · {g.summary}
                 </p>
               ))}
@@ -102,10 +103,10 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                       <span key={g.kind} className="flex min-w-0 items-baseline gap-2">
                         <span className={clsx("shrink-0", figure, TONE[g.kind])}>−{g.count}</span>
                         <span className={clsx("shrink-0", TONE[g.kind])}>{KIND_LABEL[g.kind]}</span>
-                        {/* The homepage keeps each drop to one line, the reasons in full on hover. */}
+                        {/* A narrow card (a 1024px screen) wraps the reasons to a second line, never cutting one mid-word. */}
                         <span
                           title={flush && !onToggle ? g.summary : undefined}
-                          className={clsx(flush ? "truncate" : "line-clamp-2", "text-muted", onToggle && "group-enabled:group-hover:text-text")}
+                          className={clsx("line-clamp-2", "text-muted", onToggle && "group-enabled:group-hover:text-text")}
                         >
                           {g.summary}
                         </span>

@@ -16,10 +16,13 @@ export interface SectionProps {
   tone?: "dark" | "paper";
   children: ReactNode;
   className?: string;
-  /** Laptop columns for the heading: 7 (with a lead beside it) or 9 (no lead, a longer two-tone line). */
-  headingSpan?: 7 | 9;
+  /** Laptop columns for the heading: 7 (with a lead beside it), 9 (no lead, a longer two-tone line) or 12 (each tone
+   * on one line). */
+  headingSpan?: 7 | 9 | 12;
   /** The space between the heading and the section's content, replacing 48px (64px on laptops). */
   bodyClassName?: string;
+  /** The section's padding, replacing 72px (128px on laptops) above and below. */
+  padClassName?: string;
   /** How the heading enters: focus-in (blur to sharp, 900ms), or a plain rise (fade and 8px up, 360ms, no blur). */
   reveal?: "focus" | "rise";
 }
@@ -32,16 +35,29 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
  * phones). The heading takes columns 1 to 7 and the lead columns 8 to 12, bottom-aligned, so every section's text
  * starts on the same two grid lines. The heading is 40px, two-tone, and focuses in.
  */
-export function Section({ id, exhibit, title, muted, lead, tone = "dark", children, className, headingSpan = 7, bodyClassName = "mt-12 lg:mt-16", reveal = "focus" }: SectionProps) {
+export function Section({
+  id,
+  exhibit,
+  title,
+  muted,
+  lead,
+  tone = "dark",
+  children,
+  className,
+  headingSpan = 7,
+  bodyClassName = "mt-12 lg:mt-16",
+  padClassName = "py-18 lg:py-32",
+  reveal = "focus",
+}: SectionProps) {
   const headingId = `${id}-title`;
   const enter = reveal === "rise" ? styles.rise : styles.line;
   const paper = tone === "paper";
   const [letter, name] = exhibit?.split(" · ") ?? [];
   return (
     <section id={id} aria-labelledby={headingId} className={clsx("scroll-mt-16", paper ? "bg-band text-ink" : styles.fade, className)}>
-      <div className="page py-18 lg:py-32">
+      <div className={clsx("page", padClassName)}>
         <Reveal as="header" className="grid-12 gap-y-5 lg:items-end">
-          <div className={clsx("col-span-12", headingSpan === 9 ? "lg:col-span-9" : "lg:col-span-7")}>
+          <div className={clsx("col-span-12", headingSpan === 12 ? "" : headingSpan === 9 ? "lg:col-span-9" : "lg:col-span-7")}>
             {exhibit && (
               <p className={clsx(enter, "mb-5 micro", paper ? "text-ink-muted" : "text-faint")} style={line(0)}>
                 Exhibit <span className={paper ? "text-ink" : "text-text-2"}>{letter}</span>

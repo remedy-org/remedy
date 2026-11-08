@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { duration, formatCents, ledgerOf } from "@/app/console/_lib/view";
+import { formatCents, ledgerOf } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
 import type { PreviewRow } from "@/components/console/ClaimsGridPreview";
 import { ClaimsGridPreviewLazy } from "@/components/console/ClaimsGridPreviewLazy";
@@ -10,7 +10,8 @@ import { EvidenceStill } from "@/components/console/EvidenceStill";
 import { formatCount } from "@/components/console/format";
 import { GridStill } from "@/components/console/GridStill";
 import { TABS, type Tab } from "@/components/console/StatusTabs";
-import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME } from "@/components/insights/InsightsPreviewLazy";
+import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME, type StudioFilter } from "@/components/insights/InsightsPreviewLazy";
+import { spokenTime } from "@/components/insights/report";
 import { ConsoleFrame, type FramePage } from "./ConsoleFrame";
 import styles from "./home.module.css";
 import { PayoutsNote } from "./PayoutsNote";
@@ -21,14 +22,15 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
  * The homepage's "For companies" tour (DESIGN.md, Screens §6), laptops only (1024px and up; phones get the stacked
  * story in ConsoleStory.tsx). Four tabs over one fixed console frame, a real view on each step:
  *   01 the claims queue, the real AG Grid on the recall's 40 claims, where the newest paid claim arrives on entering
- *      view (a row insert, then its verdict and payout cells flash as its checks come back). A visitor may filter it by
- *      status, sort it, hover its checks, and click a held claim to open its evidence (step 02);
+ *      view however a visitor gets there (a row insert, its checks filling, then its verdict and payout). The real grid
+ *      takes the still's place as soon as it has drawn, so a visitor may filter it by status, sort it, hover its checks,
+ *      and click a held claim to open its evidence (step 02) from the first click;
  *   02 the same grid with a held claim selected and its evidence laid over the grid's right-hand columns;
- *   03 Insights: real AG Studio from 1280px, drawn out of sight as the frame comes near so it is there when picked (the
- *      still stands in until then, and below 1280px). A visitor may hover its charts and cross-filter it;
+ *   03 Insights: real AG Studio, drawn out of sight as the frame comes near so it is there when picked (the still
+ *      stands in until then). A visitor may hover its charts and cross-filter it, and clear the filter from the frame;
  *   04 the CPSC report draft, the section's one paper object, read by scrolling it.
- * The grid and the report scroll inside the frame only once a visitor has clicked or focused them: a wheel passing over
- * the frame keeps moving the page.
+ * The grid scrolls inside the frame only once a visitor has clicked or focused it, the report also once the pointer
+ * rests on it with the page still: a wheel passing over the frame keeps moving the page.
  * Nothing autoplays except 01's arrival; every other moment plays when its tab is picked. The frame never changes
  * height, and the grid never changes width: no step reflows its columns. tour-state.ts holds what each step shows;
  * reduced motion shows every step's final state at once.
@@ -37,8 +39,11 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
 const ENTER = 0.35;
 const LEAVE = 0.25;
 const OPEN_AFTER = 300;
-const ARRIVE = { interim: 600, final: 1500, done: 2600 };
-const STUDIO_FROM = 1280;
+// In at +600ms, its checks back at +1400ms (the bars fill over 480ms), the verdict at +2000ms.
+const ARRIVE = { interim: 600, checked: 1400, final: 2000, done: 3100 };
+const STUDIO_FROM = 1024;
+// How long the page must have been still before a pointer resting on the report hands it the wheel.
+const IDLE = 150;
 const STUDIO_WAIT = 8000;
 // Studio's canvas rows are 16px, inside 14px of canvas padding and 6px around each panel (InsightsPreview.tsx): its
 // cards sit on the frame's 20px inset with 12px between them, where the still draws its own.
@@ -47,12 +52,15 @@ const STUDIO_PAD = 28;
 // The nav's height, and the air the nav jump leaves under it.
 const NAV = 64;
 const AIR = 16;
+// The frame's tallest (home.module.css .stage), and the least it takes to keep the heading in view with it.
+const FRAME_MAX = 680;
+const FIT_MIN = 560;
 
 const PAGE = { claims: "Claims", insights: "Insights", report: "Report" } as const;
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-type Arrival = "before" | "interim" | "final";
+type Arrival = "before" | "interim" | "checked" | "final";
 
 export interface ConsoleTourProps {
   /** The grid's rows, all 40 (the open claim's carries its evidence), memo-stable: the grid is driven through its API. */
@@ -77,6 +85,7 @@ export interface ConsoleTourProps {
 function rowsAt(rows: PreviewRow[], id: string, at: Arrival): PreviewRow[] {
   if (at === "final") return rows;
   if (at === "before") return rows.filter((r) => r.id !== id);
+  // In, or checked with its verdict still to come: in progress.
   return rows.map((r) => (r.id === id ? { ...r, decision: "pending" } : r));
 }
 
@@ -117,7 +126,7 @@ function TourLedger({ rows, unitsSold }: { rows: PreviewRow[]; unitsSold: number
   const l = ledgerOf(rows, { unitsSold });
   const items: [string, string][] = [
     [formatCents(l.paidCents), "paid through PayPal"],
-    ...(l.medianToPay === null ? [] : ([[duration(Math.round(l.medianToPay)), "median, photo to PayPal"]] as [string, string][])),
+    ...(l.medianToPay === null ? [] : ([[spokenTime(Math.round(l.medianToPay)), "median, photo to PayPal"]] as [string, string][])),
     [formatCount(l.remedied), `of ${formatCount(unitsSold)} units remedied`],
     [formatCount(l.held), "held for a person"],
     [formatCount(l.refused), "refused"],
@@ -152,9 +161,11 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const [studioState, setStudioState] = useState<"off" | "mounted" | "shown" | "failed">("off");
   const [studioRows, setStudioRows] = useState(36);
   const [studioAtPick, setStudioAtPick] = useState(false);
-  // The visitor has picked a step: from then on the real grid may take the still's place in view (a 160ms fade
-  // riding on the change they asked for), so a visitor who landed on the section still gets the live grid.
-  const [picked, setPicked] = useState(false);
+  // The checks popover opens only for a pointer that has moved over the queue since the arrival (a row sliding under a
+  // still cursor is not a hover).
+  const [pointed, setPointed] = useState(false);
+  // Studio's cross-filter, said in the frame's title row with a way out.
+  const [studioFilter, setStudioFilter] = useState<StudioFilter | null>(null);
 
   const root = useRef<HTMLDivElement>(null);
   const rail = useRef<HTMLDivElement>(null);
@@ -165,6 +176,8 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const arriving = useRef<number[]>([]);
   const studioWait = useRef<number[]>([]);
   const played = useRef(false);
+  const gridGate = useRef<HTMLDivElement>(null);
+  const reportEl = useRef<HTMLDivElement>(null);
   const now = useRef({ step, swapped, arrival, studioState });
   useEffect(() => {
     now.current = { step, swapped, arrival, studioState };
@@ -181,10 +194,12 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const playArrival = useCallback(() => {
     clear(arriving.current);
     setArrival("before");
+    setPointed(false);
     later(arriving.current, ARRIVE.interim, () => {
       setArrival("interim");
       setLive(true);
     });
+    later(arriving.current, ARRIVE.checked, () => setArrival("checked"));
     later(arriving.current, ARRIVE.final, () => setArrival("final"));
     later(arriving.current, ARRIVE.done, () => setLive(false));
   }, []);
@@ -228,6 +243,74 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     return Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) / r.height;
   };
 
+  // Once the page has loaded with the frame out of view, the arriving claim is held back (still and grid alike), so it
+  // arrives when the frame comes into view, however a visitor gets there (a scroll, the nav's jump, a deep link).
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      if (!reduced() && inView() === 0) setArrival("before");
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  /*
+   * The pointer over the queue and the report. The report takes the wheel from a pointer resting on it once the page is
+   * still (and from a click or focus, as the queue does: gate() below); a pointer moving out hands the wheel back, the
+   * page scrolling out from under it does not, and one the page carries over either while scrolling leaves the wheel to
+   * the page. The checks popover waits for a pointer that has really moved over the queue (a row sliding under a still
+   * cursor is not a hover).
+   */
+  useEffect(() => {
+    const grid = gridGate.current;
+    const report = reportEl.current;
+    if (!grid || !report) return;
+    let scrolledAt = 0;
+    let idle = 0;
+    let last = { x: -1, y: -1 };
+    const scrolling = () => performance.now() - scrolledAt < IDLE;
+    const moved = (e: PointerEvent) => {
+      const was = last;
+      last = { x: e.clientX, y: e.clientY };
+      return was.x !== e.clientX || was.y !== e.clientY;
+    };
+    const onScroll = () => {
+      scrolledAt = performance.now();
+      window.clearTimeout(idle);
+      idle = window.setTimeout(() => {
+        if (now.current.step === 3 && report.matches(":hover")) setEngaged("report");
+      }, IDLE);
+    };
+    const release = (area: "grid" | "report") => setEngaged((e) => (e === area ? null : e));
+    const on = (el: HTMLElement, area: "grid" | "report") => {
+      const enter = () => {
+        if (scrolling()) release(area);
+        else if (area === "report") setEngaged(area);
+      };
+      const move = (e: PointerEvent) => {
+        if (!moved(e)) return;
+        if (area === "grid") setPointed(true);
+        else if (!scrolling()) setEngaged(area);
+      };
+      const leave = () => {
+        if (!scrolling()) release(area);
+      };
+      el.addEventListener("pointerenter", enter);
+      el.addEventListener("pointermove", move);
+      el.addEventListener("pointerleave", leave);
+      return () => {
+        el.removeEventListener("pointerenter", enter);
+        el.removeEventListener("pointermove", move);
+        el.removeEventListener("pointerleave", leave);
+      };
+    };
+    const off = [on(grid, "grid"), on(report, "report")];
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      off.forEach((f) => f());
+      window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(idle);
+    };
+  }, []);
+
   // The claim was taken out of sight to arrive, but the frame is already in view (the grid swapped in while the observer
   // had last seen it out of view, and it has crossed no threshold since): it arrives now, rather than never.
   useEffect(() => {
@@ -240,7 +323,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     return () => cancelAnimationFrame(frameId);
   }, [step, swapped, arrival, playArrival]);
 
-  // Real Studio replaces the Insights still at 1280px and up, on intent (hover, focus or pick of tab 03), and never on
+  // Real Studio replaces the Insights still at 1024px and up (wherever the frame credits it), on intent (hover, focus or pick of tab 03), and never on
   // Save-Data. Its canvas is measured from the frame, so it fills the body with nothing cut off. If it hasn't drawn in
   // 6s, the still stays for the session.
   const studioIntent = () => {
@@ -288,10 +371,16 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     const section = el?.closest("section");
     if (!el || !tabsRow || !section) return;
     const place = () => {
-      el.style.setProperty("--rail-h", `${Math.round(tabsRow.getBoundingClientRect().height)}px`);
+      const railH = tabsRow.getBoundingClientRect().height;
+      el.style.setProperty("--rail-h", `${Math.round(railH)}px`);
       const top = section.getBoundingClientRect().top;
       const head = (section.querySelector("h2")?.getBoundingClientRect().top ?? top) - top;
       const tabs = tabsRow.getBoundingClientRect().top - top;
+      // Where the heading, the tabs and a frame of at least FIT_MIN fit one screen (a 1440x900 laptop), the frame takes
+      // the height that leaves the heading in view too; otherwise the CSS height, which fits it under the tabs.
+      const withHead = window.innerHeight - NAV - AIR - (tabs - head) - railH - 24 - AIR;
+      if (withHead >= FIT_MIN && withHead < FRAME_MAX) frame.current?.style.setProperty("--frame-h", `${Math.floor(withHead)}px`);
+      else frame.current?.style.removeProperty("--frame-h");
       const bottom = (frame.current?.getBoundingClientRect().bottom ?? 0) - top;
       const from = bottom - head + AIR <= window.innerHeight - NAV ? head : tabs;
       section.style.scrollMarginTop = `${NAV + AIR - from}px`;
@@ -312,9 +401,8 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     clear(timers.current);
     const still = reduced();
     setStep(next);
-    setPicked(true);
     setEngaged(null);
-    if (now.current.arrival !== "final") finishArrival();
+    settleArrival();
     if (prev === 1) {
       setOpen(null);
       if (!still) {
@@ -341,6 +429,12 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     }
   };
 
+  /** A visitor acted on the queue: the claim still to arrive is simply there, and arrives no more. */
+  const settleArrival = () => {
+    played.current = true;
+    if (now.current.arrival !== "final") finishArrival();
+  };
+
   /** A click on a row: a held claim opens its evidence (step 02), or swaps the one open. */
   const onRowClick = (row: PreviewRow) => {
     if (!row.evidence) return;
@@ -354,15 +448,16 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
 
   const onStatus = (t: Tab) => {
     if (now.current.step === 1) go(0);
+    settleArrival();
     setStatus(t);
   };
 
-  /** The wheel moves an inner scroller only once a visitor has clicked or focused it; leaving it hands the wheel back. */
+  /** The wheel moves an inner scroller only once a visitor has clicked or focused it (the report: or rests on it; the
+   * pointer effect above hands it back). */
   const gate = (area: "grid" | "report") => ({
     "data-engaged": engaged === area || undefined,
     onPointerDown: () => setEngaged(area),
     onFocus: () => setEngaged(area),
-    onPointerLeave: () => setEngaged((e) => (e === area ? null : e)),
   });
 
   const onKey = (e: KeyboardEvent<HTMLButtonElement>) => {
@@ -375,10 +470,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
 
   const state = stateAt(step, "final", { openId: claim });
   const evidence = useMemo(() => rows.find((r) => r.id === claim)?.evidence ?? null, [rows, claim]);
-  const still = useMemo(() => rows.slice(0, stillRows), [rows, stillRows]);
   const arrivalProp = useMemo(() => ({ id: arriveId, phase: arrival }), [arriveId, arrival]);
-  // The ledger and the tab counts follow the claim as it arrives (only once the real grid is there to show it).
-  const queue = useMemo(() => rowsAt(rows, arriveId, swapped ? arrival : "final"), [rows, arriveId, swapped, arrival]);
+  // The ledger, the tab counts and the still follow the claim as it arrives.
+  const queue = useMemo(() => rowsAt(rows, arriveId, arrival), [rows, arriveId, arrival]);
+  const still = useMemo(() => queue.slice(0, stillRows), [queue, stillRows]);
   const counts = useMemo(() => {
     const c = Object.fromEntries(TABS.map((t) => [t.id, 0])) as Record<Tab, number>;
     c.all = queue.length;
@@ -386,6 +481,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     return c;
   }, [queue]);
   const dock = open !== null || dockOut;
+  // The checks popover: on the queue alone (not under the evidence), never during the arrival, and only for a pointer
+  // that has moved since.
+  const tips = step === 0 && arrival === "final" && !live && pointed;
+  const filtered = step === 2 && studioState === "shown" && studioFilter;
 
   return (
     <div ref={root} className="flex flex-col gap-6">
@@ -415,7 +514,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
               <span id={`tour-tab-${i}-name`} className={clsx("text-body font-medium transition-colors", active ? "text-text" : "text-muted group-hover:text-text")}>
                 {s.name}
               </span>
-              <span id={`tour-tab-${i}-sentence`} className={clsx("min-h-[4.35em] text-ui text-pretty transition-colors", active ? "text-text-2" : "text-muted group-hover:text-text-2")}>
+              <span id={`tour-tab-${i}-sentence`} className={clsx("min-h-[2.9em] text-ui text-pretty transition-colors", active ? "text-text-2" : "text-muted group-hover:text-text-2")}>
                 {sentences[i]}
               </span>
             </button>
@@ -432,7 +531,24 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
         tabIndex={0}
         page={PAGE[state.page]}
         description={descriptions[step]}
-        credit={TOUR.credit[step]}
+        credit={
+          filtered ? (
+            <span className="flex items-baseline gap-3">
+              <span className="text-muted">
+                Showing <span className="text-text">{studioFilter.label}</span>
+              </span>
+              <button
+                type="button"
+                onClick={studioFilter.clear}
+                className="cursor-pointer rounded-control text-text underline decoration-line-2 underline-offset-4 hover:decoration-text focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Clear
+              </button>
+            </span>
+          ) : (
+            TOUR.credit[step]
+          )
+        }
         onPage={onPage}
         className={styles.stage}
         data-step={step}
@@ -447,7 +563,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
             <div className="mt-1 border-b border-line">
               <StatusFilter counts={counts} value={status} onChange={onStatus} />
             </div>
-            <div {...gate("grid")} className={clsx(styles.gate, "min-h-0 flex-1 pt-3")}>
+            <div ref={gridGate} {...gate("grid")} data-quiet={!tips || undefined} className={clsx(styles.gate, "min-h-0 flex-1 pt-3")}>
               <ClaimsGridPreviewLazy
                 bare
                 from={1024}
@@ -459,16 +575,11 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
                 sortEpoch={sortEpoch}
                 arrival={arrivalProp}
                 live={live}
-                onSwap={() => {
-                  setSwapped(true);
-                  // Read from the layout, not the observer's last report: it may predate the frame coming into view.
-                  if (inView() < ENTER && now.current.step === 0 && !played.current && !reduced()) setArrival("before");
-                }}
-                swapOnPick={picked}
+                onSwap={() => setSwapped(true)}
                 interactive={step <= 1}
                 // Isolated: nothing inside AG Grid (its pinned columns, header layers) can paint over the evidence sheet.
                 className="isolate h-full min-w-0"
-                fallback={<GridStill rows={still} openId={open} />}
+                fallback={<GridStill rows={still} openId={open} filter={status === "all" ? null : status} />}
               />
             </div>
             {/* The evidence lies over the grid's right-hand columns (the money ones it repeats), from the tabs to the
@@ -492,16 +603,24 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
           {insights}
           {studio && (studioState === "mounted" || studioState === "shown") && (
             <div data-studio data-on={studioState === "shown" || undefined} className={clsx(styles.studio, "absolute inset-0 overflow-hidden bg-bg")}>
-              <InsightsPreviewLazy data={studio.data} rows={studioRows} active={step === 2} onDisplayed={() => setStudioState((s) => (s === "mounted" ? "shown" : s))} />
+              <InsightsPreviewLazy
+                data={studio.data}
+                rows={studioRows}
+                active={step === 2}
+                onDisplayed={() => setStudioState((s) => (s === "mounted" ? "shown" : s))}
+                onFilter={setStudioFilter}
+              />
             </div>
           )}
         </div>
 
         {/* The draft reads like a document: its pages scroll inside the frame. */}
         <div
+          ref={reportEl}
           {...gate("report")}
           // A scroller a keyboard can reach, so its pages scroll with the arrow keys too.
           tabIndex={0}
+          onScroll={(e) => e.currentTarget.toggleAttribute("data-scrolled", e.currentTarget.scrollTop > 0)}
           aria-label="CPSC progress report draft"
           data-on={state.body === "report" || undefined}
           className={clsx(styles.body, styles.reportBody)}

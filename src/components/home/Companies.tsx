@@ -36,8 +36,10 @@ export function Companies() {
       title={TOUR.title}
       // Its own block, so it fills the measure (pretty) instead of breaking early to balance (the heading's text-balance).
       muted={<span className="block text-pretty">{TOUR.muted}</span>}
-      headingSpan={9}
+      headingSpan={12}
       bodyClassName="mt-10 lg:mt-8"
+      // The console frame and its heading share one laptop screen: less air above than the page's other sections.
+      padClassName="py-18 lg:pt-20 lg:pb-32"
       reveal="rise"
     >
       <noscript dangerouslySetInnerHTML={{ __html: NOSCRIPT }} />

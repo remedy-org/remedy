@@ -25,6 +25,7 @@ export function EvidencePhoto({
   sized,
   tall,
   onOpen,
+  plain,
   className,
   captionClassName,
 }: {
@@ -35,6 +36,8 @@ export function EvidencePhoto({
   sized?: boolean;
   tall?: boolean;
   onOpen?: () => void;
+  /** The photo alone, opening nothing (the homepage, where it is already shown large). */
+  plain?: boolean;
   className?: string;
   /** The caption's face and colour, when not the console's mono label (the homepage sets it in the sans face). */
   captionClassName?: string;
@@ -80,6 +83,8 @@ export function EvidencePhoto({
         <button type="button" onClick={onOpen} className={clsx(frame, "cursor-zoom-in")} aria-label={`${name}, opens the photo viewer`}>
           {inner}
         </button>
+      ) : plain ? (
+        <span className={frame}>{inner}</span>
       ) : (
         <a href={fullSize(src)} target="_blank" rel="noreferrer" className={frame} aria-label={`${name}, opens full size (opens in a new tab)`}>
           {inner}

@@ -22,6 +22,34 @@ const MARK = {
   reject: { icon: CrossIcon, tone: "bg-stop-soft text-stop", word: "Failed" },
 } as const;
 
+/** The sentence of the model's answer that carries its decision: the first that turns on "but", a "cannot" or an
+ * "unclear", else the first. */
+export function decidingSentence(text: string) {
+  const sentences = text.match(/[^.!?]+[.!?]+(\s|$)/g)?.map((t) => t.trim()) ?? [text];
+  return sentences.find((t) => /\b(but|cannot|can[’']t|couldn[’']t|unclear|unable|not sure)\b/i.test(t)) ?? sentences[0];
+}
+
+/**
+ * The model's quoted answer. Docked in the tour's frame, where a short laptop screen leaves it a few lines, it falls back
+ * to the one sentence that decides the claim, whole (home.module.css .dock), rather than a cut one; on its own (a phone)
+ * it is always whole.
+ */
+function Quote({ text, docked }: { text: string; docked: boolean }) {
+  const key = docked ? decidingSentence(text) : text;
+  return (
+    <q data-quote className="mt-0.5 block text-ui leading-[1.5] text-muted">
+      {key === text ? (
+        text
+      ) : (
+        <>
+          <span data-quote-full>{text}</span>
+          <span data-quote-key>{key}</span>
+        </>
+      )}
+    </q>
+  );
+}
+
 /**
  * The open claim's evidence as a still, as the console's panel leads with it: the photos, the model's quoted answer for
  * what held or failed the claim, the checks that passed in one line, the rule's sentence. A caption, not buttons: the still has no
@@ -49,7 +77,7 @@ export function EvidenceStill({ claim, note, fluid, className }: EvidenceStillPr
         <div className="flex flex-col gap-3 px-4 py-3">
           <div className="grid grid-cols-2 gap-2">
             {claim.photos.map((src, i) => (
-              <EvidencePhoto key={src} src={src} n={i + 1} of={claim.photos.length} sized captionClassName="text-micro text-faint max-md:sr-only" />
+              <EvidencePhoto key={src} src={src} n={i + 1} of={claim.photos.length} sized plain captionClassName="text-micro text-faint max-md:sr-only" />
             ))}
           </div>
           <ol aria-label={`Model answers for ${claim.id}`} className="flex flex-col gap-2.5">
@@ -66,7 +94,7 @@ export function EvidenceStill({ claim, note, fluid, className }: EvidenceStillPr
                       {c.label}
                       <span className="sr-only">: {mark.word}</span>
                     </p>
-                    {c.evidence ? <q data-quote className={clsx("mt-0.5 block text-ui leading-[1.5] text-muted", fluid && "max-md:line-clamp-4")}>{c.evidence}</q> : <p className="mt-0.5 text-ui text-muted">{c.rule}</p>}
+                    {c.evidence ? <Quote text={c.evidence} docked={!fluid} /> : <p className="mt-0.5 text-ui text-muted">{c.rule}</p>}
                   </div>
                 </li>
               );
@@ -87,7 +115,7 @@ export function EvidenceStill({ claim, note, fluid, className }: EvidenceStillPr
       <div className="border-t border-line px-4 py-3">
         {/* A phone has the held answer just above, and the payout path says what a person does: the rule's sentence would
             say it a third time. */}
-        <p className={clsx("text-ui", fluid && note && "max-md:hidden")}>{claim.sentence}</p>
+        <p data-rule className={clsx("text-ui", fluid && note && "max-md:hidden")}>{claim.sentence}</p>
         {claim.review &&
           (note ? (
             <div className={clsx("mt-3", fluid && "max-md:mt-0")}>{note}</div>

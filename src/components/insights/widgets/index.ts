@@ -2,7 +2,7 @@ import type { AgBaseWidgetDefinition, AgDefaultRegistry, AgFormatShapeParams, Ag
 import { CheckFunnel, HomeCheckFunnel } from "./CheckFunnel";
 import { DecisionMix } from "./DecisionMix";
 import type { CheckFunnelDef, DecisionMixDef, InsightsRegistry, MedianTimeDef, RecallProgressDef, RefusalReasonsDef } from "./defs";
-import { MedianTime } from "./MedianTime";
+import { HomeMedianTime, MedianTime } from "./MedianTime";
 import { RecallProgress } from "./RecallProgress";
 import { HomeRefusalReasons, RefusalReasons } from "./RefusalReasons";
 import { reactComp } from "../reactComp";
@@ -179,7 +179,7 @@ export const insightsWidgets =
             { key: "per", label: "Per" },
             { key: "seconds", label: "Seconds" },
           ]),
-        comp: reactComp(MedianTime),
+        comp: reactComp(home ? HomeMedianTime : MedianTime),
         defaultSize: { width: 280, height: 120 },
         minSize: { width: 200, height: 100 },
         ai: {

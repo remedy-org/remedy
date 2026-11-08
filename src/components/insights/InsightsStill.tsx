@@ -68,11 +68,13 @@ export function InsightsStill({
     return (
       <div className="overflow-hidden rounded-frame bg-bg shadow-float">
         <div className="flex flex-col gap-3 p-3">
+          {/* Each figure on one baseline: its label over it (two lines held), its caption under it. */}
           <dl className="grid grid-cols-3 divide-x divide-line rounded-card bg-surface shadow-card">
             {data.kpis.map((k) => (
-              <div key={k.id} title={k.caption} className="flex min-w-0 flex-col-reverse justify-end gap-1.5 px-3 py-3">
-                <dt className="text-micro text-muted">{k.title}</dt>
+              <div key={k.id} className="flex min-w-0 flex-col gap-1 px-3 py-3">
+                <dt className="min-h-[2lh] text-micro leading-tight text-muted">{k.phone ?? k.title}</dt>
                 <dd className="text-[22px] leading-7">{k.value}</dd>
+                <dd className="text-micro leading-tight text-pretty text-muted">{k.caption}</dd>
               </div>
             ))}
           </dl>
@@ -99,7 +101,7 @@ export function InsightsStill({
             <div key={k.id} data-kpi={k.id} className="flex flex-col gap-2 rounded-card bg-surface p-4 shadow-card xl:h-[116px]">
               <dt className="text-ui font-medium">{k.title}</dt>
               <dd className="text-[28px] leading-none">{k.value}</dd>
-              <dd className="truncate text-micro text-muted">{k.caption}</dd>
+              <dd className="text-micro text-pretty text-muted">{k.caption}</dd>
             </div>
           ))}
         </dl>

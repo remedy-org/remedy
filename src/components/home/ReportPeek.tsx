@@ -4,8 +4,8 @@ import { useLayoutEffect, useRef, type ReactNode } from "react";
 import styles from "./home.module.css";
 
 /**
- * The phone story's report: the draft's head and its units remedied, ending on that block's last row with the words
- * fading into the paper, and "Read the whole draft" to open the rest in place (no JS: the <details> alone lifts the
+ * The phone story's report: the draft's head and its units remedied, then the next block's heading fading into the
+ * paper, and "Read the whole draft" to open the rest in place (no JS: the <details> alone lifts the
  * cap). The end is measured from the sheet ([data-peek-end]), so the cut never falls mid-row at any width. The draft
  * opens about 2,000px tall, so closing it again from its foot brings the reader back to its head, not to wherever the
  * shorter page leaves them.
@@ -18,7 +18,8 @@ export function ReportPeek({ children }: { children: ReactNode }) {
     if (!el || !end) return;
     const place = () => {
       if (el.parentElement?.querySelector("details")?.open) return;
-      el.style.setProperty("--peek-h", `${Math.ceil(end.getBoundingClientRect().bottom - el.getBoundingClientRect().top + 28)}px`);
+      // The fade (64px) starts under the figures, on the next block's heading, so no figure is greyed.
+      el.style.setProperty("--peek-h", `${Math.ceil(end.getBoundingClientRect().bottom - el.getBoundingClientRect().top + 76)}px`);
     };
     place();
     const ro = new ResizeObserver(place);

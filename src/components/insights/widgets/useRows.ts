@@ -11,8 +11,9 @@ export type Row = Record<string, unknown>;
  * `queries` returns null while the widget's data mapping is incomplete. `deps` re-run it (the params object Studio
  * passes changes on every filter change). While the widget holds a cross-filter selection of its own, it asks for the
  * unfiltered rows, so it keeps showing what there is to pick from (the picked rows stand out, the rest dim).
+ * `empty`: what an empty result shows: Studio's "no data" overlay, or the widget itself (a tile that draws its own dash).
  */
-export function useRows(widgetApi: AgWidgetApi, queries: () => AgWidgetDataQuery[] | null, deps: unknown[]): Row[][] | null {
+export function useRows(widgetApi: AgWidgetApi, queries: () => AgWidgetDataQuery[] | null, deps: unknown[], empty: "noData" | "displayed" = "noData"): Row[][] | null {
   const [rows, setRows] = useState<Row[][] | null>(null);
   const loaded = useRef(false);
   useEffect(() => {
@@ -29,7 +30,7 @@ export function useRows(widgetApi: AgWidgetApi, queries: () => AgWidgetDataQuery
         const next = responses.map((r) => r.results.rows);
         loaded.current = true;
         setRows(next);
-        widgetApi.setDisplayState(next[0].length ? "displayed" : "noData");
+        widgetApi.setDisplayState(next[0].length ? "displayed" : empty);
       })
       .catch((e: unknown) => {
         if (controller.signal.aborted) return;

@@ -1,4 +1,5 @@
 import type { AgPageState, AgReportState, AgWidgetLayoutState } from "ag-studio";
+import { duration } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
 import type { InsightsRegistry } from "./widgets";
 
@@ -252,7 +253,8 @@ export const insightsReport = (data: InsightsData): AgReportState<InsightsRegist
 export const PAID_BY_DAY = "Paid through PayPal, by day";
 
 /** The Refused tile's caption on the homepage: how the refusals split between the photo check and the pre-checks. */
-export const refusedSplit = (photo: number, pre: number) => `${photo} rejected by the photo check, ${pre} blocked by pre-checks`;
+export const refusedSplit = (photo: number, pre: number) =>
+  [photo ? `${photo} rejected by the photo check` : "", pre ? `${pre} blocked by pre-checks` : ""].filter(Boolean).join(", ") || "None refused";
 
 /** The homepage's refusal reasons card, in 16px rows: its padding and title (76px with the gap around the card) and
  * each reason with its bar (34px). */
@@ -273,7 +275,7 @@ export function homeInsightsReport(data: InsightsData, rows = 40, labelColor?: s
   const widgets = overview(data).widgets!;
   const kpiRows = 8;
   const median = widgets["kpi-median"];
-  const refused = (gate: string) => data.claims.filter((c) => c.refused && c.refusalGate === gate).length;
+  const home = homeKpiCaptions(data.claims);
   const reasons = new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size;
   const body = Math.max(16, rows - kpiRows);
   const refusalRows = body - homeRefusalRows(reasons) >= HOME_DAY_ROWS ? homeRefusalRows(reasons) : 0;
@@ -284,8 +286,8 @@ export function homeInsightsReport(data: InsightsData, rows = 40, labelColor?: s
         id: "overview",
         widgets: {
           "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), `of ${data.recall.unitsSold.toLocaleString("en-US")} sold`),
-          "kpi-median": { ...median, format: { title: { enabled: true, text: say.timeTitle }, caption: { enabled: true, text: kpiCaption(data) } } },
-          "kpi-refused": kpi("Refused", sum("claims.refused"), refusedSplit(refused("Photo check"), refused("Pre-check"))),
+          "kpi-median": { ...median, format: { title: { enabled: true, text: say.timeTitle }, caption: { enabled: true, text: home.median } } },
+          "kpi-refused": kpi("Refused", sum("claims.refused"), home.refused),
           funnel: { ...widgets.funnel, format: titled("Check funnel") },
           ...(refusalRows ? { refusals: { ...widgets.refusals, format: titled("Why claims were refused") } } : {}),
           // Each day's dollars printed on its column (in the page's background colour, which reads on the paid green in
@@ -297,7 +299,14 @@ export function homeInsightsReport(data: InsightsData, rows = 40, labelColor?: s
             format: {
               ...titled(PAID_BY_DAY),
               style: {
-                theme: { bar: { series: { label: { enabled: true, fontSize: 12, ...(labelColor && { color: labelColor }) } } } },
+                theme: {
+                  bar: {
+                    series: {
+                      // A day the cross-filter leaves out keeps its dimmed column and no "$0.00" over it.
+                      label: { enabled: true, fontSize: 12, ...(labelColor && { color: labelColor }), formatter: ({ value }: { value: number }) => (value ? usd.format(value) : "") },
+                    },
+                  },
+                },
                 custom: {
                   valueAxis: { gridLine: { enabled: false }, line: { width: 0 }, tick: { enabled: false }, label: { fontSize: 1, color: "rgba(0, 0, 0, 0)" } },
                   categoryAxis: { tick: { enabled: false }, label: { fontSize: 12 } },
@@ -320,9 +329,29 @@ export function homeInsightsReport(data: InsightsData, rows = 40, labelColor?: s
   };
 }
 
-// "26 payouts": how many claims the median tile's time covers.
-const kpiCaption = (data: InsightsData) => {
-  const { timeField } = captions(provenance(data.claims));
-  const n = data.claims.filter((c) => c[timeField] !== null).length;
-  return timeField === "timeToSendSec" ? `across ${n} ${n === 1 ? "payout" : "payouts"}` : `${n} ${n === 1 ? "claim" : "claims"} checked`;
-};
+/** A time as the homepage says it: "12 sec" under a minute, else as the ledger prints it ("1:05", "1h 06m"). */
+export const spokenTime = (sec: number) => (sec < 60 ? `${sec} sec` : duration(sec));
+
+type CaptionClaim = Pick<Claim, "decision" | "source" | "amountPaid" | "modelSec" | "paidOnReview" | "timeToSendSec" | "refused" | "refusalGate">;
+
+/**
+ * The homepage's median and Refused tiles' captions, for the claims on the page: all of them, or those a cross-filter
+ * leaves (`shown`), so a caption never counts claims the tile above it no longer does. The median's field is always the
+ * whole recall's, as its tile's is.
+ */
+export function homeKpiCaptions(all: CaptionClaim[], shown: CaptionClaim[] = all) {
+  const { timeField } = captions(provenance(all));
+  const n = shown.filter((c) => c[timeField] !== null).length;
+  const gate = (g: string) => shown.filter((c) => c.refused && c.refusalGate === g).length;
+  const [photo, pre] = [gate("Photo check"), gate("Pre-check")];
+  const filtered = shown !== all;
+  return {
+    median:
+      timeField === "timeToSendSec"
+        ? n || !filtered
+          ? `across ${n} ${n === 1 ? "payout" : "payouts"}`
+          : "None paid among these claims"
+        : `${n} ${n === 1 ? "claim" : "claims"} checked`,
+    refused: filtered && !photo && !pre ? "None refused among these claims" : refusedSplit(photo, pre),
+  };
+}

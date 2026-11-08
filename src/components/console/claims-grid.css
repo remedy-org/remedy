@@ -12,6 +12,12 @@
   letter-spacing: 0;
 }
 
+/* The homepage's still draws its type as the page around it does (antialiased): AG Grid's subpixel cells would set the
+   same weights heavier than the plain-DOM still they take over from. */
+.claims-grid[data-still] .ag-cell {
+  -webkit-font-smoothing: antialiased;
+}
+
 /* The open claim, and the row the keyboard is on: a 2px amber edge on the left, like the edge of an evidence tag. */
 .claims-grid .ag-row.ag-row-selected::before,
 .claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible)::before {
@@ -97,8 +103,13 @@
 }
 
 /* The homepage tour's arriving claim (components/console/preview.ts ARRIVE_ID): as its checks come back, the five
-   check groups of its barcode fill left to right, 160ms each, 120ms apart. Scoped to the tour's still while the arrival
-   plays (data-live), so /console keeps its near-zero motion. */
+   check groups of its barcode fill left to right, 160ms each, 80ms apart, before its verdict turns. Every cell the
+   arrival changes flashes the one neutral tint. Scoped to the tour's still while the arrival plays (data-live), so
+   /console keeps its near-zero motion. */
+[data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] .ag-cell {
+  --ag-value-change-value-highlight-background-color: color-mix(in oklch, var(--text) 8%, transparent);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span > [data-state="pass"] {
     transform-origin: bottom;
@@ -106,19 +117,19 @@
   }
 
   [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(2) > [data-state="pass"] {
-    animation-delay: 120ms;
+    animation-delay: 80ms;
   }
 
   [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(3) > [data-state="pass"] {
-    animation-delay: 240ms;
+    animation-delay: 160ms;
   }
 
   [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(4) > [data-state="pass"] {
-    animation-delay: 360ms;
+    animation-delay: 240ms;
   }
 
   [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(5) > [data-state="pass"] {
-    animation-delay: 480ms;
+    animation-delay: 320ms;
   }
 }
 

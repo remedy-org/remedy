@@ -1,12 +1,12 @@
 // The console tour's steps as data (ConsoleTour.tsx plays them; tour-state.test.ts checks the rules): which console
-// page the frame's chrome underlines, which body shows, which claim the grid opens, where the arriving claim is, and the
+// page the frame's chrome marks as current, which body shows, which claim the grid opens, where the arriving claim is, and the
 // step's one amber subject (DESIGN.md: one amber per viewport).
 
 export type Step = 0 | 1 | 2 | 3;
 export const STEPS: Step[] = [0, 1, 2, 3];
 
 export interface StepState {
-  /** The in-frame chrome's underlined page. */
+  /** The in-frame chrome's current page. */
   page: "claims" | "insights" | "report";
   /** The body in the frame's fixed slot: 01 and 02 share the claims grid, which keeps every row and its width on both. */
   body: "claims" | "insights" | "report";
