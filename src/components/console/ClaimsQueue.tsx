@@ -709,8 +709,11 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
         <>Live updates stopped after 10 minutes · {refresh}</>
       ) : (
         <>
-          <span className="max-sm:hidden">Up to date · updated</span>
-          <span className="sm:hidden">Updated</span> <Ago key={at} at={at} /> · {refresh}
+          <span className="max-sm:hidden">Up to date · updated&nbsp;</span>
+          <span className="sm:hidden">Updated&nbsp;</span>
+          <Ago key={at} at={at} />
+          {" · "}
+          {refresh}
         </>
       )}
     </span>

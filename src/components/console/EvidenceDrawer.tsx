@@ -576,7 +576,7 @@ function Evidence({
             ))}
           </div>
         ) : (
-          <p className="rounded-control border border-dashed border-line-strong px-4 py-6 text-center text-ui text-muted">
+          <p className="text-ui text-muted">
             The owner has code <span className="font-mono text-text">{claim.code}</span> and an open camera session. Photos appear here when they arrive.
           </p>
         )}
