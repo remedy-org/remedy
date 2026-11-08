@@ -4,12 +4,14 @@ import { ConsoleSkeleton, SkeletonGrid } from "@/components/console/ConsoleSkele
 import { CopyField } from "@/components/console/CopyField";
 import { DrawerSkeleton } from "@/components/console/EvidenceDrawer";
 import { PartialNotice } from "@/components/console/PartialNotice";
-import { Button, CheckProgress, EmptyState, ErrorState } from "@/components/ui";
+import { CheckList } from "@/components/console/CheckList";
+import { Button, EmptyState, ErrorState } from "@/components/ui";
 import cpsc27071 from "@/lib/__fixtures__/cpsc-27071.json";
 import { CpscRecord } from "@/lib/cpsc";
 import { DEMO_SPEC } from "@/lib/demo";
 import { requireSession } from "@/lib/session";
 import { summarizeCpsc } from "../_lib/recalls";
+import { shownSpec } from "../_lib/view";
 import { PublishPreview } from "./PublishPreview";
 
 export const metadata = { title: "States" };
@@ -25,7 +27,6 @@ export default async function StatesPage() {
 
       <State name="Claims · empty (a recall with no claims)">
         <EmptyState
-          eyebrow="Recall 26-412"
           title="No claims yet"
           description="Claims appear here as owners file them. Share the claim link on the recall notice, your site and the receipt emails."
           action={
@@ -79,32 +80,30 @@ export default async function StatesPage() {
 
       <div className="grid gap-12 lg:grid-cols-2">
         <State name="Import · drafting">
-          <CheckProgress
+          <CheckList
+            label="Import progress"
             steps={[
-              { id: "cpsc", label: "Read CPSC's record", state: "pass", detail: "Recall 26-412, About 1,200,000" },
-              { id: "draft", label: "Draft the checks", state: "running", detail: "About 15 seconds" },
-              { id: "review", label: "You review and publish", state: "waiting" },
+              { id: "cpsc", label: "Read CPSC's record", state: "pass", detail: "Recall 26-412, about 1,200,000 units" },
+              { id: "draft", label: "Draft the photo checks", state: "running", detail: "The model reads the notice and its photos, about 15 seconds" },
+              { id: "review", label: "You review and publish", state: "waiting", detail: "Nothing goes live until you publish" },
             ]}
           />
         </State>
         <State name="Import · errors">
           <div className="flex flex-col gap-4">
             <ErrorState variant="inline" title="CPSC's recall service didn't answer. Try again in a minute." />
-            <ErrorState
-              variant="inline"
-              title="Recall 27-071 is already in your workspace."
-              action={
-                <Button variant="tertiary" size="sm">
-                  Open recall 27-071
-                </Button>
-              }
-            />
+            <p className="text-ui text-text-2">
+              <span className="font-mono">27-071</span> is already in your workspace.{" "}
+              <a href="/console/recalls/27-071" className="font-medium text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
+                Open it <span aria-hidden="true">→</span>
+              </a>
+            </p>
           </div>
         </State>
       </div>
 
-      <State name="Import · edit the draft (fixed draft, publishing does nothing here)">
-        <PublishPreview notice={{ ...summarizeCpsc(CpscRecord.parse(cpsc27071)), slug: "x-vesolje-nursing-pillows" }} spec={{ ...DEMO_SPEC, note: DEMO_SPEC.note ?? "" }} />
+      <State name="Import · edit the draft (publishing does nothing here)">
+        <PublishPreview notice={{ ...summarizeCpsc(CpscRecord.parse(cpsc27071)), slug: "x-vesolje-nursing-pillows" }} spec={shownSpec({ ...DEMO_SPEC, note: DEMO_SPEC.note ?? "" })} />
       </State>
 
       <State name="Report · loading grid rows">
@@ -117,7 +116,7 @@ export default async function StatesPage() {
 function State({ name, children }: { name: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="micro text-muted">{name}</h2>
+      <h2 className="text-ui font-medium text-muted">{name}</h2>
       {children}
     </section>
   );

@@ -486,3 +486,14 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
     row("payer_verified", "Verified PayPal account", "PayPal says the account is verified"),
   ];
 }
+
+/**
+ * A recall's photo checks as the console shows them. The shared recall's spec is written for the pillow its claims
+ * photograph (and the model reads it that way); on screen its label is the product's label and its scope note goes.
+ */
+export const shownSpec = <T extends { product: string; label_must_show: string[]; note?: string }>(spec: T): T => ({
+  ...spec,
+  product: spec.product.replace(/\.?\s*In this demo recall[^.]*\.?$/, "."),
+  label_must_show: spec.label_must_show.map((l) => l.replace(/\(this demo stand-in's label\)/, "(the product's label)")),
+  ...(spec.note !== undefined && /\bdemo\b/.test(spec.note) ? { note: "" } : {}),
+});

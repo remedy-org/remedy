@@ -9,17 +9,12 @@ import type { ReactNode } from "react";
 import { Button, CheckIcon } from "@/components/ui";
 import { requireSession } from "@/lib/session";
 import { claimUrl } from "../../_lib/links";
-import { formatMoney } from "../../_lib/view";
+import { formatMoney, shownSpec } from "../../_lib/view";
 import { loadRecallFor } from "../../_lib/workspace";
 
 export async function generateMetadata({ params }: PageProps<"/console/recalls/[id]">): Promise<Metadata> {
   return { title: `Recall ${(await params).id}` };
 }
-
-// The photo checks as the model reads them, shown in the console's words: the shared recall's spec was written for the
-// pillow its claims photograph, and the screen names it as the product's own.
-const shownLabel = (line: string) => line.replace(/\(this demo stand-in's label\)/, "(the product's label)");
-const shownProduct = (text: string) => text.replace(/\.?\s*In this demo recall[^.]*\.?$/, ".");
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -38,6 +33,7 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
   const { recall } = found;
   const published = (await searchParams).published === "1";
   const url = claimUrl(recall.slug);
+  const spec = shownSpec(recall.spec);
 
   return (
     <main className="flex flex-1 flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -99,15 +95,15 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
           <dl className="flex flex-col gap-5 text-ui">
             <div>
               <dt className="text-muted">Product</dt>
-              <dd className="mt-1 max-w-read">{shownProduct(recall.spec.product)}</dd>
+              <dd className="mt-1 max-w-read">{spec.product}</dd>
             </div>
             <div>
               <dt className="text-muted">The label must show</dt>
               <dd className="mt-1">
-                {recall.spec.label_must_show.length ? (
+                {spec.label_must_show.length ? (
                   <ul className="flex flex-col gap-1">
-                    {recall.spec.label_must_show.map((l) => (
-                      <li key={l}>{shownLabel(l)}</li>
+                    {spec.label_must_show.map((l) => (
+                      <li key={l}>{l}</li>
                     ))}
                   </ul>
                 ) : (

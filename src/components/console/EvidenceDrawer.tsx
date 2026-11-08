@@ -203,7 +203,13 @@ function EvidenceContent({
   // The reject form takes the footer's room: the photos it is about come into view above it.
   const photos = useRef<HTMLElement>(null);
   const onMode = useCallback((mode: "idle" | "approve" | "reject") => {
-    if (mode === "reject") requestAnimationFrame(() => photos.current?.scrollIntoView({ block: "start", behavior: "instant" }));
+    // Scrolled within the panel only: scrollIntoView would scroll the page under it too.
+    if (mode === "reject")
+      requestAnimationFrame(() => {
+        const box = scroller.current;
+        const el = photos.current;
+        if (box && el) box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top;
+      });
   }, []);
   // A or R from the queue, or Approve and Reject in the photo viewer: both open the footer's confirm.
   const [act, setAct] = useState(intent);

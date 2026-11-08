@@ -5,7 +5,8 @@ import type { Reason } from "@/lib/types";
 import { duplicateFor, payoutFailureWords, toDrawerClaim } from "./drawer";
 import { PublishInput, RefundValue, slugify, summarizeCpsc, uniqueSlug } from "./recalls";
 import { buildReport } from "./report";
-import { companyReasonText, decisionSentence, duration, formatCents, maskPayer, median, percent, preChecksOf, reasonOf, statsOf, toRow } from "./view";
+import { companyReasonText, decisionSentence, duration, formatCents, maskPayer, median, percent, preChecksOf, reasonOf, shownSpec, statsOf, toRow } from "./view";
+import { DEMO_SPEC } from "@/lib/demo/kikea";
 import cpsc27071 from "@/lib/__fixtures__/cpsc-27071.json";
 import { CpscRecord } from "@/lib/cpsc";
 
@@ -289,6 +290,9 @@ describe("recall import", () => {
   it("makes slugs unique and short", () => {
     expect(slugify("Gourmia Stainless Steel Digital 9 Slice Digital Air Fryer Ovens")).toBe("gourmia-stainless-steel-digital-9-slice-digital");
     expect(slugify("Ekouaer Girls’ Nightgowns")).toBe("ekouaer-girls-nightgowns");
+    expect(shownSpec(DEMO_SPEC).label_must_show[0]).toBe("X-VESOLJE, hand-written on a paper tag tied to the pillow (the product's label)");
+    expect(shownSpec(DEMO_SPEC).product).not.toMatch(/demo|stand-in/);
+    expect(shownSpec(DEMO_SPEC).note).toBe("");
     expect(uniqueSlug("pillows", [{ slug: "pillows", id: "27-071" }], "27-099")).toBe("pillows-2");
     expect(uniqueSlug("pillows", [{ slug: "pillows", id: "27-071" }], "27-071")).toBe("pillows");
   });

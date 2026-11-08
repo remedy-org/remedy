@@ -346,34 +346,38 @@ export function ReviewActions({
             run(`${base}/reject`, { reason });
           }}
         >
-          <Field
-            label="Why it's rejected"
-            hint="The owner reads this on their claim page"
-            error={error?.fields?.reason}
-          >
-            {(f) => <Textarea {...f} rows={2} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={REASON_MIN} />}
-          </Field>
-          <div className="-mt-1 flex flex-wrap gap-1.5" role="group" aria-label="Quick reasons">
-            {QUICK.map((q) => {
-              const text = q.text(claim.code);
-              return (
-                <button
-                  key={q.label}
-                  type="button"
-                  aria-pressed={reason === text}
-                  onClick={() => {
-                    setReason(text);
-                    setError(null);
-                  }}
-                  className={clsx(
-                    "inline-flex h-11 items-center rounded-control px-3 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] hover:bg-surface-3 hover:text-text",
-                    reason === text ? "bg-surface-3 text-text" : "bg-surface-2 text-muted",
-                  )}
-                >
-                  {q.label}
-                </button>
-              );
-            })}
+          {/* On a short window the reason and the quick reasons scroll, so the photos keep their room and the buttons stay in
+              view below them. The padding keeps the field's focus ring inside the scroller. */}
+          <div className="-m-1 flex max-h-[max(7.5rem,calc(100dvh-34rem))] flex-col gap-3 overflow-y-auto overscroll-contain p-1">
+            <Field
+              label="Why it's rejected"
+              hint="The owner reads this on their claim page"
+              error={error?.fields?.reason}
+            >
+              {(f) => <Textarea {...f} rows={2} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={REASON_MIN} />}
+            </Field>
+            <div className="-mt-1 flex flex-wrap gap-1.5" role="group" aria-label="Quick reasons">
+              {QUICK.map((q) => {
+                const text = q.text(claim.code);
+                return (
+                  <button
+                    key={q.label}
+                    type="button"
+                    aria-pressed={reason === text}
+                    onClick={() => {
+                      setReason(text);
+                      setError(null);
+                    }}
+                    className={clsx(
+                      "inline-flex h-11 items-center rounded-control px-3 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] hover:bg-surface-3 hover:text-text",
+                      reason === text ? "bg-surface-3 text-text" : "bg-surface-2 text-muted",
+                    )}
+                  >
+                    {q.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button type="submit" variant="secondary" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
