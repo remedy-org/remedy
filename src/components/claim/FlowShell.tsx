@@ -8,26 +8,28 @@ export interface FlowShellProps {
 }
 
 /**
- * The claim flow's frame, on the homepage's own page frame (.page: the same gutter, so the wordmark never moves between
- * them): a quiet header, the steps on graphite with the film grain, a one-line footer.
+ * The claim flow's frame: a quiet header, the steps on graphite with the film grain, a one-line footer. The header's and
+ * footer's edges are the steps' own (the 960px frame), so the wordmark, the step meter and every step share one left edge.
  */
 export function FlowShell({ children, company }: FlowShellProps) {
   return (
     // A phone's pinned action bar (MobileCta) never covers the end of the page: room for it under the footer.
-    <div className="grain flex min-h-dvh flex-col max-sm:has-[[data-mobile-cta]]:pb-24 [@media(max-height:600px)]:has-[[data-mobile-cta]]:pb-24">
+    <div className="grain flex min-h-dvh flex-col max-sm:pointer-coarse:has-[[data-mobile-cta]]:pb-16">
       {/* A phone's camera step is the whole screen, with its own bar: the site's header and footer step aside. */}
       <header className="border-b border-line max-sm:[body:has([data-camera])_&]:hidden">
-        <div className="page flex h-16 items-center justify-between gap-4 [@media(max-height:600px)]:h-12">
-          <Wordmark href="/" />
-          <ThemeToggle />
+        <div className="page">
+          <div className="mx-auto flex h-16 max-w-[60rem] items-center justify-between gap-4 [@media(max-height:600px)]:h-12">
+            <Wordmark href="/" />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
       <main id="main" tabIndex={-1} className="page flex-1 pt-8 pb-16 outline-none sm:pt-12 max-sm:[body:has([data-camera])_&]:pb-0 [@media(max-height:600px)]:pt-4">{children}</main>
 
       <footer className="border-t border-line max-sm:[body:has([data-camera])_&]:hidden">
-        <div className="page py-6 text-ui text-faint">
-          <p>{company ? `${company} · Remedy` : "Remedy"}</p>
+        <div className="page">
+          <p className="mx-auto max-w-[60rem] py-6 text-ui text-faint">{company ? `${company} · Remedy` : "Remedy"}</p>
         </div>
       </footer>
     </div>

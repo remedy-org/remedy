@@ -1,21 +1,18 @@
 import clsx from "clsx";
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { AlertIcon, Button, Card, ClockIcon, NoBreakHyphens } from "@/components/ui";
+import { AlertIcon, Button, ClockIcon, NoBreakHyphens } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
 import { CodeTag } from "./CodeTag";
-import { StepTitle } from "./Exhibit";
+import { STEP_GRID, StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
 import { MobileCta } from "./MobileCta";
 import { cutInHalf, handWrittenLabel, ownerLabel, photosTakenKey, taggedThing } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
 import { mmss, useCountdown } from "./useCountdown";
 
-// One name for the one action, in the card and in the phone's pinned bar.
+// One name for the one action, in the step and in the phone's pinned bar.
 const OPEN = "Open the camera";
-const LOW = "Under a minute left: open the camera now. If it runs out, you can get a new code.";
-
-// The camera session's length: the countdown's line depletes over it.
-const SESSION_MS = 10 * 60_000;
+const LOW = "Under a minute left.";
 
 export interface CodeStepProps {
   claimId: string;
@@ -56,9 +53,10 @@ export function TimerPill({ left, className }: { left: number; className?: strin
 }
 
 /**
- * The one-time code, as the paper tag it should end up on. A 2px line along the card's top edge runs down with the
- * 10-minute session. One action, "Open the camera"; on a laptop the phone's QR follows it as the other way to take the
- * photo. At zero the step turns into its expired state: the heading, the reason, and a new code.
+ * The one-time code, as the paper tag it should end up on, on the step grid: the tag on the left, the title, the shot list
+ * and the way to the camera on the right. On a laptop the phone is the camera to use (a cut pillow on the floor is
+ * photographed with a phone), so its QR leads and this computer's camera is the quiet button after it. At zero the
+ * step turns into its expired state: the tag struck through, the reason, and a new code.
  */
 export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrSvg, phoneUrl, newClaimHref, onContinue }: CodeStepProps) {
   const left = useCountdown(expiresAt, startNow, frozen);
@@ -77,72 +75,49 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
     if (ended && !wasEnded.current) document.getElementById("code-title")?.focus();
     wasEnded.current = ended;
   }, [ended]);
-  // The shot list, said once.
-  const shots = (
-    <p className="text-body text-pretty text-text">
-      {written ? (
-        <>
-          Photograph the tag with <NoBreakHyphens>{written}</NoBreakHyphens> and <span className="font-mono whitespace-nowrap">{code}</span>, and the {thing} {cut ? "cut in half" : "destroyed"}.
-        </>
-      ) : (
-        <>
-          Photograph the code <span className="font-mono whitespace-nowrap">{code}</span> beside the label{spec.label_must_show[0] ? ` (${ownerLabel(spec.label_must_show[0])})` : ""}, and the product {cut ? "cut in half" : "destroyed"}.
-        </>
-      )}
-    </p>
-  );
   return (
-    // From 1024px two columns, so the action is on the first screen: the tag and the shot list on the left, the action and
-    // the phone's QR on the right. On a phone: the tag, what the photo must show, then the button.
+    // Phones read it in order: the title, the tag, what the photo must show, the button. From 1024px the tag takes the
+    // left column, beside everything else.
     <>
-      <Card
-        padding="lg"
-        as="section"
-        aria-labelledby="code-title"
-        // Expired, it is one column: the reason, then the way on under it.
-        className={clsx(
-          "relative flex flex-col gap-8 overflow-hidden [@media(max-height:600px)]:gap-5",
-          ended ? "max-w-claim" : "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_auto_1fr] lg:gap-x-12 lg:[grid-template-areas:'head_head'_'tag_act'_'list_act']",
-        )}
-      >
-        {!ended && (
-          <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-line">
-            <span className={clsx("block h-full bg-text/70", styles.deplete)} style={{ transform: `scaleX(${Math.min(1, left / SESSION_MS)})` }} />
-          </span>
-        )}
+      <section aria-labelledby="code-title" className={clsx(STEP_GRID, "lg:grid-rows-[auto_1fr] lg:gap-y-6 [@media(max-height:600px)]:gap-5")}>
+        <div className="flex items-start justify-between gap-4 lg:col-start-2">
+          <StepTitle id="code-title">{ended ? "This code has expired" : "Write this code on a paper tag"}</StepTitle>
+          {!ended && <TimerPill left={left} className="mt-2" />}
+        </div>
 
-        <div className="flex flex-col gap-3 lg:[grid-area:head]">
-          <div className="flex items-start justify-between gap-4">
-            <StepTitle id="code-title">{ended ? "This code has expired" : "Write this code on a paper tag"}</StepTitle>
-            {!ended && <TimerPill left={left} className="mt-2" />}
-          </div>
-          {ended && (
+        {/* A dead code is struck through on a laptop and not shown on a phone: nobody should write it. */}
+        <div className={clsx("lg:col-start-1 lg:row-span-2 lg:row-start-1", ended && "max-lg:hidden")}>
+          <CodeTag code={code} written={written} expired={ended} foot={ended ? undefined : "Write it big, about 1\u00a0inch (3\u00a0cm), in marker."} />
+        </div>
+
+        <div className="flex flex-col gap-6 lg:col-start-2">
+          {ended ? (
             <p role="alert" className="text-body text-muted">
               Codes last 10 minutes, so photos can&apos;t be taken in advance. Get a new one to start again.
             </p>
+          ) : (
+            <p className="text-body text-pretty text-text">
+              {written ? (
+                <>
+                  Photograph the tag with <NoBreakHyphens>{written}</NoBreakHyphens> and <span className="font-mono whitespace-nowrap">{code}</span>, and the {thing} {cut ? "cut in half" : "destroyed"}.
+                </>
+              ) : (
+                <>
+                  Photograph the code <span className="font-mono whitespace-nowrap">{code}</span> beside the label{spec.label_must_show[0] ? ` (${ownerLabel(spec.label_must_show[0])})` : ""}, and the product {cut ? "cut in half" : "destroyed"}.
+                </>
+              )}
+            </p>
           )}
-        </div>
-
-        {/* A dead code isn't shown at full size: nobody should write it. */}
-        {!ended && (
-          <div className="pt-2 lg:[grid-area:tag] [@media(max-height:600px)]:pt-0">
-            <CodeTag code={code} written={written} foot={"Write it big, about 1\u00a0inch (3\u00a0cm), in marker."} />
-          </div>
-        )}
-
-        {!ended && <div className="lg:[grid-area:list]">{shots}</div>}
-
-        <div className="flex flex-col gap-4 lg:[grid-area:act] lg:self-start">
           {lost && (
             <p role="status" className="flex gap-2.5 rounded-control bg-surface-2 px-3 py-2.5 text-ui text-text shadow-[inset_0_0_0_1px_var(--line-2)]">
               <AlertIcon className="mt-0.5 shrink-0 text-muted" />
               <span>Your camera was closed. Photos are only kept until you send them: open the camera to take them again.</span>
             </p>
           )}
+          {/* Said once: a touch phone's pinned bar carries it, so there it is only read out. */}
           {low && (
-            <p role="status" className="flex gap-2.5 text-ui font-medium text-text">
-              <ClockIcon className="mt-0.5 shrink-0" />
-              <span>{LOW}</span>
+            <p role="status" className="text-ui font-medium text-text max-sm:pointer-coarse:sr-only">
+              {LOW}
             </p>
           )}
           {ended ? (
@@ -150,19 +125,26 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
               Get a new code
             </Button>
           ) : (
-            <Button key="live" id="code-cta" size="lg" block onClick={onContinue}>
-              {OPEN}
-            </Button>
-          )}
-          {/* A laptop (a fine pointer, 640px and up): the phone is the other camera, after the action in reading and Tab order. */}
-          {handoff && !ended && (
-            <div className="hidden sm:pointer-fine:block">
-              <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} primary />
-            </div>
+            <>
+              {/* A laptop (a fine pointer, 640px and up): the phone's QR first, then this computer's camera, quietly. */}
+              {handoff && (
+                <div className="hidden flex-col gap-4 sm:pointer-fine:flex">
+                  <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} primary />
+                  <Button variant="secondary" size="lg" block onClick={onContinue}>
+                    Use this computer&apos;s camera
+                  </Button>
+                </div>
+              )}
+              <div className={clsx(handoff && "sm:pointer-fine:hidden")}>
+                <Button key="live" id="code-cta" size="lg" block onClick={onContinue}>
+                  {OPEN}
+                </Button>
+              </div>
+            </>
           )}
         </div>
-      </Card>
-      {/* Phones: while the button is below the fold (or under Safari's toolbar), the same action waits pinned at the bottom. */}
+      </section>
+      {/* Touch phones: while the button is below the fold (or under Safari's toolbar), the same action waits pinned at the bottom. */}
       {/* Keyed: the button under it is a new element once the code ends, and the bar watches the one that's there. */}
       {ended ? (
         <MobileCta key="ended" target="code-cta" href={newClaimHref} label="Get a new code" />

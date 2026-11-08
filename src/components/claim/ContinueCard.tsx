@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, NoBreakHyphens } from "@/components/ui";
+import { Button, NoBreakHyphens } from "@/components/ui";
 import { TimerPill } from "./CodeStep";
 import { StepTitle } from "./Exhibit";
 import { useCountdown } from "./useCountdown";
@@ -35,7 +35,8 @@ export function ContinueCard({ id, product, company, loginHref, expiresAt, start
   // A link's id is only echoed back when it has a claim number's shape.
   const claim = /^RM-\d{4,}$/.test(id) ? <span className="font-mono whitespace-nowrap">{id}</span> : null;
   return (
-    <Card padding="lg" as="section" aria-labelledby="continue-title" className="flex w-full max-w-claim flex-col gap-7">
+    // On the page, not in a box: on a phone it's the screen the QR opens, and the PayPal login is its one object.
+    <section aria-labelledby="continue-title" className="flex w-full flex-col gap-7">
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4">
           <StepTitle id="continue-title">
@@ -74,6 +75,6 @@ export function ContinueCard({ id, product, company, loginHref, expiresAt, start
         </Button>
       )}
       <p className="-mt-3 text-ui text-faint">You log in on PayPal&apos;s own page, then come straight back here. Remedy never sees your password.</p>
-    </Card>
+    </section>
   );
 }

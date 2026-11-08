@@ -9,7 +9,7 @@ export interface PhoneHandoffProps {
   qrSvg: string;
   url: string;
   code: string;
-  /** The code step on a laptop: the phone is the recommended camera, so the QR is 160px and leads. */
+  /** The code step on a laptop: the phone is the camera to use, so its QR is the step's lead. */
   primary?: boolean;
   className?: string;
 }
@@ -31,11 +31,11 @@ export function PhoneHandoff({ qrSvg, url, code, primary, className }: PhoneHand
     ) ?? setCopied("no");
   const said = copied === "yes" ? "Link copied" : copied === "no" ? "Couldn't copy. The link is above." : "";
   return (
-    // In the code card it sits under a hairline, not in a box of its own; elsewhere it's its own card.
-    <div className={clsx("flex flex-col gap-4", primary ? "border-t border-line pt-5 sm:flex-row sm:items-center sm:gap-6 lg:flex-col lg:items-stretch lg:gap-4" : "rounded-card border border-line p-4 sm:flex-row sm:items-center", className)}>
-      {/* A white plate so any phone camera reads it, in either theme. */}
+    // On the page, not in a box of its own: the code on the cream paper the tag is on, so it's the same object, not a
+    // second bright slab. Ink on paper reads in any phone camera, in either theme.
+    <div className={clsx("flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5", className)}>
       <div
-        className={clsx("shrink-0 self-center rounded-control bg-[oklch(1_0_0)] [&>svg]:size-full", primary ? "size-40 p-3 lg:self-start" : "size-32 p-2.5")}
+        className={clsx("shrink-0 rounded-control bg-paper ring-1 ring-paper-line [&>svg]:size-full", primary ? "size-36 p-3" : "size-32 p-2.5")}
         dangerouslySetInnerHTML={{ __html: qrSvg }}
         role="img"
         aria-label="QR code for this claim"

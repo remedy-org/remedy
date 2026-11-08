@@ -45,8 +45,8 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
   return (
     <FlowShell company={companyName(recall)}>
       <ClaimFrame>
-        {/* Once all four have run, every step is done: the record isn't a step back. */}
-        <StepMeter current={roundDone ? DEMO_STEPS.length + 1 : 2} steps={DEMO_STEPS} />
+        {/* Once all four have run, the page is their record, not a step: no meter. */}
+        {!roundDone && <StepMeter current={2} steps={DEMO_STEPS} />}
         <SamplePicker slug={recall.slug} company={companyName(recall)} options={options} selected={selected} runs={runs} roundDone={roundDone} refusal={refusal} />
       </ClaimFrame>
     </FlowShell>

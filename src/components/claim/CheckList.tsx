@@ -57,8 +57,14 @@ export interface SixOptions {
   /** The claim is decided: a row with nothing recorded didn't run. */
   decided: boolean;
   held?: boolean;
-  /** A demo claim: its photo is a prepared one sent inside the claim, so the first row never says "live camera". */
+  /** A demo claim: one account sends all four, so the account check that didn't run for it isn't listed. */
   demo?: boolean;
+  /** How many photos were sent: a repost names its photo only when there were several. */
+  photos?: number;
+  /** A refused repost's earlier claim, when it's this account's own: the row names it. */
+  earlier?: string;
+  /** The result: its headline and lead say why a check failed, so the failed row doesn't say it again. */
+  explained?: boolean;
   /** The label hand-written on the tag beside the code ("X-VESOLJE"), when the notice asks for one. */
   written?: string | null;
   /** What the photo check read, when the verdict is at hand; otherwise it's taken from its quotes. */
@@ -66,11 +72,12 @@ export interface SixOptions {
 }
 
 /** The six rows from a claim's recorded checks. */
-export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo, written, read }: SixOptions): SixRow[] {
+export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo, photos = 1, earlier, explained, written, read }: SixOptions): SixRow[] {
   const of = (key: SixKey) => rows.filter((r) => KEY_OF(r.id) === key);
   const model = rows.find((r) => r.id === "model");
   const base: { key: SixKey; name: string; label: ReactNode }[] = [
-    demo ? { key: "session", name: "sent in this claim's session", label: "Sent in this claim's session" } : { key: "session", name: "taken on the live camera", label: "Taken on the live camera" },
+    // One name, demo and real: what the check can know is that the photo came through this claim's own camera.
+    { key: "session", name: "sent from Remedy's camera", label: "Sent from Remedy's camera" },
     { key: "duplicate", name: "photo not used before", label: "Photo not used before" },
     { key: "account", name: "one claim per PayPal account", label: "One claim per PayPal account" },
     {
@@ -89,7 +96,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
     { key: "destroyed", name: `${noun.toLowerCase()} ${cut ? "cut in half" : "destroyed"}`, label: `${noun} ${cut ? "cut in half" : "destroyed"}` },
     { key: "refund", name: "refund to PayPal", label: "Refund to PayPal" },
   ];
-  return base.map((b) => {
+  const six = base.map((b): SixRow => {
     // The photo check never answered: both of its rows wait for a person.
     const own = model && (b.key === "code" || b.key === "destroyed") ? [model] : of(b.key);
     if (!own.length) {
@@ -101,8 +108,13 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
     const detail = off.length && b.key !== "refund" ? off.map((r) => r.detail).filter(Boolean).join(". ") || undefined : undefined;
     const out: SixRow = { ...b, state, detail };
     if (state === "waiting" || state === "running") return out;
-    // The demo's one account sends all four claims, so only the genuine one is held to one claim per account: say why.
-    if (b.key === "account" && state === "skipped") out.detail = "One demo account sends all four claims.";
+    // The label and "Failed" say it; the pipeline's sentence would only repeat them.
+    if (b.key === "session") out.detail = undefined;
+    // "Already sent with claim RM-3481": a photo is numbered only when several were sent.
+    if (b.key === "duplicate" && out.detail) {
+      const where = earlier ? `claim ${earlier}` : "another claim";
+      out.detail = photos > 1 ? out.detail.replace(/(was|were) already used in another claim/, `$1 already sent with ${where}`) : `Already sent with ${where}`;
+    }
     if (b.key === "code" && !model) {
       const seen = read?.code ?? firstQuoted(own.find((r) => r.id === "code")?.quote);
       // The label as read often carries the code too ("X-VESOLJE K7Q"): said once.
@@ -124,17 +136,20 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
     }
     if (b.key === "refund") out.reference = /PayPal reference (\S+)/.exec(own[0]?.detail ?? "")?.[1];
     if (b.key === "refund" && state === "hold") out.detail = own[0]?.detail;
+    if (explained && (state === "reject" || state === "blocked")) out.detail = undefined;
     return out;
   });
+  // A demo claim's account check runs only for the genuine one (one account sends all four): where it didn't, no row.
+  return demo ? six.filter((r) => !(r.key === "account" && r.state === "skipped")) : six;
 }
 
-/** The outcome word on a row's right. */
+/** The outcome word on a row's right. The refund's words are the receipt's and the headline's: Sent, then Received. */
 export function outcomeWord(r: Pick<SixRow, "key" | "state" | "unrun">, amount?: string): string {
   switch (r.state) {
     case "running":
       return r.key === "refund" ? "Sending" : "Checking";
     case "pass":
-      return r.key === "refund" ? (amount ? `${amount} sent` : "Sent") : "Passed";
+      return r.key === "refund" ? "Sent" : "Passed";
     case "reject":
     case "blocked":
       return "Failed";
@@ -205,7 +220,22 @@ function RowLines({ r, live }: { r: SixRow; live?: boolean }) {
  * the check and its outcome; under the code and the cut, one line of what the photo check read or saw. `live`: the
  * checking screen, where each answer lands as it resolves (a 160ms settle of the mark, only under no-preference).
  */
-export function CheckList({ rows, label = "Checks", amount, live, className }: { rows: SixRow[]; label?: string; amount?: string; live?: boolean; className?: string }) {
+export function CheckList({
+  rows,
+  label = "Checks",
+  amount,
+  live,
+  refundWord,
+  className,
+}: {
+  rows: SixRow[];
+  label?: string;
+  amount?: string;
+  live?: boolean;
+  /** The paid result: PayPal's own status (Sent, then Received) in place of the word. */
+  refundWord?: ReactNode;
+  className?: string;
+}) {
   const checks = rows.filter((r) => r.key !== "refund");
   const refund = rows.find((r) => r.key === "refund");
   const word = (r: SixRow) => outcomeWord(r, amount);
@@ -237,16 +267,17 @@ export function CheckList({ rows, label = "Checks", amount, live, className }: {
             <span className={clsx("text-body", refund.state === "waiting" || refund.state === "skipped" ? "text-muted" : "text-text")}>{refund.label}</span>
             <RowLines r={refund} live={live} />
           </span>
+          {/* The same size as "Passed": the outcome is bright, not bigger. */}
           <span
             key={word(refund)}
             className={clsx(
-              "pt-[0.15em] text-right whitespace-nowrap",
-              refund.state === "pass" ? "text-body font-medium text-text" : refund.state === "hold" ? "text-ui font-medium text-hold" : "text-ui font-medium text-muted",
+              "pt-[0.15em] text-right text-ui whitespace-nowrap",
+              refund.state === "pass" ? "font-medium text-text" : refund.state === "hold" ? "font-medium text-hold" : "font-medium text-muted",
               refund.state === "waiting" && "font-mono font-normal text-faint",
               live && styles.swap,
             )}
           >
-            {word(refund)}
+            {(refund.state === "pass" && refundWord) || word(refund)}
           </span>
         </div>
       )}

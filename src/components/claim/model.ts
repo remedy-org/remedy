@@ -191,7 +191,7 @@ export function payoutHold(claim: Pick<Claim, "decision" | "reasons" | "events">
 
 // What to do next, per failed check. Keys are rule.ts check names (step_N share one).
 const ADVICE: Record<string, string> = {
-  session: "Photos only count when they're taken on this page's camera within 10 minutes of getting the code. Start a new claim for a fresh code.",
+  session: "Only photos taken in the claim, within 10 minutes of its code, count. A new claim gives you a new code.",
   duplicate_photo: "Start a new claim with new photos of your own product.",
   payer: "Each PayPal account can claim once per recall, so your earlier claim is the one that counts.",
   payer_verified: "Verify your account with PayPal, then start a new claim.",
@@ -232,7 +232,7 @@ export function payoutWords(status: string | null | undefined): { label: string;
     case "":
       return { label: "Unknown", tone: "muted", note: "" };
     default:
-      return { label: "Processing at PayPal", tone: "muted", note: "Remedy has sent it. PayPal is finishing the transfer, which usually takes a few minutes." };
+      return { label: "Sent", tone: "muted", note: "PayPal usually finishes in a few minutes." };
   }
 }
 
@@ -398,7 +398,7 @@ export function refusalHeadline(claim: Pick<Claim, "decision" | "reasons" | "pho
     case "same_item":
       return "The photos show different items";
     case "session":
-      return "This photo wasn't taken on this page's camera";
+      return claim.photos.length > 1 ? "These photos weren't sent from Remedy's camera" : "This photo wasn't sent from Remedy's camera";
     case "duplicate_photo":
       return claim.photos.length > 1 ? "These photos were already used in another claim" : "This photo was already used in another claim";
     case "payer":

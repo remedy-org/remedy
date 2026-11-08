@@ -21,7 +21,7 @@ export interface CodeTagProps {
 export function CodeTag({ code, written, foot, expired, className }: CodeTagProps) {
   const spoken = `${expired ? "Expired code" : "Your code"}: ${code.split("").join(" ")}`;
   return (
-    <figure className={clsx("relative mx-auto w-full max-w-[22.5rem]", className)} aria-label={written ? `The tag reads ${written}, then ${spoken}` : spoken}>
+    <figure className={clsx("relative w-full max-w-[22.5rem]", className)} aria-label={written ? `The tag reads ${written}, then ${spoken}` : spoken}>
       <Paper variant="tag" hole padding="lg" className={clsx(expired && "opacity-60")}>
         {written && (
           <p aria-hidden="true" className="mt-4 text-center font-mono text-[1.75rem] leading-none font-medium tracking-[0.08em] whitespace-nowrap text-ink">

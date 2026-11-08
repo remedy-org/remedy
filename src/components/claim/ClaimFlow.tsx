@@ -8,7 +8,7 @@ import { CheckingStep } from "./CheckingStep";
 import { CodeStep } from "./CodeStep";
 import { DemoCaptureStep } from "./DemoCaptureStep";
 import { ClaimFrame } from "./Exhibit";
-import { focusInView } from "./FocusTitle";
+import { firstShown, focusInView } from "./FocusTitle";
 import { cutInHalf, handWrittenLabel, taggedThing, type ClaimView } from "./model";
 import { DEMO_STEPS, REAL_STEPS, StepMeter } from "./StepMeter";
 import { useClaimArrival } from "./useClaimArrival";
@@ -66,7 +66,8 @@ export function ClaimFlow(props: ClaimFlowProps) {
 
   // On arrival too: the first step loads by a full navigation (a form post, a redirect), which leaves focus on the body.
   useEffect(() => {
-    focusInView(document.getElementById(phase === "capture" && demo ? "sample-title" : TITLE[phase]));
+    const ids = phase !== "capture" ? [TITLE[phase]] : demo ? ["sample-title", "sample-title-wide"] : ["capture-title", "capture-title-wide", "camera-message"];
+    focusInView(firstShown(...ids));
   }, [phase, demo]);
 
   // Local photo URLs are freed when the flow goes away (the result replaces it).
@@ -106,7 +107,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
       )}
       {phase === "capture" &&
         (sample ? (
-          <DemoCaptureStep claimId={claimId} code={code} sample={sample} onSent={sent} backHref={props.newClaimHref} preview={preview && { sending: preview.sending }} />
+          <DemoCaptureStep claimId={claimId} code={code} sample={sample} onSent={sent} backHref={props.newClaimHref} written={handWrittenLabel(props.spec)} preview={preview && { sending: preview.sending }} />
         ) : (
           <CaptureStep
             claimId={claimId}
@@ -119,6 +120,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
             newClaimHref={props.newClaimHref}
             loginHref={props.loginHref}
             reminder={reminder}
+            written={handWrittenLabel(props.spec)}
             framing={framing}
             onSent={sent}
             onBack={() => go("code")}

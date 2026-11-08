@@ -6,7 +6,7 @@ import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
 import { consentAction, ConsentCard, JUDGE_LOGIN_ID, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
-import { ClaimFrame } from "./Exhibit";
+import { ClaimFrame, STEP_GRID } from "./Exhibit";
 import { FlowShell } from "./FlowShell";
 import { MobileCta } from "./MobileCta";
 import { businessDaysAfter, companyName, day, maskPayer } from "./model";
@@ -79,7 +79,7 @@ export function RecallView(props: ConsentCardProps) {
         {/* Refused by a limit, the next step isn't open: the meter stays on the first step. */}
         <StepMeter {...(claim ? claimMeter(claim) : ready && !props.refusal ? { current: 2, upcoming: true } : { current: 1 })} steps={props.demo ? DEMO_STEPS : REAL_STEPS} />
         {/* One bounded track on a phone, so the card's widest line can never widen the page. */}
-        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_30rem] lg:gap-16">
+        <div className={STEP_GRID}>
           <RecallBrief recall={props.recall} />
           <ConsentCard {...props} />
         </div>
@@ -91,7 +91,7 @@ export function RecallView(props: ConsentCardProps) {
           target="consent-cta"
           href={claim?.href ?? props.href}
           label={consentAction(props)}
-          first={props.demo && !props.signedInAs && props.judgeLogin && !claim ? { target: JUDGE_LOGIN_ID, label: "Use the demo account" } : undefined}
+          first={props.demo && !props.signedInAs && props.judgeLogin && !claim ? { target: JUDGE_LOGIN_ID, label: "Show the demo account" } : undefined}
         />
       )}
     </FlowShell>

@@ -59,7 +59,7 @@ export function PayoutLive({ claimId, status: initial, live, amount, children }:
           if (next.toUpperCase() === "SUCCESS") navigator.vibrate?.([12, 40, 12]);
         }
         const w = payoutWords(next);
-        if (w.label !== "Processing at PayPal" && w.label !== "Unknown") return;
+        if (w.label !== "Sent" && w.label !== "Unknown") return;
       } catch {
         // Offline for a moment: the next tick tries again.
       }
@@ -76,21 +76,51 @@ export function PayoutLive({ claimId, status: initial, live, amount, children }:
     <PayoutContext.Provider value={{ status, changed }}>
       {children}
       <p className="sr-only" aria-live="polite">
-        {changed ? (received(status) ? `Received. ${amount} is in your PayPal.` : `Payout status: ${payoutWords(status).label}.`) : ""}
+        {changed ? (received(status) ? `Received. Your ${amount} refund is in your PayPal.` : `Payout status: ${payoutWords(status).label}.`) : ""}
       </p>
     </PayoutContext.Provider>
   );
 }
 
-/** The headline: on its way while PayPal is finishing, in your PayPal once it has. The one change crossfades. */
-export function PaidTitle({ amount }: { amount: string }) {
+/** Words the headline, the refund row and the receipt share, so the three never disagree: Sent, then Received. */
+export const PAID_TITLE = { sent: "Refund sent to your PayPal", received: "Your refund is in your PayPal" };
+
+/** The headline: sent while PayPal is finishing, in your PayPal once it has. The amount is the receipt's. */
+export function PaidTitle() {
   const { status, changed } = useContext(PayoutContext);
-  const text = received(status) ? `${amount} is in your PayPal` : `${amount} is on its way to your PayPal`;
+  const text = received(status) ? PAID_TITLE.received : PAID_TITLE.sent;
   return (
     <span key={text} className={clsx("block", changed && styles.swap)}>
       {text}
     </span>
   );
+}
+
+/** The refund row's word on the result: Sent, then Received in the paid colour. */
+export function PayoutWord() {
+  const { status, changed } = useContext(PayoutContext);
+  const got = received(status);
+  return (
+    <span key={String(got)} className={clsx(got && "text-pay", changed && styles.swap)}>
+      {got ? "Received" : "Sent"}
+    </span>
+  );
+}
+
+/** The receipt as it prints: brought into view once, so the money arriving is on screen, not under the fold. */
+export function BringIntoView({ id }: { id: string }) {
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const { bottom } = el.getBoundingClientRect();
+      if (bottom <= window.innerHeight) return;
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({ block: "end", behavior: reduced ? "auto" : "smooth" });
+    }, 360);
+    return () => clearTimeout(t);
+  }, [id]);
+  return null;
 }
 
 /** The receipt's payout status row: a word, and while it's processing, one line of why. */

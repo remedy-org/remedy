@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { CheckSpec } from "@/lib/types";
 import { CheckList, outcomeWord, sixRows, type SixRow } from "./CheckList";
-import { StepTitle } from "./Exhibit";
+import { ClaimPhotos } from "./ClaimPhotos";
+import { CHECK_GRID, OutcomeHead, WIDE_ONLY } from "./Exhibit";
 import styles from "./flow.module.css";
 import { cutInHalf, handWrittenLabel, isDecided, nounOf, type ClaimView } from "./model";
+import { PAID_TITLE } from "./ReceiptLive";
 
 // Each row resolves on its own beat, one after another, in reduced motion too: there it is a plain swap. The camera's
 // pre-checks are quick; the photo check's answers, and the refund after them, get a beat each to be read.
@@ -71,7 +73,7 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
   }
 
   const decided = isDecided(view.decision);
-  const all = sixRows(view.rows, { code: view.code, noun: nounOf(spec), cut: cutInHalf(spec), decided, held: view.decision === "held", demo: view.demo, written: handWrittenLabel(spec) });
+  const all = sixRows(view.rows, { code: view.code, noun: nounOf(spec), cut: cutInHalf(spec), decided, held: view.decision === "held", demo: view.demo, photos: Math.max(view.photos, photoUrls?.length ?? 0), written: handWrittenLabel(spec) });
   const known = sending ? 0 : firstWaiting(all);
   const [shown, setShown] = useState(preview ? known : 0);
   const done = decided && shown >= all.length;
@@ -155,7 +157,6 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
   const received = view.timeline.find((e) => e.type === "photos_received")?.at;
   const elapsed = preview?.elapsed ?? (received ? Math.max(0, (now - Date.parse(received)) / 1000) : null);
   const srcs = photoUrls?.length ? photoUrls : Array.from({ length: view.photos }, (_, i) => `/api/claims/${claimId}/photos/${i + 1}`);
-  const src = srcs[0];
   const count = Math.max(view.photos, srcs.length);
 
   // Once every row has landed the headline is the outcome, in the result's own words, so the result arrives under it.
@@ -163,7 +164,7 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
     ? `Sending your ${count > 1 ? "photos" : "photo"}`
     : done
       ? view.decision === "paid"
-        ? `${amount} is on its way to your PayPal`
+        ? PAID_TITLE.sent
         : view.decision === "held"
           ? `A person at ${company.replace(/ /g, "\u00a0")} will check this claim`
           : "We couldn't pay this claim"
@@ -176,64 +177,48 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
         ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn't answer."
         : "Your claim is saved. You can close this page.";
 
-  // One line for a screen reader, rewritten as each row lands: the list itself stays quiet.
+  // One line for a screen reader, rewritten as each row lands: the list itself stays quiet. Checks are named, never
+  // numbered: nothing on screen numbers them.
   const last = shown > 0 ? all[Math.min(shown, all.length) - 1] : null;
+  const checks = all.filter((r) => r.key !== "refund").length;
   const spoken = done
     ? view.decision === "paid"
-      ? `All 5 checks passed. ${amount} is on its way to your PayPal.`
+      ? `All ${checks} checks passed. ${amount} refund sent to your PayPal.`
       : view.decision === "held"
         ? "Claim for review."
         : "Not paid."
     : last && last.key !== "refund"
-      ? `Check ${Math.min(shown, 5)} of 5 ${outcomeWord(last).toLowerCase() || "done"}: ${last.name}.`
+      ? `${last.name[0].toUpperCase()}${last.name.slice(1)}: ${outcomeWord(last).toLowerCase() || "done"}.`
       : "";
 
-  // Tall laptops (lg and over 600px high): the photo whole, beside the list. Phones and short screens: a thumbnail in the
-  // title row. The classes are spelled out so Tailwind finds them.
+  // Tall laptops (lg and over 600px high): the photo whole, beside the list. Phones and short screens: a thumbnail beside
+  // the headline. The result keeps this layout, so nothing moves when the outcome lands.
   return (
-    <section aria-labelledby="checking-title" className="grid gap-6 lg:[@media(min-height:601px)]:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:[@media(min-height:601px)]:gap-14">
-      <div className="hidden flex-col gap-3 lg:[@media(min-height:601px)]:flex">
-        {src ? (
-          // Whole, never cropped: it's what is being checked, tag and all. The result keeps it in this same place.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt={`Photo 1 of claim ${view.id}`} className="aspect-[4/5] w-full rounded-card bg-surface-2 object-contain ring-1 ring-line" />
-        ) : (
-          <div className="flex aspect-[4/5] items-center justify-center rounded-card border border-dashed border-line-strong text-ui text-faint">Your photos are on their way</div>
-        )}
-        {srcs.length > 1 && (
-          <ul aria-label={`${srcs.length} photos received`} className="flex gap-2">
-            {srcs.slice(1).map((s, i) => (
-              <li key={`${s}-${i}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s} alt={`Photo ${i + 2}`} className="size-14 rounded-control bg-surface-2 object-cover ring-1 ring-line" />
-              </li>
-            ))}
-          </ul>
-        )}
+    <section aria-labelledby="checking-title" className={CHECK_GRID}>
+      <div className={clsx(WIDE_ONLY, "sticky top-8 min-w-0 flex-col gap-4")}>
+        <ClaimPhotos urls={srcs} claimId={view.id} />
       </div>
 
       <div className="flex min-w-0 flex-col gap-5 [@media(max-height:600px)]:gap-3">
-        <div className="flex items-center gap-4">
-          {src && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt="" className={clsx("size-18 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_70%] ring-1 ring-line [@media(max-height:600px)]:size-14", "lg:[@media(min-height:601px)]:hidden")} />
-          )}
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <StepTitle id="checking-title">
-              <span key={title} className={clsx("block", styles.swap)}>
-                {title}
-              </span>
-            </StepTitle>
-            <p aria-hidden={!lead} className={clsx("text-ui text-muted", !lead && "invisible")}>
-              {lead || "\u00a0"}
-            </p>
-          </div>
-          {elapsed !== null && !done && (
-            <span className="self-start pt-2 font-mono text-ui text-faint" aria-hidden="true">
-              {clock(elapsed)}
+        <OutcomeHead
+          id="checking-title"
+          thumb={srcs[0]}
+          small
+          title={
+            <span key={title} className={clsx("block", styles.swap)}>
+              {title}
             </span>
-          )}
-        </div>
+          }
+          lead={lead || undefined}
+          aside={
+            elapsed !== null &&
+            !done && (
+              <span className="self-start pt-2 font-mono text-ui text-faint" aria-hidden="true">
+                {clock(elapsed)}
+              </span>
+            )
+          }
+        />
 
         {offline && (
           <p role="status" className="rounded-control border border-line bg-surface-2 px-3 py-2.5 text-ui text-muted">

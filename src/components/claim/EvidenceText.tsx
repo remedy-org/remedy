@@ -57,28 +57,42 @@ export function ModelQuote({ children }: { children: string }) {
 
 // What failed, as a sentence an owner can read aloud.
 const FAILED: Record<string, (cut: boolean) => string> = {
-  session: () => "Not taken on the live camera",
-  duplicate: () => "Photo used before",
+  session: () => "Not sent from Remedy's camera",
+  duplicate: () => "Photo sent before",
   account: () => "This PayPal account has claimed already",
   code: () => "The tag doesn't match",
   destroyed: (cut) => (cut ? "Not cut in half" : "Not destroyed"),
 };
 
+// A check by what it looks at, never by a number nobody was shown.
+const NAMED: Record<string, (cut: boolean) => string> = {
+  session: () => "the camera",
+  duplicate: () => "the photo match",
+  account: () => "the PayPal account",
+  code: () => "the tag",
+  destroyed: (cut) => (cut ? "the cut" : "the damage"),
+};
+
+const and = (parts: string[]) => (parts.length < 2 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`);
+
 /**
  * The evidence in one line, said as what happened rather than as a tally: "All 5 checks passed", "The tag doesn't
- * match.", "Not taken on the live camera. The photo check didn't run.", "Checks 4 and 5 need a person." The refund
- * isn't one of the five, so it never counts.
+ * match.", "Not sent from Remedy's camera. The photo check didn't run.", "The tag and the cut need a person to look." The
+ * refund isn't one of the checks, so it never counts.
  */
 export function evidenceSummary(six: Pick<SixRow, "key" | "state" | "unrun">[], { decision, cut, unanswered }: { decision: Decision; cut: boolean; unanswered: boolean }): string {
-  if (decision === "paid") return "All 5 checks passed";
-  if (unanswered) return "The photo check didn't answer";
   const checks = six.filter((r) => r.key !== "refund");
+  if (decision === "paid") return `All ${checks.length} checks passed`;
+  if (unanswered) return "The photo check didn't answer";
   const failed = checks.filter((r) => r.state === "reject" || r.state === "blocked");
-  const review = checks.flatMap((r, i) => (r.state === "hold" ? [i + 1] : []));
+  const review = checks.filter((r) => r.state === "hold").map((r) => NAMED[r.key](cut));
   if (failed.length) {
     const what = failed.map((r) => `${FAILED[r.key](cut)}.`).join(" ");
     return checks.some((r) => r.unrun && (r.key === "code" || r.key === "destroyed")) ? `${what} The photo check didn't run.` : what;
   }
-  if (review.length) return review.length === 1 ? `Check ${review[0]} needs a person.` : `Checks ${review.slice(0, -1).join(", ")} and ${review[review.length - 1]} need a person.`;
-  return `${checks.filter((r) => r.state === "pass").length} of 5 passed`;
+  if (review.length) {
+    const who = and(review);
+    return `${who[0].toUpperCase()}${who.slice(1)} ${review.length > 1 ? "need" : "needs"} a person to look.`;
+  }
+  return `${checks.filter((r) => r.state === "pass").length} of ${checks.length} passed`;
 }

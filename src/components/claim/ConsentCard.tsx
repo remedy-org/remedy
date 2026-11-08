@@ -89,10 +89,10 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   return (
     <Card padding="lg" as="section" aria-labelledby="consent-title" className={clsx("flex flex-col gap-7", open)}>
       <div className="flex flex-col gap-3">
-        <StepTitle id="consent-title" className="text-pretty">
-          {demo ? "Run a claim yourself" : <NoBreakHyphens>{`${money(recall.refund)} back for your ${productNoun(recall)}`}</NoBreakHyphens>}
+        <StepTitle id="consent-title" as="h2" className="text-pretty">
+          <NoBreakHyphens>{demo ? `Run a claim for the ${productNoun(recall)}` : `${money(recall.refund)} back for your ${productNoun(recall)}`}</NoBreakHyphens>
         </StepTitle>
-        <p className="text-body text-pretty text-muted">{demo ? "Four claims. One pays." : how}</p>
+        <p className="text-body text-pretty text-muted">{demo ? "Four claims. Remedy pays only the genuine one." : how}</p>
       </div>
 
 
@@ -149,7 +149,7 @@ function ClaimStatus({ claim, company, action }: { claim: YourClaim; company: st
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <StepTitle id="consent-title" className="text-pretty">
+        <StepTitle id="consent-title" as="h2" className="text-pretty">
           {title}
         </StepTitle>
         <p className="text-body text-muted">

@@ -4,7 +4,9 @@ import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AlertIcon, Button } from "@/components/ui";
 import styles from "./flow.module.css";
-import { focusInView } from "./FocusTitle";
+import { rememberAspect } from "./ClaimPhotos";
+import { CodeTag } from "./CodeTag";
+import { firstShown, focusInView } from "./FocusTitle";
 import { InfoIcon } from "./icons";
 import { EvidenceText } from "./EvidenceText";
 import { coverCrop, photosTakenKey, type ClaimView } from "./model";
@@ -24,6 +26,9 @@ const MAX_BYTES = 4.4 * 1024 * 1024;
 interface Shot {
   url: string;
   blob: Blob | null;
+  /** Its size, so the checking screen draws it at its own shape from the first frame. */
+  w?: number;
+  h?: number;
 }
 
 export interface CapturePreview {
@@ -49,6 +54,8 @@ export interface CaptureStepProps {
   loginHref: string;
   /** What the photo needs, the instruction bar's one line: "Tag with M4T, and the pillow cut in half." */
   reminder: string;
+  /** The label hand-written on the tag beside the code, for the tag shown beside the camera on a laptop. */
+  written?: string | null;
   /** What the photo frames, in the code step's words: the "tag" (or "label") and the "cut pillow" (or "destroyed product"). */
   framing?: { thing: string; product: string };
   /**
@@ -78,7 +85,7 @@ const platformOf = (): Platform => {
 };
 
 /** Live camera only: no upload control. Up to 3 shots, downscaled in the browser, sent with the session id. */
-export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, reminder, framing = { thing: "label", product: "destroyed product" }, onSent, onBack, preview }: CaptureStepProps) {
+export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrSvg, phoneUrl, newClaimHref, loginHref, reminder, written, framing = { thing: "label", product: "destroyed product" }, onSent, onBack, preview }: CaptureStepProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [camera, setCamera] = useState<CameraState>(preview?.camera ?? "starting");
@@ -137,7 +144,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
 
   // The camera won't open: focus lands on why, so a keyboard or screen reader hears it before anything else.
   useEffect(() => {
-    if (camera === "denied" || camera === "nocamera" || camera === "insecure" || camera === "error") focusInView(document.getElementById("camera-message"));
+    if (camera === "denied" || camera === "nocamera" || camera === "insecure" || camera === "error") focusInView(firstShown("camera-message"));
   }, [camera]);
 
   // "Use your phone's camera instead" on a laptop: the QR opens under the frame, so it's brought into view and focused.
@@ -208,7 +215,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     canvas.getContext("2d")?.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", QUALITY));
     if (!blob) return;
-    setShots((s) => [...s, { url: URL.createObjectURL(blob), blob }]);
+    setShots((s) => [...s, { url: URL.createObjectURL(blob), blob, w: canvas.width, h: canvas.height }]);
     // The flash: white at 50%, 40ms in and 200ms out (flow.module.css).
     setFlash(true);
     setTimeout(() => setFlash(false), 40);
@@ -266,6 +273,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
       }
       stop();
       sentAll();
+      shots.forEach((s, i) => s.w && s.h && rememberAspect(claimId, i + 1, s.w, s.h));
       // Fresh URLs for the checking screen: this step frees its own thumbnails' URLs when it goes away.
       onSent(body as ClaimView, blobs.map((b) => URL.createObjectURL(b)));
     } catch {
@@ -286,9 +294,11 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const shown = viewing !== null ? shots[viewing] : undefined;
 
   return (
-    <section aria-labelledby="capture-title" className="flex w-full max-w-[40rem] flex-col gap-5">
+    // From 1024px the step grid: the camera in the left column (where the photo stays through the checks and the result),
+    // the instruction, the tag and the phone's QR on the right. A phone's camera is the whole screen.
+    <section aria-label={expired ? `Code ${code} has expired` : reminder} className="grid w-full max-w-[40rem] items-start gap-5 lg:max-w-none lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:gap-y-6">
       {/* The camera is dark in both themes, like a camera's. Full bleed on a phone, a 4:3 frame on a laptop. */}
-      <div data-theme="dark" data-camera="" className={CAMERA_FRAME}>
+      <div data-theme="dark" data-camera="" className={clsx(CAMERA_FRAME, "lg:row-span-2")}>
         <CameraTopBar
           back={
             <button type="button" onClick={onBack} className={CAMERA_BACK}>
@@ -350,9 +360,11 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-0 bg-[oklch(1_0_0)]", flash ? clsx("opacity-50", styles.flashOn) : clsx("opacity-0", styles.flashOff))} />
         </div>
 
-        <InstructionBar className="max-sm:gap-1 max-sm:pr-1">
+        {/* What to photograph, under the frame; a laptop has it in the right column instead. A camera that won't open has
+            no photo to describe: its message in the frame is the heading then. */}
+        <InstructionBar className={clsx("max-sm:gap-1 max-sm:pr-1", failed && n === 0 && !expired ? "hidden" : !sendError && "lg:hidden")}>
           <div className="flex flex-col gap-1">
-            <h2 id="capture-title" tabIndex={-1} className={clsx("text-ui font-medium text-balance text-[oklch(0.96_0.006_85)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4", sendError && "sr-only")}>
+            <h1 id="capture-title" tabIndex={-1} className={clsx("text-ui font-medium text-balance text-[oklch(0.96_0.006_85)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4", sendError && "sr-only")}>
               {expired ? (
                 <>
                   Code <span className="font-mono">{code}</span> has expired
@@ -360,7 +372,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               ) : (
                 <EvidenceText>{reminder}</EvidenceText>
               )}
-            </h2>
+            </h1>
             {/* A failed send says so here, on the first screen, where the Send button is. */}
             {sendError && (
               <div role="alert" className="flex items-start gap-2.5 text-left">
@@ -502,9 +514,30 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         </dialog>
       </div>
 
+      {/* A laptop's right column: what to photograph, said once, beside the tag it should show. */}
+      <div className="hidden flex-col gap-6 lg:col-start-2 lg:flex">
+        {failed && n === 0 && !expired ? (
+          <p className="text-body text-pretty text-muted">
+            <EvidenceText>{reminder}</EvidenceText>
+          </p>
+        ) : (
+          <h1 id="capture-title-wide" tabIndex={-1} className="text-title font-semibold text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+            {expired ? (
+              <>
+                Code <span className="font-mono">{code}</span> has expired
+              </>
+            ) : (
+              <EvidenceText>{reminder}</EvidenceText>
+            )}
+          </h1>
+        )}
+        <CodeTag code={code} written={written} expired={expired} />
+        {!expired && !failed && <p className="text-ui text-muted">{`${helpText}${n === 0 && !coarse ? " Space takes a photo." : ""}`}</p>}
+      </div>
+
       {/* Laptops only: on a phone this already is the phone. */}
       {!coarse && !expired && (
-        <div id="phone-handoff" tabIndex={-1} aria-label={showPhone ? "Take the photo on your phone" : undefined} className="rounded-card outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus max-sm:hidden">
+        <div id="phone-handoff" tabIndex={-1} aria-label={showPhone ? "Take the photo on your phone" : undefined} className="rounded-control outline-none focus:outline-2 focus:outline-offset-4 focus:outline-focus max-sm:hidden lg:col-start-2">
           {showPhone ? (
             <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} />
           ) : (
@@ -562,23 +595,28 @@ function FrameMessage({
       role={camera === "starting" ? "status" : "alert"}
       className={clsx("absolute inset-0 flex flex-col justify-center gap-2 overflow-y-auto p-5 text-left sm:p-6", collapsed && "sm:relative sm:inset-auto sm:min-h-56")}
     >
-      <p id={camera === "starting" ? undefined : "camera-message"} tabIndex={-1} className="text-body font-medium text-text outline-none">
-        {m.title}
-      </p>
+      {/* Why the camera won't open is the step's heading then: the instruction strip steps aside. */}
+      {camera === "starting" || camera === "expired" ? (
+        <p className="text-body font-medium text-text">{m.title}</p>
+      ) : (
+        <h1 id="camera-message" tabIndex={-1} className="text-body font-medium text-text outline-none">
+          {m.title}
+        </h1>
+      )}
       <p className="max-w-[30rem] text-ui text-pretty text-muted">{camera === "denied" ? DENIED[platform] : m.body}</p>
       {(m.retry || handoff || onBack) && (
         <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-3">
           {m.retry && <Button onClick={onRetry}>Try again</Button>}
           {handoff && !another && (
-            <button type="button" onClick={() => setAnother(true)} className="min-h-11 text-ui text-muted underline decoration-line-strong underline-offset-4 hover:text-text">
+            <Button variant="secondary" onClick={() => setAnother(true)}>
               Use another phone
-            </button>
+            </Button>
           )}
           {onBack && (
-            // A phone has it in the camera's top bar already.
-            <button type="button" onClick={onBack} className="min-h-11 text-ui text-muted underline max-sm:hidden decoration-line-strong underline-offset-4 hover:text-text">
+            // A phone has it in the camera's top bar already. A button, so it looks like one: the quiet kind.
+            <Button variant="secondary" onClick={onBack} className="max-sm:hidden">
               Back to your code
-            </button>
+            </Button>
           )}
         </div>
       )}

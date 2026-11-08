@@ -18,7 +18,7 @@ export function JudgeLoginPanel({ login, why, id, className }: { login: JudgeLog
       id={id}
       tabIndex={id ? -1 : undefined}
       aria-label="Demo account"
-      className={clsx("flex scroll-mt-24 flex-col gap-2 text-ui outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus", className)}
+      className={clsx("flex scroll-mt-24 flex-col gap-2 text-ui outline-none focus:outline-2 focus:outline-offset-4 focus:outline-focus", className)}
     >
       <h3 className="font-medium text-text">Demo account</h3>
       {why && <p className="text-muted">{why}</p>}
