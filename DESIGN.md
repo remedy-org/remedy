@@ -12,7 +12,7 @@ Approved 7 Nov 2026 from three explored directions (variant B), then made physic
 | Claim flow | Guided verification (Stripe Identity patterns) | Roomy, one action per screen | State changes, plus one arrival moment (the receipt) |
 | Seller console | Data, calm density (AG Grid) | Tight | Near zero: panel 160ms, cell flash, row insert |
 
-**One brand hue:** evidence-tag amber, and only for "the thing to do now" or "the thing happening now": one amber focal element per viewport (the 22px nav mark and the focus ring never count). Everything else is warm graphite, and the cream paper.
+**One brand hue:** evidence-tag amber, and only for "the thing to do now" or "the thing happening now": one amber focal element per viewport (the mark's stub and the focus ring never count). Everything else is warm graphite, and the cream paper.
 
 ## What we borrow, and from where
 
@@ -153,7 +153,7 @@ Colours are OKLCH tokens in `src/app/globals.css`, exposed to Tailwind through `
 
 **Stamp** (`<Stamp tone="pay|hold|stop|neutral">PAID</Stamp>`): 2px border, radius 6, 14px JetBrains Mono 500, +0.14em tracking, the tone's ink at 85%, rotated -8°. Decorative (`aria-hidden`): the status is always also in text. Never bigger than 14px type, never textured, one colour. `land` plays the landing once on mount.
 
-**The mark:** an amber evidence tag (top corners cut, a punched hole, the code written on it) on a string loop, hanging at the stamp's -8°. 22px in the homepage nav, 18px in app chrome. The string draws in once on load (600ms `--ease-in-out-quart`), static under reduced motion.
+**The mark (Claim Check):** one evidence tag torn in two. The cream tag (point chamfered at 45°, a small punched hole near the point) is the proof that stays with the product; the amber stub is the refund, lifting away at the stamp's -8°. The tear is six even 90° teeth, never fewer or bolder, so hole and tear never read as a face. `RemedyMark` in `ui/Wordmark.tsx` draws it on a 24 × 16 grid (one unit per pixel at 22px type): the tag is the Schibsted 600 cap height plus overshoots, its foot on the baseline, 0.3em from the name; 24px wide in the homepage nav, 18px in app chrome. Dark theme: tag `--paper`, stub `--accent`; light: tag `--ink-muted`, stub a 3:1 deep amber; one colour (`currentColor` on both) works, the tear carries it. `icon.svg` is a separate 16px drawing on whole pixels (vertical edges, hole and teeth on the grid, centred on the tile); `apple-icon.png` and the link card use the master paths. No string, no motion.
 
 **Theme toggle:** a 36px icon button with a 44px hit area and an `aria-label`; the glyph is a half-lit disc that turns over with the theme. It stores "dark" or "light", so a choice outlasts the system preference. The homepage nav has one too, and so does the company sign-in, beside its "← Back to Remedy".
 

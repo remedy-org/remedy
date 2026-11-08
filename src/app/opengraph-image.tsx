@@ -18,9 +18,12 @@ const SCRIM = "rgba(13,12,10,0.78)"; // --photo-scrim
 const PAPER = "#efebe1"; // --paper: the mark's tag
 const ACCENT = "#f3aa40"; // --accent: the mark's stub, the only amber on the card
 
-// The Claim Check mark, the same 21 x 14 geometry as ui/Wordmark.tsx: the tag (proof) and the torn amber stub (refund).
-const MARK_TAG = "M0 3L3 0H11.15A1.6 1.6 0 0 0 12 1.413V12.587A1.6 1.6 0 0 0 11.15 14H3L0 11ZM5 7A1.25 1.25 0 1 0 2.5 7A1.25 1.25 0 1 0 5 7Z";
-const MARK_STUB = "M14.35 0H20A1 1 0 0 1 21 1V13A1 1 0 0 1 20 14H14.35A1.6 1.6 0 0 0 13.5 12.587V1.413A1.6 1.6 0 0 0 14.35 0Z";
+// The Claim Check mark, the same 24 x 16 geometry as ui/Wordmark.tsx: the tag (proof) and the amber stub (refund)
+// torn from it, lifting at -8deg. The viewBox starts a unit higher to hold the stub's raised corner.
+const MARK_TAG =
+  "M0 3.5L3.5 0H13L11.667 1.333L13 2.667L11.667 4L13 5.333L11.667 6.667L13 8L11.667 9.333L13 10.667L11.667 12L13 13.333L11.667 14.667L13 16H3.5L0 12.5ZM5.25 8A1.25 1.25 0 1 0 2.75 8A1.25 1.25 0 1 0 5.25 8Z";
+const MARK_STUB =
+  "M15 0L21.437 -0.905L23.664 14.94L17.227 15.844L15.721 14.709L16.856 13.204L15.35 12.069L16.485 10.563L14.979 9.428L16.113 7.922L14.607 6.787L15.742 5.281L14.236 4.147L15.371 2.641L13.865 1.506Z";
 
 // Schibsted Grotesk for the words, JetBrains Mono for the micro labels and codes, as on the site.
 // ImageResponse needs TTF or OTF; Google's CSS API serves TTF to a client that doesn't ask for woff2. If the font
@@ -61,9 +64,9 @@ export default async function OpengraphImage() {
     (
       <div style={{ display: "flex", width: "100%", height: "100%", background: BG, color: TEXT, fontFamily: fonts.length ? "Schibsted Grotesk" : undefined }}>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, padding: "64px 56px 56px 72px" }}>
-          {/* The lockup at 30px: the mark is the cap height (0.727em), 0.3em from the name, its foot on the baseline. */}
+          {/* The lockup at 30px: the tag is the cap height (0.727em, 22px), 0.3em from the name, its foot on the baseline. */}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 9, fontSize: 30, fontWeight: 600, letterSpacing: -0.75, lineHeight: 1 }}>
-            <svg width="33" height="22" viewBox="0 0 21 14" style={{ marginBottom: 1 }}>
+            <svg width="33" height="23.375" viewBox="0 -1 24 17" style={{ marginBottom: 1 }}>
               <path fillRule="evenodd" fill={PAPER} d={MARK_TAG} />
               <path fill={ACCENT} d={MARK_STUB} />
             </svg>
