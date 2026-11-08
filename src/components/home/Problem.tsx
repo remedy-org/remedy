@@ -9,22 +9,24 @@ import { clamp, dash, inOutQuart, outExpo, outQuart, PAYOFF_LEAD, PAYOFF_REST, p
 
 /*
  * Exhibit A: one aged evidence sheet on the dark desk. On a laptop (at least 1024 x 700, motion allowed) it rises out
- * of the dark folded in half, the lower half swings down like a map opening, four cards land on brass pins, one red
- * string closes the loop between them, a bold slash marks where Remedy steps in, the string snaps and its ends recoil
- * and fall while "Remedy cuts the loop." prints under the cut, then the lamp narrows to a pool on it. Section B then
- * scrolls over the held sheet like a page laid on top. Every beat is scrubbed by the scroll (problemTimeline.ts), so
- * fast and slow readers, and readers scrolling back, all see the same frame.
+ * of the dark folded just under card 1, its lower part tucked behind, and the first two cards land on the part that
+ * shows; the lower part then swings down into view like a map opening, the other cards land on brass pins, one red string closes
+ * the loop between them, a bold slash marks where Remedy steps in, the string snaps and its ends recoil and fall while
+ * "Remedy cuts the loop." prints under the cut, then the lamp narrows to a pool on it. Section B then scrolls over the
+ * held sheet like a page laid on top and covers the payoff last. Every beat is scrubbed by the scroll
+ * (problemTimeline.ts), so fast and slow readers, and readers scrolling back, all see the same frame.
  *
  * Architecture after the "unfold" prototype: one function maps scroll to t and writes CSS custom properties; each
  * property defaults to the finished sheet, so no JS and reduced motion get it open, pinned, cut and paid off. The
- * fold is hand-built CSS 3D (a hinge at half height, its face a window onto a second copy of the paper), after Thomas
+ * fold is hand-built CSS 3D (a hinge at HINGE of the height, its face a window onto a second copy of the paper), after Thomas
  * Park's folding map and oriDomi's clone-and-shade idea (dmotz, MIT; technique only, no code). A library would add
- * weight for one hinge.
+ * weight for one hinge. The part turns without perspective, so it is never wider than the sheet.
  *
- * Phones and short laptops get the open sheet with the cards stacked; each card lands as it reaches the reader and
- * stays landed (the timeline only runs forward until the section is below the screen again). The chain runs down the
- * margin with no return line (card 4 says "Back to 01"); the cut is a slash and a stamp in the gap above card 4, and
- * the payoff prints at the sheet's foot only once the cut has happened.
+ * Phones and short laptops get the open sheet with the cards stacked; each card lands as its top comes up through the
+ * lower fifth of the screen and stays landed (everything only runs forward until the section is below the screen
+ * again). The chain runs down the margin and, past card 4, turns into a red "Back to 01"; the cut is a slash across
+ * the chain with a stamp in the middle of the gap above card 4, and the payoff prints at the sheet's foot (one timed
+ * print, never a half-blurred frame) only once the cut has happened.
  *
  * Facts from IDEA.md §2.2, each marked VERIFIED there: PIRG's 6-10% ("returned or discarded"); our CPSC recalls API
  * pull for 1 Oct to 5 Nov 2026 (36 refund recalls, 27 ask for a photo, 20 of those have owners email it to an
@@ -64,8 +66,11 @@ const SOURCES = [
 /* ---------- geometry ---------- */
 
 type Pt = [number, number];
-/** Pins, the list's size, and where along span 3 (0 to 1) the cut falls: the middle on the board, the gap above card 4 when stacked. */
-type Geo = { pts: Pt[]; w: number; h: number; stacked: boolean; cutU: number };
+/**
+ * Pins, the list's size, and where along span 3 (0 to 1) the cut falls: the middle on the board, the gap above card 4
+ * when stacked. Stacked, `back` is where the chain's return ends: the start of card 4's "Back to 01" line.
+ */
+type Geo = { pts: Pt[]; w: number; h: number; stacked: boolean; cutU: number; back: Pt | null };
 const SPANS = ["span1", "span2", "cutA", "cutB", "ret"] as const;
 type Span = (typeof SPANS)[number];
 /** An arrowhead at the end of each span, so the loop reads as cause and effect: span 1 into card 2, ... the return into card 1. */
@@ -94,7 +99,7 @@ function head(end: Pt, dir: Pt, size = 1): string {
 }
 
 /** The loop's spans in eye-path order, their arrowheads, and the cut. Span 3 (the faked photo to the fraud checks) comes as two halves so it can be cut. */
-function loopPaths({ pts, stacked, cutU }: Geo) {
+function loopPaths({ pts, stacked, cutU, back }: Geo) {
   const [p1, p2, p3, p4] = pts;
   const centre: Pt = [(p1[0] + p2[0] + p3[0] + p4[0]) / 4, (p1[1] + p2[1] + p3[1] + p4[1]) / 4];
   // On the board, level spans sag 7% and steep ones bow toward the loop's middle, away from the cards' text. Stacked,
@@ -113,22 +118,27 @@ function loopPaths({ pts, stacked, cutU }: Geo) {
   const cb = lerp(c, b, cutU);
   const mid = lerp(ac, cb, cutU);
   // On the board the return bows well into the loop's middle, so it reads as an arc closing the ring, not a hop.
-  // Stacked there is no return line (it ran beside the chain as a double rule); card 4 says "Back to 01" instead.
   // At least 36px of bow, so even a short return (narrow boards, where card 1 runs tall) still reads as an arc.
+  // Stacked, the chain runs on past card 4 and turns into its "Back to 01" line, so the return is string, not caption.
   const r = quad(p4, p1, dirFor(p4, p1), Math.max(0.3, 36 / (Math.hypot(p1[0] - p4[0], p1[1] - p4[1]) || 1)));
-  const ret = stacked ? "" : qd(r);
+  const turn = 12;
+  const ret = !stacked
+    ? qd(r)
+    : back
+      ? `M${f1(p4[0])},${f1(p4[1])} L${f1(p4[0])},${f1(back[1] - turn)} Q${f1(p4[0])},${f1(back[1])} ${f1(p4[0] + turn)},${f1(back[1])} L${f1(back[0] - 6)},${f1(back[1])}`
+      : "";
   // The cut mark: a bold slash across the span at the cut, turned 60deg from the string.
   const tan = unit(ac, cb);
   const k = Math.PI / 3;
   const sd: Pt = [tan[0] * Math.cos(k) - tan[1] * Math.sin(k), tan[0] * Math.sin(k) + tan[1] * Math.cos(k)];
-  const half = stacked ? 14 : 22;
+  const half = stacked ? 22 : 32;
   const slash = `M${f1(mid[0] - sd[0] * half)},${f1(mid[1] - sd[1] * half)} L${f1(mid[0] + sd[0] * half)},${f1(mid[1] + sd[1] * half)}`;
   const hs = stacked ? 1.5 : 1;
   const heads: Record<Head, string> = {
     span1: head(p2, unit(s1[1], p2), hs),
     span2: head(p3, unit(s2[1], p3), hs),
     span3: head(p4, unit(c, p4), hs),
-    ret: stacked ? "" : head(p1, unit(r[1], p1)),
+    ret: !stacked ? head(p1, unit(r[1], p1)) : back ? head([back[0] + 2, back[1]], [1, 0], hs) : "",
   };
   const spans: Record<Span, string> = {
     span1: qd(s1),
@@ -172,6 +182,8 @@ const RING = (() => {
 /* ---------- modes ---------- */
 
 type Mode = "pin" | "play" | "still";
+/** Where the pinned sheet folds, as a share of its height (problem.module.css --hinge-at): just under card 1. */
+const HINGE = 0.61;
 const PIN_Q = "(min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference)";
 const REDUCED_Q = "(prefers-reduced-motion: reduce)";
 const BOARD_Q = "(min-width: 1024px)";
@@ -221,13 +233,14 @@ function Loop({ geo, ref, blur }: { geo: Geo; ref: Ref<SVGSVGElement>; blur: str
   );
 }
 
-function Card({ n, slide, before, children }: { n: 1 | 2 | 3 | 4; slide?: boolean; before?: ReactNode; children: ReactNode }) {
+function Card({ n, slide, before, after, children }: { n: 1 | 2 | 3 | 4; slide?: boolean; before?: ReactNode; after?: ReactNode; children: ReactNode }) {
   return (
     <li className={clsx(s.slot, [s.slot1, s.slot2, s.slot3, s.slot4][n - 1])} data-card={n}>
       {before}
       <div className={clsx(s.land, slide && s.slide)} style={{ "--c": `var(--c${n}, 1)` } as CSSProperties}>
         {children}
       </div>
+      {after}
     </li>
   );
 }
@@ -255,13 +268,12 @@ export function Problem() {
   const geoNow = useRef<Geo | null>(null);
   const written = useRef(new Map<string, string>());
   const tNow = useRef<number>(REST);
-  // Stacked, the ring follows card 1's own place on the screen rather than the shared timeline (null: use the timeline).
-  const ringNow = useRef<number | null>(null);
-  // Stacked, the payoff likewise prints as it comes up the screen.
-  const poNow = useRef<number | null>(null);
-  // Pinned, how far the payoff has faded as B's edge comes up under it (0 to 1).
-  const pqNow = useRef(0);
+  // Stacked, each card, the ring and the payoff follow their own place on the screen rather than the shared timeline
+  // (null: use the timeline): c1 to c4 as each card's top comes up from 92% to 78%, the ring while card 1 is
+  // mid-screen, and the payoff as it comes up past 92%.
+  const own = useRef<Record<string, number> | null>(null);
   const payoff = useRef<HTMLParagraphElement>(null);
+  const backRef = useRef<HTMLParagraphElement>(null);
   const blur = `problem-blur-${useId().replace(/[^\w-]/g, "")}`;
 
   const render = useCallback(
@@ -280,24 +292,22 @@ export function Problem() {
       // CSS default for its cut, is drawn below at rest.
       if (mode === "still") t = REST;
       else if (mode === "pin") {
-        // The entrance: out of the desk's shade (smoothstep), rising and settling on --ease-out-expo. The hinge turns
-        // from 118deg (lifted back, its edge short of the heading) to flat on --ease-in-out-quart.
+        // The entrance: out of the desk's shade (smoothstep), rising and settling on --ease-out-expo. The lower part
+        // turns from 95deg (tucked behind the sheet, edge-on and hidden) to flat on --ease-in-out-quart, unfolding down
+        // out of the crease. It is drawn without perspective (its height is cos of its turn), so it never flares wider
+        // than the sheet or reads as the face of a box.
         set("--y", `${(6 * (1 - outExpo(seg(t, T.rise)))).toFixed(3)}vh`);
         set("--lean", `${(14 * (1 - outExpo(seg(t, T.lean)))).toFixed(3)}deg`);
         set("--tilt", `${(-5.5 + 4.3 * outExpo(seg(t, T.tilt))).toFixed(3)}deg`);
-        const th = 118 * (1 - inOutQuart(seg(t, T.fold)));
+        const th = 95 * (1 - inOutQuart(seg(t, T.fold)));
         const rad = (th * Math.PI) / 180;
         const light = seg(t, T.shade);
-        set("--fold", `${th.toFixed(2)}deg`);
+        set("--fk", Math.max(0, Math.cos(rad)));
         set("--shade", 0.92 * (1 - light * light * (3 - 2 * light)));
-        // Lamp upper left: a face darkens as it turns away, the inside by (1 - cos)/2, the outside by (1 + cos)/2.
-        set("--sf", ((1 - Math.cos(rad)) / 2) * 0.62);
-        set("--sb", ((1 + Math.cos(rad)) / 2) * 0.5);
-        set("--hinge", Math.sin(rad) * 0.55);
-        set("--fsy", (1 + Math.max(0, Math.cos(rad))) / 2);
-        set("--open", seg(t, [T.fold[1] - 8, T.fold[1]]));
-        // The docket on the flap's back goes before the flap turns edge-on, where its type would smear.
-        set("--dk", clamp((th - 100) / 14));
+        // The turning part darkens a little by (1 - cos)/2, most along the crease.
+        set("--sf", ((1 - Math.cos(rad)) / 2) * 0.5);
+        set("--fsy", HINGE + (1 - HINGE) * Math.max(0, Math.cos(rad)));
+        set("--open", seg(t, [T.fold[1], T.fold[1] + 6]));
         const phase = th > 0.05 ? "fold" : "open";
         if (el.dataset.phase !== phase) el.dataset.phase = phase;
         // After the cut the lamp narrows to a pool on it; as B scrolls over, the whole sheet sinks a little further.
@@ -305,41 +315,42 @@ export function Problem() {
         set("--dimx", 0.35 * outQuart(seg(t, T.sink)));
         set("--sc", 1 - 0.025 * outQuart(seg(t, T.sink)));
         set("--src", seg(t, T.sources));
-        // The payoff holds until B's edge is 150px below it, then fades in place (from at() below).
-        set("--pq", outQuart(pqNow.current));
         // The snap: both pins kick 2px away from the cut, once.
         const sn = seg(t, T.snip);
         set("--jolt", Math.sin(Math.PI * sn) * (1 - sn) * 2.4);
       }
 
       if (mode !== "still") {
+        const o = own.current;
         for (const [n, range] of [
           [1, T.card1],
           [2, T.card2],
           [3, T.card3],
           [4, T.card4],
         ] as const) {
-          set(`--c${n}`, outExpo(seg(t, range)));
+          // Stacked, a card lands on --ease-out-quart over its own 14% of the screen, so the drop is seen.
+          const c = o ? o[`c${n}`] : seg(t, range);
+          set(`--c${n}`, o ? outQuart(c) : outExpo(c));
           // The brass pin goes in as the card settles.
-          set(`--p${n}`, clamp((seg(t, range) - 0.55) * 3));
+          set(`--p${n}`, clamp((c - 0.55) * 3));
         }
-        const fig = seg(t, T.fig);
+        // 6-10% prints with card 1 (stacked: as card 1 lands).
+        const fig = o ? o.c1 : seg(t, T.fig);
         set("--f1", clamp(fig * 2));
         set("--ink1", 1 - outQuart(fig));
         set("--hl", outQuart(seg(t, T.hl)));
-        const st = seg(t, T.stamp);
-        set("--sto", clamp(st * 3));
-        set("--sts", stampScale(st));
-        set("--ring", outQuart(ringNow.current ?? seg(t, T.ring)));
+        set("--ring", outQuart(o ? o.ring : seg(t, T.ring)));
         set("--mk", outQuart(seg(t, T.mark)));
         set("--mks", stampScale(seg(t, T.mark)));
         // The lead prints as the string snaps; the rest after it. Stacked, both wait for the cut and for the payoff
-        // to come up the screen.
+        // to come up the screen. Not pinned, each line prints once as a timed transition (problem.module.css), so a
+        // paused thumb never leaves it half-blurred.
         const cut = seg(t, T.snip);
-        const lead = seg(t, [T.payoff[0], T.payoff[0] + PAYOFF_LEAD]);
-        const rest = seg(t, [T.payoff[1] - PAYOFF_REST, T.payoff[1]]);
-        set("--po", outExpo(poNow.current === null ? lead : Math.min(poNow.current, cut)));
-        set("--po2", outExpo(poNow.current === null ? rest : Math.min(poNow.current, cut)));
+        const lead = o ? Math.min(o.po, cut) : seg(t, [T.payoff[0], T.payoff[0] + PAYOFF_LEAD]);
+        const rest = o ? Math.min(o.po, cut) : seg(t, [T.payoff[1] - PAYOFF_REST, T.payoff[1]]);
+        const once = (v: number) => (mode === "play" ? (v >= 0.5 ? 1 : 0) : outExpo(v));
+        set("--po", once(lead));
+        set("--po2", once(rest));
       }
 
       const g = geoNow.current;
@@ -359,7 +370,7 @@ export function Problem() {
       // Each end recoils a fixed distance from the cut (22px on the board, 14px stacked), so the gap reads as a cut
       // in both layouts rather than an unfinished string.
       const { lens } = loopPaths(g);
-      const rec = g.stacked ? 14 : 22;
+      const rec = g.stacked ? 30 : 22;
       const ra = clamp(rec / (lens[0] || 1), 0, 0.5) * k;
       const rb = clamp(rec / (lens[1] || 1), 0, 0.5) * k;
       const show: Record<Span, ReturnType<typeof dash>> = {
@@ -367,7 +378,7 @@ export function Problem() {
         span2: dash(0, d2),
         cutA: dash(0, a3 * (1 - ra)),
         cutB: k > 0 ? dash(0, 1 - rb) : dash(1 - b3, 1),
-        ret: g.stacked ? null : dash(0, dr),
+        ret: dash(0, dr),
       };
       for (const p of svgEl.querySelectorAll<SVGPathElement>("[data-span]")) {
         const v = show[p.dataset.span as Span];
@@ -381,7 +392,7 @@ export function Problem() {
         span1: clamp((d1 - 0.85) * 7),
         span2: clamp((d2 - 0.85) * 7),
         span3: clamp((b3 - 0.85) * 7) * (1 - k),
-        ret: g.stacked ? 0 : clamp((dr - 0.85) * 7),
+        ret: clamp((dr - 0.85) * 7),
       };
       for (const p of svgEl.querySelectorAll<SVGPathElement>("[data-head]")) {
         const o = heads[p.dataset.head as Head].toFixed(3);
@@ -393,11 +404,11 @@ export function Problem() {
         sl.style.visibility = mk ? "visible" : "hidden";
         if (mk) sl.style.strokeDasharray = mk.array;
       }
-      // On the board each loose end falls about 25px, with a slight sway past rest as it settles. Stacked, the ends
-      // stay straight on the chain's line, a clear gap either side of the slash.
+      // On the board each loose end falls about 25px, with a slight sway past rest as it settles. Stacked, both ends
+      // swing a little off the chain's line, so the snap reads as string let go.
       const [p3, p4] = [g.pts[2], g.pts[3]];
       const sway = fall + 0.14 * Math.sin(Math.PI * fall) * (1 - fall);
-      const droop = g.stacked ? 0 : 2 * k + 5 * sway;
+      const droop = g.stacked ? 1.5 * k + 3 * sway : 2 * k + 5 * sway;
       const sa = g.stacked ? 1 : p3[0] >= p4[0] ? -1 : 1;
       const turn = (deg: number, p: Pt) => `rotate(${deg.toFixed(2)} ${f1(p[0])} ${f1(p[1])})`;
       svgEl.querySelector("[data-cut=a]")?.setAttribute("transform", turn(sa * droop, p3));
@@ -428,14 +439,18 @@ export function Problem() {
           ] as Pt[]
         )[i];
       });
-      // Stacked, the cut falls in the gap above card 4, where it is stamped; the chain is straight, so y is linear in u.
+      // Stacked, the cut falls in the middle of the gap above card 4, level with its stamp; the chain is straight, so
+      // y is linear in u. The return runs on to the middle of card 4's "Back to 01" line.
       let cutU = 0.5;
+      let back: Pt | null = null;
       if (stacked && lis.length === 4) {
-        // Level with the middle of the stamp that names it (problem.module.css .cutTag: 32px tall, 6px above card 4).
-        const gapMid = lis[3].offsetTop - 22;
+        // problem.module.css: .slot4's margin-top (64px) less the cards' gap; .cutTag is centred in it.
+        const gapMid = lis[3].offsetTop - 32;
         cutU = clamp((gapMid - pts[2][1]) / (pts[3][1] - pts[2][1] || 1), 0.1, 0.95);
+        const b = backRef.current;
+        if (b) back = [lis[3].offsetLeft + b.offsetLeft, lis[3].offsetTop + b.offsetTop + b.offsetHeight / 2];
       }
-      const next: Geo = { pts, w: ol.offsetWidth, h: ol.offsetHeight, stacked, cutU };
+      const next: Geo = { pts, w: ol.offsetWidth, h: ol.offsetHeight, stacked, cutU, back };
       setGeo((prev) => (prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
       // On the board the payoff and the lamp's last pool sit on the cut.
       const root_ = root.current;
@@ -462,20 +477,15 @@ export function Problem() {
     const el = root.current;
     if (!el || mode === "still") return;
     el.dataset.armed = "";
+    if (mode === "play") el.dataset.play = "";
     const written_ = written.current;
     // Not pinned, the sheet only plays forward: what has landed stays landed until the section is below the screen.
     let latch = -Infinity;
-    let ringLatch = 0;
-    let poLatch = 0;
+    let ownLatch: Record<string, number> = {};
 
     const at = (): number => {
       const vh = window.innerHeight;
-      if (mode === "pin") {
-        const next = el.nextElementSibling;
-        const pb = payoff.current?.getBoundingClientRect().bottom;
-        pqNow.current = next && pb !== undefined ? clamp((pb + 150 - next.getBoundingClientRect().top) / 130) : 0;
-        return ((vh - el.getBoundingClientRect().top) / vh) * 100;
-      }
+      if (mode === "pin") return ((vh - el.getBoundingClientRect().top) / vh) * 100;
       // Not pinned: map the scroll onto the timeline through knots on the page, read fresh each time (fonts and the
       // sections above can move them).
       const y = window.scrollY;
@@ -486,8 +496,7 @@ export function Problem() {
       if (!sh || cards.length !== 4) return REST;
       const stacked = !window.matchMedia(BOARD_Q).matches;
       if (!stacked) {
-        ringNow.current = null;
-        poNow.current = null;
+        own.current = null;
         return piecewise(
           [
             [top(sh) - 0.6 * vh, T.card1[0]],
@@ -498,20 +507,22 @@ export function Problem() {
           y,
         );
       }
-      // Stacked: card 1 lands as it comes up the screen (so the sheet is never a blank block), cards 2 and 3 as their
-      // tops reach 82%, card 4 at 86%, and the cut while the gap above card 4 is in the lower third (before the payoff
-      // can reach the screen). The ring and the payoff follow their own places on the screen: the ring while card 1 is
-      // mid-screen, the payoff as it comes up past 92%, and never before the cut.
-      const c1 = cards[0].getBoundingClientRect().top;
-      ringNow.current = clamp((0.72 * vh - c1) / (0.27 * vh));
+      // Stacked: the strings follow the cards (each span as the next card comes up past 82%), and the cut happens
+      // while the gap above card 4 is in the lower third (before the payoff can reach the screen). Each card, the ring
+      // and the payoff follow their own places on the screen: a card as its top comes up from 92% to 78%, the ring
+      // while card 1 is mid-screen, the payoff as it comes up past 92%, and never before the cut.
+      const o: Record<string, number> = {};
+      cards.forEach((c, i) => (o[`c${i + 1}`] = clamp((0.92 * vh - c.getBoundingClientRect().top) / (0.14 * vh))));
+      o.ring = clamp((0.72 * vh - cards[0].getBoundingClientRect().top) / (0.27 * vh));
       const pt = payoff.current?.getBoundingClientRect().top ?? 0;
-      poNow.current = clamp((0.92 * vh - pt) / (0.16 * vh));
+      o.po = clamp((0.92 * vh - pt) / (0.16 * vh));
+      own.current = o;
       return piecewise(
         [
           [top(cards[0]) - 1.0 * vh, T.card1[0]],
           [top(cards[0]) - 0.88 * vh, T.card1[1]],
           [top(cards[1]) - 0.82 * vh, T.card2[0]],
-          [bottom(cards[1]) - 0.92 * vh, T.stamp[1]],
+          [bottom(cards[1]) - 0.92 * vh, T.hl[1]],
           [top(cards[2]) - 0.82 * vh, T.card3[0]],
           [top(cards[3]) - 0.86 * vh, T.card4[0]],
           [top(cards[3]) - 0.78 * vh, T.mark[0]],
@@ -524,18 +535,16 @@ export function Problem() {
     const tick = () => {
       let t = at();
       if (mode === "play") {
+        const o = own.current;
         if (el.getBoundingClientRect().top > window.innerHeight) {
           latch = t;
-          ringLatch = ringNow.current ?? 0;
-          poLatch = poNow.current ?? 0;
+          ownLatch = { ...o };
         } else {
           latch = Math.max(latch, t);
-          if (ringNow.current !== null) ringLatch = Math.max(ringLatch, ringNow.current);
-          if (poNow.current !== null) poLatch = Math.max(poLatch, poNow.current);
+          if (o) for (const k in o) ownLatch[k] = Math.max(ownLatch[k] ?? 0, o[k]);
         }
         t = latch;
-        if (ringNow.current !== null) ringNow.current = ringLatch;
-        if (poNow.current !== null) poNow.current = poLatch;
+        if (o) own.current = { ...o, ...ownLatch };
       }
       render(t);
     };
@@ -550,12 +559,11 @@ export function Problem() {
       written_.clear();
       delete el.dataset.phase;
       delete el.dataset.armed;
+      delete el.dataset.play;
       el.querySelectorAll("[data-span], [data-head], [data-slash]").forEach((p) => p.removeAttribute("style"));
       el.querySelectorAll("[data-cut]").forEach((g) => g.removeAttribute("transform"));
       tNow.current = REST;
-      ringNow.current = null;
-      poNow.current = null;
-      pqNow.current = 0;
+      own.current = null;
     };
   }, [mode, render]);
 
@@ -575,18 +583,9 @@ export function Problem() {
                 <div aria-hidden="true" className={s.floor} />
                 <article ref={sheet} className={s.sheet}>
                   <div aria-hidden="true" className={s.paper} />
-                  <div aria-hidden="true" className={s.hinge} />
                   <div aria-hidden="true" className={s.flap}>
                     <div className={s.flapFront}>
                       <div className={s.paper} />
-                      <div className={s.turn} />
-                      <div className={s.faceShade} />
-                    </div>
-                    <div className={s.flapBack}>
-                      <p className={s.docket}>
-                        <span>Exhibit A</span>
-                        <span>36 refund recalls · 1 Oct–5 Nov 2026</span>
-                      </p>
                       <div className={s.turn} />
                       <div className={s.faceShade} />
                     </div>
@@ -629,20 +628,16 @@ export function Problem() {
                           Easy refunds run on emailed photos.
                         </p>
                         <figure className={s.doc}>
+                          {/* Who is asking, first: the official notice, so the address never reads as a scam email. */}
                           <figcaption className={s.docMeta}>
-                            <span className={s.docNo}>CPSC 27-071 · </span>
-                            <span>Nursing pillow</span> <span>· Suffocation risk</span>
+                            <span>Recall notice · CPSC 27-071</span>
+                            <span>Nursing pillow · Suffocation risk</span>
                           </figcaption>
                           <blockquote className={s.excerpt}>
                             &ldquo;&hellip;cut the pillow in half&hellip; send a photo&hellip; to{" "}
                             <span className={s.nowrap}>
                               <span className={clsx(s.address, s.highlight)}>z•••••929@gmail.com</span>
                               .&rdquo;
-                            </span>
-                            <span className={s.stamp}>
-                              <Stamp tone="stop" rotate={-7} className={s.stampInk}>
-                                Received
-                              </Stamp>
                             </span>
                           </blockquote>
                         </figure>
@@ -667,6 +662,12 @@ export function Problem() {
 
                     <Card
                       n={4}
+                      after={
+                        // Stacked, where the chain turns back: the loop said in string and red ink, not a caption.
+                        <p ref={backRef} aria-hidden="true" className={s.back}>
+                          &#8634; Back to 01
+                        </p>
+                      }
                       before={
                         // Named only once the string is there to be cut (it is measured in the browser).
                         geo && (
@@ -685,9 +686,6 @@ export function Problem() {
                         </p>
                         <p className={s.cardLine}>
                           The same filing says they <span className={s.quote}>&ldquo;reduce recall participation.&rdquo;</span>
-                        </p>
-                        <p aria-hidden="true" className={s.back}>
-                          &#8634; Back to 01
                         </p>
                       </div>
                     </Card>

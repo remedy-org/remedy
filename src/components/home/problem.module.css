@@ -17,11 +17,13 @@
   --aged-back: oklch(0.895 0.022 82);
   --aged-burn: oklch(0.6 0.06 68);
   --aged-edge: oklch(0.55 0.07 62);
-  /* Muted ink for text printed straight on the aged sheet (the sub-line, the sources, the docket): a step darker than
+  /* Muted ink for text printed straight on the aged sheet (the sub-line, the sources): a step darker than
      --ink-muted, so it holds 4.5:1 on the grain's darkest and the warm edge band. */
   --sheet-muted: oklch(0.36 0.012 65);
   /* The stacked cut's stamp: PAID's green a step darker, so it holds 4.5:1 on the sheet's warm edge band. */
   --cut-ink: oklch(0.36 0.11 150);
+  /* The stacked chain's "Back to 01": the string's red a step darker, so it holds 4.5:1 on the warm edge band. */
+  --loop-ink: oklch(0.38 0.14 28);
   --crease-dark: oklch(0.23 0.01 65 / 0.085);
   --crease-light: oklch(1 0 0 / 0.5);
   --evidence-card: oklch(0.962 0.009 88);
@@ -36,13 +38,19 @@
   /* Foxing: sparse warm blotches from thresholded low-frequency noise. Masked to the corners below. */
   --foxing: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.06' numOctaves='3' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.29 0 0 0 0 0.13 -16 0 0 0 5.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
   --tilt-rest: -0.6deg;
-  /* The room the lamp goes down into, and how far it falls over the sheet. In light the lamp narrows by washing the
-     sheet toward the desk instead (--dim-tone), so the paper never turns brown and the headline holds 3:1. */
+  /* Where the board's sheet folds (Problem.tsx HINGE): under card 1, so the first two cards land on the half that
+     shows while the sheet is still folded. */
+  --hinge-at: 61%;
+  /* The room the lamp goes down into, and how far it falls over the sheet. In light the lamp goes down to a neutral
+     warm grey (--dim-light) at most 60%, so the pool reads at a glance, the paper never turns brown and the headline
+     holds 3:1. */
   --room: oklch(0.16 0.006 70);
+  --dim-light: oklch(0.58 0.01 75);
   --dim-tone: var(--room);
   --dim-max: 0.88;
-  /* The desk under the sheet. Dark: the page. Light: two steps down from the page, so the cream sheet lifts off it. */
-  --desk-light: oklch(0.87 0.008 80);
+  /* The desk under the sheet. Dark: the page. Light: a warm cream a step under the page, so the sheet lifts off it
+     without a grey seam under the cream nav. */
+  --desk-light: oklch(0.905 0.012 82);
   --desk: var(--bg);
 
   position: relative;
@@ -54,8 +62,8 @@
 :global([data-theme="light"]) .section {
   --desk: var(--desk-light);
   --desk-shadow: oklch(0.23 0.01 65 / 0.42);
-  --dim-tone: var(--desk-light);
-  --dim-max: 0.5;
+  --dim-tone: var(--dim-light);
+  --dim-max: 0.6;
 }
 
 .eyebrow {
@@ -216,68 +224,21 @@
 
 /* ---------- the fold: only while it opens (data-phase="fold"); otherwise one flat sheet ---------- */
 
-.flap,
-.hinge {
+.flap {
   display: none;
 }
 
-.flapFront,
-.flapBack {
+.flapFront {
   position: absolute;
   inset: 0;
   overflow: hidden;
   border-radius: 0 0 3px 3px;
-  backface-visibility: hidden;
 }
 
-/* The lower half's face is a window onto a full sheet of the same paper, so grain, age and creases run on unbroken. */
+/* The lower part's face is a window onto a full sheet of the same paper, so grain, age and creases run on unbroken. */
 .flapFront > .paper {
   inset: auto 0 0;
-  top: -100%;
-}
-
-.flapBack {
-  transform: rotateX(180deg);
-  border-radius: 3px 3px 0 0;
-  background-color: var(--aged-back);
-  background-image:
-    radial-gradient(90% 80% at 30% 30%, oklch(1 0.01 85 / 0.18), transparent 70%),
-    radial-gradient(130% 120% at 50% 60%, transparent 55%, color-mix(in oklch, var(--aged-burn) 26%, transparent)),
-    var(--grain);
-  background-size:
-    100% 100%,
-    100% 100%,
-    220px 220px;
-  background-blend-mode: screen, multiply, multiply;
-  box-shadow:
-    inset 0 0 0 1px oklch(1 0 0 / 0.28),
-    inset 0 0 28px color-mix(in oklch, var(--aged-edge) 18%, transparent);
-}
-
-/* The outside of the folded sheet: filed and labelled, like an exhibit in a box. */
-.docket {
-  position: absolute;
-  left: 6%;
-  top: 13%;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6cqw;
-  padding-top: 0.9cqw;
-  border-top: 1px solid var(--paper-line);
-  width: 40%;
-  opacity: var(--dk, 1);
-  font-family: var(--font-mono);
-  font-size: clamp(0.75rem, 1cqw, 0.875rem);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--sheet-muted);
-}
-
-.docket > span:first-child {
-  font-size: 1.6em;
-  letter-spacing: 0.14em;
-  color: var(--ink);
+  top: calc(-100% * 61 / 39);
 }
 
 /* A turning face darkens most along its hinge, where the paper bends away from the lamp. */
@@ -292,11 +253,6 @@
   opacity: var(--sf, 0);
 }
 
-.flapBack > .turn {
-  background: linear-gradient(0deg, oklch(0.2 0.02 60 / 0.95), oklch(0.2 0.02 60 / 0.45));
-  opacity: var(--sb, 0);
-}
-
 /* The room's dark over a face as the sheet rises out of it. */
 .faceShade {
   position: absolute;
@@ -306,18 +262,6 @@
   opacity: var(--shade, 0);
 }
 
-/* The raised half's shadow on the top half, just above the fold. */
-.hinge {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 28%;
-  bottom: 50%;
-  pointer-events: none;
-  background: linear-gradient(180deg, transparent, oklch(0.2 0.02 60 / 0.38));
-  opacity: var(--hinge, 0);
-}
-
 /* ---------- printed on the sheet ---------- */
 
 .head {
@@ -325,9 +269,10 @@
   max-width: 34rem;
 }
 
+/* Stacked, rem plus a little vw, so browser zoom grows it almost as much as body text. */
 .title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: clamp(1.75rem, 1rem + 3vw, 2.25rem);
   line-height: 1.08;
   letter-spacing: -0.026em;
   font-weight: 500;
@@ -399,7 +344,7 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 24px;
 }
 
 .slot {
@@ -407,10 +352,10 @@
   z-index: 2;
 }
 
-/* A card dropping onto the sheet: 18px above, turned 2deg, settling as --c goes 0 to 1. */
+/* A card dropping onto the sheet: 24px above, turned 2deg, settling as --c goes 0 to 1. */
 .land {
-  opacity: clamp(0, calc(var(--c, 1) * 2.5), 1);
-  translate: 0 calc((1 - var(--c, 1)) * -18px);
+  opacity: clamp(0, calc(var(--c, 1) * 2.2), 1);
+  translate: 0 calc((1 - var(--c, 1)) * -24px);
   rotate: calc((1 - var(--c, 1)) * 2deg);
 }
 
@@ -466,16 +411,15 @@
   vertical-align: 0.08em;
 }
 
-/* Card 4's way back to card 1, said in words where the board can't draw it (stacked). Muted and unlinked, so it never
-   reads as a link. */
+/* Where the stacked chain turns back to card 1: the string ends in it, in the string's red ink. Unlinked and not
+   underlined, so it never reads as a link. */
 .back {
   display: none;
-  margin: 10px 0 0;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
+  margin: 12px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  font-weight: 500;
+  color: var(--loop-ink);
   opacity: clamp(0, calc((var(--c4, 1) - 0.6) * 2.5), 1);
 }
 
@@ -511,7 +455,7 @@
 .figure {
   position: relative;
   display: inline-block;
-  margin-left: 0.22em;
+  margin-left: 0.32em;
   white-space: nowrap;
 }
 
@@ -524,11 +468,11 @@
 /* A loose hand-drawn oval, a little more than one turn, clear of the glyphs. */
 .ring {
   position: absolute;
-  left: -0.55em;
-  right: -0.55em;
+  left: -0.4em;
+  right: -0.4em;
   top: -0.3em;
   bottom: -0.3em;
-  width: calc(100% + 1.1em);
+  width: calc(100% + 0.8em);
   height: calc(100% + 0.6em);
   overflow: visible;
   pointer-events: none;
@@ -539,9 +483,10 @@
   opacity: clamp(0, calc(var(--ring, 1) * 40), 1);
   fill: none;
   stroke: var(--stop-ink);
-  stroke-width: 1.5;
+  /* In the 100 x 40 box, about 1.7px on screen. No non-scaling stroke: Chromium then measures the dash in screen
+     pixels against pathLength 1 and draws only part of the oval. */
+  stroke-width: 0.85;
   stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
   stroke-dasharray: 1 2;
   stroke-dashoffset: calc(1 - var(--ring, 1));
 }
@@ -573,14 +518,15 @@
   color: var(--ink-muted);
 }
 
+/* Who is asking, then what and why: one line each. */
 .docMeta > span {
-  white-space: nowrap;
+  display: block;
 }
 
 .excerpt {
   position: relative;
   margin: 0;
-  padding: 10px 10px 44px;
+  padding: 10px 10px 12px;
   font-size: 0.9375rem;
   line-height: 1.55;
   color: var(--ink);
@@ -600,21 +546,6 @@
   background-size: calc(var(--hl, 1) * 100%) 0.7em;
   padding-inline: 0.12em;
   margin-inline: -0.12em;
-}
-
-/* RECEIVED, below the address line: the inbox took it and nobody checked it. */
-.stamp {
-  position: absolute;
-  left: 10px;
-  bottom: 8px;
-  opacity: var(--sto, 1);
-  scale: var(--sts, 1);
-  transform-origin: 30% 50%;
-}
-
-/* The full stop ink on the clipping (the shared Stamp's 85% is for --paper). */
-.stampInk {
-  color: var(--stop-ink);
 }
 
 /* Card 2's count: the number large, the sentence after it in the card's body size. */
@@ -752,7 +683,7 @@
   stroke-linejoin: round;
 }
 
-/* The cut mark, a bold stroke of ink across the red: where Remedy steps in. */
+/* The cut mark, a bold stroke of ink across the red: where Remedy steps in. 64px on the board, 44px stacked. */
 .slash {
   fill: none;
   stroke: var(--ink);
@@ -769,8 +700,6 @@
   max-width: 30ch;
   color: var(--ink);
   text-wrap: balance;
-  /* B's edge coming up under it fades it in place. */
-  opacity: calc(1 - var(--pq, 0));
 }
 
 /* Each line prints in ink: from a 6px spread and 8px low to sharp. The lead goes with the snap, the rest after. */
@@ -787,9 +716,19 @@
   translate: 0 calc((1 - var(--po2, 1)) * 8px);
 }
 
+/* Not pinned, each line prints once as a timed transition when its turn comes, never left half-blurred by a paused
+   scroll: the site's entrance curve, 350ms. */
+.section[data-play] .payoffLead,
+.section[data-play] .payoffRest {
+  transition:
+    opacity 350ms var(--ease-out-expo),
+    filter 350ms var(--ease-out-expo),
+    translate 350ms var(--ease-out-expo);
+}
+
 .payoffLead {
   display: block;
-  font-size: 1.75rem;
+  font-size: clamp(1.75rem, 1rem + 3vw, 2.25rem);
   line-height: 1.06;
   letter-spacing: -0.028em;
   font-weight: 500;
@@ -848,28 +787,24 @@
     display: none;
   }
 
-  /* The notice keeps its stakes on a phone; only the docket number goes. */
-  .docNo {
-    display: none;
-  }
-
   .thread,
   .threadShadow,
   .arrow {
     stroke-width: 2.2px;
   }
 
-  /* Room above card 4 for the cut and its stamp. */
+  /* Room above card 4 for the cut and its stamp: a 64px gap. */
   .slot4 {
-    margin-top: 34px;
+    margin-top: 40px;
   }
 
-  /* The cut, stamped beside the slash in a dark PAID green: it lands with the slash (scale 1.4 to 1, no bounce). */
+  /* The cut, stamped in the middle of the gap, clear of both cards, just right of the slash across the chain, in a
+     dark PAID green: it lands with the slash (scale 1.4 to 1, no bounce). */
   .cutTag {
     display: block;
     position: absolute;
-    left: 2px;
-    bottom: calc(100% + 6px);
+    left: 14px;
+    bottom: calc(100% + 18px);
     opacity: clamp(0, calc(var(--mk, 1) * 3), 1);
     scale: var(--mks, 1);
     transform-origin: 20% 50%;
@@ -888,18 +823,18 @@
     font-size: 0.8125rem;
   }
 
-  .sourcesLabel,
-  .source {
-    display: block;
+  /* One wrapped paragraph, each source a 32px-tall tap target, long ones wrapping inside the sheet at 320px. The
+     underlines part them, so no separator is left alone at a line's start. */
+  .source > span {
+    white-space: normal;
   }
 
   .sep {
     display: none;
   }
 
-  /* One source a line, wrapping inside the sheet at 320px, each a 32px tap target. */
-  .source > span {
-    white-space: normal;
+  .source {
+    margin-right: 0.6em;
   }
 
   .sources a {
@@ -934,8 +869,8 @@
       linear-gradient(90deg, transparent 33.333%, var(--crease-light) calc(33.333% + 1px), transparent calc(33.333% + 3px)),
       linear-gradient(90deg, transparent 66.666%, var(--crease-dark) calc(66.666% + 1px), transparent calc(66.666% + 18px)),
       linear-gradient(90deg, transparent calc(66.666% - 2px), var(--crease-light) 66.666%, transparent calc(66.666% + 1px)),
-      linear-gradient(180deg, transparent calc(50% - 14px), var(--crease-dark) calc(50% - 1px), transparent 50%),
-      linear-gradient(180deg, transparent 50%, var(--crease-light) calc(50% + 1px), transparent calc(50% + 3px)),
+      linear-gradient(180deg, transparent calc(var(--hinge-at) - 14px), var(--crease-dark) calc(var(--hinge-at) - 1px), transparent var(--hinge-at)),
+      linear-gradient(180deg, transparent var(--hinge-at), var(--crease-light) calc(var(--hinge-at) + 1px), transparent calc(var(--hinge-at) + 3px)),
       /* the panels between the folds catch the lamp a little differently */
       linear-gradient(90deg, oklch(0.23 0.01 65 / 0.035), transparent 33.333%, transparent 66.666%, oklch(0.23 0.01 65 / 0.02));
   }
@@ -973,7 +908,7 @@
 
   .slot1 {
     left: 6%;
-    top: 34%;
+    top: 31%;
     width: 25.5%;
     rotate: -0.8deg;
   }
@@ -1079,12 +1014,13 @@
     font-size: clamp(0.8125rem, 1.2cqw, 0.9375rem);
   }
 
-  /* On the board the payoff prints just under the cut, centred on it, in the gap between cards 4 and 3. */
+  /* On the board the payoff prints just under the cut, centred on it, in the gap between cards 4 and 3; its lead at
+     nearly the headline's size, on one line. */
   .payoff {
     position: absolute;
     left: var(--cut-x, 50%);
-    top: calc(var(--cut-y, 67%) + 7%);
-    width: 32cqw;
+    top: calc(var(--cut-y, 67%) + 6%);
+    width: 34cqw;
     max-width: none;
     margin: 0;
     text-align: center;
@@ -1093,10 +1029,13 @@
   }
 
   .payoffLead {
-    font-size: clamp(1.5rem, 2.9cqw, 2.6rem);
+    font-size: clamp(1.5rem, 3.3cqw, 3rem);
+    white-space: nowrap;
   }
 
   .payoffRest {
+    max-width: 30cqw;
+    margin-inline: auto;
     margin-top: 0.8cqw;
     font-size: clamp(0.875rem, 1.35cqw, 1.2rem);
   }
@@ -1108,9 +1047,11 @@
   .section {
     /* problemTimeline.ts: SECTION_VH tall, the last OVERLAP_VH (a full screen) under section B, which takes it back
        with this margin; the anchor lands at t = ANCHOR_AT. */
-    height: 352vh;
+    height: 334vh;
     margin-bottom: -100vh;
-    scroll-margin-top: 0;
+    scroll-margin-top: -20vh;
+    /* The fade under the nav runs the full width; clip (not a scroll container, so the pin still sticks). */
+    overflow-x: clip;
   }
 
   .stage {
@@ -1122,6 +1063,20 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+  }
+
+  /* Under the nav the desk fades up from the page, so no seam runs along the nav's foot (light: cream nav, deeper desk). */
+  .stage::before {
+    content: "";
+    position: absolute;
+    z-index: -2;
+    top: 0;
+    left: 50%;
+    width: 100vw;
+    height: 220px;
+    translate: -50% 0;
+    background: linear-gradient(var(--bg) 64px, transparent);
+    pointer-events: none;
   }
 
   /* The label, the sheet and (without JS) the payoff under it, all under the 64px nav. */
@@ -1137,8 +1092,7 @@
     will-change: transform;
   }
 
-  .section[data-armed] .land,
-  .section[data-armed] .stamp {
+  .section[data-armed] .land {
     will-change: transform, opacity;
   }
 
@@ -1149,7 +1103,7 @@
     will-change: opacity;
   }
 
-  /* While it opens: the lower half is its own pane on a hinge at half height, turning toward the viewer. */
+  /* While it opens: the lower part is its own pane hinged at --hinge-at, unfolding down out of the crease. */
   .section[data-phase="fold"] .lift,
   .section[data-phase="fold"] .sheet {
     transform-style: preserve-3d;
@@ -1157,11 +1111,17 @@
 
   .section[data-phase="fold"] .sheet > .paper {
     /* 1px past the hinge, under the turning half, so no seam opens between them */
-    clip-path: inset(0 0 calc(50% - 1px) 0 round 3px 3px 0 0);
+    clip-path: inset(0 0 calc(100% - var(--hinge-at) - 1px) 0 round 3px 3px 0 0);
   }
 
   .section[data-phase="fold"] .shadeTop {
-    bottom: 50%;
+    bottom: calc(100% - var(--hinge-at));
+  }
+
+  /* The lifted corners belong to the open sheet; while the lower part swings behind it they would show through. */
+  .section[data-phase="fold"] .lift::before,
+  .section[data-phase="fold"] .lift::after {
+    display: none;
   }
 
   .section[data-phase="fold"] .flap {
@@ -1169,26 +1129,21 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: 50%;
+    top: var(--hinge-at);
     bottom: 0;
-    transform-style: preserve-3d;
     transform-origin: 50% 0;
-    transform: translateZ(0.5px) rotateX(var(--fold, 0deg));
+    transform: translateZ(0.5px) scaleY(var(--fk, 1));
     will-change: transform;
   }
 
-  .section[data-phase="fold"] .hinge {
-    display: block;
-  }
-
-  /* Card 1 lands as the flap settles (under 1deg): lift the cards a hair above the flap so the hinge never cuts one. */
+  /* Card 3 lands as the flap settles (under 1deg): lift the cards a hair above the flap so the hinge never cuts one. */
   .section[data-phase="fold"] .cards {
     transform: translateZ(2px);
   }
 
   /* Section B is a page laid over this one: opaque, above, a lit hairline on its leading edge and its shadow falling
      on the sheet, so it reads as a sheet sliding over in both themes. It covers the whole held sheet before the pin
-     lets go, so the sheet is never carried off sliced. */
+     lets go, so the sheet is never carried off sliced, and it covers the payoff last, at full ink. */
   .section + section {
     position: relative;
     z-index: 2;

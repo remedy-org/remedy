@@ -162,15 +162,16 @@ const sheetPaper = ["--aged", "--aged+--grain-floor", "--aged+--aged-edge@0.2+--
 const agedSheet: Pair[] = [
   ...["--ink", "--sheet-muted"].flatMap((fg) => sheetPaper.map((bg) => ({ fg, bg, min: 4.5, note: "Exhibit A sheet" }))),
   ...["--ink", "--ink-muted"].flatMap((fg) => ["--evidence-card", "--evidence-clip"].map((bg) => ({ fg, bg, min: 4.5, note: "Exhibit A card" }))),
-  { fg: "--stop-ink", bg: "--evidence-clip", min: 4.5, note: "RECEIVED stamp, full ink" },
   { fg: "--ink", bg: "--evidence-clip+--highlight", min: 4.5, note: "highlighted address" },
-  { fg: "--sheet-muted", bg: "--aged-back+--grain-floor", min: 4.5, note: "docket on the folded sheet" },
   // The payoff prints in ink inside the lamp's last pool; its farthest letters sit where the room is at most 14% of the
   // dim's 0.88.
   { fg: "--ink", bg: "--aged+--grain-floor+--room@0.13", min: 4.5, note: "payoff at the edge of the lamp's pool" },
-  // Card 4's "Back to 01" (stacked) is muted ink on the card (covered above); the stacked cut's stamp is PAID's green a step darker,
-  // on the sheet, at its darkest.
+  // Stacked, the chain's "Back to 01" is the string's red a step darker and the cut's stamp PAID's green a step darker,
+  // both on the sheet at its darkest.
+  { fg: "--loop-ink", bg: "--aged+--aged-edge@0.2+--grain-floor", min: 4.5, note: "Back to 01 on the sheet" },
   { fg: "--cut-ink", bg: "--aged+--aged-edge@0.2+--grain-floor", min: 4.5, note: "CUT BY REMEDY stamp on the sheet" },
+  // In light the lamp goes down to --dim-light; the payoff's farthest letters sit where it is at most 14% of the 0.6.
+  { fg: "--ink", bg: "--aged+--grain-floor+--dim-light@0.09", min: 4.5, note: "payoff at the edge of the pool, light" },
 ];
 // In light the desk under the sheet is two steps down from the page; the exhibit label there is --muted.
 const lightDesk: Pair[] = [

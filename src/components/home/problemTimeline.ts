@@ -7,45 +7,45 @@
 
 export type Range = readonly [number, number];
 
-export const SECTION_VH = 352;
+export const SECTION_VH = 334;
 /** Section B scrolls fully over the held sheet, so the sheet is never sliced by B's edge and carried off half-covered. */
 export const OVERLAP_VH = 100;
-/** Where the nav's "A Problem" link lands: the pin's first frame, the sheet open and card 1 landing. */
-export const ANCHOR_AT = 100;
+/** Where the nav's "A Problem" link lands: the sheet open and card 3 landing on the half that just unfolded. */
+export const ANCHOR_AT = 120;
 
 export const T = {
-  // Entrance (96vh): rising 6vh out of the desk's shade as soon as it is on screen, leaning back 14deg, tilted
-  // -5.5deg, the lower half folded up short of the heading (so the claim reads from the first frame). It settles at
-  // -1.2deg, flat and open, on the site's entrance curve, as card 1 lands.
+  // Entrance: the sheet rises 6vh out of the desk's shade as soon as it is on screen, leaning back 14deg, tilted
+  // -5.5deg, folded just under card 1 with its lower part tucked behind (so the headline is never covered). Cards 1
+  // and 2 land on the part that shows while it rises. The lower part then swings down into view once its crease is
+  // above the lower quarter of the screen, and settles flat as the pin takes hold.
   rise: [0, 90],
-  shade: [0, 45],
+  shade: [4, 30],
   lean: [0, 96],
   tilt: [0, 100],
-  fold: [26, 96],
-  // The read (about 90vh): cards land clockwise and the string draws between them in reading order. Each card is on
-  // the sheet before the string reaches it, and card 2 lands with its count printed.
-  card1: [88, 98],
-  fig: [92, 101],
-  card2: [106, 116],
-  span1: [108, 116],
-  hl: [116, 124],
-  stamp: [124, 129],
-  card3: [131, 140],
-  span2: [133, 141],
-  card4: [143, 151],
-  span3: [145, 153],
-  ret: [154, 164],
-  ring: [163, 173],
+  card1: [50, 62],
+  fig: [54, 64],
+  card2: [62, 74],
+  span1: [64, 74],
+  hl: [74, 82],
+  fold: [74, 114],
+  // The read on the open sheet: card 3 lands as the lower half settles, then card 4, each before the string reaches
+  // it; the return closes the loop and the ring circles 6-10%.
+  card3: [108, 118],
+  span2: [110, 119],
+  card4: [120, 130],
+  span3: [122, 131],
+  ret: [131, 140],
+  ring: [139, 148],
   // Citations print after the claims they back.
-  sources: [172, 180],
-  // The cut (to B's arrival): the closed loop holds, a bold slash crosses the span, the string snaps and its ends
-  // recoil and fall. The payoff's first line prints under the cut as it snaps, so the cut is never unexplained; then
-  // the lamp narrows to a pool on it and the rest of the payoff prints.
-  mark: [184, 190],
-  snip: [189, 194],
-  droop: [190, 204],
-  payoff: [190, 210],
-  dim: [198, 214],
+  sources: [146, 154],
+  // The cut: the closed loop holds, a bold slash crosses the span, the string snaps and its ends recoil and fall.
+  // The payoff's first line prints under the cut as it snaps, so the cut is never unexplained; then the lamp narrows
+  // to a pool on it and the rest of the payoff prints. It then holds 50vh before B arrives.
+  mark: [154, 162],
+  snip: [161, 167],
+  droop: [162, 184],
+  payoff: [162, 184],
+  dim: [168, 184],
   // B scrolls over the held sheet at reading speed; the sheet sinks over its first half (half the entrance).
   cover: [SECTION_VH - OVERLAP_VH, SECTION_VH],
   sink: [SECTION_VH - OVERLAP_VH, SECTION_VH - OVERLAP_VH / 2],
