@@ -49,17 +49,21 @@ export interface Report {
 
 const share = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : "—");
 
-export function buildReport(claims: ClaimSummary[], recall: Recall, { sandbox = false } = {}): Report {
+export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const stats = statsOf(claims, recall);
   const refund = cents(recall.refund);
   const paid = claims.filter((c) => c.decision === "paid");
   const sent = paid.filter((c) => !c.seeded);
   const samples = paid.filter((c) => c.seeded);
   const sum = (list: ClaimSummary[]) => list.reduce((s, c) => s + cents(amountOf(c.payoutAmount, recall)), 0);
-  const paidNote = `Refund sent through PayPal${sandbox ? " sandbox" : ""}; the unit is destroyed${samples.length ? ". Sample claims were decided, never sent" : ""}`;
+  // "Paid" is said only beside a payout really sent: the outcome is the rule's approval, and the note says what was sent.
+  const unsent = samples.length;
+  const paidNote = !unsent
+    ? "The unit is destroyed and the refund sent through PayPal"
+    : `The unit is destroyed and the refund approved; ${unsent === paid.length ? "not sent, as the payees' PayPal accounts" : `${unsent} not sent, as those payees' PayPal accounts`} aren't live`;
   const rows: [Decision, string, number, string][] = [
-    ["paid", "Paid", stats.remedied, paidNote],
-    ["held", "Held for review", stats.held, "An answer was unclear, a check couldn't run, PayPal didn't take the payout, or auto-pay was off"],
+    ["paid", "Approved", stats.remedied, paidNote],
+    ["held", "Held", stats.held, "Waiting for a person: an answer was unclear, a check couldn't run, PayPal didn't take the payout, or auto-pay was off"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
     ["pending", "In progress", stats.pending, "Code issued; photos not yet checked"],

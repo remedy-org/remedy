@@ -1,32 +1,16 @@
 import type { ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
 import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
-import { ExhibitLabel, Meter, NoBreakHyphens, StatusPill } from "@/components/ui";
+import { Meter, NoBreakHyphens, StatusPill } from "@/components/ui";
 import type { Recall } from "@/lib/types";
 import { formatCount, formatDate, formatDayET, plural } from "./format";
 
-function H({ n, children }: { n: number; children: ReactNode }) {
-  return (
-    <h2 className="flex items-baseline gap-3 text-body font-medium">
-      <span className="font-mono text-micro text-muted">{String(n).padStart(2, "0")}</span>
-      {children}
-    </h2>
-  );
+function H({ children }: { children: ReactNode }) {
+  return <h2 className="text-body font-medium">{children}</h2>;
 }
 
-const th = "py-2 pr-4 text-left font-mono text-micro font-medium uppercase tracking-[0.06em] text-muted last:pr-0";
+const th = "py-2 pr-4 text-left text-micro font-medium text-muted last:pr-0";
 const td = "border-t border-line py-2.5 pr-4 align-top last:pr-0";
-
-// Where every claim in the totals came from, in Insights' words: the seeded samples, the judges' demo claims and the
-// real owners' live claims, so the parts add up to the claim records the report is prepared from.
-function provenance({ seeded, demo }: Pick<Report, "seeded" | "demo">, total: number) {
-  const parts = [];
-  const live = total - seeded - demo;
-  if (seeded) parts.push(`${plural(seeded, "seeded sample claim")} (never paid to a real owner)`);
-  if (demo) parts.push(`${plural(demo, "judges’ demo claim")} in sandbox money`);
-  if (live) parts.push(`${plural(live, "live claim")} from ${live === 1 ? "a real owner" : "real owners"}`);
-  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0];
-}
 
 // CPSC's own wording of units sold, only when it says more than the figure above it (a range, several products).
 const cpscUnits = (recall: Recall, sold: number) => (recall.units && recall.units.replace(/[^\d]/g, "") !== String(sold) ? `CPSC: ${recall.units}` : undefined);
@@ -39,16 +23,16 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
   const s = report.stats;
   const refused = s.rejected + s.blocked;
   const each = report.paidEachCents === null ? "" : ` at ${formatCents(report.paidEachCents)}`;
-  const sampleNote = report.samplesPaid ? ` · ${formatCents(report.sampleCents)} sample, never sent` : "";
+  const unsentNote = report.samplesPaid ? ` · ${formatCents(report.sampleCents)} approved, not sent` : "";
   return (
     // On screen it is a paper document, like every receipt, tag and notice (light-theme tokens inside, which pass on
     // --paper); printed, plain white.
-    <article data-theme="light" className="mx-auto w-full max-w-[52rem] rounded-card bg-paper px-6 py-8 text-text shadow-paper sm:px-12 sm:py-12 print:max-w-none print:rounded-none print:bg-white print:p-0 print:shadow-none">
+    <article
+      data-theme="light"
+      className="w-full max-w-[52rem] rounded-card bg-paper px-6 py-8 text-text shadow-[var(--paper-shadow-flat)] sm:px-12 sm:py-12 print:max-w-none print:rounded-none print:bg-white print:p-0 print:shadow-none"
+    >
       <header className="flex flex-col gap-3 border-b border-line pb-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <ExhibitLabel leader="none">Recall progress report · Draft</ExhibitLabel>
-          <span className="font-mono text-micro text-muted">Generated {generated}</span>
-        </div>
+        <p className="text-ui text-muted">Draft · generated {generated}</p>
         <h1 className="text-h2 font-medium text-balance">
           CPSC {recall.id}: <NoBreakHyphens>{recall.product}</NoBreakHyphens>
         </h1>
@@ -68,24 +52,18 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
         </dl>
       </header>
 
-      {(report.seeded > 0 || report.demo > 0) && (
-        <p className="mt-8 rounded-control border border-line bg-surface-2 px-4 py-3 text-ui text-text">
-          The {plural(s.total, "claim record")}: {provenance(report, s.total)}. Do not file these numbers with CPSC.
-        </p>
-      )}
-
       <section className="mt-8 flex flex-col gap-4 break-inside-avoid">
-        <H n={1}>Units remedied</H>
+        <H>Units remedied</H>
         <div className="grid gap-6 sm:grid-cols-3">
           <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={cpscUnits(recall, s.unitsSold)} />
-          <Figure label="Units remedied" value={formatCount(s.remedied)} note={report.samplesPaid ? `Destroyed on camera; ${plural(report.samplesPaid, "sample")} never refunded` : "Destroyed on camera and refunded"} />
+          <Figure label="Units remedied" value={formatCount(s.remedied)} note="Destroyed on camera" />
           <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} />
         </div>
         {s.unitsSold > 0 && <Meter value={s.remedied} max={s.unitsSold} label="Units remedied of units sold" />}
       </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
-        <H n={2}>Claims by outcome</H>
+        <H>Claims by outcome</H>
         {/* On a phone the meaning moves under its outcome, so the table fits the paper without scrolling. */}
         <table className="w-full text-ui">
           <thead>
@@ -100,7 +78,9 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
             {report.outcomes.map((o) => (
               <tr key={o.decision}>
                 <td className={td}>
-                  <StatusPill status={o.decision} label={o.label} />
+                  <span className="inline-flex w-(--verdict-pill-w)">
+                    <StatusPill status={o.decision} label={o.label} />
+                  </span>
                   <span className="mt-1.5 block text-muted sm:hidden">{o.note}</span>
                 </td>
                 <td className={`${td} text-right font-mono`}>{formatCount(o.count)}</td>
@@ -119,20 +99,20 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
       </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
-        <H n={3}>Refunds paid</H>
+        <H>Refunds</H>
         <div className="grid gap-6 sm:grid-cols-3">
-          <Figure label={sandbox ? "Paid out (sandbox)" : "Paid out"} value={formatCents(report.sentCents)} note={`${plural(report.sent, "payout")}${report.sent ? each : ""}${sampleNote}`} />
+          <Figure label="Paid out" value={formatCents(report.sentCents)} note={`${plural(report.sent, "payout")}${report.sent ? each : ""}${unsentNote}`} />
           <Figure
-            label={sandbox ? "Confirmed by PayPal (sandbox)" : "Confirmed by PayPal"}
+            label="Confirmed by PayPal"
             value={formatCents(report.settledCents)}
             note={report.settling ? `${formatCount(report.settling)} still settling` : report.sent ? "Every payout settled" : "No payouts sent yet"}
           />
-          <Figure label="Method" value={sandbox ? "PayPal sandbox" : "PayPal"} note="Payouts to each owner's verified PayPal account" />
+          <Figure label="Method" value="PayPal" note="Payouts to each owner's verified PayPal account" />
         </div>
       </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
-        <H n={4}>Why claims were refused</H>
+        <H>Why claims were refused</H>
         {refused ? (
           <table className="w-full text-ui">
             <tbody>
@@ -153,7 +133,7 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
       </section>
 
       <section className="mt-10 flex flex-col gap-3 break-inside-avoid">
-        <H n={5}>How units were verified</H>
+        <H>How units were verified</H>
         <p className="max-w-read text-ui text-text">
           Each owner logged in with PayPal, received a one-time code, and photographed the destroyed product with the code written on it, using a live camera
           session of 10 minutes with no upload option. Before any photo was examined, Remedy checked the session, refused reused photos and second claims
@@ -162,8 +142,8 @@ export function ProgressReport({ recall, report, generated, sandbox = false }: {
         </p>
       </section>
 
-      <footer className="mt-12 border-t border-line pt-4 font-mono text-micro text-muted">
-        Prepared by Remedy from {plural(s.total, "claim record")} on {generated}. Review before filing with CPSC.
+      <footer className="mt-12 border-t border-line pt-4 text-micro text-muted">
+        Draft for review, not for filing.{sandbox && " Payouts in this build use PayPal's sandbox."}
       </footer>
     </article>
   );

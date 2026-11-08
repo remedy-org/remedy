@@ -31,11 +31,11 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
 
   const claims = await loadClaims(store, recall, session);
   const sandbox = isSandboxBuild();
-  const report = buildReport(claims, recall, { sandbox });
+  const report = buildReport(claims, recall);
 
   return (
     <main className="flex flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 print:p-0">
-      <div className="mx-auto flex w-full max-w-[52rem] flex-wrap items-end justify-between gap-4 print:hidden">
+      <div className="flex w-full max-w-[52rem] flex-wrap items-end justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-h2 font-medium">CPSC progress report</h1>
           <p className="mt-1 text-ui text-muted">A draft from your claim records, laid out for the monthly report. Check it, then print or save it as a PDF.</p>

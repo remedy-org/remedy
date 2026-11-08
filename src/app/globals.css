@@ -94,6 +94,9 @@
  */
 :root,
 [data-theme] {
+  /* The verdict's fixed pill track: as wide as the widest pill ("In progress"), so every reason starts on one x, in the
+     grid, the card rows, the evidence panel's header and the report. */
+  --verdict-pill-w: 100px;
   --pay-soft: color-mix(in oklch, var(--pay) 14%, transparent);
   --hold-soft: color-mix(in oklch, var(--hold) 14%, transparent);
   --stop-soft: color-mix(in oklch, var(--stop) 14%, transparent);
