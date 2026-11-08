@@ -105,6 +105,15 @@ export function duplicateOf(claim: Pick<Claim, "id" | "demo" | "payerId" | "demo
   return null;
 }
 
+/**
+ * duplicateOf for a claim the console's grid has only as an index row: the same rounds, the same match, so the queue's
+ * line and the evidence panel (and the owner's result) always name the same earlier claim.
+ */
+export function duplicateOfRow(row: ClaimSummary, rows: ClaimSummary[]): DuplicateMatch | null {
+  const events = row.sample ? [{ at: row.createdAt, type: "demo_sample", detail: row.sample }] : [];
+  return duplicateOf({ ...row, photos: row.photoHashes.map((hash) => ({ key: "", hash })), events }, rows);
+}
+
 /** A round's demo claims on this recall for this PayPal account, newest first as the index keeps them. */
 export const roundClaims = (rows: ClaimSummary[], recallId: string, round: string, payerId: string) =>
   rows.filter((r) => r.demo === true && r.recallId === recallId && r.demoRound === round && r.payerId === payerId);

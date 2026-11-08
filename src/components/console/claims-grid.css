@@ -26,6 +26,19 @@
   z-index: 5;
 }
 
+/* The keyboard's row also wears the 2px focus ring every other control does, drawn inside its edges, so a row being
+   arrowed through is as easy to follow as a button. The ink edge on the left stays the open claim's. AG Grid's theme
+   paints its own ::after, so the ring clears its background. */
+.claims-grid:has(.ag-cell:focus-visible) .ag-row.ag-row-focus::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: none;
+  box-shadow: inset 0 0 0 2px var(--focus);
+}
+
 /* A clicked cell takes focus (so the arrow keys work next) but only the keyboard shows the ring: the open row's amber
    edge already marks a click. */
 .claims-grid .ag-cell-focus:not(:focus-visible) {
@@ -152,6 +165,24 @@
 /* A card row (phones) has no column to line up with: the reason follows its mark, so a 320px screen keeps its words. */
 .verdict-track.is-mark.is-card {
   grid-template-columns: auto minmax(0, 1fr);
+}
+
+/* A narrow verdict column (a laptop at 200% zoom): the reason goes under its mark on the cell's whole width, a step
+   smaller, so what tells this claim apart ("reads K7Q, expected K7P", the earlier claim's id) is read, not cut. */
+.claims-grid .ag-cell[col-id="decision"] {
+  container-type: inline-size;
+}
+
+@container (max-width: 26rem) {
+  .verdict-track.is-mark:not(.is-card) {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+    align-content: center;
+  }
+  .verdict-track.is-mark:not(.is-card) > :last-child {
+    font-size: var(--text-micro);
+    line-height: var(--text-micro--line-height);
+  }
 }
 
 /* The homepage tour's arriving claim (components/console/preview.ts ARRIVE_ID): as its checks come back, the two

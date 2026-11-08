@@ -3,14 +3,14 @@
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Button, CrossIcon, ErrorState, Skeleton, type CheckState } from "@/components/ui";
+import { Button, CrossIcon, ErrorState, Skeleton } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 // The model's words set as the owner's pages set them: curly quotes, codes in mono.
 import { ModelQuote } from "@/components/claim/EvidenceText";
 import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
-import { duration, NO_PAYOUT, type ClaimRow, type PreCheckState } from "@/app/console/_lib/view";
+import { duration, NO_PAYOUT, type ClaimRow } from "@/app/console/_lib/view";
 import { api } from "./api";
-import { EXCEPTION } from "./cells";
+import { DurationText, EXCEPTION } from "./cells";
 import { DrawerSkeleton, RowAmount, RowMeta, RowVerdict } from "./EvidenceShell";
 import { CheckList } from "./CheckList";
 import { EvidencePhoto } from "./EvidencePhoto";
@@ -424,8 +424,6 @@ function Section({ title, children, aside }: { title: ReactNode; children: React
   );
 }
 
-const PRE_STATE: Record<PreCheckState, CheckState> = { pass: "pass", hold: "hold", reject: "blocked", waiting: "waiting", skipped: "skipped" };
-
 type Step = { label: string; at: string | null; note?: string; failed?: boolean; value?: string };
 
 /** The money's path for this claim, from its events: photos in, photo check, decision, PayPal sent, settled. */
@@ -456,21 +454,22 @@ function moneySteps(claim: DrawerClaim): Step[] {
 }
 
 /** The claim's path as one row of dots (Mercury's money timeline, laid flat to leave room for the photos): each step,
- * then its time after the photos arrived, from 0:00. A step not reached is a hollow dot. */
+ * then its time after the photos arrived, from 0:00. A step not reached is a hollow dot. In a narrow panel (a phone, or
+ * the docked panel at its narrowest) the steps stack, each name whole on the left and its time on the right. */
 function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
   const steps = moneySteps(claim);
   const start = steps[0].at ? Date.parse(steps[0].at) : null;
   const note = steps.find((s) => s.note)?.note;
   return (
-    <div>
-      <ol className="grid" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label={`Timeline for ${claim.id}`}>
+    <div className="@container">
+      <ol className="flex flex-col gap-2 @[26rem]:grid @[26rem]:gap-0" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label={`Timeline for ${claim.id}`}>
         {steps.map((s, i) => {
           const done = s.at !== null;
           const next = steps[i + 1];
           const plus = done && start !== null ? Math.round((Date.parse(s.at!) - start) / 1000) : null;
           return (
-            <li key={s.label} className="relative flex min-w-0 flex-col gap-1.5 pr-2">
-              <span aria-hidden="true" className="relative flex h-3 items-center">
+            <li key={s.label} className="relative flex min-w-0 items-center gap-3 @[26rem]:flex-col @[26rem]:items-stretch @[26rem]:gap-1.5 @[26rem]:pr-2">
+              <span aria-hidden="true" className="relative flex h-3 shrink-0 items-center">
                 {/* A refused payout: a red ring, and its label says so, so it reads without colour too. */}
                 <span
                   className={clsx(
@@ -478,11 +477,12 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
                     s.failed ? "border-2 border-stop bg-surface" : done ? (i >= 3 ? "bg-pay" : "bg-text") : "border border-line-strong bg-surface",
                   )}
                 />
-                {next && <span className={clsx("absolute inset-x-0 left-2.5 h-px", done && next.at && !s.failed ? "bg-muted/70" : "bg-line-strong/40")} />}
+                {next && <span className={clsx("absolute inset-x-0 left-2.5 hidden h-px @[26rem]:block", done && next.at && !s.failed ? "bg-muted/70" : "bg-line-strong/40")} />}
               </span>
-              <span className={clsx("truncate text-micro", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
-              <span className="font-mono text-micro text-muted tabular-nums">
-                {!done ? <span className="text-faint">{s.value ?? "—"}</span> : s.failed ? formatClock(s.at!) : i === 0 ? "0 s" : `+${duration(plus!)}`}
+              <span className={clsx("min-w-0 flex-1 text-micro @[26rem]:flex-none @[26rem]:truncate", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
+              {/* The figures in mono, the unit in the sans after a thin space, as the grid prints a span. */}
+              <span className="text-micro text-muted">
+                {!done ? <span className="text-faint">{s.value ?? "—"}</span> : s.failed ? <span className="font-mono">{formatClock(s.at!)}</span> : <DurationText sec={i === 0 ? 0 : plus!} plus={i > 0} />}
               </span>
             </li>
           );
@@ -562,7 +562,7 @@ function PassedToggle({ count, open, onToggle, name }: { count: number; open: bo
       aria-expanded={open}
       aria-label={`${name} details`}
       onClick={onToggle}
-      className="-mt-1 inline-flex min-h-8 items-center gap-1.5 self-start text-ui text-muted hover:text-text"
+      className="-mt-1 -ml-1.5 inline-flex min-h-8 items-center gap-1.5 self-start rounded-control px-1.5 text-ui text-muted hover:text-text"
     >
       <span aria-hidden="true" className={clsx("inline-block transition-transform", open && "rotate-90")}>
         ›
@@ -590,9 +590,6 @@ function Evidence({
   // The "model" hold is the photo check not answering, not an answer: it isn't counted as a check that didn't pass.
   // Before any photo arrives every check is waiting: one line says when they run, the rows are their names alone.
   const waiting = claim.preChecks.every((p) => p.state === "waiting");
-  const answers = claim.checks.filter((c) => c.id !== "model");
-  const passed = answers.filter((c) => c.outcome === "pass").length;
-  const preRan = claim.preChecks.filter((p) => p.state !== "waiting" && p.state !== "skipped");
   // The photo viewer, open on a photo (0-based); keyed by claim, so ↑/↓ to another claim closes it.
   const [viewing, setViewing] = useState<{ id: string; n: number } | null>(null);
   const viewer = viewing?.id === claim.id ? viewing.n : null;
@@ -604,15 +601,11 @@ function Evidence({
   }
   const d = deciding(claim);
   // The passed rows' details, open or folded, per claim: ↑/↓ to the next claim folds them again.
-  const [unfolded, setUnfolded] = useState<{ id: string; pre: boolean; model: boolean }>({ id: claim.id, pre: false, model: false });
-  const open = unfolded.id === claim.id ? unfolded : { id: claim.id, pre: false, model: false };
-  const toggle = (which: "pre" | "model") => setUnfolded({ ...open, [which]: !open[which] });
+  const [unfolded, setUnfolded] = useState<{ id: string; open: boolean }>({ id: claim.id, open: false });
+  const open = unfolded.id === claim.id && unfolded.open;
   const link = (text: string) => <LinkedIds text={text} onOpen={onOpen} self={claim.id} />;
-  // The summary is already quoted under the check it explains (Same item, Real photo): don't print it twice.
-  const summary = claim.summary && !claim.checks.some((c) => c.evidence === claim.summary) ? claim.summary : null;
-  // What a screen reader hears for each photo: what the photo check saw in it, and what the tag reads.
-  const codeCheck = claim.checks.find((c) => c.id === "code");
-  const seen = [claim.summary, codeCheck?.rule].filter(Boolean).join(" ") || undefined;
+  // What a screen reader hears for each photo: what it shows and what the tag reads, in a few words from the checks.
+  const seen = claim.photoAlt ?? undefined;
   return (
     // Paragraphs wrap with no word left alone on a last line ("it.").
     <div className={clsx("flex flex-col gap-7 py-5 [&_p]:text-pretty [&_q]:text-pretty", pad)}>
@@ -668,46 +661,19 @@ function Evidence({
       </Section>
 
       {waiting && <p className="-mb-4 text-ui text-muted">Checks run when the photos arrive.</p>}
-      <Section title="Account checks" aside={preRan.length ? `${preRan.filter((p) => p.state === "pass").length} of ${preRan.length}` : undefined}>
+      {/* The five checks the owner's result and the homepage name, in their order and states; what each one recorded
+          (an account check, the photo check's answers and its quoted words) under it. */}
+      <Section title="Checks" aside={waiting ? undefined : claim.five}>
         <CheckList
-          label={`Account checks for ${claim.id}`}
-          steps={claim.preChecks.map((p) => ({ id: p.id, label: p.label, state: PRE_STATE[p.state], detail: (p.state === "pass" && !open.pre) || !p.detail ? undefined : link(p.detail) }))}
+          label={`Checks for ${claim.id}`}
+          steps={claim.fiveRows.map((r) => ({
+            id: String(r.n),
+            label: r.name,
+            state: r.state === "reject" ? (r.n <= 3 ? "blocked" : "reject") : r.state,
+            detail: r.state === "waiting" || (r.state === "pass" && !open) ? undefined : fiveDetail(r, d, link),
+          }))}
         />
-        <PassedToggle name="Account check" count={claim.preChecks.filter((p) => p.state === "pass").length} open={open.pre} onToggle={() => toggle("pre")} />
-      </Section>
-
-      <Section title="Photo check" aside={answers.length ? `${passed} of ${answers.length}` : claim.checks.length ? "No answer" : undefined}>
-        {claim.checks.length ? (
-          <>
-            <CheckList
-              label={`Photo check for ${claim.id}`}
-              steps={claim.checks.map((c) => ({
-                id: c.id,
-                label: c.label,
-                state: c.outcome === "reject" ? "reject" : c.outcome,
-                // The answer that decided the claim is quoted once, at the top: here it is its name and state alone.
-                detail:
-                  (c.outcome === "pass" && !open.model) || (d && c.rule === d.title && (c.evidence ?? null) === d.evidence) ? undefined : (
-                    <>
-                      {link(c.rule)}
-                      {c.evidence && <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted"><ModelQuote>{c.evidence}</ModelQuote></q>}
-                    </>
-                  ),
-              }))}
-            />
-            <PassedToggle name="Photo check" count={claim.checks.filter((c) => c.outcome === "pass").length} open={open.model} onToggle={() => toggle("model")} />
-            {summary && (
-              <div className="flex flex-col gap-1 border-t border-line pt-3">
-                <p className="text-ui font-medium text-text">What the photo check saw</p>
-                <q className="block font-sans text-ui leading-[1.55] text-muted"><ModelQuote>{summary}</ModelQuote></q>
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-ui text-muted">
-            {claim.decision === "blocked" ? "Not run. The account checks stopped this claim, so its photos were never read." : claim.photos.length ? "Reading the photos now." : "Waiting for photos."}
-          </p>
-        )}
+        <PassedToggle name="Checks" count={claim.fiveRows.filter((r) => r.state === "pass" && r.parts.length > 0).length} open={open} onToggle={() => setUnfolded({ id: claim.id, open: !open })} />
       </Section>
 
       <Section title="Decision">
@@ -768,11 +734,40 @@ function Evidence({
   );
 }
 
-/** The header's money: what the claim pays, and "Sent" or "Settling" once PayPal has it; nothing for a refused claim.
+/**
+ * Under one of the five checks: why it was skipped, or each thing recorded under it. One part says its line alone; several
+ * name themselves ("Code K7P: the tag reads K7Q…"). The photo check's own words are quoted, except the answer the panel
+ * already leads with, which is its name and state alone here. Undefined when there is nothing more to say.
+ */
+function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<typeof deciding>, link: (text: string) => ReactNode): ReactNode {
+  const led = (p: DrawerClaim["fiveRows"][number]["parts"][number]) => Boolean(decided && p.text === decided.title && (p.evidence ?? null) === decided.evidence);
+  const shown = row.parts.filter((p) => (p.text || p.evidence) && !led(p));
+  if (!row.note && !shown.length) return undefined;
+  const named = row.parts.filter((p) => p.text || p.evidence).length > 1;
+  return (
+    <span className="flex flex-col gap-1.5">
+      {row.note && <span>{row.note}</span>}
+      {shown.map((p) => (
+        <span key={p.id} className="block">
+          {named && <span className={p.state === "pass" ? "text-text-2" : "text-text"}>{p.label}: </span>}
+          {link(p.text)}
+          {p.evidence && (
+            <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">
+              <ModelQuote>{p.evidence}</ModelQuote>
+            </q>
+          )}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** The header's money: what the claim pays, and "Settling" or "Received" once PayPal has it; nothing for a refused claim.
  * A payout that wasn't sent is said once, on the timeline's PayPal step. */
 function MoneyLine({ claim }: { claim: DrawerClaim }) {
   if (claim.decision !== "paid" && claim.decision !== "held") return null;
-  const state = claim.decision === "held" || !claim.payout ? null : claim.payout.status === "SUCCESS" ? "Sent" : "Settling";
+  // The receipt's own word once PayPal has settled it, so the owner and the company say the same thing.
+  const state = claim.decision === "held" || !claim.payout ? null : claim.payout.status === "SUCCESS" ? "Received" : "Settling";
   return (
     <span className="ml-auto inline-flex items-baseline gap-1.5 text-ui">
       <span className="font-mono text-text">{claim.amount}</span>
@@ -799,7 +794,9 @@ function Duplicate({ claim, onOpen, onView }: { claim: DrawerClaim; onOpen?: (id
     <div className="grid grid-cols-2 gap-3">
       <div className="flex min-w-0 flex-col gap-1">
         <EvidencePhoto src={claim.photos[mine]} n={mine + 1} of={claim.photos.length} tall onOpen={() => onView(mine)} />
-        <p className="font-mono text-micro text-muted">This claim, {claim.id}</p>
+        <p className="text-micro text-muted">
+          This claim, <span className="font-mono">{claim.id}</span>
+        </p>
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         {dup.src ? (
@@ -807,14 +804,14 @@ function Duplicate({ claim, onOpen, onView }: { claim: DrawerClaim; onOpen?: (id
         ) : (
           <p className="flex aspect-[3/4] items-center justify-center rounded-control border border-dashed border-line-strong px-3 text-center text-ui text-muted">The earlier photo isn&apos;t available</p>
         )}
-        <p className="font-mono text-micro text-muted">
+        <p className="text-micro text-muted">
           Earlier claim,{" "}
           {onOpen ? (
-            <button type="button" onClick={() => onOpen(dup.id)} className="text-text underline decoration-line-strong underline-offset-2 hover:decoration-text">
+            <button type="button" onClick={() => onOpen(dup.id)} className="font-mono text-text underline decoration-line-strong underline-offset-2 hover:decoration-text">
               {dup.id}
             </button>
           ) : (
-            <span className="text-text">{dup.id}</span>
+            <span className="font-mono text-text">{dup.id}</span>
           )}
         </p>
       </div>

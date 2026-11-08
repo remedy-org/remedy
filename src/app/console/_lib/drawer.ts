@@ -1,10 +1,12 @@
 import { duplicateOf } from "@/app/api/claims/_lib/pipeline";
+import { cutInHalf, handWrittenLabel, nounOf } from "@/components/claim/model";
 import { APPEAL_CHECK, reviewAsked } from "@/lib/appeal";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Outcome, Reason, Recall } from "@/lib/types";
 import { isSandboxBuild } from "@/lib/demo/allowed";
 import { demoSample } from "@/lib/demo/samples";
-import { amountOf, checkCount, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
+import { CHECK_NAMES, checkOf, type CheckNumber } from "@/lib/fiveChecks";
+import { allPreChecks, amountOf, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow, type PreCheckState } from "./view";
 
 // Everything the evidence drawer shows for one claim, built on the server so the client never sees a full payer id.
 
@@ -17,6 +19,69 @@ export interface DrawerCheck {
   rule: string;
   // The model's quoted evidence, verbatim.
   evidence: string | null;
+}
+
+/**
+ * One of the five checks, as the owner's result and the homepage name it, with what was recorded under it: the account
+ * checks' rows (check 3 holds "Verified PayPal account" too) and the photo check's answers (the label and the code under
+ * check 4, each proof step, the same item and a real photo under check 5).
+ */
+export interface FiveRow {
+  n: CheckNumber;
+  name: string;
+  state: PreCheckState;
+  /** Skipped: it was never run, because an earlier check stopped the claim (else it doesn't apply to this claim). */
+  unrun: boolean;
+  /** Why it was skipped, when nothing recorded says it. */
+  note: string | null;
+  parts: { id: string; label: string; state: PreCheckState; text: string; evidence: string | null }[];
+}
+
+// Worst first: a check is as bad as its worst answer; one that didn't apply (skipped) isn't a pass.
+const RANK: PreCheckState[] = ["reject", "hold", "waiting", "skipped", "pass"];
+
+/** The five checks from the pre-checks (all of them, skipped included) and the photo check's answers. */
+export function fiveRowsOf(c: Pick<Claim, "code" | "decision" | "photos" | "seeded" | "demo">, recall: Pick<Recall, "spec">, pre: PreCheckRow[], checks: DrawerCheck[]): FiveRow[] {
+  const names: Record<CheckNumber, string> = {
+    1: CHECK_NAMES.session,
+    2: CHECK_NAMES.duplicate,
+    3: CHECK_NAMES.account,
+    4: CHECK_NAMES.code(c.code, handWrittenLabel(recall.spec)),
+    5: CHECK_NAMES.destroyed(nounOf(recall.spec), cutInHalf(recall.spec)),
+  };
+  const parts: FiveRow["parts"] = [
+    ...pre.map((p) => ({ id: p.id, label: p.label, state: p.state, text: p.detail, evidence: null })),
+    ...checks.map((r) => ({ id: r.id, label: r.label, state: r.outcome as PreCheckState, text: r.rule, evidence: r.evidence })),
+  ];
+  // The photo check that never answered stands for both of its checks.
+  const under = (n: CheckNumber) => parts.filter((p) => (p.id === "model" ? n === 4 || n === 5 : checkOf(p.id) === n));
+  const ran = c.photos.length > 0 || c.decision === "blocked";
+  return ([1, 2, 3, 4, 5] as const).map((n) => {
+    const own = under(n);
+    if (!own.length) {
+      return ran && c.decision !== "pending"
+        ? { n, name: names[n], state: "skipped", unrun: true, note: "An earlier check stopped the claim.", parts: [] }
+        : { n, name: names[n], state: "waiting", unrun: false, note: null, parts: [] };
+    }
+    const state = RANK.find((s) => own.some((p) => p.state === s)) ?? "pass";
+    // A demo claim after the genuine one: the account check counts once, on the genuine claim, as the owner was told.
+    const note = state !== "skipped" ? null : n === 3 && c.demo ? "Counted once, on the genuine claim." : "Not run on this claim.";
+    return { n, name: names[n], state, unrun: false, note, parts: own.filter((p) => p.state !== "skipped") };
+  });
+}
+
+/** The five in one line: "4 of 5 checks passed · 1 skipped". */
+export function fiveLine(rows: FiveRow[]): string {
+  const count = (pred: (r: FiveRow) => boolean) => rows.filter(pred).length;
+  const passed = count((r) => r.state === "pass");
+  const rest: [number, string][] = [
+    [count((r) => r.state === "reject"), "failed"],
+    [count((r) => r.state === "hold"), "held"],
+    [count((r) => r.state === "skipped" && !r.unrun), "skipped"],
+    [count((r) => r.unrun), "not run"],
+    [count((r) => r.state === "waiting"), "waiting"],
+  ];
+  return [`${passed} of ${rows.length} checks passed`, ...rest.filter(([k]) => k > 0).map(([k, w]) => `${k} ${w}`)].join(" · ");
 }
 
 // A history line as the company reads it: plain words, with a service's raw answer (an API error, PayPal's message)
@@ -45,8 +110,12 @@ export interface DrawerClaim {
   checks: DrawerCheck[];
   // The model's own one-line summary, when it answered.
   summary: string | null;
-  // The checks in one line, as the grid's barcode counts them: "Account checks 4 of 4 · Photo check 4 of 5".
+  // The five checks in one line, as the owner's result counts them: "4 of 5 checks passed · 1 skipped".
   five: string;
+  // The five checks, each with what was recorded under it.
+  fiveRows: FiveRow[];
+  // What the photo shows, in a few words from the checks (never the model's prose): the photo's accessible name.
+  photoAlt: string | null;
   sentence: string;
   amount: string;
   // itemId: PayPal's id for this one payout (older claims have only the batch's).
@@ -224,6 +293,19 @@ const willStop = (rows: PreCheckRow[], stops: string[]): PreCheckRow[] =>
     return text && row.state !== "hold" && row.state !== "reject" ? { ...row, state: "hold", detail: `Approve won't pay: ${text.charAt(0).toLowerCase()}${text.slice(1)}. Remedy runs this check again on approve.` } : row;
   });
 
+/** "Claim photo: pillow cut in half, tag reads X-VESOLJE K7Q": the photo in a few words, from what the checks read. */
+function photoAltOf(c: Pick<Claim, "verdict" | "reasons">, recall: Pick<Recall, "spec">): string | null {
+  const v = c.verdict;
+  if (!v) return null;
+  const done = v.steps.length > 0 && v.steps.every((s) => s.status === "done");
+  const thing = nounOf(recall.spec).toLowerCase();
+  // The label as read often carries the code too ("X-VESOLJE K7Q"): said once.
+  const code = v.challenge_code.text_seen ?? "";
+  const read = [(v.label.text_seen ?? "").replace(code, "").trim(), code].filter(Boolean).join(" ");
+  const parts = [done ? `${thing} ${cutInHalf(recall.spec) ? "cut in half" : "destroyed"}` : null, read ? `tag reads ${read}` : null].filter(Boolean);
+  return parts.length ? `Claim photo: ${parts.join(", ")}` : null;
+}
+
 /** The claim as the panel shows it. stops: what approve would be stopped for now (approveConflicts' texts). */
 export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?: string[] } = {}): DrawerClaim {
   const amount = formatMoney(amountOf(c.payout?.amount, recall));
@@ -232,6 +314,9 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
   const checks = c.reasons
     .filter((r) => !NOT_MODEL.has(r.check))
     .map((r) => ({ id: r.check, label: checkLabel(r.check, c.code, recall.spec.proof_steps), outcome: r.outcome, rule: companyReasonText(r, c.decision), evidence: evidenceFor(r.check, r.outcome, c.verdict) }));
+  const all = allPreChecks(refusedReasons(c, refused).length ? { ...c, reasons: [...c.reasons, ...refusedReasons(c, refused)] } : c);
+  // The rows say what approve would be stopped for now; the count line is what was recorded.
+  const rows = fiveRowsOf(c, recall, willStop(all, stops), checks);
   return {
     id: c.id,
     createdAt: c.createdAt,
@@ -245,8 +330,10 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     preChecks: willStop(pre, stops),
     checks,
     summary: c.verdict?.summary ?? null,
-    // What was recorded, as the grid's barcode counts it (barsSentence), not what approve would find now.
-    five: checkCount([...pre.map((p) => ({ id: p.id, state: p.state })), ...checks.map((r) => ({ id: r.id, state: r.outcome }))]),
+    // What was recorded, not what approve would find now.
+    five: fiveLine(fiveRowsOf(c, recall, all, checks)),
+    fiveRows: rows,
+    photoAlt: photoAltOf(c, recall),
     sentence: decisionSentence(c, recall),
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,

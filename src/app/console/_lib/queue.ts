@@ -1,6 +1,6 @@
 import "server-only";
+import { duplicateOfRow } from "@/app/api/claims/_lib/pipeline";
 import { getAppStore } from "@/lib/demo";
-import { isLikelySame } from "@/lib/fingerprint";
 import type { Session } from "@/lib/session";
 import type { ClaimSummary } from "@/lib/store";
 import type { Recall } from "@/lib/types";
@@ -23,11 +23,14 @@ export function gridRows(claims: ClaimSummary[], recall: Recall, session: Pick<S
   );
 }
 
-/** A claim blocked for a reused photo: the earliest claim of this recall with that photo, which its grid line names. */
-function copiedFrom(c: ClaimSummary, claims: ClaimSummary[]): string | null {
+/**
+ * A claim blocked for a reused photo: the earlier claim its photo matched, among the claims it was checked against
+ * (duplicateOfRow: a demo claim meets only its own round's), so the grid's line names the claim the panel and the owner's
+ * result name.
+ */
+export function copiedFrom(c: ClaimSummary, claims: ClaimSummary[]): string | null {
   if (c.decision !== "blocked" || c.reason?.check !== "duplicate_photo") return null;
-  const earlier = claims.filter((o) => o.id !== c.id && o.createdAt <= c.createdAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  return earlier.find((o) => o.photoHashes.some((h) => c.photoHashes.some((mine) => isLikelySame(mine, h))))?.id ?? null;
+  return duplicateOfRow(c, claims)?.id ?? null;
 }
 
 export interface Queue {

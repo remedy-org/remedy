@@ -525,7 +525,8 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
   return allPreChecks(c).filter((r) => r.state !== "skipped");
 }
 
-function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified" | "seeded" | "demo" | "events">): PreCheckRow[] {
+/** Every pre-check, those that don't apply to this claim included (skipped): the panel's five checks say why. */
+export function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | "payerVerified" | "seeded" | "demo" | "events">): PreCheckRow[] {
   const ran = c.photos.length > 0 || c.decision === "blocked";
   // preCheck rejects (the claim is blocked); sendCheck, run again right before a payout, holds.
   const failed = (check: string) => c.reasons.find((r) => r.check === check && r.outcome !== "pass");
