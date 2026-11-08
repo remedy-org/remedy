@@ -2,7 +2,7 @@ import clsx from "clsx";
 import type { CSSProperties } from "react";
 import sample from "./analyst-sample.json";
 import { TOUR } from "./tour-copy";
-import styles from "./home.module.css";
+import styles from "./tour.module.css";
 
 // The recall analyst's answer on the homepage: a recording, never live. Mohit asks "Why were 9 claims refused?" once in
 // /console/insights on a workspace holding only the 40 sample claims and pastes the answer into analyst-sample.json;

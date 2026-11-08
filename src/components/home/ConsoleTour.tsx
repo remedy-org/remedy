@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { formatCents, ledgerOf } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
 import type { PreviewRow } from "@/components/console/ClaimsGridPreview";
@@ -13,7 +13,7 @@ import { TABS, type Tab } from "@/components/console/StatusTabs";
 import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME, type StudioFilter } from "@/components/insights/InsightsPreviewLazy";
 import { spokenTime } from "@/components/insights/report";
 import { ConsoleFrame, type FramePage } from "./ConsoleFrame";
-import styles from "./home.module.css";
+import styles from "./tour.module.css";
 import { PayoutsNote } from "./PayoutsNote";
 import { TOUR } from "./tour-copy";
 import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
@@ -38,7 +38,8 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
 
 const ENTER = 0.35;
 const LEAVE = 0.25;
-const OPEN_AFTER = 300;
+// On 02 the held claim's row is selected at once and its evidence docks a beat later, so the panel reads as the row's.
+const OPEN_AFTER = 180;
 // In at +600ms, its checks back at +1400ms (the bars fill over 480ms), the verdict at +2000ms.
 const ARRIVE = { interim: 600, checked: 1400, final: 2000, done: 3100 };
 const STUDIO_FROM = 1024;
@@ -52,7 +53,9 @@ const STUDIO_PAD = 28;
 // The nav's height, and the air the nav jump leaves under it.
 const NAV = 64;
 const AIR = 16;
-// The frame's tallest (home.module.css .stage), and the least it takes to keep the heading in view with it.
+// The space between the steps and the frame.
+const GAP = 20;
+// The frame's tallest (tour.module.css .stage), and the least it takes to keep the heading in view with it.
 const FRAME_MAX = 680;
 const FIT_MIN = 560;
 
@@ -89,6 +92,32 @@ function rowsAt(rows: PreviewRow[], id: string, at: Arrival): PreviewRow[] {
   return rows.map((r) => (r.id === id ? { ...r, decision: "pending" } : r));
 }
 
+/**
+ * A figure that changes in place, as a live console's does: the old value rolls up and out as the new one rolls up
+ * into its place (tour.module.css .roll, 360ms). Under reduced motion it simply changes.
+ */
+function Roll({ value }: { value: string }) {
+  const [at, setAt] = useState({ now: value, was: null as string | null, n: 0 });
+  if (at.now !== value) setAt({ now: value, was: reduced() ? null : at.now, n: at.n + 1 });
+  useEffect(() => {
+    if (at.was === null) return;
+    const t = window.setTimeout(() => setAt((a) => ({ ...a, was: null })), 400);
+    return () => window.clearTimeout(t);
+  }, [at.n, at.was]);
+  return (
+    <span className={styles.roll}>
+      {at.was !== null && (
+        <span key={`was-${at.n}`} data-was aria-hidden="true" className={styles.rollOut}>
+          {at.was}
+        </span>
+      )}
+      <span key={`now-${at.n}`} data-now={at.was !== null || undefined}>
+        {at.now}
+      </span>
+    </span>
+  );
+}
+
 /** The status tabs as the console has them: each filters the live grid (AG Grid's own filter, so the rows animate),
  * their counts following the arriving claim. The console's "Approved" tab also holds claims approved and not yet sent;
  * every one here was sent, so it reads "Paid", as their pills and the ledger do. */
@@ -104,12 +133,14 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
             aria-pressed={on}
             onClick={() => onChange(t.id)}
             className={clsx(
-              "relative inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-control px-3 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px]",
+              "relative inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-3 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px]",
               on ? "text-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted hover:text-text",
             )}
           >
             {t.id === "paid" ? "Paid" : t.label}
-            <span className={clsx("text-micro tabular-nums", on ? "text-muted" : "text-faint")}>{counts[t.id]}</span>
+            <span className={clsx("font-normal", on ? "text-muted" : "text-faint")}>
+              <Roll value={String(counts[t.id])} />
+            </span>
           </button>
         );
       })}
@@ -118,10 +149,11 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
 }
 
 /**
- * The ledger over the grid, as the homepage leads with it: the money sent through PayPal and how fast, then the units,
- * then what waits for a person and what was refused. Its figures are set as every figure in the section is (Insights'
- * tiles, the report's): the sans at regular weight, its proportional figures (its tabular ones space a stop or a colon
- * like mono). No meter.
+ * The ledger over the grid, as the console's borderless stat strip: the money sent through PayPal and how fast, then
+ * the units, then what waits for a person and what was refused. Each figure in the sans at regular weight with its
+ * proportional figures (its tabular ones space a stop or a colon like mono), its words after it in the UI size. A
+ * figure the arriving claim changes rolls to its new value. On a narrow window the last figures drop whole (they wrap
+ * out of the strip's one line) rather than being cut.
  */
 function TourLedger({ rows, unitsSold }: { rows: PreviewRow[]; unitsSold: number }) {
   const l = ledgerOf(rows, { unitsSold });
@@ -133,11 +165,13 @@ function TourLedger({ rows, unitsSold }: { rows: PreviewRow[]; unitsSold: number
     [formatCount(l.refused), "refused"],
   ];
   return (
-    <dl className="flex min-h-12 items-center gap-x-7 overflow-hidden border-y border-line py-2.5 whitespace-nowrap max-xl:gap-x-5">
+    <dl className="flex h-14 flex-wrap gap-x-8 overflow-hidden whitespace-nowrap max-xl:gap-x-6">
       {items.map(([value, label]) => (
-        <div key={label} className="flex items-baseline gap-2">
-          <dd className="order-1 text-[22px] leading-7">{value}</dd>
-          <dt className="order-2 text-micro text-muted">{label}</dt>
+        <div key={label} className="flex h-14 items-baseline gap-2 leading-[56px]">
+          <dd className="order-1 text-[22px]">
+            <Roll value={value} />
+          </dd>
+          <dt className="order-2 text-ui text-muted">{label}</dt>
         </div>
       ))}
     </dl>
@@ -147,6 +181,8 @@ function TourLedger({ rows, unitsSold }: { rows: PreviewRow[]; unitsSold: number
 export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arriveId, descriptions, insights, report, studio }: ConsoleTourProps) {
   const [step, setStep] = useState<Step>(0);
   const [open, setOpen] = useState<string | null>(null);
+  // The row the grid shows selected: the open claim's, a beat before its panel docks.
+  const [picked, setPicked] = useState<string | null>(null);
   // The held claim step 02 shows: the seed's, or the one a visitor clicked in the queue.
   const [claim, setClaim] = useState(openId);
   const [status, setStatus] = useState<Tab>("all");
@@ -165,11 +201,16 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   // The checks popover opens only for a pointer that has moved over the queue since the arrival (a row sliding under a
   // still cursor is not a hover).
   const [pointed, setPointed] = useState(false);
+  // The arriving claim's row: "new" while it is in and being checked (a soft tint), "settled" once its verdict lands
+  // (the tint lets go over 1.4s), then nothing.
+  const [fresh, setFresh] = useState<"new" | "settled" | null>(null);
   // Studio's cross-filter, said in the frame's title row with a way out.
   const [studioFilter, setStudioFilter] = useState<StudioFilter | null>(null);
 
   const root = useRef<HTMLDivElement>(null);
   const rail = useRef<HTMLDivElement>(null);
+  const tablist = useRef<HTMLDivElement>(null);
+  const stepBar = useRef<HTMLSpanElement>(null);
   const frame = useRef<HTMLDivElement>(null);
   const insightsBody = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -199,10 +240,15 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     later(arriving.current, ARRIVE.interim, () => {
       setArrival("interim");
       setLive(true);
+      setFresh("new");
     });
     later(arriving.current, ARRIVE.checked, () => setArrival("checked"));
-    later(arriving.current, ARRIVE.final, () => setArrival("final"));
+    later(arriving.current, ARRIVE.final, () => {
+      setArrival("final");
+      setFresh("settled");
+    });
     later(arriving.current, ARRIVE.done, () => setLive(false));
+    later(arriving.current, ARRIVE.final + 2000, () => setFresh(null));
   }, []);
 
   /** Straight to the final state, so it never animates where no one sees it, or when a visitor has moved on. */
@@ -210,6 +256,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     clear(arriving.current);
     setArrival("final");
     setLive(false);
+    setFresh(null);
   }, []);
 
   // 01's arrival, the one moment that plays without a click: when the real grid is in and the frame is 35% in view.
@@ -227,6 +274,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
         } else if (e.intersectionRatio < LEAVE && e.intersectionRatio === 0 && step === 0 && swapped && !reduced() && played.current) {
           clear(arriving.current);
           setLive(false);
+          setFresh(null);
           setArrival("before");
           played.current = false;
         } else if (e.intersectionRatio < LEAVE && arriving.current.length && arrival !== "final") finishArrival();
@@ -364,8 +412,9 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     };
   }, [studio]);
 
-  // The frame fits under the rail on a laptop screen (home.module.css .stage reads the rail's height), and the nav's
-  // "For companies" jump lands so a visitor sees the whole frame: from the heading when it all fits, else from the tabs.
+  // The frame fits under the steps on a laptop screen (tour.module.css .stage reads the steps row's height), and the
+  // nav's "For companies" jump lands so a visitor sees the whole frame: from the heading when it all fits, else from
+  // the steps.
   useLayoutEffect(() => {
     const el = root.current;
     const tabsRow = rail.current;
@@ -379,12 +428,14 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       const tabs = tabsRow.getBoundingClientRect().top - top;
       // Where the heading, the tabs and a frame of at least FIT_MIN fit one screen (a 1440x900 laptop), the frame takes
       // the height that leaves the heading in view too; otherwise the CSS height, which fits it under the tabs.
-      const withHead = window.innerHeight - NAV - AIR - (tabs - head) - railH - 24 - AIR;
+      const withHead = window.innerHeight - NAV - AIR - (tabs - head) - railH - GAP - AIR;
       if (withHead >= FIT_MIN && withHead < FRAME_MAX) frame.current?.style.setProperty("--frame-h", `${Math.floor(withHead)}px`);
       else frame.current?.style.removeProperty("--frame-h");
       const bottom = (frame.current?.getBoundingClientRect().bottom ?? 0) - top;
       const from = bottom - head + AIR <= window.innerHeight - NAV ? head : tabs;
-      section.style.scrollMarginTop = `${NAV + AIR - from}px`;
+      // The page's scroll padding already keeps the jump under the nav: the margin only adds the air and skips the
+      // section's top padding and eyebrow.
+      section.style.scrollMarginTop = `${AIR - from}px`;
     };
     place();
     const ro = new ResizeObserver(place);
@@ -396,6 +447,45 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     };
   }, []);
 
+  // The evidence panel's left edge lands on a column boundary: it covers the columns after Checks (the time, the payer
+  // and the money, which it repeats), or from Checks on where those leave it too narrow, at least 380px.
+  const [dockW, setDockW] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const gate = gridGate.current;
+    if (!gate) return;
+    const measure = () => {
+      const checks = gate.querySelector<HTMLElement>('.ag-header-cell[col-id="checks"], [data-col="checks"]');
+      const g = gate.getBoundingClientRect();
+      if (!checks || !g.width) return;
+      const c = checks.getBoundingClientRect();
+      const after = g.right - c.right;
+      setDockW(Math.round(after >= 400 ? after : Math.max(380, g.right - c.left)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(gate);
+    return () => ro.disconnect();
+  }, [swapped]);
+
+  // The step bar sits under the active word, its width: measured, so it can glide and resize to the next one.
+  useLayoutEffect(() => {
+    const list = tablist.current;
+    const bar = stepBar.current;
+    if (!list || !bar) return;
+    const measure = () => {
+      const label = tabs.current[step]?.querySelector<HTMLElement>("[data-label]");
+      if (!label) return;
+      const at = label.getBoundingClientRect();
+      bar.style.setProperty("--x", `${Math.round(at.left - list.getBoundingClientRect().left)}px`);
+      bar.style.setProperty("--w", `${Math.round(at.width)}px`);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(list);
+    void document.fonts?.ready.then(measure);
+    return () => ro.disconnect();
+  }, [step]);
+
   const go = (next: Step, id = claim) => {
     const prev = now.current.step;
     if (next === prev) return;
@@ -406,6 +496,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     settleArrival();
     if (prev === 1) {
       setOpen(null);
+      setPicked(null);
       if (!still) {
         setDockOut(true);
         later(timers.current, 160, () => setDockOut(false));
@@ -421,6 +512,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       setClaim(id);
       // The open claim is always in the rows shown.
       setStatus((t) => (t === "all" || t === "held" ? t : "all"));
+      setPicked(id);
       if (still) setOpen(id);
       else later(timers.current, OPEN_AFTER, () => setOpen(id));
     }
@@ -441,6 +533,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     if (!row.evidence) return;
     if (now.current.step === 1) {
       setClaim(row.id);
+      setPicked(row.id);
       setOpen(row.id);
     } else go(1, row.id);
   };
@@ -488,53 +581,61 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const filtered = step === 2 && studioState === "shown" && studioFilter;
 
   return (
-    <div ref={root} className="flex flex-col gap-6">
-      <div ref={rail} role="tablist" aria-label={TOUR.tablist} className={clsx("relative grid grid-cols-4 gap-x-(--col-gap) border-b border-line", styles.rail)}>
-        {TOUR.steps.map((s, i) => {
-          const active = i === step;
-          return (
-            <button
-              key={s.name}
-              ref={(el) => {
-                tabs.current[i] = el;
-              }}
-              id={`tour-tab-${i}`}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              aria-controls="tour-panel"
-              aria-labelledby={`tour-tab-${i}-name`}
-              aria-describedby={`tour-tab-${i}-sentence`}
-              tabIndex={active ? 0 : -1}
-              onClick={() => go(STEPS[i])}
-              onKeyDown={onKey}
-              onPointerEnter={i === 2 ? studioIntent : undefined}
-              onFocus={i === 2 ? studioIntent : undefined}
-              className={clsx(styles.tab, "group relative flex cursor-pointer flex-col items-start gap-1.5 rounded-control pb-5 text-left")}
-            >
-              <span id={`tour-tab-${i}-name`} className={clsx("text-body font-medium transition-colors", active ? "text-text" : "text-muted group-hover:text-text")}>
-                {s.name}
-              </span>
-              <span id={`tour-tab-${i}-sentence`} className={clsx("min-h-[2.9em] text-ui text-pretty transition-colors", active ? "text-text-2" : "text-muted group-hover:text-text-2")}>
-                {sentences[i]}
-              </span>
-            </button>
-          );
-        })}
-        <span aria-hidden="true" className={styles.railBar} style={{ "--i": step } as CSSProperties} />
+    <div ref={root} className="flex flex-col gap-5">
+      {/* The steps: four words on column 1, the active step's one sentence on column 8 (the page's two text lines). */}
+      <div ref={rail} className="grid-12 items-baseline gap-y-3">
+        <div ref={tablist} role="tablist" aria-label={TOUR.tablist} className={clsx("relative col-span-12 flex gap-x-7 lg:col-span-7", styles.steps)}>
+          {TOUR.steps.map((s, i) => {
+            const active = i === step;
+            return (
+              <button
+                key={s.name}
+                ref={(el) => {
+                  tabs.current[i] = el;
+                }}
+                id={`tour-tab-${i}`}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-controls="tour-panel"
+                aria-describedby={`tour-tab-${i}-sentence`}
+                tabIndex={active ? 0 : -1}
+                onClick={() => go(STEPS[i])}
+                onKeyDown={onKey}
+                onPointerEnter={i === 2 ? studioIntent : undefined}
+                onFocus={i === 2 ? studioIntent : undefined}
+                className={clsx(
+                  styles.step,
+                  "min-h-11 cursor-pointer rounded-control text-body font-medium whitespace-nowrap transition-colors duration-160 ease-snap",
+                  active ? "text-text" : "text-muted hover:text-text-2",
+                )}
+              >
+                <span data-label>{s.name}</span>
+              </button>
+            );
+          })}
+          <span ref={stepBar} aria-hidden="true" className={styles.stepBar} />
+        </div>
+        <div className={clsx(styles.sentences, "col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8")}>
+          {sentences.map((t, i) => (
+            <p key={TOUR.steps[i].name} id={`tour-tab-${i}-sentence`} data-on={i === step || undefined}>
+              {t}
+            </p>
+          ))}
+        </div>
       </div>
 
       <ConsoleFrame
         ref={frame}
         id="tour-panel"
         role="tabpanel"
-        aria-labelledby={`tour-tab-${step}-name`}
+        aria-labelledby={`tour-tab-${step}`}
         tabIndex={0}
         page={PAGE[state.page]}
         description={descriptions[step]}
-        credit={
+        notice={
           filtered ? (
-            <span className="flex items-baseline gap-3">
+            <span key="filter" className="flex items-baseline gap-3">
               <span className="text-muted">
                 Showing <span className="text-text">{studioFilter.label}</span>
               </span>
@@ -546,9 +647,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
                 Clear
               </button>
             </span>
-          ) : (
-            TOUR.credit[step]
-          )
+          ) : null
         }
         onPage={onPage}
         className={styles.stage}
@@ -556,21 +655,21 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
         data-studio-pick={studioAtPick || undefined}
       >
         {/* 01 and 02: one grid, never re-mounted and never resized; the steps change it through its API. */}
-        <div data-on={state.body === "claims" || undefined} className={clsx(styles.body, "flex flex-col px-5 pb-3")}>
-          <div inert className="mt-2">
+        <div data-on={state.body === "claims" || undefined} className={clsx(styles.body, "flex flex-col")}>
+          <div inert className="px-5">
             <TourLedger rows={queue} unitsSold={unitsSold} />
           </div>
           <div className="relative flex min-h-0 flex-1 flex-col">
-            <div className="mt-1 border-b border-line">
+            <div className="border-b border-line px-5">
               <StatusFilter counts={counts} value={status} onChange={onStatus} />
             </div>
-            <div ref={gridGate} {...gate("grid")} data-quiet={!tips || undefined} className={clsx(styles.gate, "min-h-0 flex-1 pt-3")}>
+            <div ref={gridGate} {...gate("grid")} data-quiet={!tips || undefined} data-fresh={fresh ?? undefined} className={clsx(styles.gate, "min-h-0 flex-1")}>
               <ClaimsGridPreviewLazy
                 bare
                 from={1024}
                 rows={rows}
                 height={560}
-                openId={open}
+                openId={picked}
                 filter={status === "all" ? null : status}
                 onRowClick={onRowClick}
                 sortEpoch={sortEpoch}
@@ -578,16 +677,26 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
                 live={live}
                 onSwap={() => setSwapped(true)}
                 interactive={step <= 1}
-                // Isolated: nothing inside AG Grid (its pinned columns, header layers) can paint over the evidence sheet.
+                // Isolated: nothing inside AG Grid (its pinned columns, header layers) can paint over the evidence panel.
                 className="isolate h-full min-w-0"
-                fallback={<GridStill rows={still} openId={open} filter={status === "all" ? null : status} />}
+                fallback={<GridStill rows={still} openId={picked} filter={status === "all" ? null : status} flush />}
               />
             </div>
-            {/* The evidence lies over the grid's right-hand columns (the money ones it repeats), from the tabs to the
-                frame's foot, so the grid keeps its width and its columns as the claim opens. */}
+            {/* The evidence docks as the console's panel: flush to the window's right edge from the status row to the
+                foot, over the grid's right-hand columns (the money ones it repeats), so the grid keeps its width and its
+                columns as the claim opens. */}
             {dock && evidence && (
-              <div inert data-out={dockOut || undefined} className={clsx(styles.dock, "absolute top-0 right-0 bottom-0 z-10 w-[380px] max-xl:top-[49px]")}>
-                <EvidenceStill claim={evidence} note={<PayoutsNote amount={evidence.amount} id={evidence.id} />} />
+              <div
+                inert
+                data-out={dockOut || undefined}
+                style={dockW ? { width: dockW } : undefined}
+                className={clsx(styles.dock, "absolute top-0 right-0 bottom-0 z-10 w-[400px] max-xl:top-[45px] max-xl:w-[380px]")}
+              >
+                <EvidenceStill
+                  claim={evidence}
+                  note={<PayoutsNote amount={evidence.amount} id={evidence.id} />}
+                  className="w-full! rounded-none! bg-transparent! shadow-none!"
+                />
               </div>
             )}
           </div>
@@ -615,7 +724,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
           )}
         </div>
 
-        {/* The draft reads like a document: its pages scroll inside the frame. */}
+        {/* The draft reads like a document in a viewer: its pages scroll inside the frame. */}
         <div
           ref={reportEl}
           {...gate("report")}

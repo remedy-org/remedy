@@ -1,0 +1,605 @@
+/*
+ * The For companies console tour (ConsoleTour.tsx, ConsoleFrame.tsx, ConsoleStory.tsx). The window is the console
+ * itself: one app bar, then each page flush in it, everything on the window's 20px inset and separated by hairlines,
+ * never a box inside the window. Inside a product frame the product's own motions (row insert, cell flash, the panel
+ * docking) may run once on entering view or on a visitor's pick; they are not a fifth homepage move. Each runs only
+ * when motion is allowed, and the resting state is always the final one.
+ */
+
+/* The steps: four words on column 1, a 2px ink bar under the active word only (measured: --x, --w), no rule under the
+   row, so it never reads as the status tabs inside the window. Docked under the 64px nav when a step takes focus. */
+.steps {
+  isolation: isolate;
+  scroll-margin-top: 16px;
+}
+
+.stepBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: var(--w, 0);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--text);
+  transform: translateX(var(--x, 0));
+}
+
+/* The keyboard's ring stands clear of the word. */
+.step:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The active step's sentence, on column 8: all four stacked in one cell (the tallest holds the height, so nothing
+   below moves), the active one shown. The others stay in the tree as the tabs' descriptions. */
+.sentences {
+  display: grid;
+}
+
+.sentences > * {
+  grid-area: 1 / 1;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.sentences > [data-on] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/*
+ * The window fits a laptop screen with its steps: at most 680px, and never taller than the viewport less the nav (64),
+ * the steps row (measured by ConsoleTour.tsx, --rail-h), the 20px between them and 16px of air above and below, so a
+ * visitor who picks a step sees the whole step change. Never below 520px, where a step stops reading.
+ */
+.stage {
+  --frame-h: min(680px, max(520px, calc(100svh - 64px - var(--rail-h, 56px) - 20px - 32px)));
+  scroll-margin-top: 16px;
+}
+
+/* The frame's bodies, stacked in its fixed slot: the active one shown, the rest hidden (and out of the AT tree). */
+.body {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.body[data-on] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/*
+ * The grid and the report scroll inside the frame only once a visitor has clicked or focused them (ConsoleTour.tsx
+ * gate()): until then they don't scroll, so a wheel passing over the frame moves the page. Their own scrollbars stay
+ * out of the picture.
+ */
+.gate:not([data-engaged]) :global(.ag-grid-viewport),
+.reportBody:not([data-engaged]) {
+  overflow-y: hidden !important;
+}
+
+.gate :global(.ag-grid-viewport) {
+  scrollbar-width: none;
+}
+
+.gate :global(.ag-grid-viewport)::-webkit-scrollbar {
+  display: none;
+}
+
+/* The checks popover stays shut while the evidence is open, while a claim arrives, and until the pointer has moved over
+   the queue (ConsoleTour.tsx tips). */
+.gate[data-quiet] :global(.ag-tooltip-custom) {
+  display: none;
+}
+
+/*
+ * The queue flush in the window, as the console page draws it: no wrapper border or radius, the window's own ground,
+ * the header a quiet label row over a hairline, rows edge to edge, the first and last cells on the window's 20px
+ * inset. GridStill's `flush` draws the same, so the swap changes nothing.
+ */
+.gate :global(.ag-root-wrapper) {
+  --ag-wrapper-border: none;
+  --ag-wrapper-border-radius: 0;
+  --ag-background-color: var(--bg);
+  --ag-chrome-background-color: var(--bg);
+  --ag-odd-row-background-color: var(--bg);
+  --ag-header-background-color: var(--bg);
+  border: 0;
+  border-radius: 0;
+}
+
+.gate :global(.ag-header-cell:first-child),
+.gate :global(.ag-row .ag-cell:first-child) {
+  padding-left: 20px;
+}
+
+.gate :global(.ag-header-cell:last-child),
+.gate :global(.ag-row .ag-cell:last-child) {
+  padding-right: 20px;
+}
+
+/* "Answered in" is wider than its 88px column: right-aligned, it runs on into the empty end of the Checks header
+   rather than ending in an ellipsis. */
+.gate :global(.ag-header-cell[col-id="time"]),
+.gate :global(.ag-header-cell[col-id="time"] .ag-header-cell-label),
+.gate :global(.ag-header-cell[col-id="time"] .ag-header-cell-text) {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* A claim that has just arrived carries a soft tint across its whole row while it is being checked, its changed cells
+   flash in that same tint (never a patchwork of cell flashes), and once its verdict lands the tint lets go over 1.4s:
+   the queue's own "new" mark. RM-0553 is the arriving claim (components/console/preview.ts ARRIVE_ID), as in
+   claims-grid.css. */
+.gate {
+  --fresh-tint: color-mix(in oklch, var(--text) 6%, var(--bg));
+}
+
+.gate[data-fresh] :global(.ag-row[row-id="RM-0553"] .ag-cell) {
+  --ag-value-change-value-highlight-background-color: var(--fresh-tint);
+  background-color: var(--fresh-tint);
+}
+
+.gate[data-fresh="settled"] :global(.ag-row[row-id="RM-0553"] .ag-cell) {
+  background-color: var(--bg);
+  transition: background-color 1400ms var(--ease-out-quart) 500ms;
+}
+
+/* The ledger's figures and the status counts roll to their new value when the arriving claim lands (Roll). */
+.roll {
+  display: inline-grid;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.roll > * {
+  grid-area: 1 / 1;
+}
+
+.rollOut {
+  visibility: hidden;
+}
+
+/* Step 02's evidence: the console's docked panel, flush to the window's right edge from the status row to the foot,
+   a hairline on its left and one shadow toward the grid. Sized, so a short window can trade the photos' captions and
+   some of their height for the model's quoted answer, which the step promises. */
+.dock {
+  container-type: size;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: -24px 0 48px -28px oklch(0 0 0 / 0.55);
+}
+
+:global(html[data-theme="light"]) .dock {
+  box-shadow: -20px 0 40px -28px oklch(0.2 0.01 70 / 0.22);
+}
+
+/* The panel's head lines up with the status row it sits beside: one 44px row over the same hairline. */
+.dock aside > :first-child {
+  min-height: 45px;
+  padding-block: 0;
+}
+
+/* The rule's sentence would say the held check's reason a third time: the check and the model's own words say it. */
+.dock [data-rule] {
+  display: none;
+}
+
+.dock [data-rule] + * {
+  margin-top: 0;
+}
+
+.dock [data-quote-key] {
+  display: none;
+}
+
+@container (max-height: 520px) {
+  .dock figcaption {
+    display: none;
+  }
+
+  .dock figure > :first-child {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+/* The dock at a laptop's window height: the model's answer gives way to its one deciding sentence, whole
+   (EvidenceStill.tsx), so the checks that passed and the payout path stay in view under it. */
+@container (max-height: 470px) {
+  .dock [data-quote-full] {
+    display: none;
+  }
+
+  .dock [data-quote-key] {
+    display: inline;
+  }
+
+  .dock figure > :first-child {
+    aspect-ratio: 2 / 1;
+  }
+}
+
+@container (max-height: 400px) {
+  .dock [data-passed] {
+    display: none;
+  }
+}
+
+@container (max-height: 340px) {
+  .dock figure > :first-child {
+    aspect-ratio: 3 / 1;
+  }
+}
+
+/* Step 02's payout path: Approve, a drawn line, PayPal Payouts, a line, the amount, in one line at every width (a
+   picture of where the money goes, not a control: plain words). Tighter on the narrowest phones. */
+.flowPath {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-ui);
+  white-space: nowrap;
+}
+
+@media (max-width: 383px) {
+  .flowPath {
+    gap: 6px;
+  }
+
+  .flowPath .flowLine {
+    min-width: 12px;
+  }
+
+  .flowPath [data-check] {
+    display: none;
+  }
+}
+
+.flowLine {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 16px;
+  height: 1px;
+  background: var(--faint);
+  transform-origin: left;
+}
+
+.flowLine::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: -3px;
+  width: 7px;
+  height: 7px;
+  border-top: 1px solid var(--faint);
+  border-right: 1px solid var(--faint);
+  rotate: 45deg;
+}
+
+/*
+ * Insights, in AG Studio as on the still: the page reads as the Claims page does. The three figures are a borderless
+ * strip; the panels lie flat on the window's ground in a hairline ring; Studio's own
+ * toolbar is not drawn. The still (InsightsStill `flat`) is laid out on the same geometry.
+ */
+.studio {
+  opacity: 0;
+}
+
+.studio[data-on] {
+  opacity: 1;
+}
+
+.studio :global(.ag-studio-layout-widget-container) {
+  padding: 8px;
+  background: transparent;
+  box-shadow: 0 0 0 1px var(--line) !important;
+}
+
+/* The figures: no ring, their words on the window's 20px inset, as the Claims page's ledger. */
+.studio :global(.ag-studio-layout-content-container > .ag-studio-layout-widget:nth-child(-n + 3) .ag-studio-layout-widget-container) {
+  padding: 0;
+  margin-left: -8px;
+  box-shadow: none !important;
+  border-radius: 0;
+}
+
+.studio :global(.ag-studio-widget-toolbar) {
+  display: none !important;
+}
+
+/* A tile's caption wraps (a 1024px screen's Refused tile) rather than ending in an ellipsis. */
+.studio :global(.ag-studio-layout-widget-caption) {
+  white-space: normal;
+  text-overflow: clip;
+  text-wrap: pretty;
+}
+
+/* Once Studio has drawn over it, the still leaves (after the crossfade), so it is never read twice. */
+.body[data-studio-shown] :global([data-still]) {
+  visibility: hidden;
+  transition: visibility 0s linear 200ms;
+}
+
+/* The report scrolls inside the window like a document in a viewer: the paper runs on past the window's foot, and
+   once scrolled it passes under a hairline at the body's top edge. */
+.reportBody {
+  overflow-y: auto;
+  scrollbar-width: none;
+  outline: none;
+  border-top: 1px solid transparent;
+}
+
+.reportBody[data-scrolled] {
+  border-top-color: var(--line);
+}
+
+.reportBody::-webkit-scrollbar {
+  display: none;
+}
+
+/* The draft is a flat document in the viewer: its paper and a hairline edge, no drop shadow (the receipt and the tag
+   are the site's only objects). In the dark theme the paper keeps its own warm white, a touch dimmer. */
+.draftSheet article,
+.peekClip article {
+  box-shadow: 0 0 0 1px var(--line-2) !important;
+}
+
+:global(html[data-theme="dark"]) .draftSheet,
+:global(html[data-theme="dark"]) .peekClip {
+  --sheet-paper: color-mix(in srgb, var(--paper) 94%, #17130d);
+}
+
+:global(html[data-theme="dark"]) .draftSheet article,
+:global(html[data-theme="dark"]) .peekClip article {
+  background: var(--sheet-paper);
+  box-shadow: none !important;
+}
+
+/* The phone story's report: its head and its units remedied (ReportPeek.tsx measures where they end), the words fading
+   into the paper itself over 64px, until "Read the whole draft" opens it in place. */
+.peekClip {
+  position: relative;
+  height: var(--peek-h, 420px);
+  overflow: hidden;
+  border-radius: var(--radius-card);
+}
+
+.peekClip::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 64px;
+  background: linear-gradient(to bottom, transparent, var(--sheet-paper, var(--paper)));
+  pointer-events: none;
+}
+
+.peekClip article {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.peek:not(:has(details[open])) .peekClip [data-peek-hide] {
+  display: none;
+}
+
+.peek:not(:has(details[open])) .peekClip [data-peek-row] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  gap: 4px 16px;
+}
+
+.peek:not(:has(details[open])) .peekClip [data-peek-row] > * {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  gap: 4px;
+}
+
+.peek:has(details[open]) .peekClip {
+  height: auto;
+  overflow: visible;
+}
+
+.peek:has(details[open]) .peekClip::after {
+  display: none;
+}
+
+.peek summary {
+  list-style: none;
+}
+
+.peek summary::-webkit-details-marker {
+  display: none;
+}
+
+.peekLess,
+.peek:has(details[open]) .peekMore {
+  display: none;
+}
+
+.peek:has(details[open]) .peekLess {
+  display: inline;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The step bar glides and resizes to the next word; the sentence changes with it, the old one out first. */
+  .stepBar {
+    transition:
+      transform 280ms var(--ease-out-quart),
+      width 280ms var(--ease-out-quart);
+  }
+
+  .sentences > * {
+    transition:
+      opacity 120ms var(--ease-snap),
+      visibility 0s linear 120ms;
+  }
+
+  .sentences > [data-on] {
+    animation: rise-in 320ms var(--ease-out-expo) 80ms both;
+    transition: visibility 0s;
+  }
+
+  .chromePage {
+    transition: color var(--dur-ui) var(--ease-snap);
+  }
+
+  /* Step to step, as the Chain of Custody cuts between chapters: the outgoing page leaves in 140ms, the incoming one
+     rises 6px into place over 320ms, 60ms later, so two pages are never half drawn over each other. The window and
+     its app bar never move. */
+  .body {
+    transition:
+      opacity 140ms var(--ease-snap),
+      visibility 0s linear 140ms;
+  }
+
+  .body[data-on] {
+    transition: visibility 0s;
+    animation: rise-in 320ms var(--ease-out-expo) 60ms both;
+  }
+
+  /* The still gives way to Studio once Studio has drawn: a 200ms crossfade, the still in place under it. */
+  .studio {
+    transition: opacity 200ms var(--ease-snap);
+  }
+
+  /* The draft is paper: it never shows half transparent (grey) over the window. It appears whole once the page before
+     it has gone, and rises 12px. */
+  .reportBody[data-on] {
+    animation: sheet-in 420ms var(--ease-out-expo) 140ms both;
+  }
+
+  /* A figure that changes rolls: the old value up and out, the new one up from below, 360ms. */
+  .roll > [data-was] {
+    visibility: visible;
+    animation: roll-out 360ms var(--ease-out-quart) both;
+  }
+
+  .roll > [data-now] {
+    animation: roll-in 360ms var(--ease-out-quart) both;
+  }
+
+  /* The evidence docks (16px in and fade, 280ms), a beat after its row is selected, and fades out when the step is
+     left. Then the payout path draws in, part by part: the way the money goes. */
+  .dock {
+    animation: dock-in 280ms var(--ease-out-expo) both;
+  }
+
+  .dock[data-out] {
+    animation: dock-out var(--dur-ui) var(--ease-snap) both;
+  }
+
+  .dock .flow [data-flow] {
+    animation: flow-in 240ms var(--ease-out-quart) calc(360ms + var(--at, 0) * 140ms) both;
+  }
+
+  .dock .flow [data-flow="line"] {
+    animation-name: line-draw;
+    animation-duration: 360ms;
+  }
+
+  /* Where claims stop: the funnel's bars grow (Paid last), then the refusal bars; the analyst's answer focuses in. */
+  .stage[data-step="2"] [data-still] [data-bar],
+  .stage[data-step="2"][data-studio-pick] [data-studio] [data-bar] {
+    transform-origin: left;
+    animation: bar-grow 600ms var(--ease-out-quart) both;
+  }
+
+  .stage[data-step="2"] [data-bar="funnel"] {
+    animation-delay: calc(140ms + var(--i, 0) * 60ms);
+  }
+
+  .stage[data-step="2"] [data-bar="refusal"] {
+    animation-delay: calc(440ms + var(--i, 0) * 80ms);
+  }
+
+  .stage[data-step="2"] [data-still] [data-bar="day"] {
+    transform-origin: bottom;
+    animation: column-grow 600ms var(--ease-out-quart) both;
+    animation-delay: calc(640ms + var(--i, 0) * 80ms);
+  }
+
+  .stage[data-step="2"] .answerLine {
+    animation: focus-in var(--dur-reveal) var(--ease-out-expo) both;
+    animation-delay: calc(300ms + var(--line, 0) * 80ms);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+@keyframes sheet-in {
+  0% {
+    opacity: 0;
+    translate: 0 12px;
+  }
+
+  1% {
+    opacity: 1;
+  }
+}
+
+@keyframes roll-out {
+  to {
+    opacity: 0;
+    translate: 0 -70%;
+  }
+}
+
+@keyframes roll-in {
+  from {
+    opacity: 0;
+    translate: 0 70%;
+  }
+}
+
+@keyframes dock-in {
+  from {
+    opacity: 0;
+    translate: 16px 0;
+  }
+}
+
+@keyframes dock-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes flow-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes line-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes column-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes focus-in {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    translate: 0 12px;
+  }
+}
