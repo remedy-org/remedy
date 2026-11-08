@@ -24,10 +24,10 @@
   transform: translateX(var(--x, 0));
 }
 
-/* The keyboard's ring stands clear of the word. */
+/* The keyboard's ring stands clear of the word (the step's own 8px of side padding). */
 .step:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline-offset: 0;
 }
 
 /* The active step's sentence, on column 8: all four stacked in one cell (the tallest holds the height, so nothing
@@ -142,9 +142,10 @@
   background-color: var(--fresh-tint);
 }
 
+/* Settled, every cell lets go together: over AG Grid's own flash and the fade it sets on the cells it changed. */
 .gate[data-fresh="settled"] :global(.ag-row[row-id="RM-0553"] .ag-cell) {
-  background-color: var(--bg);
-  transition: background-color 1400ms var(--ease-out-quart) 500ms;
+  background-color: var(--bg) !important;
+  transition: background-color 1400ms var(--ease-out-quart) 400ms !important;
 }
 
 /* The ledger's figures and the status counts roll to their new value when the arriving claim lands (Roll). */

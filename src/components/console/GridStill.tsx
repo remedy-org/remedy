@@ -33,7 +33,7 @@ const COLUMNS: Column[] = [
 
 // Phones: the claim and its verdict, the two columns a narrow grid keeps (the verdict's reason under its pill).
 const PHONE: Column[] = [
-  { id: "createdAt", header: "Claim", cell: ClaimCell, className: "w-[172px]" },
+  { id: "createdAt", header: "Claim", cell: ClaimCell, className: "w-[144px]" },
   { id: "decision", header: "Verdict", cell: VerdictCell, className: "min-w-0 flex-1" },
 ];
 

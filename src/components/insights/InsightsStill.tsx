@@ -75,12 +75,18 @@ export function InsightsStill({
     return (
       <div className="overflow-hidden rounded-frame bg-bg shadow-float">
         <div className="flex flex-col gap-3 p-3">
-          {/* Each figure on one baseline: its label over it (two lines held), its caption under it. */}
-          <dl className={clsx("grid grid-cols-3 divide-x divide-line", !flat && "rounded-card bg-surface shadow-card")}>
+          {/* Each figure on one baseline: its label over it (two lines held), its caption under it. Flat, on the
+              narrowest phones (under 380px), the three stack, a hairline between them, rather than wrap a word a line. */}
+          <dl
+            className={clsx(
+              "grid grid-cols-3 divide-x divide-line",
+              flat ? "max-[379px]:grid-cols-1 max-[379px]:divide-x-0 max-[379px]:divide-y" : "rounded-card bg-surface shadow-card",
+            )}
+          >
             {data.kpis.map((k) => (
-              <div key={k.id} className={clsx("flex min-w-0 flex-col gap-1 py-3", flat ? "px-3 first:pl-1" : "px-3")}>
-                <dt className="min-h-[2lh] text-micro leading-tight text-muted">{k.phone ?? k.title}</dt>
-                <dd className="text-[22px] leading-7">{k.value}</dd>
+              <div key={k.id} className={clsx("flex min-w-0 flex-col gap-1 py-3", flat ? "px-3 first:pl-1 max-[379px]:px-1" : "px-3")}>
+                <dt className={clsx("min-h-[2lh] text-micro leading-tight text-muted", flat && "max-[379px]:min-h-0")}>{k.phone ?? k.title}</dt>
+                <dd className="text-[22px] leading-7 whitespace-nowrap">{k.value}</dd>
                 <dd className="text-micro leading-tight text-pretty text-muted">{k.caption}</dd>
               </div>
             ))}

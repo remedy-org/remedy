@@ -606,7 +606,8 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
                 onFocus={i === 2 ? studioIntent : undefined}
                 className={clsx(
                   styles.step,
-                  "min-h-11 cursor-pointer rounded-control text-body font-medium whitespace-nowrap transition-colors duration-160 ease-snap",
+                  // 8px of side padding, cancelled by the margin, so the focus ring has room around the word.
+                  "-mx-2 min-h-11 cursor-pointer rounded-control px-2 text-body font-medium whitespace-nowrap transition-colors duration-160 ease-snap",
                   active ? "text-text" : "text-muted hover:text-text-2",
                 )}
               >
