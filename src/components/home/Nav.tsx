@@ -26,7 +26,8 @@ const SPIED = ["[data-spy=how]", "#problem", "#checks", "#proof", "#companies"];
 const key = (el: Element) => el.getAttribute("data-spy") ?? el.id;
 
 /**
- * "You are here": the section crossing a band from under the header to 35% down the viewport, the lowest one if two
+ * "You are here": the section crossing a band from under the header to half way down the viewport (so Fraud checks
+ * takes the chip as it covers half the Problem sheet), the lowest one if two
  * do. How it works counts only once the #how marker has passed under the header, so the hero at rest shows no chip.
  * A click takes the chip at once and holds it through the jump, so it never flashes through the sections in between.
  */
@@ -57,7 +58,7 @@ function useNavSpy() {
         }
         apply();
       },
-      { rootMargin: `-${HEADER}px 0px -65% 0px` },
+      { rootMargin: `-${HEADER}px 0px -50% 0px` },
     );
     els.current.forEach((el) => io.observe(el));
     // Inside the runway the observer has nothing new to say; the scroll decides when #how has passed.

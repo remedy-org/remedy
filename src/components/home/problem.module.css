@@ -439,11 +439,12 @@
   margin-top: 8px;
 }
 
-/* Room after "Only" for the ring's left swing, so it never crosses the word. */
+/* "Only" and the figure read as one phrase: a word space and a hair more, just room for the ring's left swing (below)
+   to pass clear of the word. */
 .figure {
   position: relative;
   display: inline-block;
-  margin-left: 0.32em;
+  margin-left: 0.08em;
   white-space: nowrap;
 }
 
@@ -456,11 +457,11 @@
 /* A loose hand-drawn oval, a little more than one turn, clear of the glyphs. */
 .ring {
   position: absolute;
-  left: -0.4em;
+  left: -0.28em;
   right: -0.4em;
   top: -0.3em;
   bottom: -0.3em;
-  width: calc(100% + 0.8em);
+  width: calc(100% + 0.68em);
   height: calc(100% + 0.6em);
   overflow: visible;
   pointer-events: none;
@@ -1076,6 +1077,12 @@
     width: min(1440px, 100%, (100svh - 64px - 196px) * 5 / 3);
   }
 
+  /* Covered all but a strip, the section's name and the sheet leave with it (Problem.tsx --away). */
+  .stage > .eyebrow,
+  .stage > .column {
+    opacity: calc(1 - var(--away, 0));
+  }
+
   .section[data-armed] .column {
     width: min(1440px, 100%, (100svh - 64px - 104px) * 5 / 3);
   }
@@ -1145,6 +1152,8 @@
       0 -1px 0 oklch(1 0 0 / 0.09),
       0 -2px 6px oklch(0 0 0 / 0.5),
       0 -28px 56px -6px oklch(0 0 0 / 0.75);
+    /* The shadow falls on the sheet above only: below its foot it drew a seam across Results (light theme). */
+    clip-path: inset(-120px 0 0 0);
   }
 
   :global([data-theme="light"]) .section + section {

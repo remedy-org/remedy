@@ -23,7 +23,7 @@ export interface SectionProps {
   bodyClassName?: string;
   /** The section's padding, replacing 72px (128px on laptops) above and below. */
   padClassName?: string;
-  /** How the heading enters: focus-in (blur to sharp, 900ms), or a plain rise (fade and 8px up, 360ms, no blur). */
+  /** How the heading enters: focus-in or a plain rise, both a fade and 8px up over 360ms (never a blur). */
   reveal?: "focus" | "rise";
 }
 

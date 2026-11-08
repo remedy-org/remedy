@@ -37,10 +37,9 @@ export function useEnter(
 }
 
 /**
- * Focus-in (DESIGN.md, move 1): every child with the `line` class from home.module.css goes from blurred, 12px down
- * and transparent to sharp, 700ms, 60ms apart (`--line` sets each one's place). Text only. It plays as soon as the
- * block's top is 8% above the viewport's foot, so a heading is sharp before it reaches reading height: at 35% in view,
- * a tall heading was still blurred at 60% down the screen while the shorter content under it was already sharp.
+ * Focus-in (DESIGN.md, move 1): every child with the `line` class from home.module.css fades in and rises 8px, 360ms,
+ * 60ms apart (`--line` sets each one's place), never blurred. Text only. It plays as soon as the block's top is 8% above
+ * the viewport's foot, so a heading has landed before it reaches reading height.
  */
 export function Reveal({ children, className, as: Tag = "div" }: { children: ReactNode; className?: string; as?: "div" | "header" }) {
   const ref = useRef<HTMLElement>(null);

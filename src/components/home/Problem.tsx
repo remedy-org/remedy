@@ -311,6 +311,10 @@ export function Problem() {
         set("--dim", outQuart(seg(t, T.dim)));
         set("--dimx", 0.35 * outQuart(seg(t, T.sink)));
         set("--sc", 1 - 0.025 * outQuart(seg(t, T.sink)));
+        // As Fraud checks covers the last of the sheet, the section's name and the sheet's top strip go with it (its top
+        // edge from 300px down to 140px), so no "Why recalls stall" is left over Fraud checks under the nav.
+        const coverTop = (1 - seg(t, T.cover)) * innerHeight;
+        set("--away", Math.min(1, Math.max(0, (300 - coverTop) / 160)));
         set("--src", seg(t, T.sources));
         // The snap: both pins kick 2px away from the cut, once.
         const sn = seg(t, T.snip);
