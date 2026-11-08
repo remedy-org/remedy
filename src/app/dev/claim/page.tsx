@@ -187,7 +187,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     render: () => (
       <FlowShell context={recallContext(fx.recall)}>
         <ClaimFrame>
-          <ExpiredCard code="M4T" againHref="#" />
+          <ExpiredCard code="M4T" written="X-VESOLJE" againHref="#" />
         </ClaimFrame>
       </FlowShell>
     ),

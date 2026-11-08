@@ -8,7 +8,7 @@ export interface CodeTagProps {
   written?: string | null;
   /** The dashed foot, e.g. "Write it big, in marker." */
   foot?: ReactNode;
-  /** The code ran out: the tag fades and the code is struck through. The headline says why. */
+  /** The code ran out: the ink fades and the code is struck through. The headline says why. */
   expired?: boolean;
   className?: string;
 }
@@ -22,13 +22,17 @@ export function CodeTag({ code, written, foot, expired, className }: CodeTagProp
   const spoken = `${expired ? "Expired code" : "Your code"}: ${code.split("").join(" ")}`;
   return (
     <figure className={clsx("relative w-full max-w-[22.5rem]", className)} aria-label={written ? `The tag reads ${written}, then ${spoken}` : spoken}>
-      <Paper variant="tag" hole padding="lg" className={clsx(expired && "opacity-60")}>
+      {/* An expired tag stays paper: only its ink fades and the code is struck through, as a used tag would be. */}
+      <Paper variant="tag" hole padding="lg">
         {written && (
-          <p aria-hidden="true" className="mt-4 text-center font-mono text-[1.75rem] leading-none font-medium tracking-[0.08em] whitespace-nowrap text-ink">
+          <p aria-hidden="true" className={clsx("mt-4 text-center font-mono text-[1.75rem] leading-none font-medium tracking-[0.08em] whitespace-nowrap", expired ? "text-ink-muted" : "text-ink")}>
             {written}
           </p>
         )}
-        <p aria-hidden="true" className={clsx("mt-4 text-center font-mono text-[4rem] leading-none font-medium tracking-[0.14em] text-ink", expired && "line-through decoration-2")}>
+        <p
+          aria-hidden="true"
+          className={clsx("mt-4 text-center font-mono text-[4rem] leading-none font-medium tracking-[0.14em]", expired ? "text-ink-muted line-through decoration-ink decoration-2" : "text-ink")}
+        >
           {code}
         </p>
         {foot && <p className="mt-6 border-t border-dashed border-paper-line pt-3 text-ui text-ink-muted">{foot}</p>}

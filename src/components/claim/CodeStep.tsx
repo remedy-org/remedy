@@ -1,11 +1,12 @@
 import clsx from "clsx";
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { AlertIcon, Button, ClockIcon, NoBreakHyphens } from "@/components/ui";
+import { Button, ClockIcon, NoBreakHyphens } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
 import { CodeTag } from "./CodeTag";
 import { STEP_GRID, StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
 import { MobileCta } from "./MobileCta";
+import { Notice } from "./Notice";
 import { cutInHalf, handWrittenLabel, ownerLabel, photosTakenKey, taggedThing } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
 import { mmss, useCountdown } from "./useCountdown";
@@ -109,10 +110,9 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
             </p>
           )}
           {lost && (
-            <p role="status" className="flex gap-2.5 rounded-control bg-surface-2 px-3 py-2.5 text-ui text-text shadow-[inset_0_0_0_1px_var(--line-2)]">
-              <AlertIcon className="mt-0.5 shrink-0 text-muted" />
-              <span>Your camera was closed. Photos are only kept until you send them: open the camera to take them again.</span>
-            </p>
+            <Notice role="status" tone="neutral" title="Your camera was closed">
+              Photos are only kept until you send them. Open the camera to take them again.
+            </Notice>
           )}
           {/* Said once: a touch phone's pinned bar carries it, so there it is only read out. */}
           {low && (

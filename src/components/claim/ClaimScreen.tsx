@@ -17,7 +17,7 @@ import { ExpiredCard } from "./ExpiredCard";
 import { FlowShell, recallContext } from "./FlowShell";
 import { ClaimFrame, STEP_GRID } from "./Exhibit";
 import { RecallBrief } from "./RecallBrief";
-import { checkRows, companyName, maskEmail, maskPayer, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
+import { checkRows, companyName, handWrittenLabel, maskEmail, maskPayer, noModelAnswer, productNoun, RECEIPT_LIVE_MS, toView } from "./model";
 import { markAsked } from "./payout-live";
 import { Result, type DemoRound, type Duplicate, type PayoutLive } from "./Result";
 
@@ -146,7 +146,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
     return (
       <FlowShell context={context}>
         <ClaimFrame>
-          <ExpiredCard code={claim.code} againHref={againHref} demo={demo} />
+          <ExpiredCard code={claim.code} written={handWrittenLabel(recall.spec)} againHref={againHref} demo={demo} />
         </ClaimFrame>
       </FlowShell>
     );
