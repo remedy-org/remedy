@@ -200,7 +200,7 @@ export function Nav() {
           </div>
           {/* The shared nav link: the same chip on hover and focus, pulled out by its padding so the text stays put. */}
           <Link href="/signin" className="nav-link -mx-2.5 hidden sm:inline-flex">
-            Company sign in
+            Sign in
           </Link>
           {/* Hidden, not removed, so the bar never shifts; hidden also takes it out of the Tab order. Server-rendered
               hidden below lg until the observer says no try button is in view. */}
