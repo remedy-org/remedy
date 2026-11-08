@@ -1,4 +1,4 @@
-import { AlertIcon, ExhibitLabel, Money, Paper } from "@/components/ui";
+import { AlertIcon } from "@/components/ui";
 import type { Recall } from "@/lib/types";
 import { companyName, day, recallReason } from "./model";
 
@@ -18,10 +18,10 @@ function Hazard({ text }: { text: string }) {
 }
 
 /**
- * What was recalled and why: on a laptop the left column (notice line, product, hazard banner, the CPSC photo on a paper
- * plate, facts); on a phone one 64px row with the refund, then the hazard banner, so the action stays above the fold.
+ * What was recalled and why: on a laptop the left column (the CPSC number, the product, the hazard, CPSC's photo,
+ * facts); on a phone one 64px row and the hazard, so the action stays above the fold. The price is the card's.
  */
-export function RecallBrief({ recall, sandbox, demo }: { recall: Recall; sandbox?: boolean; demo?: boolean }) {
+export function RecallBrief({ recall }: { recall: Recall }) {
   const hazard = hazardLine(recall);
   const image = recall.images[0];
   const company = companyName(recall);
@@ -33,46 +33,39 @@ export function RecallBrief({ recall, sandbox, demo }: { recall: Recall; sandbox
       {/* Phones: one row. */}
       <div className="flex h-16 items-center gap-3 sm:hidden">
         {image && (
-          <Paper variant="sheet" padding="none" tilt={-1.5} className="w-24 shrink-0">
+          <span className="flex h-16 w-20 shrink-0 items-center justify-center overflow-hidden rounded-control bg-paper ring-1 ring-line">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.url} alt={image.caption || `The recalled ${recall.product}`} className="block h-14 w-full rounded-control object-contain mix-blend-multiply" />
-          </Paper>
+            <img src={image.url} alt={image.caption || `The recalled ${recall.product}`} className="block h-14 w-full object-contain mix-blend-multiply" />
+          </span>
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="micro truncate text-faint">CPSC {recall.id}</span>
+          <span className="truncate font-mono text-micro text-faint">CPSC {recall.id}</span>
           <p aria-hidden="true" className="line-clamp-2 text-ui leading-tight font-medium text-text">
             {recall.product}
           </p>
         </div>
-        <span className="flex shrink-0 flex-col items-end gap-0.5">
-          <Money value={Number(recall.refund.value)} currency={recall.refund.currency} size="inline" className="text-body font-medium text-text" />
-          {sandbox && <span className="micro text-faint">Sandbox</span>}
-        </span>
       </div>
 
       {/* Tablets and laptops. */}
-      <ExhibitLabel leader="none" as="p" className="max-sm:hidden">
-        CPSC {recall.id} · Recalled {day(recall.recallDate)}
-      </ExhibitLabel>
-      <p aria-hidden="true" className="max-w-[20ch] text-title font-medium text-balance max-sm:hidden">
-        {recall.product}
-      </p>
+      <div className="flex flex-col gap-3 max-sm:hidden">
+        <p className="font-mono text-micro text-faint">
+          CPSC {recall.id} · Recalled {day(recall.recallDate)}
+        </p>
+        <p aria-hidden="true" className="max-w-[20ch] text-title font-semibold text-balance text-text">
+          {recall.product}
+        </p>
+      </div>
       {hazard && <Hazard text={hazard} />}
 
       {image && (
-        <figure className="flex flex-col gap-3 pt-2 max-sm:hidden">
-          <Paper variant="sheet" padding="sm" tilt={-1.5} className="self-start">
-            {/* CPSC's own photo, hot-linked from cpsc.gov so it stays the official one. Multiplied into the paper, so its
-                white studio background never reads as a slab brighter than the paper around it. */}
+        <figure className="flex flex-col gap-2 max-sm:hidden">
+          {/* CPSC's own photo, hot-linked from cpsc.gov so it stays the official one. Multiplied into the plate, so its
+              white studio background never reads as a slab brighter than the plate around it. */}
+          <div className="self-start rounded-control bg-paper p-4 ring-1 ring-line">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.url} alt={image.caption || `The recalled ${recall.product}`} className="block h-auto max-h-40 w-auto max-w-full object-contain mix-blend-multiply lg:max-h-80" />
-          </Paper>
-          <figcaption className="flex flex-col gap-1.5 pl-1">
-            <ExhibitLabel leaderLength={24}>Exhibit · recalled product</ExhibitLabel>
-            {image.caption && <span className="max-w-read text-ui text-faint">{image.caption}</span>}
-            {/* The samples' AI-made pillow is a plain stand-in, not these covers: say so before the photos look like another recall. */}
-            {demo && <span className="max-w-read text-ui text-muted">The sample photos show an AI-made stand-in of this pillow; these are the real recalled covers.</span>}
-          </figcaption>
+            <img src={image.url} alt={image.caption || `The recalled ${recall.product}`} className="block h-auto max-h-40 w-auto max-w-full object-contain mix-blend-multiply lg:max-h-72" />
+          </div>
+          {image.caption && <figcaption className="max-w-read text-ui text-faint">{image.caption}</figcaption>}
         </figure>
       )}
 
