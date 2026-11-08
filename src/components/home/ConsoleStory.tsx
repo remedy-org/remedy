@@ -3,6 +3,7 @@ import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import type { ClaimRow } from "@/app/console/_lib/view";
 import { EvidenceStill } from "@/components/console/EvidenceStill";
 import { GridStill } from "@/components/console/GridStill";
+import { Wordmark } from "@/components/ui";
 import { PayoutsNote } from "./PayoutsNote";
 import { ReportPeek } from "./ReportPeek";
 import { storyEvidence, TOUR } from "./tour-copy";
@@ -32,18 +33,18 @@ export function ConsoleStory({
   report: ReactNode;
 }) {
   const stills: ReactNode[] = [
+    // The console window, as the laptop tour draws it: its app bar, then the queue flush under it.
     <div key="claims" className="overflow-hidden rounded-frame bg-bg shadow-float">
-      <p className="flex items-baseline justify-between gap-3 px-4 py-3">
-        <span className="min-w-0 text-ui text-pretty">
-          <span className="font-medium">{TOUR.recall.product}</span> <span className="whitespace-nowrap text-muted">{TOUR.recall.id}</span>
+      <p className="flex h-12 items-center justify-between gap-3 border-b border-line px-4">
+        <span aria-hidden="true">
+          <Wordmark size="sm" />
+        </span>
+        <span className="flex min-w-0 items-baseline gap-2 text-ui whitespace-nowrap">
+          <span className="truncate text-text-2 max-sm:hidden">{TOUR.recall.product}</span>
+          <span className="font-mono text-muted">{TOUR.recall.id}</span>
         </span>
       </p>
-      <div className="px-3 pb-3">
-        <GridStill rows={rows.slice(0, SHOWN)} openId={evidence?.id} phone className="max-md:[&>:nth-child(5)]:hidden max-md:[&>:nth-child(7)]:hidden" />
-      </div>
-      <p className="border-t border-line px-4 py-2.5 text-micro text-muted">
-        {TOUR.credit[0]} · {rows.length} claims
-      </p>
+      <GridStill rows={rows.slice(0, SHOWN)} openId={evidence?.id} phone flush className="max-md:[&>:nth-child(5)]:hidden max-md:[&>:nth-child(7)]:hidden" />
     </div>,
     evidence ? <EvidenceStill key="evidence" claim={evidence} note={<PayoutsNote amount={evidence.amount} id={evidence.id} />} fluid /> : null,
     <div key="insights">{insights}</div>,

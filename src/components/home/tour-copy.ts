@@ -7,15 +7,14 @@ export const TOUR = {
   muted: "Every claim, its evidence and its PayPal refund.",
   tablist: "A tour of the Remedy console",
   steps: [
-    { name: "Claims queue", sentence: "Every claim lands decided in one AG Grid queue: paid, held for a person, or refused." },
-    { name: "Evidence", sentence: "See a held claim’s photos and the model’s words. Approve, and PayPal Payouts refunds it." },
-    { name: "Insights", sentence: "AG Studio shows where claims stop, why each was refused, and what PayPal paid each day." },
-    { name: "CPSC report", sentence: "The monthly CPSC progress report drafts itself from the claims. Review it, then file." },
+    { name: "Claims queue", sentence: "Every claim lands in one AG Grid queue, already decided: paid, held for a person, or refused." },
+    { name: "Evidence", sentence: "A held claim opens to its photos and the model’s own words. Approve, and PayPal Payouts sends the refund." },
+    { name: "Insights", sentence: "AG Studio shows where claims stop and why, and what PayPal paid out each day." },
+    { name: "CPSC report", sentence: "The monthly CPSC progress report drafts itself from the same claims. Review it, then file." },
   ],
-  chrome: { app: "Remedy", pages: ["Claims", "Insights", "Report"] as const, company: "Kikea Store" },
-  recall: { product: "Kikea X-VESOLJE nursing pillows", id: "CPSC 27-071" },
-  /** The frame's quiet credit, per step: the SDK that step is built on (none on the report, which is Remedy's own). */
-  credit: ["Built on AG Grid", "Built on AG Grid", "Built on AG Studio", null] as const,
+  /** The console window's app bar: its pages, and the recall it shows (the recall switcher's place). */
+  chrome: { pages: ["Claims", "Insights", "Report"] as const },
+  recall: { product: "X-VESOLJE nursing pillows", id: "CPSC 27-071" },
   /** Step 03's sentence goes on to the analyst only when a recorded answer is there to show (AnalystRail.tsx). */
   analystSentence: " Then ask the recall analyst why.",
   cta: {
@@ -23,7 +22,7 @@ export const TOUR = {
     button: "Log in with PayPal",
   },
   /** Step 02's payout path under the evidence (PayoutsNote.tsx); the sentence below says it in full for screen readers. */
-  payouts: { approve: "Approve", via: "PayPal Payouts", reference: "Payout reference" },
+  payouts: { approve: "Approve", via: "PayPal Payouts" },
   analyst: { title: "Recall analyst", limit: "Can’t approve or pay", recorded: "Recorded answer" },
 } as const;
 

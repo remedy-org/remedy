@@ -56,7 +56,6 @@ describe("tour copy", () => {
   it("names the sponsor SDKs where they do the work: AG Grid on the queue, AG Studio on Insights", () => {
     expect(TOUR.steps[0].sentence).toMatch(/AG Grid/);
     expect(TOUR.steps[2].sentence).toMatch(/AG Studio/);
-    expect(TOUR.credit).toEqual(["Built on AG Grid", "Built on AG Grid", "Built on AG Studio", null]);
   });
 
   it("names a barcode in words, never by colour alone", () => {

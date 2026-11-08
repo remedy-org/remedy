@@ -33,7 +33,7 @@ const COLUMNS: Column[] = [
 
 // Phones: the claim and its verdict, the two columns a narrow grid keeps (the verdict's reason under its pill).
 const PHONE: Column[] = [
-  { id: "createdAt", header: "Claim", cell: ClaimCell, className: "w-[172px]" },
+  { id: "createdAt", header: "Claim", cell: ClaimCell, className: "w-[144px]" },
   { id: "decision", header: "Verdict", cell: VerdictCell, className: "min-w-0 flex-1" },
 ];
 
@@ -56,6 +56,7 @@ export function GridStill({
   openId,
   filter = null,
   phone = false,
+  flush = false,
   className,
 }: {
   rows: ClaimRow[];
@@ -63,16 +64,25 @@ export function GridStill({
   /** Only the claims with this decision, as the live grid's status filter shows them. */
   filter?: ClaimRow["decision"] | null;
   phone?: boolean;
+  /** Flush in a console window (the homepage tour): no border or radius, the window's own ground, the header a quiet
+   * label row over a hairline, and the first and last cells on the window's 20px inset (16px on a phone), as the tour
+   * draws the live grid (tour.module.css .gate). */
+  flush?: boolean;
   className?: string;
 }) {
   const columns = phone ? PHONE : COLUMNS;
   const shown = filter ? rows.filter((r) => r.decision === filter) : rows;
   const slots = slotsOf(rows);
+  // Flush, the row's first and last cells sit on the window's inset.
+  const edge = flush && (phone ? "first:pl-4 last:pr-4" : "first:pl-5 last:pr-5");
   return (
-    <div aria-hidden="true" className={clsx("claims-grid @container overflow-hidden rounded-[10px] border border-line bg-surface", !phone && "h-full", className)}>
-      <div className="flex h-9 border-b border-line bg-surface-2">
+    <div
+      aria-hidden="true"
+      className={clsx("claims-grid @container overflow-hidden", flush ? "bg-bg" : "rounded-[10px] border border-line bg-surface", !phone && "h-full", className)}
+    >
+      <div className={clsx("flex h-9 border-b border-line", flush ? "bg-bg" : "bg-surface-2")}>
         {columns.map((c) => (
-          <span key={c.id} className={clsx("flex shrink-0 items-center px-3 text-[13px] font-medium text-muted", c.className)}>
+          <span key={c.id} data-col={c.id} className={clsx("flex shrink-0 items-center px-3 text-[13px] font-medium whitespace-nowrap text-muted", edge, c.className)}>
             {c.header}
           </span>
         ))}
@@ -89,7 +99,7 @@ export function GridStill({
           )}
         >
           {columns.map(({ id, cell: Cell, className: col }) => (
-            <span key={id} className={clsx("flex min-w-0 shrink-0 items-center overflow-hidden px-3 text-ui whitespace-nowrap", col)}>
+            <span key={id} className={clsx("flex min-w-0 shrink-0 items-center overflow-hidden px-3 text-ui whitespace-nowrap", edge, col)}>
               <span className={clsx("min-w-0 flex-1", (id === "amount" || id === "time") && "flex justify-end")}>
                 <Cell {...props(r, phone, slots)} />
               </span>

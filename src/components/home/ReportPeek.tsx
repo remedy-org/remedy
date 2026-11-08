@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, type ReactNode } from "react";
-import styles from "./home.module.css";
+import styles from "./tour.module.css";
 
 /**
  * The phone story's report: the draft's head and its units remedied, then the next block's heading fading into the
