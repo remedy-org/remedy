@@ -15,7 +15,7 @@ export const TOUR = {
    * switcher's place) with its auto-pay setting; the queue's toolbar and its live line, as the console draws them. */
   chrome: { pages: ["Claims", "Insights", "New recall", "Report"] as const },
   recall: { product: "X-VESOLJE nursing pillows", id: "CPSC 27-071", autoPay: "Auto-pay on" },
-  toolbar: { export: "Export CSV", search: "Search claims, codes…", live: "Live · updated just now" },
+  toolbar: { export: "Export CSV", search: "Search claims, codes…", live: "Updated 8 Nov" },
   /** Step 03's sentence goes on to the analyst only when a recorded answer is there to show (AnalystRail.tsx). */
   analystSentence: " Then ask the recall analyst why.",
   cta: {

@@ -701,9 +701,9 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
                 fallback={<GridStill rows={still} openId={picked} filter={status === "all" ? null : status} flush />}
               />
             </div>
-            {/* The queue's foot, as the console's: it updates itself while a claim comes in. */}
+            {/* The queue's foot, as the console's: when these claims were drawn (PREVIEW_NOW), never "live", since the
+                console a visitor opens next has its own, newer figures. */}
             <p inert aria-hidden="true" className={clsx(styles.foot, "text-ui text-muted")}>
-              <span className="size-1.5 shrink-0 rounded-full bg-pay" />
               {TOUR.toolbar.live}
             </p>
             {/* The evidence docks as the console's panel: flush to the window's right edge from the status row to the

@@ -139,7 +139,9 @@ export function NavMenu<Id extends string>({ links, current, onPick }: { links: 
             >
               Try a claim
             </Button>
-            <Button href="/signin" variant="secondary" size="lg" block className="mt-4">
+            {/* The company's door, said as the footer tag says it, so it never reads as the owner's login. */}
+            <p className="mt-6 mb-2 text-ui text-muted">Running a recall?</p>
+            <Button href="/signin" variant="secondary" size="lg" block>
               Log in with PayPal
             </Button>
           </div>

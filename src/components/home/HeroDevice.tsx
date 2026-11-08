@@ -9,13 +9,14 @@ import { ClaimScreen, FINAL_PHASE } from "./ClaimScreen";
 import { Laptop } from "./Laptop";
 import styles from "./device.module.css";
 
-// The hero moment (DESIGN.md, Motion): once the device is in view the five checks tick in 450ms apart, then the payout
-// chip lands, and the paid receipt leaves the screen to rest on the light table (spec H1). It plays once and rests on
+// The hero moment (DESIGN.md, Motion): once the device is in view the five checks tick in 130ms apart, then the payout
+// chip lands, and the paid receipt leaves the screen to rest on the light table (spec H1), landing within 1.5 s, so a
+// visitor who glances for two seconds sees the payoff, not empty boxes. It plays once and rests on
 // its final frame, which is what a return visit finds. Reduced motion shows the final state and no tilt; without JS the
 // <noscript> style below shows it too. Laptops only: below 1024px the hero shows a phone instead (HeroPhone).
 
-const PHASE_AT = [700, 1150, 1600, 2050, 2500, 3000];
-const TAG_AFTER = 380;
+const PHASE_AT = [200, 330, 460, 590, 720, 850];
+const TAG_AFTER = 160;
 const MAX_TILT = 4;
 
 const NOSCRIPT = `<style>[data-hero-device] [data-seq=show]{opacity:1!important;transform:none!important}[data-hero-device] [data-seq=hide]{opacity:0!important}</style>`;
@@ -54,7 +55,7 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
   }, [inView, reduced]);
 
   // The payout leaves the screen: the receipt starts at the chip's size and place on the screen, and flies out over
-  // the bezel to its rest on the table, 520ms --ease-snap, its shadow fading in as it lands. Only ever scaled up to
+  // the bezel to its rest on the table, 440ms --ease-snap, its shadow fading in as it lands. Only ever scaled up to
   // its rest size, so its text stays sharp.
   useEffect(() => {
     const tag = tagRef.current;
@@ -77,8 +78,8 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
       const k = r.width / tag.offsetWidth || 1;
       const x = (c.left + c.width / 2 - (r.left + r.width / 2)) / k;
       const y = (c.top + c.height / 2 - (r.top + r.height / 2)) / k;
-      const a = animate(tag, { x: [x, 0], y: [y, 0], scale: [s, 1], opacity: [0, 1, 1], rotate: [6, -2] }, { duration: 0.52, ease: [0.2, 0.8, 0.2, 1] });
-      const b = animate(shadow, { opacity: [0, 1] }, { duration: 0.2, delay: 0.38 });
+      const a = animate(tag, { x: [x, 0], y: [y, 0], scale: [s, 1], opacity: [0, 1, 1], rotate: [6, -2] }, { duration: 0.44, ease: [0.2, 0.8, 0.2, 1] });
+      const b = animate(shadow, { opacity: [0, 1] }, { duration: 0.2, delay: 0.3 });
       stop = () => {
         a.stop();
         b.stop();

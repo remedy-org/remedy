@@ -33,7 +33,7 @@ async function googleFont(family: string, weight: number, text: string): Promise
 }
 
 const HEAD = "Recall refunds, paid in a minute.";
-const TAIL = "Proven destroyed on a live camera.";
+const TAIL = "Proof of destruction, on a live camera.";
 const EYEBROW = "RECALL REFUNDS, VERIFIED";
 const LABELS = ["CODE M4T", "CPSC 27-071"] as const;
 const LEAD = "Remedy turns any CPSC recall into a live refund program, paid through PayPal.";

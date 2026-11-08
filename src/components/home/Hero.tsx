@@ -23,7 +23,7 @@ export function Hero() {
         paid in a minute.
       </h1>
       <p className={clsx("mt-4 text-head-sm font-medium text-balance text-text lg:mt-5", styles.focusIn)} style={line(1)}>
-        Proven destroyed on a live camera.
+        Proof of destruction, on a live camera.
       </p>
       <p className={clsx("mt-5 max-w-[34ch] text-body lg:max-w-[42ch] text-pretty text-text-2 sm:text-lead lg:mt-6", styles.focusIn)} style={line(1)}>
         {/* Two blocks on phones, one paragraph from sm: each half stays smaller than the h1, so the h1 is the LCP. */}
@@ -55,7 +55,8 @@ export function Hero() {
           <span className="font-mono whitespace-nowrap">{CLAIM.recall.replace(/^CPSC /, "")}</span>
         </p>
         {/* An owner with a real recall: the demo above is not her claim, and this is where hers is. */}
-        <p className="max-w-[36ch] text-ui text-pretty text-muted">Own a recalled product? Claim through the link on its recall notice.</p>
+        {/* Held to 36ch at 1024, where the receipt sits close; from 1280 one line, as the proof line above it is. */}
+        <p className="max-w-[36ch] text-ui text-pretty text-muted xl:max-w-none">Own a recalled product? Claim through the link on its recall notice.</p>
       </div>
     </>
   );

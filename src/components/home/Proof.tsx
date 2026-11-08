@@ -6,7 +6,9 @@ import { Section } from "./Section";
 
 // Figures: docs/EVAL.md (7 Nov 2026), GPT-6.1 Sol, the model Remedy runs; the full table and method stay there.
 // short: the same fact in fewer words, for a phone's narrow columns.
+// The headline's first half is the first figure: every genuine claim in the benchmark was paid (27 of 27 checks).
 const FIGURES: { figure: string; text: string; short: string }[] = [
+  { figure: "100%", text: "of genuine claims paid", short: "genuine claims paid" },
   { figure: "100%", text: "of wrong codes and wrong products rejected", short: "wrong codes rejected" },
   { figure: "1.1¢", text: "Remedy's cost to check a claim", short: "cost per claim" },
 ];
@@ -17,11 +19,12 @@ const FIGURES: { figure: string; text: string; short: string }[] = [
  */
 function Note({ figure }: { figure: string }) {
   return (
-    <sup className="ml-0.5 text-micro">
+    <sup className="ml-1 text-micro">
+      {/* Its focus ring hugs the figure with a 1px gap, so it never lands on the word before it. */}
       <a
         href="#proof-note"
         aria-label={`Note 1: the source for ${figure}`}
-        className="relative px-0.5 text-faint no-underline transition-colors duration-160 before:absolute before:-inset-x-2 before:-inset-y-2 before:content-[''] hover:text-text-2"
+        className="relative rounded-[3px] px-0.5 text-faint no-underline transition-colors duration-160 before:absolute before:-inset-x-2 before:-inset-y-2 before:content-[''] hover:text-text-2 focus-visible:outline-offset-1"
       >
         1
       </a>
@@ -54,9 +57,9 @@ export function Proof() {
           </p>
         </Reveal>
 
-        <dl className="col-span-12 grid grid-cols-2 gap-x-4 sm:gap-x-[var(--col-gap)] lg:col-span-5">
+        <dl className="col-span-12 grid grid-cols-3 gap-x-4 sm:gap-x-[var(--col-gap)] lg:col-span-5">
           {FIGURES.map((f, i) => (
-            <div key={f.figure} className="flex flex-col">
+            <div key={f.text} className="flex flex-col">
               <dt className="text-body font-medium whitespace-nowrap text-text-2 sm:text-head-sm">{f.figure}</dt>
               <dd className="mt-1.5 max-w-[28ch] text-[0.75rem]/[1.4] text-pretty text-faint sm:mt-2 sm:text-ui sm:text-muted">
                 <span className="sm:hidden">{f.short}</span>
@@ -69,7 +72,7 @@ export function Proof() {
       </div>
 
       <p id="proof-note" className="mt-12 max-w-[68ch] scroll-mt-24 text-[0.75rem]/[1.5] text-pretty text-faint sm:mt-16">
-        ¹ Remedy fraud benchmark, 7 Nov 2026.
+        ¹ Remedy fraud benchmark, 7 Nov 2026. 36 claims, each checked three times.
       </p>
     </Section>
   );
