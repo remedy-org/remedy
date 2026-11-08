@@ -57,7 +57,7 @@ describe("console view", () => {
   it("says the rule's decision in one sentence", () => {
     expect(decisionSentence(sampleClaim({ decision: "paid" }), recall)).toBe("All checks passed, so Remedy paid $29.99 through PayPal.");
     expect(decisionSentence(sampleClaim({ decision: "blocked", reasons: [reject("payer_verified", "This PayPal account isn't verified")] }), recall)).toBe(
-      "Stopped by a pre-check before the photo check: this PayPal account isn't verified.",
+      "Stopped by the account checks before the photo check: this PayPal account isn't verified.",
     );
     expect(decisionSentence(sampleClaim({ decision: "rejected", reasons: [reject("review", "Rejected on review: PayPal name doesn't match.")] }), recall)).toBe(
       "Rejected on review: PayPal name doesn't match.",

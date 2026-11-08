@@ -212,7 +212,7 @@ export const PAID_BY_DAY = "Paid through PayPal, by day";
 
 /** The Refused tile's caption on the homepage: how the refusals split between the photo check and the pre-checks. */
 export const refusedSplit = (photo: number, pre: number) =>
-  [photo ? `${photo} rejected by the photo check` : "", pre ? `${pre} blocked by pre-checks` : ""].filter(Boolean).join(", ") || "None refused";
+  [photo ? `${photo} rejected by the photo check` : "", pre ? `${pre} blocked by the account checks` : ""].filter(Boolean).join(", ") || "None refused";
 
 /** The homepage's refusal reasons card, in 16px rows: its padding and title (76px with the gap around the card) and
  * each reason with its bar (34px). */
@@ -302,7 +302,7 @@ export function homeKpiCaptions(all: CaptionClaim[], shown: CaptionClaim[] = all
   const field = timeField(all);
   const n = shown.filter((c) => c[field] !== null).length;
   const gate = (g: string) => shown.filter((c) => c.refused && c.refusalGate === g).length;
-  const [photo, pre] = [gate("Photo check"), gate("Pre-check")];
+  const [photo, pre] = [gate("Photo check"), gate("Account check")];
   const filtered = shown !== all;
   return {
     median:

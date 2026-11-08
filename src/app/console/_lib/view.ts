@@ -152,7 +152,7 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
 const PROCESS = new Set(["model", "payout", "auto_pay"]);
 
 /**
- * "Pre-checks 4 of 4 · Photo check 5 of 5": the one count the console gives everywhere (the barcode's label and hover,
+ * "Account checks 4 of 4 · Photo check 5 of 5": the one count the console gives everywhere (the barcode's label and hover,
  * the panel). Each group counts what passed of what ran; a group where nothing ran says why ("waiting", "not run"). A
  * check that was not run is left out of its total and shown as a dotted slot in the barcode.
  */
@@ -166,7 +166,7 @@ export function checkCount(items: { id: string; state: BarState | PreCheckState 
   const pre = items.filter((b) => PRE_IDS.has(b.id));
   // A pre-check that stopped the claim means the model never ran, which isn't waiting.
   const none = pre.some((b) => b.state === "reject") ? "Photo check not run" : "Photo check waiting";
-  return `${group("Pre-checks", pre)} · ${model.length ? group("Photo check", model) : none}`;
+  return `${group("Account checks", pre)} · ${model.length ? group("Photo check", model) : none}`;
 }
 
 /** The barcode as a sentence, for screen readers: the console's one count. */
@@ -483,7 +483,7 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
     case "rejected":
       return reviewed ? `Rejected on review: ${stripPrefix(reviewed.text).replace(/[.\s]+$/, "")}.` : `A check failed, so no money moves: ${lower(first(c.reasons, "reject") ?? "refused")}.`;
     case "blocked":
-      return `Stopped by a pre-check before the photo check: ${lower(first(c.reasons, "reject") ?? "a pre-check failed")}.`;
+      return `Stopped by the account checks before the photo check: ${lower(first(c.reasons, "reject") ?? "an account check failed")}.`;
     case "pending":
       return c.photos.length ? "The photo check is reading the photos; the rule decides when it answers." : "The owner has a code and an open camera session, but no photos yet.";
   }

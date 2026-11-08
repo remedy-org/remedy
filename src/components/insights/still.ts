@@ -81,7 +81,7 @@ export function insightsStill(data: InsightsData): InsightsStillData {
     totals: {
       claims: data.claims.length,
       photos: reached("Photos sent"),
-      preChecked: reached("Passed pre-checks"),
+      preChecked: reached("Passed account checks"),
       photoChecked: reached("Passed photo check"),
       paid: reached("Paid"),
       held: sum("held"),

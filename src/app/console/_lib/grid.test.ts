@@ -45,7 +45,7 @@ describe("the grid's evidence cells", () => {
     ]);
     expect(row.note).toBe("All checks passed");
     // Each group counts what passed of what ran: the seeded claim's fingerprint check wasn't run, so it isn't counted.
-    expect(barsSentence(row.bars!)).toBe("Pre-checks 3 of 3 · Photo check 4 of 4");
+    expect(barsSentence(row.bars!)).toBe("Account checks 3 of 3 · Photo check 4 of 4");
   });
 
   it("show the checks a claim will run as waiting, and a blocked claim's photo checks as not run", () => {
@@ -54,7 +54,7 @@ describe("the grid's evidence cells", () => {
     expect(blocked.bars?.slice(0, 4).map((b) => b.state)).toEqual(["reject", "pass", "pass", "pass"]);
     // label, code, same item, screen and the recall's one step, none of them run.
     expect(blocked.bars?.slice(4).map((b) => b.state)).toEqual(["skipped", "skipped", "skipped", "skipped", "skipped"]);
-    expect(barsSentence(blocked.bars!)).toBe("Pre-checks 3 of 4 · Photo check not run");
+    expect(barsSentence(blocked.bars!)).toBe("Account checks 3 of 4 · Photo check not run");
   });
 
   it("count a demo sample's checks as its receipt does: one claim per account is skipped unless it's the genuine one", () => {
@@ -62,7 +62,7 @@ describe("the grid's evidence cells", () => {
       toRow(summarize(sampleClaim({ decision: "rejected", demo: true, reasons: [{ check: "label", outcome: "pass", text: "" }, reject("code", "Written code reads K7Q"), { check: "step_1", outcome: "pass", text: "" }, { check: "screen", outcome: "pass", text: "" }], events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] })), recall);
     // A check that didn't run has no bar.
     expect(demo("wrong-code").bars?.find((b) => b.id === "payer")).toBeUndefined();
-    expect(barsSentence(demo("wrong-code").bars!)).toBe("Pre-checks 3 of 3 · Photo check 3 of 4");
+    expect(barsSentence(demo("wrong-code").bars!)).toBe("Account checks 3 of 3 · Photo check 3 of 4");
     expect(demo("genuine").bars?.find((b) => b.id === "payer")?.state).toBe("pass");
   });
 
