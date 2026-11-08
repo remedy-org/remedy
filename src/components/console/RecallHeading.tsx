@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ExhibitLabel, NoBreakHyphens } from "@/components/ui";
+import { NoBreakHyphens } from "@/components/ui";
 import type { Recall } from "@/lib/types";
 import { formatMoney } from "@/app/console/_lib/view";
 import { formatDate } from "./format";
@@ -17,13 +17,16 @@ export function RecallHeading({ recall, recalls, basePath, actions }: RecallHead
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
       <div className="min-w-0">
-        <ExhibitLabel leader="none">
-          CPSC {recall.id} · Recalled {formatDate(recall.recallDate)}
-        </ExhibitLabel>
-        <h1 className="mt-3 text-h2 font-medium text-balance">
+        <h1 className="text-h2 font-medium text-balance">
           <NoBreakHyphens>{recall.product}</NoBreakHyphens>
         </h1>
         <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-ui text-muted">
+          <span>
+            CPSC <span className="font-mono text-text-2">{recall.id}</span>
+          </span>
+          <span aria-hidden="true" className="text-faint">·</span>
+          <span>Recalled {formatDate(recall.recallDate)}</span>
+          <span aria-hidden="true" className="text-faint">·</span>
           <span>
             <span className="font-mono text-text">{formatMoney(recall.refund)}</span> refund
           </span>

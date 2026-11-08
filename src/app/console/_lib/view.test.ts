@@ -95,14 +95,14 @@ describe("console view", () => {
     const payer = (c: Parameters<typeof sampleClaim>[0]) => preChecksOf(sampleClaim(c)).find((r) => r.id === "payer")!;
     const demo = (sample: string) => ({ demo: true, events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] });
     expect(payer({})).toMatchObject({ state: "pass", detail: "No other paid or open claim for this recall from this PayPal account" });
-    expect(payer(demo("genuine"))).toMatchObject({ state: "pass", detail: expect.stringMatching(/^Checked within this demo session/) });
+    expect(payer(demo("genuine"))).toMatchObject({ state: "pass", detail: expect.stringMatching(/^Checked within this session/) });
     expect(payer(demo("wrong-code")).state).toBe("skipped");
     expect(payer({ ...demo("wrong-code"), photos: [] }).state).toBe("waiting");
   });
 
   it("offers review only on held claims, and only a sample review on a seeded one", () => {
     expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false, note: null });
-    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toMatchObject({ sample: true, note: expect.stringContaining("nothing is saved") });
+    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toMatchObject({ sample: true, note: expect.stringContaining("without sending money or saving") });
     expect(toDrawerClaim(sampleClaim({ decision: "paid" }), recall).review).toBeNull();
     expect(toDrawerClaim(sampleClaim(), recall).photos).toEqual(["/api/console/claims/RM-0412/photos/0"]);
   });
@@ -202,7 +202,7 @@ describe("console view", () => {
     const d = toDrawerClaim(rejected, recall);
     expect(d.rejected).toEqual({ at: "2026-11-07T10:03:00.000Z", by: "Kikea Store", reason: "The tag reads K7Q." });
     expect(d.events.map((e) => e.detail)).toEqual([
-      'Filed with the judges\' sample "The wrong code"',
+      'Filed with photo set "The wrong code"',
       "Held for a person: the photo check service didn't answer",
       "Remedy couldn't reach PayPal (a network error). Nothing was sent, so it's safe to try again.",
       "Rejected on review: The tag reads K7Q. (by Kikea Store)",
@@ -223,7 +223,7 @@ describe("console view", () => {
   it("says a demo claim's duplicate check covers only its own demo round", () => {
     const photos = [{ key: "a/1.jpg", hash: "0123456789abcdef" }];
     const dup = (c: Parameters<typeof sampleClaim>[0]) => preChecksOf(sampleClaim({ decision: "held", photos, ...c })).find((p) => p.id === "duplicate_photo")!;
-    expect(dup({ demo: true }).detail).toContain("this demo session");
+    expect(dup({ demo: true }).detail).toContain("this session");
     expect(dup({ demo: true }).detail).not.toMatch(/round/);
     expect(dup({}).detail).toBe("No other claim used these photos");
   });

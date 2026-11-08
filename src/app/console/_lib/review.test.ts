@@ -52,7 +52,7 @@ describe("approveClaim", () => {
     await store.putClaim(claim);
     const pay = vi.fn();
     const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
-    expect(result).toMatchObject({ ok: true, claim: { decision: "held" }, sample: expect.stringContaining("sent no money") });
+    expect(result).toMatchObject({ ok: true, claim: { decision: "held" }, sample: expect.stringContaining("stays unpaid") });
     expect(pay).not.toHaveBeenCalled();
     expect(await store.getClaim("RM-0412")).toEqual(claim);
   });

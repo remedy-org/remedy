@@ -6,8 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { Button, CrossIcon, EmptyState } from "@/components/ui";
 import { ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
-import { SampleDiamond } from "./cells";
-import { ClaimsGrid, type ClaimsGridHandle } from "./ClaimsGrid";
+import { ClaimsGrid, type ClaimsGridHandle, type GroupBy } from "./ClaimsGrid";
+import type { DecisionModel } from "./DecisionFilter";
 import { Keys } from "./Keys";
 import { formatCount, plural } from "./format";
 import { Ledger } from "./Ledger";
@@ -25,8 +25,8 @@ function PanelShell() {
 
 const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: string }> = {
   paid: {
-    title: "No paid claims yet",
-    description: "A claim is paid when every check passes and auto-pay is on, or when a person approves it.",
+    title: "No approved claims yet",
+    description: "A claim is approved when every check passes and auto-pay is on, or when a person approves it.",
   },
   held: {
     title: "Nothing waiting for review",
@@ -64,9 +64,21 @@ function useMedia(query: string) {
 }
 
 const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
-// Focus on the page itself or a control of the queue's chrome (a tab, a button), not in the grid, the panel or a dialog:
-// where ↓ and j go into the list.
-const outsideList = (t: EventTarget | null) => !(t instanceof Element) || t === document.body || !t.closest(".claims-grid, .evidence-panel, dialog");
+// Focus on the page itself, a control of the queue's chrome (a tab, a button) or the grid's header row (after a sort),
+// not in the grid's rows, the panel or a dialog: where ↓ and j go into the list.
+const outsideList = (t: EventTarget | null) =>
+  !(t instanceof Element) || t === document.body || Boolean(t.closest(".claims-grid .ag-header")) || !t.closest(".claims-grid, .evidence-panel, dialog");
+
+// A tab is a Verdict filter on one decision; the column's own filter can say more (several decisions, reasons).
+const tabFilter = (t: Tab): DecisionModel | null => (t === "all" ? null : { decisions: [t], reasons: [] });
+const tabOf = (m: DecisionModel | null): Tab => (m && m.decisions.length === 1 && !m.reasons.length ? (m.decisions[0] as Tab) : "all");
+
+const GROUPS: { id: GroupBy; label: string }[] = [
+  { id: "none", label: "None" },
+  { id: "reason", label: "Reason" },
+  { id: "code", label: "Code" },
+  { id: "day", label: "Day" },
+];
 
 const isTab = (v: string | undefined): v is Tab => TABS.some((t) => t.id === v);
 
@@ -75,8 +87,6 @@ export interface ClaimsQueueProps {
   rows: ClaimRow[];
   // When the server read these rows (ISO).
   at: string;
-  // Payouts in this build go to PayPal's sandbox: the ledger's money says so.
-  sandbox?: boolean;
   // From the URL (?tab=held&q=pillow&claim=RM-1460), which the queue keeps in step, so a view can be reloaded or shared.
   initialTab?: string;
   initialSearch?: string;
@@ -89,7 +99,7 @@ export interface ClaimsQueueProps {
  * outside the list goes into it, ↑/↓ walks the queue with the panel open, Enter opens, Esc closes, A and R open approve
  * or reject on a held claim, ? lists them.
  */
-export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = false, initialTab, initialSearch = "", initialOpen }: ClaimsQueueProps) {
+export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, initialSearch = "", initialOpen }: ClaimsQueueProps) {
   const [open, setOpen] = useState<string | null>(() => (initialOpen && initial.some((r) => r.id === initialOpen) ? initialOpen : null));
   // The pointer or keyboard focus in the grid: new claims wait rather than shift the rows (useQueuePoll).
   const [pointerIn, setPointerIn] = useState(false);
@@ -98,7 +108,12 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
   const wide = useMedia(WIDE);
   const fill = useMedia(FILL);
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "all");
+  // The Verdict column's filter: the tab's, or what the column's menu picked.
+  const [filter, setFilter] = useState<DecisionModel | null>(() => tabFilter(isTab(initialTab) ? initialTab : "all"));
   const [search, setSearch] = useState(initialSearch);
+  const [groupBy, setGroupBy] = useState<GroupBy>("none");
+  // How many claims the grid shows after its filters.
+  const [shown, setShown] = useState<number | null>(null);
   const [intent, setIntent] = useState<ReviewIntent | null>(null);
   const [help, setHelp] = useState(false);
   // A or R on a claim they can't act on: said in the footer for a few seconds, so a key never seems to do something silently.
@@ -130,6 +145,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
   }, [searched]);
   const tabRows = useMemo(() => (tab === "all" ? rows : rows.filter((r) => r.decision === tab)), [rows, tab]);
   const found = useMemo(() => (tab === "all" ? searched : searched.filter((r) => r.decision === tab)), [searched, tab]);
+  const filtered = filter !== null && tabOf(filter) === "all";
   const openRow = rows.find((r) => r.id === open) ?? null;
 
   const close = useCallback(() => {
@@ -152,6 +168,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
   const changeTab = useCallback(
     (t: Tab) => {
       setTab(t);
+      setFilter(tabFilter(t));
       const row = open ? rows.find((r) => r.id === open) : null;
       if (row && t !== "all" && row.decision !== t) {
         setOpen(null);
@@ -187,16 +204,27 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
     show(back);
   }, [back, show]);
 
-  // After a person pays or rejects a held claim, the next held claim in the list as it stood: the panel offers it, so
-  // working the queue never means hunting for the next row.
+  // After a person approves or rejects a held claim, the next held claim in the grid's order as it stood. Beside the
+  // docked panel focus moves to its row and the panel follows; the sheet offers it in its footer.
   const [next, setNext] = useState<{ after: string; id: string | null } | null>(null);
   const decided = useCallback(
-    (id: string) => {
-      const held = found.filter((r) => r.decision === "held" || r.id === id);
-      const i = held.findIndex((r) => r.id === id);
-      setNext({ after: id, id: (held[i + 1] ?? held[i - 1])?.id ?? null });
+    (id: string, decision?: string) => {
+      const order = grid.current?.displayedIds() ?? found.map((r) => r.id);
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      const held = order.filter((x) => x === id || byId.get(x)?.decision === "held");
+      const i = held.indexOf(id);
+      const nextId = (held[i + 1] ?? held[i - 1]) || null;
+      setNext({ after: id, id: nextId });
+      if (wide && nextId) {
+        setHint(`${id} ${decision === "rejected" ? "rejected" : "approved"} and saved`);
+        requestAnimationFrame(() => {
+          setIntent(null);
+          setOpen(nextId);
+          grid.current?.focusRow(nextId);
+        });
+      }
     },
-    [found],
+    [found, rows, wide],
   );
   const nextHeld = next && next.after === open ? next.id : undefined;
 
@@ -238,15 +266,19 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
         e.preventDefault();
         if (open) grid.current?.focusRow(open);
         else grid.current?.focusFirst();
-      } else if ((e.key === "a" || e.key === "r") && wide) {
+      } else if (e.key === "a" || e.key === "r") {
         // Never while the open claim's confirm or reason is up (or sending): a letter typed there, or after focus
         // dropped to the page, must not swap the form for another.
         if (document.querySelector(".evidence-panel [data-review-open]")) return;
-        // The open claim, else the grid row with focus: A and R open it and start the confirm.
-        const id = open ?? (e.target instanceof Element && e.target.closest(".claims-grid") ? grid.current?.focusedRowId() : null);
+        // The grid row with focus, else the open claim: A and R open it and start the confirm.
+        const focused = e.target instanceof Element && e.target.closest(".claims-grid") ? grid.current?.focusedRowId() : null;
+        const id = focused ?? open;
         const row = rows.find((r) => r.id === id);
-        if (!row) return;
         e.preventDefault();
+        if (!row) {
+          setHint("Open a held claim first: A approves it, R rejects it");
+          return;
+        }
         if (row.decision !== "held") {
           setHint(`${row.id} isn't held: only held claims can be approved or rejected`);
           return;
@@ -265,10 +297,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
     return () => window.removeEventListener("keydown", onKey);
   }, [open, wide, fill, close, openClaim, changeTab, rows, help]);
 
-  const samples = ledger.samples;
-  const demos = ledger.demos;
-  // Every claim the legend doesn't mark: real owners' (on the demo recall, this company's own), so its parts add up to All.
-  const live = rows.length - samples - demos;
+  // The column's menu changed the Verdict filter: a single decision is its tab, anything else is All, filtered.
+  const onDecisionFilter = useCallback((m: DecisionModel | null) => {
+    setFilter(m);
+    setTab(tabOf(m));
+  }, []);
 
   const clearSearch = () => {
     setSearch("");
@@ -277,15 +310,25 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
 
   return (
     <section aria-label="Claims" className="flex min-h-0 flex-1 flex-col">
-      <Ledger ledger={ledger} sandbox={sandbox} />
+      <Ledger ledger={ledger} />
 
       {/* From 1280px the open claim's panel is a column beside the tabs, grid and footer, from under the ledger to the
           foot of the window: the evidence has the height, and the search, the heading's actions and the footer stay in
           reach. */}
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="mt-1 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-line">
+          <div className="mt-1 flex flex-wrap items-end gap-x-6 gap-y-2 border-b border-line">
             <StatusTabs value={tab} counts={counts} onChange={changeTab} controls="claims-panel" />
+            <div className="mb-1.5 ml-auto flex items-center gap-4 max-sm:hidden">
+              <GroupControl value={groupBy} onChange={setGroupBy} />
+              <button
+                type="button"
+                onClick={() => grid.current?.exportCsv()}
+                className="inline-flex h-8 items-center rounded-control px-1 text-ui whitespace-nowrap text-muted transition-colors hover:text-text"
+              >
+                Export CSV
+              </button>
+            </div>
             <div className="relative mb-1.5 flex w-full items-center sm:w-64">
               <label className="w-full">
                 <span className="sr-only">Search claims by id, code, PayPal account or reason</span>
@@ -318,7 +361,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
                 </button>
               ) : (
                 <kbd
-                  className="pointer-events-none absolute right-2 hidden h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-[11px] text-faint sm:inline-flex"
+                  className="pointer-events-none absolute right-2 hidden h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro text-faint sm:inline-flex"
                   aria-hidden="true"
                 >
                   /
@@ -326,36 +369,6 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
               )}
             </div>
           </div>
-
-          {/* The legend for the marks after claim ids, naming every claim in All, on one line so opening a claim never
-              moves the grid (the full text is in its title when the panel narrows it); on a phone, where the evidence is
-              a sheet, it wraps. */}
-          {(samples > 0 || demos > 0) && (
-            <p
-              className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 py-2.5 font-mono text-micro text-faint sm:flex-nowrap sm:overflow-hidden sm:whitespace-nowrap"
-              title={[
-                samples > 0 && `${plural(samples, "sample claim")} from the eval set: AI-made test photos, never paid.`,
-                demos > 0 && `${plural(demos, "judges' demo claim")}: sample photos and sandbox money. Every demo session sends the same sample photos, so each session's duplicate check runs on its own.`,
-                live > 0 && `${plural(live, "live claim")} from a real owner's PayPal account.`,
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              {samples > 0 && (
-                <span className="inline-flex min-w-0 items-center gap-2 sm:shrink-0">
-                  <SampleDiamond />
-                  <span className="truncate">{plural(samples, "sample")}: AI-made photos, never paid</span>
-                </span>
-              )}
-              {demos > 0 && (
-                <span className="inline-flex min-w-0 items-center gap-2">
-                  <SampleDiamond demo />
-                  <span className="truncate">{formatCount(demos)} judges&apos; demo: sandbox money</span>
-                </span>
-              )}
-              {live > 0 && <span className="shrink-0">+ {plural(live, "live claim")}</span>}
-            </p>
-          )}
 
           <div
             id="claims-panel"
@@ -388,42 +401,49 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
                 </button>
               </div>
             )}
-            {!tabRows.length ? (
-              <EmptyState title={EMPTY_TAB[tab as Exclude<Tab, "all">].title} description={EMPTY_TAB[tab as Exclude<Tab, "all">].description} />
-            ) : (
-              <>
-                {found.length > 0 && (
-                  <ClaimsGrid
-                    ref={grid}
-                    rows={found}
-                    // Held claims wait for a person: the longest waiting first.
-                    oldestFirst={tab === "held"}
-                    openId={open}
-                    onOpen={openClaim}
-                    onFocusRow={(id) => open && wide && id !== open && openClaim(id)}
-                    fill={fill}
+            {/* The grid holds every claim and filters them itself (the tab and the column's menu set its Verdict filter,
+                search is its quick filter), so switching tabs never remounts it. With nothing to show, a note covers it. */}
+            <ClaimsGrid
+              ref={grid}
+              rows={rows}
+              // Held claims wait for a person: the longest waiting first.
+              oldestFirst={tab === "held"}
+              openId={open}
+              onOpen={openClaim}
+              onFocusRow={(id) => open && wide && id !== open && openClaim(id)}
+              fill={fill}
+              search={search}
+              decisionFilter={filter}
+              onDecisionFilter={onDecisionFilter}
+              groupBy={groupBy}
+              onShown={setShown}
+            />
+            {shown === 0 && (
+              <div className="absolute inset-0 z-10 flex justify-center bg-bg px-4 pt-10">
+                {!tabRows.length && !filtered ? (
+                  <EmptyState title={EMPTY_TAB[tab as Exclude<Tab, "all">].title} description={EMPTY_TAB[tab as Exclude<Tab, "all">].description} />
+                ) : (
+                  <EmptyState
+                    title="No claims match"
+                    description={
+                      search
+                        ? `Nothing in ${tab === "all" ? "this recall" : `the ${TABS.find((t) => t.id === tab)?.label} tab`} matches “${search}”. Search by claim id, code, the PayPal account's last four or the reason.`
+                        : "No claim passes the column filters. Clear them to see every claim."
+                    }
+                    action={
+                      <Button variant="secondary" size="sm" onClick={search ? clearSearch : () => changeTab("all")}>
+                        {search ? "Clear search" : "Clear filters"}
+                      </Button>
+                    }
                   />
                 )}
-                {found.length === 0 && (
-                  <div className="flex justify-center px-4 pt-10">
-                    <EmptyState
-                      title="No claims match"
-                      description={`Nothing in ${tab === "all" ? "this recall" : `the ${TABS.find((t) => t.id === tab)?.label} tab`} matches “${search}”. Search by claim id, code, the PayPal account's last four or the reason.`}
-                      action={
-                        <Button variant="secondary" size="sm" onClick={clearSearch}>
-                          Clear search
-                        </Button>
-                      }
-                    />
-                  </div>
-                )}
-              </>
+              </div>
             )}
           </div>
 
           <footer className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 pt-2 font-mono text-micro text-faint" aria-live="polite">
             <span>
-              {found.length === tabRows.length ? plural(tabRows.length, "claim") : `${formatCount(found.length)} of ${plural(tabRows.length, "claim")}`}
+              {shown === null || shown === rows.length ? plural(rows.length, "claim") : `${formatCount(shown)} of ${plural(rows.length, "claim")}`}
               {ledger.settling > 0 && ` · ${formatCount(ledger.settling)} settling at PayPal`}
             </span>
             <Status state={state} at={at} failed={failed} onRefresh={refresh} />
@@ -431,7 +451,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
             <button
               type="button"
               onClick={() => setHelp(true)}
-              className="-my-1 ml-auto hidden h-8 items-center gap-1.5 rounded-control px-2 hover:text-muted lg:inline-flex"
+              className="-my-1 ml-auto inline-flex h-8 items-center gap-1.5 rounded-control px-2 hover:text-muted"
             >
               <Keys k={["?"]}>Shortcuts</Keys>
             </button>
@@ -456,7 +476,18 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, sandbox = fa
         )}
       </div>
       {!wide && open && (
-        <EvidenceDrawer claimId={open} version={openRow?.version} filedAt={openRow?.createdAt} onClose={close} onOpen={goTo} onDecided={decided} nextHeld={nextHeld} back={back} onBack={goBack} />
+        <EvidenceDrawer
+          claimId={open}
+          version={openRow?.version}
+          filedAt={openRow?.createdAt}
+          onClose={close}
+          intent={intent}
+          onOpen={goTo}
+          onDecided={decided}
+          nextHeld={nextHeld}
+          back={back}
+          onBack={goBack}
+        />
       )}
 
       {help && <ShortcutSheet onClose={() => setHelp(false)} />}
@@ -508,8 +539,8 @@ const SHORTCUTS: [string[], string][] = [
   [["↑", "↓"], "Move between claims; the panel follows. ↓ or j from anywhere starts the list"],
   [["Enter"], "Open a claim's evidence"],
   [["Esc"], "Close the evidence"],
-  [["A"], "Pay the open or focused held claim: A opens the confirm, A again or Enter on Pay sends it"],
-  [["R"], "Reject the open or focused held claim"],
+  [["A"], "Approve the focused or open held claim: A opens the confirm, A again sends it"],
+  [["R"], "Reject the focused or open held claim"],
 ];
 
 function ShortcutSheet({ onClose }: { onClose: () => void }) {
@@ -526,7 +557,8 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
       className="m-auto w-[360px] max-w-[calc(100vw-2rem)] rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0.1_0.004_75/0.5)]"
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
-        <h2 id="shortcuts-title" className="text-ui font-medium">
+        {/* Focus starts on the title, not on the Esc button, whose ring read as a stray selection. */}
+        <h2 id="shortcuts-title" className="text-ui font-medium outline-none" tabIndex={-1} autoFocus>
           Keyboard
         </h2>
         <button
@@ -556,5 +588,33 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
         ))}
       </dl>
     </dialog>
+  );
+}
+
+/** Group by: a quiet segmented control, one choice at a time. */
+function GroupControl({ value, onChange }: { value: GroupBy; onChange: (g: GroupBy) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Group claims by" className="flex items-center gap-2 text-ui">
+      <span className="text-muted" aria-hidden="true">
+        Group
+      </span>
+      <span className="inline-flex rounded-control bg-surface p-0.5 shadow-[inset_0_0_0_1px_var(--line)]">
+        {GROUPS.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            role="radio"
+            aria-checked={value === g.id}
+            onClick={() => onChange(g.id)}
+            className={clsx(
+              "inline-flex h-7 items-center rounded-[4px] px-2.5 transition-colors",
+              value === g.id ? "bg-surface-2 text-text shadow-[inset_0_0_0_1px_var(--line-2)]" : "text-muted hover:text-text",
+            )}
+          >
+            {g.label}
+          </button>
+        ))}
+      </span>
+    </div>
   );
 }

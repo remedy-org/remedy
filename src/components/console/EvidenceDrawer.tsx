@@ -3,11 +3,13 @@
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Button, CheckProgress, CrossIcon, ErrorState, ExhibitLabel, Skeleton, SkeletonText, StatusPill, type CheckState } from "@/components/ui";
+import { Button, CrossIcon, ErrorState, Skeleton, SkeletonText, StatusPill, type CheckState } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { duration, type PreCheckState } from "@/app/console/_lib/view";
 import { api } from "./api";
+import { verdictLabel } from "./cells";
+import { CheckList } from "./CheckList";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { formatClock, formatTime } from "./format";
 import { Keys } from "./Keys";
@@ -31,8 +33,8 @@ export interface EvidenceProps {
   intent?: ReviewIntent | null;
   // Opens another claim of the queue (the claim a repost copied, the next held claim).
   onOpen?: (id: string) => void;
-  // A person paid or rejected this claim (ClaimsQueue works out the next held one).
-  onDecided?: (id: string) => void;
+  // A person approved or rejected this claim (ClaimsQueue works out the next held one).
+  onDecided?: (id: string, decision: DrawerClaim["decision"]) => void;
   // After a decision: the next held claim in the list, null when none is left, undefined before.
   nextHeld?: string | null;
   // The claim this one was opened from through a link in its evidence: the header offers the way back.
@@ -183,7 +185,7 @@ function EvidenceContent({
     seen.clear();
     replace(c);
     setSaved({ id: c.id, decision: c.decision, at: new Date().toISOString() });
-    onDecided?.(c.id);
+    onDecided?.(c.id, c.decision);
     router.refresh();
   };
   const heading = useRef<HTMLHeadingElement>(null);
@@ -230,9 +232,14 @@ function EvidenceContent({
             <h2 ref={heading} id={variant === "sheet" ? "drawer-title" : undefined} className="font-mono text-body font-medium outline-none" tabIndex={-1}>
               {id}
             </h2>
-            {claim ? <StatusPill status={claim.decision} /> : <Skeleton className="h-6 w-16 rounded-full" />}
-            {claim?.seeded && <span className="micro rounded-control border border-line px-1.5 py-px text-faint">Sample, never paid</span>}
-            {claim?.demo && <span className="micro rounded-control border border-line px-1.5 py-px text-faint">Demo · sandbox</span>}
+            {/* In the grid's pill track, so walking the queue never moves it. */}
+            <span className="inline-flex w-(--verdict-pill-w)">
+              {claim ? (
+                <StatusPill status={claim.decision} label={verdictLabel({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null, seeded: claim.seeded })} />
+              ) : (
+                <Skeleton className="h-[22px] w-20 rounded-full" />
+              )}
+            </span>
           </div>
           {claim ? (
             // One line in the 440px panel, so the evidence keeps the height: "Unverified" only when it's true, as in the
@@ -292,11 +299,9 @@ function EvidenceContent({
         <footer ref={savedFooter} className={clsx("flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line bg-surface py-4", pad)}>
           <p role="status" className="min-w-0 flex-1 basis-56 text-ui text-muted">
             <span className="font-medium text-text">
-              {justSaved.decision === "paid" ? "Approved and paid" : "Rejected"} · saved at <span className="font-mono">{formatClock(justSaved.at)}</span> UTC.
+              {justSaved.decision === "paid" ? "Approved" : "Rejected"} · saved at <span className="font-mono">{formatClock(justSaved.at)}</span> UTC.
             </span>{" "}
-            {justSaved.decision === "paid"
-              ? `${claim.amount} sent through PayPal${claim.sandbox ? " sandbox" : ""}.`
-              : "The owner sees your reason on their claim page."}
+            {justSaved.decision === "paid" ? `${claim.amount} sent through PayPal.` : "The owner sees your reason on their claim page."}
             {nextHeld === null && " No held claims are left in this list."}
           </p>
           {nextHeld && onOpen && (
@@ -309,7 +314,7 @@ function EvidenceContent({
       {/* The keys: one compact line on a laptop's shorter window, so the evidence keeps the height; the footer's ?
           lists them all. */}
       {variant === "panel" && (
-        <p className={clsx("flex h-9 shrink-0 items-center gap-4 border-t border-line font-mono text-[11px] text-faint [@media(max-height:960px)]:h-7", pad)} aria-hidden="true">
+        <p className={clsx("flex h-9 shrink-0 items-center gap-4 border-t border-line text-micro text-faint [@media(max-height:960px)]:h-8", pad)} aria-hidden="true">
           <Keys k={["↑", "↓"]}>Next claim</Keys>
           {labels && !labels.blocked && <Keys k={["A"]}>{labels.approveKey}</Keys>}
           {labels && <Keys k={["R"]}>Reject</Keys>}
@@ -346,7 +351,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
     { label: "Model", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "A pre-check stopped it: the photos never reached the model." : undefined },
     { label: "Rule", at: decided },
   ];
-  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "A sample claim: the rule decided to pay, and no money was sent." : undefined }];
+  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "Not sent: the payee's PayPal account isn't live." : undefined }];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
   const failure = payoutFailure(claim);
   if (failure) {
@@ -401,28 +406,28 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
   );
 }
 
-/** What decided a held or refused claim: the first check that didn't pass (or pre-check), its sentence and the model's
- * own words. Null for any other claim. */
-function deciding(claim: DrawerClaim): { lead: string; text: string; evidence: string | null } | null {
+/** What decided a held or refused claim: the reason as a heading, what it means, and the model's own words. Null for
+ * any other claim. */
+function deciding(claim: DrawerClaim): { title: string; detail: string | null; evidence: string | null } | null {
   if (claim.decision !== "held" && claim.decision !== "rejected" && claim.decision !== "blocked") return null;
   // The newest thing that stopped the money leads: PayPal not taking the payout, or the checks run again on approve.
   const failure = payoutFailure(claim);
   const refused = claim.refused;
   if (failure && (!refused || failure.at > refused.at)) {
-    return { lead: "Why it's held · PayPal", text: `${failure.what} at ${formatClock(failure.at)} UTC. ${failure.next}`, evidence: null };
+    return { title: failure.what, detail: `At ${formatClock(failure.at)} UTC. ${failure.next}`, evidence: null };
   }
   if (refused) {
     return {
-      lead: "Why it's held · Not paid on review",
-      text: `When it was approved at ${formatClock(refused.at)} UTC, Remedy checked again and didn't send the payout: ${refused.text.charAt(0).toLowerCase()}${refused.text.slice(1)}.`,
+      title: "Not paid on review",
+      detail: `When it was approved at ${formatClock(refused.at)} UTC, Remedy checked again and didn't send the payout: ${refused.text.charAt(0).toLowerCase()}${refused.text.slice(1)}.`,
       evidence: null,
     };
   }
   // A person rejected it: their reason, as the owner reads it, and who and when.
   if (claim.rejected) {
     return {
-      lead: "Why it was refused · Rejected on review",
-      text: `${claim.rejected.by ?? "A person at the company"} rejected it at ${formatClock(claim.rejected.at)} UTC. The owner reads:`,
+      title: "Rejected on review",
+      detail: `${claim.rejected.by ?? "A person at the company"} rejected it at ${formatClock(claim.rejected.at)} UTC. The owner reads:`,
       evidence: claim.rejected.reason,
     };
   }
@@ -430,33 +435,33 @@ function deciding(claim: DrawerClaim): { lead: string; text: string; evidence: s
   if (claim.decision === "held" && claim.appealedAt) {
     const refused = claim.checks.find((c) => c.outcome === "reject");
     return {
-      lead: "Why it's held · Owner asked for a review",
-      text: `The rule refused it${refused ? ` on ${refused.label}: ${refused.rule.charAt(0).toLowerCase()}${refused.rule.slice(1).replace(/[.\s]+$/, "")}` : ""}. The owner asked a person to look, so it needs your review. Nothing has been paid.`,
+      title: "The owner asked for a review",
+      detail: `The rule refused it${refused ? ` on ${refused.label}: ${refused.rule.charAt(0).toLowerCase()}${refused.rule.slice(1).replace(/[.\s]+$/, "")}` : ""}. Nothing has been paid.`,
       evidence: refused?.evidence ?? null,
     };
   }
   const pre = claim.preChecks.find((p) => p.state === "reject" || p.state === "hold");
   const check = claim.checks.find((c) => c.outcome !== "pass");
-  return {
-    lead: `${claim.decision === "held" ? "Why it's held" : "Why it was refused"} · ${check?.label ?? pre?.label ?? "The rule"}`,
-    text: check?.rule ?? pre?.detail ?? claim.sentence,
-    evidence: check?.evidence ?? null,
-  };
+  return { title: check?.rule ?? pre?.detail ?? claim.sentence, detail: null, evidence: check?.evidence ?? null };
 }
 
-/** Held or refused: what decided it, first, with the model's own words, then the five checks in one line (the grid's
- * count), before the photos and the full list. Claim ids it names open in the panel. */
+/** Held or refused: the reason as the panel's first heading, the model's own words under it, then the count. Claim ids
+ * it names open in the panel. */
 function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: string) => void }) {
   const d = deciding(claim);
   if (!d) return null;
   return (
-    <section aria-label="What decided it" className={clsx("rounded-control border-l-2 px-3.5 py-3", claim.decision === "held" ? "border-hold bg-hold-soft" : "border-stop bg-stop-soft")}>
-      <p className="micro text-muted">{d.lead}</p>
-      <p className="mt-1.5 text-ui text-text">
-        <LinkedIds text={d.text} onOpen={onOpen} self={claim.id} />
-      </p>
-      {d.evidence && <q className="mt-1.5 block font-sans text-ui leading-[1.55] text-muted">{d.evidence}</q>}
-      {claim.five && <p className="mt-2 text-ui text-muted">{claim.five}</p>}
+    <section aria-labelledby="deciding-title" className="flex flex-col gap-1.5">
+      <h3 id="deciding-title" className="text-ui font-medium text-text">
+        <LinkedIds text={d.title} onOpen={onOpen} self={claim.id} />
+      </h3>
+      {d.detail && (
+        <p className="text-ui text-muted">
+          <LinkedIds text={d.detail} onOpen={onOpen} self={claim.id} />
+        </p>
+      )}
+      {d.evidence && <q className="block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">{d.evidence}</q>}
+      {claim.five && <p className="mt-1 font-mono text-micro text-faint">{claim.five}</p>}
     </section>
   );
 }
@@ -490,7 +495,7 @@ function Evidence({
   // The "model" hold is the photo check not answering, not an answer: it isn't counted as a check that didn't pass.
   const answers = claim.checks.filter((c) => c.id !== "model");
   const passed = answers.filter((c) => c.outcome === "pass").length;
-  const sample = claim.seeded || claim.demo;
+  const preRan = claim.preChecks.filter((p) => p.state !== "waiting" && p.state !== "skipped");
   // The photo viewer, open on a photo (0-based); keyed by claim, so ↑/↓ to another claim closes it.
   const [viewing, setViewing] = useState<{ id: string; n: number } | null>(null);
   const viewer = viewing?.id === claim.id ? viewing.n : null;
@@ -506,16 +511,16 @@ function Evidence({
     <div className={clsx("flex flex-col gap-7 py-5", pad)}>
       {/* What decided it, then the photos, so a laptop's first view of the panel holds both. */}
       <Deciding claim={claim} onOpen={onOpen} />
-      <section ref={photosRef} className="flex scroll-mt-4 flex-col gap-3" aria-label="Photos">
+      <section ref={photosRef} className="flex scroll-mt-4 flex-col gap-3" aria-labelledby="photos-title">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <ExhibitLabel leader="right" leaderLength={24}>
-            {claim.photos.length ? `${claim.photos.length === 1 ? "Photo 1" : `Photos 1 to ${claim.photos.length}`} · ${sample ? "sample" : "live"}` : "No photos yet"}
-          </ExhibitLabel>
+          <h3 id="photos-title" className="text-ui font-medium text-text">
+            {claim.photos.length ? "Photos" : "No photos yet"}
+          </h3>
           {/* A person deciding a held claim reads the tag against this: one glance, beside the photos. */}
           {claim.review && claim.photos.length > 0 && <TagCode code={claim.code} />}
         </div>
         {claim.duplicate ? (
-          <Duplicate claim={claim} sample={sample} onOpen={onOpen} onView={(n) => setViewing({ id: claim.id, n })} />
+          <Duplicate claim={claim} onOpen={onOpen} onView={(n) => setViewing({ id: claim.id, n })} />
         ) : claim.photos.length ? (
           <div className={claim.photos.length === 1 ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
             {claim.photos.map((src, i) => (
@@ -524,7 +529,6 @@ function Evidence({
                 src={src}
                 n={i + 1}
                 of={claim.photos.length}
-                sample={sample}
                 tall={claim.photos.length === 2}
                 onOpen={() => setViewing({ id: claim.id, n: i })}
                 className={claim.photos.length === 3 && i === 0 ? "col-span-2" : undefined}
@@ -536,15 +540,13 @@ function Evidence({
             The owner has code <span className="font-mono text-text">{claim.code}</span> and an open camera session. Photos appear here when they arrive.
           </p>
         )}
-        {claim.seeded && <p className="text-ui text-muted">Sample photos from the eval set, shared by several seeded claims.</p>}
         {viewer !== null && (
           <PhotoViewer
             claimId={claim.id}
             photos={claim.photos}
             start={viewer}
-            sample={sample}
             code={claim.code}
-            question={d && { lead: d.lead, text: d.text }}
+            question={d && { title: d.title, detail: d.detail }}
             labels={claim.review ? reviewLabels(claim) : undefined}
             onOpen={onOpen}
             onReview={onReview}
@@ -557,18 +559,18 @@ function Evidence({
         <MoneyTimeline claim={claim} />
       </Section>
 
-      <Section title="Before the model" aside="No AI">
-        <CheckProgress
+      <Section title="Before the model" aside={preRan.length ? `${preRan.filter((p) => p.state === "pass").length} of ${preRan.length}` : undefined}>
+        <CheckList
           label={`Pre-checks for ${claim.id}`}
           steps={claim.preChecks.map((p) => ({ id: p.id, label: p.label, state: PRE_STATE[p.state], detail: p.state === "pass" && !open.pre ? undefined : link(p.detail) }))}
         />
         <PassedToggle count={claim.preChecks.filter((p) => p.state === "pass").length} open={open.pre} onToggle={() => toggle("pre")} />
       </Section>
 
-      <Section title="The model's answers" aside={answers.length ? `${passed} of ${answers.length} passed` : claim.checks.length ? "No answer" : undefined}>
+      <Section title="The model's answers" aside={answers.length ? `${passed} of ${answers.length}` : claim.checks.length ? "No answer" : undefined}>
         {claim.checks.length ? (
           <>
-            <CheckProgress
+            <CheckList
               label={`Model answers for ${claim.id}`}
               steps={claim.checks.map((c) => ({
                 id: c.id,
@@ -585,10 +587,10 @@ function Evidence({
             />
             <PassedToggle count={claim.checks.filter((c) => c.outcome === "pass").length} open={open.model} onToggle={() => toggle("model")} />
             {summary && (
-              <p className="rounded-control bg-surface-2 px-4 py-3 text-ui text-muted">
-                <span className="micro mb-1 block text-muted">Model summary</span>
-                <span className="font-sans text-ui leading-[1.55] text-text-2">{summary}</span>
-              </p>
+              <div className="flex flex-col gap-1 border-t border-line pt-3">
+                <p className="text-ui font-medium text-text">The model&apos;s summary</p>
+                <q className="block font-sans text-ui leading-[1.55] text-muted">{summary}</q>
+              </div>
             )}
           </>
         ) : (
@@ -660,18 +662,18 @@ function TagCode({ code }: { code: string }) {
 
 /** A blocked repost: its photo beside the earlier claim's matching one, each with its photo number and claim id; the
  * earlier claim's id opens its row. */
-function Duplicate({ claim, sample, onOpen, onView }: { claim: DrawerClaim; sample: boolean; onOpen?: (id: string) => void; onView: (n: number) => void }) {
+function Duplicate({ claim, onOpen, onView }: { claim: DrawerClaim; onOpen?: (id: string) => void; onView: (n: number) => void }) {
   const dup = claim.duplicate!;
   const mine = Math.min(dup.photo, claim.photos.length) - 1;
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="flex min-w-0 flex-col gap-1">
-        <EvidencePhoto src={claim.photos[mine]} n={mine + 1} of={claim.photos.length} sample={sample} tall onOpen={() => onView(mine)} />
+        <EvidencePhoto src={claim.photos[mine]} n={mine + 1} of={claim.photos.length} tall onOpen={() => onView(mine)} />
         <p className="font-mono text-micro text-muted">This claim, {claim.id}</p>
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         {dup.src ? (
-          <EvidencePhoto src={dup.src} n={dup.theirs} of={dup.of} sample={sample} tall />
+          <EvidencePhoto src={dup.src} n={dup.theirs} of={dup.of} tall />
         ) : (
           <p className="flex aspect-[3/4] items-center justify-center rounded-control border border-dashed border-line-strong px-3 text-center text-ui text-muted">The earlier photo isn&apos;t available</p>
         )}

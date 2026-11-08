@@ -1,6 +1,5 @@
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
-import { fiveSummary } from "@/lib/fiveChecks";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
@@ -88,9 +87,18 @@ const PRE_CHECKS: [string, string][] = [
   ["payer_verified", "Verified PayPal account"],
 ];
 const PRE_IDS = new Set(PRE_CHECKS.map(([id]) => id));
+/** One of the four checks that run before the model. */
+export const isPreCheck = (id: string) => PRE_IDS.has(id);
 
-/** A model check's name: "Label", "Code K7Q", "Step 1". */
-export function checkLabel(check: string, code: string): string {
+/** A proof step named by what it asks for: "The pillow is cut fully in half, so it…" -> "Pillow cut fully in half". */
+export function stepName(text: string): string {
+  const clause = text.split(/[,.;:(]/)[0].trim().replace(/^the\s+/i, "").replace(/\s+(?:is|are)\s+/, " ");
+  return clause ? clause[0].toUpperCase() + clause.slice(1) : text;
+}
+
+/** A model check's name: "Label", "Code K7Q", and a proof step by its content ("Pillow cut fully in half"), or
+ * "Step 1" when the recall's steps aren't at hand. */
+export function checkLabel(check: string, code: string, steps?: readonly string[]): string {
   if (check === "label") return "Label";
   if (check === "code") return `Code ${code}`;
   if (check === "same_item") return "Same item";
@@ -100,7 +108,9 @@ export function checkLabel(check: string, code: string): string {
   if (check === "payout") return "PayPal payout";
   if (check === "auto_pay") return "Auto-pay";
   const step = check.match(/^step_(\d+)$/);
-  return step ? `Step ${step[1]}` : check;
+  if (!step) return check;
+  const text = steps?.[Number(step[1]) - 1];
+  return text ? stepName(text) : `Step ${step[1]}`;
 }
 
 /** The evidence barcode, from the index row alone: the four pre-checks, then each model check the rule recorded (or
@@ -120,18 +130,35 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
     return { id, label, state: ran ? "pass" : "waiting" };
   });
   const answered = c.checks.filter((r) => !PRE_IDS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK);
-  if (answered.length) return [...pre, ...answered.map((r) => ({ id: r.check, label: checkLabel(r.check, code), state: r.outcome }))];
-  const expected = ["label", "code", ...(c.photoHashes.length > 1 ? ["same_item"] : []), "screen", ...recall.spec.proof_steps.map((_, i) => `step_${i + 1}`)];
+  const steps = recall.spec.proof_steps;
+  if (answered.length) return [...pre, ...answered.map((r) => ({ id: r.check, label: checkLabel(r.check, code, steps), state: r.outcome }))];
+  const expected = ["label", "code", ...(c.photoHashes.length > 1 ? ["same_item"] : []), "screen", ...steps.map((_, i) => `step_${i + 1}`)];
   const state: BarState = c.decision === "blocked" ? "skipped" : "waiting";
-  return [...pre, ...expected.map((id) => ({ id, label: checkLabel(id, code), state }))];
+  return [...pre, ...expected.map((id) => ({ id, label: checkLabel(id, code, steps), state }))];
+
 }
 
+// Holds from the process (the model not answering, PayPal, auto-pay) aren't answers: they are counted in neither group.
+const PROCESS = new Set(["model", "payout", "auto_pay"]);
+
 /**
- * "1 of 5 held: the same item · 4 passed": the barcode as a sentence in the homepage's five checks (src/lib/fiveChecks.ts),
- * the same count the claim's receipt gives, for screen readers.
+ * "Pre-checks 4 of 4 · Model answers 5 of 5": the one count the console gives everywhere (the barcode's label and hover,
+ * the panel). Each group counts what passed of what ran; a group where nothing ran says why ("waiting", "not run"). A
+ * check that was not run is left out of its total and shown as a dotted slot in the barcode.
  */
+export function checkCount(items: { id: string; state: BarState | PreCheckState }[]): string {
+  const group = (name: string, of: typeof items) => {
+    const ran = of.filter((b) => b.state !== "waiting" && b.state !== "skipped");
+    if (!ran.length) return `${name} ${of.some((b) => b.state === "waiting") ? "waiting" : "not run"}`;
+    return `${name} ${ran.filter((b) => b.state === "pass").length} of ${ran.length}`;
+  };
+  const model = items.filter((b) => !PRE_IDS.has(b.id) && !PROCESS.has(b.id));
+  return `${group("Pre-checks", items.filter((b) => PRE_IDS.has(b.id)))} · ${model.length ? group("Model answers", model) : "Model answers waiting"}`;
+}
+
+/** The barcode as a sentence, for screen readers: the console's one count. */
 export function barsSentence(bars: CheckBar[]): string {
-  return fiveSummary(bars, { open: "waiting", skipped: "not run" });
+  return checkCount(bars);
 }
 
 const since = (from: string | undefined, to: string | undefined) => (from && to ? Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 1000)) : null);
@@ -379,8 +406,8 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
   const reviewed = c.reasons.find((r) => r.check === "review");
   switch (c.decision) {
     case "paid":
-      // A seeded sample was decided by the rule like any claim, but its PayPal account is made up and nothing was sent.
-      if (c.seeded) return `Every check passed, so the rule would pay ${amount}. This is a sample claim: no money was sent.`;
+      // A seeded claim was decided by the rule like any claim, but its payee's PayPal account isn't live: nothing was sent.
+      if (c.seeded) return `Every check passed, so the rule approved the ${amount} refund. The payee's PayPal account isn't live, so no payout was sent.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `Every check passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
       // The rule refused it and the owner asked a person to look (src/lib/appeal.ts): the rule's reason stands beside it.
@@ -439,21 +466,22 @@ export function preChecksOf(c: Pick<Claim, "decision" | "reasons" | "photos" | "
     // Seeded claims share a handful of sample photos, so the fingerprint check was never run on them: say so rather
     // than show a pass next to another claim with the same photo.
     c.seeded
-      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Sample photo shared by the seeded claims, so this check wasn't run" }
+      ? { id: "duplicate_photo", label: "Photo not seen before", state: "skipped", detail: "Not run: this photo set is shared by several claims on this recall" }
       : // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the
         // same sample photo once: say that, next to the other rounds' claims with the same photo and code. The company
         // reads a round as a demo session.
         c.demo
-        ? row("duplicate_photo", "Photo not seen before", "No other claim in this demo session used these photos. Every demo session sends the same sample photos, so each is compared on its own")
+        ? row("duplicate_photo", "Photo not seen before", "No other claim in this session used these photos")
         : row("duplicate_photo", "Photo not seen before", "No other claim used these photos"),
     // In the demo only the genuine sample is held to one claim, within its round (pipeline.ts receivePhotos). A person's
     // approve checks every sample (review.ts), and a conflict it found shows here.
     !c.demo
       ? row("payer", "One claim per account", "No other paid or open claim for this recall from this PayPal account")
       : oneClaimChecked(c) || failed("payer")
-        ? row("payer", "One claim per account", "Checked within this demo session: no other paid or open genuine claim from this PayPal account")
+        ? row("payer", "One claim per account", "Checked within this session: no other paid or open claim from this PayPal account")
         : ran
-          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "Skipped for demo samples: one judge's account sends all four, so this check would stop the rest" }
+          ? { id: "payer", label: "One claim per account", state: "skipped", detail: "Not run: one account files every claim in this session" }
+
           : row("payer", "One claim per account", ""),
     row("payer_verified", "Verified PayPal account", "PayPal says the account is verified"),
   ];

@@ -13,11 +13,10 @@ export interface PhotoViewerProps {
   photos: string[];
   /** The photo that was clicked (0-based). */
   start: number;
-  sample: boolean;
   /** The one-time code the tag must read: on top, beside the photos it is checked against. */
   code?: string;
-  /** What decided a held or refused claim, as the panel's callout says it: the question to look at the photos with. */
-  question?: { lead: string; text: string } | null;
+  /** What decided a held or refused claim, as the panel's heading says it: the question to look at the photos with. */
+  question?: { title: string; detail?: string | null } | null;
   /** Held: approve or reject from here. The viewer closes and the panel's footer opens the same confirm. */
   onReview?: (mode: "approve" | "reject") => void;
   /** The panel's names for those actions, and which leads (reviewLabels): the viewer says them the same way. */
@@ -32,7 +31,7 @@ export interface PhotoViewerProps {
  * question that held it on top. ← and → move between the photos, Esc goes back to the panel (the dialog returns focus
  * to the thumbnail that opened it). On a phone it shows one photo at a time.
  */
-export function PhotoViewer({ claimId, photos, start, sample, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
+export function PhotoViewer({ claimId, photos, start, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const figures = useRef<(HTMLElement | null)[]>([]);
   const [current, setCurrent] = useState(start);
@@ -73,14 +72,19 @@ export function PhotoViewer({ claimId, photos, start, sample, code, question, on
         <div className="min-w-0 flex-1">
           <h2 id="viewer-title" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-body font-medium">{claimId}</span>
-            <span className="micro text-faint">
-              {photos.length === 1 ? "Photo 1" : `Photos 1 to ${photos.length}`}
-              {sample ? " · AI-made test photos" : ""}
-            </span>
+            <span className="text-ui text-muted">{photos.length === 1 ? "1 photo" : `${photos.length} photos`}</span>
           </h2>
           {question && (
             <p className="mt-1 text-ui text-muted">
-              <span className="text-text-2">{question.lead}:</span> <LinkedIds text={question.text} onOpen={onOpen} self={claimId} />
+              <span className="text-text">
+                <LinkedIds text={question.title} onOpen={onOpen} self={claimId} />
+              </span>
+              {question.detail && (
+                <>
+                  {" "}
+                  <LinkedIds text={question.detail} onOpen={onOpen} self={claimId} />
+                </>
+              )}
             </p>
           )}
         </div>
@@ -107,7 +111,7 @@ export function PhotoViewer({ claimId, photos, start, sample, code, question, on
               figures.current[i] = el;
             }}
             tabIndex={-1}
-            aria-label={`Photo ${i + 1} of ${photos.length}${sample ? ", an AI-made test photo" : ""}`}
+            aria-label={`Photo ${i + 1} of ${photos.length}`}
             // A phone shows the current photo alone; wider screens show them all.
             className={clsx("flex min-h-0 min-w-0 flex-col gap-2 rounded-control outline-none max-sm:col-span-full", i !== current && "max-sm:hidden")}
           >
@@ -115,9 +119,6 @@ export function PhotoViewer({ claimId, photos, start, sample, code, question, on
               {/* A private, session-checked route at full size: next/image's optimizer can't fetch it with the cookie. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt={`Photo ${i + 1} of ${photos.length} for ${claimId}`} className="absolute inset-0 size-full object-contain" />
-              {sample && (
-                <span className="micro absolute inset-x-0 bottom-0 bg-[oklch(0.155_0.004_75/0.78)] px-2 py-1 text-[oklch(0.96_0.006_85)]">AI-made test photo</span>
-              )}
             </div>
             <figcaption className={clsx("font-mono text-micro", i === current ? "text-text" : "text-muted")}>
               Photo {i + 1} of {photos.length}
@@ -140,7 +141,7 @@ export function PhotoViewer({ claimId, photos, start, sample, code, question, on
             </Button>
           </div>
         )}
-        <p className="ml-auto flex items-center gap-4 font-mono text-[11px] text-faint" aria-hidden="true">
+        <p className="ml-auto flex items-center gap-4 text-micro text-faint" aria-hidden="true">
           {photos.length > 1 && <Keys k={["←", "→"]}>Switch photo</Keys>}
           <Keys k={["Esc"]}>Back to the evidence</Keys>
         </p>

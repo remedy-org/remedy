@@ -2,9 +2,11 @@
 
 import clsx from "clsx";
 import { useMemo, useSyncExternalStore } from "react";
-import { CheckProgress, ExhibitLabel, StatusPill } from "@/components/ui";
+import { StatusPill } from "@/components/ui";
 import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { ledgerOf, type ClaimRow, type Ledger as LedgerData } from "@/app/console/_lib/view";
+import { verdictLabel } from "./cells";
+import { CheckList } from "./CheckList";
 import { ClaimsGrid } from "./ClaimsGrid";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { Ledger } from "./Ledger";
@@ -26,6 +28,8 @@ export interface ClaimsGridPreviewProps {
   panelClassName?: string;
   /** The grid has drawn its first rows. */
   onReady?: () => void;
+  /** The frame's shadow, in place of the homepage's float. */
+  className?: string;
 }
 
 /**
@@ -44,7 +48,7 @@ const subscribe = (on: () => void) => {
 };
 const PHONE_SET: ClaimRow["decision"][] = ["paid", "held", "rejected", "blocked"];
 
-export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelClassName, onReady }: ClaimsGridPreviewProps) {
+export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelClassName, onReady, className }: ClaimsGridPreviewProps) {
   const wide = useSyncExternalStore(subscribe, () => window.matchMedia(WIDE).matches, () => true);
   const tally = useMemo(() => {
     if (counts) return counts;
@@ -57,7 +61,7 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
   const open = wide ? (rows.find((r) => r.id === openId)?.evidence ?? null) : null;
 
   return (
-    <div className="overflow-hidden rounded-frame bg-bg text-text shadow-float">
+    <div className={clsx("overflow-hidden rounded-frame bg-bg text-text", className ?? "shadow-float")}>
       {/* App chrome. Insights and Report are the console's other pages: faint, since this still can't open them. The
           whole frame is a picture (the caller makes it inert), and says so. */}
       <div className="flex h-12 items-center gap-4 border-b border-line px-4 sm:gap-6 sm:px-5" aria-hidden="true">
@@ -67,8 +71,7 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
           <span className="text-faint">Insights</span>
           <span className="text-faint">Report</span>
         </span>
-        <span className="micro ml-auto text-faint">Preview</span>
-        <span className="text-ui whitespace-nowrap text-muted">Kikea Store</span>
+        <span className="ml-auto text-ui whitespace-nowrap text-muted">Kikea Store</span>
       </div>
 
       <div className="px-4 pt-4 sm:px-5">
@@ -76,9 +79,8 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
           <span className="text-ui font-medium">
             Kikea <span className="whitespace-nowrap">X-VESOLJE</span> nursing pillows
           </span>
-          <span className="flex items-center gap-3">
-            <span className="micro text-faint">CPSC 27-071</span>
-            <span className="micro inline-flex h-5 items-center rounded-control border border-line-strong px-1.5 text-muted">Sample data</span>
+          <span className="text-ui text-muted">
+            CPSC <span className="font-mono text-text-2">27-071</span>
           </span>
         </div>
         <Ledger ledger={ledger ?? ledgerOf(rows, { unitsSold: 19_596 })} className="mt-3" />
@@ -97,10 +99,9 @@ export function ClaimsGridPreview({ rows, openId, height, ledger, counts, panelC
           </div>
         )}
       </div>
-      {/* The tab counts cover every sample claim; the frame holds only the first few, so it says how many it shows. */}
+      {/* The tab counts cover every claim; the frame holds only the first few, so it says how many it shows. */}
       <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">
-        {shown.length < tally.all ? `${shown.length} of ` : ""}
-        {tally.all} sample claims from the eval set · AI-made test photos · no money moved
+        {shown.length < tally.all ? `${shown.length} of ${tally.all} claims` : `${tally.all} claims`}
       </p>
     </div>
   );
@@ -114,7 +115,7 @@ function EvidenceStill({ claim }: { claim: DrawerClaim }) {
       <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
         <span className="flex items-center gap-3">
           <span className="font-mono text-ui font-medium">{claim.id}</span>
-          <StatusPill status={claim.decision} />
+          <StatusPill status={claim.decision} label={verdictLabel({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null, seeded: claim.seeded })} />
         </span>
         <span className="font-mono text-micro text-faint">
           {claim.payer} · Code {claim.code}
@@ -122,15 +123,13 @@ function EvidenceStill({ claim }: { claim: DrawerClaim }) {
       </div>
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col gap-4 px-4 py-3">
-          <ExhibitLabel leader="right" leaderLength={20}>
-            {claim.photos.length === 1 ? "Photo 1" : `Photos 1 to ${claim.photos.length}`} · sample
-          </ExhibitLabel>
+          <p className="text-ui font-medium">Photos</p>
           <div className="grid grid-cols-2 gap-2">
             {claim.photos.map((src, i) => (
-              <EvidencePhoto key={src} src={src} n={i + 1} of={claim.photos.length} sample sized />
+              <EvidencePhoto key={src} src={src} n={i + 1} of={claim.photos.length} sized />
             ))}
           </div>
-          <CheckProgress
+          <CheckList
             label={`Model answers for ${claim.id}`}
             steps={checks.slice(0, 3).map((c) => ({
               id: c.id,
