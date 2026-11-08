@@ -8,7 +8,7 @@ import { PhoneFrame } from "./frames";
 export function HeroPhone() {
   return (
     <figure className="m-0 flex flex-col items-center gap-3">
-      <PhoneFrame step={4} className="relative">
+      <PhoneFrame bar className="relative">
         <div className="flex flex-col gap-4 p-4" aria-hidden="true">
           {/* The paid receipt, flat: the one physical moment, so the one stamp. The amount and the claim id once each. */}
           <Paper variant="receipt" perforated padding="none">

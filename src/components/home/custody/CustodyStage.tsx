@@ -202,7 +202,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
         <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-card")} style={{ opacity: frame }} />
         <div className={styles.screenInner} data-screen-inner>
           <motion.div style={{ opacity: frame }}>
-            <ScreenBar step={[1, 2, 3, 4, 4, 4][chapter]} console={chapter === 5} />
+            <ScreenBar console={chapter === 5} />
           </motion.div>
           <motion.div className="relative min-h-0 flex-1" style={{ opacity: content }}>
             <Compact.Provider value={compact}>
