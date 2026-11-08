@@ -1,20 +1,16 @@
 import type { ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
 import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
-import { ExhibitLabel, Meter, NoBreakHyphens, StatusPill } from "@/components/ui";
+import { StatusPill } from "@/components/ui";
+import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
-import { formatCount, formatDate, formatDayET, plural } from "./format";
+import { formatCount, formatDate, keepHyphens, plural } from "./format";
 
-function H({ n, children }: { n: number; children: ReactNode }) {
-  return (
-    <h2 className="flex items-baseline gap-3 text-body font-medium">
-      <span className="font-mono text-micro text-muted">{String(n).padStart(2, "0")}</span>
-      {children}
-    </h2>
-  );
+function H({ children }: { children: ReactNode }) {
+  return <h3 className="text-body font-medium">{children}</h3>;
 }
 
-const th = "py-2 pr-4 text-left font-mono text-micro font-medium uppercase tracking-[0.06em] text-muted last:pr-0";
+const th = "py-2 pr-4 text-left text-micro font-medium text-muted last:pr-0";
 const td = "border-t border-line py-2.5 pr-4 align-top last:pr-0";
 
 // CPSC's own wording of units sold, only when it says more than the figure above it (a range, several products).
@@ -28,26 +24,26 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
   const s = report.stats;
   const refused = s.rejected + s.blocked;
   const each = report.paidEachCents === null ? "" : ` at ${formatCents(report.paidEachCents)}`;
-  const sampleNote = report.samplesPaid ? ` · ${formatCents(report.sampleCents)} approved` : "";
   return (
     // On screen it is a paper document, like every receipt, tag and notice (light-theme tokens inside, which pass on
     // --paper); printed, plain white.
-    <article data-theme="light" className="mx-auto w-full max-w-[52rem] rounded-card bg-paper px-6 py-8 text-text shadow-paper sm:px-12 sm:py-12 print:max-w-none print:rounded-none print:bg-white print:p-0 print:shadow-none">
+    <article
+      data-theme="light"
+      className="w-full max-w-[52rem] rounded-card bg-paper px-6 py-8 text-text shadow-[var(--paper-shadow-flat)] sm:px-12 sm:py-12 print:max-w-none print:rounded-none print:bg-white print:p-0 print:shadow-none"
+    >
       <header className="flex flex-col gap-3 border-b border-line pb-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <ExhibitLabel leader="none">Recall progress report · Draft</ExhibitLabel>
-          <span className="font-mono text-micro text-muted">Generated {generated}</span>
-        </div>
-        <h1 className="text-h2 font-medium text-balance">
-          CPSC {recall.id}: <NoBreakHyphens>{recall.product}</NoBreakHyphens>
-        </h1>
+        <p className="text-ui text-muted">Draft · generated {generated}</p>
+        <h2 className="text-h2 font-medium text-balance">
+          CPSC {recall.id}: {keepHyphens(recall.product)}
+        </h2>
         <p className="text-ui text-muted">{recall.title}</p>
         <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-3 text-ui sm:grid-cols-4">
           {[
             ["Recall date", formatDate(recall.recallDate)],
             ["Remedy", "Refund for destroyed units"],
             ["Refund per unit", formatMoney(recall.refund)],
-            ["Claims period (ET)", report.firstClaim && report.lastClaim ? `${formatDayET(report.firstClaim)} to ${formatDayET(report.lastClaim)}` : "No claims yet"],
+            // The period the report covers: from the recall's date to the day it was drawn up, as CPSC's monthly report reads.
+            ["Reporting period", `${formatDate(recall.recallDate)} to ${generated}`],
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="text-muted">{k}</dt>
@@ -58,17 +54,17 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
       </header>
 
       <section className="mt-8 flex flex-col gap-4 break-inside-avoid">
-        <H n={1}>Units remedied</H>
+        <H>Units remedied</H>
         <div className="grid gap-6 sm:grid-cols-3">
           <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={cpscUnits(recall, s.unitsSold)} />
-          <Figure label="Units remedied" value={formatCount(s.remedied)} note={report.samplesPaid ? "Destroyed on camera" : "Destroyed on camera and refunded"} />
+          <Figure label="Units remedied" value={formatCount(s.remedied)} note="Destroyed on camera" />
           <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} />
         </div>
-        {s.unitsSold > 0 && <Meter value={s.remedied} max={s.unitsSold} label="Units remedied of units sold" />}
+        {s.unitsSold > 0 && <ReturnRuler remedied={s.remedied} sold={s.unitsSold} />}
       </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
-        <H n={2}>Claims by outcome</H>
+        <H>Claims by outcome</H>
         {/* On a phone the meaning moves under its outcome, so the table fits the paper without scrolling. */}
         <table className="w-full text-ui">
           <thead>
@@ -83,7 +79,9 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
             {report.outcomes.map((o) => (
               <tr key={o.decision}>
                 <td className={td}>
-                  <StatusPill status={o.decision} label={o.label} />
+                  <span className="inline-flex w-(--verdict-pill-w)">
+                    <StatusPill status={o.decision} label={o.label} />
+                  </span>
                   <span className="mt-1.5 block text-muted sm:hidden">{o.note}</span>
                 </td>
                 <td className={`${td} text-right font-mono`}>{formatCount(o.count)}</td>
@@ -102,20 +100,20 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
       </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
-        <H n={3}>Refunds paid</H>
+        <H>Refunds</H>
         <div className="grid gap-6 sm:grid-cols-3">
-          <Figure label="Paid out" value={formatCents(report.sentCents)} note={`${plural(report.sent, "payout")}${report.sent ? each : ""}${sampleNote}`} />
+          <Figure label="Approved" value={formatCents(report.sentCents + report.sampleCents)} note={plural(s.remedied, "refund")} />
           <Figure
-            label="Confirmed by PayPal"
-            value={formatCents(report.settledCents)}
-            note={report.settling ? `${formatCount(report.settling)} still settling` : report.sent ? "Every payout settled" : "No payouts sent yet"}
+            label="Sent"
+            value={formatCents(report.sentCents)}
+            note={`${plural(report.sent, "payout")}${report.sent ? each : ""}${report.settling ? ` · ${formatCount(report.settling)} settling` : report.sent ? " · all settled" : ""}`}
           />
           <Figure label="Method" value="PayPal" note="Payouts to each owner's verified PayPal account" />
         </div>
       </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
-        <H n={4}>Why claims were refused</H>
+        <H>Why claims were refused</H>
         {refused ? (
           <table className="w-full text-ui">
             <tbody>
@@ -136,7 +134,7 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
       </section>
 
       <section className="mt-10 flex flex-col gap-3 break-inside-avoid">
-        <H n={5}>How units were verified</H>
+        <H>How units were verified</H>
         <p className="max-w-read text-ui text-text">
           Each owner logged in with PayPal, received a one-time code, and photographed the destroyed product with the code written on it, using a live camera
           session of 10 minutes with no upload option. Before any photo was examined, Remedy checked the session, refused reused photos and second claims
@@ -145,10 +143,50 @@ export function ProgressReport({ recall, report, generated }: { recall: Recall; 
         </p>
       </section>
 
-      <footer className="mt-12 border-t border-line pt-4 font-mono text-micro text-muted">
-        Prepared by Remedy from {plural(s.total, "claim record")} on {generated}. Review before filing with CPSC.
+      <footer className="mt-12 border-t border-line pt-4 text-micro text-muted">
+        Draft for review, not for filing.
       </footer>
     </article>
+  );
+}
+
+const RULER = 0.12;
+const on = (share: number) => `${(Math.min(share, RULER) / RULER) * 100}%`;
+
+/** Units remedied on a 4px ruler to 12%, with the 6-10% share recalls typically reach as a hatched band, as Insights
+ * draws it: the scale is honest, so a young recall's sliver sits plainly next to the band. */
+function ReturnRuler({ remedied, sold }: { remedied: number; sold: number }) {
+  const share = remedied / sold;
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        role="meter"
+        aria-label="Units remedied of units sold"
+        aria-valuemin={0}
+        aria-valuemax={sold}
+        aria-valuenow={remedied}
+        aria-valuetext={`${percent(remedied, sold)}; recalls typically reach ${TYPICAL_RETURN.from * 100} to ${TYPICAL_RETURN.to * 100}%`}
+        className="relative h-1 rounded-full bg-paper-2"
+      >
+        <span
+          aria-hidden="true"
+          className="absolute -inset-y-px rounded-[2px]"
+          style={{
+            left: on(TYPICAL_RETURN.from),
+            width: `calc(${on(TYPICAL_RETURN.to)} - ${on(TYPICAL_RETURN.from)})`,
+            background: "repeating-linear-gradient(135deg, var(--ink-muted) 0 1px, transparent 1px 5px)",
+          }}
+        />
+        <span aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-pay-ink" style={{ width: `max(3px, ${on(share)})` }} />
+      </div>
+      <p aria-hidden="true" className="relative h-4 text-micro text-muted">
+        <span className="absolute left-0 font-mono">0</span>
+        <span className="absolute" style={{ left: on(TYPICAL_RETURN.from) }}>
+          Typical recall, {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}%
+        </span>
+        <span className="absolute right-0 font-mono">{RULER * 100}%</span>
+      </p>
+    </div>
   );
 }
 

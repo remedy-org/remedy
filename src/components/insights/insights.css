@@ -1,0 +1,175 @@
+/*
+ * Insights runs AG Studio in edit mode only for the analyst's rail; to a company the report is a set of read-only panels.
+ * So a hovered or selected widget gets no editor frame, no resize handles and no empty toolbar (Studio's or a chart's,
+ * which a screen reader would still announce), and a widget's title and caption don't raise a tooltip over the content
+ * beneath.
+ */
+.insights-report .ag-studio-layout-widget {
+  --ag-studio-layout-widget-resize-border-color: transparent;
+}
+
+/*
+ * The keyboard on the canvas (InsightsStudio names each panel's stop): Tab lands on a panel, which gets the app's focus
+ * ring on its card in place of Studio's grey box. A panel with nothing to operate is read, not visited: no stop.
+ */
+.insights-report .ag-studio-layout-widget[data-no-controls] > :is(.ag-tab-guard, .ag-studio-layout-widget-focus-container) {
+  visibility: hidden;
+}
+
+.insights-report .ag-studio-layout-widget.ag-studio-layout-widget-focus,
+.insights-report .ag-studio-layout-widget-focus.ag-studio-layout-widget-editing .ag-studio-layout-widget-overlay {
+  box-shadow: none;
+}
+
+.insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-container {
+  outline: 2px solid var(--text-2);
+  outline-offset: 4px;
+}
+
+/* No cards: every panel is a section under a hairline, on the page's own background (theme.ts drops the fill). */
+.insights-report .ag-studio-layout-widget-container {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+/* A panel's title starts on the section's own left edge, the page's 32px gutter, as the ledger above it does. */
+.insights-report .ag-studio-layout-widget-header {
+  margin-inline: 0;
+}
+
+/* The analyst's rail sits inside the page's gutter, set off by one hairline on its left, never a filled box. */
+.insights-report .ag-studio-ai-panel {
+  border: 0;
+  box-shadow: inset 1px 0 0 var(--line);
+}
+
+/* The analyst's starting questions: a plain list of text links, not a row of pills. */
+.insights-report .ag-studio-ai-prompt-starters {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.insights-report .ag-studio-ai-prompt-starter {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  padding: 4px 0;
+  color: var(--text-2);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+
+.insights-report .ag-studio-ai-prompt-starter:hover {
+  background: none;
+  color: var(--text);
+  text-decoration-color: var(--text);
+}
+
+.insights-report .ag-studio-layout-widget-overlay-resize,
+.insights-report .ag-studio-widget-toolbar:not(:has(button)),
+.insights-report .ag-charts-toolbar:empty {
+  display: none;
+}
+
+/*
+ * A panel's downloads (the grid's CSV, a chart's image) sit inside its card on the title's line, named in words: Studio
+ * draws them as unlabelled icons floating above the card, where they read as belonging to the panel before.
+ */
+.insights-report .ag-studio-widget-toolbar:is(.ag-studio-widget-toolbar-outside-top, .ag-studio-widget-toolbar-inside-top) {
+  top: 16px;
+  right: 24px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.insights-report .ag-studio-widget-toolbar-button {
+  padding: 0 8px;
+  color: var(--muted);
+  font: 400 12px/22px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.insights-report .ag-studio-widget-toolbar-button + .ag-studio-widget-toolbar-button {
+  box-shadow: inset 1px 0 0 var(--line);
+}
+
+.insights-report .ag-studio-widget-toolbar-button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.insights-report .ag-studio-widget-toolbar-button .ag-icon {
+  display: none;
+}
+
+.insights-report .ag-studio-widget-toolbar-button::after {
+  content: attr(aria-label);
+}
+
+.insights-report :is(.ag-studio-layout-widget-title, .ag-studio-layout-widget-subtitle, .ag-studio-layout-widget-caption) {
+  pointer-events: none;
+}
+
+/*
+ * The ledger's hairline already closes the figures above the canvas, so the first row of panels starts on it, without a
+ * rule of its own: Studio's 32px top padding there left an empty band between two rules.
+ */
+.insights-report .ag-studio-layout-content-container {
+  top: 0;
+}
+
+.insights-report .ag-studio-layout-widget[style*="top: 0px"] .ag-studio-layout-widget-container {
+  border-top: 0;
+}
+
+/* An answer that couldn't be had is a quiet line under the question, marked by one rule in the refusal colour, not a
+ * red box: nothing on the page is wrong, and the figures stay current. */
+.insights-report .ag-studio-ai-output-message-error {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: inset 2px 0 0 var(--stop);
+  padding: 2px 0 2px 12px;
+  color: var(--text-2);
+}
+
+/*
+ * The analyst opens from "Ask about this recall" in the page header, so while it is closed nothing of it shows: no
+ * rotated rail at the canvas's edge. Open, it is a plain column: no thread picker (one conversation per visit; "Start
+ * over" clears it), and its header takes the page's neutral focus ring, never a second amber.
+ */
+.insights-report.insights-ask-closed .ag-studio-root-panel-container-right {
+  display: none;
+}
+
+.insights-report .ag-studio-ai-thread-button {
+  display: none;
+}
+
+.insights-report .ag-studio-panel-header:focus-visible {
+  outline: 2px solid var(--text-2);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+/*
+ * Side by side, the right column's panels keep 40px off the left column's bars and track, which otherwise run straight
+ * into the next panel's text. Stacked (below 1024px) every panel starts at 0 and none takes it.
+ */
+.insights-report .ag-studio-layout-widget:not([style*="left: 0px"]) .ag-studio-layout-widget-container {
+  padding-left: 40px;
+}
+
+/* Below 1024px the page's gutter is 24px (the header's sm:px-6), so the canvas keeps the same edge. */
+@media (max-width: 1023px) {
+  .insights-report .ag-studio-root {
+    --ag-studio-canvas-padding: 24px;
+  }
+}

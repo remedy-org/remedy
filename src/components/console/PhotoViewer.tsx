@@ -15,8 +15,8 @@ export interface PhotoViewerProps {
   start: number;
   /** The one-time code the tag must read: on top, beside the photos it is checked against. */
   code?: string;
-  /** What decided a held or refused claim, as the panel's callout says it: the question to look at the photos with. */
-  question?: { lead: string; text: string } | null;
+  /** What decided a held or refused claim, as the panel's heading says it: the question to look at the photos with. */
+  question?: { title: string; detail?: string | null } | null;
   /** Held: approve or reject from here. The viewer closes and the panel's footer opens the same confirm. */
   onReview?: (mode: "approve" | "reject") => void;
   /** The panel's names for those actions, and which leads (reviewLabels): the viewer says them the same way. */
@@ -72,13 +72,19 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
         <div className="min-w-0 flex-1">
           <h2 id="viewer-title" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-body font-medium">{claimId}</span>
-            <span className="micro text-faint">
-              {photos.length === 1 ? "Photo 1" : `Photos 1 to ${photos.length}`}
-            </span>
+            <span className="text-ui text-muted">{photos.length === 1 ? "1 photo" : `${photos.length} photos`}</span>
           </h2>
           {question && (
             <p className="mt-1 text-ui text-muted">
-              <span className="text-text-2">{question.lead}:</span> <LinkedIds text={question.text} onOpen={onOpen} self={claimId} />
+              <span className="text-text">
+                <LinkedIds text={question.title} onOpen={onOpen} self={claimId} />
+              </span>
+              {question.detail && (
+                <>
+                  {" "}
+                  <LinkedIds text={question.detail} onOpen={onOpen} self={claimId} />
+                </>
+              )}
             </p>
           )}
         </div>
@@ -114,7 +120,7 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt={`Photo ${i + 1} of ${photos.length} for ${claimId}`} className="absolute inset-0 size-full object-contain" />
             </div>
-            <figcaption className={clsx("font-mono text-micro", i === current ? "text-text" : "text-muted")}>
+            <figcaption className={clsx("text-micro", i === current ? "text-text" : "text-muted")}>
               Photo {i + 1} of {photos.length}
             </figcaption>
           </figure>
@@ -135,7 +141,7 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
             </Button>
           </div>
         )}
-        <p className="ml-auto flex items-center gap-4 font-mono text-[11px] text-faint" aria-hidden="true">
+        <p className="ml-auto flex items-center gap-4 text-micro text-faint" aria-hidden="true">
           {photos.length > 1 && <Keys k={["←", "→"]}>Switch photo</Keys>}
           <Keys k={["Esc"]}>Back to the evidence</Keys>
         </p>

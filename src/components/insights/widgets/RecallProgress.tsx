@@ -31,17 +31,15 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
   const share = total > 0 ? done / total : 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col justify-between gap-4 px-1.5 pb-1">
+    <div className="flex h-full min-h-0 flex-col justify-between gap-4 pb-1">
       <p className="sr-only">
-        {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}. Most recalls only ever reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
+        {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}. Recalls typically reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
       </p>
-      <div aria-hidden="true" className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
-        <p className="flex items-baseline gap-2">
-          <span className="text-head-sm leading-none font-medium">{done.toLocaleString("en-US")}</span>
-          <span className="text-ui text-muted">of {total.toLocaleString("en-US")} units remedied</span>
-        </p>
-        <p className="font-mono text-ui text-text tabular-nums">{pct(share)}</p>
-      </div>
+      {/* The units themselves are the ledger's first figure, right above: the panel gives the share they make. */}
+      <p aria-hidden="true" className="flex items-baseline gap-2">
+        <span className="text-head-sm leading-none font-medium">{pct(share)}</span>
+        <span className="text-ui text-muted">of units sold remedied so far</span>
+      </p>
 
       <div aria-hidden="true" className="relative pt-5 pb-6">
         <div className="relative h-2 rounded-full bg-surface-2">
@@ -57,12 +55,10 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
           <div className="absolute inset-y-0 left-0 rounded-full bg-pay" style={{ width: `max(3px, ${at(share)})` }} />
         </div>
         <div className="absolute top-0 bottom-6 w-px bg-pay" style={{ left: `max(1px, ${at(share)})` }}>
-          <span className="micro absolute -top-0.5 left-2 whitespace-nowrap text-pay">
-            Remedy so far
-          </span>
+          <span className="absolute -top-1 left-2 text-micro whitespace-nowrap text-pay">Remedy so far</span>
         </div>
         <div className="absolute top-0 -translate-x-1/2 text-center" style={{ left: `calc((${at(TYPICAL_RETURN.from)} + ${at(TYPICAL_RETURN.to)}) / 2)` }}>
-          <span className="micro whitespace-nowrap text-muted">Where most recalls end</span>
+          <span className="text-micro whitespace-nowrap text-muted">Typical recall</span>
         </div>
         {TICKS.map((t) => (
           <div key={t} className={clsx("absolute bottom-0 flex flex-col gap-1", t === 0 ? "items-start" : "-translate-x-1/2 items-center")} style={{ left: at(t) }}>

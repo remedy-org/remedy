@@ -4,7 +4,7 @@ import { ConsoleSkipLink } from "@/components/console/ConsoleSkipLink";
 import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = {
-  title: { default: "Console", template: "%s · Remedy console" },
+  title: { default: "Console", template: "%s · Remedy" },
   robots: { index: false },
 };
 

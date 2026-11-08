@@ -5,14 +5,24 @@ import { CopyField } from "@/components/console/CopyField";
 import { formatCount } from "@/components/console/format";
 import { RecallHeading } from "@/components/console/RecallHeading";
 import { RecallSettingsForm } from "@/components/console/RecallSettingsForm";
-import { Button, Card, CardHeader, CheckIcon } from "@/components/ui";
+import type { ReactNode } from "react";
+import { Button, CheckIcon } from "@/components/ui";
 import { requireSession } from "@/lib/session";
 import { claimUrl } from "../../_lib/links";
-import { formatMoney } from "../../_lib/view";
+import { formatMoney, shownSpec } from "../../_lib/view";
 import { loadRecallFor } from "../../_lib/workspace";
 
 export async function generateMetadata({ params }: PageProps<"/console/recalls/[id]">): Promise<Metadata> {
   return { title: `Recall ${(await params).id}` };
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-5 border-t border-line py-8 first:border-t-0 first:pt-0">
+      <h2 className="text-body font-medium">{title}</h2>
+      {children}
+    </section>
+  );
 }
 
 export default async function RecallPage({ params, searchParams }: PageProps<"/console/recalls/[id]">) {
@@ -23,6 +33,7 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
   const { recall } = found;
   const published = (await searchParams).published === "1";
   const url = claimUrl(recall.slug);
+  const spec = shownSpec(recall.spec);
 
   return (
     <main className="flex flex-1 flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -37,64 +48,51 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
         recalls={[recall]}
         basePath="/console"
         actions={
-          <Button href={`/console?recall=${recall.id}`} variant="secondary" size="sm">
+          <Button href={`/console?recall=${recall.id}`} variant="tertiary" size="sm">
             Claims
           </Button>
         }
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <Card as="section" padding="lg" className="flex flex-col gap-6">
-          <CardHeader title="Claim link" description="Owners start here. There is no account to create: they log in with PayPal and are paid there." />
-          <CopyField value={url} label="Claim link" />
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            <ClaimQr url={url} name={recall.slug} />
-            <Button href={`/r/${recall.slug}`} variant="tertiary" size="sm" target="_blank" className="self-start sm:self-auto">
-              Open the claim page
-            </Button>
-          </div>
-        </Card>
+      {/* Two columns from 1024px: the link owners use on the left, what the recall pays and what a photo must show on the
+          right. One column of hairline sections below. */}
+      <div className="grid gap-x-16 lg:grid-cols-2">
+        <div className="flex flex-col">
+          <Section title="Claim link">
+            <CopyField value={url} label="Claim link" />
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <ClaimQr url={url} name={recall.slug} />
+              <Button href={`/r/${recall.slug}`} variant="tertiary" size="sm" target="_blank" className="self-start sm:self-auto">
+                Open the claim page
+              </Button>
+            </div>
+          </Section>
+        </div>
 
-        <div className="flex flex-col gap-6">
-          <Card as="section" padding="lg" className="flex flex-col gap-6">
+        <div className="flex flex-col max-lg:border-t max-lg:border-line max-lg:pt-8">
+          <Section title="Refund">
             {recall.owner === null ? (
-              <>
-                <CardHeader title="Settings" description="The demo recall is shared by every workspace, so its settings are fixed. Import your own recall to set a refund and auto-pay." />
-                <dl className="grid gap-6 text-ui sm:grid-cols-2">
-                  <div>
-                    <dt className="text-muted">Refund per unit</dt>
-                    <dd className="mt-1 font-mono text-body">{formatMoney(recall.refund)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted">Auto-pay</dt>
-                    <dd className="mt-1 text-body">{recall.autoPay ? "On: passing claims are paid at once" : "Off: passing claims wait for approval"}</dd>
-                  </div>
-                </dl>
-                <Button href="/console/recalls/new" variant="tertiary" size="sm" className="self-start">
-                  Import your own recall
-                </Button>
-              </>
+              <p className="text-ui text-text-2">
+                <span className="font-mono text-text">{formatMoney(recall.refund)}</span> per unit, auto-pay {recall.autoPay ? "on" : "off"}. Both are fixed for
+                this recall.
+              </p>
             ) : (
-              <>
-                <CardHeader title="Settings" description="Changes apply to new claims; paid claims keep the amount they were paid." />
-                <RecallSettingsForm recallId={recall.id} refund={recall.refund.value} autoPay={recall.autoPay} />
-              </>
+              <RecallSettingsForm recallId={recall.id} refund={recall.refund.value} autoPay={recall.autoPay} />
             )}
-          </Card>
+          </Section>
 
-          <Card as="section" padding="lg" className="flex flex-col gap-4">
-            <CardHeader title="Photo checks" description="What every claim's photos must show. Set when the recall was published." />
-            <dl className="flex flex-col gap-4 text-ui">
+          <Section title="Photo checks">
+            <dl className="flex flex-col gap-5 text-ui">
               <div>
                 <dt className="text-muted">Product</dt>
-                <dd className="mt-1">{recall.spec.product}</dd>
+                <dd className="mt-1 max-w-read">{spec.product}</dd>
               </div>
               <div>
                 <dt className="text-muted">The label must show</dt>
                 <dd className="mt-1">
-                  {recall.spec.label_must_show.length ? (
+                  {spec.label_must_show.length ? (
                     <ul className="flex flex-col gap-1">
-                      {recall.spec.label_must_show.map((l) => (
+                      {spec.label_must_show.map((l) => (
                         <li key={l}>{l}</li>
                       ))}
                     </ul>
@@ -106,27 +104,24 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
               <div>
                 <dt className="text-muted">Proof steps</dt>
                 <dd className="mt-1">
-                  <ol className="flex flex-col gap-1">
-                    {recall.spec.proof_steps.map((s, i) => (
-                      <li key={s} className="flex gap-3">
-                        <span className="font-mono text-micro leading-5 text-muted">{String(i + 1).padStart(2, "0")}</span>
-                        {s}
-                      </li>
+                  <ul className="flex flex-col gap-1">
+                    {recall.spec.proof_steps.map((step) => (
+                      <li key={step}>{step}</li>
                     ))}
-                  </ol>
+                  </ul>
                 </dd>
               </div>
-              <div className="border-t border-line pt-4">
+              <div>
                 <dt className="text-muted">From CPSC</dt>
                 <dd className="mt-1">
-                  {recall.unitsSold ? `${formatCount(recall.unitsSold)} units sold.` : "CPSC gives no unit count."}{" "}
-                  <a href={recall.url} target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-accent-text">
+                  {recall.unitsSold ? `About ${formatCount(recall.unitsSold)} units sold.` : "CPSC gives no unit count."}{" "}
+                  <a href={recall.url} target="_blank" rel="noreferrer" className="underline decoration-line-strong underline-offset-4 hover:decoration-text">
                     Read the notice
                   </a>
                 </dd>
               </div>
             </dl>
-          </Card>
+          </Section>
         </div>
       </div>
     </main>

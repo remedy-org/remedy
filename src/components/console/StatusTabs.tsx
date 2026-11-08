@@ -6,7 +6,7 @@ import type { KeyboardEvent } from "react";
 export type Tab = "all" | "paid" | "held" | "rejected" | "blocked" | "pending";
 export const TABS: { id: Tab; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "paid", label: "Paid" },
+  { id: "paid", label: "Approved" },
   { id: "held", label: "Held" },
   { id: "rejected", label: "Rejected" },
   { id: "blocked", label: "Blocked" },
@@ -14,7 +14,7 @@ export const TABS: { id: Tab; label: string }[] = [
   { id: "pending", label: "In progress" },
 ];
 
-/** AG Grid demo style status tabs: a word and its count, the current one underlined. Arrow keys, Home and End move between them. */
+/** Status tabs: a word and its count, the current one underlined. Arrow keys, Home and End move between them. */
 export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; counts: Record<Tab, number>; onChange: (t: Tab) => void; controls: string }) {
   // ← and → move between the tabs, Home and End to the first and last (the ARIA tabs pattern).
   const move = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
@@ -32,7 +32,7 @@ export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; 
     <div
       role="tablist"
       aria-label="Filter claims by decision"
-      className="-mx-4 -my-1 flex overflow-x-auto px-4 py-1 [scrollbar-width:none] after:w-8 after:shrink-0 after:content-[''] max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] sm:-mx-1 sm:px-1 sm:after:hidden"
+      className="-mx-4 -my-1 flex overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:shrink-0 after:w-8 after:shrink-0 after:content-[''] max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] sm:-mx-1 sm:px-1 sm:after:hidden"
     >
       {TABS.map((t, i) => {
         const active = t.id === value;

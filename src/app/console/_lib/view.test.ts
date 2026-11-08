@@ -5,7 +5,8 @@ import type { Reason } from "@/lib/types";
 import { duplicateFor, payoutFailureWords, toDrawerClaim } from "./drawer";
 import { PublishInput, RefundValue, slugify, summarizeCpsc, uniqueSlug } from "./recalls";
 import { buildReport } from "./report";
-import { companyReasonText, decisionSentence, duration, formatCents, maskPayer, median, percent, preChecksOf, reasonOf, statsOf, toRow } from "./view";
+import { companyReasonText, decisionSentence, duration, formatCents, maskPayer, median, percent, preChecksOf, reasonOf, shownSpec, statsOf, toRow } from "./view";
+import { DEMO_SPEC } from "@/lib/demo/kikea";
 import cpsc27071 from "@/lib/__fixtures__/cpsc-27071.json";
 import { CpscRecord } from "@/lib/cpsc";
 
@@ -49,14 +50,14 @@ describe("console view", () => {
   it("gives each row its reason and amount", () => {
     const row = toRow(summarize(sampleClaim({ decision: "rejected", reasons: [{ check: "label", outcome: "pass", text: "ok" }, reject("code", "Written code reads K7O")] })), recall);
     expect(row).toMatchObject({ decision: "rejected", reason: "Written code reads K7O", amount: null, payer: "•••• UJ3Q" });
-    expect(toRow(summarize(sampleClaim({ decision: "held" })), { ...recall, autoPay: false }).reason).toBe("Every check passed; auto-pay is off");
+    expect(toRow(summarize(sampleClaim({ decision: "held" })), { ...recall, autoPay: false }).reason).toBe("All checks passed; auto-pay is off");
     expect(reasonOf(summarize(sampleClaim({ decision: "pending", photos: [] })), recall)).toBe("Waiting for photos");
   });
 
   it("says the rule's decision in one sentence", () => {
-    expect(decisionSentence(sampleClaim({ decision: "paid" }), recall)).toBe("Every check passed, so Remedy paid $29.99 through PayPal.");
+    expect(decisionSentence(sampleClaim({ decision: "paid" }), recall)).toBe("All checks passed, so Remedy paid $29.99 through PayPal.");
     expect(decisionSentence(sampleClaim({ decision: "blocked", reasons: [reject("payer_verified", "This PayPal account isn't verified")] }), recall)).toBe(
-      "Stopped before the photos reached the model: this PayPal account isn't verified.",
+      "Stopped by a pre-check before the photo check: this PayPal account isn't verified.",
     );
     expect(decisionSentence(sampleClaim({ decision: "rejected", reasons: [reject("review", "Rejected on review: PayPal name doesn't match.")] }), recall)).toBe(
       "Rejected on review: PayPal name doesn't match.",
@@ -66,10 +67,10 @@ describe("console view", () => {
   it("says why a claim is held: the model, auto-pay, PayPal or a conflict before the payout", () => {
     const held = (check: string, text: string) => sampleClaim({ decision: "held", reasons: [{ check: "label", outcome: "pass", text: "ok" }, { check, outcome: "hold", text }] });
     expect(decisionSentence(held("payout", "PayPal didn't accept the payout, so a person will send it"), recall)).toBe(
-      "Every check passed, but PayPal didn't accept the payout, so a person will send it.",
+      "All checks passed, but PayPal didn't accept the payout, so a person will send it.",
     );
     expect(decisionSentence(held("auto_pay", "Auto-pay is off for this recall, so a person approves each refund"), recall)).toBe(
-      "Every check passed. Auto-pay is off, so a person approves the $29.99 refund.",
+      "All checks passed. Auto-pay is off, so a person approves the $29.99 refund.",
     );
     expect(decisionSentence(held("payer", "PayPal account already has a claim"), recall)).toBe(
       "A check before the payout found a conflict, so a person decides: PayPal account already has a claim.",
@@ -88,21 +89,22 @@ describe("console view", () => {
       ["payer_verified", "pass"],
     ]);
     expect(preChecksOf(sampleClaim({ photos: [] })).every((r) => r.state === "waiting")).toBe(true);
-    expect(preChecksOf(sampleClaim({ seeded: true })).find((r) => r.id === "duplicate_photo")?.state).toBe("skipped");
+    // A check that didn't run isn't listed.
+    expect(preChecksOf(sampleClaim({ seeded: true })).find((r) => r.id === "duplicate_photo")).toBeUndefined();
   });
 
   it("says what the one-claim check covered: paid or open claims, the round for the genuine sample, nothing for the others", () => {
     const payer = (c: Parameters<typeof sampleClaim>[0]) => preChecksOf(sampleClaim(c)).find((r) => r.id === "payer")!;
     const demo = (sample: string) => ({ demo: true, events: [{ at: "2026-11-07T10:00:00.000Z", type: "demo_sample", detail: sample }] });
     expect(payer({})).toMatchObject({ state: "pass", detail: "No other paid or open claim for this recall from this PayPal account" });
-    expect(payer(demo("genuine"))).toMatchObject({ state: "pass", detail: expect.stringMatching(/^Checked within this demo session/) });
-    expect(payer(demo("wrong-code")).state).toBe("skipped");
+    expect(payer(demo("genuine"))).toMatchObject({ state: "pass", detail: expect.stringMatching(/^Checked within this session/) });
+    expect(payer(demo("wrong-code"))).toBeUndefined();
     expect(payer({ ...demo("wrong-code"), photos: [] }).state).toBe("waiting");
   });
 
   it("offers review only on held claims, and only a sample review on a seeded one", () => {
-    expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false });
-    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toEqual({ sample: true });
+    expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false, note: null });
+    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toEqual({ sample: true, note: null });
     expect(toDrawerClaim(sampleClaim({ decision: "paid" }), recall).review).toBeNull();
     expect(toDrawerClaim(sampleClaim(), recall).photos).toEqual(["/api/console/claims/RM-0412/photos/0"]);
   });
@@ -223,7 +225,7 @@ describe("console view", () => {
   it("says a demo claim's duplicate check covers only its own demo round", () => {
     const photos = [{ key: "a/1.jpg", hash: "0123456789abcdef" }];
     const dup = (c: Parameters<typeof sampleClaim>[0]) => preChecksOf(sampleClaim({ decision: "held", photos, ...c })).find((p) => p.id === "duplicate_photo")!;
-    expect(dup({ demo: true }).detail).toContain("this demo session");
+    expect(dup({ demo: true }).detail).toContain("this session");
     expect(dup({ demo: true }).detail).not.toMatch(/round/);
     expect(dup({}).detail).toBe("No other claim used these photos");
   });
@@ -252,10 +254,12 @@ describe("timing", () => {
     expect(median([4, 3, 2, 4007])).toBe(3);
   });
 
-  it("prints a duration as a clock, and in hours and minutes past an hour", () => {
-    expect(duration(3)).toBe("0:03");
-    expect(duration(448)).toBe("7:28");
-    expect(duration(4007)).toBe("1h 06m");
+  it("prints a duration in seconds, minutes, and hours and minutes past an hour", () => {
+    expect(duration(3)).toBe("3 s");
+    expect(duration(10.8)).toBe("11 s");
+    expect(duration(120)).toBe("2 min");
+    expect(duration(448)).toBe("7 min 28 s");
+    expect(duration(4007)).toBe("1 h 06 min");
   });
 });
 
@@ -269,9 +273,9 @@ describe("report", () => {
     ];
     const r = buildReport(claims.map(summarize), recall);
     expect(r.outcomes.find((o) => o.decision === "rejected")).toMatchObject({ count: 2, share: "50%", note: "A photo check failed, or a person rejected it on review" });
-    expect(r.outcomes.find((o) => o.decision === "held")?.note).toContain("PayPal didn't take the payout");
+    expect(r.outcomes.find((o) => o.decision === "held")?.note).toContain("PayPal refused an approved payout");
     expect(r.refusals).toEqual([
-      { reason: "One-time code missing or wrong", count: 2 },
+      { reason: "Code missing or wrong", count: 2 },
       { reason: "Destruction not shown", count: 1 },
     ]);
     // A seeded sample is counted as remedied, but its payout never left: it is not money paid or confirmed.
@@ -288,6 +292,10 @@ describe("recall import", () => {
 
   it("makes slugs unique and short", () => {
     expect(slugify("Gourmia Stainless Steel Digital 9 Slice Digital Air Fryer Ovens")).toBe("gourmia-stainless-steel-digital-9-slice-digital");
+    expect(slugify("Ekouaer Girls’ Nightgowns")).toBe("ekouaer-girls-nightgowns");
+    expect(shownSpec(DEMO_SPEC).label_must_show[0]).toBe("X-VESOLJE, hand-written on a paper tag tied to the pillow (the product's label)");
+    expect(shownSpec(DEMO_SPEC).product).not.toMatch(/demo|stand-in/);
+    expect(shownSpec(DEMO_SPEC).note).toBe("");
     expect(uniqueSlug("pillows", [{ slug: "pillows", id: "27-071" }], "27-099")).toBe("pillows-2");
     expect(uniqueSlug("pillows", [{ slug: "pillows", id: "27-071" }], "27-071")).toBe("pillows");
   });

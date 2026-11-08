@@ -3,10 +3,8 @@ import { APPEAL_CHECK, reviewAsked } from "@/lib/appeal";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Outcome, Reason, Recall } from "@/lib/types";
 import { isSandboxBuild } from "@/lib/demo/allowed";
-import { fiveSummary } from "@/lib/fiveChecks";
 import { demoSample } from "@/lib/demo/samples";
-import { SAMPLE_PRECHECKED, samplePayoutDetail, samplePhotosDetail } from "@/lib/demo/sampleCopy";
-import { amountOf, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
+import { amountOf, checkCount, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow } from "./view";
 
 // Everything the evidence drawer shows for one claim, built on the server so the client never sees a full payer id.
 
@@ -47,7 +45,7 @@ export interface DrawerClaim {
   checks: DrawerCheck[];
   // The model's own one-line summary, when it answered.
   summary: string | null;
-  // The five checks in one line, as the grid's barcode counts them: "1 of 5 held: the same item · 3 passed · 1 not run".
+  // The checks in one line, as the grid's barcode counts them: "Pre-checks 4 of 4 · Model answers 4 of 5".
   five: string;
   sentence: string;
   amount: string;
@@ -66,7 +64,7 @@ export interface DrawerClaim {
   // The owner asked a person to look at a claim the rule refused (src/lib/appeal.ts): when, or null.
   appealedAt: string | null;
   // Approve and reject for held claims. A seeded one's review is a sample: answered, but never paid or saved.
-  review: { sample: boolean } | null;
+  review: { sample: boolean; note: string | null } | null;
   recall: { id: string; autoPay: boolean };
   // Payouts in this build go to PayPal's sandbox: the approve step says so beside the amount.
   sandbox: boolean;
@@ -96,19 +94,20 @@ export function photoUrl(claimId: string, n: number) {
 }
 
 /**
- * A seeded sample's history in the words of a sample: claims seeded before the wording changed still say "live camera"
- * and "sent through PayPal", which never happened. Their made-up PayPal status is left out.
+ * A seeded claim's history as it happened: it came with the console and never pays out, so no payout left and no PayPal
+ * status exists. The stored lines (lib/demo/sampleCopy.ts) are rewritten in the console's words.
  */
 function sampleEvents(c: Claim, amount: string): Claim["events"] {
+  const n = c.photos.length;
   return c.events
     .filter((e) => e.type !== "payout_updated")
     .map((e) =>
       e.type === "photos_received"
-        ? { ...e, detail: samplePhotosDetail(c.photos.length) }
+        ? { ...e, detail: `${n} ${n === 1 ? "photo" : "photos"} received` }
         : e.type === "prechecked"
-          ? { ...e, detail: SAMPLE_PRECHECKED }
+          ? { ...e, detail: "Pre-checks passed" }
           : e.type === "payout_sent"
-            ? { ...e, detail: samplePayoutDetail(amount) }
+            ? { ...e, detail: `Approved for ${amount}. No payout: this claim came with your console.` }
             : e,
     );
 }
@@ -216,7 +215,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
   const pre = preChecksOf(refusedReasons(c, refused).length ? { ...c, reasons: [...c.reasons, ...refusedReasons(c, refused)] } : c);
   const checks = c.reasons
     .filter((r) => !NOT_MODEL.has(r.check))
-    .map((r) => ({ id: r.check, label: checkLabel(r.check, c.code), outcome: r.outcome, rule: companyReasonText(r, c.decision), evidence: evidenceFor(r.check, r.outcome, c.verdict) }));
+    .map((r) => ({ id: r.check, label: checkLabel(r.check, c.code, recall.spec.proof_steps), outcome: r.outcome, rule: companyReasonText(r, c.decision), evidence: evidenceFor(r.check, r.outcome, c.verdict) }));
   return {
     id: c.id,
     createdAt: c.createdAt,
@@ -231,7 +230,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     checks,
     summary: c.verdict?.summary ?? null,
     // What was recorded, as the grid's barcode counts it (barsSentence), not what approve would find now.
-    five: fiveSummary([...pre.map((p) => ({ id: p.id, state: p.state })), ...checks.map((r) => ({ id: r.id, state: r.outcome }))], { open: "waiting", skipped: "not run" }),
+    five: checkCount([...pre.map((p) => ({ id: p.id, state: p.state })), ...checks.map((r) => ({ id: r.id, state: r.outcome }))]),
     sentence: decisionSentence(c, recall),
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,
@@ -244,7 +243,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     duplicate: null,
     review:
       c.decision === "held"
-        ? { sample: Boolean(c.seeded) }
+        ? { sample: Boolean(c.seeded), note: null }
         : null,
     recall: { id: recall.id, autoPay: recall.autoPay },
     sandbox: isSandboxBuild(),

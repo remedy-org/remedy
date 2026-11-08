@@ -26,7 +26,7 @@ export function ConsoleSkeleton() {
 }
 
 /**
- * The claims grid's footprint while it loads: a 36px header and 52px rows at the columns' widths, or 72px cards below
+ * The claims grid's footprint while it loads: a 36px header and 52px rows at the columns' widths, or 88px cards below
  * 720px (the same width the grid measures, by a container query), so the grid replaces it without moving anything.
  */
 export function SkeletonGrid({ rows, cards }: { rows: number; cards?: boolean }) {
@@ -51,7 +51,7 @@ export function SkeletonGrid({ rows, cards }: { rows: number; cards?: boolean })
         </div>
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="border-b border-line last:border-b-0">
-            <div className={clsx("h-[71px] items-center gap-3 px-4", cards ? "flex" : "flex @min-[720px]:hidden")}>
+            <div className={clsx("h-[87px] items-center gap-3 px-4", cards ? "flex" : "flex @min-[720px]:hidden")}>
               <Skeleton className="h-[30px] w-10 rounded-[4px]" />
               <span className="flex flex-1 flex-col gap-2.5">
                 <span className="flex justify-between">

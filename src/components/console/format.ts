@@ -18,6 +18,11 @@ const timeFmt = new Intl.DateTimeFormat("en-GB", { month: "short", day: "numeric
 /** "7 Nov, 14:02 UTC". */
 export const formatTime = (iso: string) => timeFmt.format(new Date(iso));
 
+const dayTimeFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
+
+/** "7 Nov 14:02" (UTC): a grid row's filing time, with its day, so a list that spans days reads in order. */
+export const formatDayTime = (iso: string) => dayTimeFmt.format(new Date(iso)).replace(",", "");
+
 /** "14:02:05", in UTC like formatTime, beside which it is shown. */
 const clockFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23", timeZone: "UTC" });
 export const formatClock = (iso: string) => clockFmt.format(new Date(iso));
@@ -25,3 +30,7 @@ export const formatClock = (iso: string) => clockFmt.format(new Date(iso));
 export const formatCount = (n: number) => n.toLocaleString("en-US");
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${formatCount(n)} ${n === 1 ? one : many}`;
+
+/** A product name as one string that never breaks at its hyphens ("X-VESOLJE"): a word joiner after each one. One text
+ * node, so a screen reader hears the name as written, spaces and all. */
+export const keepHyphens = (text: string) => text.replace(/-/g, "-\u2060");

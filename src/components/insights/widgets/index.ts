@@ -5,6 +5,9 @@ import type { CheckFunnelDef, DecisionMixDef, InsightsRegistry, MedianTimeDef, R
 import { MedianTime } from "./MedianTime";
 import { RecallProgress } from "./RecallProgress";
 import { RefusalReasons } from "./RefusalReasons";
+import { pillClasses } from "@/components/ui/StatusPill";
+import type { Decision } from "@/lib/types";
+import { shownAs } from "../funnel";
 import { reactComp } from "../reactComp";
 import type { StudioLib } from "../studio-lib";
 
@@ -14,7 +17,7 @@ import type { StudioLib } from "../studio-lib";
 
 export type { InsightsRegistry } from "./defs";
 
-// The format these widgets keep: a title, an exhibit-label subtitle and a caption. Built with Studio's own shape
+// The format these widgets keep: a title, a subtitle and a caption. Built with Studio's own shape
 // builder (through a command, the public way to get one), so the AI sees a real schema.
 const formatShape = ({ api }: AgFormatShapeParams) =>
   api.defineAiCommand((s) => {
@@ -25,9 +28,8 @@ const formatShape = ({ api }: AgFormatShapeParams) =>
     };
   }).shape;
 
-// The report is read, not built: Studio runs in edit mode only because the analyst's rail lives there. So no widget
-// keeps Studio's duplicate and delete, which left out of a toolbar are off for the Delete key too; the grid's CSV and a
-// chart's image download stay, named in words (Studio reads a button's label out as-is, not as a locale key; globals.css
+// The report is read, not built. So no widget keeps Studio's duplicate and delete, which left out of a toolbar are off for the Delete key too; the grid's CSV and a
+// chart's image download stay, named in words (Studio reads a button's label out as-is, not as a locale key; insights.css
 // shows it as the button's text).
 const ACTIONS: Record<string, string> = { export: "Export CSV", download: "Save image" };
 const readOnly = <T extends Pick<AgBaseWidgetDefinition, "toolbar">>(def: T): T => ({
@@ -50,28 +52,21 @@ export const insightsWidgets =
         dataMapping: {
           remedied: { type: "field", supportedRoles: ["numeric"], requires: { cardinality: "one" }, required: true, aiDescription: "Units remedied: sum of claims.remedied." },
           sold: { type: "field", supportedRoles: ["numeric"], requires: { cardinality: "one" }, required: true, aiDescription: "Units sold: max of recall.unitsSold." },
-          samples: {
-            type: "field",
-            supportedRoles: ["numeric"],
-            requires: { cardinality: "one" },
-            aiDescription: "Units remedied by starter claims, which never pay out: sum of claims.remediedSample.",
-          },
         },
         formatShape,
         form: (params: AgWidgetFormParams<RecallProgressDef>) =>
           titles(params, [
             { key: "remedied", label: "Units remedied" },
             { key: "sold", label: "Units sold" },
-            { key: "samples", label: "Of which starter claims" },
           ]),
         comp: reactComp(RecallProgress),
         defaultSize: { width: 640, height: 200 },
         minSize: { width: 360, height: 160 },
         ai: {
           label: "Recall progress",
-          description: "A ruler of units remedied against units sold, with the 6-10% share recalls typically reach (PIRG) as an amber band.",
+          description: "A ruler of units remedied against units sold, with the 6-10% share recalls typically reach (PIRG) as a hatched band.",
           usage: "Use for how far the recall has got. Not for counts over time.",
-          configuration: "Map remedied to sum(claims.remedied), sold to max(recall.unitsSold) and samples to sum(claims.remediedSample).",
+          configuration: "Map remedied to sum(claims.remedied) and sold to max(recall.unitsSold).",
         },
       },
       {
@@ -194,12 +189,14 @@ export const insightsWidgets =
 };
 
 // The grid's claim ids (sources.ts gives that field a claimOf context: the recall) are mono links to the claim in the
-// queue, as every claim id in the console is.
+// queue, as every claim id in the console is; its decisions read as the console's pill does ("Approved").
 const claimLinks = <T extends AgBaseWidgetDefinition>(def: T): T => ({
   ...def,
   options: {
     ...(def.options as object | undefined),
-    createCellRenderer: (field: { context?: { claimOf?: string } }) => {
+    createCellRenderer: (field: { context?: { claimOf?: string; decision?: boolean } }) => {
+      // The Claims grid's pill, in its fixed track, so the two grids speak one language.
+      if (field.context?.decision) return ({ value }: { value: unknown }) => (typeof value === "string" ? pillElement(value) : "");
       const recall = field.context?.claimOf;
       if (!recall) return undefined;
       return ({ value }: { value: unknown }) => {
@@ -207,9 +204,28 @@ const claimLinks = <T extends AgBaseWidgetDefinition>(def: T): T => ({
         const a = document.createElement("a");
         a.href = `/console?recall=${encodeURIComponent(recall)}&claim=${encodeURIComponent(value)}`;
         a.textContent = value;
-        a.className = "font-mono font-medium whitespace-nowrap text-text underline decoration-line-strong underline-offset-2 hover:decoration-text";
+        a.className = "font-mono font-medium whitespace-nowrap text-text decoration-line-strong underline-offset-2 hover:underline";
         return a;
       };
     },
   },
 });
+
+const DECISION_OF: Record<string, Decision> = { Paid: "paid", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
+
+/** A decision as the console's StatusPill draws it, as DOM for Studio's grid. */
+function pillElement(value: string): HTMLElement | string {
+  const decision = DECISION_OF[value];
+  if (!decision) return shownAs(value);
+  const { className, dot } = pillClasses(decision);
+  const track = document.createElement("span");
+  track.className = "inline-flex w-(--verdict-pill-w)";
+  const pill = document.createElement("span");
+  pill.className = `inline-flex h-[22px] items-center gap-1.5 rounded-full px-2.5 text-micro font-medium whitespace-nowrap ${className}`;
+  const mark = document.createElement("span");
+  mark.className = `size-1.5 shrink-0 rounded-full ${dot}`;
+  mark.setAttribute("aria-hidden", "true");
+  pill.append(mark, shownAs(value));
+  track.append(pill);
+  return track;
+}

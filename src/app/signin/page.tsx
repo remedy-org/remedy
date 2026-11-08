@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { JudgeLoginPanel } from "@/components/claim/JudgeLoginPanel";
-import { ConsoleReplica, PREVIEW_ROWS } from "@/components/home/ConsoleReplica";
-import { Button, Card, CheckIcon, ErrorState, ExhibitLabel, ThemeToggle, Wordmark } from "@/components/ui";
+import { CopyField } from "@/components/console/CopyField";
+import { Button, CheckIcon, ErrorState, ThemeToggle, Wordmark } from "@/components/ui";
 import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { DEFAULT_NEXT, getSession, safeNext } from "@/lib/session";
 
@@ -22,14 +21,6 @@ const ERRORS: Record<string, { title: string; description: string }> = {
   },
 };
 
-const FACTS = [
-  <>
-    Your console opens on the <span className="whitespace-nowrap">X-VESOLJE</span> pillow recall, with 40 claims already in the queue.
-  </>,
-  "Refunds land in each owner's PayPal account through PayPal Payouts. Next: fund them straight from your PayPal business account.",
-  "Remedy reads your PayPal name, email and account ID to open your console. Nothing else.",
-];
-
 export default async function SignInPage({ searchParams }: PageProps<"/signin">) {
   const params = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -44,10 +35,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   const fromClaim = new URL(next, "http://n").searchParams.has("claim");
 
   return (
-    // On the homepage's page frame and 12-column grid: the wordmark on the gutter, the card in columns 1 to 5, and the
-    // console still from column 7, running off the right edge like the hero's laptop.
+    // On the homepage's page frame: the wordmark on the gutter, then one quiet column, centred in the window. No picture
+    // of the console beside it: what is behind the login is said in words.
     <div className="flex min-h-dvh flex-col overflow-x-clip">
-      {/* The way back and the theme stay in reach above the fold, as on every page. */}
       <header className="page flex h-16 items-center justify-between gap-4">
         <Wordmark href="/" />
         <div className="flex items-center gap-2 sm:gap-5">
@@ -57,68 +47,53 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <ThemeToggle />
         </div>
       </header>
-      <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none sm:py-16">
-        <div className="col-span-12 flex flex-col items-center lg:col-span-5 lg:items-stretch">
-          <Card padding="lg" className="w-full max-w-claim">
-            <ExhibitLabel leader="right" leaderLength={24}>
-              For companies running a recall
-            </ExhibitLabel>
-            <h1 className="mt-4 text-h2 font-medium">Sign in to your recall console</h1>
-            <p className="mt-3 text-body text-muted">Log in with PayPal. Your claims, payouts and CPSC report are there.</p>
+      <main id="main" tabIndex={-1} className="page flex flex-1 items-center justify-center py-12 outline-none sm:py-16 sm:pb-28">
+        <div className="flex w-full max-w-[400px] flex-col">
+          <h1 className="text-h2 font-medium">Sign in to Remedy</h1>
+          <p className="mt-2 text-ui text-muted">Review recall claims and pay refunds through PayPal.</p>
 
-            {error && <ErrorState variant="inline" className="mt-6" title={error.title} description={error.description} />}
-            {signedOut && (
-              <p role="status" className="mt-6 flex items-center gap-2.5 rounded-control border border-line bg-surface-2 px-4 py-3 text-ui text-text-2">
-                <CheckIcon className="shrink-0 text-pay" />
-                You&apos;re signed out. Log in again to open your console.
-              </p>
-            )}
-
-            {login && (
-              <JudgeLoginPanel
-                login={login}
-                className="mt-6"
-                why={fromClaim ? "The console is the company's side. Use the demo business account to see this claim." : undefined}
-              />
-            )}
-
-            <Button href={start} size="lg" block className="mt-8" prefetch={false}>
-              Log in with PayPal
-            </Button>
-            <p className="mt-3 text-center text-ui text-muted">You&apos;ll confirm on PayPal&apos;s own page, then come back here.</p>
-
-            <ol className="mt-8 flex flex-col border-t border-line">
-              {FACTS.map((f, i) => (
-                <li key={i} className="flex gap-3 border-b border-line py-3 text-ui text-muted last:border-b-0 last:pb-0">
-                  <span className="mt-px w-5 shrink-0 font-mono text-micro leading-[1.45rem] text-faint tabular-nums">{String(i + 1).padStart(2, "0")}</span>
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ol>
-          </Card>
-
-          <div className="mt-8 flex w-full max-w-claim flex-col items-center text-center text-ui text-muted">
-            <p className="text-balance">
-              Own a recalled product? Use the claim link on the recall notice, or{" "}
-              <Link href="/r/kikea-x-vesolje/try" className="text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
-                see a claim
-              </Link>
-              .
+          {error && <ErrorState variant="inline" className="mt-6" title={error.title} description={error.description} />}
+          {signedOut && (
+            <p role="status" className="mt-6 flex items-center gap-2.5 text-ui text-text-2">
+              <CheckIcon className="shrink-0 text-pay" />
+              You&apos;re signed out.
             </p>
-          </div>
+          )}
+
+          <Button href={start} size="lg" block className="mt-8" prefetch={false}>
+            Log in with PayPal
+          </Button>
+          <p className="mt-3 text-ui text-muted">Remedy reads your PayPal name and email to open your workspace.</p>
+
+          {/* The shared login sits under the real way in, never in front of it. */}
+          {login && (
+            <section aria-labelledby="demo-account" className="mt-10 flex flex-col gap-3 border-t border-line pt-6">
+              <div className="flex flex-col gap-1">
+                <h2 id="demo-account" className="text-ui font-medium">
+                  Demo account
+                </h2>
+                {fromClaim && <p className="text-ui text-muted">This claim is in the company console. Log in with the demo account to see it.</p>}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-micro text-muted">Email</span>
+                <CopyField value={login.email} label="Email" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-micro text-muted">Password</span>
+                <CopyField value={login.password} label="Password" secret />
+              </div>
+            </section>
+          )}
+
+          <p className="mt-10 border-t border-line pt-5 text-ui text-muted">
+            Own a recalled product? Use the claim link on the recall notice, or{" "}
+            <Link href="/r/kikea-x-vesolje/try" className="text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
+              file a claim
+            </Link>
+            .
+          </p>
         </div>
 
-        {/* What you're signing in to: the console on the demo recall, as a still. Decorative; the card says it in words.
-            It keeps its 48rem layout and is zoomed to fit columns 7 to 12 (tilt included), so no word is cut at the
-            viewport's edge: each step fits the narrowest screen it covers. */}
-        <aside aria-hidden="true" inert className="hidden lg:col-span-6 lg:col-start-7 lg:block">
-          <div className="w-[48rem] rotate-2 lg:[zoom:0.57] xl:[zoom:0.71] min-[85rem]:[zoom:0.76] min-[90rem]:[zoom:0.8]">
-            <ExhibitLabel leader="right" leaderLength={48} className="mb-5 ml-8">
-              Your console, with 40 claims to work through
-            </ExhibitLabel>
-            <ConsoleReplica rows={PREVIEW_ROWS.slice(0, 8)} className="opacity-80" />
-          </div>
-        </aside>
       </main>
     </div>
   );

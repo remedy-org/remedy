@@ -1,21 +1,8 @@
 import type { ClaimSummary } from "@/lib/store";
 import type { Decision, Recall } from "@/lib/types";
-import { amountOf, cents, statsOf, type Stats } from "./view";
+import { amountOf, cents, refusalLabel, statsOf, type Stats } from "./view";
 
 // The CPSC progress-report draft, computed from the claims' index rows. Pure, so the numbers are unit-tested.
-
-const REFUSAL: Record<string, string> = {
-  code: "One-time code missing or wrong",
-  screen: "Photo of a screen or a print",
-  label: "Label missing or not the recalled product",
-  same_item: "Photos showed different items",
-  step: "Destruction not shown",
-  session: "Photos outside the live camera session",
-  duplicate_photo: "Photo already used in another claim",
-  payer: "Second claim from one PayPal account",
-  payer_verified: "PayPal account not verified",
-  review: "Rejected by a person on review",
-};
 
 export interface OutcomeRow {
   decision: Decision;
@@ -43,8 +30,6 @@ export interface Report {
   samplesPaid: number;
   seeded: number;
   demo: number;
-  firstClaim: string | null;
-  lastClaim: string | null;
 }
 
 const share = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : "—");
@@ -56,11 +41,17 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const sent = paid.filter((c) => !c.seeded);
   const samples = paid.filter((c) => c.seeded);
   const sum = (list: ClaimSummary[]) => list.reduce((s, c) => s + cents(amountOf(c.payoutAmount, recall)), 0);
-  // Starter claims are approved by the rule and never pay out, so with any among them the row says approved, not sent.
-  const paidNote = samples.length ? "Approved by the rule; the unit is destroyed" : "Refund sent through PayPal; the unit is destroyed";
+  // "Paid" is said only beside a payout really sent: the outcome is the rule's approval. What was sent is the Refunds
+  // section's to say, in numbers.
+  const unsent = samples.length;
+  // One definition per state, in the words the claims grid uses: claims that came with the console are approved by the
+  // rule and never pay out, so with any among them the row says approved; Held is only a claim waiting for a person.
+  const paidNote = !unsent
+    ? "Unit destroyed on camera; refund sent through PayPal"
+    : "Unit destroyed on camera; refund approved by the rule. Claims that came with the console never pay out";
   const rows: [Decision, string, number, string][] = [
-    ["paid", "Paid", stats.remedied, paidNote],
-    ["held", "Held for review", stats.held, "An answer was unclear, a check couldn't run, PayPal didn't take the payout, or auto-pay was off"],
+    ["paid", "Approved", stats.remedied, paidNote],
+    ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn't run, auto-pay was off, or PayPal refused an approved payout"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
     ["pending", "In progress", stats.pending, "Code issued; photos not yet checked"],
@@ -70,11 +61,10 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   for (const c of claims) {
     if (c.decision !== "rejected" && c.decision !== "blocked") continue;
     const check = c.reason?.check ?? "";
-    const reason = REFUSAL[check.startsWith("step_") ? "step" : check] ?? "Other";
+    const reason = refusalLabel(check);
     tally.set(reason, (tally.get(reason) ?? 0) + 1);
   }
 
-  const times = claims.map((c) => c.createdAt).sort();
   const paidAmounts = new Set(paid.map((c) => cents(amountOf(c.payoutAmount, recall))));
   const settled = sent.filter((c) => c.payoutStatus === "SUCCESS");
   return {
@@ -91,7 +81,5 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
     samplesPaid: samples.length,
     seeded: claims.filter((c) => c.seeded).length,
     demo: claims.filter((c) => c.demo).length,
-    firstClaim: times[0] ?? null,
-    lastClaim: times.at(-1) ?? null,
   };
 }

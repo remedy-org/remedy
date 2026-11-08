@@ -1,87 +1,46 @@
 import type { AgPageState, AgReportState, AgWidgetLayoutState } from "ag-studio";
 import type { InsightsData } from "@/app/console/insights/facts";
+import { median } from "@/app/console/_lib/view";
+import { shownAs } from "./funnel";
 import type { InsightsRegistry } from "./widgets";
 
 // The Insights report as Studio state: one page on the 24-column canvas (rows of 16px). Field ids refer to the data
-// sources in ./sources.ts. Subtitles are short labels under each title.
+// sources in ./sources.ts. The figures above the canvas (InsightsLedger) are Remedy's own, not Studio tiles.
 
-/** A panel's name for the keyboard: its title and exhibit letter ("Decisions, Exhibit B"), or its title alone. */
-export function panelName(title: string, subtitle: string) {
-  const exhibit = subtitle.match(/^EXHIBIT (\w+)/)?.[1];
-  return exhibit ? `${title}, Exhibit ${exhibit}` : title;
-}
+/** A panel's name for the keyboard: its title. */
+export const panelName = (title: string) => title;
 
 const at = (xTrack: number, yTrack: number, xSpan: number, ySpan: number): AgWidgetLayoutState => ({ xTrack, yTrack, xSpan, ySpan });
-const titled = (text: string, exhibit?: string) => ({
-  title: { enabled: true, text },
-  ...(exhibit && { subtitle: { enabled: true, text: exhibit } }),
-});
+const titled = (text: string) => ({ title: { enabled: true, text } });
 const count = { id: "claims.id", aggregation: "countd" as const };
 const sum = (id: string) => ({ id, aggregation: "sum" as const });
 
-// Plain value tiles: the claims span a few days, so a day sparkline says little, and its bars ran into the number.
-const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }, caption: string) => ({
-  type: "value" as const,
-  dataMapping: { value: [value] },
-  format: {
-    title: { enabled: true, text },
-    caption: { enabled: true, text: caption },
-    style: {
-      verticalAlign: "top" as const,
-      textAlign: "left" as const,
-      textScaling: { enabled: false },
-    },
-  },
-});
+type LedgerRow = Pick<InsightsData["claims"][number], "remedied" | "refused" | "amountPaid" | "amountSent" | "timeToSendSec" | "modelSec">;
 
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+/** The time the page reports: photo to payout once a payout was really sent, the photo check's own time until then. */
+export const timeField = (claims: Pick<LedgerRow, "timeToSendSec">[]) =>
+  (claims.some((c) => c.timeToSendSec !== null) ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec";
+
+const cents = (dollars: number) => Math.round(dollars * 100);
 
 /**
- * How many paid claims there are, how many of them are samples that never sent money to a real owner, what the rest
- * really sent, how many sent payouts waited for a person's review, and how many claims the model answered
- * (for the timing tile when nothing was sent).
+ * The figures over the report, in the console ledger's words: units remedied, money really sent through PayPal with
+ * what was approved and not sent beside it, the median time (photo to payout, or the photo check while nothing was
+ * sent: one claim a person approved hours later would drag an average to minutes) and refusals.
  */
-export function provenance(claims: Pick<InsightsData["claims"][number], "decision" | "source" | "amountPaid" | "modelSec" | "paidOnReview">[]) {
-  const paid = claims.filter((c) => c.decision === "Paid");
-  const samples = paid.filter((c) => c.source === "Starter");
+export function insightsLedger(claims: LedgerRow[]) {
+  const field = timeField(claims);
+  const times = claims.map((c) => c[field]).filter((t): t is number => t !== null);
+  const paidCents = claims.reduce((n, c) => n + cents(c.amountSent), 0);
   return {
-    paid: paid.length,
-    samples: samples.length,
-    sentAmount: paid.filter((c) => c.source !== "Starter").reduce((n, c) => n + c.amountPaid, 0),
-    reviewed: paid.filter((c) => c.source !== "Starter" && c.paidOnReview).length,
-    answered: claims.filter((c) => c.modelSec !== null).length,
-  };
-}
-
-/**
- * The captions under the money and timing tiles say where their numbers come from, in the console ledger's words: the
- * money tile counts only what was really sent through PayPal, with the samples' amount beside it as never sent; the
- * timing tile is the ledger's median over payouts really sent (a claim that waited hours for a person would drag an
- * average to minutes), says how many of them waited, and with none sent it shows the model's own answer time instead.
- */
-const PAID_CAPTION = "To owners' PayPal accounts";
-const paidCaption = (sent: number) => `${usd.format(sent)} sent through PayPal`;
-
-export function captions({ paid, samples, reviewed, answered, sentAmount }: ReturnType<typeof provenance>) {
-  const sent = paid - samples;
-  return {
-    remedied: "Destroyed and verified on camera",
-    // The money tile leads with what the rule approved while starter claims are among the paid (their payouts never
-    // leave), with what was really sent under it; otherwise it is the money sent. One line of the tile at 1440 (~200px).
-    paidTitle: samples ? "Approved refunds" : "Sent through PayPal",
-    paidField: (samples ? "amountPaid" : "amountSent") as "amountPaid" | "amountSent",
-    paid: samples ? paidCaption(sentAmount) : PAID_CAPTION,
-    timeTitle: sent ? "Median photo to PayPal" : "Median photo check",
-    timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
-    time: !sent
-      ? `${answered} ${answered === 1 ? "claim" : "claims"} checked`
-      : reviewed
-        ? `${sent} sent · ${reviewed} after a person's review`
-        : `Median of ${sent} sent ${sent === 1 ? "payout" : "payouts"}`,
-    // Exhibit E charts the tile's own number by day: the same claims and the same field, so the two always agree. Its
-    // axis counts plain seconds; its tooltip reads "0:03".
-    timeChart: sent ? "Photo to PayPal, by day" : "Photo check, by day",
-    timeExhibit: sent ? "MEDIAN SECONDS · PAYOUTS SENT" : "MEDIAN SECONDS · PHOTO CHECK",
+    remedied: claims.reduce((n, c) => n + c.remedied, 0),
+    paidCents,
+    unsentCents: claims.reduce((n, c) => n + Math.max(0, cents(c.amountPaid) - cents(c.amountSent)), 0),
+    median: median(times),
+    timeLabel: field === "timeToSendSec" ? "median photo to payout" : "median photo check",
+    timed: times.length,
+    timedOne: field === "timeToSendSec" ? "payout" : "claim",
+    refused: claims.reduce((n, c) => n + c.refused, 0),
   };
 }
 
@@ -100,7 +59,7 @@ export function filterPicks(page: Pick<AgPageState<InsightsRegistry>, "crossFilt
     .flatMap((s) => (s.type !== "value" ? [{ field: "", values: [] }] : s.values.length ? [{ field: s.field.id, values: s.values.map(String) }] : []));
 }
 
-// A bar in Exhibit E picks a calendar day, keyed 20261107; a claim is on the UTC day it was filed, as the console says.
+// An analyst's chart by day picks a calendar day, keyed 20261107; a claim is on the UTC day it was filed, as the console says.
 const DAY = "calendar::day";
 const dayKey = (iso: string) => iso.slice(0, 10).replaceAll("-", "");
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -118,10 +77,10 @@ export function filterClaims<T extends Partial<Claim>>(claims: T[], picks: Filte
 
 // How the filter bar names a pick: a refusal reason reads as itself, a funnel drop by the furthest stage its claims
 // reached (the grid's "Furthest stage"), a day as filed.
-const or = (values: string[]) => values.join(" or ");
+const or = (values: string[]) => values.map(shownAs).join(" or ");
 const PICK_LABEL: Record<string, (values: string[]) => string> = {
   "claims.stage": (v) => `Furthest stage: ${or(v)}`,
-  "claims.decision": (v) => `Decision: ${or(v)}`,
+  "claims.decision": (v) => `Verdict: ${or(v)}`,
   [DAY]: (v) => `Filed ${or(v.map((d) => `${Number(d.slice(6))} ${MONTHS[Number(d.slice(4, 6)) - 1] ?? ""}`.trim()))}`,
 };
 
@@ -131,59 +90,50 @@ export function filterLabel(picks: FilterPick[]) {
 }
 
 /**
- * The money and timing tiles' captions for the claims on the page: unfiltered, the captions above; under a cross-filter,
- * the same captions for the picked claims, so "26 of 65 are samples" never sits under a filtered 0. When the picks
- * can't be checked here, the captions only say the tiles are filtered.
+ * Rows (16px each) for the row the funnel and the refusals share, tall enough to list every refusal reason with none cut off at the
+ * panel's foot: a reason takes about 58px (the reason, where it was caught, its bar), and the 22-row minimum leaves
+ * 224px for the list on a 1280px laptop.
  */
-export function kpiCaptions(all: Parameters<typeof provenance>[0], shown: Parameters<typeof provenance>[0] | null) {
-  const base = captions(provenance(all));
-  if (!shown) return { remedied: "Picked claims only", paid: "Picked claims only", time: "Picked claims only" };
-  const picked = provenance(shown);
-  const say = captions(picked);
-  return {
-    remedied: say.remedied,
-    // The tile keeps its field and title, so its caption follows the whole recall's choice.
-    paid: base.paidField === "amountPaid" ? paidCaption(picked.sentAmount) : PAID_CAPTION,
-    // The tile keeps its field: with nothing sent among the picked claims, it has no median to show.
-    time: base.timeField !== say.timeField ? "None sent among these claims" : say.time,
-  };
-}
+export const refusalRows = (reasons: number) => Math.max(22, 22 + Math.ceil((reasons * 58 - 224) / 16));
+
+const reasonCount = (data: InsightsData) => new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size;
 
 /**
- * Rows (16px each) for the row Exhibits C and D share, tall enough to list every refusal reason with none cut off at the
- * card's foot: a reason takes about 39px, and the 22-row minimum leaves 224px for the list on a 1280px laptop, where
- * the card's intro wraps.
+ * Rows for each panel. Side by side the funnel and the refusals share a row (refusalRows); stacked, the decisions and the
+ * refusals each take only what they list (the title, then 58px a reason), with no shared height to match.
  */
-export const refusalRows = (reasons: number) => Math.max(22, 22 + Math.ceil((reasons * 39 - 224) / 16));
+const rowsOf = (data: InsightsData, narrow: boolean) => {
+  const tall = refusalRows(reasonCount(data));
+  return narrow
+    ? { progress: 15, decisions: 14, funnel: tall, refusals: Math.ceil((72 + reasonCount(data) * 58) / 16) }
+    : { progress: 15, decisions: 15, funnel: tall, refusals: tall };
+};
 
-const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
-  const say = captions(provenance(data.claims));
-  const tall = refusalRows(new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size);
+/** The canvas rows the report takes: what the page sizes Studio's host to, so the page scrolls and the canvas never does. */
+export const reportRows = (data: InsightsData, narrow = false) => {
+  const r = rowsOf(data, narrow);
+  return narrow ? r.progress + r.decisions + r.funnel + r.refusals : r.progress + r.funnel;
+};
+
+// Every claim is one click away in the claims grid (the page header links it), so the report is the figures alone: no
+// second table of the same rows. Below 1024px each panel takes the canvas's full width, one under another.
+const overview = (data: InsightsData, narrow: boolean): AgPageState<InsightsRegistry> => {
+  const r = rowsOf(data, narrow);
   return {
     id: "overview",
     widgets: {
-      "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), say.remedied),
-      "kpi-paid": kpi(say.paidTitle, sum(`claims.${say.paidField}`), say.paid),
-      // Studio's value tile can only average; the ledger's median comes from a widget of Remedy's own.
-      "kpi-median": {
-        type: "median-time",
-        dataMapping: { per: [{ id: "claims.id" }], seconds: [{ id: `claims.${say.timeField}`, aggregation: "max" }] },
-        format: { title: { enabled: true, text: say.timeTitle }, caption: { enabled: true, text: say.time } },
-      },
-      "kpi-refused": kpi("Refused", sum("claims.refused"), "Rejected or blocked"),
       progress: {
         type: "recall-progress",
         dataMapping: {
           remedied: [sum("claims.remedied")],
           sold: [{ id: "recall.unitsSold", aggregation: "max" }],
-          samples: [sum("claims.remediedSample")],
         },
-        format: titled("Recall progress", "REMEDIED AGAINST SOLD"),
+        format: titled("Recall progress"),
       },
       decisions: {
         type: "decision-mix",
         dataMapping: { decision: [{ id: "claims.decision" }], count: [count] },
-        format: titled("Decisions", "DECIDED BY THE RULE"),
+        format: titled("Decisions"),
       },
       funnel: {
         type: "check-funnel",
@@ -193,7 +143,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
           decision: [{ id: "claims.decision" }],
           count: [count],
         },
-        format: titled("Check funnel", "WHERE CLAIMS STOP"),
+        format: titled("Where claims stop"),
       },
       refusals: {
         type: "refusal-reasons",
@@ -202,51 +152,31 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
           gate: [{ id: "claims.refusalGate" }],
           count: [count],
         },
-        format: titled("Why claims were refused", "REFUSALS BY REASON"),
-      },
-      "time-to-pay": {
-        type: "column-chart-grouped",
-        dataMapping: {
-          categoryKey: [{ id: "calendar::day" }],
-          valueKey: [{ id: "medianToPaySec" }],
-        },
-        format: {
-          ...titled(say.timeChart, say.timeExhibit),
-          style: { custom: { valueAxis: { title: { enabled: true, text: "Seconds" } } } },
-        },
-      },
-      claims: {
-        type: "grid",
-        dataMapping: {
-          // Short columns first, so the amount and whether a row is a sample are always in view; the reason runs last.
-          cols: [{ id: "claims.id" }, { id: "claims.decision" }, { id: "claims.refund" }, { id: "claims.reason" }],
-        },
-        sort: [{ field: { id: "claims.filedAt" }, direction: "desc" }],
-        // No grand total: a sum under a column of decisions and reasons says nothing.
-        format: { ...titled("Every claim", "NEWEST FIRST"), style: { grandTotalRow: { enabled: false } } },
+        format: titled("Why claims were refused"),
       },
     },
-    widgetLayout: {
-      "kpi-remedied": at(0, 0, 6, 8),
-      "kpi-paid": at(6, 0, 6, 8),
-      "kpi-median": at(12, 0, 6, 8),
-      "kpi-refused": at(18, 0, 6, 8),
-      progress: at(0, 8, 16, 15),
-      decisions: at(16, 8, 8, 15),
-      funnel: at(0, 23, 14, tall),
-      refusals: at(14, 23, 10, tall),
-      // The ledger closes the page across the full width, so a reason reads whole instead of stopping mid-word.
-      "time-to-pay": at(0, 23 + tall, 24, 16),
-      claims: at(0, 39 + tall, 24, 28),
-    },
+    widgetLayout: narrow
+      ? {
+          progress: at(0, 0, 24, r.progress),
+          decisions: at(0, r.progress, 24, r.decisions),
+          funnel: at(0, r.progress + r.decisions, 24, r.funnel),
+          refusals: at(0, r.progress + r.decisions + r.funnel, 24, r.refusals),
+        }
+      : {
+          progress: at(0, 0, 16, r.progress),
+          decisions: at(16, 0, 8, r.decisions),
+          funnel: at(0, r.progress, 16, r.funnel),
+          refusals: at(16, r.progress, 8, r.refusals),
+        },
   };
 };
 
-export const insightsReport = (data: InsightsData): AgReportState<InsightsRegistry> => ({
+export const insightsReport = (data: InsightsData, narrow = false): AgReportState<InsightsRegistry> => ({
   selectedPageId: "overview",
-  pages: [overview(data)],
+  pages: [overview(data, narrow)],
   panels: {
-    ai: { collapsed: false },
+    // The analyst opens on demand from "Ask about this recall" in the page header: the report leads, not an empty chat.
+    ai: { collapsed: true },
     filters: { collapsed: true },
     edit: { collapsed: true },
     data: { collapsed: true },

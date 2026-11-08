@@ -9,7 +9,7 @@ import { consentAction, ConsentCard, JUDGE_LOGIN_ID, type AuthError, type Consen
 import { ClaimFrame, STEP_GRID } from "./Exhibit";
 import { FlowShell } from "./FlowShell";
 import { MobileCta } from "./MobileCta";
-import { businessDaysAfter, companyName, day, maskPayer } from "./model";
+import { businessDaysAfter, day, maskPayer } from "./model";
 import { RecallBrief } from "./RecallBrief";
 import { DEMO_STEPS, REAL_STEPS, resultMeter, StepMeter, type StepMeterProps } from "./StepMeter";
 

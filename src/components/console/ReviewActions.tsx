@@ -52,7 +52,7 @@ const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
  * and "Reject…", since nothing is paid. blocked: approve's checks would stop the payout
  * now (DrawerClaim.stops), so Reject leads and approve isn't offered as a button.
  */
-export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "sandbox" | "decision" | "events" | "stops">) {
+export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "decision" | "events" | "stops">) {
   const sample = Boolean(claim.review?.sample);
   const failure = payoutFailure(claim);
   const blocked = !sample && claim.stops.length > 0;
@@ -247,7 +247,7 @@ export function ReviewActions({
               <p className="mt-1 font-mono break-words">{failure.raw}</p>
             </details>
           ) : null}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {labels.blocked ? (
               // Approve isn't a button while its checks would stop the payout: Reject leads, and the claim they name opens
               // beside it. The A key still opens the confirm, which says why.
@@ -265,6 +265,8 @@ export function ReviewActions({
               <>
                 <Button
                   key="approve"
+                  // The held claim's decision is the panel's one action, amber here as in the photo viewer; Reject leads only
+                  // once approve can't pay (its checks would stop the payout, or PayPal refused it).
                   variant={stuck ? "secondary" : "primary"}
                   onClick={() => (setSample(null), setNotPaid(null), setMode("approve"))}
                   autoFocus={back === "approve"}
@@ -292,7 +294,7 @@ export function ReviewActions({
             <Button onClick={openReject} autoFocus className="flex-1 sm:flex-none">
               {labels.reject}
             </Button>
-            <Button variant="secondary" onClick={reset} className="flex-1 sm:flex-none">
+            <Button variant="tertiary" arrow={false} onClick={reset}>
               Cancel
             </Button>
           </div>
@@ -308,8 +310,7 @@ export function ReviewActions({
             </p>
           ) : (
             <p className="text-ui text-muted">
-              Remedy runs the duplicate and account checks again, then sends <span className="font-mono text-text">{claim.amount}</span> to{" "}
-              <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts.
+              Sends <span className="font-mono text-text">{claim.amount}</span> to <span className="font-mono text-text">{claim.payer}</span> through PayPal Payouts.
             </p>
           )}
           {dropped && (
@@ -327,7 +328,7 @@ export function ReviewActions({
                 Pay {claim.amount}
               </Button>
             )}
-            <Button variant="secondary" onClick={reset} disabled={busy} className="flex-1 sm:flex-none">
+            <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>
               Cancel
             </Button>
           </div>
@@ -350,37 +351,42 @@ export function ReviewActions({
             run(`${base}/reject`, { reason });
           }}
         >
-          <Field
-            label="Why it's rejected"
-            hint="The owner reads this on their claim page"
-            error={error?.fields?.reason}
-          >
-            {(f) => <Textarea {...f} rows={2} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={REASON_MIN} />}
-          </Field>
-          <div className="-mt-1 flex flex-wrap gap-1.5" role="group" aria-label="Quick reasons">
-            {QUICK.map((q) => {
-              const text = q.text(claim.code);
-              return (
-                <button
-                  key={q.label}
-                  type="button"
-                  aria-pressed={reason === text}
-                  onClick={() => {
-                    setReason(text);
-                    setError(null);
-                  }}
-                  className={clsx(
-                    "inline-flex h-8 items-center rounded-control px-2 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] hover:bg-surface-3 hover:text-text",
-                    reason === text ? "bg-surface-3 text-text" : "bg-surface-2 text-muted",
-                  )}
-                >
-                  {q.label}
-                </button>
-              );
-            })}
+          {/* On a short window the reason and the quick reasons scroll, so the photos keep their room and the buttons stay in
+              view below them. The padding keeps the field's focus ring inside the scroller. */}
+          <div className="-m-1 flex max-h-[max(7.5rem,calc(100dvh-34rem))] flex-col gap-3 overflow-y-auto overscroll-contain p-1 [@media(max-height:600px)]:max-h-none [@media(max-height:600px)]:overflow-visible">
+            <Field
+              label="Why it's rejected"
+              hint="The owner reads this on their claim page"
+              error={error?.fields?.reason}
+            >
+              {(f) => <Textarea {...f} rows={2} maxLength={280} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus required minLength={REASON_MIN} />}
+            </Field>
+            <div className="-mt-1 flex flex-wrap gap-1.5" role="group" aria-label="Quick reasons">
+              {QUICK.map((q) => {
+                const text = q.text(claim.code);
+                return (
+                  <button
+                    key={q.label}
+                    type="button"
+                    aria-pressed={reason === text}
+                    onClick={() => {
+                      setReason(text);
+                      setError(null);
+                    }}
+                    className={clsx(
+                      "inline-flex h-11 items-center rounded-control px-3 text-ui shadow-[inset_0_0_0_1px_var(--line-2)] hover:bg-surface-3 hover:text-text",
+                      reason === text ? "bg-surface-3 text-text" : "bg-surface-2 text-muted",
+                    )}
+                  >
+                    {q.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" variant="secondary" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
+          {/* On a short window the panel scrolls as one: these two stay in view at its foot. */}
+          <div className="flex flex-wrap gap-3 [@media(max-height:600px)]:sticky [@media(max-height:600px)]:bottom-0 [@media(max-height:600px)]:-mb-4 [@media(max-height:600px)]:bg-surface [@media(max-height:600px)]:py-3">
+            <Button type="submit" pending={busy} pendingLabel="Rejecting" className="flex-1 sm:flex-none">
               Reject claim
             </Button>
             <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>

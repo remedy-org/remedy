@@ -1,47 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { captions, filterClaims, filterLabel, filterPicks, kpiCaptions, panelName, provenance, refusalRows } from "./report";
+import { filterClaims, filterLabel, filterPicks, insightsLedger, panelName, refusalRows, timeField } from "./report";
 
-type Row = Parameters<typeof provenance>[0][number];
-const paid = (source: Row["source"], paidOnReview = 0): Row => ({ decision: "Paid", source, amountPaid: 29.99, modelSec: 2, paidOnReview });
+type Row = Parameters<typeof insightsLedger>[0][number];
+const row = (over: Partial<Row> = {}): Row => ({ remedied: 0, refused: 0, amountPaid: 0, amountSent: 0, timeToSendSec: null, modelSec: 2, ...over });
 
-describe("timing tile", () => {
-  it("is the median of payouts really sent, and says how many waited for a person", () => {
-    const say = captions(provenance([paid("Owner"), paid("Demo"), paid("Demo", 1), paid("Starter")]));
-    expect(say).toMatchObject({ timeTitle: "Median photo to PayPal", timeField: "timeToSendSec", time: "3 sent · 1 after a person's review" });
-    // Exhibit E charts the tile's own median by day, so it never shows sample timings beside a sent-payout median.
-    expect(say).toMatchObject({ timeChart: "Photo to PayPal, by day", timeExhibit: "MEDIAN SECONDS · PAYOUTS SENT" });
+describe("figures", () => {
+  it("counts money really sent through PayPal, with what was approved and not sent beside it", () => {
+    const l = insightsLedger([row({ remedied: 1, amountPaid: 29.99 }), row({ remedied: 1, amountPaid: 29.99, amountSent: 29.99, timeToSendSec: 4 }), row({ refused: 1 })]);
+    expect(l).toMatchObject({ remedied: 2, paidCents: 2999, unsentCents: 2999, refused: 1 });
   });
 
-  it("names the count when no payout waited, and falls back to the model's time when none was sent", () => {
-    expect(captions(provenance([paid("Owner")])).time).toBe("Median of 1 sent payout");
-    expect(captions(provenance([paid("Starter"), paid("Starter", 1)]))).toMatchObject({
-      timeTitle: "Median photo check",
-      timeField: "modelSec",
-      time: "2 claims checked",
-      timeChart: "Photo check, by day",
-      timeExhibit: "MEDIAN SECONDS · PHOTO CHECK",
-    });
+  it("is the median of payouts really sent, and falls back to the photo check's time when none was", () => {
+    expect(insightsLedger([row({ timeToSendSec: 4 }), row({ timeToSendSec: 6 }), row({ timeToSendSec: 90 }), row()])).toMatchObject({ median: 6, timeLabel: "median photo to payout", timed: 3 });
+    expect(insightsLedger([row({ modelSec: 3 }), row({ modelSec: null })])).toMatchObject({ median: 3, timeLabel: "median photo check", timed: 1 });
+    expect(timeField([row()])).toBe("modelSec");
+    expect(insightsLedger([])).toMatchObject({ median: null, timed: 0 });
   });
 });
 
 describe("layout", () => {
   it("gives the refusals row room for every reason, never less than the 22-row default", () => {
     expect(refusalRows(0)).toBe(22);
-    expect(refusalRows(5)).toBe(22);
-    expect(refusalRows(7)).toBeGreaterThan(22);
-    // Every reason (about 39px each) fits in the 224px the 22-row card leaves on a 1280px laptop, plus 16px a row.
-    for (let n = 6; n <= 11; n++) expect(224 + (refusalRows(n) - 22) * 16).toBeGreaterThanOrEqual(n * 39);
+    expect(refusalRows(3)).toBe(22);
+    expect(refusalRows(5)).toBeGreaterThan(22);
+    // Every reason (its full text over the check that caught it, about 58px) fits in the 224px the 22-row card leaves on a 1280px laptop, plus 16px a row.
+    for (let n = 4; n <= 11; n++) expect(224 + (refusalRows(n) - 22) * 16).toBeGreaterThanOrEqual(n * 58);
   });
 
-  it("names a panel's keyboard stop by its title and exhibit letter", () => {
-    expect(panelName("Decisions", "EXHIBIT B · DECIDED BY THE RULE")).toBe("Decisions, Exhibit B");
-    expect(panelName("Units remedied", "")).toBe("Units remedied");
-    expect(panelName("A chart the analyst made", "By day")).toBe("A chart the analyst made");
+  it("names a panel's keyboard stop by its title", () => {
+    expect(panelName("Decisions")).toBe("Decisions");
   });
 });
 
 describe("cross-filter", () => {
-  const claim = (id: string, decision: string, refusalReason: string | null, source: Row["source"], filedAt = "2026-11-07T10:00:00Z") => ({
+  const claim = (id: string, decision: string, refusalReason: string | null, source: "Starter" | "Demo" | "Owner", filedAt = "2026-11-07T10:00:00Z") => ({
     id,
     decision,
     refusalReason,
@@ -78,14 +70,8 @@ describe("cross-filter", () => {
 
   it("names the picks in the bar", () => {
     expect(filterLabel([{ field: "claims.refusalReason", values: ["Rejected by a person on review"] }])).toBe("Rejected by a person on review");
-    expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("Furthest stage: Photos sent · Decision: Held or Blocked");
+    expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("Furthest stage: Photos sent · Verdict: Held or Blocked");
     expect(filterLabel([{ field: "calendar::day", values: ["20261107", "20261104"] }])).toBe("Filed 7 Nov or 4 Nov");
     expect(filterLabel([{ field: "", values: [] }])).toBe("A pick on a chart");
-  });
-
-  it("captions the tiles for the picked claims, never the whole recall's under a filtered number", () => {
-    expect(kpiCaptions(claims, claims)).toMatchObject({ remedied: "Destroyed and verified on camera", paid: "$29.99 sent through PayPal", time: "Median of 1 sent payout" });
-    expect(kpiCaptions(claims, [claims[2]])).toEqual({ remedied: "Destroyed and verified on camera", paid: "$0.00 sent through PayPal", time: "None sent among these claims" });
-    expect(kpiCaptions(claims, null)).toEqual({ remedied: "Picked claims only", paid: "Picked claims only", time: "Picked claims only" });
   });
 });

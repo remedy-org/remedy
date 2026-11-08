@@ -4,6 +4,10 @@
 export const STAGES = ["Filed", "Photos sent", "Passed pre-checks", "Passed photo check", "Paid"] as const;
 export type Stage = (typeof STAGES)[number];
 
+/** How the report shows a decision or a stage: "Paid" reads as "Approved", as the console's pill does, since "paid"
+ * belongs only beside a payout really sent. The data keeps its own values, so filters still match. */
+export const shownAs = (value: string) => (value === "Paid" ? "Approved" : value);
+
 /**
  * Why a claim stopped where it did: refused by a check (rejected or blocked, drawn in --stop), held for a person
  * (waiting, drawn in --hold, never counted as refused), or still in progress.
@@ -31,23 +35,15 @@ export interface FunnelStep {
   groups: StopGroup[];
 }
 
-const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-const word = (n: number) => WORDS[n] ?? String(n);
-
 /**
- * One line for a set of reasons and their counts. One reason: its name. A clear commonest reason: it, with its share
- * ("Photo of a screen or a print · 3 of 6"). Reasons tied for commonest: how many and how often, without picking one.
+ * One line for a set of reasons and their counts: the reasons themselves, commonest first, each with its count when the
+ * counts differ ("Photo of a screen or a print 2, Code missing or wrong 1"). Never a templated count of reasons, and
+ * never a tie presented as the top reason.
  */
 export function reasonSummary(tally: ReadonlyMap<string, number>): string {
   const sorted = [...tally].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  if (!sorted.length) return "";
-  const total = sorted.reduce((n, [, c]) => n + c, 0);
-  const [top, n] = sorted[0];
-  if (sorted.length === 1) return top;
-  const tied = sorted.filter(([, c]) => c === n).length;
-  if (tied === 1) return `${top} · ${n} of ${total}`;
-  if (tied === sorted.length) return `${word(tied)} reasons, ${n} each`;
-  return `${word(tied)} reasons tied at ${n}, and ${sorted.length - tied} more`;
+  const even = sorted.every(([, c]) => c === sorted[0]?.[1]);
+  return sorted.map(([reason, n]) => (even ? reason : `${reason} ${n}`)).join(", ");
 }
 
 /** Rows are claims, or groups of claims with a count (as a Studio query returns them). */

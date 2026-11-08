@@ -28,7 +28,6 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
         <PartialNotice what="recalls" ids={lostRecalls} total={lostRecalls.length} />
         <EmptyState
           className="my-auto"
-          eyebrow="No recalls"
           title="Start with your first recall"
           description="Paste a CPSC recall URL. Remedy drafts the photo checks from the notice; you review them and publish a claim link."
           action={<Button href="/console/recalls/new">Import a recall</Button>}
@@ -52,7 +51,7 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
               CPSC report
             </Button>
             <Button href={`/console/recalls/${recall.id}`} variant="secondary" size="sm">
-              Recall settings
+              Recall details
             </Button>
           </>
         }
@@ -62,7 +61,7 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
         // Keyed by recall: switching recalls starts a fresh queue (tabs, search, live updates).
         <ClaimsQueue
           key={recall.id}
-          recall={{ id: recall.id, unitsSold: recall.unitsSold }}
+          recall={{ id: recall.id, unitsSold: recall.unitsSold, product: recall.product }}
           rows={rows}
           at={new Date().toISOString()}
           initialTab={one(params.tab)}
@@ -71,7 +70,6 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
         />
       ) : (
         <EmptyState
-          eyebrow={`Recall ${recall.id}`}
           title="No claims yet"
           description="Claims appear here as owners file them. Share the claim link on the recall notice, your site and the receipt emails."
           action={

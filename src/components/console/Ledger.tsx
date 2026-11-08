@@ -1,29 +1,44 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { duration, formatCents, percent, type Ledger as LedgerData } from "@/app/console/_lib/view";
+import { duration, formatCents, type Ledger as LedgerData } from "@/app/console/_lib/view";
 import { formatCount } from "./format";
 
-function Item({ value, label, className, children }: { value: ReactNode; label: ReactNode; className?: string; children?: ReactNode }) {
+/** One figure: the value (22/500) and what it counts (12, muted). The term comes first in the DOM, as a definition list
+ * reads; the value leads on screen. */
+export function LedgerItem({ value, label, title, className }: { value: ReactNode; label: ReactNode; title?: string; className?: string }) {
   return (
-    <div className={clsx("flex min-w-0 flex-wrap items-baseline gap-x-2 sm:flex-nowrap sm:whitespace-nowrap", className)}>
-      <dd className="order-1 text-[20px] leading-7 font-semibold">{value}</dd>
-      {children}
-      <dt className="order-3 text-micro text-muted">{label}</dt>
+    <div className={clsx("flex min-w-0 items-baseline gap-x-2 whitespace-nowrap", className)} title={title}>
+      <dt className="order-2 text-micro text-muted">{label}</dt>
+      {/* Proportional figures: Schibsted's tabular set spaces the comma and point ("19 , 596"). */}
+      <dd className="order-1 text-head-sm leading-7 font-medium">{value}</dd>
     </div>
   );
 }
 
+/** The figures' strip: hairlines above and below, no boxes, one row that wraps only when it must. */
+export function LedgerStrip({ className, children }: { className?: string; children: ReactNode }) {
+  return <dl className={clsx("flex min-h-12 flex-wrap items-center gap-x-6 gap-y-2 border-y border-line py-2.5 min-[900px]:gap-x-8", className)}>{children}</dl>;
+}
+
+/** Approved, then what PayPal sent as its own quieter figure: the outcome in full ink, the money's state beside it. */
+export function MoneyItems({ approvedCents, sentCents }: { approvedCents: number; sentCents: number }) {
+  return (
+    <>
+      <LedgerItem value={formatCents(approvedCents)} label="approved" />
+      <LedgerItem value={<span className="text-muted">{formatCents(sentCents)}</span>} label="sent" />
+    </>
+  );
+}
+
 /**
- * The 48px ledger strip over the grid: units remedied of units sold with a 64x4 meter, money sent through PayPal, the
- * median time from photos to PayPal, held and refused. With starter claims among the paid, the money figure is what the
- * rule approved, and what was really sent through PayPal sits beside it: starter payouts never leave.
+ * The ledger over the grid: units remedied of units sold, the refunds approved and what PayPal sent, and the median time
+ * from photos to PayPal once there is one. Held and refused claims are counted on the tabs under it.
  */
 export function Ledger({ ledger, className }: { ledger: LedgerData; className?: string }) {
   const known = ledger.unitsSold > 0;
-  const share = known ? ledger.remedied / ledger.unitsSold : 0;
   return (
-    <dl className={clsx("grid min-h-12 grid-cols-2 items-center gap-x-6 gap-y-2 border-y border-line py-2.5 sm:flex sm:flex-wrap sm:gap-x-7", className)}>
-      <Item
+    <LedgerStrip className={className}>
+      <LedgerItem
         value={
           <>
             {formatCount(ledger.remedied)}
@@ -31,56 +46,26 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
           </>
         }
         label="remedied"
-        className="col-span-2"
-      >
-        {known && (
-          <span className="order-2 inline-flex items-center gap-2 self-center" aria-hidden="true">
-            <span className="block h-1 w-16 overflow-hidden rounded-full bg-surface-2">
-              <span className="block h-full rounded-full bg-pay" style={{ width: `max(2px, ${Math.min(100, share * 100)}%)` }} />
-            </span>
-            <span className="font-mono text-micro text-faint">{percent(ledger.remedied, ledger.unitsSold)}</span>
-          </span>
-        )}
-      </Item>
-      {/* While starter claims are among the paid (their payouts never leave), the figure is what the rule approved, with
-          what was really sent beside it; otherwise it is the money sent. */}
-      <Item
-        className="col-span-2"
-        value={<AmountValue cents={ledger.paidCents + ledger.sampleCents} />}
-        label={
-          ledger.sampleCents > 0 ? (
-            <>
-              approved
-              <span className="text-faint"> · {formatCents(ledger.paidCents)} sent through PayPal</span>
-            </>
-          ) : (
-            "sent through PayPal"
-          )
-        }
       />
+      <MoneyItems approvedCents={ledger.paidCents + ledger.sampleCents} sentCents={ledger.paidCents} />
       {ledger.medianToPay !== null && (
-        <Item
-          className="col-span-2"
-          value={<span className="font-mono">{duration(ledger.medianToPay)}</span>}
-          label={`median photo → PayPal · ${formatCount(ledger.timed)} ${ledger.timed === 1 ? "payout" : "payouts"}`}
+        <LedgerItem
+          value={durationFigure(ledger.medianToPay)}
+          label={`median photo to payout · ${formatCount(ledger.timed)} ${ledger.timed === 1 ? "payout" : "payouts"}`}
         />
       )}
-      <Item value={formatCount(ledger.held)} label="held" className={ledger.held ? undefined : "text-muted"} />
-      <Item value={formatCount(ledger.refused)} label="refused" />
-    </dl>
+    </LedgerStrip>
   );
 }
 
-function AmountValue({ cents }: { cents: number }) {
-  const text = formatCents(cents);
-  const dot = text.lastIndexOf(".");
-  return (
-    <>
-      <span className="sr-only">{text}</span>
-      <span aria-hidden="true">
-        {text.slice(0, dot)}
-        <span className="relative -top-[0.2em] text-[0.73em]">{text.slice(dot)}</span>
+/** A time as a figure: the numbers at the figure's size, the units ("min", "s") at the label's, as "of 19,596" is. */
+export function durationFigure(sec: number): ReactNode {
+  return duration(sec)
+    .split(" ")
+    .map((t, i) => (
+      <span key={i} className={/\d/.test(t) ? undefined : "text-ui font-normal text-muted"}>
+        {i > 0 && " "}
+        {t}
       </span>
-    </>
-  );
+    ));
 }

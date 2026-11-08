@@ -2,12 +2,12 @@
 
 import clsx from "clsx";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Button, CrossIcon, EmptyState } from "@/components/ui";
-import { ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { CrossIcon } from "@/components/ui";
+import { formatCents, ledgerOf, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
-import { SampleDiamond } from "./cells";
-import { ClaimsGrid, type ClaimsGridHandle } from "./ClaimsGrid";
+import { ClaimsGrid, type ClaimsGridHandle, type GridTotals, type GroupBy, type SortOrder } from "./ClaimsGrid";
+import type { DecisionModel } from "./DecisionFilter";
 import { Keys } from "./Keys";
 import { formatCount, plural } from "./format";
 import { Ledger } from "./Ledger";
@@ -25,8 +25,8 @@ function PanelShell() {
 
 const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: string }> = {
   paid: {
-    title: "No paid claims yet",
-    description: "A claim is paid when every check passes and auto-pay is on, or when a person approves it.",
+    title: "No approved claims yet",
+    description: "A claim is approved when every check passes and auto-pay is on, or when a person approves it.",
   },
   held: {
     title: "Nothing waiting for review",
@@ -34,11 +34,11 @@ const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: strin
   },
   rejected: {
     title: "No rejected claims",
-    description: "A claim is rejected when the model's answer fails a check, such as a wrong code or label.",
+    description: "A claim is rejected when its photos fail a check, such as a wrong code or label.",
   },
   blocked: {
     title: "No blocked claims",
-    description: "Blocked claims never reached the model: a reused photo, an expired camera session or a second claim from one account.",
+    description: "A pre-check stops a claim before its photos are read: a reused photo, an expired camera session or a second claim from one account.",
   },
   pending: {
     title: "Nothing in progress",
@@ -51,6 +51,8 @@ const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: strin
 // grid.
 const FILL = "(min-width: 1024px)";
 const WIDE = "(min-width: 1280px)";
+// Below 768px the toolbar keeps to the tabs' row: the search folds to its icon, and grouping and export step aside.
+const ROOMY = "(min-width: 768px)";
 function useMedia(query: string) {
   return useSyncExternalStore(
     (on) => {
@@ -64,14 +66,26 @@ function useMedia(query: string) {
 }
 
 const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
-// Focus on the page itself or a control of the queue's chrome (a tab, a button), not in the grid, the panel or a dialog:
-// where ↓ and j go into the list.
-const outsideList = (t: EventTarget | null) => !(t instanceof Element) || t === document.body || !t.closest(".claims-grid, .evidence-panel, dialog");
+// Focus on the page itself, a control of the queue's chrome (a tab, a button) or the grid's header row (after a sort),
+// not in the grid's rows, the panel or a dialog: where ↓ and j go into the list.
+const outsideList = (t: EventTarget | null) =>
+  !(t instanceof Element) || t === document.body || Boolean(t.closest(".claims-grid .ag-header")) || !t.closest(".claims-grid, .evidence-panel, dialog");
+
+// A tab is a Verdict filter on one decision; the column's own filter can say more (several decisions, reasons).
+const tabFilter = (t: Tab): DecisionModel | null => (t === "all" ? null : { decisions: [t], reasons: [] });
+const tabOf = (m: DecisionModel | null): Tab => (m && m.decisions.length === 1 && !m.reasons.length ? (m.decisions[0] as Tab) : "all");
+
+const GROUPS: { id: GroupBy; label: string }[] = [
+  { id: "none", label: "None" },
+  { id: "reason", label: "Reason" },
+  { id: "code", label: "Code" },
+  { id: "day", label: "Day" },
+];
 
 const isTab = (v: string | undefined): v is Tab => TABS.some((t) => t.id === v);
 
 export interface ClaimsQueueProps {
-  recall: Pick<Recall, "id" | "unitsSold">;
+  recall: Pick<Recall, "id" | "unitsSold" | "product">;
   rows: ClaimRow[];
   // When the server read these rows (ISO).
   at: string;
@@ -95,8 +109,15 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const { rows, pending, showPending, at, failed, state, refresh } = useQueuePoll(recall.id, initial, initialAt, pointerIn || focusIn || open !== null);
   const wide = useMedia(WIDE);
   const fill = useMedia(FILL);
+  const roomy = useMedia(ROOMY);
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "all");
+  // The Verdict column's filter: the tab's, or what the column's menu picked.
+  const [filter, setFilter] = useState<DecisionModel | null>(() => tabFilter(isTab(initialTab) ? initialTab : "all"));
   const [search, setSearch] = useState(initialSearch);
+  const [groupBy, setGroupBy] = useState<GroupBy>("none");
+  // What the grid shows after its filters: how many claims, and the money they approved and sent.
+  const [totals, setTotals] = useState<GridTotals | null>(null);
+  const shown = totals?.count ?? null;
   const [intent, setIntent] = useState<ReviewIntent | null>(null);
   const [help, setHelp] = useState(false);
   // A or R on a claim they can't act on: said in the footer for a few seconds, so a key never seems to do something silently.
@@ -108,6 +129,9 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   }, [hint]);
   const grid = useRef<ClaimsGridHandle>(null);
   const searchBox = useRef<HTMLInputElement>(null);
+  // Beside the docked panel the toolbar has the grid's width only: an empty search folds to its icon, so the tabs and
+  // controls never crowd it into "Search cla". It opens on a click or /, and stays open while it holds words.
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const ledger = useMemo(() => ledgerOf(rows, recall), [rows, recall]);
   // Search: every word must appear in the claim id, code, PayPal account's last four or reason. It applies to every
@@ -128,7 +152,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   }, [searched]);
   const tabRows = useMemo(() => (tab === "all" ? rows : rows.filter((r) => r.decision === tab)), [rows, tab]);
   const found = useMemo(() => (tab === "all" ? searched : searched.filter((r) => r.decision === tab)), [searched, tab]);
+  const filtered = filter !== null && tabOf(filter) === "all";
   const openRow = rows.find((r) => r.id === open) ?? null;
+  const compact = ((wide && open !== null) || !roomy) && !search && !searchOpen;
+  // A search with nothing in this tab: where its matches are instead, so an empty tab is never a dead end.
+  const elsewhere = tab !== "all" && search ? TABS.filter((t) => t.id !== "all" && t.id !== tab && counts[t.id] > 0) : [];
 
   const close = useCallback(() => {
     const id = open;
@@ -150,6 +178,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const changeTab = useCallback(
     (t: Tab) => {
       setTab(t);
+      setFilter(tabFilter(t));
       const row = open ? rows.find((r) => r.id === open) : null;
       if (row && t !== "all" && row.decision !== t) {
         setOpen(null);
@@ -185,16 +214,27 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     show(back);
   }, [back, show]);
 
-  // After a person pays or rejects a held claim, the next held claim in the list as it stood: the panel offers it, so
-  // working the queue never means hunting for the next row.
+  // After a person approves or rejects a held claim, the next held claim in the grid's order as it stood. Beside the
+  // docked panel focus moves to its row and the panel follows; the sheet offers it in its footer.
   const [next, setNext] = useState<{ after: string; id: string | null } | null>(null);
   const decided = useCallback(
-    (id: string) => {
-      const held = found.filter((r) => r.decision === "held" || r.id === id);
-      const i = held.findIndex((r) => r.id === id);
-      setNext({ after: id, id: (held[i + 1] ?? held[i - 1])?.id ?? null });
+    (id: string, decision?: string) => {
+      const order = grid.current?.displayedIds() ?? found.map((r) => r.id);
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      const held = order.filter((x) => x === id || byId.get(x)?.decision === "held");
+      const i = held.indexOf(id);
+      const nextId = (held[i + 1] ?? held[i - 1]) || null;
+      setNext({ after: id, id: nextId });
+      if (wide && nextId) {
+        setHint(`${id} ${decision === "rejected" ? "rejected" : "approved"} and saved`);
+        requestAnimationFrame(() => {
+          setIntent(null);
+          setOpen(nextId);
+          grid.current?.focusRow(nextId);
+        });
+      }
     },
-    [found],
+    [found, rows, wide],
   );
   const nextHeld = next && next.after === open ? next.id : undefined;
 
@@ -219,6 +259,20 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       // An open dialog (the ? sheet) handles its own keys, Esc included: closing the panel behind it would be the wrong layer.
       if (help || (e.target instanceof Element && e.target.closest("dialog[open]"))) return;
+      // A column's filter is open: Esc closes it (focus back on its header), / closes it and goes to search, and no other
+      // single key reaches the queue's shortcuts while it is up.
+      if (document.querySelector(".ag-popup .ag-filter, .ag-popup .ag-menu")) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          grid.current?.closeFilter();
+        } else if (e.key === "/" && !typing(e.target)) {
+          e.preventDefault();
+          grid.current?.closeFilter();
+          setSearchOpen(true);
+          requestAnimationFrame(() => searchBox.current?.focus());
+        }
+        return;
+      }
       if (e.key === "Escape" && open && wide && !typing(e.target)) {
         e.preventDefault();
         close();
@@ -227,7 +281,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
       if (typing(e.target)) return;
       if (e.key === "/") {
         e.preventDefault();
-        searchBox.current?.focus();
+        setSearchOpen(true);
+        requestAnimationFrame(() => searchBox.current?.focus());
       } else if (/^[1-6]$/.test(e.key)) {
         changeTab(TABS[Number(e.key) - 1].id);
       } else if ((e.key === "j" || (e.key === "ArrowDown" && fill)) && outsideList(e.target)) {
@@ -236,15 +291,19 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         e.preventDefault();
         if (open) grid.current?.focusRow(open);
         else grid.current?.focusFirst();
-      } else if ((e.key === "a" || e.key === "r") && wide) {
+      } else if (e.key === "a" || e.key === "r") {
         // Never while the open claim's confirm or reason is up (or sending): a letter typed there, or after focus
         // dropped to the page, must not swap the form for another.
         if (document.querySelector(".evidence-panel [data-review-open]")) return;
-        // The open claim, else the grid row with focus: A and R open it and start the confirm.
-        const id = open ?? (e.target instanceof Element && e.target.closest(".claims-grid") ? grid.current?.focusedRowId() : null);
+        // The grid row with focus, else the open claim: A and R open it and start the confirm.
+        const focused = e.target instanceof Element && e.target.closest(".claims-grid") ? grid.current?.focusedRowId() : null;
+        const id = focused ?? open;
         const row = rows.find((r) => r.id === id);
-        if (!row) return;
         e.preventDefault();
+        if (!row) {
+          setHint("Open a held claim first: A approves it, R rejects it");
+          return;
+        }
         if (row.decision !== "held") {
           setHint(`${row.id} isn't held: only held claims can be approved or rejected`);
           return;
@@ -263,10 +322,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     return () => window.removeEventListener("keydown", onKey);
   }, [open, wide, fill, close, openClaim, changeTab, rows, help]);
 
-  const samples = ledger.samples;
-  const demos = ledger.demos;
-  // Every claim the legend doesn't mark: real owners' (on the demo recall, this company's own), so its parts add up to All.
-  const live = rows.length - samples - demos;
+  // The column's menu changed the Verdict filter: a single decision is its tab, anything else is All, filtered.
+  const onDecisionFilter = useCallback((m: DecisionModel | null) => {
+    setFilter(m);
+    setTab(tabOf(m));
+  }, []);
 
   const clearSearch = () => {
     setSearch("");
@@ -274,77 +334,89 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   };
 
   return (
-    <section aria-label="Claims" className="flex min-h-0 flex-1 flex-col">
+    <section aria-labelledby="claims-heading" className="flex min-h-0 flex-1 flex-col">
+      <h2 className="sr-only">Summary</h2>
       <Ledger ledger={ledger} />
+      <h2 id="claims-heading" className="sr-only">
+        Claims
+      </h2>
 
       {/* From 1280px the open claim's panel is a column beside the tabs, grid and footer, from under the ledger to the
           foot of the window: the evidence has the height, and the search, the heading's actions and the footer stay in
           reach. */}
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="mt-1 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-line">
+          {/* One row while it fits: the search narrows first, and only a narrow queue wraps the controls to a second line. */}
+          <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-line">
             <StatusTabs value={tab} counts={counts} onChange={changeTab} controls="claims-panel" />
-            <div className="relative mb-1.5 flex w-full items-center sm:w-64">
-              <label className="w-full">
-                <span className="sr-only">Search claims by id, code, PayPal account or reason</span>
-                <input
-                  ref={searchBox}
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    // Esc clears the box and stays in it; on an empty box it goes on into the list.
-                    if (e.key !== "Escape") return;
-                    e.preventDefault();
-                    if (search) setSearch("");
-                    else if (open) grid.current?.focusRow(open);
-                    else grid.current?.focusFirst();
-                  }}
-                  placeholder="Search claims, codes…"
-                  className="h-9 w-full rounded-control border border-line bg-surface pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0 [&::-webkit-search-cancel-button]:appearance-none"
-                />
-              </label>
-              {/* Clear shows whenever there is text, focused or not (the browser's own × hides on blur). */}
-              {search ? (
-                <button
-                  type="button"
-                  onClick={clearSearch}
-                  aria-label="Clear search"
-                  className="absolute right-1 inline-flex size-7 items-center justify-center rounded-[4px] text-muted hover:bg-surface-2 hover:text-text"
-                >
-                  <CrossIcon className="size-3.5" />
-                </button>
-              ) : (
-                <kbd
-                  className="pointer-events-none absolute right-2 hidden h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-[11px] text-faint sm:inline-flex"
-                  aria-hidden="true"
-                >
-                  /
-                </kbd>
-              )}
+            <div className="mb-1.5 ml-auto flex shrink-0 items-center gap-3 max-md:hidden">
+              <GroupControl value={groupBy} onChange={setGroupBy} />
+              <button
+                type="button"
+                onClick={() => grid.current?.exportCsv()}
+                className="inline-flex h-8 items-center rounded-control px-1 text-ui whitespace-nowrap text-muted transition-colors hover:text-text"
+              >
+                Export CSV
+              </button>
             </div>
+            {/* Card rows have no header to click: below 768px the sort is its own control, beside search. */}
+            {!roomy && <SortControl key={tab} initial={tab === "held" ? "oldest" : "newest"} onChange={(o) => grid.current?.sortBy(o)} />}
+            {compact ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchOpen(true);
+                  requestAnimationFrame(() => searchBox.current?.focus());
+                }}
+                aria-label="Search claims (/)"
+                title="Search claims (/)"
+                className="mb-1.5 inline-flex size-9 shrink-0 items-center justify-center rounded-control text-muted shadow-[inset_0_0_0_1px_var(--line)] hover:text-text"
+              >
+                <SearchGlyph />
+              </button>
+            ) : (
+              <div className="relative mb-1.5 flex w-full items-center sm:w-auto sm:max-w-64 sm:grow sm:basis-40">
+                <label className="w-full">
+                  <span className="sr-only">Search claims by id, code, PayPal account or reason</span>
+                  <input
+                    ref={searchBox}
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onBlur={() => setSearchOpen(false)}
+                    onKeyDown={(e) => {
+                      // Esc clears the box and goes back to the list, so the next j or ↓ walks the claims; ↓ goes there too.
+                      if (e.key !== "Escape" && e.key !== "ArrowDown") return;
+                      e.preventDefault();
+                      if (e.key === "Escape") setSearch("");
+                      if (open) grid.current?.focusRow(open);
+                      else grid.current?.focusFirst();
+                    }}
+                    placeholder="Search claims, codes…"
+                    className="h-9 w-full rounded-control border border-line bg-surface pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0 [&::-webkit-search-cancel-button]:appearance-none"
+                  />
+                </label>
+                {/* Clear shows whenever there is text, focused or not (the browser's own × hides on blur). */}
+                {search ? (
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    aria-label="Clear search"
+                    className="absolute right-1 inline-flex size-7 items-center justify-center rounded-[4px] text-muted hover:bg-surface-2 hover:text-text"
+                  >
+                    <CrossIcon className="size-3.5" />
+                  </button>
+                ) : (
+                  <kbd
+                    className="pointer-events-none absolute right-2 hidden h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro text-faint sm:inline-flex"
+                    aria-hidden="true"
+                  >
+                    /
+                  </kbd>
+                )}
+              </div>
+            )}
           </div>
-
-          {/* The legend for the marks after claim ids, only once the queue mixes kinds of claim (a workspace's own 40 need
-              none), on one line so opening a claim never moves the grid; on a phone, where the evidence is a sheet, it
-              wraps. */}
-          {[samples, demos, live].filter((n) => n > 0).length > 1 && (
-            <p className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 py-2.5 font-mono text-micro text-faint sm:flex-nowrap sm:overflow-hidden sm:whitespace-nowrap">
-              {samples > 0 && (
-                <span className="inline-flex min-w-0 items-center gap-2 sm:shrink-0">
-                  <SampleDiamond />
-                  <span className="truncate">{plural(samples, "claim")} included with your console</span>
-                </span>
-              )}
-              {demos > 0 && (
-                <span className="inline-flex min-w-0 items-center gap-2">
-                  <SampleDiamond demo />
-                  <span className="truncate">{plural(demos, "claim")} from the try page</span>
-                </span>
-              )}
-              {live > 0 && <span className="shrink-0">+ {plural(live, "live claim")}</span>}
-            </p>
-          )}
 
           <div
             id="claims-panel"
@@ -377,53 +449,103 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                 </button>
               </div>
             )}
-            {!tabRows.length ? (
-              <EmptyState title={EMPTY_TAB[tab as Exclude<Tab, "all">].title} description={EMPTY_TAB[tab as Exclude<Tab, "all">].description} />
-            ) : (
-              <>
-                {found.length > 0 && (
-                  <ClaimsGrid
-                    ref={grid}
-                    rows={found}
-                    // Held claims wait for a person: the longest waiting first.
-                    oldestFirst={tab === "held"}
-                    openId={open}
-                    onOpen={openClaim}
-                    onFocusRow={(id) => open && wide && id !== open && openClaim(id)}
-                    fill={fill}
+            {/* The grid holds every claim and filters them itself (the tab and the column's menu set its Verdict filter,
+                search is its quick filter), so switching tabs never remounts it. With nothing to show, a note covers it. */}
+            <ClaimsGrid
+              ref={grid}
+              label={`Claims for ${recall.product}`}
+              rows={rows}
+              // Held claims wait for a person: the longest waiting first.
+              oldestFirst={tab === "held"}
+              openId={open}
+              onOpen={openClaim}
+              onOpenLinked={goTo}
+              onFocusRow={(id) => open && wide && id !== open && openClaim(id)}
+              fill={fill}
+              search={search}
+              decisionFilter={filter}
+              onDecisionFilter={onDecisionFilter}
+              groupBy={groupBy}
+              onShown={setTotals}
+            />
+            {shown === 0 && (
+              // Under the header row, sized to its words: the grid's frame stays, with the note where the rows would be.
+              <div className="absolute inset-x-px top-[37px] bottom-px z-10 rounded-b-card bg-surface px-6 pt-8">
+                {!tabRows.length && !filtered && !search ? (
+                  <Note title={EMPTY_TAB[tab as Exclude<Tab, "all">].title}>{EMPTY_TAB[tab as Exclude<Tab, "all">].description}</Note>
+                ) : search ? (
+                  <Note
+                    title={`No claims in ${tab === "all" ? "this recall" : TABS.find((t) => t.id === tab)?.label} match “${search}”`}
+                    action={
+                      <>
+                        {elsewhere.map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => changeTab(t.id)}
+                            className="text-text underline decoration-line-strong underline-offset-2 hover:decoration-text"
+                          >
+                            {plural(counts[t.id], "match", "matches")} in {t.label}
+                          </button>
+                        ))}
+                        <button type="button" onClick={clearSearch} className="text-muted hover:text-text">
+                          Clear search
+                        </button>
+                      </>
+                    }
+                  />
+                ) : (
+                  <Note
+                    title="No claims pass the column filters"
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => changeTab("all")}
+                        className="text-text underline decoration-line-strong underline-offset-2 hover:decoration-text"
+                      >
+                        Clear filters
+                      </button>
+                    }
                   />
                 )}
-                {found.length === 0 && (
-                  <div className="flex justify-center px-4 pt-10">
-                    <EmptyState
-                      title="No claims match"
-                      description={`Nothing in ${tab === "all" ? "this recall" : `the ${TABS.find((t) => t.id === tab)?.label} tab`} matches “${search}”. Search by claim id, code, the PayPal account's last four or the reason.`}
-                      action={
-                        <Button variant="secondary" size="sm" onClick={clearSearch}>
-                          Clear search
-                        </Button>
-                      }
-                    />
-                  </div>
-                )}
-              </>
+              </div>
             )}
           </div>
 
-          <footer className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 pt-2 font-mono text-micro text-faint" aria-live="polite">
+          {/* One bar under the grid: what the filters show and its money on the left; freshness and the keys on the right. */}
+          <footer className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-micro text-muted">
             <span>
-              {found.length === tabRows.length ? plural(tabRows.length, "claim") : `${formatCount(found.length)} of ${plural(tabRows.length, "claim")}`}
+              <span className="text-text-2">
+                {shown === null || shown === rows.length ? plural(rows.length, "claim") : `${formatCount(shown)} of ${plural(rows.length, "claim")}`}
+              </span>
+              {totals && totals.approvedCents > 0 && (
+                <>
+                  {" · "}
+                  <span className="font-mono">{formatCents(totals.approvedCents)}</span> approved
+                  {/* What PayPal took, only once it took something: the strip above says why nothing has. */}
+                  {totals.sentCents > 0 && (
+                    <>
+                      {" · "}
+                      <span className="font-mono">{formatCents(totals.sentCents)}</span> paid out
+                    </>
+                  )}
+                </>
+              )}
               {ledger.settling > 0 && ` · ${formatCount(ledger.settling)} settling at PayPal`}
+              {tab === "held" && " · oldest first"}
             </span>
-            <Status state={state} at={at} failed={failed} onRefresh={refresh} />
-            {hint && <span className="text-muted">{hint}</span>}
-            <button
-              type="button"
-              onClick={() => setHelp(true)}
-              className="-my-1 ml-auto hidden h-8 items-center gap-1.5 rounded-control px-2 hover:text-muted lg:inline-flex"
-            >
-              <Keys k={["?"]}>Shortcuts</Keys>
-            </button>
+            {hint && <span className="text-text-2">{hint}</span>}
+            <span className="ml-auto inline-flex items-center gap-4">
+              <Status state={state} at={at} failed={failed} onRefresh={refresh} />
+              <button type="button" onClick={() => setHelp(true)} className="-my-1 inline-flex h-8 items-center gap-1.5 rounded-control px-2 hover:text-text">
+                <Keys k={["?"]}>Shortcuts</Keys>
+              </button>
+            </span>
+            {/* What a screen reader hears: the count after a search or filter, and new claims. Never the clock. */}
+            <span className="sr-only" role="status">
+              {shown !== null && shown !== rows.length ? `${formatCount(shown)} of ${plural(rows.length, "claim")}` : ""}
+              {pending > 0 ? ` New claims: ${pending}` : ""}
+            </span>
           </footer>
         </div>
 
@@ -445,7 +567,18 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         )}
       </div>
       {!wide && open && (
-        <EvidenceDrawer claimId={open} version={openRow?.version} filedAt={openRow?.createdAt} onClose={close} onOpen={goTo} onDecided={decided} nextHeld={nextHeld} back={back} onBack={goBack} />
+        <EvidenceDrawer
+          claimId={open}
+          version={openRow?.version}
+          filedAt={openRow?.createdAt}
+          onClose={close}
+          intent={intent}
+          onOpen={goTo}
+          onDecided={decided}
+          nextHeld={nextHeld}
+          back={back}
+          onBack={goBack}
+        />
       )}
 
       {help && <ShortcutSheet onClose={() => setHelp(false)} />}
@@ -453,19 +586,24 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   );
 }
 
+/** "just now", then "2 min ago": a calm clock, redrawn every 15 s rather than ticking each second. */
 function Ago({ at }: { at: number }) {
   const [now, setNow] = useState(at);
   useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    const t = window.setInterval(() => setNow(Date.now()), 15_000);
     return () => window.clearInterval(t);
   }, []);
-  const s = Math.max(0, Math.round((now - at) / 1000));
-  return <>{s < 60 ? `${s} s` : `${Math.floor(s / 60)} min`} ago</>;
+  const min = Math.floor(Math.max(0, now - at) / 60_000);
+  return <>{min < 1 ? "just now" : `${min} min ago`}</>;
 }
 
 function Status({ state, at, failed, onRefresh }: { state: PollState; at: number; failed: boolean; onRefresh: () => void }) {
   const refresh = (
-    <button type="button" onClick={onRefresh} className="text-muted underline decoration-line-strong underline-offset-2 hover:text-text">
+    <button
+      type="button"
+      onClick={onRefresh}
+      className="-my-1 inline-flex min-h-6 items-center text-text-2 underline decoration-line-strong underline-offset-2 hover:text-text"
+    >
       Refresh
     </button>
   );
@@ -492,13 +630,14 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
 }
 
 const SHORTCUTS: [string[], string][] = [
-  [["/"], "Search claims"],
-  [["1", "6"], "Switch status tab"],
-  [["↑", "↓"], "Move between claims; the panel follows. ↓ or j from anywhere starts the list"],
-  [["Enter"], "Open a claim's evidence"],
-  [["Esc"], "Close the evidence"],
-  [["A"], "Pay the open or focused held claim: A opens the confirm, A again or Enter on Pay sends it"],
-  [["R"], "Reject the open or focused held claim"],
+  [["/"], "Search"],
+  [["1", "6"], "Status tab"],
+  [["↑", "↓"], "Next / previous claim"],
+  [["J", "K"], "Next / previous claim"],
+  [["Enter"], "Open claim"],
+  [["Esc"], "Close"],
+  [["A"], "Approve (press twice)"],
+  [["R"], "Reject"],
 ];
 
 function ShortcutSheet({ onClose }: { onClose: () => void }) {
@@ -515,7 +654,8 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
       className="m-auto w-[360px] max-w-[calc(100vw-2rem)] rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0.1_0.004_75/0.5)]"
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
-        <h2 id="shortcuts-title" className="text-ui font-medium">
+        {/* Focus starts on the title, not on the Esc button, whose ring read as a stray selection. */}
+        <h2 id="shortcuts-title" className="text-ui font-medium outline-none" tabIndex={-1} autoFocus>
           Keyboard
         </h2>
         <button
@@ -529,7 +669,7 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
       </div>
       <dl className="flex flex-col gap-3 px-5 py-4">
         {SHORTCUTS.map(([keys, what]) => (
-          <div key={what} className="grid grid-cols-[88px_1fr] items-center gap-3 text-ui">
+          <div key={keys.join()} className="grid grid-cols-[88px_1fr] items-center gap-3 text-ui">
             <dt className="flex gap-1">
               {keys.map((k, i) => (
                 <span key={k} className="inline-flex items-center gap-1">
@@ -545,5 +685,85 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
         ))}
       </dl>
     </dialog>
+  );
+}
+
+/** Group by: one compact select, so the toolbar keeps to one row beside the open panel. */
+function GroupControl({ value, onChange }: { value: GroupBy; onChange: (g: GroupBy) => void }) {
+  return (
+    <label className="relative inline-flex h-8 items-center text-ui">
+      <span className="sr-only">Group claims by</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as GroupBy)}
+        className={clsx(
+          "h-8 appearance-none rounded-control bg-surface pr-7 pl-2.5 text-ui shadow-[inset_0_0_0_1px_var(--line)] hover:text-text",
+          value === "none" ? "text-muted" : "text-text",
+        )}
+      >
+        {GROUPS.map((g) => (
+          <option key={g.id} value={g.id}>
+            {g.id === "none" ? "No grouping" : `Group: ${g.label}`}
+          </option>
+        ))}
+      </select>
+      <svg aria-hidden="true" viewBox="0 0 10 6" className="pointer-events-none absolute right-2.5 h-1.5 w-2.5 text-muted">
+        <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </label>
+  );
+}
+
+const SORTS: { id: SortOrder; label: string }[] = [
+  { id: "newest", label: "Newest first" },
+  { id: "oldest", label: "Oldest first" },
+  { id: "amount", label: "Amount" },
+];
+
+function SortControl({ initial, onChange }: { initial: SortOrder; onChange: (o: SortOrder) => void }) {
+  const [value, setValue] = useState(initial);
+  return (
+    <label className="relative mb-1.5 ml-auto inline-flex h-9 items-center text-ui">
+      <span className="sr-only">Sort claims</span>
+      <select
+        value={value}
+        onChange={(e) => {
+          const o = e.target.value as SortOrder;
+          setValue(o);
+          onChange(o);
+        }}
+        className="h-9 appearance-none rounded-control bg-surface pr-7 pl-2.5 text-ui text-muted shadow-[inset_0_0_0_1px_var(--line)] hover:text-text"
+      >
+        {SORTS.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.label}
+          </option>
+        ))}
+      </select>
+      <svg aria-hidden="true" viewBox="0 0 10 6" className="pointer-events-none absolute right-2.5 h-1.5 w-2.5 text-muted">
+        <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </label>
+  );
+}
+
+/** A magnifier drawn for the folded search: one 1.5px stroke, the weight of the select's chevron. */
+function SearchGlyph() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4">
+      <circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10.25 10.25L13.5 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** The grid's empty note: a line, what it means, and what to do, on the left where the rows would start. */
+function Note({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex max-w-read flex-col gap-1.5 text-ui">
+      <p className="font-medium text-text">{title}</p>
+      {children && <p className="text-muted">{children}</p>}
+      {action && <p className="mt-1.5 flex flex-wrap gap-x-5 gap-y-2">{action}</p>}
+    </div>
   );
 }

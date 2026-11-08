@@ -54,8 +54,10 @@ function promptStarters(data: InsightsData): AgAiPromptStarter[] {
   const sameItem = data.claims.filter((c) => c.decision === "Held" && c.failedCheck === "same_item").length;
   const starters: AgAiPromptStarter[] = [];
   if (refused) starters.push({ label: `Why were ${refused} claims refused?`, prompt: `Why were ${refused} claims refused? Chart them by reason.` });
-  if (sameItem) starters.push({ label: "Held on the same-item check", prompt: "Show the held claims where only the same-item check was unclear, and quote what the model saw." });
-  starters.push({ label: "Chart time to pay by day", prompt: "Chart the median seconds from photo to PayPal payout by day filed." });
+  if (sameItem) starters.push({ label: `Why are ${sameItem} claims held?`, prompt: "Show the held claims where only the same-item check was unclear, and quote what the photo check saw." });
+  // Only a question this recall's data can answer: time to pay once something was paid, else the photo check's own time.
+  if (data.claims.some((c) => c.timeToSendSec !== null)) starters.push({ label: "Chart time to pay by day", prompt: "Chart the median seconds from photo to PayPal payout by day filed." });
+  else starters.push({ label: "Chart claims filed by day", prompt: "Chart how many claims were filed each day, by decision." });
   if (held) starters.push({ label: `Draft a review note for ${held.id}`, prompt: `Draft a review note for ${held.id}.` });
   return starters.slice(0, 4);
 }

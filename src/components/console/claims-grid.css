@@ -1,20 +1,23 @@
 /* The claims grid's finishing touches the theme params can't express (gridTheme.ts holds the rest). */
 
-/* Header labels: the micro token, mono uppercase with +0.06em tracking. */
-.claims-grid .ag-header-cell-text {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+/* An "In progress" pill is --surface-2, the open row's own tint: on that row it steps up a surface so it keeps its
+   shape. */
+.claims-grid .ag-row-selected .pill-pending,
+.claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible) .pill-pending {
+  background-color: var(--surface-3);
 }
 
-/* The open claim, and the row the keyboard is on: a 2px amber edge on the left, like the edge of an evidence tag. */
+/* The open claim, and the row the keyboard is on: one surface step up with a 2px ink edge on the left, like the edge of
+   an evidence tag. Ink, not amber: amber is the view's one action. While a claim is open the edge is its row's alone,
+   so two edges never point at two claims at once. */
 .claims-grid .ag-row.ag-row-selected::before,
-.claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible)::before {
+.claims-grid:not(:has(.ag-row-selected)) .ag-row.ag-row-focus:has(.ag-cell:focus-visible)::before {
   content: "";
   position: absolute;
   inset-block: 0;
   left: 0;
   width: 2px;
-  background: var(--accent);
+  background: var(--text-2);
   z-index: 5;
 }
 
@@ -29,7 +32,7 @@
 /* The keyboard marks the whole row, not the one cell it sits on: the open row's tint across every cell (pinned ones
    included, which paint their own background), with the amber edge above, in place of the cell's ring. */
 .claims-grid .ag-row.ag-row-focus:has(.ag-cell:focus-visible) .ag-cell {
-  background-image: linear-gradient(var(--accent-soft), var(--accent-soft));
+  background-color: var(--surface-2);
 }
 
 .claims-grid .ag-row.ag-row-focus .ag-cell.ag-cell-focus:focus-visible {
@@ -41,8 +44,40 @@
 /* Below 720px each claim is one full-width card row, which AG Grid's theme gives no focus mark. The ring goes on the
    anchor, which is exactly the visible card: the row itself is wider than the viewport and would clip its right edge. */
 .claims-grid .ag-full-width-row.ag-row-focus:focus-visible .ag-full-width-anchor {
-  box-shadow: inset 0 0 0 2px var(--accent);
+  box-shadow: inset 0 0 0 2px var(--focus);
 }
+
+/* Filters: a filterable column always shows its icon, faint, so the filters can be found at a glance; it brightens on
+   hover or focus and stays bright while a filter is on. */
+.claims-grid .ag-header-cell .ag-header-cell-filter-button,
+.claims-grid .ag-header-cell .ag-header-cell-menu-button {
+  opacity: 0.45;
+  transition: opacity var(--dur-ui) ease-out;
+}
+
+.claims-grid .ag-header-cell:hover .ag-header-cell-filter-button,
+.claims-grid .ag-header-cell:focus-within .ag-header-cell-filter-button,
+.claims-grid .ag-header-cell:hover .ag-header-cell-menu-button,
+.claims-grid .ag-header-cell:focus-within .ag-header-cell-menu-button,
+.claims-grid .ag-header-cell.ag-header-cell-filtered .ag-header-cell-filter-button,
+.claims-grid .ag-header-cell-filter-button.ag-filter-active {
+  opacity: 1;
+}
+
+/* A resize handle only where it can be used: a hairline on hover. */
+.claims-grid .ag-header-cell-resize::after {
+  opacity: 0;
+}
+.claims-grid .ag-header-cell:hover .ag-header-cell-resize::after {
+  opacity: 1;
+}
+
+/* Group rows and the pinned totals are drawn by their renderers; the full-width wrapper adds nothing. */
+.claims-grid .ag-full-width-row .ag-full-width-anchor,
+.claims-grid .ag-row-pinned .ag-full-width-anchor {
+  height: 100%;
+}
+
 
 /* Cells centre their content vertically; renderers own their own layout. */
 .claims-grid .ag-cell {
@@ -88,4 +123,17 @@
    (ClaimsGrid's cellClass): green only ever means paid. */
 .claims-grid .ag-cell.flash-neutral {
   --ag-value-change-value-highlight-background-color: color-mix(in oklch, var(--text) 10%, transparent);
+}
+
+/* The verdict's fixed pill track (--verdict-pill-w, globals.css): every reason starts on one x. */
+.verdict-track {
+  display: grid;
+  grid-template-columns: var(--verdict-pill-w) minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.verdict-track > :first-child {
+  justify-self: start;
 }
