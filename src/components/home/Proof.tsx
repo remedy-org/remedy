@@ -14,7 +14,7 @@ const FIGURES: { figure: string; text: string; short: string }[] = [
 /** The footnote mark: a 24px hit area around the small figure, jumping to the method line at the section's foot. */
 function Note() {
   return (
-    <sup className="ml-0.5 font-mono text-micro">
+    <sup className="ml-0.5 text-micro">
       <a
         href="#proof-note"
         aria-label="Note 1"
