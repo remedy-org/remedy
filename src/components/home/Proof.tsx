@@ -4,11 +4,10 @@ import styles from "./home.module.css";
 import { Reveal } from "./Reveal";
 import { Section } from "./Section";
 
-// Figures: docs/EVAL.md (7 Nov 2026), GPT-6.1 Sol, the model Remedy runs. Full table and method in public/llms-full.txt.
-// short: the same fact in fewer words, for a phone's three narrow columns.
+// Figures: docs/EVAL.md (7 Nov 2026), GPT-6.1 Sol, the model Remedy runs; the full table and method stay there.
+// short: the same fact in fewer words, for a phone's narrow columns.
 const FIGURES: { figure: string; text: string; short: string }[] = [
   { figure: "100%", text: "of wrong codes and wrong products rejected", short: "wrong codes rejected" },
-  { figure: "16 s", text: "to check a claim", short: "to check a claim" },
   { figure: "1.1¢", text: "Remedy's cost to check a claim", short: "cost per claim" },
 ];
 
@@ -34,10 +33,10 @@ export function Proof() {
       exhibit="Results"
       title="Every genuine claim paid."
       muted="Every stolen photo stopped."
-      lead="Remedy was tested against real owner photos, official recall photos, wrong codes and deliberate fakes. Photos get in only through the claim's live camera, and a fixed rule, never the model, moves the money."
+      lead="We put Remedy up against real owner photos, official recall photos, photos of screens, wrong codes and deliberate fakes. It reads the code on every tag character by character, so one wrong letter refuses the claim."
     >
       {/* The one number that matters, at the section's title size and the only full-contrast figure, on the heading's
-          grid line; the three supporting figures sit on the lead's (column 8), smaller and muted. */}
+          grid line; the two supporting figures sit on the lead's (column 8), smaller and muted. */}
       <div className="grid-12 gap-y-8 border-t border-line pt-8 lg:items-end">
         <Reveal className="col-span-12 flex items-baseline gap-x-5 lg:col-span-7">
           <p aria-hidden="true" className={clsx(styles.line, "text-display leading-none font-medium")}>
@@ -49,7 +48,7 @@ export function Proof() {
           </p>
         </Reveal>
 
-        <dl className="col-span-12 grid grid-cols-3 gap-x-4 sm:gap-x-[var(--col-gap)] lg:col-span-5">
+        <dl className="col-span-12 grid grid-cols-2 gap-x-4 sm:gap-x-[var(--col-gap)] lg:col-span-5">
           {FIGURES.map((f, i) => (
             <div key={f.figure} className="flex flex-col">
               <dt className="text-body font-medium whitespace-nowrap text-text-2 sm:text-head-sm">{f.figure}</dt>
@@ -64,8 +63,7 @@ export function Proof() {
       </div>
 
       <p id="proof-note" className="mt-12 max-w-[68ch] scroll-mt-24 text-[0.75rem]/[1.5] text-pretty text-faint sm:mt-16">
-        ¹ Remedy fraud benchmark, 7 Nov 2026: real owner photos, official recall photos, wrong codes, photos of screens and
-        deliberate fakes.
+        ¹ Remedy fraud benchmark, 7 Nov 2026.
       </p>
     </Section>
   );

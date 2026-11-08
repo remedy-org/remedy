@@ -19,7 +19,7 @@ export function ExpiredCard({ code, againHref, demo }: { code: string; againHref
         <CodeTag code={code} label="One-time code" foot="Valid for 10 minutes from when it was issued." expired />
       </div>
       <Button href={againHref} size="lg" block prefetch={false}>
-        {demo ? "Choose a sample again" : "Get a new code"}
+        {demo ? "Pick a claim again" : "Get a new code"}
       </Button>
     </Card>
   );

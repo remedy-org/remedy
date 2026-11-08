@@ -647,7 +647,7 @@
       "label": {
         "text_seen": "X-VESOLJE",
         "matches_recalled_product": "yes",
-        "evidence": "The handwritten paper tag reads \"X-VESOLJE\", matching the specified demo label."
+        "evidence": "The handwritten paper tag reads \"X-VESOLJE\"."
       },
       "steps": [
         {

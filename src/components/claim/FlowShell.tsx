@@ -5,7 +5,7 @@ import { JUDGES_DOCK_ID } from "./JudgesSheet";
 
 export interface FlowShellProps {
   children: ReactNode;
-  /** The demo (/try): a Demo chip in the header, the claim pages' one marker. The guide rail (WithJudges) says the rest. */
+  /** The demo (/try): the Guide pill docks in the header. No label: the Demo account panel and the guide say the rest. */
   demo?: boolean;
   /** The company running the recall, for the footer. */
   company?: string;
@@ -24,13 +24,8 @@ export function FlowShell({ children, demo, company, bare }: FlowShellProps) {
       <header className="border-b border-line">
         <div className="page flex h-16 items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            {/* Below 360px the demo's header holds the mark, DEMO, the Guide pill and the theme toggle: the name gives way. */}
+            {/* Below 360px the demo's header holds the mark, the Guide pill and the theme toggle: the name gives way. */}
             <Wordmark href="/" nameClassName={demo ? "max-[359px]:sr-only" : undefined} />
-            {demo && (
-              <span className="micro inline-flex h-6 shrink-0 items-center rounded-control border border-line-strong px-2 whitespace-nowrap text-muted">
-                Demo
-              </span>
-            )}
             {/* The Guide pill docks here below 1200px (JudgesSheet). */}
             {demo && <div id={JUDGES_DOCK_ID} className="flex min-[1200px]:hidden" />}
           </div>
@@ -45,7 +40,7 @@ export function FlowShell({ children, demo, company, bare }: FlowShellProps) {
         {!bare && (
           <div className="page flex flex-col gap-1 pt-6 text-ui text-faint sm:flex-row sm:justify-between">
             <p>{company ? `Refunds for ${company}'s recall are sent through PayPal Payouts.` : "Refunds are sent through PayPal Payouts."}</p>
-            <p>Your photos are used only to check your claim and are shared only with the company running the recall.</p>
+            <p>Your photos are used only to check this claim. Besides Remedy&rsquo;s checks, only the company running the recall sees them.</p>
           </div>
         )}
         <div className="page flex flex-wrap items-center gap-x-2 pt-6 pb-6 text-ui text-faint">

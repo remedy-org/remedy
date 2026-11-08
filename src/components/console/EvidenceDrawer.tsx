@@ -231,8 +231,6 @@ function EvidenceContent({
               {id}
             </h2>
             {claim ? <StatusPill status={claim.decision} /> : <Skeleton className="h-6 w-16 rounded-full" />}
-            {claim?.seeded && <span className="micro rounded-control border border-line px-1.5 py-px text-faint">Starter claim</span>}
-            {claim?.demo && <span className="micro rounded-control border border-line px-1.5 py-px text-faint">Demo claim</span>}
           </div>
           {claim ? (
             // One line in the 440px panel, so the evidence keeps the height: "Unverified" only when it's true, as in the
@@ -346,7 +344,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
     { label: "Model", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "A pre-check stopped it: the photos never reached the model." : undefined },
     { label: "Rule", at: decided },
   ];
-  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "Starter claims don't pay out." : undefined }];
+  if (claim.seeded) return [...steps, { label: "PayPal", at: null, note: claim.decision === "paid" ? "No payout sent." : undefined }];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
   const failure = payoutFailure(claim);
   if (failure) {
@@ -601,7 +599,6 @@ function Evidence({
 
       <Section title="Decision">
         <p className="text-body text-text">{claim.sentence}</p>
-        {claim.review?.note && <p className="text-ui text-muted">{claim.review.note}</p>}
         {claim.payout && (
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 rounded-control border border-line px-4 py-3 text-ui">
             <dt className="text-muted">PayPal batch</dt>

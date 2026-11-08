@@ -4,7 +4,7 @@ import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "r
 import { createPortal } from "react-dom";
 import { CrossIcon } from "@/components/ui";
 
-/** FlowShell's header slot beside the Demo chip, where the pill docks so it never floats over a step. */
+/** FlowShell's header slot beside the wordmark, where the pill docks so it never floats over a step. */
 export const JUDGES_DOCK_ID = "judges-dock";
 
 const noop = () => () => {};

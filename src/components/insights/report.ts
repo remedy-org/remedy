@@ -37,8 +37,8 @@ const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 /**
- * How many paid claims there are, how many of them are samples that never sent money to a real owner, what those
- * samples would have paid, how many sent payouts waited for a person's review, and how many claims the model answered
+ * How many paid claims there are, how many of them are samples that never sent money to a real owner, what the rest
+ * really sent, how many sent payouts waited for a person's review, and how many claims the model answered
  * (for the timing tile when nothing was sent).
  */
 export function provenance(claims: Pick<InsightsData["claims"][number], "decision" | "source" | "amountPaid" | "modelSec" | "paidOnReview">[]) {
@@ -47,7 +47,7 @@ export function provenance(claims: Pick<InsightsData["claims"][number], "decisio
   return {
     paid: paid.length,
     samples: samples.length,
-    sampleAmount: samples.reduce((n, c) => n + c.amountPaid, 0),
+    sentAmount: paid.filter((c) => c.source !== "Starter").reduce((n, c) => n + c.amountPaid, 0),
     reviewed: paid.filter((c) => c.source !== "Starter" && c.paidOnReview).length,
     answered: claims.filter((c) => c.modelSec !== null).length,
   };
@@ -59,12 +59,18 @@ export function provenance(claims: Pick<InsightsData["claims"][number], "decisio
  * timing tile is the ledger's median over payouts really sent (a claim that waited hours for a person would drag an
  * average to minutes), says how many of them waited, and with none sent it shows the model's own answer time instead.
  */
-export function captions({ paid, samples, sampleAmount, reviewed, answered }: ReturnType<typeof provenance>) {
+const PAID_CAPTION = "To owners' PayPal accounts";
+const paidCaption = (sent: number) => `${usd.format(sent)} sent through PayPal`;
+
+export function captions({ paid, samples, reviewed, answered, sentAmount }: ReturnType<typeof provenance>) {
   const sent = paid - samples;
   return {
     remedied: "Destroyed and verified on camera",
-    // The caption must fit one line of the tile at 1440 (about 200px). Starter claims' approved money was never sent.
-    paid: samples ? `${usd.format(sampleAmount)} approved` : "USD through PayPal",
+    // The money tile leads with what the rule approved while starter claims are among the paid (their payouts never
+    // leave), with what was really sent under it; otherwise it is the money sent. One line of the tile at 1440 (~200px).
+    paidTitle: samples ? "Approved refunds" : "Sent through PayPal",
+    paidField: (samples ? "amountPaid" : "amountSent") as "amountPaid" | "amountSent",
+    paid: samples ? paidCaption(sentAmount) : PAID_CAPTION,
     timeTitle: sent ? "Median photo to PayPal" : "Median photo check",
     timeField: (sent ? "timeToSendSec" : "modelSec") as "timeToSendSec" | "modelSec",
     time: !sent
@@ -132,10 +138,12 @@ export function filterLabel(picks: FilterPick[]) {
 export function kpiCaptions(all: Parameters<typeof provenance>[0], shown: Parameters<typeof provenance>[0] | null) {
   const base = captions(provenance(all));
   if (!shown) return { remedied: "Picked claims only", paid: "Picked claims only", time: "Picked claims only" };
-  const say = captions(provenance(shown));
+  const picked = provenance(shown);
+  const say = captions(picked);
   return {
     remedied: say.remedied,
-    paid: say.paid,
+    // The tile keeps its field and title, so its caption follows the whole recall's choice.
+    paid: base.paidField === "amountPaid" ? paidCaption(picked.sentAmount) : PAID_CAPTION,
     // The tile keeps its field: with nothing sent among the picked claims, it has no median to show.
     time: base.timeField !== say.timeField ? "None sent among these claims" : say.time,
   };
@@ -155,7 +163,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
     id: "overview",
     widgets: {
       "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), say.remedied),
-      "kpi-paid": kpi("Paid through PayPal", sum("claims.amountSent"), say.paid),
+      "kpi-paid": kpi(say.paidTitle, sum(`claims.${say.paidField}`), say.paid),
       // Studio's value tile can only average; the ledger's median comes from a widget of Remedy's own.
       "kpi-median": {
         type: "median-time",
@@ -211,7 +219,7 @@ const overview = (data: InsightsData): AgPageState<InsightsRegistry> => {
         type: "grid",
         dataMapping: {
           // Short columns first, so the amount and whether a row is a sample are always in view; the reason runs last.
-          cols: [{ id: "claims.id" }, { id: "claims.decision" }, { id: "claims.refund" }, { id: "claims.source" }, { id: "claims.reason" }],
+          cols: [{ id: "claims.id" }, { id: "claims.decision" }, { id: "claims.refund" }, { id: "claims.reason" }],
         },
         sort: [{ field: { id: "claims.filedAt" }, direction: "desc" }],
         // No grand total: a sum under a column of decisions and reasons says nothing.

@@ -333,13 +333,13 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               {samples > 0 && (
                 <span className="inline-flex min-w-0 items-center gap-2 sm:shrink-0">
                   <SampleDiamond />
-                  <span className="truncate">{plural(samples, "starter claim")}</span>
+                  <span className="truncate">{plural(samples, "claim")} included with your console</span>
                 </span>
               )}
               {demos > 0 && (
                 <span className="inline-flex min-w-0 items-center gap-2">
                   <SampleDiamond demo />
-                  <span className="truncate">{plural(demos, "demo claim")}</span>
+                  <span className="truncate">{plural(demos, "claim")} from the try page</span>
                 </span>
               )}
               {live > 0 && <span className="shrink-0">+ {plural(live, "live claim")}</span>}

@@ -16,7 +16,7 @@ const GATES: { title: string; text: string; ai: boolean }[] = [
   },
   {
     title: "Never seen before",
-    text: "A perceptual fingerprint compares every photo with every earlier claim, so a reposted or lightly edited photo is refused.",
+    text: "Every photo is fingerprinted and compared with every earlier claim. A reposted or lightly edited photo is refused.",
     ai: false,
   },
   {
@@ -82,7 +82,7 @@ const SAMPLES: Sample[] = [
 
 const RULE = (
   <>
-    any &ldquo;no&rdquo; &rarr; reject <span className="text-faint">·</span> any &ldquo;unclear&rdquo; &rarr; hold <span className="text-faint">·</span> <span className="whitespace-nowrap">the model never moves money</span>
+    any &ldquo;no&rdquo; &rarr; reject <span className="text-faint">·</span> any &ldquo;unclear&rdquo; &rarr; hold for a person
   </>
 );
 

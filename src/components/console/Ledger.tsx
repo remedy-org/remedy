@@ -15,8 +15,8 @@ function Item({ value, label, className, children }: { value: ReactNode; label: 
 
 /**
  * The 48px ledger strip over the grid: units remedied of units sold with a 64x4 meter, money sent through PayPal, the
- * median time from photos to PayPal, held and refused. Money the rule approved on starter claims is shown apart as
- * "approved": it was never sent.
+ * median time from photos to PayPal, held and refused. With starter claims among the paid, the money figure is what the
+ * rule approved, and what was really sent through PayPal sits beside it: starter payouts never leave.
  */
 export function Ledger({ ledger, className }: { ledger: LedgerData; className?: string }) {
   const known = ledger.unitsSold > 0;
@@ -42,19 +42,20 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
           </span>
         )}
       </Item>
+      {/* While starter claims are among the paid (their payouts never leave), the figure is what the rule approved, with
+          what was really sent beside it; otherwise it is the money sent. */}
       <Item
         className="col-span-2"
-        value={<AmountValue cents={ledger.paidCents} />}
+        value={<AmountValue cents={ledger.paidCents + ledger.sampleCents} />}
         label={
-          <>
-            paid through PayPal
-            {ledger.sampleCents > 0 && (
-              <span className="text-faint">
-                {" "}
-                · {formatCents(ledger.sampleCents)} approved
-              </span>
-            )}
-          </>
+          ledger.sampleCents > 0 ? (
+            <>
+              approved
+              <span className="text-faint"> · {formatCents(ledger.paidCents)} sent through PayPal</span>
+            </>
+          ) : (
+            "sent through PayPal"
+          )
         }
       />
       {ledger.medianToPay !== null && (

@@ -219,7 +219,6 @@ export function ReviewActions({
               above them. A seeded claim's note is in the evidence (EvidenceDrawer). */}
           {sample ? (
             <p role="status" className="text-ui text-muted">
-              <span className="micro mr-2 text-text-2">Starter claim</span>
               {sample}
             </p>
           ) : notPaid ? (
@@ -304,7 +303,7 @@ export function ReviewActions({
         <>
           {review.sample ? (
             <p className="text-ui text-muted">
-              Starter claims don&apos;t pay out, so this sends nothing and the claim stays held. On an owner&apos;s claim, this sends{" "}
+              This claim came with your console, so approving sends nothing and it stays in the queue. On an owner&apos;s claim, this sends{" "}
               <span className="font-mono text-text">{claim.amount}</span> through PayPal Payouts.
             </p>
           ) : (

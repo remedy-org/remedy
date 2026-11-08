@@ -1,6 +1,6 @@
 # Remedy
 
-> Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera with a one-time code, five checks stop stolen and generated photos, a fixed rule decides, and PayPal Payouts sends the refund within a minute. Companies get a claims console, recall analytics and a CPSC report drafted from the claims.
+> Remedy replaces mail-in coupons and inbox photo checks with a live refund program for any CPSC recall. Owners prove the product destroyed on a live camera with a one-time code. Five checks stop stolen and generated photos, and PayPal Payouts sends the refund within a minute. Recall teams run it all from one console, with analytics and a CPSC report drafted for them.
 
 ## The problem
 - [PIRG, Too Much to Recall (2024)](https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf): only 6–10% of recalled products are ever returned or destroyed. The rest stay in homes.
@@ -11,14 +11,14 @@
 ## How Remedy works
 - The owner opens the recall's claim link and logs in with PayPal. Remedy reads the PayPal name, email, account ID and verified status, never the password, balance or cards.
 - Remedy issues a three-character code. The owner writes it on a tag with the product label and photographs the destroyed product in the page's own camera, inside a 10-minute session. There is no upload button.
-- Five checks run in order: a live camera session; a photo never seen before (perceptual fingerprint against every earlier claim); one claim per verified PayPal account; the code and label read character by character; the destruction step the notice asks for, and not a photo of a screen or a print.
+- Five checks run in order: a live camera session; a photo never seen before (fingerprinted and compared with every earlier claim); one claim per verified PayPal account; the code and label read character by character; the destruction step the notice asks for, and not a photo of a screen or a print.
 - The first three checks run before any AI. The model only describes the photo; a fixed rule decides. Any "no" rejects, any "unclear" holds the claim for a person, and the model never moves money.
 - Paid claims go to the owner's verified PayPal account through PayPal Payouts. Claim RM-0442 was paid 15 seconds after its photo.
 
 ## Why Remedy wins
 - Proof instead of paperwork: a live photo with a one-time code replaces mail-in coupons, receipts and inbox review.
 - A fake has to beat the camera first. A stolen, reposted or uploaded photo is refused before any model sees it.
-- Fraud benchmark, 7 Nov 2026, on real owner photos, official recall photos, wrong codes and deliberate fakes: every genuine claim paid, no stolen web photo paid, every wrong code, label and product rejected, 16 seconds and about 1¢ to check a claim ([details](https://remedy-recalls.vercel.app/llms-full.txt)).
+- Fraud benchmark, 7 Nov 2026, on real owner photos, official recall photos, photos of screens, wrong codes and deliberate fakes: every genuine claim paid, no stolen web photo paid, every wrong code, label and product rejected, about 1.1¢ to check a claim ([results](https://remedy-recalls.vercel.app/llms-full.txt)).
 - Built for the recall team: a claims queue on AG Grid with the photos, checks and payout for every claim; Insights on AG Studio with a recall analyst; a CPSC progress report drafted from the claim records; import a recall straight from its CPSC notice; approve or reject held claims and pay in one step.
 - PayPal end to end: Log in with PayPal for identity, PayPal Payouts for the money.
 
@@ -41,6 +41,6 @@
 - [For companies](https://remedy-recalls.vercel.app/#companies)
 
 ## Optional
-- [llms-full.txt](https://remedy-recalls.vercel.app/llms-full.txt): the benchmark in full, every check and the decision rule.
+- [llms-full.txt](https://remedy-recalls.vercel.app/llms-full.txt): every check, the decision rule, the benchmark results and the console.
 - [Privacy](https://remedy-recalls.vercel.app/privacy)
 - [Terms](https://remedy-recalls.vercel.app/terms)

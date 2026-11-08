@@ -9,7 +9,7 @@ import { captions, provenance } from "./report";
 // headline numbers and the funnel as plain HTML from the same facts, then the analyst's chat. Server-rendered.
 
 export function MobileSummary({ data }: { data: InsightsData }) {
-  const sum = (k: "remedied" | "refused" | "amountSent") => data.claims.reduce((n, c) => n + c[k], 0);
+  const sum = (k: "remedied" | "refused" | "amountSent" | "amountPaid") => data.claims.reduce((n, c) => n + c[k], 0);
   const say = captions(provenance(data.claims));
   const mid = median(data.claims.map((c) => c[say.timeField]).filter((t): t is number => t !== null));
   const steps = funnel(data.claims);
@@ -17,7 +17,7 @@ export function MobileSummary({ data }: { data: InsightsData }) {
 
   const kpis = [
     { label: "Units remedied", value: sum("remedied"), note: say.remedied },
-    { label: "Paid through PayPal", value: <Money value={sum("amountSent")} size="inline" />, note: say.paid },
+    { label: say.paidTitle, value: <Money value={sum(say.paidField)} size="inline" />, note: say.paid },
     { label: say.timeTitle, value: mid === null ? "—" : duration(mid), note: say.time },
     { label: "Refused", value: sum("refused"), note: "Rejected or blocked" },
   ];

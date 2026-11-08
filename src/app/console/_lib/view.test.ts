@@ -101,8 +101,8 @@ describe("console view", () => {
   });
 
   it("offers review only on held claims, and only a sample review on a seeded one", () => {
-    expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false, note: null });
-    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toMatchObject({ sample: true, note: expect.stringContaining("Nothing is paid or saved") });
+    expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false });
+    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toEqual({ sample: true });
     expect(toDrawerClaim(sampleClaim({ decision: "paid" }), recall).review).toBeNull();
     expect(toDrawerClaim(sampleClaim(), recall).photos).toEqual(["/api/console/claims/RM-0412/photos/0"]);
   });

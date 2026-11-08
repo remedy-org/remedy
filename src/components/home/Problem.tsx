@@ -87,8 +87,8 @@ export function Problem() {
             <span className={clsx(styles.highlight, "font-mono whitespace-nowrap")}>z•••••929@gmail.com</span>.&rdquo;
           </Document>
           <blockquote className="order-last max-w-[44ch] border-l-2 border-ink pl-6 text-head-sm font-medium text-balance lg:order-none">
-            The same request warns that fraud controls can &ldquo;reduce recall participation&rdquo;.{" "}
-            <span className="text-ink-muted">Remedy makes the refund fast for a real owner and a dead end for a fake.</span>
+            <span className="text-ink-muted">CPSC also warns that fraud controls can &ldquo;reduce recall participation&rdquo;.</span>{" "}
+            Remedy makes the refund fast for a real owner and a dead end for a fake.
           </blockquote>
         </div>
         <Document

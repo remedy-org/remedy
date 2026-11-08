@@ -19,7 +19,7 @@ export default function TermsPage() {
         },
         {
           title: "Claims",
-          body: "One claim per verified PayPal account, per recall. A fixed rule decides each claim: a failed check rejects it, an unclear answer holds it for a person at the company, and the company can approve or reject a held claim. Remedy caps how many claims each account, and the service as a whole, can take in a day.",
+          body: "One claim per verified PayPal account, per recall. A fixed rule decides each claim: a failed check rejects it, an unclear answer holds it for a person at the company, and the company can approve or reject a held claim. Remedy limits how many claims each account can make in a day.",
         },
         {
           title: "Payouts",

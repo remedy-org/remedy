@@ -3,6 +3,6 @@
 // drawer rewrites older seeded claims to match.
 
 export const samplePhotosDetail = (n: number) => `${n} ${n === 1 ? "photo" : "photos"}`;
-export const SAMPLE_PRECHECKED = "Starter claim: live session and first claim for this account assumed; photo fingerprint check not run";
-export const samplePayoutDetail = (amount: string) => `Starter claim: the rule approved ${amount}; starter claims don't pay out`;
-export const SAMPLE_PAYOUT_UPDATED = "Starter claim: no PayPal status, because starter claims don't pay out";
+export const SAMPLE_PRECHECKED = "Session, account and photo fingerprint checks not run on this claim";
+export const samplePayoutDetail = (amount: string) => `The rule approved ${amount}. No payout sent`;
+export const SAMPLE_PAYOUT_UPDATED = "No PayPal status: no payout was sent";

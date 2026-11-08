@@ -114,7 +114,7 @@ function EvidenceStill({ claim }: { claim: DrawerClaim }) {
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col gap-4 px-4 py-3">
           <ExhibitLabel leader="right" leaderLength={20}>
-            {claim.photos.length === 1 ? "Photo 1" : `Photos 1 to ${claim.photos.length}`} · sample
+            {claim.photos.length === 1 ? "Photo 1" : `Photos 1 to ${claim.photos.length}`}
           </ExhibitLabel>
           <div className="grid grid-cols-2 gap-2">
             {claim.photos.map((src, i) => (

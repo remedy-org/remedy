@@ -84,8 +84,8 @@ describe("cross-filter", () => {
   });
 
   it("captions the tiles for the picked claims, never the whole recall's under a filtered number", () => {
-    expect(kpiCaptions(claims, claims)).toMatchObject({ remedied: "Destroyed and verified on camera", paid: "$29.99 approved", time: "Median of 1 sent payout" });
-    expect(kpiCaptions(claims, [claims[2]])).toEqual({ remedied: "Destroyed and verified on camera", paid: "USD through PayPal", time: "None sent among these claims" });
+    expect(kpiCaptions(claims, claims)).toMatchObject({ remedied: "Destroyed and verified on camera", paid: "$29.99 sent through PayPal", time: "Median of 1 sent payout" });
+    expect(kpiCaptions(claims, [claims[2]])).toEqual({ remedied: "Destroyed and verified on camera", paid: "$0.00 sent through PayPal", time: "None sent among these claims" });
     expect(kpiCaptions(claims, null)).toEqual({ remedied: "Picked claims only", paid: "Picked claims only", time: "Picked claims only" });
   });
 });

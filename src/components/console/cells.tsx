@@ -12,7 +12,7 @@ import { formatClock, formatTime } from "./format";
 
 type Cell = CustomCellRendererProps<ClaimRow>;
 
-const DEMO_TITLE = "Demo claim, filed from the try page";
+const DEMO_TITLE = "Filed from the try page";
 
 /** The 6px diamond itself, neutral (amber is the one action's): hollow for a sample claim, filled for a judges' demo
  * claim. The note over the grid shows both, labelled. */

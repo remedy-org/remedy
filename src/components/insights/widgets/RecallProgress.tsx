@@ -33,7 +33,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
   return (
     <div className="flex h-full min-h-0 flex-col justify-between gap-4 px-1.5 pb-1">
       <p className="sr-only">
-        {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}. Recalls typically reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
+        {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}. Most recalls only ever reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
       </p>
       <div aria-hidden="true" className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
         <p className="flex items-baseline gap-2">
@@ -62,7 +62,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
           </span>
         </div>
         <div className="absolute top-0 -translate-x-1/2 text-center" style={{ left: `calc((${at(TYPICAL_RETURN.from)} + ${at(TYPICAL_RETURN.to)}) / 2)` }}>
-          <span className="micro whitespace-nowrap text-muted">Typical recall</span>
+          <span className="micro whitespace-nowrap text-muted">Where most recalls end</span>
         </div>
         {TICKS.map((t) => (
           <div key={t} className={clsx("absolute bottom-0 flex flex-col gap-1", t === 0 ? "items-start" : "-translate-x-1/2 items-center")} style={{ left: at(t) }}>
