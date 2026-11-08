@@ -72,16 +72,20 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
     const expiresAt = ours && !demo && !ours.photos.length && ours.decision === "pending" ? ours.captureSession?.expiresAt : undefined;
     return (
       <FlowShell company={companyName(recall)}>
-        <ContinueCard
-          id={id}
-          product={productNoun(recall)}
-          company={companyName(recall)}
-          loginHref={loginPath("owner", here)}
-          demo={demo}
-          expiresAt={expiresAt}
-          startNow={requestTime()}
-          signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : undefined}
-        />
+        {/* On the flow's own frame, under the meter: the PayPal login is the step this screen leads to. */}
+        <ClaimFrame>
+          <StepMeter current={1} steps={demo ? DEMO_STEPS : REAL_STEPS} />
+          <ContinueCard
+            id={id}
+            product={productNoun(recall)}
+            company={companyName(recall)}
+            loginHref={loginPath("owner", here)}
+            demo={demo}
+            expiresAt={expiresAt}
+            startNow={requestTime()}
+            signedInAs={session ? (session.name ?? maskPayer(session.payerId)) : undefined}
+          />
+        </ClaimFrame>
       </FlowShell>
     );
   }

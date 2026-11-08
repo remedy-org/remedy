@@ -44,6 +44,7 @@ const OUTCOME: Partial<Record<Decision, { word: string; tone: string }>> = {
  */
 export function SamplePicker({
   slug,
+  company,
   options,
   selected,
   runs,
@@ -51,6 +52,8 @@ export function SamplePicker({
   refusal,
 }: {
   slug: string;
+  /** "Kikea Store": once all four have run, their claims can be seen as the company sees them. */
+  company: string;
   options: SampleOption[];
   selected: string;
   /** This round's demo claims. */
@@ -65,17 +68,14 @@ export function SamplePicker({
   const latest = latestRuns(scored);
   // Once all four have run, each row is the record of its claim and opens its result.
   const resultOf = (sample: string) => runs.find((r) => r.sample === sample);
-  if (roundDone) return <RoundDone slug={slug} options={options} latest={latest} resultOf={resultOf} />;
+  if (roundDone) return <RoundDone slug={slug} company={company} options={options} latest={latest} resultOf={resultOf} />;
   return (
     <section aria-labelledby="picker-title" className="flex w-full max-w-[40rem] flex-col gap-6">
       {/* A limit's notice, rendered later, takes focus from the title. */}
       <FocusTitle id="picker-title" />
-      <div className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between gap-4">
-          <StepTitle id="picker-title">Choose a claim</StepTitle>
-          {scored.length > 0 && <span className="shrink-0 text-ui text-muted">{ranLine(scored)}</span>}
-        </div>
-        <p className="text-body text-muted">Each one runs through the real checks.</p>
+      <div className="flex items-baseline justify-between gap-4">
+        <StepTitle id="picker-title">Choose a claim</StepTitle>
+        {scored.length > 0 && <span className="shrink-0 text-ui text-muted">{ranLine(scored)}</span>}
       </div>
 
       {refusal && <LimitNotice refusal={refusal} demo />}
@@ -184,9 +184,11 @@ export function SamplePicker({
 }
 
 /** The round's record once all four have run: each claim, its outcome and its number, opening its result; then Start over. */
-function RoundDone({ slug, options, latest, resultOf }: { slug: string; options: SampleOption[]; latest: Map<string, RoundRun>; resultOf(sample: string): DemoRun | undefined }) {
+function RoundDone({ slug, company, options, latest, resultOf }: { slug: string; company: string; options: SampleOption[]; latest: Map<string, RoundRun>; resultOf(sample: string): DemoRun | undefined }) {
+  // The four claims' ids, so the company's console opens on them.
+  const first = options.map(({ sample }) => resultOf(sample.id)).find(Boolean);
   return (
-    <section aria-labelledby="picker-title" className="flex w-full flex-col gap-6">
+    <section aria-labelledby="picker-title" className="flex w-full max-w-[40rem] flex-col gap-6">
       <FocusTitle id="picker-title" />
       <StepTitle id="picker-title">All four claims ran</StepTitle>
       <ul className="flex flex-col border-t border-line">
@@ -223,6 +225,9 @@ function RoundDone({ slug, options, latest, resultOf }: { slug: string; options:
           Start over
         </Button>
       </form>
+      <a href={first ? `/console?claim=${first.id}` : "/console"} className="self-start text-ui text-muted underline decoration-line-strong underline-offset-4 hover:text-text">
+        See these claims as {company}
+      </a>
     </section>
   );
 }

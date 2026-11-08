@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AlertIcon, Button } from "@/components/ui";
 import styles from "./flow.module.css";
 import { focusInView } from "./FocusTitle";
@@ -298,7 +298,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         >
           <span className="font-mono text-[oklch(0.96_0.006_85)]">{code}</span>
         </CameraTopBar>
-        <div className="relative overflow-hidden max-sm:min-h-0 sm:aspect-[4/3] sm:max-h-[55svh] sm:w-full [@media(max-height:600px)]:max-h-[40svh]">
+        {/* A camera that won't open gives up the 4:3 frame on a laptop: the message, not an empty black box. */}
+        <div className={clsx("relative overflow-hidden max-sm:min-h-0 sm:w-full", failed && n === 0 && !expired ? "sm:min-h-56" : "sm:aspect-[4/3] sm:max-h-[55svh] [@media(max-height:600px)]:max-h-[40svh]")}>
           <video ref={videoRef} playsInline muted aria-label="Camera preview" className={clsx("absolute inset-0 size-full object-cover", !live && "invisible")} />
           {preview?.still && live && (
             // Dev previews only: a still in place of the feed.
@@ -308,7 +309,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           {live ? (
             <Cutout>
               {/* The photo the shutter takes next, numbered as the slots below are; opposite it, the time left. */}
-              {n < MAX_PHOTOS && <GlassChip className="absolute top-2 left-2">Photo {n + 1}</GlassChip>}
+              {n < MAX_PHOTOS && <GlassChip className="absolute top-2 left-2">{n === 0 ? "Photo 1" : `Next: photo ${n + 1}`}</GlassChip>}
               <GlassChip className={clsx("absolute top-2 right-2", left < 60_000 && "font-medium", left < 10_000 && styles.urgent)}>
                 <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`}>
                   {mmss(left)}
@@ -320,13 +321,22 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             <FrameMessage
               camera={expired || camera === "live" ? "expired" : camera}
               platform={platform}
-              copyUrl={coarse ? phoneUrl : undefined}
+              handoff={coarse && failed && !expired ? <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} /> : undefined}
+              collapsed={failed && n === 0 && !expired}
               onBack={failed && n === 0 && !expired ? onBack : undefined}
               onRetry={() => {
                 setCamera("starting");
                 setAttempt((a) => a + 1);
               }}
             />
+          )}
+          {/* The time left stays in its corner while the camera won't open, as it does over the feed. */}
+          {!live && !expired && (
+            <GlassChip className={clsx("absolute top-2 right-2 z-10", left < 60_000 && "font-medium")}>
+              <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`}>
+                {mmss(left)}
+              </span>
+            </GlassChip>
           )}
           {/* Phones: a one-line hint, or the longer help from (i), over the foot of the feed, so the viewfinder never
               resizes (and the guide never moves) as they come and go. */}
@@ -523,38 +533,46 @@ const MESSAGES: Record<Exclude<CameraState, "live"> | "expired", { title: string
   expired: { title: "Your 10 minutes are up", body: "Codes last 10 minutes, so photos can't be taken in advance. Get a new code to start again." },
 };
 
-/** Inside the frame, left-aligned at its foot as the instruction bar is: what's wrong, how to fix it, and one action. */
+/**
+ * Inside the frame, left-aligned: what's wrong, how to fix it, and one action.
+ * A phone whose camera won't open can carry the claim to another phone.
+ */
 function FrameMessage({
   camera,
   platform,
-  copyUrl,
+  handoff,
+  collapsed,
   onBack,
   onRetry,
 }: {
   camera: Exclude<CameraState, "live"> | "expired";
   platform: Platform;
-  /** A phone or tablet with no camera to use: this claim's link, to open on another device. */
-  copyUrl?: string;
+  /** A phone: this claim's QR and link, for another phone, behind "Use another phone". */
+  handoff?: ReactNode;
+  /** A laptop's frame has given up its 4:3 box: the message sets the height. */
+  collapsed?: boolean;
   /** The camera won't open: the way back to the code and its timer. */
   onBack?(): void;
   onRetry(): void;
 }) {
   const m = MESSAGES[camera];
-  const [copied, setCopied] = useState(false);
-  const copy = copyUrl && (camera === "nocamera" || camera === "insecure");
+  const [another, setAnother] = useState(false);
   return (
-    <div role={camera === "starting" ? "status" : "alert"} className="absolute inset-0 flex flex-col justify-end gap-2 p-5 text-left sm:p-6">
+    <div
+      role={camera === "starting" ? "status" : "alert"}
+      className={clsx("absolute inset-0 flex flex-col justify-center gap-2 overflow-y-auto p-5 text-left sm:p-6", collapsed && "sm:relative sm:inset-auto sm:min-h-56")}
+    >
       <p id={camera === "starting" ? undefined : "camera-message"} tabIndex={-1} className="text-body font-medium text-text outline-none">
         {m.title}
       </p>
       <p className="max-w-[30rem] text-ui text-pretty text-muted">{camera === "denied" ? DENIED[platform] : m.body}</p>
-      {(m.retry || copy || onBack) && (
+      {(m.retry || handoff || onBack) && (
         <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-3">
           {m.retry && <Button onClick={onRetry}>Try again</Button>}
-          {copy && (
-            <Button variant="secondary" onClick={() => navigator.clipboard?.writeText(copyUrl).then(() => setCopied(true), () => {})}>
-              {copied ? "Link copied" : "Copy this claim's link"}
-            </Button>
+          {handoff && !another && (
+            <button type="button" onClick={() => setAnother(true)} className="min-h-11 text-ui text-muted underline decoration-line-strong underline-offset-4 hover:text-text">
+              Use another phone
+            </button>
           )}
           {onBack && (
             // A phone has it in the camera's top bar already.
@@ -564,11 +582,7 @@ function FrameMessage({
           )}
         </div>
       )}
-      {copy && (
-        <p className="text-ui text-muted" aria-live="polite">
-          {copied ? "Open it on a phone with a camera, logged in with the same PayPal account." : "Open it on another device with a camera. Same code, same timer."}
-        </p>
-      )}
+      {another && handoff && <div className="mt-3">{handoff}</div>}
     </div>
   );
 }

@@ -10,10 +10,10 @@ export const SAMPLE_PAYOUT_UPDATED = "Sample claim: no PayPal status, because no
 // What the claim flow calls each of the four demo claims: its title, and one line of what happens to it. The same words
 // in the picker, on the photo step and on a result's "Next claim".
 export const SAMPLE_COPY: Record<string, { title: string; line: string }> = {
-  genuine: { title: "Pillow cut in half, right code", line: "Pays $29.99 to your PayPal." },
+  genuine: { title: "Right code on the tag", line: "Pays $29.99 to your PayPal." },
   "wrong-code": { title: "Wrong code on the tag", line: "Remedy reads the tag and refuses it." },
-  "ai-no-session": { title: "Photo uploaded from the gallery", line: "Stopped at the first check." },
-  reposted: { title: "The same photo, sent again", line: "Caught as a repeat of an earlier claim." },
+  "ai-no-session": { title: "A photo from the camera roll", line: "Refused before the photo check." },
+  reposted: { title: "A photo already claimed", line: "Caught as a repeat of an earlier claim." },
 };
 
 export const sampleTitle = (id: string, fallback = "Claim") => SAMPLE_COPY[id]?.title ?? fallback;

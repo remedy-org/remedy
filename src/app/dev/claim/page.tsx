@@ -73,11 +73,11 @@ function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultPr
   );
 }
 
-const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug">) => (
+const picker = (props: Omit<Parameters<typeof SamplePicker>[0], "slug" | "company">) => (
   <FlowShell company="Kikea Store">
     <ClaimFrame>
       <StepMeter current={2} steps={DEMO_STEPS} />
-      <SamplePicker slug={fx.recall.slug} {...props} />
+      <SamplePicker slug={fx.recall.slug} company="Kikea Store" {...props} />
     </ClaimFrame>
   </FlowShell>
 );

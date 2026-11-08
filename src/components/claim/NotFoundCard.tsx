@@ -17,10 +17,10 @@ export function NotFoundCard({
       <h1 id="not-found-title" className="text-title font-semibold text-balance text-text">
         {title}
       </h1>
-      <p className="text-body text-muted">{description}</p>
+      <p className="text-body text-pretty text-muted">{description}</p>
       <div className="pt-2">
         {action ?? (
-          <Button href="/" variant="secondary">
+          <Button href="/">
             Go to Remedy
           </Button>
         )}

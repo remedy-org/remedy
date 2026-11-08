@@ -40,9 +40,9 @@ export function StepTitle({ id, className, children }: { id: string; className?:
 }
 
 /**
- * Every step's frame: one centred column, the step meter on top, so the meter's edges and the content's are the same on
- * every screen: 960px, or 640px (`narrow`) for the single-column steps, the camera and the claim picker.
+ * Every step's frame: one 960px column, centred, with the step meter on top, the same on every screen, so nothing moves
+ * sideways from step to step. A narrower step (the camera, the claim picker) starts on the meter's left edge.
  */
-export function ClaimFrame({ children, narrow, className }: { children: ReactNode; narrow?: boolean; className?: string }) {
-  return <div className={clsx("mx-auto flex w-full flex-col gap-8 sm:gap-10", narrow ? "max-w-[40rem]" : "max-w-[60rem]", className)}>{children}</div>;
+export function ClaimFrame({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={clsx("mx-auto flex w-full max-w-[60rem] flex-col gap-8 sm:gap-10", className)}>{children}</div>;
 }

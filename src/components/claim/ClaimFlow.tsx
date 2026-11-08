@@ -86,8 +86,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
   useClaimArrival(claimId, props.expiresAt, (next) => sent(next), { off: demo || Boolean(preview) || phase !== "code" });
 
   return (
-    // The camera and a demo's photo are one 640px column; the meter narrows with them, so its edges stay on the content's.
-    <ClaimFrame narrow={phase === "capture"}>
+    <ClaimFrame>
       <StepMeter current={current} steps={steps} compact={phase === "capture"} />
       {phase === "code" && (
         <div className="w-full">

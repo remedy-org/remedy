@@ -29,22 +29,33 @@ export function ContinueCard({ id, product, company, loginHref, expiresAt, start
   // Frozen at zero when there is no session to count down: nothing shows then.
   const left = useCountdown(expiresAt ?? new Date(0).toISOString(), startNow, !expiresAt);
   const ended = Boolean(expiresAt) && left <= 0;
-  const carry = ended ? "its code's 10 minutes are up, so you can get a new code there." : "your code and its 10 minutes carry over.";
+  // Only a live code carries over; with none (a claim already sent, or decided) there is nothing to say about one.
+  const live = Boolean(expiresAt) && !ended;
+  const carry = live ? " Your code and its 10 minutes carry over." : ended ? " Its code's 10 minutes are up, so you can get a new code there." : "";
+  // A link's id is only echoed back when it has a claim number's shape.
+  const claim = /^RM-\d{4,}$/.test(id) ? <span className="font-mono whitespace-nowrap">{id}</span> : null;
   return (
     <Card padding="lg" as="section" aria-labelledby="continue-title" className="flex w-full max-w-claim flex-col gap-7">
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-4">
-          <span className="font-mono text-micro text-faint">{id}</span>
-          {expiresAt && <TimerPill left={left} />}
+        <div className="flex items-start justify-between gap-4">
+          <StepTitle id="continue-title">
+            {signedInAs ? (
+              `This claim belongs to another ${account}`
+            ) : expiresAt ? (
+              "Continue your claim on this device"
+            ) : (
+              <>Log in to see {claim ? <>claim {claim}</> : "your claim"}</>
+            )}
+          </StepTitle>
+          {expiresAt && <TimerPill left={left} className="mt-2" />}
         </div>
-        <StepTitle id="continue-title">{signedInAs ? `Started with another ${account}` : "Continue your claim on this device"}</StepTitle>
         {signedInAs ? (
           <p className="text-body text-pretty text-muted">
-            You&apos;re logged in as <span className="text-text">{signedInAs}</span>. Log in with the {account} this claim was started with: {carry}
+            You&apos;re logged in as <span className="text-text">{signedInAs}</span>. Log in with the {account} that started {claim ? <>claim {claim}</> : "this claim"} to see it.{carry}
           </p>
         ) : (
           <p className="text-body text-pretty text-muted">
-            Your refund for the <NoBreakHyphens>{product}</NoBreakHyphens>, from {company} through Remedy. Log in with the same {account} you started it with: {carry}
+            Your refund for the <NoBreakHyphens>{product}</NoBreakHyphens>, from {company} through Remedy. Log in with the same {account} you started it with.{carry}
           </p>
         )}
       </div>

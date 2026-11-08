@@ -7,7 +7,7 @@ import type { CheckSpec } from "@/lib/types";
 import { CheckList, outcomeWord, sixRows, type SixRow } from "./CheckList";
 import { StepTitle } from "./Exhibit";
 import styles from "./flow.module.css";
-import { cutInHalf, isDecided, nounOf, type ClaimView } from "./model";
+import { cutInHalf, handWrittenLabel, isDecided, nounOf, type ClaimView } from "./model";
 
 // Each row resolves on its own beat, one after another, in reduced motion too: there it is a plain swap. The camera's
 // pre-checks are quick; the photo check's answers, and the refund after them, get a beat each to be read.
@@ -71,7 +71,7 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
   }
 
   const decided = isDecided(view.decision);
-  const all = sixRows(view.rows, { code: view.code, noun: nounOf(spec), cut: cutInHalf(spec), decided, held: view.decision === "held" });
+  const all = sixRows(view.rows, { code: view.code, noun: nounOf(spec), cut: cutInHalf(spec), decided, held: view.decision === "held", demo: view.demo, written: handWrittenLabel(spec) });
   const known = sending ? 0 : firstWaiting(all);
   const [shown, setShown] = useState(preview ? known : 0);
   const done = decided && shown >= all.length;
@@ -194,8 +194,9 @@ export function CheckingStep({ claimId, view: initial, spec, amount, startNow, p
     <section aria-labelledby="checking-title" className="grid gap-6 lg:[@media(min-height:601px)]:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:[@media(min-height:601px)]:gap-14">
       <div className="hidden flex-col gap-3 lg:[@media(min-height:601px)]:flex">
         {src ? (
+          // Whole, never cropped: it's what is being checked, tag and all. The result keeps it in this same place.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt={`Photo 1 of claim ${view.id}`} className="aspect-[4/5] w-full rounded-card bg-surface-2 object-cover object-[50%_70%] ring-1 ring-line" />
+          <img src={src} alt={`Photo 1 of claim ${view.id}`} className="aspect-[4/5] w-full rounded-card bg-surface-2 object-contain ring-1 ring-line" />
         ) : (
           <div className="flex aspect-[4/5] items-center justify-center rounded-card border border-dashed border-line-strong text-ui text-faint">Your photos are on their way</div>
         )}

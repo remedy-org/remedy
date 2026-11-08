@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { Button, Card, ErrorState, NoBreakHyphens } from "@/components/ui";
 import type { JudgeLogin } from "@/lib/demo/judgeLogin";
 import type { Refusal } from "@/lib/limits";
@@ -60,7 +61,7 @@ export function consentAction({ signedInAs, demo, unverified, yourClaim }: Pick<
 const thingOf = (recall: Recall) => (taggedThing(recall.spec)?.split(" ").pop() ?? productNoun(recall).split(" ").pop() ?? "product").toLowerCase();
 
 /**
- * The consent card: what the owner gets back, in one headline, how in one line, the one thing to have ready, then one action. A
+ * The consent card: what the owner gets back, in one headline, how in one line, then one action. A
  * returning owner sees only their claim and the way back to it.
  */
 export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin }: ConsentCardProps) {
@@ -72,11 +73,13 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   const error = authError && !signedInAs ? AUTH_ERRORS[authError] : null;
   const thing = thingOf(recall);
   const cut = cutInHalf(recall.spec);
-  const how = `${cut ? `Cut the ${thing} in half` : `Destroy the ${thing} as the notice says`}, photograph it with a code we give you, and PayPal pays you${recall.autoPay ? "" : ` once ${company} approves it`}.`;
+  const how = `${cut ? `Cut the ${thing} in half first` : `Destroy the ${thing} first, as the notice says`}, then photograph it with a code we give you, and PayPal pays you${recall.autoPay ? "" : ` once ${company} approves it`}.`;
+  // Phones: the offer is the page's headline, not a box inside it.
+  const open = "max-sm:border-0 max-sm:bg-transparent max-sm:p-0";
 
   if (yourClaim) {
     return (
-      <Card padding="lg" as="section" aria-labelledby="consent-title" className="flex flex-col gap-6">
+      <Card padding="lg" as="section" aria-labelledby="consent-title" className={clsx("flex flex-col gap-6", open)}>
         <ClaimStatus claim={yourClaim} company={company} action={action} />
         <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : "You log in on PayPal's own page."}</p>
       </Card>
@@ -84,16 +87,14 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   }
 
   return (
-    <Card padding="lg" as="section" aria-labelledby="consent-title" className="flex flex-col gap-7">
+    <Card padding="lg" as="section" aria-labelledby="consent-title" className={clsx("flex flex-col gap-7", open)}>
       <div className="flex flex-col gap-3">
         <StepTitle id="consent-title" className="text-pretty">
           {demo ? "Run a claim yourself" : <NoBreakHyphens>{`${money(recall.refund)} back for your ${productNoun(recall)}`}</NoBreakHyphens>}
         </StepTitle>
-        <p className="text-body text-pretty text-muted">{demo ? "Run four claims through the real checks. One of them pays." : how}</p>
+        <p className="text-body text-pretty text-muted">{demo ? "Four claims. One pays." : how}</p>
       </div>
 
-      {/* The meter above names the steps and the line above says how: the one thing left to say is what to do first. */}
-      {!demo && <p className="border-y border-line py-3 text-body text-text">Have the {thing} already {cut ? "cut in half" : "destroyed"}.</p>}
 
       {unverified && (
         <ErrorState
@@ -117,10 +118,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
             {action}
           </Button>
         )}
-        <div className="flex flex-col gap-1 text-ui text-faint">
-          <p>{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : `Paid by ${company} through PayPal.`}</p>
-          <p>Remedy sees your PayPal name, email and account ID, never your password. Photos are seen only by Remedy and {company}.</p>
-        </div>
+        <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : "Remedy sees your PayPal name, email and account ID, never your password."}</p>
       </div>
     </Card>
   );
@@ -151,11 +149,12 @@ function ClaimStatus({ claim, company, action }: { claim: YourClaim; company: st
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <p className="font-mono text-micro text-faint">{claim.id}</p>
         <StepTitle id="consent-title" className="text-pretty">
           {title}
         </StepTitle>
-        <p className="text-body text-muted">{line}</p>
+        <p className="text-body text-muted">
+          {line} Claim <span className="font-mono whitespace-nowrap">{claim.id}</span>.
+        </p>
       </div>
       <Button id="consent-cta" href={claim.href} size="lg" block prefetch={false}>
         {action}

@@ -88,8 +88,7 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
         <>
           Photograph the code <span className="font-mono whitespace-nowrap">{code}</span> beside the label{spec.label_must_show[0] ? ` (${ownerLabel(spec.label_must_show[0])})` : ""}, and the product {cut ? "cut in half" : "destroyed"}.
         </>
-      )}{" "}
-      <span className="text-muted">One photo is enough; you can take up to three.</span>
+      )}
     </p>
   );
   return (
@@ -100,11 +99,17 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
         padding="lg"
         as="section"
         aria-labelledby="code-title"
-        className="relative flex flex-col gap-8 overflow-hidden [@media(max-height:600px)]:gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_auto_1fr] lg:gap-x-12 lg:[grid-template-areas:'head_head'_'tag_act'_'list_act']"
+        // Expired, it is one column: the reason, then the way on under it.
+        className={clsx(
+          "relative flex flex-col gap-8 overflow-hidden [@media(max-height:600px)]:gap-5",
+          ended ? "max-w-claim" : "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_auto_1fr] lg:gap-x-12 lg:[grid-template-areas:'head_head'_'tag_act'_'list_act']",
+        )}
       >
-        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-line">
-          <span className={clsx("block h-full bg-text/70", styles.deplete)} style={{ transform: `scaleX(${Math.min(1, left / SESSION_MS)})` }} />
-        </span>
+        {!ended && (
+          <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-line">
+            <span className={clsx("block h-full bg-text/70", styles.deplete)} style={{ transform: `scaleX(${Math.min(1, left / SESSION_MS)})` }} />
+          </span>
+        )}
 
         <div className="flex flex-col gap-3 lg:[grid-area:head]">
           <div className="flex items-start justify-between gap-4">
@@ -121,7 +126,7 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
         {/* A dead code isn't shown at full size: nobody should write it. */}
         {!ended && (
           <div className="pt-2 lg:[grid-area:tag] [@media(max-height:600px)]:pt-0">
-            <CodeTag code={code} written={written} foot={`Write it big, about 1\u00a0inch (3\u00a0cm), in marker.${low ? "" : " Valid for 10 minutes."}`} />
+            <CodeTag code={code} written={written} foot={"Write it big, about 1\u00a0inch (3\u00a0cm), in marker."} />
           </div>
         )}
 
@@ -141,11 +146,11 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
             </p>
           )}
           {ended ? (
-            <Button id="code-cta" href={newClaimHref} size="lg" block prefetch={false}>
+            <Button key="ended" id="code-cta" href={newClaimHref} size="lg" block prefetch={false}>
               Get a new code
             </Button>
           ) : (
-            <Button id="code-cta" size="lg" block onClick={onContinue}>
+            <Button key="live" id="code-cta" size="lg" block onClick={onContinue}>
               {OPEN}
             </Button>
           )}
@@ -158,7 +163,12 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
         </div>
       </Card>
       {/* Phones: while the button is below the fold (or under Safari's toolbar), the same action waits pinned at the bottom. */}
-      {ended ? <MobileCta target="code-cta" href={newClaimHref} label="Get a new code" /> : <MobileCta target="code-cta" onClick={onContinue} label={OPEN} note={low ? LOW : undefined} />}
+      {/* Keyed: the button under it is a new element once the code ends, and the bar watches the one that's there. */}
+      {ended ? (
+        <MobileCta key="ended" target="code-cta" href={newClaimHref} label="Get a new code" />
+      ) : (
+        <MobileCta key="live" target="code-cta" onClick={onContinue} label={OPEN} note={low ? LOW : undefined} />
+      )}
     </>
   );
 }

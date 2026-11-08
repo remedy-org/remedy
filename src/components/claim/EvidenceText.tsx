@@ -65,19 +65,20 @@ const FAILED: Record<string, (cut: boolean) => string> = {
 };
 
 /**
- * The evidence in one line, beside its photo, counted from the five rows as they show: "All 5 checks passed", "3 of 5
- * passed, 2 for review", "The tag doesn't match. 3 of 5 passed.", "Not taken on the live camera. 1 of 5 passed, 2
- * didn't run." A row that ran after the failure counts as it ran; only rows with nothing recorded are "didn't run".
+ * The evidence in one line, said as what happened rather than as a tally: "All 5 checks passed", "The tag doesn't
+ * match.", "Not taken on the live camera. The photo check didn't run.", "Checks 4 and 5 need a person." The refund
+ * isn't one of the five, so it never counts.
  */
 export function evidenceSummary(six: Pick<SixRow, "key" | "state" | "unrun">[], { decision, cut, unanswered }: { decision: Decision; cut: boolean; unanswered: boolean }): string {
   if (decision === "paid") return "All 5 checks passed";
   if (unanswered) return "The photo check didn't answer";
   const checks = six.filter((r) => r.key !== "refund");
-  const passed = checks.filter((r) => r.state === "pass").length;
   const failed = checks.filter((r) => r.state === "reject" || r.state === "blocked");
-  const review = checks.filter((r) => r.state === "hold").length;
-  const unrun = checks.filter((r) => r.unrun).length;
-  if (!failed.length) return review ? `${passed} of 5 passed, ${review} for review` : `${passed} of 5 passed`;
-  const what = failed.length > 1 ? `${failed.length} of 5 failed` : FAILED[failed[0].key](cut);
-  return `${what}. ${passed} of 5 passed${unrun ? `, ${unrun} didn't run` : ""}.`;
+  const review = checks.flatMap((r, i) => (r.state === "hold" ? [i + 1] : []));
+  if (failed.length) {
+    const what = failed.map((r) => `${FAILED[r.key](cut)}.`).join(" ");
+    return checks.some((r) => r.unrun && (r.key === "code" || r.key === "destroyed")) ? `${what} The photo check didn't run.` : what;
+  }
+  if (review.length) return review.length === 1 ? `Check ${review[0]} needs a person.` : `Checks ${review.slice(0, -1).join(", ")} and ${review[review.length - 1]} need a person.`;
+  return `${checks.filter((r) => r.state === "pass").length} of 5 passed`;
 }

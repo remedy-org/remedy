@@ -2,7 +2,6 @@
 
 import clsx from "clsx";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { Stamp } from "@/components/ui";
 import styles from "./flow.module.css";
 import { payoutWords, receiptPollDelay, type ClaimStatus } from "./model";
 
@@ -29,7 +28,7 @@ export interface PayoutLiveProps {
 
 /**
  * The paid result's one live fact, PayPal's payout status (Revolut's Pending to Completed on the same screen), shared
- * by the headline, the receipt's status row and its stamp so they never disagree. It polls the claim's status route:
+ * by the headline and the receipt's status row so they never disagree. It polls the claim's status route:
  * every 5 s for 30 s, then every 15 s, for 2 minutes at most, never while the tab is hidden, and stops on a settled
  * status. Each poll is one Blob read; the route asks PayPal at most once a minute.
  */
@@ -94,23 +93,12 @@ export function PaidTitle({ amount }: { amount: string }) {
   );
 }
 
-/** PAID, stamped only once PayPal says the money arrived: before that the receipt says it's processing, never both. */
-export function PaidStamp({ arrive }: { arrive: boolean }) {
-  const { status, changed } = useContext(PayoutContext);
-  if (!received(status)) return null;
-  return (
-    <Stamp tone="pay" land={changed ? 0 : arrive ? 1060 : undefined}>
-      Paid
-    </Stamp>
-  );
-}
-
 /** The receipt's payout status row: a word, and while it's processing, one line of why. */
 export function PayoutRow() {
   const { status, changed } = useContext(PayoutContext);
   const words = payoutWords(status);
   return (
-    <div className="flex flex-col gap-1 border-b border-dashed border-paper-line py-3">
+    <div className="flex flex-col gap-1 border-b border-paper-line py-3">
       <div className="flex items-baseline justify-between gap-4 text-ui">
         <dt className="shrink-0 text-ink-muted">Payout status</dt>
         <dd key={words.label} className={clsx("font-medium text-ink", changed && styles.swap)}>

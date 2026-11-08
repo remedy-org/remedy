@@ -57,24 +57,32 @@ export interface SixOptions {
   /** The claim is decided: a row with nothing recorded didn't run. */
   decided: boolean;
   held?: boolean;
+  /** A demo claim: its photo is a prepared one sent inside the claim, so the first row never says "live camera". */
+  demo?: boolean;
+  /** The label hand-written on the tag beside the code ("X-VESOLJE"), when the notice asks for one. */
+  written?: string | null;
   /** What the photo check read, when the verdict is at hand; otherwise it's taken from its quotes. */
   read?: { label?: string | null; code?: string | null };
 }
 
 /** The six rows from a claim's recorded checks. */
-export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, read }: SixOptions): SixRow[] {
+export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo, written, read }: SixOptions): SixRow[] {
   const of = (key: SixKey) => rows.filter((r) => KEY_OF(r.id) === key);
   const model = rows.find((r) => r.id === "model");
   const base: { key: SixKey; name: string; label: ReactNode }[] = [
-    { key: "session", name: "taken on the live camera", label: "Taken on the live camera" },
+    demo ? { key: "session", name: "sent in this claim's session", label: "Sent in this claim's session" } : { key: "session", name: "taken on the live camera", label: "Taken on the live camera" },
     { key: "duplicate", name: "photo not used before", label: "Photo not used before" },
     { key: "account", name: "one claim per PayPal account", label: "One claim per PayPal account" },
     {
       key: "code",
-      name: `code ${code} and the label on the tag`,
-      label: (
+      name: written ? `tag shows ${written} and ${code}` : `label and code ${code}`,
+      label: written ? (
         <>
-          Code <span className="font-mono whitespace-nowrap">{code}</span> and the label on the tag
+          Tag shows <span className="whitespace-nowrap">{written}</span> and <span className="font-mono whitespace-nowrap">{code}</span>
+        </>
+      ) : (
+        <>
+          Label and code <span className="font-mono whitespace-nowrap">{code}</span>
         </>
       ),
     },
@@ -93,6 +101,8 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, read
     const detail = off.length && b.key !== "refund" ? off.map((r) => r.detail).filter(Boolean).join(". ") || undefined : undefined;
     const out: SixRow = { ...b, state, detail };
     if (state === "waiting" || state === "running") return out;
+    // The demo's one account sends all four claims, so only the genuine one is held to one claim per account: say why.
+    if (b.key === "account" && state === "skipped") out.detail = "One demo account sends all four claims.";
     if (b.key === "code" && !model) {
       const seen = read?.code ?? firstQuoted(own.find((r) => r.id === "code")?.quote);
       // The label as read often carries the code too ("X-VESOLJE K7Q"): said once.
@@ -129,10 +139,10 @@ export function outcomeWord(r: Pick<SixRow, "key" | "state" | "unrun">, amount?:
     case "blocked":
       return "Failed";
     case "hold":
-      return "For review";
+      // The refund isn't checked: it waits on the person who checks the rest.
+      return r.key === "refund" ? "Waiting" : "For review";
     case "skipped":
-      // A demo claim isn't held to one claim per account (one demo account sends all four): it doesn't count, it wasn't dodged.
-      return r.key === "refund" ? "Not sent" : r.unrun ? "Not run" : r.key === "account" ? "Not counted" : "Skipped";
+      return r.key === "refund" ? "Not sent" : r.unrun ? "Not run" : "Skipped";
     default:
       return r.key === "refund" && amount ? amount : "";
   }
