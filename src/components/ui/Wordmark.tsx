@@ -11,6 +11,8 @@ export interface WordmarkProps {
   className?: string;
   /** On the name only, e.g. to hide it visually where a header has no room (the link keeps its label). */
   nameClassName?: string;
+  /** false: don't fetch the homepage ahead (the claim flow's header, where an owner on a phone won't open it). */
+  prefetch?: boolean;
 }
 
 /*
@@ -116,7 +118,7 @@ export function RemedyMark({ className }: { className?: string }) {
  * 18 x 12 at 17px (the cap height, 11.95px). Its foot sits on the baseline; sm's baseline falls 0.828px into a pixel
  * row, so the sm mark drops 0.172px to start on a whole one (its foot 0.17px under the baseline, an overshoot).
  */
-export function Wordmark({ size = "sm", href, className, nameClassName }: WordmarkProps) {
+export function Wordmark({ size = "sm", href, className, nameClassName, prefetch }: WordmarkProps) {
   const body = (
     <span
       className={clsx(
@@ -131,7 +133,7 @@ export function Wordmark({ size = "sm", href, className, nameClassName }: Wordma
   );
   if (!href) return body;
   return (
-    <Link href={href} aria-label="Remedy, home" className="inline-flex min-h-11 min-w-11 items-center rounded-control">
+    <Link href={href} prefetch={prefetch} aria-label="Remedy, home" className="inline-flex min-h-11 min-w-11 items-center rounded-control">
       {body}
     </Link>
   );

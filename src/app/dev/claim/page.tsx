@@ -7,7 +7,6 @@ import { ClaimFlow, type ClaimFlowProps } from "@/components/claim/ClaimFlow";
 import { ContinueCard } from "@/components/claim/ContinueCard";
 import { ExpiredCard } from "@/components/claim/ExpiredCard";
 import { FlowShell, recallContext } from "@/components/claim/FlowShell";
-import { FlowSkeleton } from "@/components/claim/FlowSkeleton";
 import { ClaimFrame, STEP_GRID } from "@/components/claim/Exhibit";
 import { RecallBrief } from "@/components/claim/RecallBrief";
 import { checkRows, toView } from "@/components/claim/model";
@@ -34,6 +33,7 @@ async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "previe
   return (
     <FlowShell context={recallContext(fx.recall)}>
       <ClaimFlow
+        slug={fx.recall.slug}
         claimId={claim.id}
         code={claim.code}
         sessionId="cs_preview"
@@ -280,8 +280,6 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
         duplicate: { photo: 1, earlier: { id: "RM-0412", n: 1, src: reposted.photos[0] } },
       }),
   },
-  loading: { group: "States", note: "Loading skeleton: a step", render: () => <FlowSkeleton /> },
-  "loading-recall": { group: "States", note: "Loading skeleton: the recall screen", render: () => <FlowSkeleton wide /> },
   "not-found": { group: "States", note: "Unknown link", render: () => <FlowShell><NotFoundCard /></FlowShell> },
   error: {
     group: "States",

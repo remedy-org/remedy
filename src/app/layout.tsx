@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Schibsted_Grotesk } from "next/font/google";
+import { RouteFocus } from "@/components/ui/RouteFocus";
 import { SkipLink } from "@/components/ui/SkipLink";
 import { THEME_STORAGE_KEY } from "@/components/ui/theme";
 import "./globals.css";
@@ -56,8 +57,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-dvh bg-bg text-text antialiased">
-        {/* The first Tab stop on every page. Each frame's main content carries id="main" (homepage, sign-in, FlowShell,
-            the console layout). */}
+        {/* The first Tab stop on every page, after a client-side page change too (RouteFocus). Each frame's main content
+            carries id="main" (homepage, sign-in, FlowShell, the console layout). */}
+        <RouteFocus />
         <SkipLink href="#main">Skip to content</SkipLink>
         {children}
       </body>

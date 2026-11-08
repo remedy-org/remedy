@@ -54,21 +54,25 @@ export const STEP_GRID = "grid grid-cols-[minmax(0,1fr)] items-start gap-8 lg:gr
 export const WIDE_ONLY = "hidden lg:[@media(min-height:601px)]:flex";
 export const NARROW_ONLY = "lg:[@media(min-height:601px)]:hidden";
 
-/** The width that keeps a photo at most 55% of the screen's height, so its tag never falls below the fold. */
-export const photoWidth = (aspect: number) => `min(100%, calc(55svh * ${aspect}))`;
+/**
+ * The width that keeps a photo at most 55% of the screen's height, so its tag never falls below the fold; on a short
+ * window (a laptop at 200%), small enough that the camera's bars and its shutter fit under it too.
+ */
+export const photoWidth = (aspect: number) => `min(100%, calc(55svh * ${aspect}), calc((100svh - 18rem) * ${aspect}))`;
 
 /**
- * The photo on a laptop, under the refund row: as tall as keeps it on the first screen while the checks run (26rem from
- * 1440x900; 1024x768: 25rem), never under 14rem, and as wide as its shape makes it.
+ * The photo on a laptop, under the five checks: as tall as keeps it on the first screen under them (about 22rem at
+ * 1440x900), never under 14rem nor over 26rem, and as wide as its shape makes it.
  */
-export const evidenceWidth = (aspect: number) => `min(100%, calc(clamp(14rem, 100svh - 22rem, 26rem) * ${aspect}))`;
+export const evidenceWidth = (aspect: number) => `min(100%, calc(clamp(14rem, 100svh - 34rem, 26rem) * ${aspect}))`;
 
 /**
  * One layout from the checking screen to the result, so the outcome lands in place. On a laptop, one 960px grid: on the
- * left the headline, the refund row (which the paid receipt prints out of, pushing what's under it down) and the photo
- * being checked; on the right the five checks, level with the headline. On a phone (or a short screen), one column in
- * the DOM's order: the headline with a small photo, the checks, then the refund row, the way a receipt comes out under
- * a till's last line. The photo is the laptop's alone (the phone has its thumbnail).
+ * left the headline and the refund row (which the paid receipt prints out of, or the way on replaces); on the right the
+ * five checks, level with the headline, and the photo being checked under them. The photo never changes column: only
+ * the left one changes when the outcome lands. On a phone (or a short screen), one column in the DOM's order: the
+ * headline with a small photo, the checks, then the refund row, the way a receipt comes out under a till's last line.
+ * The photo is the laptop's alone (the phone has its thumbnail).
  */
 export function ClaimLayout({ labelledBy, head, checks, outcome, photo }: { labelledBy: string; head: ReactNode; checks: ReactNode; outcome?: ReactNode; photo?: ReactNode }) {
   return (
@@ -78,9 +82,11 @@ export function ClaimLayout({ labelledBy, head, checks, outcome, photo }: { labe
       className="grid grid-cols-[minmax(0,1fr)] items-start gap-y-6 lg:[@media(min-height:601px)]:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] lg:[@media(min-height:601px)]:grid-rows-[auto_auto_1fr] lg:[@media(min-height:601px)]:gap-x-16 lg:[@media(min-height:601px)]:gap-y-8 [@media(max-height:600px)]:gap-y-4"
     >
       <div className="min-w-0 lg:[@media(min-height:601px)]:col-start-1 lg:[@media(min-height:601px)]:row-start-1">{head}</div>
-      <div className="flex min-w-0 flex-col gap-5 lg:[@media(min-height:601px)]:col-start-2 lg:[@media(min-height:601px)]:row-span-3 lg:[@media(min-height:601px)]:row-start-1">{checks}</div>
+      <div className="flex min-w-0 flex-col gap-5 lg:[@media(min-height:601px)]:col-start-2 lg:[@media(min-height:601px)]:row-span-3 lg:[@media(min-height:601px)]:row-start-1">
+        {checks}
+        {photo && <div className={clsx(WIDE_ONLY, "min-w-0 flex-col gap-4")}>{photo}</div>}
+      </div>
       {outcome && <div className="flex min-w-0 flex-col gap-6 lg:[@media(min-height:601px)]:col-start-1 lg:[@media(min-height:601px)]:row-start-2">{outcome}</div>}
-      {photo && <div className={clsx(WIDE_ONLY, "min-w-0 flex-col gap-4 lg:[@media(min-height:601px)]:col-start-1 lg:[@media(min-height:601px)]:row-start-3")}>{photo}</div>}
     </section>
   );
 }
@@ -88,25 +94,39 @@ export function ClaimLayout({ labelledBy, head, checks, outcome, photo }: { labe
 /**
  * The headline the checking screen and the result share: on a phone the photo's thumbnail beside it, the title, and one
  * line under it whose height is kept even when it's empty, so the checks under it never move when the outcome lands.
+ * Below 640px that line runs the full width under the thumbnail, so a two-sentence reason never squeezes beside it.
  */
 export function OutcomeHead({ id, thumb, title, lead, small, aside }: { id: string; thumb?: string; title: ReactNode; lead?: ReactNode; small?: boolean; aside?: ReactNode }) {
+  // A reason (the result's) runs the full width under the thumbnail on a phone; the checking screen's line stays beside it.
+  const wide = Boolean(lead) && !small;
   return (
-    <div className="flex items-start gap-4">
+    // No column gap: a thumbnail hidden on a laptop leaves its column at 0 wide, so the title keeps the column's edge.
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-y-1">
       {thumb && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={thumb} alt="" className={clsx("size-18 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_70%] ring-1 ring-line [@media(max-height:600px)]:size-14", NARROW_ONLY)} />
+        <img
+          src={thumb}
+          alt=""
+          className={clsx(
+            "col-start-1 row-start-1 mr-4 size-18 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_70%] ring-1 ring-line [@media(max-height:600px)]:size-14",
+            wide ? "sm:row-span-2" : "row-span-2",
+            NARROW_ONLY,
+          )}
+        />
       )}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="col-start-2 row-start-1 min-w-0">
         <StepTitle id={id}>{title}</StepTitle>
+      </div>
+      {aside && <div className="col-start-3 row-start-1 ml-4 flex">{aside}</div>}
+      <div className={clsx("row-start-2 min-w-0", wide ? "col-span-3 col-start-1 max-w-read sm:col-span-2 sm:col-start-2" : "col-start-2")}>
         {lead ? (
-          <div className={clsx(small ? "text-ui text-pretty text-muted" : "text-body text-balance text-text-2")}>{lead}</div>
+          <div className={clsx(small ? "text-ui text-pretty text-muted" : "text-body text-pretty text-text-2")}>{lead}</div>
         ) : (
           <p aria-hidden="true" className="invisible text-ui">
             {"\u00a0"}
           </p>
         )}
       </div>
-      {aside}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import type { Claim, Recall, Reason } from "@/lib/types";
 import { CheckList, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
 import { evidenceSummary } from "./EvidenceText";
-import { ClaimFrame, ClaimLayout, ExhibitPhoto, NARROW_ONLY, OutcomeHead, WIDE_ONLY } from "./Exhibit";
+import { ClaimFrame, ClaimLayout, NARROW_ONLY, OutcomeHead } from "./Exhibit";
 import styles from "./flow.module.css";
 import { FocusTitle } from "./FocusTitle";
 import {
@@ -31,6 +31,7 @@ import {
   type CheckRow,
 } from "./model";
 import { Receipt } from "./Receipt";
+import { SubmitButton } from "./SubmitButton";
 import { BringIntoView, PaidTitle, PayoutLive } from "./ReceiptLive";
 import { nextSample, type RoundRun } from "./Scoreboard";
 
@@ -94,8 +95,6 @@ interface Parts {
   meta?: boolean;
   /** The photos are on screen already (a repost's comparison): no thumbnail beside the headline. */
   photosShown?: boolean;
-  /** The photo comes in after the receipt has printed (it sat where the receipt prints). */
-  photoIn?: boolean;
 }
 
 /** A sentence as the page writes it: "We couldn't…" for the pipeline's "Couldn't…", and a full stop. */
@@ -138,14 +137,15 @@ export function Result(props: ResultProps) {
         <>
           {parts.under && <div className={clsx(NARROW_ONLY, "flex flex-col gap-4")}>{parts.under}</div>}
           <CheckList rows={six} label={`Checks for this claim: ${summary}`} />
-          {/* The claim's number as the evidence's own metadata, when nothing else on the screen carries it: under the checks
-              on a laptop, at the foot of the page on a phone. */}
-          {parts.meta && <Meta id={claim.id} className={WIDE_BLOCK} />}
-          {/* Paid: the receipt takes the left column, so the photo joins the checks, the evidence the money moved on. */}
-          {paid && <div className={clsx(WIDE_ONLY, "min-w-0 flex-col pt-3", parts.photoIn && styles.later)}>{parts.side}</div>}
         </>
       }
-      photo={paid ? undefined : parts.side}
+      // The claim's number under its photo on a laptop, so the photo sits right under the checks.
+      photo={
+        <>
+          {parts.side}
+          {parts.meta && <Meta id={claim.id} className={WIDE_BLOCK} />}
+        </>
+      }
       outcome={
         (parts.next || parts.meta) && (
           <>
@@ -214,7 +214,6 @@ function paidParts({ claim, recall, photoUrls, againHref, sample, round, now, sa
   return {
     title: <PaidTitle />,
     side: <ClaimPhotos urls={photoUrls} claimId={claim.id} />,
-    photoIn: arrive,
     next: (
       <>
         <Receipt
@@ -306,9 +305,14 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
     `${asked ? "You asked for a review, and" : "Your claim was held for a person, and"} ${company} refused it: ${reasons[0]?.text ?? ""}`
   ) : lead === "code" ? (
     seen.readable ? (
+      // Two lines, read against each other: what the tag says, then what it should say.
       <>
-        The tag in your photo reads <span className="font-mono whitespace-nowrap">{tagRead}</span>. Your claim&apos;s code is{" "}
-        <span className="font-mono whitespace-nowrap">{claim.code}</span>.
+        <span className="block">
+          The tag in your photo reads <span className="font-mono whitespace-nowrap">{tagRead}</span>.
+        </span>
+        <span className="block">
+          Your claim&apos;s code is <span className="font-mono whitespace-nowrap">{claim.code}</span>.
+        </span>
       </>
     ) : (
       <>
@@ -316,11 +320,12 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
       </>
     )
   ) : lead === "session" ? (
-    `${claim.photos.length > 1 ? "These photos weren't" : "This photo wasn't"} taken in Remedy's camera. Only photos taken in the claim, within 10 minutes of its code, count.`
+    // The row under it says this photo came from outside the camera: the lead says the rule, once.
+    "Only photos taken in this claim's camera, within 10 minutes of its code, count."
   ) : lead === "duplicate_photo" ? (
-    // The pair beside it carries the earlier claim's number: said there, once.
+    // The row and the pair beside it carry the earlier claim's number: said there, once.
     duplicate?.earlier ? (
-      `${these} already sent with an earlier claim of yours.`
+      `A photo can be claimed once, and ${these === "This photo was" ? "this one already was" : "these already were"}.`
     ) : (
       `${these} already sent with ${duplicate ? "another PayPal account's claim" : "another claim"}.`
     )
@@ -363,6 +368,8 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
               {a}
             </p>
           ))}
+        {/* The likeliest honest mistake: what an owner who wrote it wrong would do. */}
+        {sample && lead === "code" && <p className="text-body text-pretty text-text">Wrote it wrong? Start a new claim: you&apos;ll get a new code to write on the tag.</p>}
         {earlier && (
           <Button href={`/r/${recall.slug}/claim/${earlier}`} size="lg" block prefetch={false}>
             {duplicate?.earlier?.id === earlier ? "See your earlier claim" : `See your claim ${earlier}`}
@@ -402,14 +409,18 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
  * whole. Another account's claim shows neither its photo nor its id, so it gets no pair: this claim's photo alone.
  */
 function DuplicatePair({ claimId, photoUrls, earlier, n }: { claimId: string; photoUrls: string[]; earlier: NonNullable<Duplicate["earlier"]>; n: number }) {
+  // Each photo at its own shape, edge to edge in a hairline: no frame of empty bands around it.
+  const photo = "block h-auto w-full rounded-control bg-surface-2 ring-1 ring-line";
   return (
-    <figure className="grid grid-cols-2 gap-3">
+    <figure className="grid grid-cols-2 items-start gap-3">
       <div className="flex flex-col gap-2">
-        <ExhibitPhoto src={photoUrls[n - 1] ?? photoUrls[0]} alt={`Photo ${n} of this claim, ${claimId}`} fit="contain" frame="aspect-[4/5]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={photoUrls[n - 1] ?? photoUrls[0]} alt={`Photo ${n} of this claim, ${claimId}`} className={photo} />
         <span className="text-ui text-muted">This claim</span>
       </div>
       <div className="flex flex-col gap-2">
-        <ExhibitPhoto src={earlier.src} alt={`Photo ${earlier.n} of the earlier claim ${earlier.id}, the same picture`} fit="contain" frame="aspect-[4/5]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={earlier.src} alt={`Photo ${earlier.n} of the earlier claim ${earlier.id}, the same picture`} className={photo} />
         <span className="text-ui text-muted">
           Claimed before as <span className="font-mono whitespace-nowrap">{earlier.id}</span>
         </span>
@@ -426,9 +437,9 @@ function RunSample({ slug, sample, children, secondary }: { slug: string; sample
     <form action="/api/claims" method="post">
       <input type="hidden" name="recall" value={slug} />
       <input type="hidden" name="sample" value={sample} />
-      <Button type="submit" variant={secondary ? "secondary" : "primary"} size={secondary ? "md" : "lg"} block>
+      <SubmitButton variant={secondary ? "secondary" : "primary"} size={secondary ? "md" : "lg"} block>
         {children}
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
@@ -452,7 +463,7 @@ function DemoActions({ sample, slug, againHref, round, unanswered }: { sample: D
             Next claim
           </RunSample>
         ) : (
-          <Button href={againHref} size="lg" block prefetch={false}>
+          <Button href={againHref} size="lg" block native>
             All four claims
           </Button>
         )}
@@ -463,7 +474,7 @@ function DemoActions({ sample, slug, againHref, round, unanswered }: { sample: D
         )}
       </div>
       {(next || unanswered) && (
-        <Button href={againHref} variant="tertiary" size="sm" prefetch={false}>
+        <Button href={againHref} variant="tertiary" size="sm" native>
           All four claims
         </Button>
       )}

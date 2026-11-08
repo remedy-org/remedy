@@ -8,7 +8,7 @@ import { env } from "@/lib/env";
 import { activityUrl } from "@/lib/paypal/identity";
 import { getPayoutStatus } from "@/lib/paypal/payouts";
 import { isTerminal, savePayoutStatus } from "@/lib/paypal/status";
-import { getDemoRound, getSession, loginPath } from "@/lib/session";
+import { getDemoRound, getSession, loginPath, type Session } from "@/lib/session";
 import { getRecallBySlug, type ClaimSummary, type Store } from "@/lib/store";
 import type { Claim, Recall } from "@/lib/types";
 import { ClaimFlow } from "./ClaimFlow";
@@ -56,6 +56,59 @@ async function demoRound(all: ClaimSummary[], recall: Recall, payerId: string): 
   return { runs: rows.filter((r) => r.photoHashes.length > 0 && r.sample).map((r) => ({ sample: r.sample!, decision: r.decision, unanswered: noModelAnswer(r.decision, [r.reason]) })) };
 }
 
+const sampleOf = (claim: Claim) => (claim.demo ? demoSample(claim.events.find((e) => e.type === "demo_sample")?.detail ?? "") : null);
+const againOf = (recall: Recall, demo: boolean) => (demo ? `/r/${recall.slug}/try/samples` : `/api/claims/start?recall=${recall.slug}`);
+
+/** A decided claim's result, for its owner: the page renders it, and so does the checking screen the moment it lands. */
+async function decidedResult(store: Store, recall: Recall, claim: Claim, session: Session, now: number) {
+  const sample = sampleOf(claim);
+  const sandbox = isSandboxBuild();
+  // A demo claim's photos are the sample's own public files: shown from there, they cost no Blob reads.
+  const photoUrls = claim.photos.map((_, i) => (sample ? (sample.photos[i] ?? sample.photos[0]) : `/api/claims/${claim.id}/photos/${i + 1}`));
+  // index.json, once: a demo result's round, and the earlier claim a refused repost matched.
+  const reposted = claim.reasons.some((r) => r.check === "duplicate_photo");
+  const [payout, rows] = await Promise.all([livePayout(store, claim, now), sample || reposted ? store.listClaims() : null]);
+  const round = sample && rows ? await demoRound(rows, recall, session.payerId) : null;
+  const match = reposted && rows ? duplicateOf(claim, rows) : null;
+  // Its photo only when it's this account's own claim: another owner's photo and claim id are theirs.
+  const duplicate: Duplicate | null = match && {
+    photo: match.photo,
+    earlier:
+      match.payerId === session.payerId
+        ? { id: match.id, n: match.theirs, src: (match.sample && demoSample(match.sample)?.photos[match.theirs - 1]) || `/api/claims/${match.id}/photos/${match.theirs}` }
+        : null,
+  };
+  return (
+    <Result
+      claim={claim}
+      recall={recall}
+      rows={checkRows(claim, recall.spec)}
+      photoUrls={photoUrls}
+      payout={payout}
+      againHref={againOf(recall, Boolean(claim.demo))}
+      sample={sample}
+      round={round}
+      duplicate={duplicate}
+      now={now}
+      sandbox={sandbox}
+      activityUrl={sandbox && claim.decision === "paid" ? activityUrl() : undefined}
+      account={session.email ? maskEmail(session.email) : null}
+    />
+  );
+}
+
+/**
+ * The result of one of this owner's claims once it's decided, or null (still being checked, or not theirs): the checking
+ * screen shows it in place the moment the last check lands, so nothing redraws after it (settle.ts).
+ */
+export async function claimResult(slug: string, id: string) {
+  const store = await getAppStore();
+  const [recall, session, claim] = await Promise.all([getRecallBySlug(slug, store), getSession("owner"), store.getClaim(id)]);
+  if (!recall || !session || !claim || claim.recallId !== recall.id || claim.payerId !== session.payerId || claim.decision === "pending") return null;
+  if (claim.demo && !isDemoAllowed(recall)) return null;
+  return decidedResult(store, recall, claim, session, requestTime());
+}
+
 /** One claim, owner only: the open steps (code, camera, checking) in the browser, or the result. */
 export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string; demo: boolean }) {
   const store = await getAppStore();
@@ -97,49 +150,13 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   if (!claim || claim.payerId !== session.payerId || claim.recallId !== recall.id) notFound();
   if (Boolean(claim.demo) !== demo) redirect(`/r/${recall.slug}/${claim.demo ? "try" : "claim"}/${claim.id}`);
 
-  const sample = claim.demo ? demoSample(claim.events.find((e) => e.type === "demo_sample")?.detail ?? "") : null;
-  const againHref = demo ? `/r/${recall.slug}/try/samples` : `/api/claims/start?recall=${recall.slug}`;
+  const sample = sampleOf(claim);
+  const againHref = againOf(recall, demo);
   const company = companyName(recall);
   const context = recallContext(recall);
   const now = requestTime();
-  const sandbox = isSandboxBuild();
 
-  if (claim.decision !== "pending") {
-    // A demo claim's photos are the sample's own public files: shown from there, they cost no Blob reads.
-    const photoUrls = claim.photos.map((_, i) => (sample ? (sample.photos[i] ?? sample.photos[0]) : `/api/claims/${claim.id}/photos/${i + 1}`));
-    // index.json, once: a demo result's round, and the earlier claim a refused repost matched.
-    const reposted = claim.reasons.some((r) => r.check === "duplicate_photo");
-    const [payout, rows] = await Promise.all([livePayout(store, claim, now), sample || reposted ? store.listClaims() : null]);
-    const round = sample && rows ? await demoRound(rows, recall, session.payerId) : null;
-    const match = reposted && rows ? duplicateOf(claim, rows) : null;
-    // Its photo only when it's this account's own claim: another owner's photo and claim id are theirs.
-    const duplicate: Duplicate | null = match && {
-      photo: match.photo,
-      earlier:
-        match.payerId === session.payerId
-          ? { id: match.id, n: match.theirs, src: (match.sample && demoSample(match.sample)?.photos[match.theirs - 1]) || `/api/claims/${match.id}/photos/${match.theirs}` }
-          : null,
-    };
-    return (
-      <FlowShell context={context}>
-        <Result
-          claim={claim}
-          recall={recall}
-          rows={checkRows(claim, recall.spec)}
-          photoUrls={photoUrls}
-          payout={payout}
-          againHref={againHref}
-          sample={sample}
-          round={round}
-          duplicate={duplicate}
-          now={now}
-          sandbox={sandbox}
-          activityUrl={sandbox && claim.decision === "paid" ? activityUrl() : undefined}
-          account={session.email ? maskEmail(session.email) : null}
-        />
-      </FlowShell>
-    );
-  }
+  if (claim.decision !== "pending") return <FlowShell context={context}>{await decidedResult(store, recall, claim, session, now)}</FlowShell>;
 
   const session10 = claim.captureSession;
   if (!claim.photos.length && (!session10 || Date.parse(session10.expiresAt) <= now)) {
@@ -157,6 +174,7 @@ export async function ClaimScreen({ slug, id, demo }: { slug: string; id: string
   return (
     <FlowShell context={context}>
       <ClaimFlow
+        slug={recall.slug}
         claimId={claim.id}
         code={claim.code}
         sessionId={session10?.id ?? ""}

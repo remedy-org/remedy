@@ -57,6 +57,12 @@ export const AlertIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const ArrowLeftIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M13 8H3.5M7 4.5L3.5 8 7 11.5" />
+  </Icon>
+);
+
 export const ArrowRightIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M3 8h9.5M9 4.5L12.5 8 9 11.5" />

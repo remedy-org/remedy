@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { ThemeToggle, Wordmark } from "@/components/ui";
 import type { Recall } from "@/lib/types";
 
-const FOOT_LINK = "inline-flex min-h-6 items-center underline decoration-line-2 underline-offset-4 transition-colors duration-160 hover:text-text hover:decoration-text";
+// A 44px target on a 24px line: the extra height overhangs the footer's own padding.
+const FOOT_LINK = "-my-2.5 inline-flex min-h-11 items-center underline decoration-line-2 underline-offset-4 transition-colors duration-160 hover:text-text hover:decoration-text";
 
 /** The header's one line of context on a claim's steps: the recall it is for, never the company's name. */
 export const recallContext = (recall: Pick<Recall, "product">) => `${recall.product} recall`;
@@ -28,7 +29,8 @@ export function FlowShell({ children, context }: FlowShellProps) {
         <div className="page">
           <div className="mx-auto flex h-16 max-w-[60rem] items-center justify-between gap-4 [@media(max-height:600px)]:h-12">
             <div className="flex min-w-0 items-center gap-4">
-              <Wordmark href="/" />
+              {/* No homepage prefetch: an owner from a recall email never opens it, and on a phone it costs data. */}
+              <Wordmark href="/" prefetch={false} />
               {context && (
                 <>
                   <span aria-hidden="true" className="h-4 w-px shrink-0 bg-line-2 max-sm:hidden" />

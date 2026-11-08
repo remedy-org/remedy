@@ -15,6 +15,8 @@ import { useClaimArrival } from "./useClaimArrival";
 export type Phase = "code" | "capture" | "checking";
 
 export interface ClaimFlowProps {
+  /** The recall's slug: the checking screen asks for the result by it. */
+  slug: string;
   claimId: string;
   code: string;
   /** The capture session the photos must arrive with; real claims only. */
@@ -122,6 +124,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
         ))}
       {phase === "checking" && (
         <CheckingStep
+          slug={props.slug}
           claimId={claimId}
           view={view}
           spec={props.spec}

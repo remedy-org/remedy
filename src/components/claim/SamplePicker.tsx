@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import Link from "next/link";
-import { Button } from "@/components/ui";
+import { ArrowRightIcon, Button, LinkPending } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
 import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import type { Refusal } from "@/lib/limits";
@@ -8,6 +8,7 @@ import type { Decision } from "@/lib/types";
 import { photoWidth, STEP_GRID, StepTitle } from "./Exhibit";
 import { FocusTitle } from "./FocusTitle";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
+import { SubmitButton } from "./SubmitButton";
 import { latestRuns, type RoundRun } from "./Scoreboard";
 
 export interface SampleOption {
@@ -31,11 +32,11 @@ export interface DemoRun {
 export const roundRuns = (runs: DemoRun[]): RoundRun[] => runs.flatMap((r) => (r.sample ? [{ sample: r.sample, decision: r.decision, unanswered: r.unanswered }] : []));
 
 // A refusal here is the product working, not an error: muted. Only a payout is green. The title already says what the
-// claim was, so the outcome is one word.
+// claim was, so the outcome is one word, the result's own: "We couldn't pay this claim" is Not paid.
 function outcomeOf(decision: Decision | undefined): { word: string; tone: string } | null {
   if (decision === "paid") return { word: "Paid", tone: "text-pay" };
   if (decision === "held") return { word: "With a person", tone: "text-hold" };
-  if (decision === "rejected" || decision === "blocked") return { word: "Refused", tone: "text-muted" };
+  if (decision === "rejected" || decision === "blocked") return { word: "Not paid", tone: "text-muted" };
   return null;
 }
 
@@ -105,7 +106,8 @@ export function SamplePicker({
 
       <form action="/api/claims" method="post" className="flex flex-col gap-5">
         <input type="hidden" name="recall" value={slug} />
-        <fieldset disabled={off} className="-mx-3 flex flex-col gap-1">
+        {/* The rows' rings sit on the column's own edges, the button's: their padding is inside. */}
+        <fieldset disabled={off} className="flex flex-col gap-1">
           <legend className="sr-only">Claims to run</legend>
           {options.map(({ sample, locked }) => {
             const run = latest.get(sample.id);
@@ -134,7 +136,7 @@ export function SamplePicker({
                   defaultChecked={sample.id === selected}
                   disabled={Boolean(locked)}
                   aria-labelledby={`${id}-title`}
-                  aria-describedby={`${id}-line${locked ? ` ${id}-locked` : ""}`}
+                  aria-describedby={[`${id}-line`, locked && `${id}-locked`, outcome && `${id}-outcome`].filter(Boolean).join(" ")}
                   className="peer sr-only"
                 />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -153,7 +155,7 @@ export function SamplePicker({
                   </span>
                   {/* The outcome reads as the row's last line, so the title never squeezes beside it. */}
                   {outcome && (
-                    <span className="text-ui">
+                    <span id={`${id}-outcome`} className="text-ui">
                       <span className={clsx("font-medium", outcome.tone)}>{outcome.word}</span>
                       {runId && <span className="text-faint"> · <span className="font-mono">{runId}</span></span>}
                     </span>
@@ -181,9 +183,9 @@ export function SamplePicker({
           {off ? (
             <LimitNextStep demo />
           ) : (
-            <Button type="submit" size="lg" block>
+            <SubmitButton size="lg" block>
               Start this claim
-            </Button>
+            </SubmitButton>
           )}
         </div>
       </form>
@@ -191,9 +193,9 @@ export function SamplePicker({
       {scored.length > 0 && (
         <form action="/api/claims/round" method="post">
           <input type="hidden" name="recall" value={slug} />
-          <Button type="submit" variant="tertiary" size="sm">
+          <SubmitButton variant="tertiary" size="sm">
             Start over
-          </Button>
+          </SubmitButton>
         </form>
       )}
       </div>
@@ -220,26 +222,29 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
         {options.map(({ sample }) => {
           const run = resultOf(sample.id);
           const outcome = outcomeOf(decided(sample.id));
+          // The title has the row's width; the verdict sits on the line under it, after the claim's number.
           const row = (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={sample.photos[0]} alt="" className="size-12 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_65%] ring-1 ring-line" />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-body text-text">{sampleTitle(sample.id, sample.title)}</span>
-                {run && <span className="font-mono text-ui text-faint">{run.id}</span>}
+                <span className="text-body text-balance text-text">{sampleTitle(sample.id, sample.title)}</span>
+                {(run || outcome) && (
+                  <span className="text-ui text-faint">
+                    {run && <span className="font-mono">{run.id}</span>}
+                    {run && outcome && " · "}
+                    {outcome && <span className={clsx("font-medium", outcome.tone)}>{outcome.word}</span>}
+                  </span>
+                )}
               </span>
-              {outcome && <span className={clsx("shrink-0 text-ui font-medium", outcome.tone)}>{outcome.word}</span>}
-              {run && (
-                <span aria-hidden="true" className="shrink-0 text-faint transition-transform duration-160 group-hover:translate-x-0.5">
-                  →
-                </span>
-              )}
+              {run && <ArrowRightIcon className="shrink-0 text-faint transition-transform duration-160 group-hover:translate-x-0.5" />}
+              {run && <LinkPending />}
             </>
           );
           return (
             <li key={sample.id} className="border-b border-line">
               {run ? (
-                <Link href={run.href} className="group -mx-3 flex items-center gap-4 rounded-control px-3 py-3 transition-colors duration-160 hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus">
+                <Link href={run.href} className="group -mx-3 flex items-center gap-4 rounded-control px-3 py-3 transition-[background-color,opacity] duration-160 hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus data-[pending]:opacity-60">
                   {row}
                 </Link>
               ) : (
@@ -256,9 +261,9 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
         </Button>
         <form action="/api/claims/round" method="post">
           <input type="hidden" name="recall" value={slug} />
-          <Button type="submit" variant="tertiary" size="md">
+          <SubmitButton variant="tertiary" size="md">
             Start over
-          </Button>
+          </SubmitButton>
         </form>
       </div>
     </section>

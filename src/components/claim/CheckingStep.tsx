@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AlertIcon } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
 import { CheckList, outcomeWord, sixRows, type SixRow } from "./CheckList";
@@ -12,17 +12,22 @@ import styles from "./flow.module.css";
 import { cutInHalf, handWrittenLabel, isDecided, money, nounOf, type ClaimView } from "./model";
 import { RefundRow } from "./Receipt";
 import { PAID_TITLE } from "./ReceiptLive";
+import { settleClaim } from "./settle";
 
 // Each row resolves on its own beat, one after another, in reduced motion too: there it is a plain swap. The camera's
-// pre-checks are quick; the photo check's answers, and the refund after them, get a beat each to be read.
-const PRE_MS = 420;
-const STEP_MS = 650;
+// pre-checks are quick; the photo check's answers, and the refund after them, get a beat each to be read. Short enough
+// that the receipt prints within about a second of the payout it shows.
+const PRE_MS = 300;
+const STEP_MS = 400;
 // Only a wait this long earns "you can close this page".
 const SAVED_S = 10;
-// The finished list stays up this long before the result replaces it (and, when paid, the receipt prints).
+// If the result can't be had in place, the finished list stays up this long before the page reloads as the result.
 const HOLD_MS = 1200;
-// Each poll reads the claim from the store, and those reads are capped per month.
+// Each poll reads the claim from the store, and those reads are capped per month: every second while a photo check
+// usually answers, then every 2 s.
 const POLL_MS = 2000;
+const FAST_POLL_MS = 1000;
+const FAST_FOR_MS = 20_000;
 // Past this, the screen says it's taking longer than usual.
 const SLOW_S = 40;
 
@@ -35,6 +40,8 @@ const firstWaiting = (rows: SixRow[]) => {
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 export interface CheckingStepProps {
+  /** The recall's slug: the result is asked for by it. */
+  slug: string;
   claimId: string;
   view: ClaimView;
   spec: CheckSpec;
@@ -61,8 +68,11 @@ export interface CheckingStepProps {
  * first screen; from 1024px it sits whole beside the list. Once decided, the rows land in order, the finished list
  * holds for a moment, and the page re-renders as the result.
  */
-export function CheckingStep({ claimId, view: initial, spec, refund, startNow, photoUrls, sending, preview, company = "The company" }: CheckingStepProps) {
+export function CheckingStep({ slug, claimId, view: initial, spec, refund, startNow, photoUrls, sending, preview, company = "The company" }: CheckingStepProps) {
   const router = useRouter();
+  // The result, rendered by the server as its page renders it, asked for as soon as the decision is in: it replaces this
+  // screen when the last check lands, in one change. "failed": it couldn't be had here, so the page reloads as it.
+  const [settled, setSettled] = useState<ReactNode | "failed" | null>(null);
   const [view, setView] = useState(initial);
   const [offline, setOffline] = useState(preview?.offline ?? false);
   // The server clock at render first, so server and client paint the same seconds.
@@ -111,7 +121,9 @@ export function CheckingStep({ claimId, view: initial, spec, refund, startNow, p
   const unseen = initial.photos === 0;
   useEffect(() => {
     if (preview || sending || decided) return;
-    let delay = POLL_MS;
+    const start = Date.now();
+    const pace = () => (Date.now() - start < FAST_FOR_MS ? FAST_POLL_MS : POLL_MS);
+    let delay = pace();
     let t: ReturnType<typeof setTimeout>;
     let stopped = false;
     const tick = async () => {
@@ -127,7 +139,7 @@ export function CheckingStep({ claimId, view: initial, spec, refund, startNow, p
         if (stopped) return;
         setView(next);
         setOffline(false);
-        delay = POLL_MS;
+        delay = pace();
       } catch {
         if (stopped) return;
         setOffline(true);
@@ -142,12 +154,25 @@ export function CheckingStep({ claimId, view: initial, spec, refund, startNow, p
     };
   }, [claimId, decided, preview, sending, unseen]);
 
+  // The decision is in: the result is fetched while the last rows land.
   useEffect(() => {
-    if (!done || (preview && !preview.next)) return;
+    if (!decided || preview) return;
+    let stopped = false;
+    settleClaim(slug, claimId)
+      .then((node) => !stopped && setSettled(node ?? "failed"))
+      .catch(() => !stopped && setSettled("failed"));
+    return () => {
+      stopped = true;
+    };
+  }, [decided, preview, slug, claimId]);
+
+  // Dev previews open the result's preview; a result that couldn't be had in place comes with a reload.
+  useEffect(() => {
+    if (!done || (preview ? !preview.next : settled !== "failed")) return;
     const next = preview?.next;
     const t = setTimeout(() => (next ? router.push(next) : router.refresh()), HOLD_MS);
     return () => clearTimeout(t);
-  }, [done, preview, router]);
+  }, [done, preview, router, settled]);
 
   const rows: SixRow[] = all.map((r, i) =>
     i < shown ? r : i === shown && !done && !sending ? { key: r.key, name: r.name, label: r.label, state: "running" } : { key: r.key, name: r.name, label: r.label, state: "waiting" },
@@ -159,10 +184,14 @@ export function CheckingStep({ claimId, view: initial, spec, refund, startNow, p
   const srcs = photoUrls?.length ? photoUrls : Array.from({ length: view.photos }, (_, i) => `/api/claims/${claimId}/photos/${i + 1}`);
   const count = Math.max(view.photos, srcs.length);
 
-  // Once every row has landed the headline is the outcome, in the result's own words, so the result arrives under it.
+  // Every row has landed and the result is here: it takes the screen in one change (the receipt prints, or the way on
+  // comes in), and nothing redraws after it.
+  if (done && settled && settled !== "failed") return <>{settled}</>;
+  // Without the result in place (a preview, or it couldn't be had), the headline is the outcome, in the result's words.
+  const outcome = done && (preview || settled === "failed");
   const title = sending
     ? `Sending your ${count > 1 ? "photos" : "photo"}`
-    : done
+    : outcome
       ? view.decision === "paid"
         ? PAID_TITLE.sent
         : view.decision === "held"
@@ -182,7 +211,7 @@ export function CheckingStep({ claimId, view: initial, spec, refund, startNow, p
   const last = shown > 0 ? all[Math.min(shown, all.length) - 1] : null;
   const checks = all.filter((r) => r.key !== "refund").length;
   const amount = money(refund);
-  const spoken = done
+  const spoken = outcome
     ? view.decision === "paid"
       ? `All ${checks} checks passed. ${amount} refund sent to your PayPal.`
       : view.decision === "held"

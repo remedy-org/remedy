@@ -73,7 +73,17 @@ export function Receipt({ amount, recallId, claimId, account, payerTail, payoutI
     // The slot's lip stays where the refund row's top hairline was; the paper feeds down out of it.
     <div id="receipt" className={clsx("scroll-mt-24 border-t border-line-2", arrive && styles.feed)} style={{ ["--feed-ms" as string]: `${FEED_MS}ms` }}>
       <div>
-        <Paper variant="receipt" perforated padding="none" as="article" aria-label="Refund receipt" data-paper="" className="w-full">
+        <Paper
+          variant="receipt"
+          perforated
+          padding="none"
+          as="article"
+          aria-label="Refund receipt"
+          data-paper=""
+          // Focus follows it when the page brings it into view (BringIntoView).
+          tabIndex={-1}
+          className="w-full outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
+        >
           <div className="flex flex-col px-6 pt-8 pb-6 sm:px-7">
             <div className="flex items-baseline justify-between gap-4 text-ui text-ink-muted">
               <span>Refund receipt</span>

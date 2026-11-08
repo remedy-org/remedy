@@ -1,7 +1,9 @@
 import clsx from "clsx";
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ComponentProps, ReactNode, Ref } from "react";
 import { ArrowRightIcon } from "./icons";
+import { LinkPending } from "./LinkPending";
+import { NativeAnchor } from "./NativeAnchor";
 
 export type ButtonVariant = "primary" | "secondary" | "tertiary";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -22,15 +24,26 @@ interface Common {
   children: ReactNode;
 }
 
-type AsButton = Common & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "className"> & { href?: undefined };
-type AsLink = Common & Omit<ComponentProps<typeof Link>, "children" | "className"> & { href: string; disabled?: boolean };
+type AsButton = Common & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "className"> & { href?: undefined; ref?: Ref<HTMLButtonElement> };
+type AsLink = Common &
+  Omit<ComponentProps<typeof Link>, "children" | "className"> & {
+    href: string;
+    disabled?: boolean;
+    /**
+     * A plain <a> that loads the next page as a document, never the client router's fetch: for a route handler (every
+     * /api/ href is one already), such as the PayPal login's start or a start that files a claim.
+     */
+    native?: boolean;
+  };
 export type ButtonProps = AsButton | AsLink;
 
 const base =
   "group relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-medium " +
   "transition-[background-color,color,box-shadow,scale,opacity] duration-160 ease-snap " +
   "focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-focus " +
-  "aria-disabled:pointer-events-none aria-disabled:opacity-40 disabled:pointer-events-none disabled:opacity-40";
+  "aria-disabled:pointer-events-none aria-disabled:opacity-40 disabled:pointer-events-none disabled:opacity-40 " +
+  // Tapped, and the next page is on its way: the label stays, the button quietens (SubmitButton, NativeAnchor).
+  "data-[pending]:cursor-progress data-[pending]:opacity-60";
 
 // The fills, rims, hover sheen and press live in globals.css (.btn-primary, .btn-quiet): their shadow stacks differ by
 // theme. A press scales the button to 98% (96% at 36px) and deepens it, in 75ms.
@@ -67,7 +80,7 @@ export function Button(props: ButtonProps) {
   );
 
   if (rest.href !== undefined) {
-    const { disabled, ...link } = rest as Omit<AsLink, keyof Common>;
+    const { disabled, native, ...link } = rest as Omit<AsLink, keyof Common>;
     if (disabled || pending) {
       return (
         <span className={classes} role="link" aria-disabled="true" aria-busy={pending || undefined}>
@@ -75,9 +88,20 @@ export function Button(props: ButtonProps) {
         </span>
       );
     }
+    if (native || link.href.startsWith("/api/")) {
+      // Link's own props have no meaning on a plain <a>.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { prefetch, replace, scroll, shallow, passHref, legacyBehavior, onNavigate, locale, ...a } = link as typeof link & Record<string, unknown>;
+      return (
+        <NativeAnchor className={classes} {...(a as ComponentProps<"a">)}>
+          {content}
+        </NativeAnchor>
+      );
+    }
     return (
       <Link className={classes} {...link}>
         {content}
+        <LinkPending />
       </Link>
     );
   }

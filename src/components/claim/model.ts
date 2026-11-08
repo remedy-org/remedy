@@ -1,6 +1,7 @@
 import type { CheckState } from "@/components/ui";
 import { reviewAsked } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
+import { CHECK_NAMES } from "@/lib/fiveChecks";
 import type { CheckSpec, Claim, Decision, Reason, Recall } from "@/lib/types";
 
 // Pure view logic for the claim flow, shared by the pages, the API's JSON and the dev previews. No server imports.
@@ -48,9 +49,9 @@ export type ClaimStatus = Pick<ClaimView, "decision" | "photos"> & { payout?: st
 export type ClaimLike = Pick<Claim, "decision" | "reasons" | "photos" | "verdict" | "payout" | "code" | "demo" | "events">;
 
 const PRE = [
-  { id: "session", label: "Live camera session", checks: ["session"], pass: "Taken on this page's camera before the code expired" },
-  { id: "duplicate_photo", label: "Photo not seen before", checks: ["duplicate_photo"], pass: "No match among earlier claims' photos" },
-  { id: "account", label: "One claim per verified PayPal account", checks: ["state", "payer_verified", "payer"], pass: "A verified PayPal account with no other paid or open claim for this recall" },
+  { id: "session", label: CHECK_NAMES.session, checks: ["session"], pass: "Taken on this page's camera before the code expired" },
+  { id: "duplicate_photo", label: CHECK_NAMES.duplicate, checks: ["duplicate_photo"], pass: "No match among earlier claims' photos" },
+  { id: "account", label: CHECK_NAMES.account, checks: ["state", "payer_verified", "payer"], pass: "A verified PayPal account with no other paid or open claim for this recall" },
 ] as const;
 
 const OUTCOME: Record<Reason["outcome"], CheckState> = { pass: "pass", hold: "hold", reject: "reject" };
@@ -231,8 +232,10 @@ export function payoutWords(status: string | null | undefined): { label: string;
       return { label: "Didn't go through", tone: "stop", note: "The company's recall team has been told and will send it again." };
     case "":
       return { label: "Unknown", tone: "muted", note: "" };
+    // Sent, and PayPal hasn't finished: said as the fact it is (it's coming), not as a doubt beside the PAID stamp. One
+    // line, so the receipt keeps its height when it turns to Received.
     default:
-      return { label: "Processing", tone: "muted", note: "PayPal usually finishes within a few minutes." };
+      return { label: "On its way", tone: "muted", note: "" };
   }
 }
 

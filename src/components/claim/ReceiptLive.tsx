@@ -59,7 +59,7 @@ export function PayoutLive({ claimId, status: initial, live, amount, children }:
           if (next.toUpperCase() === "SUCCESS") navigator.vibrate?.([12, 40, 12]);
         }
         const w = payoutWords(next);
-        if (w.label !== "Processing" && w.label !== "Unknown") return;
+        if (w.label !== "On its way" && w.label !== "Unknown") return;
       } catch {
         // Offline for a moment: the next tick tries again.
       }
@@ -98,7 +98,8 @@ export function PaidTitle() {
 
 /**
  * The receipt as it starts to print: when its paper would end under the fold (a phone, where it prints under the
- * checks), the slot is brought up near the top first, so the whole receipt comes out on screen. Once.
+ * checks), the slot is brought up near the top first, so the whole receipt comes out on screen. Once. Focus moves with
+ * it (the receipt itself, which reads out its label), so a keyboard or magnifier user's place is where the eye is.
  */
 export function BringIntoView({ id }: { id: string }) {
   useEffect(() => {
@@ -109,20 +110,25 @@ export function BringIntoView({ id }: { id: string }) {
       if (el.getBoundingClientRect().top + paper.offsetHeight <= window.innerHeight) return;
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       el.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+      paper.focus({ preventScroll: true });
     }, 80);
     return () => clearTimeout(t);
   }, [id]);
   return null;
 }
 
-/** The receipt's PayPal row: PayPal's own word for the payout, and while it's processing, one line of why. */
+/**
+ * The receipt's PayPal row: PayPal's own word for the payout, in ink (the PAID stamp is the receipt's one green). On its
+ * way, then Received, on one line, so the receipt and what's under it never move as it lands; only a payout PayPal
+ * stopped gets a second line, saying what happens next.
+ */
 export function PayoutRow() {
   const { status, changed } = useContext(PayoutContext);
   const words = payoutWords(status);
   return (
     <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 border-b border-dashed border-paper-line py-2.5">
       <dt className="text-ink-muted">PayPal</dt>
-      <dd key={words.label} className={clsx("text-right font-medium", words.tone === "pay" ? "text-pay-ink" : "text-ink", changed && styles.swap)}>
+      <dd key={words.label} className={clsx("text-right font-medium text-ink", changed && styles.swap)}>
         {words.label}
       </dd>
       {words.tone !== "pay" && words.note && <dd className="col-span-2 mt-0.5 text-pretty text-ink-muted">{words.note}</dd>}
