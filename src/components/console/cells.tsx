@@ -416,8 +416,9 @@ export function CardRow({ data }: Cell) {
         </span>
         <span className="verdict-track is-mark is-card">
           <VerdictMark verdict={verdict} className={EXCEPTION.has(data.decision) ? "text-text" : undefined} />
+          {/* Two lines on a phone rather than cut mid-word: the reason is what tells this claim apart. */}
           {note && (
-            <span className="min-w-0 truncate text-ui text-muted">
+            <span className="line-clamp-2 min-w-0 text-ui whitespace-normal text-muted">
               <LinkedIds text={note} />
             </span>
           )}

@@ -724,7 +724,7 @@ function Evidence({
               [
                 [claim.payout.itemId ? "Payout" : "Batch", <span key="v" className="truncate font-mono text-text">{claim.payout.itemId ?? claim.payout.batchId}</span>],
                 ...(claim.payout.itemId ? [["Batch", <span key="v" className="truncate font-mono text-text-2">{claim.payout.batchId}</span>]] : []),
-                ["Status", <span key="v" className="font-mono text-text-2">{claim.payout.status}</span>],
+                ["Status", <span key="v" className="text-text-2" title={`PayPal: ${claim.payout.status}`}>{payoutStatusWord(claim.payout.status)}</span>],
                 ["Updated", <span key="v" className="font-mono text-text-2">{formatTime(claim.payout.updatedAt)}</span>],
               ] as [string, ReactNode][]
             ).map(([k, v], i) => (
@@ -803,11 +803,30 @@ function MoneyLine({ claim }: { claim: DrawerClaim }) {
   // The receipt's own word once PayPal has settled it, so the owner and the company say the same thing.
   const state = claim.decision === "held" || !claim.payout ? null : claim.payout.status === "SUCCESS" ? "Received" : "Settling";
   return (
-    <span className="ml-auto inline-flex items-baseline gap-1.5 text-ui">
+    // Right-aligned on the header's row; when a phone wraps it, it starts on the left edge under the id, never mid-line.
+    <span className="inline-flex items-baseline gap-1.5 text-ui sm:ml-auto">
       <span className="font-mono text-text">{claim.amount}</span>
       {state && <span className="text-muted">· {state}</span>}
     </span>
   );
+}
+
+/** PayPal's payout status in the console's words ("Settled", as the section's heading says it), never its raw enum. */
+function payoutStatusWord(status: string): string {
+  switch (status.toUpperCase()) {
+    case "SUCCESS":
+      return "Settled";
+    case "PENDING":
+    case "PROCESSING":
+    case "NEW":
+      return "Settling";
+    case "UNCLAIMED":
+      return "Unclaimed";
+    case "ONHOLD":
+      return "On hold";
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  }
 }
 
 /** "Tag must read K7P": the code the owner wrote, in mono at a size that reads against the photo's tag. */
