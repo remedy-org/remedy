@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { AlertIcon, Button } from "@/components/ui";
+import { AlertIcon, ArrowLeftIcon, Button } from "@/components/ui";
 import styles from "./flow.module.css";
 import { rememberAspect } from "./ClaimPhotos";
 import { CodeTag } from "./CodeTag";
@@ -302,11 +302,25 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         <CameraTopBar
           back={
             <button type="button" onClick={onBack} className={CAMERA_BACK}>
-              <span aria-hidden="true">←</span> Back to your code
+              <ArrowLeftIcon className="shrink-0" /> Back to your code
             </button>
           }
         >
-          <span className="font-mono text-[oklch(0.96_0.006_85)]">{code}</span>
+          {/* The code and its time left, in one place: below 1024px this bar is where they're read. */}
+          <span className="text-[oklch(0.96_0.006_85)]">
+            <span className="sr-only">Code </span>
+            <span className="font-mono">{code}</span>
+            {!expired && (
+              <>
+                <span aria-hidden="true" className="text-[oklch(0.74_0.005_80)]">
+                  {" · "}
+                </span>
+                <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`} className={clsx(left < 10_000 && styles.urgent)}>
+                  <span className="font-mono">{mmss(left)}</span> left
+                </span>
+              </>
+            )}
+          </span>
         </CameraTopBar>
         {/* A camera that won't open gives up the 4:3 frame on a laptop: the message, not an empty black box. */}
         <div className={clsx("relative overflow-hidden max-sm:min-h-0 sm:w-full", failed && n === 0 && !expired ? "sm:min-h-56" : "sm:aspect-[4/3] sm:max-h-[55svh] [@media(max-height:600px)]:max-h-[40svh]")}>
@@ -320,9 +334,10 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             <Cutout>
               {/* The photo the shutter takes next, numbered as the slots below are; opposite it, the time left. */}
               {n < MAX_PHOTOS && <GlassChip className="absolute top-2 left-2">{n === 0 ? "Photo 1" : `Next: photo ${n + 1}`}</GlassChip>}
-              <GlassChip mono className={clsx("absolute top-2 right-2", left < 60_000 && "font-medium", left < 10_000 && styles.urgent)}>
+              {/* From 1024px the camera's bar steps aside: the time left is here, opposite the photo's number. */}
+              <GlassChip className={clsx("absolute top-2 right-2 max-lg:hidden", left < 60_000 && "font-medium", left < 10_000 && styles.urgent)}>
                 <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`}>
-                  {mmss(left)}
+                  <span className="font-mono">{mmss(left)}</span> left
                 </span>
               </GlassChip>
             </Cutout>
@@ -342,9 +357,9 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           )}
           {/* The time left stays in its corner while the camera won't open, as it does over the feed. */}
           {!live && !expired && (
-            <GlassChip mono className={clsx("absolute top-2 right-2 z-10", left < 60_000 && "font-medium")}>
+            <GlassChip className={clsx("absolute top-2 right-2 z-10 max-lg:hidden", left < 60_000 && "font-medium")}>
               <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`}>
-                {mmss(left)}
+                <span className="font-mono">{mmss(left)}</span> left
               </span>
             </GlassChip>
           )}
@@ -614,8 +629,8 @@ function FrameMessage({
             </Button>
           )}
           {onBack && (
-            // A phone has it in the camera's top bar already. A button, so it looks like one: the quiet kind.
-            <Button variant="secondary" onClick={onBack} className="max-sm:hidden">
+            // Below 1024px the camera's top bar has it already. A button, so it looks like one: the quiet kind.
+            <Button variant="secondary" onClick={onBack} className="max-lg:hidden">
               Back to your code
             </Button>
           )}

@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { Button, ClockIcon, NoBreakHyphens } from "@/components/ui";
+import { Button, NoBreakHyphens } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
 import { CodeTag } from "./CodeTag";
 import { STEP_GRID, StepTitle } from "./Exhibit";
@@ -40,14 +40,19 @@ const readTaken = (claimId: string) => {
   }
 };
 
-/** The countdown, in mono beside the title: bright under a minute, "Ended" at zero. */
+/** The countdown beside the title, said as words with the digits in mono ("9:57 left"): bright under a minute, "Ended" at zero. */
 export function TimerPill({ left, className }: { left: number; className?: string }) {
   const low = left > 0 && left < 60_000;
   return (
-    <span className={clsx("inline-flex shrink-0 items-center gap-1.5 font-mono text-ui", low ? "font-medium text-text" : "text-muted", className)}>
-      <ClockIcon size={14} />
+    <span className={clsx("inline-flex shrink-0 items-center whitespace-nowrap text-ui", low ? "font-medium text-text" : "text-muted", className)}>
       <span role="timer" aria-live="off" aria-label={left > 0 ? `${mmss(left)} left on the camera session` : "The camera session has ended"} className={clsx(left > 0 && left < 10_000 && styles.urgent)}>
-        {left > 0 ? mmss(left) : "Ended"}
+        {left > 0 ? (
+          <>
+            <span className="font-mono">{mmss(left)}</span> left
+          </>
+        ) : (
+          "Ended"
+        )}
       </span>
     </span>
   );
@@ -82,13 +87,15 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
     <>
       <section aria-labelledby="code-title" className={clsx(STEP_GRID, "lg:grid-rows-[auto_1fr] lg:gap-y-6 [@media(max-height:600px)]:gap-5")}>
         <div className="flex items-start justify-between gap-4 lg:col-start-2">
-          <StepTitle id="code-title">{ended ? "This code has expired" : "Write this code on a paper tag"}</StepTitle>
+          <StepTitle id="code-title">{ended ? "This code has expired" : "Write this code on any piece of paper"}</StepTitle>
           {!ended && <TimerPill left={left} className="mt-2" />}
         </div>
 
         {/* A dead code is struck through on a laptop and not shown on a phone: nobody should write it. */}
         <div className={clsx("lg:col-start-1 lg:row-span-2 lg:row-start-1", ended && "max-lg:hidden")}>
           <CodeTag code={code} written={written} expired={ended} foot={ended ? undefined : "Write it big, about 1\u00a0inch (3\u00a0cm), in marker."} />
+          {/* What happens at 0:00, said once, under the tag the timer is for. */}
+          {!ended && <p className="mt-3 text-ui text-muted">If time runs out, you&apos;ll get a new code.</p>}
         </div>
 
         <div className="flex flex-col gap-6 lg:col-start-2">

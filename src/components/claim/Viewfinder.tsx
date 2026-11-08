@@ -82,16 +82,21 @@ export function Dock({ left, middle, right, short, className }: { left?: ReactNo
 /**
  * Phones: the camera takes the whole screen, like a camera app, with its own bar on top (the way back, and this claim's
  * code) in place of the site's header, which FlowShell hides with its footer while [data-camera] is on screen. Then the
- * viewfinder, the instruction bar and the dock. From 640px it is a 4:3 card under the site's header.
+ * viewfinder, the instruction bar and the dock. From 640px it is a 4:3 card under the site's header, its bar on top
+ * until 1024px.
  */
 export const CAMERA_FRAME =
   "overflow-hidden bg-[oklch(0.12_0.004_75)] text-text max-sm:mx-[calc(var(--gutter)*-1)] max-sm:-mt-8 max-sm:grid max-sm:h-dvh max-sm:grid-rows-[auto_minmax(0,1fr)_auto_auto] max-sm:[@media(max-height:600px)]:-mt-4 sm:rounded-card sm:shadow-ring";
 export const CAMERA_VIEW = "relative overflow-hidden max-sm:min-h-0 sm:aspect-[4/3]";
 
-/** The camera's own top bar on a phone: back on the left, the claim's code on the right. Hidden from 640px. */
+/**
+ * The camera's own top bar: back on the left, the claim's code (and its time left) on the right. A phone's camera is the
+ * whole screen, so this is its only way back; from 640px it tops the camera card, and from 1024px the right column says
+ * it all, so it steps aside.
+ */
 export function CameraTopBar({ back, children }: { back: ReactNode; children?: ReactNode }) {
   return (
-    <div className="flex h-12 items-center justify-between gap-3 pr-4 pl-1 pt-[env(safe-area-inset-top)] text-ui text-[oklch(0.86_0.005_80)] sm:hidden">
+    <div className="flex h-12 items-center justify-between gap-3 pr-4 pl-1 pt-[env(safe-area-inset-top)] text-ui text-[oklch(0.86_0.005_80)] sm:border-b sm:border-[oklch(1_0_0/0.08)] sm:pt-0 lg:hidden">
       {back}
       {children}
     </div>
