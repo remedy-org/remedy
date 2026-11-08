@@ -48,7 +48,7 @@ export function Laptop({ screen, renderTilt }: { screen: ReactNode; renderTilt: 
               CM
             </span>
             <div className={styles.tag} style={{ left: "calc(50% + 34em)", top: "113em" }}>
-              CPSC 27-071
+              <span className="font-mono">CPSC 27-071</span>
               <hr />
               Kikea X-VESOLJE
               <br />

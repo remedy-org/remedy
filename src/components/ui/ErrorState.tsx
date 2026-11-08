@@ -26,9 +26,9 @@ export function ErrorState({ title, description, action, reference, variant = "b
         className,
       )}
     >
-      <span className={clsx("flex shrink-0 items-center gap-2 text-stop", variant === "inline" && "pt-0.5")}>
+      {/* The icon in the state's colour and the title say it: no "Error" eyebrow over them. */}
+      <span className={clsx("flex shrink-0 items-center text-stop", variant === "inline" && "pt-0.5")}>
         <AlertIcon />
-        {variant === "block" && <span className="micro">Error</span>}
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-body font-medium text-text">{title}</p>

@@ -169,18 +169,16 @@
   white-space: nowrap;
 }
 
-/* An evidence tag lying on the table, in perspective: the recall it belongs to. */
+/* An evidence tag lying on the table, in perspective: the recall it belongs to. Words in the sans, in sentence case;
+   only the CPSC number is mono. */
 .tag {
   position: absolute;
   padding: 1em 1.4em;
   border: 1px solid var(--line-2);
   border-radius: 0.4em;
   color: color-mix(in oklch, var(--text) 45%, transparent);
-  font-family: var(--font-mono);
   font-size: 1.15em;
   line-height: 1.5;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 

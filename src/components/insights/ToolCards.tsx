@@ -42,9 +42,9 @@ function Explain(p: AgAiToolDetailParams) {
             <span className="flex items-center gap-2 text-ui text-text">
               <span aria-hidden="true" className={clsx("size-1.5 rounded-full", OUTCOME_DOT[k.outcome] ?? "bg-faint")} />
               {k.label}
-              <span className={clsx("micro ml-auto", OUTCOME_TEXT[k.outcome] ?? "text-faint")}>{OUTCOME_WORD[k.outcome] ?? k.outcome}</span>
+              <span className={clsx("ml-auto text-micro font-medium", OUTCOME_TEXT[k.outcome] ?? "text-faint")}>{OUTCOME_WORD[k.outcome] ?? k.outcome}</span>
             </span>
-            {k.evidence && <q className="border-l border-line pl-3 font-mono text-micro text-muted before:content-none after:content-none">{k.evidence}</q>}
+            {k.evidence && <q className="border-l border-line pl-3 text-micro leading-[1.55] text-muted before:content-none after:content-none">{k.evidence}</q>}
           </li>
         ))}
       </ul>
@@ -81,7 +81,9 @@ function Note(p: AgAiToolDetailParams) {
   return (
     <div className="flex flex-col gap-3 py-1">
       <div className="rounded-control bg-paper p-3 text-ink shadow-[0_0_0_1px_var(--paper-line)]">
-        <p className="micro text-ink-muted">Draft review note · {data.claimId}</p>
+        <p className="text-micro text-ink-muted">
+          Draft review note · <span className="font-mono">{data.claimId}</span>
+        </p>
         <p className="mt-2 text-ui">{data.note}</p>
         <p className="mt-2 text-right font-mono text-micro text-ink-muted tabular-nums">{data.note.length} / 280</p>
       </div>

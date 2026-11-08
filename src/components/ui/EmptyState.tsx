@@ -8,7 +8,7 @@ export interface EmptyStateProps {
   description?: ReactNode;
   /** Usually one secondary Button. */
   action?: ReactNode;
-  /** Optional mono eyebrow, e.g. "Recall 27-071". */
+  /** Optional line above the title, in sentence case, e.g. "X-VESOLJE Nursing Pillows recall". */
   eyebrow?: ReactNode;
   className?: string;
 }
@@ -17,7 +17,7 @@ export interface EmptyStateProps {
 export function EmptyState({ title, description, action, eyebrow, className }: EmptyStateProps) {
   return (
     <div className={clsx("flex flex-col items-center gap-3 rounded-card border border-line px-6 py-12 text-center", className)}>
-      {eyebrow && <p className="micro text-faint">{eyebrow}</p>}
+      {eyebrow && <p className="text-ui text-faint">{eyebrow}</p>}
       <p className="text-body font-medium text-text">{title}</p>
       {description && <p className="max-w-read text-ui text-muted">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
