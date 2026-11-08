@@ -18,6 +18,8 @@ export type GridRow = ClaimRow & { group?: { key: string; label: string } };
  * every row's strip has the same length), and the live group totals (a store the group rows subscribe to). */
 export interface GridContext {
   stacked?: boolean;
+  /** The homepage's phone still: one tag photo per row, the code alone, a reason that wraps. */
+  compact?: boolean;
   /** Opens a claim a row's reason names ("Second claim from one PayPal account · RM-7306"). */
   open?: (id: string) => void;
   slots?: { pre: number; model: number };
@@ -69,9 +71,32 @@ export function Thumbs({ row, size = "md" }: { row: Pick<ClaimRow, "photos" | "p
   );
 }
 
-/** Thumbnails, the claim id (mono 14/500) and its code and filing time (mono 12, faint). */
-export function ClaimCell({ data }: Cell) {
+/** A phone's still: one 40px square of the claim's first photo (its tag), so every row's photo reads and lines up. */
+function TagThumb({ row }: { row: Pick<ClaimRow, "photos"> }) {
+  const first = row.photos[0];
+  if (!first) return <span aria-hidden="true" className="size-10 shrink-0 rounded-[6px] border border-dashed border-line-strong" />;
+  // A private, session-checked route: next/image's optimizer can't fetch it with the company's cookie.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={first.thumb} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" className="size-10 shrink-0 rounded-[6px] bg-surface-2 object-cover ring-1 ring-line" />;
+}
+
+/** Thumbnails, the claim id (mono 14/500) and its code and filing time (mono 12, faint). The homepage's still
+ * (context.stacked) sets the second line in the sans; a phone's (context.compact) shows one tag photo and the code alone. */
+export function ClaimCell({ data, context }: Cell) {
   if (!data) return null;
+  if (context?.stacked) {
+    return (
+      <span className="flex h-full items-center gap-3">
+        {context.compact ? <TagThumb row={data} /> : <Thumbs row={data} />}
+        <span className="flex min-w-0 flex-col leading-tight">
+          <span className="font-mono text-ui font-medium">{data.id}</span>
+          <span className="mt-1 truncate text-micro whitespace-nowrap text-muted" title={`Filed ${formatTime(data.createdAt)}`}>
+            {data.code ? `Code ${data.code}${context.compact ? "" : ` · ${formatClock(data.createdAt).slice(0, 5)}`}` : formatTime(data.createdAt)}
+          </span>
+        </span>
+      </span>
+    );
+  }
   return (
     <span className="flex h-full items-center gap-3">
       <Thumbs row={data} />
@@ -105,7 +130,8 @@ export function VerdictCell({ data, context }: Cell) {
       <span className="flex h-full min-w-0 flex-col items-start justify-center gap-1">
         <StatusPill status={data.decision} label={verdictLabel(data)} />
         {data.note && data.decision !== "paid" && (
-          <span className="w-full truncate text-micro leading-tight text-muted" title={data.note}>
+          // A phone has no hover to read a cut reason: it wraps to a second line there instead.
+          <span className={clsx("w-full text-micro leading-tight text-muted", context.compact ? "line-clamp-2 whitespace-normal" : "truncate")} title={data.note}>
             {data.note}
           </span>
         )}
@@ -136,6 +162,7 @@ const barWord = (b: Pick<CheckBar, "id" | "state">) =>
 function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
   return (
     <span
+      data-state={bar.state}
       className={clsx(
         "relative h-4 w-2 shrink-0 overflow-hidden rounded-[1.5px]",
         bar.state === "pass" && "bg-pay/70",
@@ -186,11 +213,13 @@ export function ChecksCell({ data, context }: Cell) {
 }
 
 /** How long the photo check took to answer ("11 s"), right-aligned mono. The hover card has every step to the payout. */
-export function TimeCell({ data }: Cell) {
+export function TimeCell({ data, context }: Cell) {
   if (!data) return null;
-  if (!data.timeline || data.modelSec === null) return <span className="font-mono text-ui text-faint">—</span>;
+  // The homepage's still sets its figures in the sans, as the page around it does.
+  const face = context?.stacked ? "" : "font-mono tabular-nums ";
+  if (!data.timeline || data.modelSec === null) return <span className={`${face}text-ui text-faint`}>—</span>;
   return (
-    <span className="font-mono text-ui text-text-2 tabular-nums">
+    <span className={`${face}text-ui text-text-2`}>
       <span className="sr-only">Photo check answered in </span>
       {duration(data.modelSec)}
     </span>
@@ -198,11 +227,11 @@ export function TimeCell({ data }: Cell) {
 }
 
 /** The payer's last four; "Unverified" in red, on its own line, only when it's true. */
-export function PayerCell({ data }: Cell) {
+export function PayerCell({ data, context }: Cell) {
   if (!data) return null;
   return (
     <span className="flex h-full flex-col justify-center leading-tight">
-      <span className="font-mono text-ui text-muted">{data.payer}</span>
+      <span className={clsx("text-ui text-muted", !context?.stacked && "font-mono")}>{data.payer}</span>
       {!data.verified && <span className="mt-0.5 text-micro text-stop">Unverified</span>}
     </span>
   );
@@ -252,12 +281,16 @@ export function PayoutCell({ data }: Cell) {
 }
 
 type AmountTone = "sent" | "approved" | "owed";
+const TONE_CLASS: Record<AmountTone, string> = { sent: "text-text", approved: "text-text-2", owed: "text-faint" };
 
 /** "$29.99" as a plain tabular figure, so a column of amounts lines up and copies as it reads. Its tone says where the
- * money is: sent through PayPal (full ink), approved (second tone), or only owed once a person approves (muted). */
-export function AmountText({ amount, tone }: { amount: string; tone: AmountTone }) {
+ * money is: sent through PayPal (full ink), approved (second tone), or only owed once a person approves (muted).
+ * `plain`: the homepage's still, as a finance console prints money: the sans, with proportional figures. */
+export function AmountText({ amount, tone, plain }: { amount: string; tone: AmountTone; plain?: boolean }) {
+  // Proportional figures, said outright: the grid's right-aligned cells set tabular ones, which space the stop like mono.
+  if (plain) return <span className={clsx("text-ui whitespace-nowrap [font-variant-numeric:normal]", TONE_CLASS[tone])}>{amount}</span>;
   return (
-    <span className={clsx("font-mono text-ui whitespace-nowrap tabular-nums", tone === "sent" ? "text-text" : tone === "approved" ? "text-text-2" : "text-faint")}>
+    <span className={clsx("font-mono text-ui whitespace-nowrap tabular-nums", TONE_CLASS[tone])}>
       {amount}
     </span>
   );
@@ -265,12 +298,12 @@ export function AmountText({ amount, tone }: { amount: string; tone: AmountTone 
 
 const toneOf = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">): AmountTone => (sent(r) ? "sent" : r.decision === "paid" ? "approved" : "owed");
 
-export function AmountCell({ data }: Cell) {
+export function AmountCell({ data, context }: Cell) {
   if (!data) return null;
   if (!data.amount) return <span className="text-faint" aria-label="No amount">—</span>;
   return (
     <span title={data.decision === "held" ? "Owed once a person approves it" : undefined}>
-      <AmountText amount={data.amount} tone={toneOf(data)} />
+      <AmountText amount={data.amount} tone={toneOf(data)} plain={context?.stacked} />
     </span>
   );
 }

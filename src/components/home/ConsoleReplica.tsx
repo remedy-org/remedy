@@ -17,7 +17,7 @@ import { Money, StatusPill, type Status } from "@/components/ui";
  */
 
 /** A check's outcome as one bar of the evidence barcode. */
-export type Bar = "pass" | "hold" | "reject" | "waiting";
+export type Bar = "pass" | "hold" | "reject" | "waiting" | "skipped";
 
 export interface PreviewRow {
   id: string;
@@ -78,22 +78,52 @@ const TABS: [string, number][] = [
   ["In progress", 2],
 ];
 
-function Barcode({ checks }: { checks: PreviewRow["checks"] }) {
-  const bar = (b: Bar, i: number) => (
+function BarMark({ b }: { b: Bar }) {
+  return (
     <span
-      key={i}
       className={clsx(
-        "relative h-4 w-2 overflow-hidden rounded-[1.5px]",
+        "relative h-4 w-2 shrink-0 overflow-hidden rounded-[1.5px]",
         b === "pass" && "bg-pay/70",
         b === "hold" && "border border-hold bg-[linear-gradient(var(--hold)_50%,transparent_50%)]",
         b === "reject" && "bg-stop after:absolute after:top-1/2 after:-left-1 after:h-px after:w-4 after:-rotate-60 after:bg-bg",
         b === "waiting" && "border border-line-strong",
+        b === "skipped" && "border border-dotted border-line-strong",
       )}
     />
   );
+}
+
+const BAR_WORD: Record<Bar, string> = { pass: "passed", hold: "unclear", reject: "failed", waiting: "not run", skipped: "not run" };
+
+/** The barcode in words, for screen readers: "8 checks: 7 passed, 1 failed". */
+export function barcodeWords([pre, model]: PreviewRow["checks"]) {
+  const all = [...pre, ...model];
+  const tally = new Map<string, number>();
+  for (const b of all) tally.set(BAR_WORD[b], (tally.get(BAR_WORD[b]) ?? 0) + 1);
+  return `${all.length} checks: ${[...tally].map(([word, n]) => `${n} ${word}`).join(", ")}`;
+}
+
+/** What the barcode's shapes mean, in one line under the claims (phones): shape carries it as well as colour. */
+export function BarcodeLegend({ className }: { className?: string }) {
+  return (
+    <p className={clsx("flex flex-wrap items-center gap-x-4 gap-y-1 text-micro text-muted", className)}>
+      {(["pass", "hold", "reject", "waiting"] as const).map((b) => (
+        <span key={b} className="inline-flex items-center gap-1.5">
+          <span aria-hidden="true" className="flex">
+            <BarMark b={b} />
+          </span>
+          {BAR_WORD[b]}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function Barcode({ checks }: { checks: PreviewRow["checks"] }) {
+  const bar = (b: Bar, i: number) => <BarMark key={i} b={b} />;
   const [preChecks, model] = checks;
   return (
-    <span className="flex items-center gap-1.5" aria-hidden="true">
+    <span className="flex items-center gap-1.5" role="img" aria-label={barcodeWords(checks)}>
       <span className="flex gap-0.5">{preChecks.map(bar)}</span>
       <span className="flex gap-0.5">{model.map(bar)}</span>
     </span>
@@ -182,6 +212,75 @@ function EvidencePanel({ row }: { row: PreviewRow }) {
   );
 }
 
+/** The queue as a table (laptops): claim, verdict, checks, payout and amount, the open claim's row tinted with its edge. */
+export function ReplicaTable({ rows, openId, className }: { rows: PreviewRow[]; openId?: string | null; className?: string }) {
+  return (
+    <div role="table" aria-label="Claims" className={className}>
+      <div role="row" className={clsx(COLS, "h-9 border-b border-line bg-surface px-5")}>
+        {["Claim", "Verdict", "Checks", "Payout", "Amount"].map((h, i) => (
+          <span role="columnheader" key={h} className={clsx("micro text-faint", i === 4 && "text-right")}>
+            {h}
+          </span>
+        ))}
+      </div>
+      {rows.map((r) => (
+        <div
+          role="row"
+          key={r.id}
+          className={clsx(COLS, "relative min-h-13 border-b border-line px-5 last:border-b-0", r.id === openId && "bg-accent-soft before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent")}
+        >
+          <span role="cell" className="flex items-center gap-3">
+            <Thumbs photos={r.photos} />
+            <span className="flex flex-col leading-tight">
+              <span className="font-mono text-ui font-medium">{r.id}</span>
+              <span className="font-mono text-micro text-faint">Code {r.code}</span>
+            </span>
+          </span>
+          <span role="cell" className="flex min-w-0 flex-col items-start gap-0.5">
+            <StatusPill status={r.status} />
+            {r.reason && <span className="line-clamp-2 w-full text-micro leading-snug text-muted">{r.reason}</span>}
+          </span>
+          <span role="cell">
+            <Barcode checks={r.checks} />
+          </span>
+          <span role="cell" className="text-ui">
+            <PayoutCell row={r} />
+          </span>
+          <span role="cell" className={clsx("text-right font-mono text-ui", r.status === "paid" ? "text-text" : "text-faint")}>
+            {r.status === "paid" ? <Money value={29.99} size="grid" /> : "—"}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The queue as card rows (phones): photo, id and pill, then the barcode and the amount. */
+export function ReplicaCards({ rows, className }: { rows: PreviewRow[]; className?: string }) {
+  return (
+    <ul className={className} aria-label="Claims">
+      {rows.map((r) => (
+        <li key={r.id} className="flex min-h-18 items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
+          {/* One width for one photo or two, so every id starts on the same line. */}
+          <span className="flex w-14 shrink-0">
+            <Thumbs photos={r.photos} size="sm" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span className="flex items-center justify-between gap-2">
+              <span className="font-mono text-ui font-medium whitespace-nowrap">{r.id}</span>
+              <StatusPill status={r.status} />
+            </span>
+            <span className="flex items-center gap-3 text-micro">
+              <Barcode checks={r.checks} />
+              <span className="ml-auto font-mono text-ui">{r.status === "paid" ? <Money value={29.99} size="grid" /> : <span className="text-faint">—</span>}</span>
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export interface ConsoleReplicaProps {
   rows?: PreviewRow[];
   /** The claim whose evidence panel is open (laptops only). */
@@ -267,65 +366,10 @@ export function ConsoleReplica({ rows = PREVIEW_ROWS, openId, phoneIds = ["RM-05
           </div>
 
           {/* The queue, laptops */}
-          <div role="table" aria-label="Claims" className="hidden lg:block">
-            <div role="row" className={clsx(COLS, "h-9 border-b border-line bg-surface px-5")}>
-              {["Claim", "Verdict", "Checks", "Payout", "Amount"].map((h, i) => (
-                <span role="columnheader" key={h} className={clsx("micro text-faint", i === 4 && "text-right")}>
-                  {h}
-                </span>
-              ))}
-            </div>
-            {rows.map((r) => (
-              <div
-                role="row"
-                key={r.id}
-                className={clsx(COLS, "relative min-h-13 border-b border-line px-5 last:border-b-0", r.id === openId && "bg-accent-soft before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent")}
-              >
-                <span role="cell" className="flex items-center gap-3">
-                  <Thumbs photos={r.photos} />
-                  <span className="flex flex-col leading-tight">
-                    <span className="font-mono text-ui font-medium">{r.id}</span>
-                    <span className="font-mono text-micro text-faint">Code {r.code}</span>
-                  </span>
-                </span>
-                <span role="cell" className="flex min-w-0 flex-col items-start gap-0.5">
-                  <StatusPill status={r.status} />
-                  {r.reason && <span className="line-clamp-2 w-full text-micro leading-snug text-muted">{r.reason}</span>}
-                </span>
-                <span role="cell">
-                  <Barcode checks={r.checks} />
-                </span>
-                <span role="cell" className="text-ui">
-                  <PayoutCell row={r} />
-                </span>
-                <span role="cell" className={clsx("text-right font-mono text-ui", r.status === "paid" ? "text-text" : "text-faint")}>
-                  {r.status === "paid" ? <Money value={29.99} size="grid" /> : "—"}
-                </span>
-              </div>
-            ))}
-          </div>
+          <ReplicaTable rows={rows} openId={openId} className="hidden lg:block" />
 
           {/* Card rows, phones and tablets */}
-          <ul className="lg:hidden" aria-label="Claims">
-            {phoneIds
-              .map((id) => rows.find((r) => r.id === id))
-              .filter((r) => r !== undefined)
-              .map((r) => (
-                <li key={r.id} className="flex min-h-18 items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
-                  <Thumbs photos={r.photos} size="sm" />
-                  <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-ui font-medium">{r.id}</span>
-                      <StatusPill status={r.status} />
-                    </span>
-                    <span className="flex items-center gap-3 text-micro">
-                      <Barcode checks={r.checks} />
-                      <span className="ml-auto font-mono text-ui">{r.status === "paid" ? <Money value={29.99} size="grid" /> : <span className="text-faint">—</span>}</span>
-                    </span>
-                  </span>
-                </li>
-              ))}
-          </ul>
+          <ReplicaCards rows={phoneIds.map((id) => rows.find((r) => r.id === id)).filter((r) => r !== undefined)} className="lg:hidden" />
         </div>
         {open && <div className="hidden w-[25rem] shrink-0 py-3 xl:block">{panelWrap(<EvidencePanel row={open} />)}</div>}
       </div>

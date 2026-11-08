@@ -7,6 +7,18 @@
   background-color: var(--surface-3);
 }
 
+/* The homepage's still (gridTheme.ts stillTheme): sentence case in the sans face. */
+.claims-grid[data-still] .ag-header-cell-text {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* The homepage's still draws its type as the page around it does (antialiased): AG Grid's subpixel cells would set the
+   same weights heavier than the plain-DOM still they take over from. */
+.claims-grid[data-still] .ag-cell {
+  -webkit-font-smoothing: antialiased;
+}
+
 /* The open claim, and the row the keyboard is on: one surface step up with a 2px ink edge on the left, like the edge of
    an evidence tag. Ink, not amber: amber is the view's one action. While a claim is open the edge is its row's alone,
    so two edges never point at two claims at once. */
@@ -136,4 +148,49 @@
 
 .verdict-track > :first-child {
   justify-self: start;
+}
+
+/* The homepage tour's arriving claim (components/console/preview.ts ARRIVE_ID): as its checks come back, the two
+   groups of its checks strip fill (the pre-checks, then the photo check's answers 160ms later), each bar over
+   --dur-ui, before its verdict turns. Every cell the arrival changes flashes the one neutral tint. Scoped to the
+   tour's still while the arrival plays (data-live), so /console keeps its near-zero motion. */
+[data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] .ag-cell {
+  --ag-value-change-value-highlight-background-color: color-mix(in oklch, var(--text) 8%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span > [data-state="pass"] {
+    transform-origin: bottom;
+    animation: bar-fill var(--dur-ui) var(--ease-snap) both;
+  }
+
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(2) > [data-state="pass"] {
+    animation-delay: 160ms;
+  }
+}
+
+/* The arriving row opens its own slot: it is uncovered top down exactly as fast as the rows below slide away (AG Grid's
+   400ms row animation), so there is never a blank row and it is never drawn over the row it displaces. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] {
+    animation: row-open 400ms ease both;
+  }
+}
+
+@keyframes row-open {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes bar-fill {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }

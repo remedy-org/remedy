@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterClaims, filterLabel, filterPicks, insightsLedger, panelName, refusalRows, timeField } from "./report";
+import { filterClaims, filterLabel, filterPicks, homeKpiCaptions, insightsLedger, panelName, refusalRows, refusedSplit, spokenTime, timeField } from "./report";
 
 type Row = Parameters<typeof insightsLedger>[0][number];
 const row = (over: Partial<Row> = {}): Row => ({ remedied: 0, refused: 0, amountPaid: 0, amountSent: 0, timeToSendSec: null, modelSec: 2, ...over });
@@ -73,5 +73,40 @@ describe("cross-filter", () => {
     expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("Furthest stage: Photos sent · Verdict: Held or Blocked");
     expect(filterLabel([{ field: "calendar::day", values: ["20261107", "20261104"] }])).toBe("Filed 7 Nov or 4 Nov");
     expect(filterLabel([{ field: "", values: [] }])).toBe("A pick on a chart");
+  });
+});
+
+describe("the homepage's tiles", () => {
+  type C = Parameters<typeof homeKpiCaptions>[0][number];
+  const claim = (over: Partial<C>): C => ({
+    decision: "Paid",
+    source: "Owner",
+    amountPaid: 29.99,
+    modelSec: 4,
+    paidOnReview: 0,
+    timeToSendSec: 12,
+    refused: 0,
+    refusalGate: null,
+    ...over,
+  });
+  const paid = claim({});
+  const photo = claim({ decision: "Rejected" as never, amountPaid: 0, timeToSendSec: null, refused: 1, refusalGate: "Photo check" as never });
+  const pre = claim({ decision: "Blocked" as never, amountPaid: 0, timeToSendSec: null, refused: 1, refusalGate: "Pre-check" as never });
+
+  it("says a time under a minute in seconds", () => {
+    expect(spokenTime(12)).toBe("12 sec");
+    expect(spokenTime(65)).not.toMatch(/sec/);
+  });
+
+  it("counts the captions over the claims a cross-filter leaves", () => {
+    const all = [paid, paid, photo, pre];
+    expect(homeKpiCaptions(all)).toEqual({ median: "across 2 payouts", refused: "1 rejected by the photo check, 1 blocked by pre-checks" });
+    expect(homeKpiCaptions(all, [paid])).toEqual({ median: "across 1 payout", refused: "None refused among these claims" });
+    expect(homeKpiCaptions(all, [photo])).toEqual({ median: "None paid among these claims", refused: "1 rejected by the photo check" });
+  });
+
+  it("names only the checks that refused", () => {
+    expect(refusedSplit(0, 3)).toBe("3 blocked by pre-checks");
+    expect(refusedSplit(0, 0)).toBe("None refused");
   });
 });

@@ -1,4 +1,5 @@
 import type { AgPageState, AgReportState, AgWidgetLayoutState } from "ag-studio";
+import { duration } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
 import { median } from "@/app/console/_lib/view";
 import { shownAs } from "./funnel";
@@ -182,3 +183,134 @@ export const insightsReport = (data: InsightsData, narrow = false): AgReportStat
     data: { collapsed: true },
   },
 });
+
+/** The homepage's median tile: the time it reports (timeField) and its title, in the ledger's words. */
+export function homeTime(claims: Pick<LedgerRow, "timeToSendSec">[]) {
+  const field = timeField(claims);
+  return { timeField: field, timeTitle: field === "timeToSendSec" ? "Median photo to PayPal" : "Median photo check" };
+}
+
+// The homepage's plain value tiles (Studio's own): the claims span a few days, so a day sparkline says little.
+const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }, caption: string) => ({
+  type: "value" as const,
+  dataMapping: { value: [value] },
+  format: {
+    title: { enabled: true, text },
+    caption: { enabled: true, text: caption },
+    style: {
+      verticalAlign: "top" as const,
+      textAlign: "left" as const,
+      textScaling: { enabled: false },
+    },
+  },
+});
+
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+/** The homepage's day chart's title, in Studio and in the still that stands in for it (InsightsStill.tsx). */
+export const PAID_BY_DAY = "Paid through PayPal, by day";
+
+/** The Refused tile's caption on the homepage: how the refusals split between the photo check and the pre-checks. */
+export const refusedSplit = (photo: number, pre: number) =>
+  [photo ? `${photo} rejected by the photo check` : "", pre ? `${pre} blocked by pre-checks` : ""].filter(Boolean).join(", ") || "None refused";
+
+/** The homepage's refusal reasons card, in 16px rows: its padding and title (76px with the gap around the card) and
+ * each reason with its bar (34px). */
+export const homeRefusalRows = (reasons: number) => Math.ceil((76 + reasons * 34) / 16);
+
+/** The homepage's dollars-by-day chart needs this many 16px rows to read (its card, title and columns). */
+export const HOME_DAY_ROWS = 10;
+
+/**
+ * The homepage's Insights, as Studio state (InsightsPreview.tsx): six widgets on one page. Units remedied and Refused
+ * are Studio's own value KPI tiles; the median is Remedy's tile (Studio's can only average); the funnel and the refusal
+ * reasons are the console's own widgets; the dollars paid by day are Studio's column chart. `rows` is the canvas height
+ * in 16px tracks, measured from the tour's fixed frame, so the page fills it with nothing cut off. On a short frame (a
+ * 1280x800 screen) the refusal reasons give their place to the chart: the funnel already names every reason and count.
+ */
+export function homeInsightsReport(data: InsightsData, rows = 40, labelColor?: string): AgReportState<InsightsRegistry> {
+  const say = homeTime(data.claims);
+  const widgets = overview(data, false).widgets!;
+  const kpiRows = 8;
+  // Studio's value tile can only average; the ledger's median comes from a widget of Remedy's own.
+  const median = { type: "median-time" as const, dataMapping: { per: [{ id: "claims.id" }], seconds: [{ id: `claims.${say.timeField}`, aggregation: "max" as const }] } };
+  const home = homeKpiCaptions(data.claims);
+  const reasons = new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size;
+  const body = Math.max(16, rows - kpiRows);
+  const refusalRows = body - homeRefusalRows(reasons) >= HOME_DAY_ROWS ? homeRefusalRows(reasons) : 0;
+  return {
+    selectedPageId: "overview",
+    pages: [
+      {
+        id: "overview",
+        widgets: {
+          "kpi-remedied": kpi("Units remedied", sum("claims.remedied"), `of ${data.recall.unitsSold.toLocaleString("en-US")} sold`),
+          "kpi-median": { ...median, format: { title: { enabled: true, text: say.timeTitle }, caption: { enabled: true, text: home.median } } },
+          "kpi-refused": kpi("Refused", sum("claims.refused"), home.refused),
+          funnel: { ...widgets.funnel, format: titled("Check funnel") },
+          ...(refusalRows ? { refusals: { ...widgets.refusals, format: titled("Why claims were refused") } } : {}),
+          // Each day's dollars printed on its column (in the page's background colour, which reads on the paid green in
+          // both themes), the day under it, no value axis: the still's reading, in Studio. Hovering a column gives the
+          // claims paid that day.
+          "paid-by-day": {
+            type: "column-chart-grouped",
+            dataMapping: { categoryKey: [{ id: "calendar::day" }], valueKey: [sum("claims.amountSent")], tooltipKey: [sum("claims.remedied")] },
+            format: {
+              ...titled(PAID_BY_DAY),
+              style: {
+                theme: {
+                  bar: {
+                    series: {
+                      // A day the cross-filter leaves out keeps its dimmed column and no "$0.00" over it.
+                      label: { enabled: true, fontSize: 12, ...(labelColor && { color: labelColor }), formatter: ({ value }: { value: number }) => (value ? usd.format(value) : "") },
+                    },
+                  },
+                },
+                custom: {
+                  valueAxis: { gridLine: { enabled: false }, line: { width: 0 }, tick: { enabled: false }, label: { fontSize: 1, color: "rgba(0, 0, 0, 0)" } },
+                  categoryAxis: { tick: { enabled: false }, label: { fontSize: 12 } },
+                },
+              },
+            },
+          },
+        } as AgPageState<InsightsRegistry>["widgets"],
+        widgetLayout: {
+          "kpi-remedied": at(0, 0, 8, kpiRows),
+          "kpi-median": at(8, 0, 8, kpiRows),
+          "kpi-refused": at(16, 0, 8, kpiRows),
+          funnel: at(0, kpiRows, 14, body),
+          ...(refusalRows ? { refusals: at(14, kpiRows, 10, refusalRows) } : {}),
+          "paid-by-day": at(14, kpiRows + refusalRows, 10, body - refusalRows),
+        },
+      },
+    ],
+    panels: { filters: { collapsed: true }, edit: { collapsed: true }, data: { collapsed: true }, ai: { collapsed: true } },
+  };
+}
+
+/** A time as the homepage says it: "12 sec" under a minute, else as the ledger prints it ("1:05", "1h 06m"). */
+export const spokenTime = (sec: number) => (sec < 60 ? `${sec} sec` : duration(sec));
+
+type CaptionClaim = Pick<Claim, "decision" | "source" | "amountPaid" | "modelSec" | "paidOnReview" | "timeToSendSec" | "refused" | "refusalGate">;
+
+/**
+ * The homepage's median and Refused tiles' captions, for the claims on the page: all of them, or those a cross-filter
+ * leaves (`shown`), so a caption never counts claims the tile above it no longer does. The median's field is always the
+ * whole recall's, as its tile's is.
+ */
+export function homeKpiCaptions(all: CaptionClaim[], shown: CaptionClaim[] = all) {
+  const field = timeField(all);
+  const n = shown.filter((c) => c[field] !== null).length;
+  const gate = (g: string) => shown.filter((c) => c.refused && c.refusalGate === g).length;
+  const [photo, pre] = [gate("Photo check"), gate("Pre-check")];
+  const filtered = shown !== all;
+  return {
+    median:
+      field === "timeToSendSec"
+        ? n || !filtered
+          ? `across ${n} ${n === 1 ? "payout" : "payouts"}`
+          : "None paid among these claims"
+        : `${n} ${n === 1 ? "claim" : "claims"} checked`,
+    refused: filtered && !photo && !pre ? "None refused among these claims" : refusedSplit(photo, pre),
+  };
+}

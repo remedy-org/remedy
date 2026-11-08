@@ -1,10 +1,10 @@
 import type { AgBaseWidgetDefinition, AgDefaultRegistry, AgFormatShapeParams, AgWidgetData, AgWidgetDataFormat, AgWidgetsConfig, AgWidgetFormParams } from "ag-studio";
-import { CheckFunnel } from "./CheckFunnel";
+import { CheckFunnel, HomeCheckFunnel } from "./CheckFunnel";
 import { DecisionMix } from "./DecisionMix";
 import type { CheckFunnelDef, DecisionMixDef, InsightsRegistry, MedianTimeDef, RecallProgressDef, RefusalReasonsDef } from "./defs";
-import { MedianTime } from "./MedianTime";
+import { HomeMedianTime, MedianTime } from "./MedianTime";
 import { RecallProgress } from "./RecallProgress";
-import { RefusalReasons } from "./RefusalReasons";
+import { HomeRefusalReasons, RefusalReasons } from "./RefusalReasons";
 import { pillClasses } from "@/components/ui/StatusPill";
 import type { Decision } from "@/lib/types";
 import { shownAs } from "../funnel";
@@ -41,8 +41,10 @@ const titles = <T extends AgWidgetData<unknown, AgWidgetDataFormat<unknown>>>(pa
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params.createDefaults({ dataMappingItems: items as any, supportsCrossHighlight: false });
 
+/** home: the homepage's Insights step: its funnel names every reason with its count (funnel.ts reasonList), and both
+ * lists sit on their panel's own edge. */
 export const insightsWidgets =
-  ({ createWidgets }: StudioLib) =>
+  ({ createWidgets }: StudioLib, { home = false }: { home?: boolean } = {}) =>
   (defaults: AgWidgetsConfig<AgDefaultRegistry>): AgWidgetsConfig<InsightsRegistry> => {
   const config = createWidgets<InsightsRegistry>({
     additionalTypes: [
@@ -91,7 +93,7 @@ export const insightsWidgets =
             { key: "decision", label: "Decision" },
             { key: "count", label: "Claims" },
           ]),
-        comp: reactComp(CheckFunnel),
+        comp: reactComp(home ? HomeCheckFunnel : CheckFunnel),
         defaultSize: { width: 560, height: 300 },
         minSize: { width: 420, height: 240 },
         featureConfig: { crossFilter: { supportsHighlight: true } },
@@ -118,7 +120,7 @@ export const insightsWidgets =
             { key: "gate", label: "Check kind" },
             { key: "count", label: "Claims" },
           ]),
-        comp: reactComp(RefusalReasons),
+        comp: reactComp(home ? HomeRefusalReasons : RefusalReasons),
         defaultSize: { width: 420, height: 300 },
         minSize: { width: 320, height: 200 },
         featureConfig: { crossFilter: { supportsHighlight: true } },
@@ -172,7 +174,7 @@ export const insightsWidgets =
             { key: "per", label: "Per" },
             { key: "seconds", label: "Seconds" },
           ]),
-        comp: reactComp(MedianTime),
+        comp: reactComp(home ? HomeMedianTime : MedianTime),
         defaultSize: { width: 280, height: 120 },
         minSize: { width: 200, height: 100 },
         ai: {
