@@ -46,7 +46,7 @@ describe("replayed photo check", () => {
   it("decides the demo samples as the eval did: genuine paid, wrong code rejected on the code", async () => {
     const genuine = await replayVision({ images: [photo("c02-1.jpg")], spec: DEMO_SPEC, code: "M4T" }, 0);
     expect(decide(genuine.verdict, { spec: DEMO_SPEC, code: "M4T", photos: 1 }).outcome).toBe("pass");
-    expect(genuine.model).toMatch(/recorded eval answer/);
+    expect(genuine.model).toMatch(/recorded answer/);
     const wrong = await replayVision({ images: [photo("c11-1.jpg")], spec: DEMO_SPEC, code: "K7P" }, 0);
     const { outcome, reasons } = decide(wrong.verdict, { spec: DEMO_SPEC, code: "K7P", photos: 1 });
     expect(outcome).toBe("reject");
@@ -60,7 +60,7 @@ describe("replayed photo check", () => {
       expect(reasons.some((r) => r.outcome === "reject")).toBe(false);
     }
     const live = await replayVision({ images: [Buffer.from("frame")], spec: DEMO_SPEC, code: "M4T" }, 0);
-    expect(live.model).toBe("review replay, no model call");
+    expect(live.model).toBe("no model call");
   });
 });
 

@@ -82,8 +82,8 @@ export async function replayVision(
   const hit = recordedAnswer(images, code);
   const seconds = (Date.now() - started) / 1000;
   return hit
-    ? { verdict: hit.verdict, seconds, model: `${hit.model}, recorded eval answer, review replay` }
-    : { verdict: unsureAnswer(spec, code, images.length), seconds, model: "review replay, no model call" };
+    ? { verdict: hit.verdict, seconds, model: `${hit.model}, recorded answer` }
+    : { verdict: unsureAnswer(spec, code, images.length), seconds, model: "no model call" };
 }
 
 // Made-up batch ids are PayPal's 13 characters: RPLY, the send time in base 36 (8 characters until 2059) and one random

@@ -103,7 +103,7 @@ export default function DevUiPage() {
           </Spec>
           <Spec name='size="grid"' detail="14px JetBrains Mono, tabular, right-aligned in tables.">
             <table className="w-full max-w-md text-ui">
-              <caption className="sr-only">Sample payouts</caption>
+              <caption className="sr-only">Payouts</caption>
               <thead>
                 <tr className="border-b border-line text-left">
                   <th scope="col" className="micro py-2 font-normal text-faint">Claim</th>
@@ -118,7 +118,7 @@ export default function DevUiPage() {
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-3 text-muted">26 paid sample claims</td>
+                  <td className="py-3 text-muted">26 paid claims</td>
                   <td className="py-3 text-right">
                     <Money value={779.74} size="grid" />
                   </td>
@@ -194,10 +194,10 @@ export default function DevUiPage() {
                   <div className="mt-8 flex items-end justify-between gap-4">
                     <Money value={29.99} size="amount" />
                     <Stamp tone="pay" className="mb-2">
-                      Paid · sandbox
+                      Paid
                     </Stamp>
                   </div>
-                  <p className="mt-3 text-body text-ink-muted">Refunded to your PayPal account through Remedy for Kikea Store, in PayPal sandbox money.</p>
+                  <p className="mt-3 text-body text-ink-muted">Refunded to your PayPal account through Remedy for Kikea Store.</p>
                   <p className="mt-6 inline-flex h-7 items-center rounded-control bg-paper-2 px-2.5 font-mono text-micro">Paid 15 s after your photo</p>
                   <dl className="mt-8 text-ui">
                     {[
@@ -245,9 +245,6 @@ export default function DevUiPage() {
             <div className="flex w-full flex-wrap items-center gap-x-10 gap-y-8 rounded-frame bg-paper px-8 py-10">
               <Stamp tone="pay" land>
                 Paid
-              </Stamp>
-              <Stamp tone="pay" land={80}>
-                Paid · sandbox
               </Stamp>
               <Stamp tone="hold" land={160}>
                 Held for review
@@ -300,7 +297,7 @@ export default function DevUiPage() {
               <div className="flex flex-wrap items-center gap-4" data-buttons={variant}>
                 <Button variant={variant} size="sm">Try a claim</Button>
                 <Button variant={variant} size="md">Log in with PayPal</Button>
-                <Button variant={variant} size="lg">Try a claim with sample photos</Button>
+                <Button variant={variant} size="lg">See a claim paid</Button>
                 <Button variant={variant} size="md" disabled>Disabled</Button>
                 <Button variant={variant} size="md" pending pendingLabel="Sending…">Send</Button>
               </div>

@@ -117,7 +117,7 @@ export const demoWrongCode = (() => {
   const { outcome, reasons } = decide(wrongCodeVerdict, { spec: recall.spec, code: "K7P", photos: 1 });
   const claim = base("K7P", { demo: true, photos: photosOf(["c11-1.jpg"]), verdict: wrongCodeVerdict, reasons, decision: outcome === "reject" ? "rejected" : "held" });
   claim.events.push(
-    { at: at(0), type: "photos_received", detail: "1 sample photo (demo mode)" },
+    { at: at(0), type: "photos_received", detail: "1 photo from the demo" },
     { at: at(0.3), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
     { at: at(10.3), type: "checked", detail: "Photo check answered in 10.3 s (gpt-6.1-sol)" },
     { at: at(10.4), type: "decided", detail: "Rejected by the rule" },
