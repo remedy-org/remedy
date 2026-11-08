@@ -16,9 +16,12 @@ function Item({ value, label, title, className, children }: { value: ReactNode; 
 /**
  * The 48px ledger strip over the grid: units remedied of units sold with a 64x4 meter, money sent through PayPal, the
  * median time from photos to PayPal, held and refused. Sample claims' money is shown apart: it was never sent.
+ * `samples`: every claim shown is a sample (the homepage's tour, whose frame wears the SAMPLE DATA badge and says "no
+ * money moved" in its foot): the money the rule approved leads, said once as never sent, instead of a $0.00 headline.
  */
-export function Ledger({ ledger, className, sandbox = false }: { ledger: LedgerData; className?: string; sandbox?: boolean }) {
+export function Ledger({ ledger, className, sandbox = false, samples = false }: { ledger: LedgerData; className?: string; sandbox?: boolean; samples?: boolean }) {
   const known = ledger.unitsSold > 0;
+  const sampleOnly = samples && ledger.paidCents === 0 && ledger.sampleCents > 0;
   const share = known ? ledger.remedied / ledger.unitsSold : 0;
   return (
     <dl className={clsx("grid min-h-12 grid-cols-2 items-center gap-x-6 gap-y-2 border-y border-line py-2.5 sm:flex sm:flex-wrap sm:gap-x-7", className)}>
@@ -29,7 +32,7 @@ export function Ledger({ ledger, className, sandbox = false }: { ledger: LedgerD
             <span className="text-ui font-normal text-muted"> of {known ? formatCount(ledger.unitsSold) : "unknown"}</span>
           </>
         }
-        label={ledger.sampleRemedied ? `remedied · ${formatCount(ledger.sampleRemedied)} sample` : "remedied"}
+        label={ledger.sampleRemedied && !sampleOnly ? `remedied · ${formatCount(ledger.sampleRemedied)} sample` : "remedied"}
         title={ledger.sampleRemedied ? `${ledger.sampleRemedied} of these are sample claims the rule decided to pay; none was paid.` : undefined}
         className="col-span-2"
       >
@@ -44,17 +47,23 @@ export function Ledger({ ledger, className, sandbox = false }: { ledger: LedgerD
       </Item>
       <Item
         className="col-span-2"
-        value={<AmountValue cents={ledger.paidCents} />}
+        value={<AmountValue cents={sampleOnly ? ledger.sampleCents : ledger.paidCents} />}
         label={
-          <>
-            {sandbox ? "paid in PayPal sandbox" : "paid through PayPal"}
-            {ledger.sampleCents > 0 && (
-              <span className="text-faint">
-                {" "}
-                · {formatCents(ledger.sampleCents)} sample, never sent
-              </span>
-            )}
-          </>
+          sampleOnly ? (
+            <>
+              approved for PayPal <span className="text-faint">· sample, never sent</span>
+            </>
+          ) : (
+            <>
+              {sandbox ? "paid in PayPal sandbox" : "paid through PayPal"}
+              {ledger.sampleCents > 0 && (
+                <span className="text-faint">
+                  {" "}
+                  · {formatCents(ledger.sampleCents)} sample, never sent
+                </span>
+              )}
+            </>
+          )
         }
       />
       {ledger.medianToPay !== null && (

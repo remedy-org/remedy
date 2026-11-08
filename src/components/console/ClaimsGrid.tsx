@@ -261,6 +261,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         tooltipComponent: TimelineTooltip,
         sortable: true,
         valueGetter: (p) => p.data?.toPay ?? null,
+        // A sample claim never times a payout (toPay stays null), so its value never changes: the still redraws the
+        // track whenever its row does (the homepage's arrival, whose track appears as its checks come back).
+        equals: still ? () => false : undefined,
         // Unpaid claims last, whichever way.
         comparator: (a: number | null, b: number | null, _na, _nb, desc) =>
           a === null ? (b === null ? 0 : desc ? -1 : 1) : b === null ? (desc ? 1 : -1) : a - b,

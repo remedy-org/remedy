@@ -7,14 +7,15 @@ import type { InsightsData } from "@/app/console/insights/facts";
 import type { PreviewRow } from "@/components/console/ClaimsGridPreview";
 import { ClaimsGridPreviewLazy } from "@/components/console/ClaimsGridPreviewLazy";
 import { EvidenceStill } from "@/components/console/EvidenceStill";
+import { GridStill } from "@/components/console/GridStill";
 import { Ledger } from "@/components/console/Ledger";
 import { TABS, type Tab } from "@/components/console/StatusTabs";
 import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME } from "@/components/insights/InsightsPreviewLazy";
 import { ConsoleFrame, useSlider } from "./ConsoleFrame";
-import { ReplicaTable, type PreviewRow as ReplicaRow } from "./ConsoleReplica";
 import { CREDIT } from "./credits";
 import styles from "./home.module.css";
-import { payoutsLine, TOUR } from "./tour-copy";
+import { PayoutsNote } from "./PayoutsNote";
+import { TOUR } from "./tour-copy";
 import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
 
 /*
@@ -43,8 +44,8 @@ const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefe
 export interface ConsoleTourProps {
   /** The grid's rows (the open claim's carries its evidence), memo-stable: the grid is driven through its API. */
   rows: PreviewRow[];
-  /** The same rows in the static replica's form, for the still before the grid loads. */
-  replica: ReplicaRow[];
+  /** Each step's sentence under its name (tour-copy.ts stepSentences()). */
+  sentences: string[];
   ledger: LedgerData;
   counts: Record<Tab, number>;
   openId: string;
@@ -82,7 +83,7 @@ function TabsEcho({ value, counts }: { value: Tab; counts: Record<Tab, number> }
   );
 }
 
-export function ConsoleTour({ rows, replica, ledger, counts, openId, arriveId, descriptions, insights, report, studio }: ConsoleTourProps) {
+export function ConsoleTour({ rows, sentences, ledger, counts, openId, arriveId, descriptions, insights, report, studio }: ConsoleTourProps) {
   const [step, setStep] = useState<Step>(0);
   const [filter, setFilter] = useState<"held" | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -93,6 +94,9 @@ export function ConsoleTour({ rows, replica, ledger, counts, openId, arriveId, d
   const [swapped, setSwapped] = useState(false);
   const [studioState, setStudioState] = useState<"off" | "mounted" | "shown" | "failed">("off");
   const [studioAtPick, setStudioAtPick] = useState(false);
+  // The visitor has picked a step: from then on the real grid may take the still's place in view (a 160ms fade
+  // riding on the change they asked for), so a visitor who landed on the section still gets the live grid.
+  const [picked, setPicked] = useState(false);
 
   const frame = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -167,6 +171,7 @@ export function ConsoleTour({ rows, replica, ledger, counts, openId, arriveId, d
     clear(timers.current);
     const still = reduced();
     setStep(next);
+    setPicked(true);
     if (prev === 1) {
       setFilter(null);
       setOpen(null);
@@ -202,7 +207,7 @@ export function ConsoleTour({ rows, replica, ledger, counts, openId, arriveId, d
 
   const state = stateAt(step, "final", { openId, studio: studioState === "shown" });
   const evidence = useMemo(() => rows.find((r) => r.id === openId)?.evidence ?? null, [rows, openId]);
-  const stillRows = useMemo(() => (filter === "held" ? replica.filter((r) => r.status === "held") : replica), [filter, replica]);
+  const stillRows = useMemo(() => (filter === "held" ? rows.filter((r) => r.decision === "held") : rows), [filter, rows]);
   const arrivalProp = useMemo(() => ({ id: arriveId, phase: arrival }), [arriveId, arrival]);
   const credit = state.credit && CREDIT ? CREDIT[state.credit] : null;
   const dock = open !== null || dockOut;
@@ -223,16 +228,22 @@ export function ConsoleTour({ rows, replica, ledger, counts, openId, arriveId, d
               role="tab"
               aria-selected={active}
               aria-controls="tour-panel"
+              aria-labelledby={`tour-tab-${i}-name`}
+              aria-describedby={`tour-tab-${i}-sentence`}
               tabIndex={active ? 0 : -1}
               onClick={() => go(STEPS[i])}
               onKeyDown={onKey}
               onPointerEnter={i === 2 ? studioIntent : undefined}
               onFocus={i === 2 ? studioIntent : undefined}
-              className="group flex flex-col items-start gap-1 rounded-control pb-4 text-left"
+              className={clsx(styles.tab, "group relative flex cursor-pointer flex-col items-start gap-1 rounded-control pb-4 text-left")}
             >
-              <span className="font-mono text-micro text-faint">{s.n}</span>
-              <span className={clsx("text-ui font-medium transition-colors", active ? "text-text" : "text-muted group-hover:text-text")}>{s.name}</span>
-              <span className="min-h-[4.35em] text-ui text-pretty text-muted">{s.sentence}</span>
+              <span className={clsx("font-mono text-micro transition-colors", active ? "text-muted" : "text-faint group-hover:text-muted")}>{s.n}</span>
+              <span id={`tour-tab-${i}-name`} className={clsx("text-ui font-medium transition-colors", active ? "text-text" : "text-muted group-hover:text-text")}>
+                {s.name}
+              </span>
+              <span id={`tour-tab-${i}-sentence`} className={clsx("min-h-[4.35em] text-ui text-pretty transition-colors", active ? "text-text-2" : "text-faint group-hover:text-muted")}>
+                {sentences[i]}
+              </span>
             </button>
           );
         })}
@@ -243,7 +254,7 @@ export function ConsoleTour({ rows, replica, ledger, counts, openId, arriveId, d
         ref={frame}
         id="tour-panel"
         role="tabpanel"
-        aria-labelledby={`tour-tab-${step}`}
+        aria-labelledby={`tour-tab-${step}-name`}
         tabIndex={0}
         page={PAGE[state.page]}
         description={descriptions[step]}
@@ -254,29 +265,38 @@ export function ConsoleTour({ rows, replica, ledger, counts, openId, arriveId, d
       >
         {/* 01 and 02: one grid, never re-mounted; the steps change it through its API. */}
         <div data-on={state.body === "claims" || undefined} className={clsx(styles.body, "flex flex-col px-5 pb-3")}>
-          <Ledger ledger={ledger} className="mt-2" />
-          <div className="mt-1 border-b border-line">
-            <TabsEcho value={filter === "held" ? "held" : "all"} counts={counts} />
-          </div>
-          {/* The evidence docks beside the grid from 1280px and lies over it as a sheet below, as in the console, so the
-              grid keeps its columns at 1024. */}
-          <div className="relative flex min-h-0 flex-1 gap-3 pt-3">
-            <ClaimsGridPreviewLazy
-              bare
-              from={1024}
-              rows={rows}
-              height={560}
-              filter={filter}
-              openId={open}
-              arrival={arrivalProp}
-              live={live}
-              onSwap={() => setSwapped(true)}
-              className="h-full min-w-0 flex-1"
-              fallback={<ReplicaTable rows={stillRows} openId={open} className="h-full overflow-hidden rounded-card bg-surface" />}
-            />
+          <Ledger ledger={ledger} samples className="mt-2" />
+          {/* The evidence docks from under the ledger to the frame's foot, beside the status tabs and the grid, from
+              1280px (as in the console), and lies over the grid as a sheet below, so the grid keeps its columns at 1024. */}
+          <div className="relative flex min-h-0 flex-1 gap-3">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div className="mt-1 border-b border-line">
+                <TabsEcho value={filter === "held" ? "held" : "all"} counts={counts} />
+              </div>
+              <div className="min-h-0 flex-1 pt-3">
+                <ClaimsGridPreviewLazy
+                  bare
+                  from={1024}
+                  rows={rows}
+                  height={560}
+                  filter={filter}
+                  openId={open}
+                  arrival={arrivalProp}
+                  live={live}
+                  onSwap={() => setSwapped(true)}
+                  swapOnPick={picked}
+                  // Isolated: nothing inside AG Grid (its pinned columns, header layers) can paint over the evidence sheet.
+                  className="isolate h-full min-w-0"
+                  fallback={<GridStill rows={stillRows} openId={open} />}
+                />
+              </div>
+            </div>
             {dock && evidence && (
-              <div data-out={dockOut || undefined} className={clsx(styles.dock, "h-full shrink-0 max-xl:absolute max-xl:top-3 max-xl:h-auto max-xl:right-0 max-xl:bottom-0 max-xl:z-10")}>
-                <EvidenceStill claim={evidence} note={payoutsLine(evidence.amount, evidence.id)} quoteClassName={styles.inkUnder} />
+              <div
+                data-out={dockOut || undefined}
+                className={clsx(styles.dock, "w-[380px] shrink-0 pt-3 max-xl:absolute max-xl:top-[49px] max-xl:right-0 max-xl:bottom-0 max-xl:z-10 xl:pt-1")}
+              >
+                <EvidenceStill claim={evidence} note={<PayoutsNote amount={evidence.amount} id={evidence.id} />} quoteClassName={styles.inkUnder} />
               </div>
             )}
           </div>
@@ -285,7 +305,7 @@ export function ConsoleTour({ rows, replica, ledger, counts, openId, arriveId, d
         <div data-on={state.body === "insights" || undefined} className={styles.body}>
           {insights}
           {studio && (studioState === "mounted" || studioState === "shown") && (
-            <div data-studio data-on={studioState === "shown" || undefined} className={clsx(styles.studio, "absolute inset-0 bg-bg p-2")}>
+            <div data-studio data-on={studioState === "shown" || undefined} className={clsx(styles.studio, "absolute inset-0 overflow-hidden bg-bg p-2")}>
               <InsightsPreviewLazy data={studio.data} rows={studio.rows} onDisplayed={() => setStudioState((s) => (s === "mounted" ? "shown" : s))} />
             </div>
           )}

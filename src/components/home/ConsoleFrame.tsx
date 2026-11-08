@@ -47,14 +47,14 @@ export interface ConsoleFrameProps extends HTMLAttributes<HTMLDivElement> {
 
 /**
  * The homepage tour's one console window (ConsoleTour.tsx): chrome, the recall's title row, a body slot of fixed height
- * and a one-line mono foot. It never re-mounts and never changes height: only the body inside it changes. The chrome is
+ * (809px, or less on a short laptop screen: --frame-h, home.module.css .stage) and a one-line mono foot. It never re-mounts and never changes height: only the body inside it changes. The chrome is
  * an echo inside the inert picture: the tour's own tabs above the frame are the controls.
  */
 export const ConsoleFrame = forwardRef<HTMLDivElement, ConsoleFrameProps>(function ConsoleFrame({ page, foot, description, children, className, ...panel }, ref) {
   const pages = TOUR.chrome.pages;
   const { row, bar } = useSlider<HTMLSpanElement>(pages.indexOf(page));
   return (
-    <div ref={ref} {...panel} className={clsx("flex h-[809px] flex-col overflow-hidden rounded-frame bg-bg text-text shadow-float", className)}>
+    <div ref={ref} {...panel} className={clsx("flex h-[var(--frame-h,809px)] flex-col overflow-hidden rounded-frame bg-bg text-text shadow-float", className)}>
       <p className="sr-only" aria-live="polite">
         {description}
       </p>

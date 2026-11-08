@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { barcodeWords } from "./ConsoleReplica";
+import { stepSentences, TOUR } from "./tour-copy";
 import { nextTab, stateAt, STEPS } from "./tour-state";
 
 const openId = "RM-9629";
@@ -45,5 +47,22 @@ describe("tablist keys", () => {
     expect(nextTab("End", 1)).toBe(3);
     expect(nextTab("Enter", 1)).toBeNull();
     expect(nextTab("Tab", 1)).toBeNull();
+  });
+});
+
+describe("tour copy", () => {
+  it("names the recall analyst on 03 only when a recorded answer is on screen", () => {
+    expect(stepSentences(false)[2]).not.toMatch(/analyst/);
+    expect(stepSentences(true)[2]).toMatch(/recall analyst/);
+    expect(stepSentences(true).filter((s, i) => s !== TOUR.steps[i].sentence)).toHaveLength(1);
+  });
+
+  it("says the test-money fact without pointing at a claim outside the frame", () => {
+    expect(TOUR.money).toMatch(/no money moved/);
+    expect(TOUR.money).not.toMatch(/RM-\d|above|sandbox/);
+  });
+
+  it("names a barcode in words, never by colour alone", () => {
+    expect(barcodeWords([["pass", "pass", "pass"], ["pass", "reject", "waiting"]])).toBe("6 checks: 4 passed, 1 failed, 1 not run");
   });
 });

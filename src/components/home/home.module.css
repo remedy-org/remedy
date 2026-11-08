@@ -185,6 +185,37 @@
  * homepage move. Each runs only when motion is allowed, and the resting state is always the final one.
  */
 
+/* The rail: four tabs that look pressable (a pointer, a --surface wash on hover reaching 12px past the text, the
+   inactive ones quieter until hovered). Docked under the 64px nav when a tab or the panel takes focus. */
+.rail {
+  isolation: isolate;
+  scroll-margin-top: 80px;
+}
+
+.tab::before {
+  content: "";
+  position: absolute;
+  inset: -12px -12px 0;
+  z-index: -1;
+  border-radius: 10px;
+  background: var(--surface);
+  opacity: 0;
+}
+
+.tab[aria-selected="false"]:hover::before {
+  opacity: 1;
+}
+
+/*
+ * The frame fits a laptop screen with its tabs: at most 809px, and never taller than the viewport less the nav (64),
+ * the rail (about 123), the 32px between them and 12px of air, so a visitor sees the tab they picked and the whole
+ * step at 1440x900. Never below 600px, where a step stops reading. The same height on every step.
+ */
+.stage {
+  --frame-h: min(809px, max(600px, calc(100svh - 232px)));
+  scroll-margin-top: 80px;
+}
+
 /* The rail's 2px bar under the active tab (never amber): four equal tabs on the 12-column grid's gap. */
 .railBar {
   position: absolute;
@@ -245,6 +276,35 @@
   mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
 }
 
+/* The phone story's report: its head, fading out, until "Read the whole draft" opens it in place. */
+.peekClip {
+  height: 360px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent);
+}
+
+.peek:has(details[open]) .peekClip {
+  height: auto;
+  mask-image: none;
+}
+
+.peek summary {
+  list-style: none;
+}
+
+.peek summary::-webkit-details-marker {
+  display: none;
+}
+
+.peekLess,
+.peek:has(details[open]) .peekMore {
+  display: none;
+}
+
+.peek:has(details[open]) .peekLess {
+  display: inline;
+}
+
 /* Step 02's quote: a 1px neutral ink line under the unclear answer (never the amber highlighter). */
 .inkUnder {
   background-image: linear-gradient(var(--text-2), var(--text-2));
@@ -256,11 +316,54 @@
   padding-bottom: 1px;
 }
 
+/* Step 02's evidence dock: sized, so a short frame (a 900px laptop screen) can trade the photos' captions and some of
+   their height for the model's quoted answer, which the step promises. */
+.dock {
+  container-type: size;
+}
+
+@container (max-height: 540px) {
+  .dock figcaption,
+  .dock :global(.evidence-photos-label) {
+    display: none;
+  }
+
+  .dock figure > a {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+/* Step 02's payout path: Approve, a drawn line, PayPal Payouts, a line, the amount. */
+.flowLine {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 16px;
+  height: 1px;
+  background: var(--faint);
+  transform-origin: left;
+}
+
+.flowLine::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: -3px;
+  width: 7px;
+  height: 7px;
+  border-top: 1px solid var(--faint);
+  border-right: 1px solid var(--faint);
+  rotate: 45deg;
+}
+
 .stage {
   --drop: linear(0, 0.058, 0.185, 0.342, 0.5, 0.643, 0.763, 0.858, 0.928, 0.977, 1.008, 1.026, 1.034, 1.035, 1.032, 1.028, 1.022, 1.016, 1.012, 1.008, 1.004, 1.002, 1.001, 1);
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .tab::before {
+    transition: opacity var(--dur-ui) var(--ease-snap);
+  }
+
   /* E1, E3: the rail bar and the measured underlines glide, 160ms. */
   .railBar,
   .slider {
@@ -300,6 +403,16 @@
 
   .dock .inkUnder {
     animation: ink-under 700ms var(--ease-out-quart) 700ms both;
+  }
+
+  /* Then the payout path draws in, part by part, once the underline is done: the way the money would go. */
+  .dock .flow [data-flow] {
+    animation: flow-in 240ms var(--ease-out-quart) calc(1400ms + var(--at, 0) * 180ms) both;
+  }
+
+  .dock .flow [data-flow="line"] {
+    animation-name: line-draw;
+    animation-duration: 360ms;
   }
 
   /* E6: where claims stop. The funnel's bars grow (Paid last), then the refusal bars; the analyst's answer focuses in. */
@@ -348,6 +461,18 @@
 @keyframes ink-under {
   from {
     background-size: 0% 1px;
+  }
+}
+
+@keyframes flow-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes line-draw {
+  from {
+    transform: scaleX(0);
   }
 }
 

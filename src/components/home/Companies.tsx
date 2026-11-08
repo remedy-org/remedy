@@ -11,7 +11,7 @@ import { ConsoleStory } from "./ConsoleStory";
 import { ConsoleTour } from "./ConsoleTour";
 import styles from "./home.module.css";
 import { Section } from "./Section";
-import { describe, TOUR } from "./tour-copy";
+import { describe, stepSentences, TOUR } from "./tour-copy";
 
 // The Insights canvas in Studio's 16px rows: the frame's body (809px less chrome, title row and foot) less its padding.
 const STUDIO_ROWS = 40;
@@ -31,6 +31,8 @@ export function Companies() {
   const still = insightsStill(insightsPreview());
   const { recall, report, sandbox, generated } = reportPreview();
   const evidence = grid.rows.find((r) => r.id === PREVIEW_OPEN_ID)?.evidence ?? null;
+  // Step 03 names the recall analyst only when its recorded answer is there to show.
+  const sentences = stepSentences(Boolean(RECORDING));
   const descriptions = describe(still.totals, { id: PREVIEW_OPEN_ID, amount: evidence?.amount ?? "" }, RECORDING);
   const sheet = (stamp: boolean) => (
     <ProgressReport recall={recall} report={report} sandbox={sandbox} generated={generated} stamp={stamp ? <Stamp className={styles.draftStamp}>Draft</Stamp> : undefined} />
@@ -42,7 +44,7 @@ export function Companies() {
       <div data-tour className="hidden lg:block">
         <ConsoleTour
           rows={grid.rows}
-          replica={replica}
+          sentences={sentences}
           ledger={grid.ledger!}
           counts={grid.counts!}
           openId={PREVIEW_OPEN_ID}
@@ -54,7 +56,7 @@ export function Companies() {
         />
       </div>
       <div data-story className="max-w-[720px] lg:hidden">
-        <ConsoleStory replica={replica} evidence={evidence} insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" />} report={sheet(false)} />
+        <ConsoleStory replica={replica} sentences={sentences} evidence={evidence} insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" />} report={sheet(false)} />
         <p className="mt-10 font-mono text-micro text-muted">{TOUR.money}</p>
       </div>
 

@@ -6,7 +6,7 @@ import { EvidencePhoto } from "./EvidencePhoto";
 
 export interface EvidenceStillProps {
   claim: DrawerClaim;
-  /** The line under the rule's sentence on a held claim; by default, what a person does here. */
+  /** What goes under the rule's sentence on a held claim; by default, a line saying what a person does here. */
   note?: ReactNode;
   /** A class for the first (the unclear) answer's quote, so a page can draw under it. */
   quoteClassName?: string;
@@ -38,7 +38,7 @@ export function EvidenceStill({ claim, note, quoteClassName, fluid, className }:
       </div>
       <div className={clsx("relative min-h-0 flex-1", !fluid && "overflow-hidden")}>
         <div className="flex flex-col gap-4 px-4 py-3">
-          <ExhibitLabel leader="right" leaderLength={20}>
+          <ExhibitLabel leader="right" leaderLength={20} className="evidence-photos-label">
             {claim.photos.length === 1 ? "Photo 1" : `Photos 1 to ${claim.photos.length}`} · sample
           </ExhibitLabel>
           <div className="grid grid-cols-2 gap-2">
@@ -66,7 +66,12 @@ export function EvidenceStill({ claim, note, quoteClassName, fluid, className }:
       </div>
       <div className="border-t border-line px-4 py-3">
         <p className="text-ui">{claim.sentence}</p>
-        {claim.review && <p className="mt-2 text-ui text-muted">{note ?? <>A person approves or rejects it here. Approving sends {claim.amount} through PayPal.</>}</p>}
+        {claim.review &&
+          (note ? (
+            <div className="mt-3">{note}</div>
+          ) : (
+            <p className="mt-2 text-ui text-muted">A person approves or rejects it here. Approving sends {claim.amount} through PayPal.</p>
+          ))}
       </div>
     </aside>
   );

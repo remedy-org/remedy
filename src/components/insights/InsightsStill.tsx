@@ -65,7 +65,7 @@ export function InsightsStill({
         <Kpis data={data} className="grid h-24 shrink-0 grid-cols-3 gap-3" />
         <div className="grid min-h-0 flex-1 grid-cols-[55fr_45fr] gap-3 xl:grid-cols-[14fr_10fr]">
           <Card title="Check funnel">
-            <CheckFunnelView steps={data.steps} />
+            <CheckFunnelView steps={data.steps} spread={false} />
           </Card>
           <Card title="Why claims were refused" foot={refusalNote}>
             <RefusalReasonsView items={data.refusals} />

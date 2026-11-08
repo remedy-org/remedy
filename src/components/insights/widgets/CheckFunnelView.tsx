@@ -19,9 +19,11 @@ export interface CheckFunnelViewProps {
   onKeyDown?: (e: KeyboardEvent<HTMLElement>) => void;
   /** Phones: each stage's name and count over its bar, the drops under it (as the console's MobileSummary). */
   compact?: boolean;
+  /** Spread the stages over the card's height (the console's canvas); off, they sit 16px apart from the top. */
+  spread?: boolean;
 }
 
-export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset, onKeyDown, compact }: CheckFunnelViewProps) {
+export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset, onKeyDown, compact, spread = true }: CheckFunnelViewProps) {
   const filed = steps[0]?.reached || 1;
   if (compact) {
     return (
@@ -51,7 +53,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
   }
   const Drop = onToggle ? "button" : "div";
   return (
-    <ol className="flex h-full min-h-0 flex-col justify-between gap-0.5 px-1.5 pb-1" onClick={onReset} onKeyDown={onKeyDown}>
+    <ol className={clsx("flex h-full min-h-0 flex-col px-1.5 pb-1", spread ? "justify-between gap-0.5" : "gap-4")} onClick={onReset} onKeyDown={onKeyDown}>
       {steps.map((s, i) => {
         const last = i === steps.length - 1;
         return (

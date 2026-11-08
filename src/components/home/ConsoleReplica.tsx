@@ -78,12 +78,11 @@ const TABS: [string, number][] = [
   ["In progress", 2],
 ];
 
-function Barcode({ checks }: { checks: PreviewRow["checks"] }) {
-  const bar = (b: Bar, i: number) => (
+function BarMark({ b }: { b: Bar }) {
+  return (
     <span
-      key={i}
       className={clsx(
-        "relative h-4 w-2 overflow-hidden rounded-[1.5px]",
+        "relative h-4 w-2 shrink-0 overflow-hidden rounded-[1.5px]",
         b === "pass" && "bg-pay/70",
         b === "hold" && "border border-hold bg-[linear-gradient(var(--hold)_50%,transparent_50%)]",
         b === "reject" && "bg-stop after:absolute after:top-1/2 after:-left-1 after:h-px after:w-4 after:-rotate-60 after:bg-bg",
@@ -92,9 +91,39 @@ function Barcode({ checks }: { checks: PreviewRow["checks"] }) {
       )}
     />
   );
+}
+
+const BAR_WORD: Record<Bar, string> = { pass: "passed", hold: "unclear", reject: "failed", waiting: "not run", skipped: "not run" };
+
+/** The barcode in words, for screen readers: "8 checks: 7 passed, 1 failed". */
+export function barcodeWords([pre, model]: PreviewRow["checks"]) {
+  const all = [...pre, ...model];
+  const tally = new Map<string, number>();
+  for (const b of all) tally.set(BAR_WORD[b], (tally.get(BAR_WORD[b]) ?? 0) + 1);
+  return `${all.length} checks: ${[...tally].map(([word, n]) => `${n} ${word}`).join(", ")}`;
+}
+
+/** What the barcode's shapes mean, in one line under the claims (phones): shape carries it as well as colour. */
+export function BarcodeLegend({ className }: { className?: string }) {
+  return (
+    <p className={clsx("flex flex-wrap items-center gap-x-4 gap-y-1 text-micro text-muted", className)}>
+      {(["pass", "hold", "reject", "waiting"] as const).map((b) => (
+        <span key={b} className="inline-flex items-center gap-1.5">
+          <span aria-hidden="true" className="flex">
+            <BarMark b={b} />
+          </span>
+          {BAR_WORD[b]}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function Barcode({ checks }: { checks: PreviewRow["checks"] }) {
+  const bar = (b: Bar, i: number) => <BarMark key={i} b={b} />;
   const [preChecks, model] = checks;
   return (
-    <span className="flex items-center gap-1.5" aria-hidden="true">
+    <span className="flex items-center gap-1.5" role="img" aria-label={barcodeWords(checks)}>
       <span className="flex gap-0.5">{preChecks.map(bar)}</span>
       <span className="flex gap-0.5">{model.map(bar)}</span>
     </span>

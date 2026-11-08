@@ -7,6 +7,9 @@ import { AlertIcon } from "@/components/ui";
 /** The photo route URL at a width (console/_lib/photos.ts): resized and cached on the server. */
 export const atWidth = (src: string, w: 96 | 240 | 880) => `${src}${src.includes("?") ? "&" : "?"}w=${w}`;
 
+/** The photo itself at full size: a sized src through Next's image optimizer (the homepage) names the original. */
+const fullSize = (src: string) => (src.startsWith("/_next/image?") ? (new URLSearchParams(src.slice(src.indexOf("?") + 1)).get("url") ?? src) : src);
+
 /**
  * One claim photo from the private photo route, at 880px (the panel at 2x). With onOpen (the console) it's a button
  * that opens the in-app viewer, and shows the whole photo, uncropped (tall: a portrait frame, for two side by side);
@@ -75,7 +78,7 @@ export function EvidencePhoto({
           {inner}
         </button>
       ) : (
-        <a href={src} target="_blank" rel="noreferrer" className={frame} aria-label={`${name}, opens full size`}>
+        <a href={fullSize(src)} target="_blank" rel="noreferrer" className={frame} aria-label={`${name}, opens full size (opens in a new tab)`}>
           {inner}
         </a>
       )}

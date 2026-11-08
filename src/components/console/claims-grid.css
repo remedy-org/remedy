@@ -116,6 +116,20 @@
   }
 }
 
+/* The arriving row waits, transparent, while the rows below slide down to make its slot (AG Grid's 400ms row
+   animation), then fades in: never drawn over the row it is displacing. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] {
+    animation: row-in var(--dur-ui) var(--ease-snap) 380ms both;
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes bar-fill {
   from {
     transform: scaleY(0);

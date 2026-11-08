@@ -13,7 +13,8 @@ const Preview = dynamic(() => import("./ClaimsGridPreview").then((m) => m.Claims
  * ClaimsGridPreview for the homepage: the fallback (a complete still) until the real grid has drawn its rows. The grid
  * mounts hidden under the fallback once the section is one viewport away, and takes its place only while the frame is
  * out of view, so a reader never sees it blank or change (an anchor jump straight to it keeps the still until they
- * scroll away). The whole frame is a product shot: inert, so nothing in it takes a click or a tab stop.
+ * scroll away, or, with `swapOnPick`, until they pick a step of the tour: a change they asked for, which the grid's
+ * 160ms fade in rides on). The whole frame is a product shot: inert, so nothing in it takes a click or a tab stop.
  * Mount it from a server component with previewProps() (components/console/preview.ts):
  *   <ClaimsGridPreviewLazy {...previewProps()} fallback={<StaticStill />} />
  */
@@ -21,6 +22,7 @@ export function ClaimsGridPreviewLazy({
   fallback,
   from = 720,
   onSwap,
+  swapOnPick = false,
   className,
   ...props
 }: ClaimsGridPreviewProps & {
@@ -28,16 +30,29 @@ export function ClaimsGridPreviewLazy({
   from?: number;
   /** The grid has taken the fallback's place. */
   onSwap?: () => void;
+  /** The visitor has picked a step: the grid may take the still's place now, in view, with a 160ms fade. */
+  swapOnPick?: boolean;
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
   // The grid replaces the still once it has drawn and the frame is out of view; once swapped, the grid stays.
   const [swapped, setSwapped] = useState(false);
-  const seen = useRef({ ready: false, inView: false });
+  // In view, the still stays under the fading grid for its 160ms, then goes.
+  const [stillGone, setStillGone] = useState(false);
+  const seen = useRef({ ready: false, inView: false, pick: swapOnPick });
   const settle = () => {
-    if (seen.current.ready && !seen.current.inView) setSwapped(true);
+    if (seen.current.ready && (!seen.current.inView || seen.current.pick)) setSwapped(true);
   };
+  useEffect(() => {
+    seen.current.pick = swapOnPick;
+    if (swapOnPick && seen.current.ready) setSwapped(true);
+  }, [swapOnPick]);
+  useEffect(() => {
+    if (!swapped || !props.bare) return;
+    const t = window.setTimeout(() => setStillGone(true), seen.current.inView ? 200 : 0);
+    return () => window.clearTimeout(t);
+  }, [swapped, props.bare]);
   const swapNotice = useRef(onSwap);
   useEffect(() => {
     swapNotice.current = onSwap;
@@ -68,10 +83,16 @@ export function ClaimsGridPreviewLazy({
 
   return (
     <div ref={ref} className={clsx("relative", className)} inert>
-      {!swapped && (fallback ?? <Placeholder height={props.height} />)}
+      {(!swapped || (props.bare && !stillGone)) && (fallback ?? <Placeholder height={props.height} />)}
       {near && (
         // Opacity as well as visibility: AG Grid's scrollbars set their own visibility, which shows through a hidden parent.
-        <div className={clsx(props.bare && "h-full", !swapped && "invisible absolute inset-x-0 top-0 opacity-0", !swapped && props.bare && "bottom-0")}>
+        // Bare (the tour), the grid always lies over the still, so a swap in view is a fade, never a jump.
+        <div
+          className={clsx(
+            props.bare ? "absolute inset-0 transition-opacity duration-160 ease-snap motion-reduce:transition-none" : !swapped && "absolute inset-x-0 top-0",
+            !swapped && "invisible opacity-0",
+          )}
+        >
           <Preview
             {...props}
             onReady={() => {
