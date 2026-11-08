@@ -5,7 +5,7 @@ import type { Slow } from "./landing";
 // The gate against a stand-in Lenis: wheel streams in, which events it takes, and where it lands the page.
 const STOPS = [0, 1410, 2144, 2821, 3205];
 
-function setup(at = 1410, stops = STOPS, slow: Slow[] = []) {
+function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[]) {
   const listeners = new Map<string, ((e: unknown) => void)[]>();
   vi.stubGlobal("innerHeight", 900);
   vi.stubGlobal("scrollY", at);
@@ -39,7 +39,7 @@ function setup(at = 1410, stops = STOPS, slow: Slow[] = []) {
     },
     start() {},
   };
-  const gate = createGate(() => ({ stops, slow }));
+  const gate = createGate(() => ({ stops, slow, up }));
   gate.attach(lenis as unknown as GateLenis);
   let t = 1000;
   /** Sends deltas `gap` ms apart, after `pause` ms; returns how many px reached Lenis (the events the gate let through). */
@@ -209,7 +209,9 @@ describe("wheel stops", () => {
   it("gives a slow stretch on the way more of the landing, and enters it at the page's speed all the same", () => {
     const plain = setup(0);
     plain.send(swipe(), 8);
-    const slowed = setup(0, STOPS, [[207, 670, 5]]);
+    // A slow stretch that isn't the dolly (the dolly's landing is held to DOLLY_TIME: tested below), so both take the
+    // same time and their curves compare.
+    const slowed = setup(0, STOPS, [[207, 670, 4]]);
     slowed.send(swipe(), 8);
     const e0 = plain.lenis.easing!;
     const e1 = slowed.lenis.easing!;
@@ -229,6 +231,13 @@ describe("wheel stops", () => {
       return lo;
     };
     expect(time(e1, 492) - time(e1, 207)).toBeGreaterThan(1.8 * (time(e0, 492) - time(e0, 207)));
+  });
+
+  it("lands across the hero's dolly in 1.2 s at most, so the page is at rest soon after the dolly has played", () => {
+    const pad = setup(0, STOPS, [[207, 670, 5]]);
+    pad.send(swipe(), 8);
+    expect(pad.lenis.landed).toEqual([1410]);
+    expect(pad.lenis.duration).toBeLessThanOrEqual(1.2);
   });
 
   it("keeps a notched wheel's landing short, the hero's dolly excepted, and crosses the dolly lighter", () => {
@@ -263,13 +272,32 @@ describe("wheel stops", () => {
     expect(share(notched.lenis.easing!)).toBeLessThan(share(flung.lenis.easing!));
   });
 
-  it("chains a wheel spun on hard after its landing to the next stop, rather than holding the page", () => {
+  it("hands a wheel spun on hard after its landing back to the reader, rather than holding the page", () => {
     const { lenis, send, finish } = setup();
     send(power(), 8);
     finish();
-    // The same gesture, no pause: still fast 300 ms after the landing finished.
-    send(Array(40).fill(120), 8);
-    expect(lenis.landed).toEqual([2144, 2821]);
+    // The same gesture, no pause: still fast 300 ms after the landing finished. It scrolls on freely.
+    expect(send(Array(40).fill(120), 8)).toBeGreaterThan(0);
+    expect(lenis.landed).toEqual([2144]);
+  });
+
+  it("lets a wheel spun on hard after its landing run free for the rest of the gesture, and stops it again after a pause", () => {
+    const { lenis, send, finish } = setup(0);
+    send(power(), 8);
+    finish();
+    // Still spinning at the same pace once it has landed: the page goes with the wheel.
+    expect(send(Array(80).fill(120), 8)).toBeGreaterThan(0);
+    expect(lenis.landed).toEqual([1410]);
+    // A new gesture after a pause meets the stops again.
+    lenis.animatedScroll = lenis.targetScroll = 2300;
+    send(power(), 8, 600);
+    expect(lenis.landed).toEqual([1410, 2821]);
+  });
+
+  it("goes up on its own stops when the course lists them", () => {
+    const { lenis, send } = setup(3205, STOPS, [], [0, 1410, 3205]);
+    send(power(-1), 8);
+    expect(lenis.landed).toEqual([1410]);
   });
 
   it("takes a swipe laid on a fading momentum, each window faster than the last, as a fresh fling", () => {

@@ -29,11 +29,12 @@ describe("Opened Exhibit model", () => {
     expect(clock(z.seconds)).toBe(`0:${EXHIBIT.seconds}`);
   });
 
-  it("shows each check at its hold, with the checks before it passed", () => {
+  it("shows each check at its hold finished: it and the checks before it passed, the camera still on it", () => {
     CHECKS.forEach((c, i) => {
       const s = stateAt(holdOf(c.id));
       expect(s.active).toBe(i);
-      expect(s.done).toBe(i);
+      expect(s.done).toBe(i + 1);
+      expect(s.leaderFade).toBe(1);
       expect(s.callout).toBeGreaterThan(0.95);
       expect(s.decision).toBe("checking");
     });

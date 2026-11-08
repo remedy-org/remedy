@@ -5,6 +5,7 @@ import { ANCHORED, framed, LINE, MERGE, nearestClean, STOPS, tidy, type Page } f
 
 /** A stand-in page at 1440x900: the runway at 64 with 7316px of travel, the Problem sheet's top at 8280. */
 const page: Page = {
+  size: { width: 1440, height: 900 },
   top: () => 0,
   beat: (f) => 64 + f * 7316,
   beats: () => undefined,
@@ -68,7 +69,13 @@ describe("scroll stops", () => {
   it("stops the wheel on every beat Space and Page Down stop on in the Chain of Custody, in order", () => {
     const custody = STOPS.filter((s) => /^Chain of Custody \d/.test(s.name)).map((s) => s.at(page));
     expect(custody).toEqual(PAGE_STOPS.slice(1).map((f) => 64 + f * 7316));
-    expect(custody).toHaveLength(10); // 01, 02, the exhibit's seven beats, the console
+    expect(custody).toHaveLength(6); // 01, 02, the exhibit's live photo, check 3 and paid receipt, the console
+  });
+
+  it("goes up through the pinned stories on their first beats only", () => {
+    const up = STOPS.filter((s) => !s.down).map((s) => s.name);
+    expect(up.filter((n) => n.startsWith("Chain of Custody "))).toEqual(["Chain of Custody 1", "Chain of Custody 6"]);
+    expect(up.filter((n) => n.startsWith("Problem"))).toEqual(["Problem, the sheet open"]);
   });
 
   it("lands the Problem sheet open where the nav's Problem does, then on the closed loop, then cut and paid off", () => {
@@ -100,6 +107,7 @@ describe("scroll stops", () => {
           "#checks header": 10514,
           "#checks ol > li:nth-child(3)": 11050,
           "#proof header": 11940,
+          "#companies header": 12530,
           "#companies [data-tour]": 12687,
         };
         return sel in tops ? framed(tops[sel], 64, under) : undefined;

@@ -16,6 +16,9 @@ import type { Slow } from "./landing";
  */
 export const LINE = 48;
 
+/** A tall laptop screen, where Results is a screen of its own (Proof.tsx). */
+const TALL = 1000;
+
 /** What a frame may not cut, and where it may sit. */
 export type Frame = {
   /** Never above this scrollY, nor below `max`. */
@@ -27,6 +30,8 @@ export type Frame = {
 
 /** Reads the page as laid out now; each helper returns undefined when its element isn't on this layout. */
 export type Page = {
+  /** The screen's size. */
+  size: { width: number; height: number };
   /** The page top, while `sel` is on the page. */
   top(sel: string): number | undefined;
   /** A point (0 to 1) on the pinned Chain of Custody's scroll, while the sequence is pinned. */
@@ -47,7 +52,12 @@ export type Page = {
   fit(prefer: number | undefined, frame?: Frame): number | undefined;
 };
 
-export type Stop = { name: string; at: (page: Page) => number | readonly number[] | undefined };
+export type Stop = {
+  name: string;
+  at: (page: Page) => number | readonly number[] | undefined;
+  /** A stop going down only: a pinned story's inner beat, whose scrub played backwards shows nothing new (gate.ts). */
+  down?: true;
+};
 
 /**
  * The sections a frame is fitted to: their text, and their objects (the sheet's cards when it isn't pinned, the claims'
@@ -82,7 +92,8 @@ export const STOPS: readonly Stop[] = [
   // The Chain of Custody: the stops Space and Page Down use in the pin (CustodyStage), so the keys and the wheel stop on
   // the same beats: 01 and 02 with every line lit, the exhibit's live photo and five checks at their holds, the paid
   // receipt, then the console. Its first stop is the runway's top, the page top.
-  ...PAGE_STOPS.slice(1).map((f, i) => ({ name: `Chain of Custody ${i + 1}`, at: (p: Page) => p.beat(f) })),
+  // Going up, only 01 and the console stop: the beats between are the story told forwards.
+  ...PAGE_STOPS.slice(1).map((f, i, all) => ({ name: `Chain of Custody ${i + 1}`, at: (p: Page) => p.beat(f), ...(i > 0 && i < all.length - 1 && { down: true as const }) })),
   // Laptops under 700px tall and windows under 1024px wide get the phone sequence: its chapters 01 and 02, then the
   // exhibit's beats, the stops its own Space and Page Down use (PhoneRunway).
   { name: "Chain of Custody, phone", at: (p) => p.beats("div[data-runway][data-scroll-stops]") },
@@ -95,10 +106,11 @@ export const STOPS: readonly Stop[] = [
     name: "Problem, the sheet open",
     at: (p) => p.sheet(ANCHOR_AT - 0.4) ?? p.fit(p.line("#problem .eyebrow"), { min: p.line("#problem", 0), max: p.line("#problem .eyebrow", 16) }),
   },
-  { name: "Problem, the loop closed", at: (p) => p.sheet(T.mark[0] - 0.4) },
+  { name: "Problem, the loop closed", at: (p) => p.sheet(T.mark[0] - 0.4), down: true },
   {
     name: "Problem, the loop cut",
     at: (p) => p.sheet(REST + 2) ?? p.fit(p.foot("#problem article", 0.78), { min: p.foot("#problem article", 0.8), max: p.foot("#problem article", 0.45) }),
+    down: true,
   },
   // Fraud checks: the heading on the top line over the four claims and the checks that need no AI. Never so high that
   // the Problem sheet shows above the section's edge, and the heading at least 16px under the nav.
@@ -113,15 +125,34 @@ export const STOPS: readonly Stop[] = [
     name: "Fraud checks, the rule",
     at: (p) => p.fit(p.line(GATE_3, -1), { min: p.line(GATE_1, -1), before: "#proof header" }),
   },
-  // Results: the heading, the zero and the footnote, For companies kept below the fold rather than cut by it (on a tall
-  // screen, its heading and tabs whole under Results). Never showing the end of Fraud checks above it.
+  // Results: the heading, the zero and the footnote, For companies kept below the fold rather than cut by it. Never
+  // showing the end of Fraud checks above it. On a tall laptop screen the section is a screen of its own with its
+  // content centred (Proof.tsx): its top goes straight under the nav, so it reads as one slide, as on a laptop.
   {
     name: "Results",
-    at: (p) => p.fit(p.line("#proof header"), { min: p.past("#checks [data-try-cta]"), before: "#companies header" }),
+    at: (p) =>
+      p.size.height >= TALL && p.size.width >= 1024
+        ? p.line("#proof", 0)
+        : p.fit(p.line("#proof header"), { min: p.past("#checks [data-try-cta]"), before: "#companies header" }),
   },
-  // For companies: the tour whole, its steps 16px under the nav and the console frame under them (the frame is sized to
-  // fit this, tour.module.css .stage). Phones and narrow windows, which get the story instead, stop at its heading.
-  { name: "For companies", at: (p) => p.fit(p.line("#companies [data-tour]", 16) ?? p.line("#companies header")) },
+  // For companies: the heading on the top line with the whole tour under it, wherever the console frame's foot still
+  // clears the screen's foot from there (a tall screen); else the heading 24px under the nav, its eyebrow tucked under
+  // it, where the frame still clears the foot (a 1440x900 laptop: ConsoleTour sizes the frame for this); else the tour
+  // whole, its steps under the nav, never above the heading's foot. The heading is read whole with air above it, or is
+  // wholly under the nav, never jammed against it. Phones and narrow windows, which get the story instead, stop at its
+  // heading.
+  {
+    name: "For companies",
+    at: (p) => {
+      const head = p.line("#companies header");
+      const frame = p.foot("#tour-panel", 1);
+      if (head === undefined || frame === undefined) return head;
+      if (head >= frame + 16) return p.fit(head);
+      const h2 = p.line("#companies h2", 24)!;
+      if (h2 >= frame + 8) return p.fit(h2, { min: frame + 8 });
+      return p.fit(Math.max(p.line("#companies [data-tour]", 16)!, p.past("#companies h2")! + 8), { min: p.past("#companies h2") });
+    },
+  },
   // The footer's tag: "See a refund land in a minute." and Try a claim, at the page end; on a short screen, where the end
   // would cut the tag under the nav, the tag whole nearest the end (within half a screen of it).
   { name: "Footer", at: (p) => p.fit(p.end("footer"), { min: p.foot("main ~ footer", 1.5) }) },
@@ -202,12 +233,13 @@ const INK = 2;
 const AIR = 8;
 
 /** The intervals a frame edge may not fall inside: each line's ink, each object with its shadow. An outcome not yet
- * printed (its lane armed, Pipeline.tsx) is not there. */
+ * printed (its lane armed, Pipeline.tsx) counts as printed, so a stop is the same frame whichever way the page came to
+ * it (going up the lanes have drawn, going down they haven't). */
 function atoms(sheet: boolean): [number, number][] {
   const out: [number, number][] = [];
   const add = (sel: string, grow: number) => {
     for (const el of document.querySelectorAll<HTMLElement>(sel)) {
-      if (!el.getClientRects().length || el.closest("[data-go='armed']")) continue;
+      if (!el.getClientRects().length) continue;
       const a = docTop(el) - grow;
       const b = docTop(el) + el.offsetHeight + grow;
       if (b > a) out.push([a, b]);
@@ -254,6 +286,7 @@ export function readPage(): Page {
     return el ? f(el) : undefined;
   };
   return {
+    size: { width: innerWidth, height: innerHeight },
     top: (sel) => (document.querySelector(sel) ? 0 : undefined),
     beat: (f) => (runway ? runway.top + f * runway.travel : undefined),
     beats: (sel) => {
@@ -311,10 +344,10 @@ export function resolveStops(list: readonly Stop[] = STOPS, page = readPage()): 
   return tidy(readAll(list, page).flat().filter(Number.isFinite), document.documentElement.scrollHeight - innerHeight);
 }
 
-/** The stops and the slow stretches between them, read once when a gesture starts (gate.ts). */
+/** The stops (going down, and going up) and the slow stretches between them, read once when a gesture starts (gate.ts). */
 export function resolveCourse(): Course {
   const page = readPage();
-  return { stops: resolveStops(STOPS, page), slow: readAll(SLOW, page) };
+  return { stops: resolveStops(STOPS, page), up: resolveStops(STOPS.filter((s) => !s.down), page), slow: readAll(SLOW, page) };
 }
 
 /**

@@ -51,15 +51,18 @@ export const CHAPTERS = [
   {
     n: "06",
     title: "The recall team sees it",
-    text: "The paid claim lands in the recall team's console with its photo, its checks and the time from photo to PayPal.",
+    text: "The paid claim lands in the recall team's console with its photo, its five checks and how fast they answered.",
   },
 ] as const;
 
 // The scroll thresholds (spec H2), spread across each chapter's beat (01 is 0.2 to 0.34, 02 is 0.34 to 0.48 in
 // pace.ts) so no stretch of a hold is still. (Chapters 03 to 05, with the five checks and their quotes, are the Opened
 // Exhibit's: src/components/home/teardown/claim.ts.)
-/** 01: each consent step lights in turn, the first as the chapter settles (the #how anchor is at 0.215). */
-export const CONSENT_AT = [0.2, 0.255, 0.31];
+/** 01: the consent steps light in turn once the chapter has settled (0.2, the dolly done), CONSENT_STAGGER seconds apart,
+ * in time rather than over a stretch of scroll, so the stop right after the dolly (0.215, where the #how anchor lands
+ * too) finds them all lit and a fling never drifts on to reach them. */
+export const CONSENT_AT = [0.2, 0.2, 0.2];
+export const CONSENT_STAGGER = 0.3;
 /** 02: when each code character appears. */
 export const CODE_AT = [0.352, 0.372, 0.392];
 /** The tag is written left to right after the last character appears. */
@@ -67,18 +70,19 @@ export const WRITE_AT = [0.398, 0.436] as const;
 /** Then what the photo must show lights in turn, leading into 03. */
 export const SHOT_AT = [0.432, 0.444, 0.456];
 
-// The console replica after the payout: the M4T claim slides in over the recall's other claims, as the homepage's
-// console tour draws them (components/console/preview.ts, the seed's claims drawn live: src/lib/demo/seed.ts, seed
-// 27071): the same ids, codes, photos, verdicts, reasons and times, so a claim reads the same in both pictures. Rows past
-// the panel's foot are cut by it, as a list is: a tall screen shows more of the queue, never an empty well.
-// `fails`: which of the five checks (0 to 4) stopped a rejected or blocked claim.
-export const CONSOLE_ROWS: { photo: string; code: string; id: string; status: Status; reason: string; time?: string; amount?: number; fails?: number }[] = [
-  { photo: "/demo/c01-1.jpg", code: "K7Q", id: "RM-7581", status: "paid", reason: "Every check passed", time: "12 s", amount: 29.99 },
-  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-9629", status: "held", reason: "Couldn’t tell if both photos show the same item" },
-  { photo: "/demo/c10-1.jpg", code: "K7Q", id: "RM-9545", status: "rejected", reason: "Photo of a screen or a print", fails: 4 },
-  { photo: "/demo/c01-1.jpg", code: "R8D", id: "RM-0120", status: "blocked", reason: "Second claim from one PayPal account", fails: 2 },
-  { photo: "/demo/c05-1.jpg", code: "K7Q", id: "RM-6276", status: "paid", reason: "Every check passed", time: "12 s", amount: 29.99 },
-  { photo: "/demo/c09-1.jpg", code: "K7Q", id: "RM-0118", status: "rejected", reason: "Code missing or wrong", fails: 3 },
-  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-9475", status: "blocked", reason: "PayPal account not verified", fails: 2 },
-  { photo: "/demo/c03-1.jpg", code: "R8D", id: "RM-2125", status: "paid", reason: "Every check passed", time: "12 s", amount: 29.99 },
+// The console replica after the payout: the M4T claim slides in over the recall's newest claims, exactly the rows the
+// homepage's console tour opens on, newest first (components/console/preview.ts, the seed's claims: src/lib/demo/seed.ts,
+// seed 27071), the two still waiting for photos left out: the same ids, photos, verdicts, reasons, filing times and
+// photo-check times, so a claim reads the same in both pictures (a test checks it). Rows past the panel's foot are cut
+// by it, as a list is: a tall screen shows more of the queue, never an empty well.
+// `fails`: which of the five checks (0 to 4) stopped a rejected or blocked claim. `filed`: day and time, UTC.
+export const CONSOLE_ROWS: { photo: string; filed: string; id: string; status: Status; reason: string; time?: string; amount?: number; fails?: number }[] = [
+  { photo: "/demo/c03-1.jpg", filed: "8 Nov 07:54", id: "RM-0553", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
+  { photo: "/demo/c03-1.jpg", filed: "8 Nov 05:59", id: "RM-9629", status: "held", reason: "Couldn’t tell if both photos show the same item", time: "12 s" },
+  { photo: "/demo/c10-1.jpg", filed: "8 Nov 05:04", id: "RM-9545", status: "rejected", reason: "Photo of a screen or a print", time: "19 s", fails: 4 },
+  { photo: "/demo/c01-1.jpg", filed: "8 Nov 04:58", id: "RM-7581", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
+  { photo: "/demo/c03-1.jpg", filed: "8 Nov 03:18", id: "RM-9475", status: "blocked", reason: "PayPal account not verified", fails: 2 },
+  { photo: "/demo/c05-1.jpg", filed: "8 Nov 02:40", id: "RM-6276", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
+  { photo: "/demo/c03-1.jpg", filed: "7 Nov 23:32", id: "RM-2125", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
+  { photo: "/demo/c01-1.jpg", filed: "7 Nov 23:28", id: "RM-8501", status: "paid", reason: "Every check passed", time: "15 s", amount: 29.99 },
 ];

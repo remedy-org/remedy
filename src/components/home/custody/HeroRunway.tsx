@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform, type MotionValue } from "motion/react";
+import { motion, useMotionValue, useMotionValueEvent, useScroll, useTransform, type MotionValue } from "motion/react";
 import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { EASE } from "@/components/ui";
 import { HeroDevice, useMedia } from "../HeroDevice";
@@ -22,6 +22,13 @@ type Mode = "static" | "pinned" | "phone";
 export const DOLLY = [0.04, 0.12] as const;
 /** The most the laptop grows on the dolly: its glass reaches the window's width on every laptop screen. */
 const MAX_SCALE = 2.8;
+/** The hero copy and the receipt on the table are gone by here, scrubbed (however fast the page moves), and the laptop
+ * only starts to grow from LAPTOP_FROM: it never scales up under the copy or carries the receipt up with it. */
+const COPY_GONE = DOLLY[0] + 0.012;
+const LAPTOP_FROM = DOLLY[0] + 0.008;
+/** ms the page must be still on the dolly before the moving layers drop will-change, so the browser draws them again at
+ * the size they are now, never a scale-1 picture blown up (a reader paused mid-dolly). */
+const SETTLE_MS = 150;
 
 const ramp = (v: number, a: number, b: number) => Math.min(1, Math.max(0, (v - a) / (b - a)));
 /** DESIGN.md's state-to-state curve, cubic-bezier(0.65, 0, 0.35, 1): the laptop is under way as soon as the copy goes. */
@@ -82,14 +89,29 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
     return () => ro.disconnect();
   }, [p, stage, device]);
 
-  // Out of the gate at once (ease-out): the laptop is well on its way to the centre by the time the copy has gone, so no
-  // frame holds an empty left half beside a parked laptop; it settles into the screen as it arrives.
-  const k = useTransform(p, (v) => 1 - (1 - ramp(v, DOLLY[0], DOLLY[1])) ** 3);
+  // Out of the gate at once (ease-out) once the copy is nearly gone: the laptop is well on its way to the centre by the
+  // time the copy has left, so no frame holds an empty left half beside a parked laptop, and none has the copy printed
+  // over its screen; it settles into the screen as it arrives.
+  const k = useTransform(p, (v) => 1 - (1 - ramp(v, LAPTOP_FROM, DOLLY[1])) ** 3);
   // The hero copy and the laptop's labels leave in time as the dolly starts, and come back the same way: a scrubbed fade
   // held the headline at half strength wherever the reader paused. The copy fades and lifts away (no blur) and comes
-  // back as a reveal; the labels (paper on the light table) go at once, never left half-transparent over the keyboard.
-  const copy = useGate(p, (v) => v < DOLLY[0] + 0.005, { duration: 0.7, ease: EASE.outExpo }, { duration: 0.36, ease: IN_OUT });
-  const labels = useGate(p, (v) => v < DOLLY[0] + 0.005, ENTER, LEAVE);
+  // back as a reveal; the labels (paper on the light table, the receipt) go at once, never left half-transparent over
+  // the keyboard. A fling faster than the fade takes both out with the scroll instead (COPY_GONE).
+  const copyGate = useGate(p, (v) => v < DOLLY[0] + 0.005, { duration: 0.7, ease: EASE.outExpo }, { duration: 0.36, ease: IN_OUT });
+  const labelGate = useGate(p, (v) => v < DOLLY[0] + 0.005, ENTER, LEAVE);
+  const out = (v: number) => 1 - ramp(v, DOLLY[0], COPY_GONE);
+  const copy = useTransform(() => Math.min(copyGate.get(), out(p.get())));
+  const labels = useTransform(() => Math.min(labelGate.get(), out(p.get())));
+  // will-change only while the dolly is moving: held, Chrome keeps the layer at its scale-1 raster and blows it up.
+  const will = useMotionValue<"auto" | "transform, opacity">("auto");
+  const idle = useRef(0);
+  useMotionValueEvent(p, "change", (v) => {
+    window.clearTimeout(idle.current);
+    if (v <= 0.02 || v >= 0.22) return will.set("auto");
+    will.set("transform, opacity");
+    idle.current = window.setTimeout(() => will.set("auto"), SETTLE_MS);
+  });
+  useEffect(() => () => window.clearTimeout(idle.current), []);
   // The laptop goes once the consent screen has dissolved in over its screen (at 0.12, CustodyStage), before the clip's
   // right edge pulls in from beyond the viewport and would uncover the laptop's own screen there.
   const body = useGate(p, (v) => v < 0.13, ENTER, { duration: 0.24, ease: IN_OUT });
@@ -97,7 +119,7 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
     text: {
       y: useTransform(copy, (c) => -24 * (1 - c)),
       opacity: copy,
-      willChange: useTransform(p, (v) => (v > 0.02 && v < 0.22 ? "transform, opacity" : "auto")),
+      willChange: will,
     },
     device: {
       x: useTransform(k, (t) => t * target.current.x),
@@ -105,7 +127,7 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
       scale: useTransform(k, (t) => 1 + (target.current.s - 1) * t),
       opacity: body,
       "--tilt-k": useTransform(p, (v) => 1 - inOut(ramp(v, DOLLY[0], DOLLY[1] - 0.01))),
-      willChange: useTransform(p, (v) => (v > 0.02 && v < 0.22 ? "transform, opacity" : "auto")),
+      willChange: will,
     },
     labels,
   };

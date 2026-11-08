@@ -5,8 +5,10 @@ import { landing as glide, landingTime, warp, type Slow } from "./landing";
 // Scroll stops for the wheel. A fast wheel or trackpad fling is taken, as soon as it reads as fast, to the next stop in
 // its direction (stops.ts) and lands exactly there, on a glide long enough for the scrubbed transition on the way to be
 // seen (landing.ts); the rest of that gesture (the trackpad's momentum, a free-spinning wheel) is absorbed there. The
-// next beat takes a fresh gesture: a pause, a new swipe or a reversal. Slow scrolling never meets a stop, and a short
-// flick that would not have carried halfway to the next stop runs free. Only the wheel is gated: keys, anchor links,
+// next beat takes a fresh gesture: a pause, a new swipe or a reversal. A wheel spun on hard after its landing has made
+// its point: the rest of that gesture scrolls freely (ESCAPE). Going up, the pinned stories' inner
+// beats are not stops (stops.ts), since a story scrubbed backwards shows nothing new. Slow scrolling never meets a stop,
+// and a short flick that would not have carried halfway to the next stop runs free. Only the wheel is gated: keys, anchor links,
 // the scrollbar, find-in-page, focus moves, touch and screen readers scroll natively and cancel a landing at once.
 
 /** The input rate is measured over this many ms. */
@@ -30,6 +32,9 @@ const REACH = 2;
 /** ms of input held at FAST or more, after a landing has finished, that reads as a fresh fling rather than its tail (a
  * wheel spun on hard, a swipe laid straight on top of the last). */
 const SUSTAIN = 250;
+/** Stops one gesture may be landed on before input kept at FAST past the landing (SUSTAIN) runs free for the rest of
+ * it: one, so only a fresh gesture's first fling stops. */
+const ESCAPE = 1;
 /** A wheel's notches (|deltaY| this big or more, whole px): no momentum to play out, so its landings stay short. */
 const NOTCH = 50;
 /** Seconds a notched wheel's landing takes at most (the hero's dolly excepted), so the page never drives on long after
@@ -38,6 +43,8 @@ const NOTCH_TIME = 1.1;
 /** The slow stretch's weight that marks the hero's dolly (stops.ts SLOW), and the weight a notched wheel crosses it at. */
 const DOLLY_WEIGHT = 5;
 const NOTCH_DOLLY = 3.5;
+/** Seconds a landing across the dolly takes at most: the dolly plays, and the page is at rest about a second after. */
+const DOLLY_TIME = 1.2;
 /** A stop closer than this many windows to where the gesture began is where the reader already is: it goes on past. */
 const NEAR = 0.15;
 /**
@@ -88,8 +95,9 @@ export function samePageHash(e: Event) {
   return link && link.hash && link.origin === location.origin && link.pathname === location.pathname ? link.hash : null;
 }
 
-/** The stops in scrollY, sorted, and the stretches between them a glide crosses slowly (landing.ts warp). */
-export type Course = { stops: number[]; slow?: readonly Slow[] };
+/** The stops in scrollY, sorted (going down, and going up when they differ), and the stretches between them a glide
+ * crosses slowly (landing.ts warp). */
+export type Course = { stops: number[]; up?: number[]; slow?: readonly Slow[] };
 
 export function createGate(read: () => Course) {
   let lenis: GateLenis | null = null;
@@ -98,6 +106,7 @@ export function createGate(read: () => Course) {
   let lastA = 0;
   let lastDir: Dir = 1;
   let stops: number[] = [];
+  let upStops: number[] = [];
   let slow: readonly Slow[] = [];
   let hold: Hold | null = null;
   let landing: { to: number; dir: Dir } | null = null;
@@ -111,6 +120,9 @@ export function createGate(read: () => Course) {
   let notched = false;
   /** Since when input has run at FAST or more with the page held after a landing. */
   let fastSince: number | null = null;
+  /** Landings this gesture has made, and whether it has escaped the stops (ESCAPE) for the rest of it. */
+  let chained = 0;
+  let free = false;
   /** The page's own speed, px/ms, from Lenis's last two frames. */
   let speed = 0;
   let prev: { t: number; y: number } | null = null;
@@ -128,7 +140,7 @@ export function createGate(read: () => Course) {
     const near = NEAR * innerHeight;
     const lead = Math.max(0, pace) * CATCH;
     const ok = (s: number) => (dir > 0 ? s > from + near && s > at + lead : s < from - near && s < at - lead);
-    const next = dir > 0 ? stops.find(ok) : stops.findLast(ok);
+    const next = dir > 0 ? stops.find(ok) : upStops.findLast(ok);
     return next !== undefined && Math.abs(next - at) <= REACH * innerHeight ? next : undefined;
   }
 
@@ -151,11 +163,12 @@ export function createGate(read: () => Course) {
     const from = l.animatedScroll;
     const dolly = slow.some(([a, b, k]) => k >= DOLLY_WEIGHT && Math.max(a, b) > Math.min(from, to) && Math.min(a, b) < Math.max(from, to));
     const way = warp(from, to, notched ? slow.map(([a, b, k]) => [a, b, k >= DOLLY_WEIGHT ? NOTCH_DOLLY : k] as const) : slow);
-    const duration = notched && !dolly ? Math.min(NOTCH_TIME, landingTime(way.length / innerHeight)) : landingTime(way.length / innerHeight);
+    const duration = Math.min(dolly ? DOLLY_TIME : notched ? NOTCH_TIME : Infinity, landingTime(way.length / innerHeight));
     const v = Math.max(0, pageSpeed(l, dir));
     const curve = glide(way.length < 1 ? 0 : (v * duration * way.entry) / way.length);
     landing = { to, dir };
     fastSince = null;
+    chained++;
     hold = { dir, peak: sum(now - PACE, now), low: Infinity, rising: 0, paced: now };
     l.scrollTo(to, {
       duration,
@@ -215,22 +228,27 @@ export function createGate(read: () => Course) {
         // page and lands with the pointer over the console never scrolls the console with its momentum.
         startedInner = nested(event, dir);
         notched = true;
+        chained = 0;
+        free = false;
       } else if (hold) {
         hold.paced = now + PACE;
         hold.low = Infinity;
         hold.rising = 0;
       }
-      ({ stops, slow = [] } = read());
+      ({ stops, up: upStops = stops, slow = [] } = read());
       origin = l.animatedScroll;
     }
-    if (dir !== lastDir) samples = [];
+    if (dir !== lastDir) {
+      samples = [];
+      free = false;
+    }
     lastT = now;
     lastA = a;
     lastDir = dir;
     if (a < NOTCH || !Number.isInteger(deltaY)) notched = false;
     samples.push({ t: now, a });
     while (samples[0].t < now - 500) samples.shift();
-    if (yielded) return true;
+    if (yielded || free) return true;
 
     // A reversal is always the reader's: Lenis takes it from wherever the page is.
     if ((hold && dir !== hold.dir) || (landing && dir !== landing.dir)) {
@@ -247,6 +265,11 @@ export function createGate(read: () => Course) {
       if (now - fastSince >= SUSTAIN) {
         hold = null;
         fastSince = null;
+        // Spun on hard past its stop: the reader wants to be somewhere else, and the page goes with the wheel.
+        if (chained >= ESCAPE) {
+          free = true;
+          return true;
+        }
       }
     } else if (!fast) fastSince = null;
     const inner = startedInner && nested(event, dir);

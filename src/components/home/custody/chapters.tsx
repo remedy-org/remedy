@@ -5,9 +5,9 @@ import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { VerdictMark } from "@/components/console/VerdictMark";
-import { AlertIcon, ClockIcon, DURATION, EASE, Money, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
-import { CLAIM, CODE_AT, CONSENT_AT, CONSOLE_ROWS, SHOT_AT, WRITE_AT } from "./claim";
-import { useGate } from "./gate";
+import { AlertIcon, ClockIcon, DURATION, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
+import { CLAIM, CODE_AT, CONSENT_AT, CONSENT_STAGGER, CONSOLE_ROWS, SHOT_AT, WRITE_AT } from "./claim";
+import { ENTER, useGate } from "./gate";
 
 // The five chapters of the Chain of Custody, as presentational copies of the real claim screens. Each one is drawn from
 // a scroll progress `p` (0 to 1 over the whole runway, spec H2); a progress fixed at 1 (useDone) gives every chapter's
@@ -38,11 +38,11 @@ function useAfter(p: Progress, at: number) {
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const ramp = (v: number, a: number, b: number) => clamp01((v - a) / (b - a));
 
-/** A line that lights from 35% once the progress passes `at`, in time, so a step comes up in its turn and a stop never
- * rests on it half lit. Lit at rest. */
-function Lit({ p, at, className, children }: { p?: Progress; at: number; className?: string; children?: ReactNode }) {
+/** A line that lights from 35% once the progress passes `at`, in time (after `delay` seconds), so a step comes up in
+ * its turn and a stop never rests on it half lit. Lit at rest. */
+function Lit({ p, at, delay = 0, className, children }: { p?: Progress; at: number; delay?: number; className?: string; children?: ReactNode }) {
   const done = useDone();
-  const lit = useGate(p ?? done, (v) => v >= at);
+  const lit = useGate(p ?? done, (v) => v >= at, { ...ENTER, delay });
   const opacity = useTransform(lit, (k) => 0.35 + 0.65 * k);
   return (
     <motion.span className={className} style={{ opacity }}>
@@ -56,15 +56,15 @@ function Lit({ p, at, className, children }: { p?: Progress; at: number; classNa
  * lights them at `at`; without it they are all lit. `card`: the list sits on the consent card from 720px, so each node
  * masks the hairline in the card's colour there.
  */
-function StepLine({ p, at, steps, card, className }: { p?: Progress; at: readonly number[]; steps: readonly string[]; card?: boolean; className?: string }) {
+function StepLine({ p, at, stagger = 0, steps, card, className }: { p?: Progress; at: readonly number[]; stagger?: number; steps: readonly string[]; card?: boolean; className?: string }) {
   return (
     <ol className={clsx("relative flex flex-col gap-2.5 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-line", className)}>
       {steps.map((s, i) => (
         <li key={s} className="relative grid grid-cols-[1.25rem_minmax(0,1fr)] text-ui">
           <span className={clsx("mt-1.5 flex size-2 rounded-full bg-bg", card && "@min-[720px]:bg-surface")}>
-            <Lit p={p} at={at[i]} className="block size-2 rounded-full border border-text-2" />
+            <Lit p={p} at={at[i]} delay={i * stagger} className="block size-2 rounded-full border border-text-2" />
           </span>
-          <Lit p={p} at={at[i]}>
+          <Lit p={p} at={at[i]} delay={i * stagger}>
             {s}
           </Lit>
         </li>
@@ -123,14 +123,17 @@ export function ConsentChapter({ p }: { p?: Progress }) {
           <span className={clsx("text-ui text-muted @min-[720px]:hidden", compact && "@max-[719px]:hidden")}>
             <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall · <span className="font-mono">{CLAIM.recall}</span>
           </span>
-          <p className="text-title font-medium text-pretty">
-            Get $29.99 back for your <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> pillow.{" "}
-            <span className="text-muted">Remedy sends it through PayPal once your photo shows it&rsquo;s destroyed.</span>
-          </p>
-          <StepLine p={p} at={CONSENT_AT} steps={CONSENT_STEPS} card className={clsx("font-medium", compact && "@max-[719px]:hidden")} />
+          {/* The claim page's headline and the line under it (ConsentCard.tsx): one ink, the line a step down. */}
+          <div className="flex flex-col gap-2">
+            <p className="text-title font-medium text-pretty">
+              $29.99 back for your <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> pillow
+            </p>
+            <p className="text-body text-pretty text-text-2">Cut the pillow in half first, then photograph it with a code we give you, and PayPal pays you.</p>
+          </div>
+          <StepLine p={p} at={CONSENT_AT} stagger={CONSENT_STAGGER} steps={CONSENT_STEPS} card className={clsx("font-medium", compact && "@max-[719px]:hidden")} />
           {/* The claim page's own button, as it looks there: brass, the screen's one amber. A picture, so it is no control
               (the whole screen is hidden from screen readers and takes no pointer). */}
-          <span className="btn-primary flex h-12 items-center justify-center rounded-button-lg text-body font-medium select-none">Log in with PayPal</span>
+          <span className="btn-primary pointer-events-none flex h-12 items-center justify-center rounded-button-lg text-body font-medium select-none">Log in with PayPal</span>
         </div>
       </div>
     </div>
@@ -205,6 +208,15 @@ export function CodeChapter({ p }: { p: Progress }) {
             >
               <path d="M3 80 C 6 52, -6 30, 10 0" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
             </svg>
+            {/* What it hangs from: a brass pin at the string's top end, as the Problem board's pins (never a string ending
+                in the air). */}
+            <span
+              aria-hidden="true"
+              className={clsx(
+                "absolute left-[calc(50%+7px)] size-2 -translate-x-1/2 translate-y-1/2 rounded-full bg-accent shadow-[0_0_0_1px_var(--accent-edge),0_2px_3px_-1px_oklch(0_0_0/0.4)]",
+                compact ? "bottom-[calc(100%+37px)]" : "bottom-[calc(100%+61px)]",
+              )}
+            />
             <CodeTag wipe={wipe} short={compact} />
           </motion.div>
         </div>
@@ -280,15 +292,16 @@ function Thumb({ src }: { src: string }) {
 
 const GRID = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[11rem_minmax(0,1fr)_6rem_6.5rem_5rem]";
 
-/** Claim RM-0442 as the recall team's console lists it, paid. */
+/** Claim RM-0442 as the recall team's console lists it, paid, just filed: its photo check answered at 0:14, the
+ * payout sent at 0:15 (the exhibit's clock, teardown/model.ts elapsed). */
 const M4T_ROW = {
   photo: CLAIM.photo,
-  code: CLAIM.code,
+  filed: "Just now",
   id: CLAIM.id,
   status: "paid" as const,
   reason: "Every check passed",
-  // The console's one time unit: seconds, "15 s".
-  time: `${CLAIM.seconds} s`,
+  // The console's one time unit: seconds, "14 s".
+  time: `${CLAIM.seconds - 1} s`,
   amount: CLAIM.amount,
 };
 
@@ -302,11 +315,9 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
       <span className="flex min-w-0 items-center gap-3">
         <Thumb src={row.photo} />
         <span className="flex min-w-0 flex-col leading-tight">
-          {/* The console's own convention: the claim id first, its one-time code under it (the word in the sans). */}
+          {/* The tour's convention: the claim id first, when it was filed under it, newest first. */}
           <span className="font-mono font-medium">{row.id}</span>
-          <span className="truncate text-micro text-faint">
-            Code <span className="font-mono">{row.code}</span>
-          </span>
+          <span className="truncate text-micro text-faint">{row.filed}</span>
         </span>
       </span>
       {/* The console's verdict mark in a track as wide as the widest (Approved), so every reason starts on one line. */}
@@ -319,14 +330,13 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
         <Barcode bars={barsOf(row)} />
       </span>
       <span className="hidden text-faint @min-[720px]:block">{row.time ?? "—"}</span>
-      <span className="flex items-center justify-end gap-3 font-mono">
+      <span className="flex items-center justify-end gap-3">
         <span className="@min-[720px]:hidden">
           <VerdictMark verdict={row.status} className={EXCEPTION.has(row.status) ? "text-text" : undefined} />
         </span>
+        {/* Plain figures in a table, as the console tour prints them: superscript cents are the hero receipt's alone. */}
         {row.amount ? (
-          <span>
-            <Money value={row.amount} size="grid" />
-          </span>
+          <span className="tabular-nums">${row.amount.toFixed(2)}</span>
         ) : (
           <span className="text-faint">—</span>
         )}
@@ -349,9 +359,7 @@ export function ConsoleChapter({ p }: { p: Progress }) {
     <div className="h-full @container">
       <div className="flex h-full flex-col gap-6">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
-          <p className="text-head-sm font-medium">
-            And the recall team sees it here. <span className="text-muted">Photo, checks and payout in one row.</span>
-          </p>
+          <p className="text-head-sm font-medium">The recall team sees it here: photo, checks and payout in one row.</p>
         </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card bg-surface shadow-card">
           <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-3">
@@ -371,7 +379,7 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             <span>Claim</span>
             <span>Verdict</span>
             <span>Checks</span>
-            <span>Photo to PayPal</span>
+            <span>Answered in</span>
             <span className="text-right">Amount</span>
           </div>
           {/* The rows run on past the panel's foot, cut by it as a list is, so a tall screen shows more of the queue. */}
@@ -385,18 +393,9 @@ export function ConsoleChapter({ p }: { p: Progress }) {
               <ConsoleRow key={r.id} row={r} />
             ))}
           </div>
+          {/* The newest claims of the recall, never totals of their own: the recall's figures are For companies'. */}
           <p className="flex shrink-0 items-center justify-between gap-4 border-t border-line px-4 py-3 text-micro text-faint">
-            <span>{CONSOLE_ROWS.length + 1} claims</span>
-            <span>
-              {[
-                [1 + CONSOLE_ROWS.filter((r) => r.status === "paid").length, "paid"],
-                [CONSOLE_ROWS.filter((r) => r.status === "held").length, "held for a person"],
-                [CONSOLE_ROWS.filter((r) => r.status === "rejected").length, "rejected"],
-                [CONSOLE_ROWS.filter((r) => r.status === "blocked").length, "blocked"],
-              ]
-                .map(([n, w]) => `${n} ${w}`)
-                .join(" · ")}
-            </span>
+            <span>Newest first</span>
           </p>
         </div>
       </div>

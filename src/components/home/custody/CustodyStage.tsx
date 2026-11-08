@@ -35,11 +35,11 @@ function Layer({ p, i, compact, fill, children }: { p: Progress; i: number; comp
   const y = useTransform(opacity, (o) => (i === 0 ? 0 : 8 * (1 - o)));
   const visibility = useTransform(opacity, (o) => (o > 0 ? "visible" : "hidden"));
   return (
-    // Top-aligned under the app bar, as a page loads, on a laptop screen; on a tall one (1000px and up) a claim screen
-    // sits in the middle of the frame, which a top-aligned one left half empty under it.
+    // A claim screen sits in the middle of the frame at every size (one rule: top-aligned, a laptop screen left its lower
+    // half empty, a tall one its upper); the console fills it.
     <motion.div
       data-layer={i}
-      className={clsx("absolute inset-0 flex items-start justify-center px-8", compact ? "pt-6 pb-4" : "pt-12 pb-8", !fill && "[@media(min-height:1000px)]:items-center")}
+      className={clsx("absolute inset-0 flex justify-center px-8", compact ? "pt-6 pb-4" : "pt-12 pb-8", fill ? "items-start" : "items-center")}
       style={{ opacity, y, visibility }}
     >
       <div className={clsx("w-full max-w-[66rem]", fill && "h-full")}>{children}</div>
@@ -55,7 +55,7 @@ function RailItem({ p, i }: { p: Progress; i: number }) {
   // Enters in turn once p passes RAIL_IN, in time (the whole list in about half a second), then 100% while its chapter
   // is on screen, else 35%. Item 06 is the console, the screen's layer 5.
   const enter = useGate(p, (v) => v >= RAIL_IN, { ...ENTER, delay: i * RAIL_STAGGER }, LEAVE);
-  const on = useChapterGate(p, (n) => n === i);
+  const on = useOn(p, i);
   const opacity = useTransform(() => enter.get() * (0.35 + 0.65 * on.get()));
   const x = useTransform(enter, (k) => -12 * (1 - k));
   // The amber edge marks the chapter on screen, and for 01 and 02 fills down from a quarter through the chapter's
@@ -75,8 +75,16 @@ function RailItem({ p, i }: { p: Progress; i: number }) {
   );
 }
 
+/** Whether chapter i is the one on the rail: 01 only once its screen has taken over from the laptop (HANDOFF), so the
+ * rail never names the login while the laptop still shows the hero's finished claim. */
+function useOn(p: Progress, i: number) {
+  const chapter = useChapterGate(p, (n) => n === i);
+  const first = useGate(p, (v) => v >= HANDOFF[0] && chapterAt(v) === 0, CUT_IN, LEAVE);
+  return i === 0 ? first : chapter;
+}
+
 function RailCaption({ p, i }: { p: Progress; i: number }) {
-  const on = useChapterGate(p, (n) => n === i);
+  const on = useOn(p, i);
   const enter = useGate(p, (v) => v >= RAIL_IN);
   const opacity = useTransform(() => on.get() * enter.get());
   return (
@@ -122,17 +130,21 @@ function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
   el.style.clipPath = `inset(${box.t.toFixed(1)}px ${box.r.toFixed(1)}px ${box.b.toFixed(1)}px ${box.l.toFixed(1)}px round ${box.round.toFixed(1)}px)`;
 }
 
+/** The exhibit's beats a stop rests on: the live photo, check 3 (the three checks that need no AI play on the way to
+ * it) and the paid receipt (checks 4 and 5, the model's, play on the way to it). */
+const EXHIBIT_STOPS = ["intro", "acct", "paid"] as const;
+
 /**
- * Where Space and Page Down stop on the timeline: the hero, chapter 01 once every line is lit (so the dolly gets a page
- * of its own, landing on the settled screen; a stop as it settled made the next page look like it did nothing), 02 once
- * every line is lit, each of the exhibit's seven
- * beats (its live photo, the five checks, the paid receipt) at its hold, and the console.
+ * Where Space and Page Down stop on the timeline: the hero, chapter 01 as the dolly lands (its lines light in time, so
+ * the dolly's landing ends on the settled screen, never drifting on through a stretch of scroll to light them), 02 once
+ * every line is lit, three of the exhibit's beats at their holds (EXHIBIT_STOPS), and the console: six beats, each a
+ * finished frame, rather than ten that read alike.
  */
 export const PAGE_STOPS = [
   0,
-  CONSENT_AT[2] + 0.014,
+  CONSENT_AT[2] + 0.015,
   SHOT_AT[2] + 0.012,
-  ...EXHIBIT_BEATS.map((b) => EXHIBIT_RANGE[0] + holdOf(b.id) * (EXHIBIT_RANGE[1] - EXHIBIT_RANGE[0])),
+  ...EXHIBIT_BEATS.filter((b) => (EXHIBIT_STOPS as readonly string[]).includes(b.id)).map((b) => EXHIBIT_RANGE[0] + holdOf(b.id) * (EXHIBIT_RANGE[1] - EXHIBIT_RANGE[0])),
   0.96,
 ].map(scrollAt);
 
@@ -179,13 +191,13 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
     return () => ro.disconnect();
   }, [stage, p]);
 
-  // As p passes 0.12, in time, the laptop's own screen clears to the page's ground (160ms, the layer coming in), then
-  // the consent screen rises in on it (320ms, 140ms later): one UI at a time, never the laptop's photo and checks
-  // under a half-drawn card. Back, both leave in 160ms. Opacity and pointer events as well as visibility: a chapter
+  // As p passes 0.12, in time, the laptop's own screen dissolves straight into the consent screen: the layer and its
+  // content come in together (200ms and 240ms), so the screen never shows a frame of bare ground between the two UIs.
+  // Back, both leave in 160ms. Opacity and pointer events as well as visibility: a chapter
   // layer sets its own visibility, which would show through a hidden parent and catch the hero's clicks and pointer
   // (the laptop's tilt) while invisible.
-  const handIn = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.16 }, { ...LEAVE, duration: 0.16 });
-  const content = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.32, delay: 0.14 }, { ...LEAVE, duration: 0.16 });
+  const handIn = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.2 }, { ...LEAVE, duration: 0.16 });
+  const content = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.24 }, { ...LEAVE, duration: 0.16 });
   const screenStyle = {
     opacity: handIn,
     visibility: useTransform(handIn, (o) => (o > 0 ? "visible" : "hidden")),
@@ -204,7 +216,8 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
   return (
     <>
       <motion.div ref={screen} className={styles.screen} style={screenStyle} aria-hidden="true">
-        <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-card")} style={{ opacity: frame }} />
+        {/* The window's edge: a definite hairline with its soft shadow, so its corners never float alone. */}
+        <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-card ring-1 ring-line")} style={{ opacity: frame }} />
         <div className={styles.screenInner} data-screen-inner>
           <motion.div style={{ opacity: frame }}>
             <ScreenBar console={chapter === 5} />

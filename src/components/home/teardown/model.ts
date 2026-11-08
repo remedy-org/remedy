@@ -64,8 +64,8 @@ function fpOpen(p: number) {
   return 1 - easeInOut(inv(0, 0.12, local("acct", p)));
 }
 
-/** A check ticks at 82% of its beat, or before the camera leaves it. */
-const tickAt = (id: CheckId) => lerp(RANGES[id][0], RANGES[id][1], Math.min(0.82, DEPART[id] - 0.04));
+/** A check ticks at 82% of its beat, or before the camera leaves it; its bar in the row fills up to that moment. */
+export const tickAt = (id: CheckId) => lerp(RANGES[id][0], RANGES[id][1], Math.min(0.82, DEPART[id] - 0.04));
 
 /**
  * Seconds since the photo, as claim RM-0442 ran: the three pre-checks take under a second, the model reads the photo
@@ -327,10 +327,13 @@ export function stateAt(pIn: number): ExhibitState {
   };
 }
 
-/** The p each beat is best seen at (the middle of its hold), for posters, the check buttons and tests. */
+/**
+ * The p each beat is best seen at, for posters, the check buttons, the scroll stops and tests: a check just after it
+ * has ticked (its bar full, the camera still on it), so every stop rests on a finished beat, never a bar part filled.
+ */
 export function holdOf(id: BeatId) {
   const [a, z] = RANGES[id];
   if (id === "intro") return z - 0.002;
   if (id === "paid") return lerp(a, z, 0.62);
-  return lerp(a, z, 0.6);
+  return tickAt(id) + 0.02 * (z - a);
 }

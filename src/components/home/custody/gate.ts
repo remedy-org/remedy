@@ -38,7 +38,7 @@ export const CUT_IN: Transition = { ...ENTER, delay: 0.14 };
  * across more than one chapter in one step (an anchor, an instant scroll) sets the layers at once: animating from the
  * chapter left behind would flash a stale screen first.
  */
-export function useChapterGate(p: MotionValue<number>, is: (c: number) => boolean) {
+export function useChapterGate(p: MotionValue<number>, is: (c: number) => boolean, leave: Transition = LEAVE) {
   const k = useMotionValue(is(chapterAt(p.get())) ? 1 : 0);
   const prev = useRef(chapterAt(p.get()));
   useMotionValueEvent(p, "change", (v) => {
@@ -47,7 +47,7 @@ export function useChapterGate(p: MotionValue<number>, is: (c: number) => boolea
     if (from === to) return;
     prev.current = to;
     if (Math.abs(to - from) > 1) return k.jump(is(to) ? 1 : 0);
-    const t = cut(from, to, is);
+    const t = cut(from, to, is, leave);
     if (t) animate(k, is(to) ? 1 : 0, t);
   });
   return k;
@@ -60,9 +60,9 @@ export function useChapterGate(p: MotionValue<number>, is: (c: number) => boolea
  * frame of a cut shows one screen's words printed over another's (a crossfade of the opaque exhibit over chapter 02,
  * or off it onto the console, did, for about 250ms on every pass).
  */
-export function cut(from: number, to: number, is: (c: number) => boolean): Transition | null {
+export function cut(from: number, to: number, is: (c: number) => boolean, leave: Transition = LEAVE): Transition | null {
   const was = is(from);
   const now = is(to);
   if (was === now) return null;
-  return now ? CUT_IN : LEAVE;
+  return now ? CUT_IN : leave;
 }

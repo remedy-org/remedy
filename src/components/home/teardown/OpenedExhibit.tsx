@@ -5,7 +5,7 @@ import { useScroll, type MotionValue } from "motion/react";
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
 import { CHECKS, EXHIBIT, RECEIPT_ROWS } from "./claim";
-import { BEATS, RANGES, RECEIPT_FADE, TOTAL_VH, clock, holdOf, stateAt, type BeatId, type ExhibitState, type Shot } from "./model";
+import { BEATS, RANGES, RECEIPT_FADE, TOTAL_VH, clock, holdOf, stateAt, tickAt, type BeatId, type ExhibitState, type Shot } from "./model";
 import type { Colors, Exhibit, Rect, Tier } from "./scene";
 import { createFrameWatch, stageLayers } from "./watch";
 import styles from "./teardown.module.css";
@@ -174,10 +174,8 @@ function Header({ compact, chapter }: { compact?: boolean; chapter?: string }) {
   return (
     <div className="min-w-0">
       <p className="eyebrow text-muted whitespace-nowrap">{chapter ?? "How it works"}</p>
-      {/* Each half its own block on one column start, as the section headings set them, so both lines start alike. */}
-      <h2 className={clsx("mt-3 text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>
-        <span className="block max-w-[26ch]">Five checks pass.</span> <span className="block max-w-[26ch] text-muted">Then PayPal pays the owner.</span>
-      </h2>
+      {/* One ink, as every heading on the page: the second tone is for labels only. */}
+      <h2 className={clsx("mt-3 max-w-[26ch] text-pretty font-medium", compact ? "text-head-sm" : "text-title")}>Five checks pass, then PayPal pays the owner.</h2>
     </div>
   );
 }
@@ -418,12 +416,12 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
       // It settles level, so its figures read crisp at rest.
       receipt.current.style.transform = `translateY(${((1 - st.receipt) * 48).toFixed(1)}px) rotate(${(1.6 * (1 - st.receipt)).toFixed(2)}deg)`;
     }
-    // Active check's bar fills with its beat.
+    // Active check's bar fills with its beat, full the moment its tick lands (tickAt), never after.
     el.querySelectorAll<HTMLElement>("[data-fill]").forEach((f) => {
       const id = CHECKS[Number(f.dataset.fill)].id;
-      const [a, z] = RANGES[id];
-      const t = Math.min(1, Math.max(0, (st.p - a) / (z - a)));
-      f.style.transform = `scaleX(${st.p >= z ? 1 : t})`;
+      const a = RANGES[id][0];
+      const t = Math.min(1, Math.max(0, (st.p - a) / (tickAt(id) - a)));
+      f.style.transform = `scaleX(${t})`;
     });
     // Posters: a short dissolve (3% of a beat) centred on each beat's start, where the callout, readouts and check row
     // change, so the still and the callout always describe the same check, and a scroll that stops there never lands
