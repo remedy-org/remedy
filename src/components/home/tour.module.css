@@ -103,6 +103,7 @@
   --ag-wrapper-border: none;
   --ag-wrapper-border-radius: 0;
   --ag-background-color: var(--bg);
+  --ag-data-background-color: var(--bg);
   --ag-chrome-background-color: var(--bg);
   --ag-odd-row-background-color: var(--bg);
   --ag-header-background-color: var(--bg);
