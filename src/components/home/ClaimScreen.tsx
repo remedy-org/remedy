@@ -47,10 +47,10 @@ function CheckRow({ label, state }: { label: string; state: "waiting" | "running
 export function ClaimScreen({ phase }: { phase: number }) {
   return (
     <div className="flex h-full flex-col text-text">
-      {/* Top bar: the product on the left, the recall's number (data, so mono) on the right. */}
+      {/* Top bar: the recall by its title on the left, as the claim app's bar names it, its number (data, so mono) on the right. */}
       <div className="flex h-[3.4em] shrink-0 items-center gap-[1.4em] border-b border-line px-[1.6em]">
         <span className="text-[1.2em] text-text-2">
-          <NoBreakHyphens>Kikea X-VESOLJE nursing pillow</NoBreakHyphens>
+          <NoBreakHyphens>X-VESOLJE Nursing Pillows</NoBreakHyphens>
         </span>
         <span className="ml-auto font-mono text-[1.05em] text-faint">CPSC 27-071</span>
       </div>
