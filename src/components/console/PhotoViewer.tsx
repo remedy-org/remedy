@@ -15,6 +15,8 @@ export interface PhotoViewerProps {
   start: number;
   /** Opens zoomed on this spot (0 to 1), as Zoom to tag does. */
   zoomAt?: { x: number; y: number } | null;
+  /** Zoom to tag's own view: the tag cut from this photo's full-size original at 4x, shown in its place at that size. */
+  tag?: { photo: number; src: string } | null;
   /** The one-time code the tag must read: on top, beside the photos it is checked against. */
   code?: string;
   /** What decided a held or refused claim, as the panel's heading says it: the question to look at the photos with. */
@@ -39,7 +41,11 @@ const ZOOM = 3;
  * (the viewer closes on the panel's confirm, which takes the second A), ← and → move between the photos where one shows
  * at a time, Esc goes back to the panel. On a phone it shows one photo at a time.
  */
-export function PhotoViewer({ claimId, photos, start, zoomAt, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
+// The enlarged tag's own size (scripts/demo-assets.ts): 4x a 160 x 120 cut, never drawn larger, so it stays as sharp as
+// the original allows.
+const TAG_SIZE = { w: 640, h: 480 };
+
+export function PhotoViewer({ claimId, photos, start, zoomAt, tag, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const figures = useRef<(HTMLElement | null)[]>([]);
   const [current, setCurrent] = useState(start);
@@ -47,7 +53,9 @@ export function PhotoViewer({ claimId, photos, start, zoomAt, code, question, on
   const [ratios, setRatios] = useState<(number | null)[]>(() => photos.map(() => null));
   const table = useRef<HTMLDivElement>(null);
   const [room, setRoom] = useState<{ w: number; h: number } | null>(null);
-  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(zoomAt ?? null);
+  // Zoom to tag with an enlarged cut opens on it, in the photo's place; a click or Esc goes back to the whole photo.
+  const [tagView, setTagView] = useState(Boolean(zoomAt && tag));
+  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(tagView ? null : (zoomAt ?? null));
   useLayoutEffect(() => {
     const el = table.current;
     if (!el) return;
@@ -66,8 +74,11 @@ export function PhotoViewer({ claimId, photos, start, zoomAt, code, question, on
   const GAP = 16;
   const CAPTION = 24;
   const shown = room && room.w < 640 ? [current] : photos.map((_, i) => i);
-  const known = shown.every((i) => ratios[i]);
-  const height = room && known ? Math.max(80, Math.min(room.h - CAPTION, (room.w - GAP * (shown.length - 1)) / shown.reduce((n, i) => n + ratios[i]!, 0))) : null;
+  const isTag = (i: number) => tagView && tag?.photo === i;
+  const ratioOf = (i: number) => (isTag(i) ? TAG_SIZE.w / TAG_SIZE.h : ratios[i]);
+  const known = shown.every((i) => ratioOf(i));
+  const fit = room && known ? Math.max(80, Math.min(room.h - CAPTION, (room.w - GAP * (shown.length - 1)) / shown.reduce((n, i) => n + ratioOf(i)!, 0))) : null;
+  const height = fit !== null && shown.some(isTag) ? Math.min(fit, TAG_SIZE.h) : fit;
   const at = (e: MouseEvent<HTMLElement>) => {
     const box = e.currentTarget.getBoundingClientRect();
     return { x: Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)), y: Math.min(1, Math.max(0, (e.clientY - box.top) / box.height)) };
@@ -99,9 +110,10 @@ export function PhotoViewer({ claimId, photos, start, zoomAt, code, question, on
       }}
       // Esc zooms back out first; the next one goes back to the evidence.
       onCancel={(e) => {
-        if (!zoom) return;
+        if (!zoom && !tagView) return;
         e.preventDefault();
         setZoom(null);
+        setTagView(false);
       }}
       onKeyDown={(e) => {
         // The panel's keys, where the call is made: A opens the approve confirm (A again pays), R the reason.
@@ -156,7 +168,7 @@ export function PhotoViewer({ claimId, photos, start, zoomAt, code, question, on
 
       <div ref={table} className="flex min-h-0 flex-1 items-center justify-center gap-4 p-4 sm:p-5">
         {photos.map((src, i) => {
-          const r = ratios[i];
+          const r = ratioOf(i);
           const size = height && r ? { width: Math.round(height * r), height: Math.round(height) } : undefined;
           return (
             <figure
@@ -171,14 +183,25 @@ export function PhotoViewer({ claimId, photos, start, zoomAt, code, question, on
               className={clsx("flex min-w-0 flex-col gap-2 rounded-control outline-none", !shown.includes(i) && "hidden", !size && "invisible flex-1")}
             >
               <div
-                className={clsx("relative overflow-hidden rounded-control ring-1 ring-line", zoom ? "cursor-zoom-out" : "cursor-zoom-in", !size && "h-40")}
+                className={clsx("relative overflow-hidden rounded-control ring-1 ring-line", zoom || isTag(i) ? "cursor-zoom-out" : "cursor-zoom-in", !size && "h-40")}
                 style={size}
                 onClick={(e) => {
+                  if (tagView) return setTagView(false);
                   const p = at(e);
                   setZoom((z) => (z ? null : p));
                 }}
                 onPointerMove={(e) => zoom && setZoom(at(e))}
               >
+                {isTag(i) && (
+                  // A public file: the demo claim's tag, cut from the photo's original.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={tag!.src}
+                    alt={`The tag in photo ${i + 1} of ${photos.length} for ${claimId}, enlarged`}
+                    draggable={false}
+                    className="absolute inset-0 z-[1] size-full object-cover select-none"
+                  />
+                )}
                 {/* A private, session-checked route at full size: next/image's optimizer can't fetch it with the cookie. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -195,6 +218,7 @@ export function PhotoViewer({ claimId, photos, start, zoomAt, code, question, on
               </div>
               <figcaption className={clsx("h-4 text-micro", i === current ? "text-text" : "text-muted")}>
                 Photo {i + 1} of {photos.length}
+                {isTag(i) && <span className="text-muted"> · the tag, enlarged 4×</span>}
               </figcaption>
             </figure>
           );
@@ -225,8 +249,8 @@ export function PhotoViewer({ claimId, photos, start, zoomAt, code, question, on
               <Keys k={["←", "→"]}>Switch photo</Keys>
             </span>
           )}
-          <span className="hidden sm:inline">{zoom ? "Click to zoom out" : "Click a photo to zoom both"}</span>
-          <Keys k={["Esc"]}>{zoom ? "Zoom out" : "Back to the evidence"}</Keys>
+          <span className="hidden sm:inline">{zoom || tagView ? "Click to zoom out" : "Click a photo to zoom both"}</span>
+          <Keys k={["Esc"]}>{zoom || tagView ? "Zoom out" : "Back to the evidence"}</Keys>
         </p>
       </footer>
     </dialog>

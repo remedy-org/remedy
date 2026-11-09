@@ -6,6 +6,7 @@ import { summarize } from "@/lib/store/store";
 import type { Claim, Recall } from "@/lib/types";
 import type { Stage } from "@/components/insights/funnel";
 import { verdictOf, verdictWord, type Verdict } from "@/components/console/VerdictMark";
+import { recallDays } from "@/components/console/format";
 
 export { funnel, STAGES } from "@/components/insights/funnel";
 
@@ -103,7 +104,7 @@ export interface InsightsRecall {
   unitsSold: number;
   refund: number;
   autoPay: boolean;
-  /** Days since the recall was announced, at least 1: the pace beside the share remedied. */
+  /** Days the recall has run, its own date as day 1 (recallDays): the pace beside the share remedied. */
   daysIn: number;
 }
 
@@ -235,7 +236,7 @@ export function buildInsights(claims: Claim[], recall: Recall, now: Date): Insig
       unitsSold: recall.unitsSold,
       refund: cents(recall.refund) / 100,
       autoPay: recall.autoPay,
-      daysIn: Math.max(1, Math.ceil((now.getTime() - Date.parse(recall.recallDate)) / 86_400_000)),
+      daysIn: recallDays(recall.recallDate, now),
     },
     claims: claims.map((c) => claimFact(c, recall)),
     checks: claims.flatMap(checkFacts),

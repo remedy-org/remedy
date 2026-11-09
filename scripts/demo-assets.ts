@@ -1,6 +1,7 @@
 // Rebuilds the committed demo assets from the local eval (eval/ is git-ignored, so this only runs on a machine that has it):
 //   public/demo/<case>-<n>.jpg     our own AI-made sample photos, max 1200 px. Never the w- cases: those are third-party photos.
-//   public/demo/<case>-tag.jpg     the wrong-code photo's tag, cut at 800 x 400 from its full-size original.
+//   public/demo/<case>-tag.jpg     the wrong-code photo's tag, cut at 800 x 400 from its full-size original; the held
+//                                  claim's tag (k10), cut from its original and enlarged 4x for the console's Zoom to tag.
 //   src/lib/demo/verdicts.json     real model answers from eval/out/runs, copied verbatim: run 1 of each case.
 //   src/lib/review/replay.json     the same answers, keyed by photo SHA-256, for the local review replay
 //                                  (src/lib/review/replay.ts).
@@ -30,6 +31,9 @@ const CASES: { name: string; runs?: string }[] = [
 
 // The wrong-code photo's tag, in its full-size original's pixels (2:1), for the refusal's enlarged tag.
 const TAG = { name: "k02-floral-K7Q", box: { left: 676, top: 1046, width: 300, height: 150 } };
+// The held claim's tag (src/lib/demo/claims.ts TAG_SPOTS), in its 1024 x 1536 original's pixels (4:3), enlarged 4x
+// from the original rather than from the 1200px copy, so Zoom to tag shows every pixel the camera kept.
+const HELD_TAG = { name: "k10-puzzle-far-dim-H9D", box: { left: 719, top: 769, width: 160, height: 120 } };
 
 const short = (c: string) => c.slice(0, 3);
 const jpgs = async (c: string) => (await readdir(join(PHOTOS, c))).filter((f) => f.endsWith(".jpg")).sort();
@@ -55,6 +59,15 @@ async function photos() {
     .jpeg({ quality: 85, mozjpeg: true })
     .toFile(tag);
   console.log(tag);
+  const held = join(ROOT, "public/demo", `${short(HELD_TAG.name)}-tag.jpg`);
+  await sharp(await readFile(join(PHOTOS, HELD_TAG.name, "01.jpg")))
+    .rotate()
+    .extract(HELD_TAG.box)
+    .resize(HELD_TAG.box.width * 4, HELD_TAG.box.height * 4, { kernel: "lanczos3" })
+    .sharpen({ sigma: 0.6 })
+    .jpeg({ quality: 88, mozjpeg: true })
+    .toFile(held);
+  console.log(held);
 }
 
 interface Row {

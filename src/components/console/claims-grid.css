@@ -325,3 +325,56 @@
 .claims-grid .ag-body-vertical-scroll.ag-apple-scrollbar {
   background: transparent !important;
 }
+
+/* The Checks strip says its count in words, its own aria-label ("4 of 5 checks passed · 1 failed"), in a small card
+   under it: on hover where no hover card lists the checks (the stills, the homepage's queue), and in the live grid when
+   the keyboard reaches its cell, since the grid's hover card is the pointer's. The grid's last row's card opens above. */
+.checks-glyph {
+  position: relative;
+}
+.checks-glyph::after {
+  content: attr(aria-label);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -8px;
+  z-index: 5;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  box-shadow:
+    0 0 0 1px var(--line-2),
+    var(--float-shadow);
+  color: var(--text);
+  font-size: var(--text-micro);
+  line-height: 16px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-ui) var(--ease-snap);
+}
+.checks-glyph:hover::after {
+  opacity: 1;
+  transition-delay: 250ms;
+}
+.claims-grid .ag-cell .checks-glyph:hover::after {
+  opacity: 0;
+}
+.claims-grid .ag-cell[col-id="checks"] {
+  overflow: visible;
+}
+.claims-grid .ag-row:has(.ag-cell[col-id="checks"]:focus-visible) {
+  z-index: 3;
+}
+.claims-grid .ag-cell[col-id="checks"]:focus-visible .checks-glyph::after {
+  opacity: 1;
+  transition-delay: 0ms;
+}
+.claims-grid .ag-row-last .checks-glyph::after {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .checks-glyph::after {
+    transition: none;
+  }
+}

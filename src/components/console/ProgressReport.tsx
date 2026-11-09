@@ -4,6 +4,7 @@ import type { Report } from "@/app/console/_lib/report";
 import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
 import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
+import { firmOf } from "./firm";
 import { formatCount, formatDate, formatPeriod, keepHyphens, plural } from "./format";
 import { Figure as Digits } from "./Ledger";
 import { VerdictMark } from "./VerdictMark";
@@ -43,13 +44,16 @@ export function ProgressReport({
   report,
   generated,
   daysIn,
+  reportNo,
   home = false,
 }: {
   recall: Recall;
   report: Report;
   generated: string;
-  /** Whole days from the recall's date to the draft's, said beside the reporting period. */
+  /** Days the recall has run to the draft's day, its date as day 1 (format.ts recallDays), said beside the period. */
   daysIn?: number;
+  /** Which monthly progress report this is in CPSC's sequence (format.ts reportNumber). */
+  reportNo?: number;
   /**
    * The homepage's sheet, inside the console tour's frame: sized by its own width, sans figures, shares to one decimal
    * that add up to 100.0%, and the marks its phone peek (ReportPeek.tsx) cuts on.
@@ -63,16 +67,15 @@ export function ProgressReport({
   const share = home ? shares(report.outcomes.map((o) => o.count)) : report.outcomes.map((o) => o.share);
   const refused = s.rejected + s.blocked;
   const each = report.paidEachCents === null ? "" : ` at ${formatCents(report.paidEachCents)}`;
+  const firm = firmOf(recall);
   return (
-    // On screen it is a paper document, like every receipt, tag and notice (light-theme tokens inside, which pass on
-    // --paper); printed, plain white.
+    // On screen it is a paper document, like every receipt, tag and notice: the same cream sheet on the homepage and in
+    // the console, in both themes (light-theme tokens inside, which pass on --paper), lying in the dark room as on the
+    // light page. Printed, plain white (PrintButton turns the page light while it prints).
     <article
-      // The homepage's sheet is paper in both themes; the console's takes the page's theme on screen (a dark sheet in the
-      // dark room, the paper in light), and prints light on white (PrintButton turns the page light while it prints).
-      data-theme={home ? "light" : undefined}
+      data-theme="light"
       className={clsx(
-        "report-sheet w-full max-w-[52rem] rounded-card px-6 text-text print:max-w-none print:rounded-none print:bg-[#fff]! print:p-0 print:shadow-none!",
-        home ? "bg-paper shadow-[var(--paper-shadow-flat)]" : "bg-surface shadow-[0_0_0_1px_var(--line-2)] in-data-[theme=light]:bg-paper in-data-[theme=light]:shadow-[var(--paper-shadow-flat)]",
+        "report-sheet w-full max-w-[52rem] rounded-card bg-paper px-6 text-text shadow-[var(--paper-shadow-flat)] print:max-w-none print:rounded-none print:bg-[#fff]! print:p-0 print:shadow-none!",
         home ? "@container mx-auto py-7 sm:px-10 sm:py-9" : "py-8 sm:px-12 sm:py-12",
       )}
     >
@@ -89,21 +92,33 @@ export function ProgressReport({
           className={clsx(
             "mt-2 grid gap-x-6 gap-y-3 text-ui",
             // The homepage's sheet sizes by its own width (a frame, a tablet column, a phone), never by the window's.
-            home ? "grid-cols-[repeat(2,minmax(0,1fr))] @min-[40rem]:grid-cols-[repeat(4,max-content)] @min-[40rem]:justify-between" : "grid-cols-2 sm:grid-cols-4",
+            // In pairs: who and which report, when and over what period, the remedy and its amount. Two to a row on a
+            // phone; from a tablet's width three columns of two, filled down each column.
+            home
+              ? "grid-cols-[repeat(2,minmax(0,1fr))] @min-[40rem]:grid-flow-col @min-[40rem]:grid-cols-[repeat(3,minmax(0,1fr))] @min-[40rem]:grid-rows-2"
+              : "grid-cols-2 sm:grid-flow-col sm:grid-cols-3 sm:grid-rows-2",
           )}
         >
-          {[
-            ["Recall date", formatDate(recall.recallDate)],
-            ["Remedy offered", "Refund for destroyed units"],
-            ["Refund per unit", formatMoney(recall.refund)],
-            // The period the report covers: from the recall's date to the day it was drawn up, as CPSC's monthly report reads.
-            ["Reporting period", `${formatPeriod(formatDate(recall.recallDate), generated)}${daysIn ? `, ${plural(daysIn, "day")} in` : ""}`],
-          ].map(([k, v]) => (
-            <div key={k}>
-              <dt className="text-muted">{k}</dt>
-              <dd className="mt-0.5">{v}</dd>
-            </div>
-          ))}
+          {(
+            [
+              // The header CPSC's monthly progress report opens with, from the notice and the claims alone: the recalling
+              // firm as CPSC's notice names it, and the report's place in the monthly sequence. No contact is guessed.
+              firm ? ["Recalling firm", firm] : null,
+              reportNo ? ["Progress report", `Monthly, no. ${reportNo}`] : null,
+              ["Recall date", formatDate(recall.recallDate)],
+              // The period the figures cover: from the recall's date to the day it was drawn up, counted inclusive.
+              ["Reporting period", `${formatPeriod(formatDate(recall.recallDate), generated)}${daysIn ? `, ${plural(daysIn, "day")} in` : ""}`],
+              ["Remedy offered", "Refund for destroyed units"],
+              ["Refund per unit", formatMoney(recall.refund)],
+            ] satisfies ([string, string] | null)[]
+          )
+            .filter((f) => f !== null)
+            .map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-muted">{k}</dt>
+                <dd className="mt-0.5">{v}</dd>
+              </div>
+            ))}
         </dl>
       </header>
 
@@ -180,7 +195,13 @@ export function ProgressReport({
                 [
                   ["Units corrected by refund", formatCount(s.remedied), "Destroyed on camera and approved"],
                   ["Units corrected by repair or replacement", "0", "The remedy is a refund"],
-                  ["Units remaining at consumer level", s.unitsSold ? formatCount(Math.max(0, s.unitsSold - s.remedied)) : "Not given", "Units sold less units corrected"],
+                  [
+                    "Units remaining at consumer level",
+                    s.unitsSold ? formatCount(Math.max(0, s.unitsSold - s.remedied)) : "Not given",
+                    s.unitsSold
+                      ? `${formatCount(s.unitsSold)} sold less ${formatCount(s.remedied)} corrected: every unit sold counts as with a consumer until it is corrected`
+                      : "Units sold less units corrected, once CPSC gives units sold",
+                  ],
                   ["Claims in progress or held", formatCount(s.pending + s.held), "Not yet counted as corrected"],
                 ] as const
               ).map(([k, v, note]) => (
@@ -253,7 +274,7 @@ function ReturnRuler({ remedied, sold, daysIn }: { remedied: number; sold: numbe
   const share = remedied / sold;
   return (
     <div className="flex flex-col gap-2">
-      {/* On paper (light) the paper's inks; on the console's dark sheet, the room's own. */}
+      {/* The paper's inks: the sheet is light-themed paper wherever it lies. */}
       <p aria-hidden="true" className="text-micro text-pay in-data-[theme=light]:text-pay-ink">
         This recall{daysIn ? `, ${plural(daysIn, "day")} in` : " so far"}
       </p>

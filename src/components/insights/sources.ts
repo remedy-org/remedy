@@ -90,7 +90,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["unitsSold", "Units sold", "integerFormat", { ...whole, description: "Units sold, from the CPSC notice." }],
           ["refund", "Refund", "currencyFormat", { ...usd }],
           ["autoPay", "Auto-pay", "booleanFormat"],
-          ["daysIn", "Days since the recall", "integerFormat", { ...whole, description: "Days since CPSC announced the recall, at least 1." }],
+          ["daysIn", "Days since the recall", "integerFormat", { ...whole, description: "Days the recall has run, counting the day CPSC announced it as day 1, as the CPSC report's period does." }],
         ]),
       },
     ],

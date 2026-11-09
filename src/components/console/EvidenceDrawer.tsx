@@ -548,9 +548,9 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
   );
 }
 
-/** What decided a held or refused claim: the reason as a heading, what it means, and the photo check's own words. Null
- * for any other claim. */
-function deciding(claim: DrawerClaim): { title: string; detail: string | null; evidence: string | null } | null {
+/** What decided a held or refused claim, in its own words: the reason, what it means, and the photo check's own words.
+ * Null for any other claim. */
+function decider(claim: DrawerClaim): { title: string; detail: string | null; evidence: string | null } | null {
   if (claim.decision !== "held" && claim.decision !== "rejected" && claim.decision !== "blocked") return null;
   // The newest thing that stopped the money leads: PayPal not taking the payout, or the checks run again on approve.
   const failure = payoutFailure(claim);
@@ -585,6 +585,20 @@ function deciding(claim: DrawerClaim): { title: string; detail: string | null; e
   const pre = claim.preChecks.find((p) => p.state === "reject" || p.state === "hold");
   const check = claim.checks.find((c) => c.outcome !== "pass");
   return { title: check?.rule ?? pre?.detail ?? claim.sentence, detail: null, evidence: check?.evidence ?? null };
+}
+
+/**
+ * The panel's headline is the grid row's reason, word for word, in every state ("Tag reads K7Q · code is K7P"), so the
+ * row and the panel never say one refusal two ways. What the row's line leaves out stays under it: a payout failure, a
+ * review or an owner's ask says its own heading first in the detail; a check's full sentence is the check list's.
+ * `rule` is the decider's own heading, which the check list's "see above" matches.
+ */
+function deciding(claim: DrawerClaim): { title: string; detail: string | null; evidence: string | null; rule: string } | null {
+  const d = decider(claim);
+  if (!d) return null;
+  if (!claim.note || claim.note === d.title) return { ...d, rule: d.title };
+  const own = d.detail !== null && !claim.note.startsWith(d.title);
+  return { title: claim.note, detail: own ? `${d.title.replace(/[.\s]+$/, "")}. ${d.detail}` : d.detail, evidence: d.evidence, rule: d.title };
 }
 
 /** Held or refused: the reason as the panel's first heading, the photo check's own words under it, then the count.
@@ -712,6 +726,7 @@ function Evidence({
             photos={claim.photos}
             start={viewer}
             zoomAt={viewing?.zoom}
+            tag={viewing?.zoom && claim.tagSpot?.enlarged ? { photo: claim.tagSpot.photo, src: claim.tagSpot.enlarged } : null}
             code={claim.code}
             question={d && { title: lowerAfterColons(typesetText(d.title)), detail: d.detail && typesetText(d.detail) }}
             labels={claim.review ? reviewLabels(claim) : undefined}
@@ -739,7 +754,7 @@ function Evidence({
           label={`Checks for ${claim.id}`}
           steps={claim.fiveRows.map((r) => ({
             id: String(r.n),
-            label: r.name,
+            label: r.title,
             state: r.state === "reject" ? (r.n <= 3 ? "blocked" : "reject") : r.state,
             detail: r.state === "waiting" || (r.state === "pass" && !open) ? undefined : fiveDetail(r, d, link),
           }))}
@@ -813,6 +828,7 @@ function Evidence({
 
 // What a part that didn't pass says in a word, after its name: the reason itself is the panel's heading.
 const PART_STATE: Partial<Record<string, string>> = { hold: "couldn’t tell", reject: "failed" };
+const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 // No capital after a colon in these rows: "…: Couldn't confirm: The tag…" reads "…: couldn't confirm: the tag…". A
 // word that is a name or a code (PayPal, X-VESOLJE, H9D) keeps its case: only a plain capitalised word is lowered.
@@ -827,12 +843,16 @@ const lowerAfterColons = (text: string) => text.replace(/(:\s+)([A-Z])(?=[a-z’
  */
 function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<typeof deciding>, link: (text: string) => ReactNode): ReactNode {
   type Part = DrawerClaim["fiveRows"][number]["parts"][number];
-  const led = (p: Part) => Boolean(decided && p.text === decided.title && (p.evidence ?? null) === decided.evidence);
+  const led = (p: Part) => Boolean(decided && p.text === decided.rule && (p.evidence ?? null) === decided.evidence);
   const shown = row.parts.filter((p) => p.text || p.evidence).sort((a, b) => Number(a.state === "pass") - Number(b.state === "pass"));
   if (!row.note && !shown.length) return undefined;
   const named = shown.length > 1;
   // An account check's line says what was checked; a photo-check answer's rule only restates its name.
   const restates = (p: Part) => p.state === "pass" && !isPreCheck(p.id);
+  // The answer the row's title already names (fiveRowsOf's title) isn't named again; under a row in doubt, an answer
+  // that passed says so even beside its quote, so what held or failed is the only thing left uncertain.
+  const titled = (p: Part) => row.title !== row.name && p.label === row.title;
+  const doubted = row.state === "hold" || row.state === "reject";
   return (
     <span className="flex flex-col gap-1.5">
       {row.note && <span>{lowerAfterColons(row.note)}</span>}
@@ -840,14 +860,16 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
         <span key={p.id} className="block">
           {led(p) ? (
             <span className="text-text">
-              {p.label}: {PART_STATE[p.state] ?? "see above"}
+              {titled(p) ? capital(PART_STATE[p.state] ?? "see above") : `${p.label}: ${PART_STATE[p.state] ?? "see above"}`}
               {PART_STATE[p.state] && <span className="text-muted">, see above</span>}
             </span>
           ) : restates(p) && (named || p.evidence) ? (
             <span className="text-text-2">
               {p.label}
-              {!p.evidence && <span className="text-muted"> · passed</span>}
+              {(!p.evidence || doubted) && <span className="text-muted"> · passed</span>}
             </span>
+          ) : titled(p) && PART_STATE[p.state] ? (
+            <span className="text-text">{capital(PART_STATE[p.state]!)}</span>
           ) : named && PART_STATE[p.state] ? (
             // Its name and state; the rule's own line would only restate the name ("Couldn't confirm: The tag is on…").
             <span className="text-text">

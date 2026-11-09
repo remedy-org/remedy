@@ -23,12 +23,12 @@ const NOSCRIPT = `<style>[data-tour]{display:none!important}[data-story]{display
 export function Companies() {
   const grid = previewProps();
   const still = insightsStill(insightsPreview());
-  const { recall, report, generated, daysIn } = reportPreview();
+  const { recall, report, generated, daysIn, reportNo } = reportPreview();
   const evidence = grid.rows.find((r) => r.id === PREVIEW_OPEN_ID)?.evidence ?? null;
   // Step 03 names the recall analyst only when its recorded answer is there to show.
   const sentences = stepSentences(Boolean(RECORDING));
   const descriptions = describe(still.totals, { id: PREVIEW_OPEN_ID, amount: evidence?.amount ?? "" }, RECORDING);
-  const sheet = <ProgressReport recall={recall} report={report} generated={generated} daysIn={daysIn} home />;
+  const sheet = <ProgressReport recall={recall} report={report} generated={generated} daysIn={daysIn} reportNo={reportNo} home />;
 
   return (
     <Section
