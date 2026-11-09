@@ -43,8 +43,9 @@ Schibsted Grotesk and JetBrains Mono fonts. The component itself reads only the 
 |---|---|
 | `claim.ts` | Every fact and quote the exhibit shows, with its source |
 | `model.ts` | The one input, `p` → `stateAt(p)`: beats, part openness, camera shot, readouts, ticks, receipt. Pure; tested in `model.test.ts` |
+| `scan.ts` | Check 1's scan line: where it is on the clock, and the photo's projective map that lays it on the phone's tilted screen. Pure; tested in `scan.test.ts` |
 | `OpenedExhibit.tsx` | Chooses the form, owns the pin, draws one frame per change of `p`, and writes the DOM overlay (readouts, check row, callout and leader, receipt) |
-| `scene/` | three.js, behind a dynamic import: `index.ts` (studio, framing, render), `pillow.ts` (the cut C-shaped pillow in slate blue-grey, torn edge, stuffing), `parts.ts` (tag and twine, the phone with the photo and its scan line on its screen, prints and fingerprints), `textures.ts`, `noise.ts` |
+| `scene/` | three.js, behind a dynamic import: `index.ts` (studio, framing, render), `pillow.ts` (the cut C-shaped pillow in slate blue-grey, torn edge, stuffing), `parts.ts` (tag and twine, the phone with the photo on its screen and that photo's corners for the scan line, prints and fingerprints), `textures.ts`, `noise.ts` |
 | `public/teardown/*.webp` | 28 pre-rendered stills (7 beats × 2 themes × desktop/phone), 1.2 MB in all. The phone stills of the whole pillow are framed tight, so the object fills about 85% of a 375px screen |
 
 ### Forms, chosen after mount
@@ -66,7 +67,14 @@ The server always renders the static form.
   - the 1.7 KB is Turbopack re-splitting shared motion code, and no exhibit code is in those chunks.
 - The lazy chunks are three.js (750 KB raw, 191 KB gz; Turbopack does not tree-shake it) and the scene (22 KB raw,
   8 KB gz).
-- A frame is drawn only when `p`, the theme or the size changes. Nothing draws while idle or off-screen.
+- A frame is drawn only when `p`, the theme or the size changes. Nothing draws while idle or off-screen, but check 1's
+  scan line: while the phone is up, a white 1.5px line with a soft glow trailing above it sweeps down the photo on its
+  screen (1.9 s, then a 0.45 s pause), on a clock, so a reader resting on the live check sees it working. It is an SVG
+  over the canvas, laid on the photo's four projected corners (the scene returns them with each frame) through their
+  projective map, so it stays crisp and clipped to the photo however small and tilted the phone is, and only its few
+  attributes are written each frame; the scene is not redrawn. It starts at the photo's top as the phone comes up and
+  is drawn in the same frame as the scene, so it never trails the phone while the camera moves. The stills and the
+  capture tool's frames leave it out.
 - Tier 2 caps the pixel ratio at 1.5, uses a 1024 VSM shadow map, and draws two fibre shells.
 - Tier 1 drops to a pixel ratio of 1, 512 shadows and one shell. The drop happens:
   - after a start-up benchmark of over 12 ms a frame. The benchmark ends on a 1px `readPixels`, which blocks until the
@@ -121,10 +129,11 @@ The server always renders the static form.
 - A part opens as the camera arrives and closes over the last 12% of its beat; its leader draws on over the tenth of
   the beat before the camera arrives and fades (never retracts) over 6% as the camera leaves. The callout is up or
   down, eased in time by CSS, never scrubbed. The paid beat's halves part and stay parted to the end.
-- In the custody pin the exhibit comes and goes as one opaque layer, cut in time (`custody/gate.ts`) like the claim
+- In the custody pin the exhibit comes in as one opaque layer, cut in time (`custody/gate.ts`) like the claim
   screens: the outgoing layer leaves in 180ms and the incoming one rises in over 360ms, 140ms later. Out onto the
-  console its receipt (`data-receipt`, exported as `Receipt`) stays: `custody/arrival.ts` folds it into RM-0442's row
-  and glides it into the console.
+  console it goes scrubbed, as the first part of one move (`custody/arrival.ts`): past the paid stop it fades and
+  lifts 16px away, a little each frame, while its receipt (`data-receipt`, exported as `Receipt`) stays where it lay;
+  the arrival then folds the receipt into RM-0442's row and glides it into the console, which fills in round it.
 - The live canvas replaces the beat's still in one frame once warm, so the stage never shows the ground alone.
 
 ### Regenerating the stills

@@ -80,7 +80,7 @@ export const tickAt = (id: CheckId) => lerp(RANGES[id][0], RANGES[id][1], Math.m
 export const SENT_AT = 0.04;
 export const CONFIRMED_AT = 0.48;
 const clockPoints = (): readonly (readonly [number, number])[] => [
-  [RANGES.live[0] + (RANGES.live[1] - RANGES.live[0]) * 0.55, 0], // the photo is taken mid-scan
+  [RANGES.live[0] + (RANGES.live[1] - RANGES.live[0]) * 0.55, 0], // the photo is taken mid-beat
   [tickAt("live"), EXHIBIT.prechecked / 3],
   [tickAt("fp"), (2 * EXHIBIT.prechecked) / 3],
   [tickAt("acct"), EXHIBIT.prechecked],
@@ -240,8 +240,6 @@ export interface ExhibitState {
   torn: number;
   /** The paid beat's explode, 0 to 1, held to the end. */
   explode: number;
-  /** The scan line's sweep down the photo on the phone's screen, 0 to 1 (live check). */
-  scan: number;
   /** The fingerprint grid drawing on (photo check). */
   hash: number;
   /** Code characters read so far (0 to 3) and the one being read now (-1 for none). */
@@ -346,7 +344,6 @@ export function stateAt(pIn: number): ExhibitState {
     // The halves part as the receipt lands and stay parted to the end: the last 3D frame before the console is the
     // pillow destroyed, never put back together. The turntable carries the motion after that.
     explode: smooth(inv(0.05, 0.45, paidT)) * (p >= RANGES.paid[0] ? 1 : 0),
-    scan: inv(0.3, 0.75, local("live", p)),
     hash: smooth(inv(0.25, 0.6, local("fp", p))),
     chars,
     charNow,
