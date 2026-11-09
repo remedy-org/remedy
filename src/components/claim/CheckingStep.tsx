@@ -117,10 +117,12 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shown, preview]);
 
-  // The elapsed clock, 4 times a second, until the checks are done.
+  // The elapsed clock, 4 times a second, until the checks are done. An animated preview counts on from its fixed time,
+  // so its clock moves as its rows land.
+  const [ticked, setTicked] = useState(0);
   useEffect(() => {
-    if (preview || done) return;
-    const t = setInterval(() => setNow(Date.now()), 250);
+    if (done || (preview && !preview.animate)) return;
+    const t = setInterval(() => (preview ? setTicked((n) => n + 0.25) : setNow(Date.now())), 250);
     return () => clearInterval(t);
   }, [preview, done]);
 
@@ -187,7 +189,7 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
   // Seconds since the photos arrived, from the claim's own event, so a reload keeps counting. Until that is known (the
   // photos are still on their way from another device) there is no count, rather than one from when this page opened.
   const received = view.timeline.find((e) => e.type === "photos_received")?.at;
-  const elapsed = preview?.elapsed ?? (received ? Math.max(0, (now - Date.parse(received)) / 1000) : null);
+  const elapsed = preview?.elapsed !== undefined ? preview.elapsed + ticked : received ? Math.max(0, (now - Date.parse(received)) / 1000) : null;
   const srcs = photoUrls?.length ? photoUrls : Array.from({ length: view.photos }, (_, i) => `/api/claims/${claimId}/photos/${i + 1}`);
   const count = Math.max(view.photos, srcs.length);
 

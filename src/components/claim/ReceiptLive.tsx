@@ -154,7 +154,13 @@ export function PayoutRow({ confirmed }: { confirmed?: number | null }) {
       <dt className="text-ink-muted">Status</dt>
       <dd key={words.label} className={clsx("text-right font-medium text-ink", changed && styles.swap)}>
         {words.label}
-        {when && <span className="font-normal text-ink-muted"> · {when}</span>}
+        {/* One line where it fits; on a phone the seconds take their own line, as the Sent row's do. */}
+        {when && (
+          <span className="font-normal text-ink-muted">
+            <span className="max-sm:hidden"> · </span>
+            <span className="max-sm:block">{when}</span>
+          </span>
+        )}
       </dd>
       {!when && note && (
         <dd key={note} className={clsx("col-span-2 mt-0.5 text-pretty text-ink-muted", (words.tone === "pay" || words.label === "On its way") && "text-right", changed && styles.swap)}>

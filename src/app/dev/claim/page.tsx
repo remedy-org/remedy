@@ -111,6 +111,13 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "consent-denied": { group: "Recall", note: "PayPal login cancelled", render: () => consent({ authError: "denied" }) },
   "consent-unverified": { group: "Recall", note: "Unverified PayPal account", render: () => consent({ signedInAs: "Dan Okafor", unverified: true }) },
   "consent-limit": { group: "Recall", note: "Claim start refused: account's daily limit", render: () => consent({ signedInAs: "Dan Okafor", refusal: { kind: "account", limit: 5, until: nextUtcDay(new Date()) } }) },
+  "consent-limit-daily": { group: "Recall", note: "Claim start refused: Remedy's daily limit", render: () => consent({ signedInAs: "Dan Okafor", refusal: { kind: "daily", limit: 60, until: nextUtcDay(new Date()) } }) },
+  "consent-limit-monthly": {
+    group: "Recall",
+    note: "Claim start refused: Remedy's 30-day limit",
+    render: () => consent({ signedInAs: "Dan Okafor", refusal: { kind: "monthly", limit: 150, until: new Date(Date.now() + 3 * 86_400_000) } }),
+  },
+  "consent-limit-checks": { group: "Recall", note: "Claim start refused: photo checks used up", render: () => consent({ signedInAs: "Dan Okafor", refusal: { kind: "checks", limit: 100, until: nextUtcDay(new Date()) } }) },
   "consent-returning": {
     group: "Recall",
     note: "Back from the notice with a held claim",
