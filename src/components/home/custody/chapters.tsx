@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
+import { animate, motion, useMotionValue, useMotionValueEvent, useTransform, type MotionStyle, type MotionValue } from "motion/react";
 import { createContext, useContext, useState, type ComponentType, type ReactNode } from "react";
 import type { CustomCellRendererProps } from "ag-grid-react";
 import type { ClaimRow } from "@/app/console/_lib/view";
@@ -12,9 +12,10 @@ import { TABS } from "@/components/console/StatusTabs";
 import { verdictOf } from "@/components/console/VerdictMark";
 import { PAYPAL_CONSENT } from "@/components/claim/consentCopy";
 import { ClockIcon, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
-import { LAND } from "./arrival";
+import { LAND, consoleAt, consoleParts } from "./arrival";
 import { CLAIM, CODE_AT, CODE_STAGGER, CONSENT, SHOT_AT, WRITE_FOR } from "./claim";
 import { ENTER, LEAVE, useGate } from "./gate";
+import styles from "./custody.module.css";
 
 // The five chapters of the Chain of Custody, as presentational copies of the real claim screens. Each one is drawn from
 // a scroll progress `p` (0 to 1 over the whole runway, spec H2); a progress fixed at 1 (useDone) gives every chapter's
@@ -314,9 +315,9 @@ const EDGE = "first:pl-4 last:pr-4";
 const cellProps = (row: ClaimRow) => ({ data: row, context: {} }) as unknown as Cell;
 
 /** One claim's row in the console queue. Exported for chapter 06's arrival, whose card carries RM-0442's row in. */
-export function QueueRow({ row }: { row: ClaimRow }) {
+export function QueueRow({ row, style }: { row: ClaimRow; style?: MotionStyle }) {
   return (
-    <div className="flex h-13 border-b border-line">
+    <motion.div className="flex h-13 border-b border-line" style={style}>
       {COLUMNS.map(({ id, cell: Render, className }) => (
         <span key={id} className={clsx("flex min-w-0 shrink-0 items-center overflow-hidden px-3 text-ui whitespace-nowrap", EDGE, className)}>
           <span className={clsx("min-w-0 flex-1", (id === "amount" || id === "time") && "flex justify-end")}>
@@ -324,7 +325,28 @@ export function QueueRow({ row }: { row: ClaimRow }) {
           </span>
         </span>
       ))}
-    </div>
+    </motion.div>
+  );
+}
+
+/** Chapter 06's console part i of n coming in (arrival.ts consoleAt): its strength, and a 6px rise as it comes. */
+function usePart(p: Progress, i: number, n: number): MotionStyle {
+  const opacity = useTransform(p, (v) => consoleAt(v, i, n));
+  const y = useTransform(opacity, (k) => 6 * (1 - k));
+  return { opacity, y };
+}
+
+/** A claim's row under RM-0442's slot, coming in in its turn. */
+function IncomingRow({ p, row, i, n }: { p: Progress; row: ClaimRow; i: number; n: number }) {
+  return <QueueRow row={row} style={usePart(p, i, n)} />;
+}
+
+/** A count that ticks: the new figure rises in (240ms) as RM-0442 lands, and back as it leaves. */
+function Tick({ children }: { children: ReactNode }) {
+  return (
+    <span key={String(children)} className={clsx("inline-block", styles.chapterIn)}>
+      {children}
+    </span>
   );
 }
 
@@ -346,12 +368,27 @@ export function ConsoleChapter({ p, rows }: { p: Progress; rows: ClaimRow[] }) {
   // RM-0442's slot is open from the start, so the card carrying it in (arrival.ts, CustodyStage) glides to a place that
   // never moves; its own row shows once the card lands there (LAND), the card's last frame and its first the same.
   const opacity = useTransform(p, (v) => (v >= LAND ? 1 : 0));
-  // The tabs and the ledger count RM-0442 as its row lands (All 6 to 7, Paid 0 to 1, $0.00 to $29.99), never before.
+  // The window's parts come in one after another, top to bottom, once its frame is drawn (arrival.ts consoleAt): the
+  // bar (CustodyStage, part 0), the ledger, the tabs, the queue's header, then each claim under RM-0442's slot.
+  const n = consoleParts(others.length);
+  const ledgerIn = usePart(p, 1, n);
+  const tabsIn = usePart(p, 2, n);
+  const headIn = usePart(p, 3, n);
+  // The tabs and the ledger count RM-0442 as its row lands (All 6 to 7, Paid 0 to 1, $0.00 to $29.99), never before:
+  // each changed figure ticks in.
   const [landed, setLanded] = useState(() => p.get() >= LAND);
-  useMotionValueEvent(p, "change", (v) => setLanded(v >= LAND));
+  // The console's one neutral flash on the landed row (never amber: the rail's running chapter is this screen's amber),
+  // in time as it lands, so the console's stop rests on the settled queue, never on a flash half faded.
+  const glow = useMotionValue(0);
+  useMotionValueEvent(p, "change", (v) => {
+    const now = v >= LAND;
+    if (now === landed) return;
+    setLanded(now);
+    if (now) animate(glow, [1, 0], { duration: 1.1, ease: EASE.outExpo });
+    else glow.jump(0);
+  });
   const { counts, remedied } = tally(landed ? rows : others);
-  // The console's one neutral flash on a changed row (never amber: the rail's running chapter is this screen's amber).
-  const flash = useTransform(p, (v) => `color-mix(in oklch, var(--text) ${(8 * (1 - ramp(v, LAND, 1))).toFixed(2)}%, transparent)`);
+  const flash = useTransform(glow, (k) => `color-mix(in oklch, var(--text) ${(8 * k).toFixed(2)}%, transparent)`);
   // Its window is as tall as the queue (CustodyStage, .screen[data-fit]): a tall screen shows the seven claims whole over
   // their foot, never a well of empty rows; a short one keeps as many whole rows as the window holds.
   return (
@@ -361,25 +398,25 @@ export function ConsoleChapter({ p, rows }: { p: Progress; rows: ClaimRow[] }) {
       <div className="flex h-full flex-col">
         <div data-console-queue className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* The console's ledger strip, in its order and words (console/Ledger.tsx), over its status tabs. */}
-          <dl className="flex h-12 shrink-0 items-center gap-x-6 overflow-hidden border-b border-line px-4 whitespace-nowrap @min-[720px]:gap-x-8">
+          <motion.dl className="flex h-12 shrink-0 items-center gap-x-6 overflow-hidden border-b border-line px-4 whitespace-nowrap @min-[720px]:gap-x-8" style={ledgerIn}>
             <LedgerItem
               value={
                 <>
-                  {remedied}
+                  <Tick>{remedied}</Tick>
                   <span className="text-ui font-normal text-muted"> of {CLAIM.units.replace(/^About /, "")}</span>
                 </>
               }
               label="remedied"
             />
-            <LedgerItem value={`$${(landed ? CLAIM.amount : 0).toFixed(2)}`} label="paid through PayPal" />
+            <LedgerItem value={<Tick>{`$${(landed ? CLAIM.amount : 0).toFixed(2)}`}</Tick>} label="paid through PayPal" />
             {/* The console shows no median before a payout: it comes in with the row. */}
             <LedgerItem
               className={clsx("hidden transition-opacity duration-300 @min-[640px]:flex", !landed && "opacity-0")}
               value={durationFigure(CLAIM.seconds)}
               label="median photo to payout sent · 1 payout"
             />
-          </dl>
-          <div className="flex items-center gap-4 border-b border-line px-4">
+          </motion.dl>
+          <motion.div className="flex items-center gap-4 border-b border-line px-4" style={tabsIn}>
             {/* The console's own status tabs, in its words, with their counts in mono. */}
             <span className="flex min-w-0 overflow-hidden">
               {TABS.map((t, i) => (
@@ -392,7 +429,7 @@ export function ConsoleChapter({ p, rows }: { p: Progress; rows: ClaimRow[] }) {
                 >
                   {t.label}
                   <span className={clsx("inline-block min-w-[2ch] font-mono text-micro font-normal tabular-nums", i === 0 ? "text-muted" : "text-faint")}>
-                    {counts[t.id] ?? 0}
+                    <Tick>{counts[t.id] ?? 0}</Tick>
                   </span>
                 </span>
               ))}
@@ -402,15 +439,15 @@ export function ConsoleChapter({ p, rows }: { p: Progress; rows: ClaimRow[] }) {
               Search claims
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro">/</span>
             </span>
-          </div>
+          </motion.div>
           {/* The grid's header as GridStill draws it: 36px and its hairline, the labels in 13px. */}
-          <div className="box-content flex h-9 shrink-0 border-b border-line">
+          <motion.div className="box-content flex h-9 shrink-0 border-b border-line" style={headIn}>
             {COLUMNS.map((c) => (
               <span key={c.id} className={clsx("flex shrink-0 items-center px-3 text-[13px] font-medium whitespace-nowrap text-muted", EDGE, c.className)}>
                 {c.header}
               </span>
             ))}
-          </div>
+          </motion.div>
           {/* As many whole rows as the panel holds, so a tall screen shows more of the queue: a row that would not fit
               wraps out of sight beside the list, never cut through by the panel's foot. */}
           {/* .claims-grid: the console's own styles for its cells (the picked-row box stays hidden, as in /console). */}
@@ -420,8 +457,8 @@ export function ConsoleChapter({ p, rows }: { p: Progress; rows: ClaimRow[] }) {
                 <QueueRow row={arriving} />
               </motion.div>
             )}
-            {others.map((r) => (
-              <QueueRow key={r.id} row={r} />
+            {others.map((r, i) => (
+              <IncomingRow key={r.id} p={p} row={r} i={4 + i} n={n} />
             ))}
           </div>
         </div>

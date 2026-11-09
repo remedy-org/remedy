@@ -6,7 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import type { ClaimRow } from "@/app/console/_lib/view";
 import { Receipt } from "@/components/home/teardown";
 import { BEATS as EXHIBIT_BEATS, holdOf } from "../teardown/model";
-import { ARRIVAL, CONSOLE_IN, LAND, arrivalAt, cardAt, frameAt, lookAt, type Box } from "./arrival";
+import { ARRIVAL, EXHIBIT_LIFT, LAND, arrivalAt, cardAt, consoleAt, consoleParts, exhibitOutAt, frameAt, lookAt, railBackAt, type Box } from "./arrival";
 import { CHAPTERS, CLAIM, CONSENT_AT, SHOT_AT } from "./claim";
 import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, QueueRow, type Progress } from "./chapters";
 import { ExhibitSlot } from "./ExhibitSlot";
@@ -183,7 +183,9 @@ function paintArrival(refs: Record<"stage" | "card" | "ghost", RefObject<HTMLDiv
   const win = rel(st.querySelector("[data-screen-inner]"));
   if (!win) return;
   const slot = rel(st.querySelector('[data-layer="5"] [data-arriving]')) ?? win;
-  const r0 = rel(receipt) ?? slot;
+  // Where the receipt lay before the exhibit lifted away round it, so the card holds still while the exhibit goes.
+  const lay = rel(receipt);
+  const r0 = lay ? { ...lay, y: lay.y + EXHIBIT_LIFT * exhibitOutAt(v) } : slot;
   const k = arrivalAt(v);
   const c = chapterAt(v);
   const on = !!receipt && ((v >= ARRIVAL[0] && v < LAND) || (c === 4 && exhibit < 1));
@@ -267,10 +269,15 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
   // The page-wide pager (scroll/keys.ts) pages these same beats wherever it runs, and from the console steps out of the
   // pin onto the Problem sheet open; this one is the pin's own, for when it doesn't.
   useBeatPaging(() => stage.current?.parentElement, PAGE_STOPS);
-  // The exhibit's layer (ExhibitSlot): in over chapter 02, out onto the console as a 280ms dissolve. Held here, so chapter
-  // 06's arrival knows when the exhibit is back whole over the stage and its own receipt can take over again.
-  const exhibitOn = useChapterGate(p, (c) => c >= 2 && c <= 4, { duration: 0.28, ease: IN_OUT });
+  // The exhibit's layer (ExhibitSlot): in over chapter 02 as a cut in time, out onto the console scrubbed, fading and
+  // lifting away past the paid stop (arrival.ts EXHIBIT_OUT) while chapter 06's card stands in for its receipt. Held
+  // here, so the arrival knows when the exhibit is back whole over the stage and its own receipt can take over again.
+  const exhibitIn = useChapterGate(p, (c) => c >= 2, { duration: 0.28, ease: IN_OUT });
+  const exhibitOut = useTransform(p, exhibitOutAt);
+  const exhibitOn = useTransform(() => exhibitIn.get() * (1 - exhibitOut.get()));
   const arriving = consoleRows.find((r) => r.id === CLAIM.id);
+  /** The console's parts, in the order they come in (arrival.ts consoleAt): its bar is the first. */
+  const parts = consoleParts(consoleRows.filter((r) => r.id !== CLAIM.id).length);
   const paint = useCallback(() => paintArrival({ stage, card, ghost }, p.get(), exhibitOn.get()), [stage, p, exhibitOn]);
 
   useMotionValueEvent(p, "change", (v) => {
@@ -362,18 +369,21 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
     pointerEvents: useTransform(handIn, (o) => (o > 0.5 ? "auto" : "none")),
   };
   // The screen's frame and app bar come in with the clip on the grid, so the growing clip never slices the bar's words.
-  // They and the rail leave while the exhibit covers the stage, and the rail comes back after it has gone, so its cuts
-  // in and out pass through the bare ground, never the exhibit's headline over the rail's list. In chapter 06 the
-  // window's edge is the arrival's frame (drawn out round the arriving card), and its bar comes in with the console's
-  // content once that frame is whole (CONSOLE_IN).
+  // They and the rail leave, in time, while the exhibit covers the stage, so their cuts pass through the bare ground,
+  // never the exhibit's headline over the rail's list. Chapter 06's are scrubbed (arrival.ts), so the paid claim's way
+  // into the console is one move, played at the reader's pace both ways: the rail comes back once the exhibit's heading
+  // has all but gone (RAIL_BACK); the window's edge is the arrival's frame, drawn out round the arriving card; and its
+  // bar is the first of the console's parts to come in once that frame is all but drawn (CONSOLE_IN).
   const frame = useGate(p, (v) => v >= ON_GRID && v < EXHIBIT_RANGE[0], CUT_IN, LEAVE);
-  const bar = useGate(p, (v) => v >= ON_GRID && !inExhibit(v) && (v < ARRIVAL[0] || v >= CONSOLE_IN), CUT_IN, LEAVE);
-  const consoleIn = useGate(p, (v) => v >= CONSOLE_IN);
-  const railHead = useGate(p, (v) => v >= RAIL_IN && !inExhibit(v), CUT_IN, LEAVE);
+  const bar = useTransform(() => (p.get() >= ARRIVAL[0] ? consoleAt(p.get(), 0, parts) : frame.get()));
+  const consoleLayer = useTransform(p, (v): number => (v >= ARRIVAL[0] ? 1 : 0));
+  const railGate = useGate(p, (v) => v >= RAIL_IN && v < EXHIBIT_RANGE[0], CUT_IN, LEAVE);
+  const railHead = useTransform(() => (p.get() >= EXHIBIT_RANGE[1] ? railBackAt(p.get()) : railGate.get()));
   // The rail's skip link hides while the exhibit covers it: the exhibit carries the same link in its own foot. Past the
   // console it has nothing left to skip, so it fades out as the pin releases, never left alone on the stage.
   const skipVisibility = useTransform(p, (v) => (inExhibit(v) ? "hidden" : "visible"));
-  const skipOpacity = useGate(p, (v) => v >= RAIL_IN && v < 0.97, ENTER, { duration: 0.24, ease: IN_OUT });
+  const skipGate = useGate(p, (v) => v >= RAIL_IN && v < 0.97, ENTER, { duration: 0.24, ease: IN_OUT });
+  const skipOpacity = useTransform(() => skipGate.get() * (p.get() >= EXHIBIT_RANGE[1] ? railBackAt(p.get()) : 1));
 
   return (
     <>
@@ -393,7 +403,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
                 <CodeChapter p={p} />
               </Layer>
               {/* Chapters 03 to 05 are the Opened Exhibit, a full-stage layer above the screen and the rail (below). */}
-              <Layer p={p} i={5} compact={compact} fill gate={consoleIn}>
+              <Layer p={p} i={5} compact={compact} fill gate={consoleLayer}>
                 <ConsoleChapter p={p} rows={consoleRows} />
               </Layer>
             </Compact.Provider>
@@ -422,7 +432,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
         </motion.div>
       </div>
 
-      <ExhibitSlot p={p} page={exhibitOn} skip={skip} onSeek={(t) => seekTo(stage.current, t)} />
+      <ExhibitSlot p={p} page={exhibitOn} out={exhibitOut} skip={skip} onSeek={(t) => seekTo(stage.current, t)} />
 
       {/* Chapter 06's arrival (arrival.ts, paintArrival): the console window's edge, drawn out round the card... */}
       <div ref={ghost} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 z-[6] rounded-frame shadow-card ring-1 ring-line" style={{ visibility: "hidden" }} />
