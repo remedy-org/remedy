@@ -98,6 +98,18 @@ export function askedSample(query: Record<string, string | string[] | undefined>
   return (named ?? (typeof query.sample === "string" ? demoSample(query.sample) : null))?.id ?? null;
 }
 
+/** A demo claim's photo key: the sample's own file in public/demo (sample/k01-1.jpg). The app store reads it from the
+ * deployment and never uploads it (lib/demo/index.ts), so a demo claim costs no photo write. */
+const SAMPLE_PHOTO_PREFIX = "sample/";
+export const samplePhotoKey = (path: string) => `${SAMPLE_PHOTO_PREFIX}${path.replace(/^\/demo\//, "")}`;
+
+/** The public/demo file a sample photo key names, or null for any other key. */
+export function samplePhotoFile(key: string): string | null {
+  if (!key.startsWith(SAMPLE_PHOTO_PREFIX)) return null;
+  const name = key.slice(SAMPLE_PHOTO_PREFIX.length);
+  return DEMO_SAMPLES.some((s) => s.photos.includes(`/demo/${name}`)) ? name : null;
+}
+
 /** The sample a demo claim ran, from its history; null for a real claim. */
 export const demoSampleOf = (claim: Pick<Claim, "demo" | "events">) => (claim.demo ? (claim.events.find((e) => e.type === "demo_sample")?.detail ?? null) : null);
 

@@ -81,11 +81,15 @@ export function useQueuePoll(recallId: string, initial: ClaimRow[], initialAt: s
     }
   }, [recallId]);
 
-  const live = isLive(pending.length ? [...pending, ...rows] : rows);
-  const liveRef = useRef(live);
+  const all = pending.length ? [...pending, ...rows] : rows;
+  // The 8 s poll runs only while a claim can still change by itself; a decided demo claim can't, so it only wakes a tab
+  // that comes back into view (a judge back from filing the next sample), never the interval: up to 75 reads saved a view.
+  const live = isLive(all, undefined, { demo: false });
+  const wake = isLive(all);
+  const liveRef = useRef(wake);
   useEffect(() => {
-    liveRef.current = live;
-  }, [live]);
+    liveRef.current = wake;
+  }, [wake]);
 
   useEffect(() => {
     const onChange = () => {

@@ -9,7 +9,7 @@ import { Notice } from "./Notice";
  * own limit, that the refund is still owed). `retry` is when to come back without a time zone ("in about 6 hours"); the
  * notice shows the exact reset in the viewer's own time once it can.
  */
-export function limitCopy({ kind, until }: Refusal, { now }: { now: Date }): { title: string; description: string; retry: string } {
+export function limitCopy({ kind, until }: Refusal, { now, demo = false }: { now: Date; demo?: boolean }): { title: string; description: string; retry: string } {
   const nothing = "Nothing was started and nothing was paid.";
   const owed = "We can’t start new claims right now. Your refund is still owed.";
   const retry = retryIn(until, now);
@@ -17,9 +17,9 @@ export function limitCopy({ kind, until }: Refusal, { now }: { now: Date }): { t
     case "account":
       return { title: "This PayPal account has reached today’s claim limit", description: nothing, retry };
     case "daily":
-      return { title: "Remedy is at today’s limit for new claims", description: owed, retry };
+      return demo ? { title: "Today’s sample runs are used up", description: nothing, retry } : { title: "Remedy is at today’s limit for new claims", description: owed, retry };
     case "monthly":
-      return { title: "Remedy is at this month’s limit for new claims", description: owed, retry };
+      return demo ? { title: "This month’s sample runs are used up", description: nothing, retry } : { title: "Remedy is at this month’s limit for new claims", description: owed, retry };
     case "checks":
       return { title: "Today’s photo checks are used up", description: nothing, retry };
   }
@@ -36,7 +36,7 @@ export interface RecallNotice {
  * do meanwhile. The refused start has no button: LimitNextStep takes its place.
  */
 export function LimitNotice({ refusal, demo, notice, now = new Date() }: { refusal: Refusal; demo: boolean; notice?: RecallNotice; now?: Date }) {
-  const { title, description, retry } = limitCopy(refusal, { now });
+  const { title, description, retry } = limitCopy(refusal, { now, demo });
   // The body may already say the refund is owed: the notice's line then only says where to ask for it.
   const owed = description.includes("still owed");
   return (

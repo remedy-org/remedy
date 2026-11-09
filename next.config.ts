@@ -6,7 +6,12 @@ const nextConfig: NextConfig = {
   // No "N" badge in dev screenshots (Devpost stills and the /dev previews).
   devIndicators: false,
   // The demo claims' photos (lib/demo/dataset.ts), which the console's photo route reads from public/demo.
-  outputFileTracingIncludes: { "/api/console/claims/\\[id\\]/photos/\\[n\\]": ["./public/demo/*.jpg"] },
+  outputFileTracingIncludes: {
+    "/api/console/claims/\\[id\\]/photos/\\[n\\]": ["./public/demo/*.jpg"],
+    // A demo claim's photos are the samples' own files (lib/demo samplePhotoKey): the check and the result read them here.
+    "/api/claims/\\[id\\]/photos": ["./public/demo/*.jpg"],
+    "/api/claims/\\[id\\]/photos/\\[n\\]": ["./public/demo/*.jpg"],
+  },
 };
 
 export default nextConfig;

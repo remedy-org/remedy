@@ -47,7 +47,7 @@ The model only describes. A fixed rule in code, not the model, turns those answe
    - **A reposted photo**: blocked as a duplicate of an earlier claim's photo.
 
    Your browser's run is one demo round: its samples are checked only against each other, so judges sharing one sandbox login each see these four outcomes. **Run the samples again** on the picker starts a new round.
-4. Open **https://remedy-recalls.vercel.app/signin** and log in with PayPal to see the company console with the Kikea demo recall, 40 sample claims and your own demo claims. **Insights** in the console nav opens the AG Studio report and the Recall analyst.
+4. Open **https://remedy-recalls.vercel.app/signin** and log in with PayPal, with the same sandbox login, to see the company console with the Kikea demo recall, its seven sample claims and your own demo claims. **Insights** in the console nav opens the AG Studio report and the Recall analyst.
 
 ## PayPal and AI in the product
 
@@ -66,7 +66,7 @@ The model only describes. A fixed rule in code, not the model, turns those answe
 - **Real:** the PayPal sandbox calls (login, payouts, status, webhooks), the vision model calls, the fingerprinting and the rule. Every demo claim you run makes these calls.
 - **Sandbox:** all money is PayPal sandbox money.
 - **Sample photos:** the judges' demo uses prepared photos instead of your camera, and says so on every screen. Real claims use the live camera: the page has no upload, and a photo counts only if it arrives inside the claim's 10-minute camera session.
-- **Seeded claims:** the console starts with 40 sample claims whose verdicts are real model answers from our eval runs; they are marked as samples, use fake PayPal accounts and were never paid.
+- **Seeded claims:** the console starts with seven sample claims whose verdicts are real model answers from our eval runs; they are marked as samples, use fake PayPal accounts and were never paid.
 - **In this build** refunds are sent from Remedy's PayPal sandbox business account. At launch each company would connect its own.
 
 ## Evaluation
@@ -120,7 +120,7 @@ You need a PayPal developer account with a US business sandbox account (sends re
 | `BLOB_READ_WRITE_TOKEN` | Optional: Vercel Blob; without it data lives in `data/` |
 | `NEXT_PUBLIC_AG_STUDIO_LICENSE` | Optional: AG Studio licence; without it Insights shows the trial watermark |
 | `ANALYST_MODEL` | Optional: the Recall analyst's model; defaults to `gpt-5.4-mini` |
-| `VISION_DAILY_LIMIT`, `DRAFT_DAILY_LIMIT`, `CLAIM_DAILY_LIMIT`, `CLAIM_MONTHLY_LIMIT`, `ACCOUNT_CLAIM_DAILY_LIMIT`, `ACCOUNT_DEMO_DAILY_LIMIT` | Optional: what the live demo may spend. Per UTC day: 100 photo checks, 20 check drafts, 60 new claims (150 in any 30 days), and per PayPal account 5 real and 60 demo claims. Past the photo-check limit a real claim is held for a person, never lost ([docs/PRODUCT.md](docs/PRODUCT.md)) |
+| `VISION_DAILY_LIMIT`, `DRAFT_DAILY_LIMIT`, `CLAIM_DAILY_LIMIT`, `CLAIM_MONTHLY_LIMIT`, `ACCOUNT_CLAIM_DAILY_LIMIT`, `ACCOUNT_DEMO_DAILY_LIMIT`, `DEMO_DAILY_LIMIT`, `DEMO_MONTHLY_LIMIT` | Optional: what the live demo may spend. Per UTC day: 100 photo checks, 20 check drafts, 10 new claims (30 in any 30 days), 40 demo claims across all accounts (200 in any 30 days), and per PayPal account 5 real and 40 demo claims. Past the photo-check limit a real claim is held for a person, never lost ([docs/PRODUCT.md](docs/PRODUCT.md)) |
 
 Checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
 

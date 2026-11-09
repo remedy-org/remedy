@@ -217,7 +217,7 @@ export async function createClaim(
  */
 export async function receivePhotos(
   deps: Pick<PipelineDeps, "store" | "hash" | "now">,
-  { claimId, payerId, sessionId, photos }: { claimId: string; payerId: string; sessionId: string; photos: Buffer[] },
+  { claimId, payerId, sessionId, photos, keys: given }: { claimId: string; payerId: string; sessionId: string; photos: Buffer[]; keys?: string[] },
 ): Promise<Claim> {
   const claim = await deps.store.getClaim(claimId);
   if (!claim || claim.payerId !== payerId) throw new ClaimError(404, "No such claim for this PayPal account");
@@ -238,8 +238,9 @@ export async function receivePhotos(
   // behind "already claimed" once the round's genuine claim is paid.
   if (!oneClaimChecked(claim)) reasons = reasons.filter((r) => r.check !== "payer");
 
-  // Kept for blocked claims too: the company sees what was sent, and a resend of the same photo is caught.
-  const keys = photos.map((_, i) => `${claim.payoutKey}/${i + 1}.jpg`);
+  // Kept for blocked claims too: the company sees what was sent, and a resend of the same photo is caught. A demo
+  // claim's keys name its sample's own files (samplePhotoKey), which the app store never uploads.
+  const keys = given ?? photos.map((_, i) => `${claim.payoutKey}/${i + 1}.jpg`);
   for (let i = 0; i < photos.length; i++) await deps.store.putPhoto(keys[i], photos[i]);
   claim.photos = keys.map((key, i) => ({ key, hash: hashes[i] }));
   claim.events.push(event(now, "photos_received", claim.demo ? `${plural(photos.length, "photo")} from the demo` : `${plural(photos.length, "photo")} in the camera session`));
@@ -314,26 +315,41 @@ export async function checkClaim(deps: PipelineDeps, claimId: string): Promise<C
   const checkedAt = deps.now();
   const autoPayOff: Reason[] = outcome === "pass" && !recall.autoPay ? [{ check: "auto_pay", outcome: "hold", text: "Auto-pay is off for this recall, so a person approves each refund" }] : [];
 
-  // Save the model's answer first. Rejected and held claims end here.
-  const saved = await commit(store, claimId, (c) => {
+  // The model's answer, on a claim that doesn't carry it yet.
+  const answer = (c: Claim) => {
+    if (c.verdict) return;
     c.verdict = result.verdict;
     c.reasons = [...reasons, ...autoPayOff];
     c.events.push(event(checkedAt, "checked", `Photo check answered in ${result.seconds.toFixed(1)} s (${result.model})`));
-    if (outcome === "pass" && recall.autoPay) return;
-    // What the grid and the panel lead with (lib/reasonOrder.ts), so the claim's history names the same reason.
-    const first = decidingCheck(c.reasons);
-    c.decision = decisionFor(c.reasons);
-    c.events.push(event(checkedAt, "decided", c.decision === "rejected" ? `Rejected: ${first?.text}` : `Held for a person: ${first?.text}`));
-  });
-  if (!saved || saved.decision !== "pending") return saved ?? start;
+  };
+  const payNow = outcome === "pass" && recall.autoPay;
+
+  // Save the model's answer first. Rejected and held claims end here. A demo claim on its way to PayPal skips this save:
+  // its answer goes into the save that records the payout (or the hold), two Blob writes fewer per genuine sample.
+  if (!(start.demo && payNow)) {
+    const saved = await commit(store, claimId, (c) => {
+      answer(c);
+      if (payNow) return;
+      // What the grid and the panel lead with (lib/reasonOrder.ts), so the claim's history names the same reason.
+      const first = decidingCheck(c.reasons);
+      c.decision = decisionFor(c.reasons);
+      c.events.push(event(checkedAt, "decided", c.decision === "rejected" ? `Rejected: ${first?.text}` : `Held for a person: ${first?.text}`));
+    });
+    if (!saved || saved.decision !== "pending") return saved ?? start;
+  }
 
   // A fresh read of the claim and the index: a parallel claim may have got photos or been paid during the model call.
   const fresh = await store.getClaim(claimId);
-  if (!fresh) return saved;
+  if (!fresh) return start;
   const conflicts = sendCheck({ claim: fresh, others: othersFor(fresh, await store.listClaims()) });
   if (conflicts.some((r) => r.check === "state")) return fresh;
   if (conflicts.length) {
-    return (await commit(store, claimId, (c) => hold(c, deps.now(), [...c.reasons, ...conflicts], conflicts.map((r) => r.text).join("; ")))) ?? fresh;
+    return (
+      (await commit(store, claimId, (c) => {
+        answer(c);
+        hold(c, deps.now(), [...c.reasons, ...conflicts], conflicts.map((r) => r.text).join("; "));
+      })) ?? fresh
+    );
   }
 
   let payout: PayoutStatus;
@@ -349,6 +365,7 @@ export async function checkClaim(deps: PipelineDeps, claimId: string): Promise<C
     const reason: Reason = { check: "payout", outcome: "hold", text: "PayPal didn't accept the payout, so a person will send it" };
     return (
       (await commit(store, claimId, (c) => {
+        answer(c);
         c.events.push(event(deps.now(), "payout_failed", payoutFailedDetail(e)));
         hold(c, deps.now(), [...c.reasons, reason], reason.text);
       })) ?? fresh
@@ -358,6 +375,7 @@ export async function checkClaim(deps: PipelineDeps, claimId: string): Promise<C
   const paidAt = deps.now();
   return (
     (await commit(store, claimId, (c) => {
+      answer(c);
       c.decision = "paid";
       c.payout = { batchId: payout.batchId, ...(payout.itemId ? { itemId: payout.itemId } : {}), status: payout.itemStatus ?? payout.batchStatus, updatedAt: paidAt.toISOString(), amount: recall.refund };
       c.events.push(event(paidAt, "decided", "Every check passed"));

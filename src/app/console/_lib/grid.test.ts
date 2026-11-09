@@ -111,6 +111,8 @@ describe("the ledger and live updates", () => {
     // A demo claim filed in the last 10 minutes, then not.
     expect(isLive([row({ decision: "rejected", demo: true })], now)).toBe(true);
     expect(isLive([row({ decision: "rejected", demo: true })], now + 10 * 60_000)).toBe(false);
+    // The 8 s interval leaves a decided demo claim out: only a tab coming back into view asks again.
+    expect(isLive([row({ decision: "rejected", demo: true })], now, { demo: false })).toBe(false);
     // An abandoned claim (a code, never any photos) and a payout parked at UNCLAIMED or ONHOLD never keep it polling.
     const later = now + 60 * 60_000;
     expect(isLive([row({ photos: [] })], later)).toBe(false);

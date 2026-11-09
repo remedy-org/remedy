@@ -1,6 +1,6 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { toView } from "@/components/claim/model";
-import { demoSample, isDemoAllowed } from "@/lib/demo";
+import { demoSample, isDemoAllowed, samplePhotoKey } from "@/lib/demo";
 import { getSession } from "@/lib/session";
 import { liveDeps, samplePhotos } from "../../_lib/deps";
 import { fail, json } from "../../_lib/http";
@@ -30,6 +30,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/
     if (!form) return json(400, "Nothing arrived. Send again.");
 
     let photos: Buffer[];
+    let keys: string[] | undefined;
     let sessionId: string;
     if (claim.demo) {
       const recall = await deps.store.getRecall(claim.recallId);
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/
       const sample = demoSample(demoSampleOf(claim) ?? "");
       if (!sample) throw new ClaimError(400, "This demo claim has no photos");
       photos = await samplePhotos(sample, request.nextUrl.origin);
+      keys = sample.photos.map(samplePhotoKey);
       sessionId = sample.liveSession ? (claim.captureSession?.id ?? "") : OUTSIDE_SESSION;
     } else {
       const files = form.getAll("photo").filter((f): f is File => f instanceof File);
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/
       sessionId = String(form.get("sessionId") ?? "");
     }
 
-    const received = await receivePhotos(deps, { claimId: id, payerId: session.payerId, sessionId, photos });
+    const received = await receivePhotos(deps, { claimId: id, payerId: session.payerId, sessionId, photos, keys });
     if (received.decision === "pending") {
       after(async () => {
         try {

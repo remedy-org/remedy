@@ -63,7 +63,7 @@ beforeEach(async () => {
     pay,
     hash: dHash,
     now: () => new Date(),
-    limits: { vision: 100, draft: 20, claimsPerDay: 200, claimsPerMonth: 500, accountClaimsPerDay: 5, accountDemosPerDay: 60 },
+    limits: { vision: 100, draft: 20, claimsPerDay: 200, claimsPerMonth: 500, accountClaimsPerDay: 5, accountDemosPerDay: 60, demosPerDay: 1000, demosPerMonth: 1000 },
   };
 });
 afterEach(async () => {
@@ -97,6 +97,10 @@ async function runRound(round: string | null) {
     round = set;
     const decidedBy = claim!.reasons.find((r) => r.outcome !== "pass")?.check ?? "all";
     outcomes[sample.id] = `${claim!.decision} by ${decidedBy}`;
+    // The two the model sees carry its answer once, the genuine one's saved with its payout; the blocked two never reach it.
+    const modelSaw = sample.decidedBy === "all" || sample.decidedBy === "code";
+    expect(Boolean(claim!.verdict)).toBe(modelSaw);
+    expect(claim!.events.filter((e) => e.type === "checked")).toHaveLength(modelSaw ? 1 : 0);
     expect(claim!.demoRound).toBe(round);
   }
   return { round: round!, outcomes };

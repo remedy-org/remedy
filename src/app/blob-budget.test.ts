@@ -15,6 +15,8 @@ import type { Session } from "@/lib/session";
 import type { Claim, Decision, Recall, Verdict } from "@/lib/types";
 import type { PipelineDeps } from "./api/claims/_lib/pipeline";
 import { DEMO_CLAIMS } from "@/lib/demo/claims";
+import { DEMO_ROUND_COOKIE, DEMO_SAMPLES, withDemoRecall } from "@/lib/demo";
+import { dHash } from "@/lib/fingerprint";
 
 // The Vercel Blob plan caps reads at 10,000 a month (docs/PRODUCT.md, "Blob budget"). These pin how many store reads
 // each hot action costs, a write's own reads included (countingStore), so a change that reads every claim again
@@ -104,7 +106,7 @@ beforeEach(async () => {
     pay: async () => ({ batchId: "LIVEBATCH1", batchStatus: "PENDING" }),
     hash: async (b) => createHash("sha256").update(b).digest("hex").slice(0, 16),
     now: () => new Date(),
-    limits: { vision: 100, draft: 20, claimsPerDay: 60, claimsPerMonth: 150, accountClaimsPerDay: 5, accountDemosPerDay: 12 },
+    limits: { vision: 100, draft: 20, claimsPerDay: 60, claimsPerMonth: 150, accountClaimsPerDay: 5, accountDemosPerDay: 12, demosPerDay: 1000, demosPerMonth: 1000 },
   };
 });
 afterEach(async () => {
@@ -407,25 +409,29 @@ describe("the paid receipt's live status", () => {
 
 describe("recall reads", () => {
   it("hit the cache on the second call", async () => {
+    // The demo slug opens its recall by id: no recalls.json (in production the app store has it in memory: 0).
     expect(await getRecallBySlug("kikea-x-vesolje", app)).not.toBeNull();
-    expect(counter.counts.reads).toBe(2);
+    expect(counter.counts.reads).toBe(1);
     counter.reset();
     expect((await getRecallBySlug("kikea-x-vesolje", app))?.id).toBe("27-071");
     expect(await app.getRecall("27-071")).not.toBeNull();
-    expect(await app.listRecalls()).toHaveLength(1);
     expect(counter.counts.reads).toBe(0);
+    // recalls.json, read once for a listing, then cached too.
+    expect(await app.listRecalls()).toHaveLength(1);
+    expect(await app.listRecalls()).toHaveLength(1);
+    expect(counter.counts.reads).toBe(1);
   });
 
-  it("look an unknown slug up fresh at most once per 10 s, and an invalid one never", async () => {
+  it("look an unknown slug up fresh at most once a minute, and an invalid one never", async () => {
     const t = Date.parse("2026-11-08T00:00:00.000Z");
     expect(await getRecallBySlug("no-such-recall", app, t)).toBeNull();
     expect(counter.counts.calls).toEqual({ listRecalls: 2 });
     counter.reset();
-    expect(await getRecallBySlug("no-such-recall", app, t + 9_999)).toBeNull();
-    expect(await getRecallBySlug("another-one", app, t + 9_999)).toBeNull();
-    expect(await getRecallBySlug("../../etc", app, t + 60_000)).toBeNull();
+    expect(await getRecallBySlug("no-such-recall", app, t + 59_999)).toBeNull();
+    expect(await getRecallBySlug("another-one", app, t + 59_999)).toBeNull();
+    expect(await getRecallBySlug("../../etc", app, t + 120_000)).toBeNull();
     expect(counter.counts.reads).toBe(0);
-    await getRecallBySlug("no-such-recall", app, t + 10_000);
+    await getRecallBySlug("no-such-recall", app, t + 60_000);
     expect(counter.counts.calls).toEqual({ listRecalls: 1 });
   });
 });
@@ -469,8 +475,10 @@ describe("a demo run", () => {
       // index.json for the limits, the day's usage, then addClaim's conditional index write.
       start: 3,
       "claim page, open": 1,
-      // The route's claim and photo reads, the pre-checks and the check: see checkClaim.
-      "photos and check": 14,
+      // The route's claim and photo reads, the pre-checks and the check: see checkClaim. A demo claim on its way to
+      // PayPal is saved once with its payout, not first with its answer. (In production the sample photo and the demo
+      // recall come from the deployment and memory: 10.)
+      "photos and check": 12,
       "checking poll": 1,
       // PayPal still says PENDING: nothing to save, so no second read of the claim. A demo result also reads
       // index.json once, for this round's scoreboard and "Next sample".
@@ -480,6 +488,68 @@ describe("a demo run", () => {
       // The claim, to check whose photo it is, then the photo itself (a CDN read after the first).
       "result photo": 2,
     });
+  });
+
+  // The Advanced Operations (put()s) each blob store write makes when nothing races it: a claim or index write is one
+  // put, and saving a claim writes its file and its index row.
+  const PUTS: Record<string, number> = { putRecall: 2, putClaim: 2, addClaim: 2, updateClaim: 2, reindexClaim: 1, takeUsage: 1, putPhoto: 1 };
+  const putsOf = (calls: Record<string, number>) => Object.entries(calls).reduce((n, [name, k]) => n + k * (PUTS[name] ?? 0), 0);
+
+  it("a round of the four samples costs what docs/PRODUCT.md says: 24 writes", async () => {
+    // As in production: the demo recall and the sample photos come from memory and the deployment (getAppStore).
+    app = withDemoRecall(withRecallCache(counter.store));
+    const tags: [Buffer, string][] = await Promise.all(
+      Object.entries({ "k01-1.jpg": "M4T", "k02-1.jpg": "K7Q", "web-1.jpg": "H6N" }).map(async ([name, tag]) => [await readFile(join(process.cwd(), "public/demo", name)), tag] as [Buffer, string]),
+    );
+    const read = (images: Buffer[]) => tags.find(([b]) => b.equals(images[0]))?.[1] ?? "???";
+    deps = { ...deps, store: app, hash: dHash, vision: async ({ spec, images }) => ({ verdict: pass({ ...sampleRecall(), spec }, read(images)), seconds: 12.3, model: "gpt-test" }) };
+    // PayPal settles the genuine payout by the time its result opens: saved once.
+    getPayoutStatus.mockImplementation(async (batchId: string) => ({ batchId, batchStatus: "SUCCESS", itemStatus: "SUCCESS" }));
+    await getRecallBySlug(slug, app);
+
+    let cookie = "";
+    const cost: Record<string, { puts: number; reads: number; check: number; decision?: string }> = {};
+    for (const sample of DEMO_SAMPLES) {
+      counter.reset();
+      const run = async (step: () => Promise<unknown>) => {
+        await step();
+        await Promise.all(later);
+        later.length = 0;
+      };
+      await run(() => SamplesPage({ params: Promise.resolve({ recall: slug }), searchParams: Promise.resolve({}) } as never));
+      let res!: Response;
+      await run(async () => {
+        const form = new FormData();
+        form.set("recall", slug);
+        form.set("sample", sample.id);
+        res = await startDemo(new NextRequest("http://127.0.0.1:3000/api/claims", { method: "POST", body: form, headers: cookie ? { cookie } : undefined }));
+      });
+      expect(res.status).toBe(303);
+      cookie ||= `${DEMO_ROUND_COOKIE}=${res.headers.get("set-cookie")!.match(new RegExp(`${DEMO_ROUND_COOKIE}=([^;]+)`))![1]}`;
+      const id = res.headers.get("location")!.split("/").pop()!;
+      await run(() => ClaimScreen({ slug, id, demo: true }));
+      const before = counter.counts.reads;
+      await run(() => sendPhotos(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}/photos`, { method: "POST", body: new FormData() }), params({ id })));
+      const check = counter.counts.reads - before;
+      await run(() => pollClaim(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}`), params({ id })));
+      await run(() => ClaimScreen({ slug, id, demo: true }));
+      await run(() => getPhoto(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}/photos/1`), params({ id, n: "1" })));
+      cost[sample.id] = { puts: putsOf(counter.counts.calls), reads: counter.counts.reads, check, decision: (await inner.getClaim(id))?.decision };
+    }
+    getPayoutStatus.mockImplementation(async (batchId: string) => ({ batchId, batchStatus: "PENDING", itemStatus: "PENDING" }));
+
+    // Writes. Start: the index and its claim file (2). The check: the claim with its photos, the day's photo-check
+    // count, then the claim once more with its answer and its payout or decision (2 + 1 + 2), and for the genuine claim
+    // PayPal's settled status (2). The two the account checks block never reach the model. No sample photo is uploaded.
+    // Reads, from the picker to the result with one checking poll and one result photo: 64 for the round. check is the
+    // photo upload and check alone.
+    expect(cost).toEqual({
+      genuine: { puts: 9, reads: 21, check: 10, decision: "paid" },
+      "wrong-code": { puts: 7, reads: 17, check: 8, decision: "rejected" },
+      "ai-no-session": { puts: 4, reads: 13, check: 4, decision: "blocked" },
+      reposted: { puts: 4, reads: 13, check: 4, decision: "blocked" },
+    });
+    expect(counter.counts.calls.putPhoto).toBeUndefined();
   });
 
   it("doesn't ask PayPal about a settled payout on the result page", async () => {
