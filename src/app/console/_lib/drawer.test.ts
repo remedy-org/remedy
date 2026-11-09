@@ -100,3 +100,25 @@ describe("history", () => {
     }
   });
 });
+
+const { demoDataset } = await import("@/lib/demo/dataset");
+const { toRow } = await import("./view");
+
+describe("the panel says what the grid row says", () => {
+  const { recall, claims } = demoDataset(Date.parse("2026-11-09T09:00:00Z"));
+  const of = (id: string) => claims.find((c) => c.id === id)!;
+
+  it("carries each refused or held claim's grid line word for word", () => {
+    for (const c of claims.filter((c) => c.decision !== "paid")) {
+      expect(toDrawerClaim(c, recall).note, c.id).toBe(toRow(summarize(c), recall).note);
+    }
+    expect(toDrawerClaim(of("RM-0118"), recall).note).toBe("Tag reads K7Q · code is K7P");
+  });
+
+  it("heads a photo check that partly passed with the answer in doubt, and a whole check with its name", () => {
+    const rows = toDrawerClaim(of("RM-9629"), recall).fiveRows;
+    expect(rows[4]).toMatchObject({ state: "hold", name: "Pillow cut in half", title: "X-VESOLJE tag on the cut pillow" });
+    expect(rows[3].title).toBe(rows[3].name);
+    expect(rows[4].parts.find((p) => p.label === "Pillow cut fully in half")?.state).toBe("pass");
+  });
+});
