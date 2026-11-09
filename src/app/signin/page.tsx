@@ -49,9 +49,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
     <div className="flex min-h-dvh flex-col overflow-x-clip">
       <header className="page flex h-16 items-center justify-between gap-4">
         {/* The homepage's lockup: sign-in is on the homepage's frame, so the logo keeps its size from "Log in". */}
-        <Wordmark size="md" href="/" />
+        <Wordmark size="md" href="/" prefetch={false} />
         <div className="flex items-center gap-2 sm:gap-5">
-          <Link href="/" className="inline-flex min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text">
+          <Link href="/" prefetch={false} className="inline-flex min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text">
             <span aria-hidden="true">&larr;&nbsp;</span>Back to Remedy
           </Link>
           <ThemeToggle />
