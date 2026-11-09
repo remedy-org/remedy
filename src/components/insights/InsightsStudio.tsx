@@ -111,7 +111,7 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
     const { resolve, done } = colorResolver();
     try {
       // The day chart prints each day's dollars on its green column in the page's background colour.
-      return { theme: buildTheme(lib, resolve, fonts()), labelColor: resolve("var(--bg)") };
+      return { theme: buildTheme(lib, resolve, fonts()), labelColor: resolve("var(--pay-fill-text)") };
     } finally {
       done();
     }

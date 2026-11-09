@@ -1,31 +1,35 @@
 "use client";
 
 import clsx from "clsx";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { formatCents, ledgerOf } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
-import type { PreviewRow } from "@/components/console/ClaimsGridPreview";
+import { payoutWord } from "@/components/console/cells";
+import { matchesSearch, type PreviewRow } from "@/components/console/ClaimsGridPreview";
 import { ClaimsGridPreviewLazy } from "@/components/console/ClaimsGridPreviewLazy";
 import { EvidenceStill } from "@/components/console/EvidenceStill";
 import { formatCount } from "@/components/console/format";
 import { GridStill } from "@/components/console/GridStill";
 import { TABS, type Tab } from "@/components/console/StatusTabs";
+import { verdictOf, verdictWord } from "@/components/console/VerdictMark";
 import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME, type StudioFilter } from "@/components/insights/InsightsPreviewLazy";
 import { homeRowsFor, spokenTime } from "@/components/insights/report";
-import { ConsoleFrame, type FramePage } from "./ConsoleFrame";
+import { ConsoleFrame } from "./ConsoleFrame";
 import styles from "./tour.module.css";
-import { PayoutsNote } from "./PayoutsNote";
+import { ReviewFoot, type ReviewPhase } from "./PayoutsNote";
 import { TOUR } from "./tour-copy";
 import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
 
 /*
  * The homepage's "For companies" tour (DESIGN.md, Screens §6), laptops only (1024px and up; phones get the stacked
  * story in ConsoleStory.tsx). Four tabs over one fixed console frame, a real view on each step:
- *   01 the claims queue, the real AG Grid on the recall's 40 claims, where the newest paid claim arrives on entering
- *      view however a visitor gets there (a row insert, its checks filling, then its verdict and payout). The real grid
- *      takes the still's place as soon as it has drawn, so a visitor may filter it by status, sort it, hover its checks,
- *      and click a held claim to open its evidence (step 02) from the first click;
- *   02 the same grid with a held claim selected and its evidence laid over the grid's right-hand columns;
+ *   01 the claims queue, the real AG Grid on the recall's 40 claims, where the newest paid claim arrives at the top on
+ *      entering view however a visitor gets there (a row insert, its checks filling, then its verdict and payout). The
+ *      real grid takes the still's place as soon as it has drawn, so a visitor may search it, filter it by status, sort
+ *      it, hover its checks, export it as CSV, and click any claim with photos to open its evidence (step 02);
+ *   02 the same grid with a claim selected and its evidence laid over the grid's right-hand columns: a held claim's Pay
+ *      and Reject play the decision in the browser (no request), the row, counts and ledger following, and are put
+ *      back when the visitor leaves the queue or the section;
  *   03 Insights: real AG Studio, drawn out of sight once a visitor shows intent (a pointer over its step, focus or a
  *      pick), so a page that is only scrolled past never loads it (the still stands in until then). A visitor may
  *      hover its charts and cross-filter it, and clear the filter from the frame;
@@ -61,7 +65,11 @@ const GAP = 20;
 const FRAME_MAX = 680;
 const FIT_MIN = 560;
 
-const PAGE = { claims: "Claims", insights: "Insights", report: "Report" } as const;
+// The grid's header and rows (ClaimsGrid.tsx): the frame's grid area holds whole rows, so no row shows cut at its foot.
+const GRID_HEAD = 37;
+const GRID_ROW = 52;
+// How long paying or rejecting a held claim reads as on its way, as the console's request takes.
+const SENDING = 600;
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -94,6 +102,18 @@ function rowsAt(rows: PreviewRow[], id: string, at: Arrival): PreviewRow[] {
   return rows.map((r) => (r.id === id ? { ...r, decision: "pending" } : r));
 }
 
+/** A held claim as a visitor's decision leaves it: paid (sent and settled, as the tour's other paid claims), or
+ * rejected on review (no amount owed); otherwise as it was. */
+function decide(r: PreviewRow, phase: ReviewPhase | undefined): PreviewRow {
+  if (phase === "paid") {
+    return { ...r, decision: "paid", payoutStatus: "SUCCESS", note: "Approved on review", evidence: r.evidence && { ...r.evidence, decision: "paid", payout: { status: "SUCCESS" } } };
+  }
+  if (phase === "rejected") {
+    return { ...r, decision: "rejected", note: "Rejected on review", amount: null, cents: null, evidence: r.evidence && { ...r.evidence, decision: "rejected" } };
+  }
+  return r;
+}
+
 /**
  * A figure that changes in place, as a live console's does: the old value rolls up and out as the new one rolls up
  * into its place (tour.module.css .roll, 360ms). Under reduced motion it simply changes.
@@ -120,9 +140,9 @@ function Roll({ value }: { value: string }) {
   );
 }
 
-/** The status tabs as the console has them: each filters the live grid (AG Grid's own filter, so the rows animate),
- * their counts following the arriving claim. The console's "Approved" tab also holds claims approved and not yet sent;
- * every one here was paid (settled with PayPal, preview.ts), so it reads "Paid", as their verdicts and the ledger do. */
+/** The status tabs as the console has them, in its words (Approved holds every claim the rule or a person approved; its
+ * rows say Paid once PayPal has settled, as here): each filters the live grid (AG Grid's own filter, so the rows
+ * animate), their counts following the arriving claim, a visitor's decision and the search. */
 function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>; value: Tab; onChange: (t: Tab) => void }) {
   return (
     <div role="group" aria-label="Filter the claims by status" className="relative flex">
@@ -139,7 +159,7 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
               on ? "text-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted hover:text-text",
             )}
           >
-            {t.id === "paid" ? "Paid" : t.label}
+            {t.label}
             <span className={clsx("font-normal", on ? "text-muted" : "text-faint")}>
               <Roll value={String(counts[t.id])} />
             </span>
@@ -150,17 +170,50 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
   );
 }
 
-/** The queue toolbar's right end as the console draws it (ClaimsQueue.tsx): Export CSV and the search box with its /
- * key. Drawn, not working: the tour's queue is a picture a visitor filters and sorts, never searches. */
-function Toolbar() {
+/** The claims as the console's Export CSV writes them, built in the browser from the rows on screen. */
+function csvOf(rows: PreviewRow[]) {
+  const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const head = ["Claim", "Filed (UTC)", "Verdict", "Reason", "Payout", "Amount (USD)"];
+  const body = rows.map((r) => [r.id, r.createdAt, verdictWord(verdictOf(r)), r.note ?? "", payoutWord(r) ?? "", r.cents === null ? "" : (r.cents / 100).toFixed(2)]);
+  return [head, ...body].map((line) => line.map(cell).join(",")).join("\n");
+}
+
+/** The queue toolbar's right end as the console has it (ClaimsQueue.tsx): Export CSV, which downloads the claims shown,
+ * and the search box, which filters the grid as a visitor types (/ puts the caret in it while the frame is in hand). */
+function Toolbar({ search, onSearch, onExport, input }: { search: string; onSearch: (q: string) => void; onExport: () => void; input: RefObject<HTMLInputElement | null> }) {
   return (
-    <span aria-hidden="true" inert className="ml-auto flex shrink-0 items-center gap-3 select-none">
-      <span className="text-ui whitespace-nowrap text-muted">{TOUR.toolbar.export}</span>
-      <span className="relative flex h-9 w-44 items-center rounded-control border border-line bg-surface pr-9 pl-3 text-ui whitespace-nowrap text-faint xl:w-60">
-        {/* The console's placeholder whole where the box has room for it, its first words on a narrower window. */}
-        <span className="xl:hidden">{TOUR.toolbar.search.split(",")[0]}</span>
-        <span className="max-xl:hidden">{TOUR.toolbar.search}</span>
-        <kbd className="absolute right-2 inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro text-faint">/</kbd>
+    <span className="ml-auto flex shrink-0 items-center gap-3">
+      <button
+        type="button"
+        onClick={onExport}
+        className="inline-flex min-h-9 cursor-pointer items-center rounded-control px-1.5 text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        {TOUR.toolbar.export}
+      </button>
+      <span className="relative flex h-9 w-52 items-center xl:w-60">
+        <input
+          ref={input}
+          type="search"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && search) {
+              e.preventDefault();
+              onSearch("");
+            }
+          }}
+          aria-label="Search claims"
+          placeholder={TOUR.toolbar.search}
+          spellCheck={false}
+          autoComplete="off"
+          className="peer h-9 w-full rounded-control border border-line-strong bg-surface pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-search-cancel-button]:hidden"
+        />
+        <kbd
+          aria-hidden="true"
+          className="pointer-events-none absolute right-2 inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro text-faint peer-focus:hidden peer-[:not(:placeholder-shown)]:hidden"
+        >
+          /
+        </kbd>
       </span>
     </span>
   );
@@ -177,7 +230,7 @@ function TourLedger({ rows, unitsSold }: { rows: PreviewRow[]; unitsSold: number
   const l = ledgerOf(rows, { unitsSold });
   const items: [string, string][] = [
     [formatCents(l.paidCents), "paid through PayPal"],
-    ...(l.medianToPay === null ? [] : ([[spokenTime(Math.round(l.medianToPay)), "median, photo to PayPal"]] as [string, string][])),
+    ...(l.medianToPay === null ? [] : ([[spokenTime(Math.round(l.medianToPay)), "median photo to payout"]] as [string, string][])),
     [formatCount(l.remedied), `of ${formatCount(unitsSold)} units remedied`],
     [formatCount(l.held), "held for a person"],
     // The status tabs' own words: no "Refused" tab to find these under.
@@ -225,6 +278,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const [fresh, setFresh] = useState<"new" | "settled" | null>(null);
   // Studio's cross-filter, said in the frame's title row with a way out.
   const [studioFilter, setStudioFilter] = useState<StudioFilter | null>(null);
+  // The toolbar's search, and what a visitor has done with each held claim's review (played in the browser alone).
+  const [search, setSearch] = useState("");
+  const [review, setReview] = useState<Record<string, ReviewPhase>>({});
+  const searchInput = useRef<HTMLInputElement>(null);
 
   const root = useRef<HTMLDivElement>(null);
   const rail = useRef<HTMLDivElement>(null);
@@ -302,6 +359,8 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
           setArrival("before");
           played.current = false;
         } else if (e.intersectionRatio < LEAVE && arriving.current.length && arrival !== "final") finishArrival();
+        // Out of sight, the queue is put back as it was: a claim a visitor paid or rejected is held again.
+        if (e.intersectionRatio === 0) setReview((r) => (Object.keys(r).length ? {} : r));
       },
       { threshold: [0, LEAVE, ENTER] },
     );
@@ -446,6 +505,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       const withHead = window.innerHeight - NAV - AIR - (tabs - head) - railH - GAP - AIR;
       if (withHead >= FIT_MIN && withHead < FRAME_MAX) frame.current?.style.setProperty("--frame-h", `${Math.floor(withHead)}px`);
       else frame.current?.style.removeProperty("--frame-h");
+      // The grid area holds whole rows: the frame gives up what would show of a row cut at its foot.
+      const grid = gridGate.current;
+      const cut = grid && frame.current ? (grid.clientHeight - GRID_HEAD) % GRID_ROW : 0;
+      if (cut > 0) frame.current?.style.setProperty("--frame-h", `${Math.floor(frame.current.getBoundingClientRect().height - cut)}px`);
       const bottom = (frame.current?.getBoundingClientRect().bottom ?? 0) - top;
       const from = bottom - head + AIR <= window.innerHeight - NAV ? head : tabs;
       // The page's scroll padding already keeps the jump under the nav: the margin only adds the air and skips the
@@ -517,9 +580,12 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
         later(timers.current, 160, () => setDockOut(false));
       }
     }
-    // Leaving the queue puts it back as it was: every claim, in the order it came in, scrolled to the top (BareGrid).
+    // Leaving the queue puts it back as it was: every claim, in the order it came in, scrolled to the top (BareGrid),
+    // unsearched, and a claim a visitor paid or rejected held again.
     if (next >= 2) {
       setStatus("all");
+      setSearch("");
+      setReview({});
       setSortEpoch((n) => n + 1);
     }
     // The draft opens on its first page, however far a visitor read it last time.
@@ -530,8 +596,9 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     if (next === 1) {
       setDockOut(false);
       setClaim(id);
-      // The open claim is always in the rows shown.
-      setStatus((t) => (t === "all" || t === "held" ? t : "all"));
+      // The open claim is always in the rows shown: the tab stays where it holds the claim.
+      const decision = shownRows.current.find((r) => r.id === id)?.decision;
+      setStatus((t) => (t === "all" || t === decision ? t : "all"));
       setPicked(id);
       if (still) setOpen(id);
       else later(timers.current, OPEN_AFTER, () => setOpen(id));
@@ -548,7 +615,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     if (now.current.arrival !== "final") finishArrival();
   };
 
-  /** A click on a row: a held claim opens its evidence (step 02), or swaps the one open. */
+  /** A click on a row: a claim with photos opens its evidence (step 02), or swaps the one open. */
   const onRowClick = (row: PreviewRow) => {
     if (!row.evidence) return;
     if (now.current.step === 1) {
@@ -558,7 +625,19 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     } else go(1, row.id);
   };
 
-  const onPage = (p: FramePage) => go(p === "Insights" ? 2 : p === "Report" ? 3 : now.current.step === 1 ? 1 : 0);
+  /** A held claim's review, a step on: paying and rejecting read as on their way for a moment, then land. */
+  const onReview = (id: string, phase: ReviewPhase) => {
+    setReview((r) => ({ ...r, [id]: phase }));
+    const done = phase === "paying" ? "paid" : phase === "rejecting" ? "rejected" : null;
+    if (done) later(timers.current, reduced() ? 0 : SENDING, () => setReview((r) => (r[id] === phase ? { ...r, [id]: done } : r)));
+  };
+
+  const onExport = () => {
+    const url = URL.createObjectURL(new Blob([csvOf(shownRows.current)], { type: "text/csv" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: "remedy-claims-27-071.csv" });
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   const onStatus = (t: Tab) => {
     if (now.current.step === 1) go(0);
@@ -585,17 +664,40 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   };
 
   const state = stateAt(step, "final", { openId: claim });
-  const evidence = useMemo(() => rows.find((r) => r.id === claim)?.evidence ?? null, [rows, claim]);
+  // The rows with a visitor's decisions on them: a held claim paid reads Paid (Sent, Settled), one rejected Rejected.
+  const decided = useMemo(() => rows.map((r) => decide(r, review[r.id])), [rows, review]);
+  const shownRows = useRef(decided);
+  useEffect(() => {
+    shownRows.current = decided;
+  }, [decided]);
+  const evidence = useMemo(() => decided.find((r) => r.id === claim)?.evidence ?? null, [decided, claim]);
   const arrivalProp = useMemo(() => ({ id: arriveId, phase: arrival }), [arriveId, arrival]);
-  // The ledger, the tab counts and the still follow the claim as it arrives.
-  const queue = useMemo(() => rowsAt(rows, arriveId, arrival), [rows, arriveId, arrival]);
-  const still = useMemo(() => queue.slice(0, stillRows), [queue, stillRows]);
+  // The ledger, the tab counts and the still follow the claim as it arrives; the counts follow the search too.
+  const queue = useMemo(() => rowsAt(decided, arriveId, arrival), [decided, arriveId, arrival]);
+  const found = useMemo(() => (search.trim() ? queue.filter((r) => matchesSearch(r, search)) : queue), [queue, search]);
+  const still = useMemo(() => found.slice(0, stillRows), [found, stillRows]);
   const counts = useMemo(() => {
     const c = Object.fromEntries(TABS.map((t) => [t.id, 0])) as Record<Tab, number>;
-    c.all = queue.length;
-    for (const r of queue) c[r.decision]++;
+    c.all = found.length;
+    for (const r of found) c[r.decision]++;
     return c;
-  }, [queue]);
+  }, [found]);
+
+  // "/" puts the caret in the search while the frame is in hand (the pointer over it, or focus in it), as the console's
+  // does; a field or a key with a modifier keeps its own.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || now.current.step > 1) return;
+      const el = frame.current;
+      const t = e.target instanceof Element ? e.target : null;
+      if (!el || t?.closest("input, textarea, select, [contenteditable]")) return;
+      if (!el.matches(":hover") && !el.contains(document.activeElement)) return;
+      e.preventDefault();
+      searchInput.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const dock = open !== null || dockOut;
   // The checks popover: on the queue alone (not under the evidence), never during the arrival, and only for a pointer
   // that has moved since.
@@ -654,7 +756,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
         role="tabpanel"
         aria-labelledby={`tour-tab-${step}`}
         tabIndex={0}
-        page={PAGE[state.page]}
         description={descriptions[step]}
         notice={
           filtered ? (
@@ -672,8 +773,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
             </span>
           ) : null
         }
-        onPage={onPage}
-        onPageIntent={(p) => p === "Insights" && studioIntent()}
         className={styles.stage}
         data-step={step}
         data-studio-pick={studioAtPick || undefined}
@@ -686,16 +785,26 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
           <div className="relative flex min-h-0 flex-1 flex-col">
             <div className="flex items-center gap-4 border-b border-line px-5">
               <StatusFilter counts={counts} value={status} onChange={onStatus} />
-              <Toolbar />
+              <Toolbar
+                search={search}
+                onSearch={(q) => {
+                  settleArrival();
+                  setPointed(false);
+                  setSearch(q);
+                }}
+                onExport={onExport}
+                input={searchInput}
+              />
             </div>
             <div ref={gridGate} {...gate("grid")} data-quiet={!tips || undefined} data-fresh={fresh ?? undefined} className={clsx(styles.gate, "min-h-0 flex-1")}>
               <ClaimsGridPreviewLazy
                 bare
                 from={1024}
-                rows={rows}
+                rows={decided}
                 height={560}
                 openId={picked}
                 filter={status === "all" ? null : status}
+                search={search}
                 onRowClick={onRowClick}
                 sortEpoch={sortEpoch}
                 arrival={arrivalProp}
@@ -707,24 +816,22 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
                 fallback={<GridStill rows={still} openId={picked} filter={status === "all" ? null : status} flush />}
               />
             </div>
-            {/* The queue's foot, as the console's: when these claims were drawn (PREVIEW_NOW), never "live", since the
-                console a visitor opens next has its own, newer figures. */}
+            {/* The queue's foot, as the console's: updated just now, as the claim that has just arrived says. */}
             <p inert aria-hidden="true" className={clsx(styles.foot, "text-ui text-muted")}>
-              {TOUR.toolbar.live}
+              {found.length ? TOUR.toolbar.live : TOUR.toolbar.none}
             </p>
             {/* The evidence docks as the console's panel: flush to the window's right edge from the status row to the
                 foot, over the grid's right-hand columns (the money ones it repeats), so the grid keeps its width and its
                 columns as the claim opens. */}
             {dock && evidence && (
               <div
-                inert
                 data-out={dockOut || undefined}
                 style={dockW ? { width: dockW } : undefined}
                 className={clsx(styles.dock, "absolute top-0 right-0 bottom-0 z-10 w-[400px] max-xl:top-[45px] max-xl:w-[380px]")}
               >
                 <EvidenceStill
                   claim={evidence}
-                  note={<PayoutsNote amount={evidence.amount} id={evidence.id} />}
+                  note={<ReviewFoot key={evidence.id} claim={evidence} phase={review[evidence.id] ?? "idle"} onPhase={(p) => onReview(evidence.id, p)} />}
                   className="w-full! rounded-none! bg-transparent! shadow-none!"
                 />
               </div>

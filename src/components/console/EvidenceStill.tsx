@@ -5,9 +5,16 @@ import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { EvidencePhoto } from "./EvidencePhoto";
 import { VerdictMark, verdictOf } from "./VerdictMark";
 
+/** What the still draws of a claim: the console panel's DrawerClaim, cut to its photos, checks and verdict (the
+ * homepage sends one for every claim in its queue). */
+export type StillClaim = Pick<DrawerClaim, "id" | "decision" | "code" | "payer" | "photos" | "checks" | "sentence" | "amount" | "review" | "summary"> & {
+  payout: { status: string } | null;
+};
+
 export interface EvidenceStillProps {
-  claim: DrawerClaim;
-  /** What goes under the rule's sentence on a held claim; by default, a line saying what a person does here. */
+  claim: StillClaim;
+  /** What goes under the rule's sentence: the review's foot (the tour's Pay and Reject, or what happened); by default,
+   * on a held claim, a line saying what a person does here. */
   note?: ReactNode;
   /** Fill the parent's width and grow with the content (phones), instead of the docked 380px panel. */
   fluid?: boolean;
@@ -120,12 +127,11 @@ export function EvidenceStill({ claim, note, fluid, className }: EvidenceStillPr
         {/* A phone has the held answer just above, and the payout path says what a person does: the rule's sentence would
             say it a third time. */}
         <p data-rule className={clsx("text-ui", fluid && note && "max-md:hidden")}>{claim.sentence}</p>
-        {claim.review &&
-          (note ? (
-            <div className={clsx("mt-3", fluid && "max-md:mt-0")}>{note}</div>
-          ) : (
-            <p className="mt-2 text-ui text-muted">A person approves or rejects it here. Approving sends {claim.amount} through PayPal.</p>
-          ))}
+        {note ? (
+          <div className={clsx("mt-3", fluid && "max-md:mt-0")}>{note}</div>
+        ) : (
+          claim.review && <p className="mt-2 text-ui text-muted">A person approves or rejects it here. Approving sends {claim.amount} through PayPal.</p>
+        )}
       </div>
     </aside>
   );

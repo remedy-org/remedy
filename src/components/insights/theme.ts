@@ -16,9 +16,10 @@ export interface Fonts {
 }
 
 // A decision has the same colour in every chart, pill and barcode: paid, held, rejected, blocked, in progress, then
-// graphite steps for anything else the analyst charts.
+// graphite steps for anything else the analyst charts. Paid as an area is the calmer --pay-fill (in dark a forest green,
+// where the glyph's mint was the loudest thing on the page).
 const PALETTE = [
-  "var(--pay)",
+  "var(--pay-fill)",
   "var(--hold)",
   "var(--stop)",
   "color-mix(in oklch, var(--stop) 55%, var(--surface))",

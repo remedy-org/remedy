@@ -177,6 +177,11 @@
   vertical-align: baseline;
 }
 
+/* The baseline is the figure at rest's, whichever value is drawn first: the outgoing one never sets it. */
+.roll > [data-was] {
+  order: 1;
+}
+
 .roll > * {
   grid-area: 1 / 1;
 }
@@ -473,10 +478,6 @@
     transition: visibility 0s;
   }
 
-  .chromePage {
-    transition: color var(--dur-ui) var(--ease-snap);
-  }
-
   /* Step to step, as the Chain of Custody cuts between chapters: the outgoing page leaves in 140ms, the incoming one
      rises 6px into place over 320ms, 60ms later, so two pages are never half drawn over each other. The window and
      its app bar never move. */
@@ -575,14 +576,14 @@
 @keyframes roll-out {
   to {
     opacity: 0;
-    translate: 0 -100%;
+    translate: 0 -0.6em;
   }
 }
 
 @keyframes roll-in {
   from {
     opacity: 0;
-    translate: 0 100%;
+    translate: 0 0.6em;
   }
 }
 

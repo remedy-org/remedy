@@ -105,7 +105,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
     expressions: [
       {
         id: "medianToPaySec",
-        name: sent ? "Median photo to PayPal" : "Median photo check",
+        name: sent ? "Median photo to payout" : "Median photo check",
         description: sent
           ? "Median seconds from photos to a payout really sent through PayPal; claims where nothing was sent are not in it. Use it grouped, by day or by source; for one overall figure use the Median time widget."
           : "No payout has been sent yet, so this is the median seconds from photos to the model's answer. Use it grouped, by day or by source; for one overall figure use the Median time widget.",

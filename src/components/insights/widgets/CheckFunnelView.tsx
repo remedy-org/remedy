@@ -68,7 +68,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
               <span className="relative h-3 rounded-[3px] bg-surface-2" aria-hidden="true">
                 <span
                   data-bar="funnel"
-                  className={clsx("absolute inset-y-0 left-0 rounded-[3px]", last ? "bg-pay" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
+                  className={clsx("absolute inset-y-0 left-0 rounded-[3px]", last ? "bg-pay-fill" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
                   style={{ width: `max(2px, ${(s.reached / filed) * 100}%)`, "--i": i } as CSSProperties}
                 />
               </span>
@@ -88,7 +88,8 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                   : {})}
                 className={clsx(
                   "group ml-[11.5rem] flex min-h-6 items-center gap-2 rounded-control py-0.5 text-left text-micro transition-colors",
-                  flush ? "pl-3" : "px-2",
+                  // 8px of air inside the picked line's ring on the homepage's flush card, so its words never touch it.
+                  flush ? "pr-2 pl-3" : "px-2",
                   onToggle && "disabled:cursor-default enabled:hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
                   selected.has(s.stage) ? "bg-surface-2 ring-1 ring-text-2 ring-inset" : "",
                 )}

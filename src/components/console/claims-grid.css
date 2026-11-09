@@ -210,20 +210,21 @@
   }
 }
 
-/* The arriving row opens its own slot: it is uncovered top down exactly as fast as the rows below slide away (AG Grid's
-   400ms row animation), so there is never a blank row and it is never drawn over the row it displaces. */
+/* The arriving row waits, unseen, while the rows below slide away to open its slot (AG Grid's 400ms row animation),
+   then fades in whole: never a half-row uncovered over a blank band, never drawn over the row it displaces. */
 @media (prefers-reduced-motion: no-preference) {
   [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] {
-    animation: row-open 400ms ease both;
+    animation: row-open 680ms var(--ease-out-quart) both;
   }
 }
 
 @keyframes row-open {
-  from {
-    clip-path: inset(0 0 100% 0);
+  0%,
+  58% {
+    opacity: 0;
   }
-  to {
-    clip-path: inset(0 0 0 0);
+  100% {
+    opacity: 1;
   }
 }
 

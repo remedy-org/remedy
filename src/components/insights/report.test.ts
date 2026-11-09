@@ -71,7 +71,7 @@ describe("cross-filter", () => {
   it("names the picks in the bar", () => {
     expect(filterLabel([{ field: "claims.refusalReason", values: ["Rejected by a person on review"] }])).toBe("Rejected by a person on review");
     expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("claims stopped at the account checks · Verdict: Held or Blocked");
-    expect(filterLabel([{ field: "calendar::day", values: ["20261107", "20261104"] }])).toBe("Filed 7 Nov or 4 Nov");
+    expect(filterLabel([{ field: "calendar::day", values: ["20261107", "20261104"] }])).toBe("claims filed 7 Nov or 4 Nov");
     expect(filterLabel([{ field: "", values: [] }])).toBe("A pick on a chart");
   });
 });
@@ -100,13 +100,13 @@ describe("the homepage's tiles", () => {
 
   it("counts the captions over the claims a cross-filter leaves", () => {
     const all = [paid, paid, photo, pre];
-    expect(homeKpiCaptions(all)).toEqual({ median: "across 2 payouts", refused: "1 rejected by the photo check, 1 blocked by the account checks" });
+    expect(homeKpiCaptions(all)).toEqual({ median: "across 2 payouts", refused: "1 at the photo check, 1 at the account checks" });
     expect(homeKpiCaptions(all, [paid])).toEqual({ median: "across 1 payout", refused: "None refused among these claims" });
-    expect(homeKpiCaptions(all, [photo])).toEqual({ median: "None paid among these claims", refused: "1 rejected by the photo check" });
+    expect(homeKpiCaptions(all, [photo])).toEqual({ median: "None paid among these claims", refused: "1 at the photo check" });
   });
 
   it("names only the checks that refused", () => {
-    expect(refusedSplit(0, 3)).toBe("3 blocked by the account checks");
+    expect(refusedSplit(0, 3)).toBe("3 at the account checks");
     expect(refusedSplit(0, 0)).toBe("None refused");
   });
 });

@@ -40,6 +40,10 @@
      ring never competes with it. */
   --focus: var(--text-2);
   --pay: oklch(0.79 0.13 150);
+  /* A chart's paid columns: a calm forest green, not the glyph's bright mint, which as an area was the loudest thing on
+     the page; its figures in the text colour. */
+  --pay-fill: oklch(0.5 0.085 150);
+  --pay-fill-text: var(--text);
   --hold: oklch(0.78 0.08 240);
   --stop: oklch(0.72 0.16 28);
   /* The light table: one warm pool of light under the paper that leads the screen. The only light on the site. */
@@ -98,6 +102,8 @@
   /* In light, amber is under 2.1:1 on the page, a card and an amber button: the ring is ink, 3:1 on all of them. */
   --focus: var(--text);
   --pay: oklch(0.45 0.13 150);
+  --pay-fill: var(--pay);
+  --pay-fill-text: var(--bg);
   --hold: oklch(0.44 0.11 250);
   --stop: oklch(0.48 0.18 28);
   --pool: oklch(0.9 0.06 85 / 0.22);
@@ -216,6 +222,8 @@
   --color-focus: var(--focus);
   --color-pay: var(--pay);
   --color-pay-soft: var(--pay-soft);
+  --color-pay-fill: var(--pay-fill);
+  --color-pay-fill-text: var(--pay-fill-text);
   --color-hold: var(--hold);
   --color-hold-soft: var(--hold-soft);
   --color-stop: var(--stop);

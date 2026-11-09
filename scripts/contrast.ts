@@ -138,6 +138,7 @@ const app: Pair[] = [
     { fg: s, bg: `--surface-2+${s}-soft`, min: 4.5, note: "status pill on the grid header or panel" },
     { fg: s, bg: `--surface+--accent-soft+${s}-soft`, min: 4.5, note: "status pill on the open row" },
   ]),
+  { fg: "--pay-fill-text", bg: "--pay-fill", min: 4.5, note: "a chart's figure on its paid column" },
   ...["--bg", "--surface", "--surface-2"].map((bg) => ({ fg: "--line-strong", bg, min: 3, note: "input border" })),
   { fg: "--photo-scrim-text", bg: "white+--photo-scrim", min: 4.5, note: "AI-made photo label, scrim over a white photo" },
   // The 2px focus ring, 2px off the control: 3:1 against every surface it can lie on (WCAG 1.4.11, 2.4.13).

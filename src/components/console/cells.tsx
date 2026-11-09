@@ -473,9 +473,10 @@ export function HeaderOnlyTip({ location, value }: CustomTooltipProps<GridRow>) 
 /** Hovering the strip: the count, then each check by name with its result, under the five checks the homepage and the
  * owner's receipt name (Live camera, Never seen before, One claim per account, Code and label, Really destroyed). A
  * check that doesn't apply to this claim keeps its dash in the strip but isn't listed. */
-export function ChecksTooltip({ data, location, value }: CustomTooltipProps<GridRow>) {
+export function ChecksTooltip({ data, location, value, context }: CustomTooltipProps<GridRow, unknown, GridContext>) {
   if (location === "header") return <HeaderTip text={value} />;
   if (!data?.bars) return null;
+  if (context?.stacked) return <FiveCard row={data} bars={data.bars} />;
   const shown = data.bars.filter((b) => !(isPreCheck(b.id) && b.state === "skipped"));
   const groups = FIVE_CHECKS.map((c) => ({ title: c.short, bars: shown.filter((b) => checkOf(b.id) === c.n) })).filter((g) => g.bars.length);
   return (
@@ -497,6 +498,55 @@ export function ChecksTooltip({ data, location, value }: CustomTooltipProps<Grid
           </ul>
         </div>
       ))}
+    </div>
+  );
+}
+
+const FIVE_BAR: Record<Outcome, BarState> = { pass: "pass", hold: "hold", fail: "reject", open: "waiting", skipped: "skipped" };
+const FIVE_WORD: Record<Outcome, string> = { pass: "Passed", hold: "Held", fail: "Failed", open: "Waiting", skipped: "Not run" };
+
+/**
+ * The homepage's checks card: the five checks as the strip draws them, one bar each, with each one's outcome, under the
+ * strip's own count ("4 of 5 checks passed · 1 held"). It sits 8px under the hovered row, or over it near the list's foot,
+ * and never over the column header.
+ */
+function FiveCard({ row, bars }: { row: GridRow; bars: CheckBar[] }) {
+  const card = useRef<HTMLDivElement>(null);
+  const id = row.id;
+  useLayoutEffect(() => {
+    const el = card.current;
+    const cell = el?.ownerDocument.querySelector<HTMLElement>(`.claims-grid .ag-row[row-id="${CSS.escape(id)}"] .ag-cell[col-id="checks"]`);
+    const body = cell?.closest(".claims-grid")?.querySelector<HTMLElement>(".ag-body-viewport");
+    if (!el || !cell || !body) return;
+    // AG Grid places its popup at the pointer after this renders: measured once it has, then moved from there.
+    let frame = 0;
+    const place = () => {
+      el.style.translate = "";
+      const box = el.getBoundingClientRect();
+      const at = cell.closest(".ag-row")!.getBoundingClientRect();
+      const room = body.getBoundingClientRect();
+      const below = at.bottom + 8;
+      const above = at.top - 8 - box.height;
+      const top = below + box.height <= room.bottom ? below : above >= room.top ? above : Math.max(room.top, room.bottom - box.height);
+      el.style.translate = `${Math.round(cell.getBoundingClientRect().left - box.left)}px ${Math.round(top - box.top)}px`;
+    };
+    place();
+    frame = requestAnimationFrame(() => (place(), (frame = requestAnimationFrame(place))));
+    return () => cancelAnimationFrame(frame);
+  }, [id]);
+  const five = fiveOf(bars);
+  return (
+    <div ref={card} className="w-[320px] rounded-card bg-surface px-3.5 py-3 shadow-float">
+      <p className="text-ui text-text">{barsSentence(bars)}</p>
+      <ul className="mt-2.5 flex flex-col gap-1.5">
+        {five.map((f) => (
+          <li key={f.n} className="flex items-center gap-2.5 text-ui">
+            <Bar bar={{ state: FIVE_BAR[f.outcome] }} />
+            <span className="min-w-0 flex-1 text-text-2">{FIVE_CHECKS[f.n - 1].short}</span>
+            <span className="shrink-0 text-micro text-muted">{FIVE_WORD[f.outcome]}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

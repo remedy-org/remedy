@@ -37,9 +37,9 @@ function PaidByDay({ days, className, counts = false }: { days: PaidDay[]; class
           <li key={d.day} className="flex min-h-0 min-w-0 flex-col items-stretch">
             <span className="relative min-h-12 flex-1">
               {d.dollars > 0 && (
-                <span data-bar="day" aria-hidden="true" className="absolute inset-x-0 bottom-0 flex justify-center rounded-t-[3px] bg-pay pt-1.5" style={{ height: h, "--i": i } as CSSProperties}>
+                <span data-bar="day" aria-hidden="true" className="absolute inset-x-0 bottom-0 flex justify-center rounded-t-[3px] bg-pay-fill pt-1.5" style={{ height: h, "--i": i } as CSSProperties}>
                   {/* The label waits for its column to finish growing (tour.module.css), so it never floats over nothing. */}
-                  <span data-bar-label className="text-micro whitespace-nowrap text-bg">
+                  <span data-bar-label className="text-micro whitespace-nowrap text-pay-fill-text">
                     {usd(d.dollars)}
                   </span>
                 </span>

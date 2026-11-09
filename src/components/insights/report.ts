@@ -87,7 +87,7 @@ const STOPPED: Record<string, string> = {
 const PICK_LABEL: Record<string, (values: string[]) => string> = {
   "claims.stage": (v) => v.map((stage) => STOPPED[stage] ?? `claims that passed ${stage}`).join(" or "),
   "claims.decision": (v) => `Verdict: ${or(v)}`,
-  [DAY]: (v) => `Filed ${or(v.map((d) => `${Number(d.slice(6))} ${MONTHS[Number(d.slice(4, 6)) - 1] ?? ""}`.trim()))}`,
+  [DAY]: (v) => `claims filed ${or(v.map((d) => `${Number(d.slice(6))} ${MONTHS[Number(d.slice(4, 6)) - 1] ?? ""}`.trim()))}`,
 };
 
 /** "Rejected by a person on review", "claims stopped at the account checks · Verdict: Held"; a pick this can't name reads as a chart's. */
@@ -236,7 +236,7 @@ export const insightsReport = (data: InsightsData, narrow = false, labelColor?: 
 /** The homepage's median tile: the time it reports (timeField) and its title, in the ledger's words. */
 export function homeTime(claims: Pick<LedgerRow, "timeToSendSec">[]) {
   const field = timeField(claims);
-  return { timeField: field, timeTitle: field === "timeToSendSec" ? "Median photo to PayPal" : "Median photo check" };
+  return { timeField: field, timeTitle: field === "timeToSendSec" ? "Median photo to payout" : "Median photo check" };
 }
 
 // The homepage's plain value tiles (Studio's own): the claims span a few days, so a day sparkline says little.
@@ -257,9 +257,10 @@ const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }
 /** The homepage's day chart's title, in Studio and in the still that stands in for it (InsightsStill.tsx). */
 export const PAID_BY_DAY = "Paid through PayPal, by day";
 
-/** The Refused tile's caption on the homepage: how the refusals split between the photo check and the pre-checks. */
+/** The Refused tile's caption on the homepage: where the refusals were stopped, the photo check or the account checks,
+ * short enough for one line beside the other tiles'. */
 export const refusedSplit = (photo: number, pre: number) =>
-  [photo ? `${photo} rejected by the photo check` : "", pre ? `${pre} blocked by the account checks` : ""].filter(Boolean).join(", ") || "None refused";
+  [photo ? `${photo} at the photo check` : "", pre ? `${pre} at the account checks` : ""].filter(Boolean).join(", ") || "None refused";
 
 /** The homepage's refusal reasons card, in 16px rows: its padding and title (76px with the gap around the card) and
  * each reason with its bar (34px). */

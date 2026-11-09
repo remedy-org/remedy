@@ -34,13 +34,14 @@ describe("homepage console tour data", () => {
     expect(rows.find((r) => r.id === PREVIEW_OPEN_ID)?.decision).toBe("held");
   });
 
-  it("opens newest first, the one clickable held claim the one How it works' console shows, and the same rows there", async () => {
+  it("opens newest first, the arriving claim on top, every claim with photos clickable, and the same rows How it works shows", async () => {
     const { CONSOLE_ROWS } = await import("./custody/claim");
     const { formatDayTime } = await import("@/components/console/format");
     const { duration } = await import("@/app/console/_lib/view");
     const { rows } = previewProps();
     expect(rows.map((r) => r.createdAt)).toEqual([...rows.map((r) => r.createdAt)].sort().reverse());
-    expect(rows.filter((r) => r.evidence).map((r) => r.id)).toEqual([PREVIEW_OPEN_ID]);
+    expect(rows[0].id).toBe(ARRIVE_ID);
+    expect(rows.filter((r) => r.evidence).map((r) => r.id)).toEqual(rows.filter((r) => r.photoCount > 0).map((r) => r.id));
     const decided = rows.filter((r) => r.decision !== "pending").slice(0, CONSOLE_ROWS.length);
     expect(CONSOLE_ROWS.map((r) => [r.id, r.status, r.filed, r.time ?? null])).toEqual(
       decided.map((r) => [r.id, r.decision, formatDayTime(r.createdAt), r.modelSec === null ? null : duration(r.modelSec)]),
@@ -65,7 +66,7 @@ describe("homepage console tour data", () => {
   it("opens a held claim whose recorded answers name only what the photos show", () => {
     const open = previewProps().rows.find((r) => r.id === PREVIEW_OPEN_ID)!.evidence!;
     expect(open.decision).toBe("held");
-    const read = { checks: open.checks, summary: open.summary, sentence: open.sentence, events: open.events };
+    const read = { checks: open.checks, summary: open.summary, sentence: open.sentence };
     expect(JSON.stringify(read)).not.toMatch(/\b(demo|sample|test)\b/i);
   });
 

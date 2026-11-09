@@ -68,13 +68,14 @@ export function Companies() {
         />
       </div>
 
-      {/* One grid row: the sentence and what New recall takes on columns 1 to 7, the button on column 8, where the step
-          sentences above start. The button is the quiet one at the nav's 44px: the footer tag's Try a claim, a screen
-          below, is the page's brass, and two never share a view. Under it, which PayPal account it means. */}
-      <div className="mt-14 grid-12 gap-y-5 lg:mt-16">
+      {/* One grid row: the sentence and the buyer's facts (who funds the refunds, what a check costs, what New recall
+          takes) on columns 1 to 7, the button on column 8, where the step sentences above start. The button is the quiet
+          one at the nav's 44px: the footer tag's Try a claim, a screen below, is the page's brass, and two never share a
+          view. Under it, which PayPal account it means. The section's one Log in with PayPal (the footer tag has none). */}
+      <div data-cta className="mt-14 grid-12 gap-y-5 lg:mt-16">
         <div className="col-span-12 flex flex-col gap-3 lg:col-span-7">
           <p className="max-w-[60ch] text-body text-pretty text-text-2">{TOUR.cta.body}</p>
-          <p className="max-w-[64ch] text-ui text-pretty text-muted">{TOUR.cta.recall}</p>
+          <p className="max-w-[64ch] text-ui text-pretty text-muted">{TOUR.cta.facts}</p>
         </div>
         <div className="col-span-12 flex flex-col items-start gap-3 lg:col-span-5 lg:col-start-8">
           <Button href="/signin" variant="secondary" className="w-full justify-center sm:w-auto">

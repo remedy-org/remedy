@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
-import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import type { ClaimRow } from "@/app/console/_lib/view";
-import { EvidenceStill } from "@/components/console/EvidenceStill";
+import { EvidenceStill, type StillClaim } from "@/components/console/EvidenceStill";
 import { GridStill } from "@/components/console/GridStill";
 import { Wordmark } from "@/components/ui";
 import { PayoutsNote } from "./PayoutsNote";
@@ -29,7 +28,7 @@ export function ConsoleStory({
 }: {
   rows: ClaimRow[];
   sentences: string[];
-  evidence: DrawerClaim | null;
+  evidence: StillClaim | null;
   insights: ReactNode;
   report: ReactNode;
 }) {

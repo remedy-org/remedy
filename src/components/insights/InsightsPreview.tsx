@@ -22,12 +22,12 @@ if (LICENSE) lib.AgStudioLicenseManager.setLicenseKey(LICENSE);
 
 const PANELS = { view: { left: [], right: [] } };
 // A chart's tooltip names its series as the page does: "Paid through PayPal", not "(sum)", and the cross-filter's part
-// of it in words.
+// of it in words. The homepage's one cross-filtered series is the day chart's money: "Of these, paid".
 const LOCALE = {
   aggregationSumFieldName: "${name}",
   aggregationMaxFieldName: "${name}",
-  crossFilterSumFieldName: "${name}, in this filter",
-  crossFilterMaxFieldName: "${name}, in this filter",
+  crossFilterSumFieldName: "Of these, paid",
+  crossFilterMaxFieldName: "Of these, paid",
 };
 
 /** The tiles' captions, by title, for the claims on the page; a caption already right is left alone. */
@@ -73,7 +73,7 @@ export default function InsightsPreview({
     try {
       return {
         theme: buildTheme(lib, resolve, fonts()).withParams({ studioCanvasPadding: 14, studioValueWidgetFontSize: 28 }),
-        labelColor: resolve("var(--bg)"),
+        labelColor: resolve("var(--pay-fill-text)"),
       };
     } finally {
       done();

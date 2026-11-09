@@ -2,15 +2,14 @@
 
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import type { DrawerClaim } from "@/app/console/_lib/drawer";
 import { ledgerOf, type ClaimRow, type Ledger as LedgerData } from "@/app/console/_lib/view";
 import { ClaimsGrid, type ClaimsGridHandle } from "./ClaimsGrid";
-import { EvidenceStill } from "./EvidenceStill";
+import { EvidenceStill, type StillClaim } from "./EvidenceStill";
 import { Ledger } from "./Ledger";
 import { StatusTabs, TABS, type Tab } from "./StatusTabs";
 
-/** A preview row: a grid row, and for the open claim its evidence (built on the server, so nothing is fetched). */
-export type PreviewRow = ClaimRow & { evidence?: DrawerClaim };
+/** A preview row: a grid row, and for a claim with photos its evidence (built on the server, so nothing is fetched). */
+export type PreviewRow = ClaimRow & { evidence?: StillClaim };
 
 export interface ClaimsGridPreviewProps {
   rows: PreviewRow[];
@@ -34,6 +33,8 @@ export interface ClaimsGridPreviewProps {
   bare?: boolean;
   /** bare: show only the claims with this decision (AG Grid's own filter, so the rows animate). */
   filter?: ClaimRow["decision"] | null;
+  /** bare: show only the claims whose id, code, PayPal account or reason holds these words (the toolbar's search). */
+  search?: string;
   /** bare: a click on a row (the tour opens a held claim's evidence). */
   onRowClick?: (row: ClaimRow) => void;
   /** bare: changes when the tour leaves the queue, which puts back the order a visitor's sort changed. */
@@ -66,11 +67,18 @@ function interimOf(row: ClaimRow): ClaimRow {
 // The same claim once its checks are back: every bar filled, the verdict, payout and amount still to come.
 const checkedOf = (row: ClaimRow): ClaimRow => ({ ...interimOf(row), bars: row.bars });
 
-// A click opens the claims that carry their evidence (every held one, preview.ts).
+// A click opens the claims that carry their evidence (every one with photos, preview.ts).
 const OPENS = (r: ClaimRow) => Boolean((r as PreviewRow).evidence);
 
+/** Whether a claim holds the search's words, as the console's search matches: its id, code, PayPal account and reason. */
+export function matchesSearch(r: ClaimRow, search: string) {
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const text = [r.id, r.code, r.payer, r.note, r.reason].filter(Boolean).join(" ").toLowerCase();
+  return words.every((w) => text.includes(w));
+}
+
 /** The grid area of the homepage's console tour: the real grid, filtered, opened and arriving through its API. */
-function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady, onRowClick, sortEpoch = 0 }: ClaimsGridPreviewProps) {
+function BareGrid({ rows, openId, filter = null, search = "", arrival, live, aside, onReady, onRowClick, sortEpoch = 0 }: ClaimsGridPreviewProps) {
   const grid = useRef<ClaimsGridHandle>(null);
   // The rows the grid starts with, once: the arriving claim held back while it is still to arrive.
   const [initial] = useState(() => (arrival?.phase === "before" ? rows.filter((r) => r.id !== arrival.id) : rows));
@@ -101,8 +109,23 @@ function BareGrid({ rows, openId, filter = null, arrival, live, aside, onReady, 
   }, [ready, arrival, final, rows]);
 
   useEffect(() => {
-    if (ready) grid.current?.setFilter(filter ? (r) => r.decision === filter : null);
-  }, [ready, filter]);
+    if (!ready) return;
+    const q = search.trim();
+    grid.current?.setFilter(filter || q ? (r) => (!filter || r.decision === filter) && (!q || matchesSearch(r, q)) : null);
+  }, [ready, filter, search]);
+
+  // A row the page has changed (a claim a visitor paid or rejected in the tour, or put back) is redrawn in place, its
+  // changed cells flashing as the console's do.
+  const drawn = useRef(rows);
+  useEffect(() => {
+    if (!ready) return;
+    const before = new Map(drawn.current.map((r) => [r.id, r]));
+    drawn.current = rows;
+    for (const r of rows) {
+      const was = before.get(r.id);
+      if (was && was !== r) grid.current?.update(r);
+    }
+  }, [ready, rows]);
 
   useEffect(() => {
     if (ready && sortEpoch) grid.current?.resetSort();

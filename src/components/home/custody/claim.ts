@@ -76,10 +76,10 @@ export const SHOT_AT = [0.432, 0.444, 0.456];
 // homepage's console tour opens on, newest first (components/console/preview.ts, the seed's claims: src/lib/demo/seed.ts,
 // seed 27071), the two still waiting for photos left out: the same ids, photos, verdicts, reasons, filing times and
 // photo-check times, so a claim reads the same in both pictures (a test checks it). Rows past the panel's foot are cut
-// by it, as a list is: a tall screen shows more of the queue, never an empty well.
+// by it, as a list is: a tall screen (1920x1080) shows more of the queue, never an empty well.
 // `fails`: which of the five checks (0 to 4) stopped a rejected or blocked claim. `filed`: day and time, UTC.
 export const CONSOLE_ROWS: { photo: string; filed: string; id: string; status: Status; reason: string; time?: string; amount?: number; fails?: number }[] = [
-  { photo: "/demo/c03-1.jpg", filed: "8 Nov 07:54", id: "RM-0553", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
+  { photo: "/demo/c03-1.jpg", filed: "8 Nov 08:58", id: "RM-0553", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
   { photo: "/demo/c03-1.jpg", filed: "8 Nov 05:59", id: "RM-9629", status: "held", reason: "Couldn’t tell if both photos show the same item", time: "12 s" },
   { photo: "/demo/c10-1.jpg", filed: "8 Nov 05:04", id: "RM-9545", status: "rejected", reason: "Photo of a screen or a print", time: "19 s", fails: 4 },
   { photo: "/demo/c01-1.jpg", filed: "8 Nov 04:58", id: "RM-7581", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
