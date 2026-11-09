@@ -12,7 +12,8 @@ import { landing as glide, landingTime, warp, type Slow } from "./landing";
 // meets a stop, and a short flick that would not have carried halfway to the next stop runs free, unless it would come
 // to rest inside a pinned story; any gesture that goes quiet with the page bound for a transition half played inside one
 // settles on its nearest finished beat (nudge); a wheel rolled on slowly, a notch at a time, settles once, from where the
-// roll began. Only the wheel is gated: keys, anchor links,
+// roll began, back on a story's last beat when it ran up to half a window past it; and no gesture rests with the Problem
+// sheet half risen or half unfolded (unfolds). Only the wheel is gated: keys, anchor links,
 // the scrollbar, find-in-page, focus moves, touch and screen readers scroll natively and cancel a landing at once.
 
 /** The input rate is measured over this many ms. */
@@ -86,6 +87,10 @@ const TREMOR = 8;
 /** px a free run with no stop near may move to rest on a clean frame (stops.ts fit): no line cut by the nav or the
  * screen's foot. */
 const CLEAN = 120;
+/** How far a gesture that began inside a story, short of its last beat in its direction, may run on past that beat, in
+ * windows, and still settle back onto it: a slow roll of ten notches from the open sheet ran 402px past the cut (283px at
+ * 1920x1080) and rested there, the held sheet cut by Fraud checks' edge. A push begun on that last beat follows the hand. */
+const OVERRUN = 0.5;
 /** A notched wheel's quick flick is taken to the next stop this many windows away or nearer however short it is, as
  * Page Down is (keys.ts REACH): the stops below the Problem sheet are about a window apart, so three notches carried
  * about half the way and a flick ran free or glided to the stop by a few px of timing. */
@@ -199,6 +204,10 @@ export type Course = {
    * of their beats is a frame a transition half played, which a gesture that goes quiet settles on a beat. Outside them
    * the page scrolls 1:1. The pins when missing. */
   stories?: readonly (readonly [number, number])[];
+  /** Stretches outside the stories that are a transition half played all the way across, [a, b], with the finished
+   * frame past it going down, c (stops.ts unfoldStretches: the Problem sheet rising and unfolding, the open sheet past
+   * it). A gesture that goes quiet between a and b settles on a going up and on c going down. None when missing. */
+  unfolds?: readonly (readonly [a: number, b: number, c: number])[];
   fit?: (y: number, range: { min: number; max: number }) => number | undefined;
 };
 
@@ -214,6 +223,7 @@ export function createGate(read: () => Course) {
   let rests: number[] = [];
   let pins: readonly (readonly [number, number])[] = [];
   let stories: readonly (readonly [number, number])[] = [];
+  let unfolds: readonly (readonly [number, number, number])[] = [];
   let slow: readonly Slow[] = [];
   let fit: Course["fit"];
   let hold: Hold | null = null;
@@ -261,6 +271,8 @@ export function createGate(read: () => Course) {
   const inPin = (y: number) => pins.some(([p, q]) => y > p + 1 && y < q - 1);
   /** Whether a page at rest at `y` would hold a pinned story's transition half played: anywhere inside one but its ends. */
   const scrubbed = (y: number) => stories.some(([p, q]) => y > p + 1 && y < q - 1);
+  /** The stretch outside the stories whose transition a page at rest at `y` would hold half played (unfolds). */
+  const unfolding = (y: number) => unfolds.find(([a, b]) => y > a + 1 && y < b - 1);
 
   /**
    * The next stop past `from` in the direction of travel that the page at `at` has not yet passed, or will not reach
@@ -340,7 +352,7 @@ export function createGate(read: () => Course) {
         if (ahead === undefined || Math.abs(s - rest) < Math.abs(ahead - rest)) ahead = s;
       } else if ((rest - s) * dir <= SETTLE_BACK * innerHeight && (back === undefined || Math.abs(s - rest) < Math.abs(back - rest))) back = s;
     }
-    if (ahead !== undefined && !(Math.abs(ahead - rest) <= SETTLE * innerHeight || scrubbed(rest))) ahead = undefined;
+    if (ahead !== undefined && !(Math.abs(ahead - rest) <= SETTLE * innerHeight || scrubbed(rest) || unfolding(rest))) ahead = undefined;
     const stop = back !== undefined && (ahead === undefined || Math.abs(back - rest) < Math.abs(ahead - rest)) ? back : ahead;
     const to = stop ?? fit?.(rest, { min: rest - CLEAN, max: rest + CLEAN });
     // A clean frame where the run rests already: Lenis finishes the run.
@@ -354,9 +366,12 @@ export function createGate(read: () => Course) {
    * have come to rest. A push of TREMOR px or more lands on the beat ahead of where the gesture began, in its direction,
    * nearest where it would rest, so a gentle nudge or one notch moves the story on a beat and never lands against the
    * hand (a 36px push from the hero sprang back to 0). It lands within NUDGE_TIME, however far that beat, sooner when it
-   * is near (NUDGE_BASE). Outside the pinned stories slow scrolling stays the reader's: a push there, or out of a story's
-   * first or last beat, scrolls 1:1 and rests where it stops, on the clean frame nearest ahead (within CLEAN) when a line
-   * would be cut at the nav or the screen's foot.
+   * is near (NUDGE_BASE). A gesture that began inside a story, short of its last beat in its direction, and ran on past
+   * that beat by up to OVERRUN settles back onto it: the story's end is where a roll through it stops. Outside the
+   * pinned stories slow scrolling stays the reader's: a push there, or out of a story's first or last beat, scrolls 1:1
+   * and rests where it stops, on the clean frame nearest ahead (within CLEAN) when a line would be cut at the nav or the
+   * screen's foot; but never inside a stretch that is a transition half played all the way across (unfolds: the Problem
+   * sheet rising and unfolding), where it goes on to the finished frame ahead in its direction.
    */
   function nudge(l: GateLenis) {
     loose = false;
@@ -364,11 +379,28 @@ export function createGate(read: () => Course) {
     const dir = lastDir;
     const rest = l.targetScroll;
     const at = l.animatedScroll;
+    const now = performance.now();
     if (rests.some((s) => Math.abs(s - rest) <= 1)) return;
+    for (const [p, q] of stories) {
+      const end = dir > 0 ? q : p;
+      const over = (rest - end) * dir;
+      if (origin >= p - 1 && origin <= q + 1 && Math.abs(origin - end) > 1 && over > 1 && over <= OVERRUN * innerHeight) {
+        land(l, end, end >= at ? 1 : -1, now, nudgeTime(end - at));
+        return;
+      }
+    }
+    const unfold = unfolding(rest);
+    if (unfold) {
+      const [a, , c] = unfold;
+      // A tremor from one of its ends goes back to the nearer.
+      const to = (rest - origin) * dir >= TREMOR ? (dir > 0 ? c : a) : rest - a <= c - rest ? a : c;
+      land(l, to, to >= at ? 1 : -1, now, nudgeTime(to - at));
+      return;
+    }
     if (!scrubbed(rest)) {
       if ((rest - origin) * dir < TREMOR) return;
       const clean = fit?.(rest, dir > 0 ? { min: rest, max: rest + CLEAN } : { min: rest - CLEAN, max: rest });
-      if (clean !== undefined && Math.abs(clean - rest) > 1) land(l, clean, dir, performance.now(), nudgeTime(clean - at));
+      if (clean !== undefined && Math.abs(clean - rest) > 1) land(l, clean, dir, now, nudgeTime(clean - at));
       return;
     }
     let back: number | undefined;
@@ -386,7 +418,7 @@ export function createGate(read: () => Course) {
     }
     if (to === undefined) to = ahead !== undefined && (back === undefined || Math.abs(ahead - rest) <= Math.abs(back - rest)) ? ahead : back;
     // Landed on even where the page is on it already: Lenis would ease on past it to where the gesture was bound.
-    if (to !== undefined) land(l, to, to >= at ? 1 : -1, performance.now(), nudgeTime(to - at));
+    if (to !== undefined) land(l, to, to >= at ? 1 : -1, now, nudgeTime(to - at));
   }
 
   /** Seconds a nudge's landing takes `px` from the page: NUDGE_BASE and NUDGE_PER a window, NUDGE_TIME at most. */
@@ -485,7 +517,7 @@ export function createGate(read: () => Course) {
         hold.low = Infinity;
         hold.rising = 0;
       }
-      ({ stops, up: upStops = stops, slow = [], inner: innerStops = [], rests = stops, pins = [], stories = pins, fit } = read());
+      ({ stops, up: upStops = stops, slow = [], inner: innerStops = [], rests = stops, pins = [], stories = pins, unfolds = [], fit } = read());
       if (!rolling) origin = l.animatedScroll;
     }
     if (dir !== lastDir) {

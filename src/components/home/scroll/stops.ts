@@ -402,6 +402,27 @@ export function storyStretches(page = readPage()): [number, number][] {
   return out;
 }
 
+/** The Problem sheet's last frame unseen, on its timeline (its eyebrow comes up at the screen's foot from about t 11), and
+ * no more than UNSEEN px past the Chain of Custody's pin, where its stage starts to scroll away: the chapter list's first
+ * line sits about 110px under the nav at the console beat, and at 1920x1080 t 10 put it under the nav. Then the sheet's
+ * first frame lying flat, as the pin takes hold, before card 3 lands (a push of up to about 170px up from the open sheet
+ * rests past it, 1:1). */
+const SHEET_HIDDEN = 10;
+const UNSEEN = 96;
+const SHEET_FLAT = T.tilt[1];
+
+/**
+ * The stretches outside the stories that are a transition half played all the way across (gate.ts Course unfolds), as
+ * [a, b, c]: the Problem sheet rising out of the shade and unfolding, from its last frame unseen (a) to its first lying
+ * flat (b), and the open sheet past it (c). A slow roll rested there with the sheet half unfolded and the console's rows
+ * cut under the nav (1440x900: 7586, 7688); a gesture that goes quiet in it now settles on a going up, on c going down.
+ */
+export function unfoldStretches(page = readPage()): [number, number, number][] {
+  const [pin, hidden, b, c] = [0, SHEET_HIDDEN, SHEET_FLAT, SHEET_OPEN].map((t) => page.sheet(t));
+  if (pin === undefined || hidden === undefined || b === undefined || c === undefined) return [];
+  return [[Math.round(Math.min(hidden, pin + UNSEEN)), Math.round(b), Math.round(c)]];
+}
+
 const warned = new Set<string>();
 
 /** Each entry's value on this page; one that can't be read is skipped, never thrown inside Lenis's wheel callback. */
@@ -437,6 +458,7 @@ export function resolveCourse(): Course {
     rests: resolveStops([...STOPS, ...RESTS], page),
     pins: pinnedStretches(),
     stories: storyStretches(page),
+    unfolds: unfoldStretches(page),
     fit: (y, range) => page.fit(y, range),
   };
 }
