@@ -8,9 +8,16 @@ import { firmOf, sameFirm } from "./firm";
  * it is (Remedy's own run of a public CPSC recall, never a client's) and offers the company's own, until it imports one.
  * Not for the firm that runs it.
  */
-export function WorkspaceNote({ recall, recalls, company }: { recall: Recall; recalls: Pick<Recall, "owner">[]; company: string | null }) {
+type Workspace = { recall: Recall; recalls: Pick<Recall, "owner">[]; company: string | null };
+
+/** Whether the workspace is on the shared recall, so the note shows (the report says so on its printed sheet too). */
+export function onSharedRecall({ recall, recalls, company }: Workspace) {
   const firm = firmOf(recall);
-  if (recall.owner !== null || recalls.some((r) => r.owner !== null) || !firm || (company && sameFirm(firm, company))) return null;
+  return !(recall.owner !== null || recalls.some((r) => r.owner !== null) || !firm || (company && sameFirm(firm, company)));
+}
+
+export function WorkspaceNote({ recall, recalls, company }: Workspace) {
+  if (!onSharedRecall({ recall, recalls, company })) return null;
   return (
     <p className="text-ui text-muted">
       Your console opens on Remedy&rsquo;s own run of public CPSC recall <span className="font-mono">{recall.id}</span>, {keepHyphens(recall.product)}, so you can see a running
