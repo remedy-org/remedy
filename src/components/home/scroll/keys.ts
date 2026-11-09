@@ -1,11 +1,11 @@
 import type Lenis from "lenis";
-import { calm, landingTime, warp } from "./landing";
+import { calm, calmLanding } from "./landing";
 import type { Course } from "./gate";
 
 // The keyboard's paging on the homepage, on the wheel's own stops (stops.ts). A browser page is about 95% of the
 // screen, so native paging landed between the stops: the Problem sheet mid-unfold, the loop closed skipped, a heading
 // under the nav or a line cut at the foot. Space, Shift+Space, Page Down and Page Up go to the next stop in their
-// direction instead, gliding there as a fling's landing does (the pinned transitions on the way crossed slowly), when
+// direction instead, on the same calm glide as a fling's landing (the pinned transitions on the way crossed slowly), when
 // that stop is near: within 1.25 screens, or anywhere when the page or the stop is inside a pinned stretch (the Chain of
 // Custody's beats, the Problem sheet's), whose stops are paced for the keys. Farther, the browser pages as usual. A key
 // press is deliberate, so besides the wheel's stops it stops on every finished beat the wheel may come to rest on
@@ -17,12 +17,6 @@ import type { Course } from "./gate";
 const REACH = 1.25;
 /** A stop this close to the page is where it already is. */
 const EPS = 4;
-/** Seconds a key's glide takes at most, as a notched wheel's landing (gate.ts): a key answers at once and never makes the
- * reader wait; across the hero's dolly, a little longer, so the dolly still plays. */
-const KEY_TIME = 1;
-const KEY_DOLLY = 1.2;
-/** The slow stretch's weight that marks the dolly (stops.ts SLOW). */
-const DOLLY_WEIGHT = 5;
 
 const EDITABLE = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
 /** Widgets that page their own way (AG Grid's Page Down moves its focus) or hold the page (a dialog). */
@@ -78,11 +72,8 @@ export function attachKeys(lenis: Pick<Lenis, "scrollTo" | "isStopped" | "animat
     const to = keyStop(rests, from, dir, REACH * innerHeight, pins());
     if (to === null) return;
     e.preventDefault();
-    const start = lenis.animatedScroll;
-    const way = warp(start, to, slow);
-    const dolly = slow.some(([a, b, k]) => k >= DOLLY_WEIGHT && Math.max(a, b) > Math.min(start, to) && Math.min(a, b) < Math.max(start, to));
-    const duration = Math.min(dolly ? KEY_DOLLY : KEY_TIME, landingTime(way.length / innerHeight));
-    const curve = calm(0);
+    const { duration, way, ease } = calmLanding(lenis.animatedScroll, to, innerHeight, slow);
+    const curve = calm(0, ease);
     aim = { to, until: performance.now() + duration * 1000 + 200 };
     lenis.scrollTo(to, { duration, easing: (t) => way.at(curve(t)) });
   };
