@@ -242,7 +242,8 @@ const FIVE_STATE: Record<Outcome, BarState> = { pass: "pass", skipped: "skipped"
 function FiveBarcode({ bars }: { bars: CheckBar[] }) {
   const five = fiveOf(bars).map((c) => ({ id: String(c.n), state: FIVE_STATE[c.outcome] }));
   return (
-    <span role="img" aria-label={barsSentence(bars)} className="flex items-center gap-2.5">
+    // Its sentence shows as a small card on hover and keyboard focus (.checks-glyph, claims-grid.css).
+    <span role="img" aria-label={barsSentence(bars)} className="checks-glyph flex items-center gap-2.5">
       <span className="flex gap-0.5">
         {five.slice(0, 3).map((b) => (
           <Bar key={b.id} bar={b} />
