@@ -75,13 +75,13 @@ describe("duplicateFor", () => {
     expect(d.fiveRows.map((r) => [r.name, r.state])).toEqual([
       ["Taken in Remedy’s camera", "pass"],
       ["Photo not used before", "pass"],
-      ["One claim per PayPal account", "skipped"],
+      ["One claim per verified PayPal account", "skipped"],
       ["Tag shows X-VESOLJE and K7P", "reject"],
       ["Pillow cut in half", "pass"],
     ]);
     expect(d.fiveRows[2].note).toBe("Counted once, on the genuine claim.");
     expect(d.five).toBe("3 of 5 checks passed · 1 failed · 1 not run");
     // The photo's name is built from what the checks read, never the photo check's prose.
-    expect(d.photoAlt).toBe("Claim photo: pillow cut in half, tag reads X-VESOLJE K7Q");
+    expect(d.photoAlt).toEqual(["Claim photo: pillow cut in half, tag reads X-VESOLJE K7Q"]);
   });
 });
