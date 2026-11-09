@@ -10,8 +10,9 @@ import { num, useRows } from "./useRows";
 // Custom widget 3: why claims were refused (RefusalReasonsView draws it), each reason followed by where it was caught:
 // before the model read the photo (a pre-check), by the model, or by a person. Clicking a reason cross-filters the page.
 
-// Where each reason was caught, in words (the console's gates; the homepage's seed names its own).
-const GATE_LABEL: Record<string, string> = { "No AI": "by the account checks", "Model reads": "by the photo check", Person: "by a person" };
+// Where each reason was caught, in words (the console's gates; the homepage's seed names its own). The checks before the
+// photo check are the camera session, the reused photo and the account: "account checks" would misname the first two.
+const GATE_LABEL: Record<string, string> = { "No AI": "before the photo check", "Model reads": "by the photo check", Person: "by a person" };
 
 // `params` is kept whole (not destructured with a rest), so its identity, which useRows re-runs on, is Studio's own.
 export function RefusalReasons(params: AgWidgetParams<RefusalReasonsDef> & { flush?: boolean }) {

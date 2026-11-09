@@ -36,7 +36,7 @@ export function insightsLedger(claims: LedgerRow[]) {
     remedied: claims.reduce((n, c) => n + c.remedied, 0),
     paidCents,
     median: median(times),
-    timeLabel: field === "timeToSendSec" ? "median photo to payout" : "median photo check",
+    timeLabel: field === "timeToSendSec" ? "median photo to payout sent" : "median photo check",
     timed: times.length,
     timedOne: field === "timeToSendSec" ? "payout" : "claim",
     refused: claims.reduce((n, c) => n + c.refused, 0),
@@ -257,10 +257,10 @@ const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }
 /** The homepage's day chart's title, in Studio and in the still that stands in for it (InsightsStill.tsx). */
 export const PAID_BY_DAY = "Paid through PayPal, by day";
 
-/** The Refused tile's caption on the homepage: where the refusals were stopped, the photo check or the account checks,
- * short enough for one line beside the other tiles'. */
+/** The Refused tile's caption on the homepage: where the refusals were stopped, at the photo check or before it, short
+ * enough for one line beside the other tiles'. */
 export const refusedSplit = (photo: number, pre: number) =>
-  [photo ? `${photo} at the photo check` : "", pre ? `${pre} at the account checks` : ""].filter(Boolean).join(", ") || "None refused";
+  [photo ? `${photo} at the photo check` : "", pre ? `${pre} before it` : ""].filter(Boolean).join(", ") || "None refused";
 
 /** The homepage's refusal reasons card, in 16px rows: its padding and title (76px with the gap around the card) and
  * each reason with its bar (34px). */
@@ -338,7 +338,7 @@ export function homeKpiCaptions(all: CaptionClaim[], shown: CaptionClaim[] = all
   const field = timeField(all);
   const n = shown.filter((c) => c[field] !== null).length;
   const gate = (g: string) => shown.filter((c) => c.refused && c.refusalGate === g).length;
-  const [photo, pre] = [gate("Photo check"), gate("Account check")];
+  const [photo, pre] = [gate("Photo check"), gate("Before the photo check")];
   const filtered = shown !== all;
   return {
     median:

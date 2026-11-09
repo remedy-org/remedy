@@ -484,7 +484,7 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
     case "rejected":
       return reviewed ? `Rejected on review: ${stripPrefix(reviewed.text).replace(/[.\s]+$/, "")}.` : `A check failed, so no money moves: ${lower(first(c.reasons, "reject") ?? "refused")}.`;
     case "blocked":
-      return `Stopped by the account checks before the photo check: ${lower(first(c.reasons, "reject") ?? "an account check failed")}.`;
+      return `Stopped before the photo check: ${lower(first(c.reasons, "reject") ?? "an account check failed")}.`;
     case "pending":
       return c.photos.length ? "The photo check is reading the photos; the rule decides when it answers." : "The owner has a code and an open camera session, but no photos yet.";
   }
