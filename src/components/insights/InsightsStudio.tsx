@@ -6,12 +6,14 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui";
 import type { InsightsData } from "@/app/console/insights/facts";
+import { studioLicence } from "@/lib/agStudioLicence";
 import { INSIGHTS_ACTIONS } from "./actions";
 import { buildAnalyst } from "./analyst";
+import { FilterBar } from "./FilterBar";
 import { InsightsLedger } from "./InsightsLedger";
 import { PaidLines } from "./PaidLines";
 import "./insights.css";
-import { chartsPaidByDay, CONSOLE_CHART, filterClaims, filterLabel, filterPicks, insightsReport, paidByDayChart, paidDays, PAID_BY_DAY, panelName, reportRows, type FilterPick } from "./report";
+import { chartsPaidByDay, CONSOLE_CHART, filterClaims, filterPicks, insightsReport, paidByDayChart, paidDays, PAID_BY_DAY, panelName, reportRows, type FilterPick } from "./report";
 import { buildSources } from "./sources";
 import { colorResolver, fonts, onThemeChange, readTheme } from "./studio-setup";
 import lib from "./studio-lib";
@@ -20,12 +22,12 @@ import { toolDisplay } from "./ToolCards";
 import { insightsWidgets, type InsightsRegistry } from "./widgets";
 
 // AG Studio, loaded on this route only (InsightsLoader imports it with ssr: false), from its self-contained UMD build
-// (see studio-lib.js) and driven through its vanilla API. The licence key is public by design (AG keys sit in the
-// client bundle); without one, Studio runs with its trial watermark.
+// (see studio-lib.js) and driven through its vanilla API. The page mounts it only under a valid, unexpired key
+// (lib/agStudioLicence.ts); without one it draws Remedy's own report (InsightsReport) and this module never loads.
 
 if (process.env.NODE_ENV !== "production") lib.enableStudioDevValidations();
 
-const LICENSE = process.env.NEXT_PUBLIC_AG_STUDIO_LICENSE;
+const LICENSE = studioLicence();
 if (LICENSE) lib.AgStudioLicenseManager.setLicenseKey(LICENSE);
 
 // Studio's own words for the analyst's panel, in the console's voice. Its thread picker is hidden (insights.css); the
@@ -311,39 +313,7 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
       <div className="page">
         <InsightsLedger claims={(filtered && shown) || data.claims} unitsSold={data.recall.unitsSold} />
       </div>
-      {/* The page's filter, said in words with a way out: a pick in one panel changes every number on the page. Always
-          there at one height, saying how to pick until something is, so nothing under it moves when a pick lands. */}
-      <div className="page">
-        <div ref={bar} tabIndex={-1} role="status" className="flex h-11 items-center gap-x-3 border-b border-line text-ui outline-none">
-          {!filtered && (
-            <p className="min-w-0 truncate text-muted">
-              Showing all {plural(data.claims.length, "claim")} · Pick a decision, a drop or a reason to filter the page
-            </p>
-          )}
-          {filtered && (
-            <>
-              <p className="min-w-0 truncate text-muted">
-                Showing <span className="font-medium text-text">{filterLabel(picks)}</span>
-                {shown ? (
-                  <>
-                    {" "}
-                    · <span className="tabular-nums text-text">{shown.length}</span> of {plural(data.claims.length, "claim")}
-                  </>
-                ) : (
-                  " · the figures above count every claim"
-                )}
-              </p>
-              <button
-                type="button"
-                onClick={clearFilter}
-                className="shrink-0 rounded-control px-2 py-1 font-medium text-text underline decoration-line-2 underline-offset-4 hover:decoration-text focus-visible:outline-2 focus-visible:outline-offset-0"
-              >
-                Clear filter
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      <FilterBar ref={bar} picks={picks} shown={shown ? shown.length : null} total={data.claims.length} onClear={clearFilter} />
       <div
         ref={host}
         // The analyst's empty column says what it answers from (insights.css prints it).

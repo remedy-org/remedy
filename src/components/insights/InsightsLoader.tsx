@@ -6,7 +6,7 @@ import type { InsightsData } from "@/app/console/insights/facts";
 import { InsightsSkeleton } from "./InsightsSkeleton";
 
 // AG Studio (with Grid and Charts Enterprise inside it) loads only here, in the browser, so no other console page
-// carries its weight. From 640px it is the report; below 1024px its panels stack one per row at the canvas's full
+// carries its weight, and only under a valid key: the page draws InsightsReport instead without one. From 640px it is the report; below 1024px its panels stack one per row at the canvas's full
 // width (a laptop at 200% zoom keeps every panel). Phones get MobileSummary's figures and funnel instead.
 const InsightsStudio = dynamic(() => import("./InsightsStudio"), { ssr: false, loading: () => <InsightsSkeleton /> });
 

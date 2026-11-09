@@ -52,7 +52,7 @@ export function RecallProgressView({ done, total, dayCount, dated }: { done: num
           <span className="absolute -top-1 left-2 text-micro whitespace-nowrap text-pay">Remedy so far</span>
         </div>
         <div className="absolute top-0 -translate-x-1/2 text-center" style={{ left: `calc((${at(TYPICAL_RETURN.from)} + ${at(TYPICAL_RETURN.to)}) / 2)` }}>
-          <span className="text-micro whitespace-nowrap text-muted">{dated ? "Typical over a whole recall (years)" : "Typical recall"}</span>
+          <span className="block text-micro whitespace-nowrap text-muted">{dated ? "Typical over a whole recall (years)" : "Typical recall"}</span>
         </div>
         {TICKS.map((t) => (
           <div
