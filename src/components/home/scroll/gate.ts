@@ -8,9 +8,9 @@ import { landing as glide, landingTime, warp, type Slow } from "./landing";
 // next beat takes a fresh gesture: a pause, a new swipe or a reversal (a notched wheel's flicks are each their own). A
 // wheel spun on hard has made its point: the rest of that gesture scrolls freely (ESCAPE, SPIN) and comes to rest on the
 // nearest whole frame. A hard fling whose momentum keeps pouring in skims past a story's inner beats (SKIM); section
-// stops always catch. Going up, the Chain of Custody stops on the same finished beats as going down; the Problem sheet's
-// inner beats are down only (stops.ts). Slow scrolling never meets a stop,
-// and a short flick that would not have carried halfway to the next stop runs free. Only the wheel is gated: keys, anchor links,
+// stops always catch. Going up, the page stops on the same finished beats as going down (stops.ts). Slow scrolling never
+// meets a stop, and a short flick that would not have carried halfway to the next stop runs free, unless it would come
+// to rest inside a pinned story. Only the wheel is gated: keys, anchor links,
 // the scrollbar, find-in-page, focus moves, touch and screen readers scroll natively and cancel a landing at once.
 
 /** The input rate is measured over this many ms. */
@@ -19,11 +19,21 @@ const WINDOW = 150;
 const FAST = 2000;
 /** ms without a wheel event that ends a gesture, unless it resumes within TAIL_GAP ms as the same slowing tail. */
 const QUIET = 140;
-/** The same for a notched wheel, which has no momentum tail to wait out: a pause twice its gesture's usual gap between
- * notches (at least this many ms) ends it, so a hand re-flicking, which re-grips in 80 to 150 ms, makes a gesture of each
- * flick. */
-const NOTCH_QUIET = 50;
 const TAIL_GAP = 400;
+/** The same for a notched wheel, which has no momentum tail to wait out (notchQuiet): 60 to 80 ms. */
+const NOTCH_QUIET: readonly [min: number, max: number] = [60, 80];
+
+/**
+ * ms without a notch that end a notched wheel's gesture: half as long again as its usual gap between notches (the
+ * median of `gaps`, the gesture's last few), held to 60 to 80 ms, and 80 before it has a gap of its own. A hand
+ * re-flicking pauses 60 ms or more between flicks, so each flick is a gesture of its own and three quick flicks move
+ * three stops; a wheel spun on sends its notches 10 to 40 ms apart, so a held spin stays one gesture.
+ */
+export function notchQuiet(gaps: readonly number[]) {
+  if (!gaps.length) return NOTCH_QUIET[1];
+  const usual = [...gaps].sort((x, y) => x - y)[gaps.length >> 1];
+  return Math.min(NOTCH_QUIET[1], Math.max(NOTCH_QUIET[0], 1.5 * usual));
+}
 /**
  * A momentum tail has decayed under this share of the gesture's peak pace. Paces are px of input per PACE ms, so events
  * the browser merges on a busy frame, and uneven event timing, read the same as the even stream it would have sent.
@@ -161,6 +171,8 @@ export function createGate(read: () => Course) {
 
   /** Whether two positions lie in the same pinned story, whose beats a fling always lands on, however far apart. */
   const story = (a: number, b: number) => pins.some(([p, q]) => Math.min(a, b) >= p - 1 && Math.max(a, b) <= q + 1);
+  /** Whether a page at rest at `y` would hold a pinned story's transition half played: anywhere inside one but its ends. */
+  const scrubbed = (y: number) => pins.some(([p, q]) => y > p + 1 && y < q - 1);
 
   /**
    * The next stop past `from` in the direction of travel that the page at `at` has not yet passed, or will not reach
@@ -181,12 +193,12 @@ export function createGate(read: () => Course) {
   }
 
   /** Whether this gesture would carry the page at least CARRY of the way to `to` on its own; inside a pinned story any
-   * fling does, so a flick never rests on a beat half played. */
+   * fling does, and so does one that would come to rest inside one, so a flick never rests on a beat half played. */
   function carries(l: GateLenis, to: number, dir: Dir, now: number) {
     if (story(l.animatedScroll, to)) return true;
     const aim = landing ? landing.to : l.targetScroll;
     const projected = (aim - l.animatedScroll) * dir + Math.min(rate(now) * MOMENTUM, sum(-Infinity, now));
-    return projected >= CARRY * Math.abs(to - l.animatedScroll);
+    return projected >= CARRY * Math.abs(to - l.animatedScroll) || scrubbed(l.animatedScroll + dir * projected);
   }
 
   function land(l: GateLenis, to: number, dir: Dir, now: number) {
@@ -213,7 +225,8 @@ export function createGate(read: () => Course) {
     });
   }
 
-  /** A free run has ended: it comes to rest on the stop ahead nearest to where it would have stopped, when that is close. */
+  /** A free run has ended: it comes to rest on the stop ahead nearest to where it would have stopped, when that is close,
+   * and however far when it would stop inside a pinned story, where only a beat is a whole frame. */
   function settle(l: GateLenis) {
     free = false;
     if (yielded) return;
@@ -223,7 +236,7 @@ export function createGate(read: () => Course) {
       if ((s - l.animatedScroll) * dir <= 1) continue;
       if (best === undefined || Math.abs(s - l.targetScroll) < Math.abs(best - l.targetScroll)) best = s;
     }
-    if (best !== undefined && Math.abs(best - l.targetScroll) <= SETTLE * innerHeight) land(l, best, dir, performance.now());
+    if (best !== undefined && (Math.abs(best - l.targetScroll) <= SETTLE * innerHeight || scrubbed(l.targetScroll))) land(l, best, dir, performance.now());
   }
 
   /** Whether a held gesture has become a new one: a fresh swipe out of the momentum tail, or a hand scrolling on. */
@@ -264,11 +277,9 @@ export function createGate(read: () => Course) {
     const a = Math.abs(deltaY);
     const notch = a >= NOTCH && Number.isInteger(deltaY);
     const gap = now - lastT;
-    // A notched wheel's gesture ends sooner, at a pause twice its usual gap (NOTCH_QUIET): three quick flicks are three
-    // gestures, three stops.
-    const usual = gaps.length ? [...gaps].sort((x, y) => x - y)[gaps.length >> 1] : QUIET / 2;
-    const quiet = notched && notch ? Math.min(QUIET, Math.max(NOTCH_QUIET, 2 * usual)) : QUIET;
-    if (gap > quiet) {
+    // A notched wheel's gesture ends sooner (notchQuiet): three quick flicks are three gestures, three stops.
+    const quiet = notched && notch ? notchQuiet(gaps) : QUIET;
+    if (gap >= quiet) {
       // A momentum tail can stall for a frame or two on a busy page; when it resumes, no larger, after input that was
       // still slowing down, it is the same gesture.
       const slowing = sum(lastT - 200, lastT) < 0.9 * sum(lastT - 400, lastT - 200);
@@ -348,9 +359,17 @@ export function createGate(read: () => Course) {
 
     if (landing) {
       if (inner) return true;
-      // A fresh fling while the page is still landing heads on from the stop it is landing on.
-      const next = !hold && fast ? ahead(landing.to, landing.to, dir) : undefined;
-      if (next !== undefined && carries(l, next, dir, now)) land(l, next, dir, now);
+      // A fresh fling while the page is still landing heads on from the stop it is landing on, however short: the hand
+      // that starts a new gesture mid-landing means the next stop (a notched wheel's flick of two notches is one). With
+      // no stop ahead within reach it runs on from there, so no flick is thrown away.
+      if (!hold && (fast || (notched && samples.length >= 2))) {
+        const next = ahead(landing.to, landing.to, dir);
+        if (next === undefined) {
+          landing = null;
+          return true;
+        }
+        land(l, next, dir, now);
+      }
       // A hard fling's momentum, still pouring in well past the take, carries it on past a story's inner beat.
       else if (hold && innerStops.includes(landing.to) && total - takenAt >= SKIM * innerHeight) {
         const on = ahead(landing.to, landing.to, dir);
