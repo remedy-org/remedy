@@ -2,6 +2,7 @@ import type { CheckState } from "@/components/ui";
 import { reviewAsked } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
+import { byCheck } from "@/lib/reasonOrder";
 import type { CheckSpec, Claim, Decision, Reason, Recall } from "@/lib/types";
 
 // Pure view logic for the claim flow, shared by the pages, the API's JSON and the dev previews. No server imports.
@@ -145,15 +146,16 @@ export function toView(claim: Claim, spec: CheckSpec): ClaimView {
 export const isDecided = (d: Decision) => d !== "pending";
 
 /**
- * The reasons that decided a refused or held claim, most important first. A claim the owner asked a person to look at
- * is held on the rule's refusal, so those reasons are what the person looks at; once a person has refused a claim,
- * their reason is the one that stands.
+ * The reasons that decided a refused or held claim, in check order (lib/reasonOrder.ts), so the one decide() acts on
+ * leads and the same photo reads the same way however its answers were recorded. A claim the owner asked a person to
+ * look at is held on the rule's refusal, so those reasons are what the person looks at; once a person has refused a
+ * claim, their reason is the one that stands.
  */
 export function decidingReasons(claim: Pick<Claim, "decision" | "reasons">): Reason[] {
   const reviewed = claim.reasons.find((r) => r.check === "review" && r.outcome === "reject");
   if (claim.decision !== "held" && reviewed) return [reviewed];
   const want = claim.decision === "held" && !reviewAsked(claim) ? "hold" : "reject";
-  return claim.reasons.filter((r) => r.outcome === want);
+  return byCheck(claim.reasons).filter((r) => r.outcome === want);
 }
 
 /**
@@ -192,7 +194,7 @@ export function payoutHold(claim: Pick<Claim, "decision" | "reasons" | "events">
 
 // What to do next, per failed check. Keys are rule.ts check names (step_N share one).
 const ADVICE: Record<string, string> = {
-  session: "Only photos taken in the claim, within 10 minutes of its code, count. A new claim gives you a new code.",
+  session: "Only photos that arrive inside the claim’s 10-minute camera session count. A new claim gives you a new code.",
   duplicate_photo: "Start a new claim with new photos of your own product.",
   payer: "Each PayPal account can claim once per recall, so your earlier claim is the one that counts.",
   payer_verified: "Verify your account with PayPal, then start a new claim.",

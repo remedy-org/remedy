@@ -320,3 +320,15 @@ describe("recall import", () => {
     expect(r.error?.issues.find((i) => i.path[0] === "slug")?.message).toBe("Use lowercase letters and numbers, joined by single dashes");
   });
 });
+
+describe("a held claim's unreadable code in the grid", () => {
+  const unread: Reason = { check: "code", outcome: "hold", text: "Couldn't read the written code clearly; this claim's code is H9D" };
+
+  it("is short, as a wrong code's line is, and keeps the code a person checks it against", () => {
+    expect(companyReasonText(unread, "held", true)).toBe("Tag unreadable · code is H9D");
+  });
+
+  it("stays the rule's full sentence wherever the line isn't the grid's", () => {
+    expect(companyReasonText(unread, "held")).toBe("Couldn’t read the written code clearly; this claim’s code is H9D");
+  });
+});

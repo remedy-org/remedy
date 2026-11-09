@@ -351,7 +351,7 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
     <CodeLead code={claim.code} seen={claim.verdict?.challenge_code.text_seen} />
   ) : lead === "session" ? (
     // The row under it says this photo came from outside the camera: the lead says the rule, once.
-    "Only photos taken in this claim’s camera, within 10 minutes of its code, count."
+    "Only photos that arrive inside this claim’s 10-minute camera session count."
   ) : lead === "duplicate_photo" ? (
     // The row and the pair beside it carry the earlier claim's number: said there, once.
     duplicate?.earlier ? (

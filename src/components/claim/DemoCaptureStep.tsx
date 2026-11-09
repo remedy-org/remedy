@@ -117,7 +117,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
         <figure className="flex flex-col gap-3">
           <CodeTag code={code} written={written} />
           <figcaption className="text-ui text-muted">
-            {upload ? "Your one-time code. Only a photo taken in this claim’s camera can carry it." : "Your one-time code. This photo’s tag is already written. Press the shutter to send it."}
+            {upload ? "Your one-time code. A photo counts only if it arrives inside this claim’s 10-minute camera session." : "Your one-time code. This photo’s tag is already written. Press the shutter to send it."}
           </figcaption>
         </figure>
       </div>
@@ -135,7 +135,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
           </div>
           {/* Phones: the code this claim was issued, which the result's tag check names (a laptop has the tag beside it). */}
           <p className="text-ui text-pretty text-muted lg:hidden">
-            Your one-time code is <span className="font-mono whitespace-nowrap text-text">{code}</span>. Only a photo taken in this claim&rsquo;s camera can carry it.
+            Your one-time code is <span className="font-mono whitespace-nowrap text-text">{code}</span>. A photo counts only if it arrives inside this claim&rsquo;s 10-minute camera session.
           </p>
           {/* A phone: the picture and its button on the text's own width, the picture no taller than leaves the button on
               the first screen. A laptop: the picture at the camera's size, and the button as wide as it. */}

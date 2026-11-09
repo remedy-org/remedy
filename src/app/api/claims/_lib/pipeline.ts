@@ -7,6 +7,7 @@ import { CAPTURE_SESSION_MINUTES, newCaptureSession, newClaimId, newPayoutKey } 
 import { claimRefusal, utcDay, type Limits, type Refusal } from "@/lib/limits";
 import { PayPalError } from "@/lib/paypal/client";
 import type { PayoutStatus } from "@/lib/paypal/payouts";
+import { decidingCheck } from "@/lib/reasonOrder";
 import { decide, preCheck, sendCheck, type OtherClaim } from "@/lib/rule";
 import type { ClaimSummary, Store } from "@/lib/store";
 import type { CheckSpec, Claim, Decision, Money, Reason, Recall, Verdict } from "@/lib/types";
@@ -319,7 +320,8 @@ export async function checkClaim(deps: PipelineDeps, claimId: string): Promise<C
     c.reasons = [...reasons, ...autoPayOff];
     c.events.push(event(checkedAt, "checked", `Photo check answered in ${result.seconds.toFixed(1)} s (${result.model})`));
     if (outcome === "pass" && recall.autoPay) return;
-    const first = c.reasons.find((r) => r.outcome === (outcome === "reject" ? "reject" : "hold"));
+    // What the grid and the panel lead with (lib/reasonOrder.ts), so the claim's history names the same reason.
+    const first = decidingCheck(c.reasons);
     c.decision = decisionFor(c.reasons);
     c.events.push(event(checkedAt, "decided", c.decision === "rejected" ? `Rejected: ${first?.text}` : `Held for a person: ${first?.text}`));
   });

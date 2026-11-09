@@ -8,6 +8,7 @@ import { datasetTagSpot } from "@/lib/demo/dataset";
 import { demoSample } from "@/lib/demo/samples";
 import { PAYPAL_CONFIRMED } from "@/lib/payoutWords";
 import { checkOf, fiveNames, type CheckNumber } from "@/lib/fiveChecks";
+import { inDecidingOrder } from "@/lib/reasonOrder";
 import { summarize } from "@/lib/store/store";
 import { allPreChecks, amountOf, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, toRow, type PreCheckRow, type PreCheckState } from "./view";
 
@@ -336,7 +337,8 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [], copiedFrom
   const amount = formatMoney(amountOf(c.payout?.amount, recall));
   const refused = refusedOf(c);
   const pre = preChecksOf(refusedReasons(c, refused).length ? { ...c, reasons: [...c.reasons, ...refusedReasons(c, refused)] } : c);
-  const checks = c.reasons
+  // The deciding check first, then the rest in one fixed order (lib/reasonOrder.ts), so a re-run reads the same way.
+  const checks = inDecidingOrder(c.reasons)
     .filter((r) => !NOT_MODEL.has(r.check))
     .map((r) => ({ id: r.check, label: checkLabel(r.check, c.code, recall.spec.proof_steps), outcome: r.outcome, rule: companyReasonText(r, c.decision), evidence: evidenceFor(r.check, r.outcome, c.verdict) }));
   const all = allPreChecks(refusedReasons(c, refused).length ? { ...c, reasons: [...c.reasons, ...refusedReasons(c, refused)] } : c);

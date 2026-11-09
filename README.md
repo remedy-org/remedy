@@ -28,8 +28,8 @@ The model is not the defence against AI images: in our tests, no model could rel
 
 | # | Check | Uses AI? |
 |---|---|---|
-| 1 | Live camera session: photos must arrive inside this claim's 10-minute session | No |
-| 2 | Never seen before: a perceptual fingerprint (dHash) compares every photo with every earlier claim | No |
+| 1 | Live camera session: photos must arrive inside this claim's 10-minute session, carrying that session's key | No |
+| 2 | Never seen before: a perceptual fingerprint (dHash) compares every photo with every earlier claim; a repost is refused even resized, re-saved or brightened | No |
 | 3 | One claim per verified PayPal account per recall | No |
 | 4 | The code, character by character: GPT-6.1 Sol reads the handwritten code and the product label, with quoted evidence | Yes, it describes |
 | 5 | Really destroyed: the model describes each step of the cut, quoting what it sees | Yes, it describes |
@@ -43,7 +43,7 @@ The model only describes. A fixed rule in code, not the model, turns those answe
 3. Run the four sample claims. They use the real pipeline on sample photos:
    - **A genuine claim**: paid $29.99 in sandbox money within a minute of the photo.
    - **The wrong code**: rejected; the model reads the tag character by character.
-   - **An uploaded photo**: blocked before the model; it wasn't taken in this claim's camera session. (All four sample photos are AI-made; only this one is sent from outside the camera.)
+   - **An uploaded photo**: blocked before the model; it didn't arrive inside this claim's camera session. (All four sample photos are AI-made; only this one is sent from outside the camera.)
    - **A reposted photo**: blocked as a duplicate of an earlier claim's photo.
 
    Your browser's run is one demo round: its samples are checked only against each other, so judges sharing one sandbox login each see these four outcomes. **Run the samples again** on the picker starts a new round.

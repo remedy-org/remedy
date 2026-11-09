@@ -705,7 +705,7 @@ function Evidence({
               <span className="min-w-0 text-muted">
                 {/* One format for a span, as the grid and timeline print it ("11 s", not "10.8 s"), and one figure: the photo
                     check's span is counted from the same timestamps as the grid's "Answered in" and the timeline. */}
-                {/* Typeset, with no capital after a colon ("Held for a person: couldn’t read the label clearly"). */}
+                {/* Typeset, with no capital after a colon ("Held for a person: couldn’t read the written code clearly"). */}
                 <LinkedIds
                   text={lowerAfterColons(typesetText(e.detail)).replace(/(\d+\.\d+) s\b/, (_, n: string) => duration(e.type === "checked" && photosIn !== null ? Math.max(0, Math.round((Date.parse(e.at) - photosIn) / 1000)) : Number(n)))}
                   onOpen={onOpen}

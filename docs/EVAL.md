@@ -120,7 +120,7 @@ Round 1 results are kept in `eval/out/runs-v1`.
 
 - **Real handwriting in a real phone photo.** Every code-on photo is AI-made, because no web photo can carry a per-claim code. The first real one will be the demo capture.
 - **AI fakes.** The models passed `c01`–`c08`, and all of them are AI images. The vision check can't tell a clean AI image from a photo, so it isn't the defence against fakes. These are:
-  - the capture path: a live camera only, with the code issued inside that session;
+  - the capture path: photos must arrive inside the claim's 10-minute camera session, carrying its key, with the code issued inside that session (this proves when and through which session a photo was sent, not that a camera took it);
   - one claim per verified PayPal account per unit.
 - **Claude**, which needs an Anthropic key, and isn't wired into the app's check.
 - **An independent answer key.** One person wrote the keys and checked them by eye.
@@ -158,3 +158,34 @@ of the CPSC photo (`w09`, with `h02` for the cut) by `eval/make-photos.ts`; each
 photo (a plain navy pillow, `c02`) under the new spec: rejected, "Label doesn't match the recalled product". Run 1 of
 each case in use is stored verbatim in `src/lib/demo/verdicts.json` and `src/lib/review/replay.json`
 (`npm run demo:assets`). Spend: about $0.62 on images and $0.36 on vision runs.
+
+## The repost fingerprint against edits (9 Nov 2026, no model calls)
+
+The duplicate check (`src/lib/fingerprint.ts`) treats two photos as the same at a dHash distance of at most
+`SAME_PHOTO_THRESHOLD`, 8 bits of 64. Each edit of k01 (the eval original and `public/demo/k01-1.jpg`) went through
+the claim page's own encode first (longest side 1600 px, JPEG 0.85), as an upload would, and was compared with the
+original's upload. The two k01 files are 3 bits apart.
+
+| Edit | eval k01 | demo k01-1 | Same photo? |
+| --- | --- | --- | --- |
+| Re-saved as JPEG 90 / 70 / 50 | 1 / 1 / 1 | 0 / 1 / 0 | yes |
+| Resized to 50% | 2 | 2 | yes |
+| Brightness +15% / -15% | 3 / 4 | 0 / 1 | yes |
+| Contrast +15% / -15% | 3 / 1 | 0 / 1 | yes |
+| Cropped 2%, evenly from every side | 2 | 1 | yes |
+| Cropped 2% off the right and bottom | 4 | 5 | yes |
+| Cropped 5%, evenly | 5 | 4 | yes |
+| Rotated 2°, cropped back to fill | 8 | 5 | yes (eval k01 at the threshold) |
+| Cropped 10%, evenly | 9 | 7 | no / yes |
+| Cropped 5% / 10% / 20% off the right and bottom | 12 / 21 / 29 | 11 / 21 / 30 | no |
+| Cropped 20%, evenly | 18 | 19 | no |
+| Rotated 2°, white corners | 13 | 9 | no |
+| Mirrored left to right | 30 | 34 | no |
+| Screenshot on a phone (black frame, status bar) | 16 | 18 | no |
+| Screenshot in a desktop viewer (grey margins) | 28 | 28 | no |
+
+So the homepage says a repost is refused "even resized, re-saved or brightened", never "edited" in general: a mirror,
+a crop of 5% or more off one side, a screenshot or a rotation with white corners gets past the fingerprint, and the
+other checks stand in the way: a reposted tag carries the earlier claim's code, not the new one (the `/try` repost
+sent to the model anyway was rejected on its code, 3 of 3), and a screenshot meets the screen check. `fingerprint.test.ts` pins
+the edits the page names.

@@ -1,4 +1,5 @@
 import { CAPTURE_SESSION_MINUTES } from "../ids";
+import { byCheck } from "../reasonOrder";
 import { decide, preCheck, type OtherClaim } from "../rule";
 import { Verdict, type Claim, type Decision, type Reason, type Recall } from "../types";
 import { DEMO_CLAIMS, type DemoClaim } from "./claims";
@@ -128,7 +129,8 @@ export function buildSeedClaims({ recall, hashes, taken = new Set(), shift = 0 }
     claim.decision = decision;
     claim.events.push({ at: at(photosAt + 300), type: "prechecked", detail: "Account checks passed" });
     claim.events.push({ at: at(checkedAt), type: "checked", detail: `Photo check answered in ${sample.seconds.toFixed(1)} s` });
-    const first = (o: Reason["outcome"]) => reasons.find((r) => r.outcome === o)?.text ?? "";
+    // The reason the grid and the panel lead with (lib/reasonOrder.ts), as the pipeline words its own decided line.
+    const first = (o: Reason["outcome"]) => byCheck(reasons).find((r) => r.outcome === o)?.text ?? "";
     const said = d.outcome === "approved" ? "Every check passed; refund approved, nothing sent yet" : outcome === "pass" ? "Every check passed" : outcome === "hold" ? `Held for a person: ${first("hold")}` : `Rejected: ${first("reject")}`;
     // The rule decides on the answer at once: the same instant, so the timeline's Decision never reads a second after the answer.
     claim.events.push({ at: at(checkedAt), type: "decided", detail: said });
