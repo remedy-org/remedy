@@ -526,6 +526,71 @@ describe("wheel stops", () => {
     }
   });
 
+  /**
+   * A notched wheel on a clock: `notches` deltas `gap` ms apart, then the wheel quiet for `after` ms, Lenis's frames
+   * every 16 ms between them (the page easing 40px behind its target). Returns the landings and where the page was at
+   * the last notch.
+   */
+  function wheelOnClock(at: number, stops: number[], pins: [number, number][], flicks: number[][], gaps: { inside: number; between: number }) {
+    const g = setup(at, stops, [], undefined, undefined, pins);
+    let clock = 5000;
+    const spy = vi.spyOn(performance, "now").mockImplementation(() => clock);
+    const frames = (ms: number) => {
+      for (let t = 16; t < ms; t += 16) {
+        clock += 16;
+        if (!g.lenis.landed.length) g.lenis.animatedScroll = g.lenis.targetScroll - 40 * Math.sign(flicks[0][0]);
+        g.scroll();
+      }
+      clock += ms % 16 || 16;
+    };
+    let atLast = at;
+    let through = 0;
+    flicks.forEach((flick, f) => {
+      flick.forEach((dy, i) => {
+        if (f || i) frames(i ? gaps.inside : gaps.between);
+        atLast = g.lenis.animatedScroll;
+        through += g.send([dy], i ? gaps.inside : gaps.between);
+      });
+    });
+    frames(600);
+    spy.mockRestore();
+    return { landed: g.lenis.landed, atLast, through };
+  }
+
+  it("brings a slow roll of notches inside a pinned story to rest on the beat nearest where the hand stopped, never on past it", () => {
+    // As the Problem sheet at 1920x1080: the sheet open, the loop cut 717px on, Fraud checks 1535px past the cut, all
+    // pinned. Ten notches 100 ms apart from the open sheet stop 283px past the cut: the page settles back onto it, rather
+    // than glide on to Fraud checks from where the last notch began.
+    const course = [0, 1000, 1717, 3252, 4000];
+    const pins: [number, number][] = [[0, 3315]];
+    for (const gap of [80, 100, 120, 150]) {
+      const roll = wheelOnClock(1000, course, pins, [Array(10).fill(100)], { inside: gap, between: gap });
+      expect(roll.through, `${gap} ms`).toBe(1000); // every notch is the reader's: nothing settles mid-roll
+      expect(roll.landed, `${gap} ms`).toEqual([1717]);
+      expect(Math.abs(1717 - roll.atLast), `${gap} ms`).toBeLessThanOrEqual(0.3 * 900);
+    }
+    // Five notches stop short of the cut: on to it, in the hand's direction.
+    expect(wheelOnClock(1000, course, pins, [Array(5).fill(100)], { inside: 100, between: 100 }).landed).toEqual([1717]);
+    // Eighteen go nearer Fraud checks than the cut: on to it.
+    expect(wheelOnClock(1000, course, pins, [Array(18).fill(100)], { inside: 100, between: 100 }).landed).toEqual([3252]);
+    // Going up, the same: ten notches from Fraud checks rest 465px above the cut, nearer it than the open sheet.
+    expect(wheelOnClock(3252, course, pins, [Array(10).fill(-100)], { inside: 100, between: 100 }).landed).toEqual([1717]);
+  });
+
+  it("still takes three quick flicks of a notched wheel, a pause between them, to three beats", () => {
+    const beats = [0, 1000, 2000, 3000, 4000, 5000];
+    const pins: [number, number][] = [[0, 5000]];
+    for (const [n, inside, between] of [
+      [2, 25, 160],
+      [2, 15, 150],
+      [3, 35, 200],
+      [2, 35, 300],
+    ]) {
+      const { landed } = wheelOnClock(1000, beats, pins, Array(3).fill(Array(n).fill(100)), { inside, between });
+      expect(landed, `${n} notches ${inside} ms apart, ${between} ms pauses`).toEqual([2000, 3000, 4000]);
+    }
+  });
+
   it("settles a nudge Lenis has finished easing before the wheel is quiet long enough to tell", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const { lenis, send } = setup(1000, [0, 1000, 2600], [], undefined, undefined, [[900, 2600]]);
