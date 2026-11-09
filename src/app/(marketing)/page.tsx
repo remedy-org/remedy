@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: share, description },
 };
 
+// Drawn ahead of time and again every hour: the For companies tour, its Insights and its report draft read the console's
+// dataset, whose claims move to the visit's day (lib/demo/dataset.ts), so their dates stay the console's.
+export const revalidate = 3600;
+
 // The production site, so search engines and agents get one canonical identity whichever host serves the page.
 const SITE = "https://remedy-recalls.vercel.app";
 const JSON_LD = {

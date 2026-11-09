@@ -7,17 +7,23 @@ import { DEMO_CLAIMS, GENUINE } from "./claims";
 
 vi.mock("server-only", () => ({}));
 
+// A visit two weeks after the dataset's own day (DATASET_NOW, 8 Nov): the dataset has moved forward to it, and every
+// replica must move with it (dataset.ts datasetShift).
+vi.useFakeTimers({ toFake: ["Date"] });
+vi.setSystemTime(new Date("2026-11-21T10:30:00Z"));
+
 // Every picture of the demo recall reads one dataset (claims.ts). This fails if any replica's ids, verdicts, amounts,
 // times, photos or check names drift from it, or if a photo or a code repeats outside the one repost.
 
 const { previewProps, reportPreview, ARRIVE_ID } = await import("@/components/console/preview");
 const { verdictOf } = await import("@/components/console/VerdictMark");
-const { formatDayTime } = await import("@/components/console/format");
+const { formatDay, formatDayTime } = await import("@/components/console/format");
 const { duration, toRow } = await import("@/app/console/_lib/view");
 const { toDrawerClaim } = await import("@/app/console/_lib/drawer");
 const { buildSeedClaims, SEED_PHOTOS } = await import("./seed");
 const { demoRecall } = await import("./kikea");
 const { summarize } = await import("@/lib/store/store");
+const { DATASET_NOW, datasetNow, datasetShift, demoDataset } = await import("./dataset");
 const { CLAIM, CHAPTERS, CONSOLE_ROWS } = await import("@/components/home/custody/claim");
 const { EXHIBIT, CHECKS: EXHIBIT_CHECKS } = await import("@/components/home/teardown/claim");
 const { CHECKS: LAPTOP_CHECKS } = await import("@/components/home/ClaimScreen");
@@ -28,9 +34,13 @@ const photosOf = (d: (typeof DEMO_CLAIMS)[number]) => d.photos.map((p) => `/demo
 const home = previewProps().rows;
 const signin = previewProps(456, { asConsole: true }).rows;
 // The console: the stored claims as /console draws them (the seed's claims, through the console's own row and panel).
-const recall = demoRecall(new Date("2026-11-05T09:00:00Z"));
+const shift = datasetShift();
+const recall = demoRecall(new Date(Date.parse("2026-11-05T09:00:00Z") + shift));
 const hashes = Object.fromEntries(SEED_PHOTOS.map((p, i) => [p, (i + 1).toString(16).padStart(16, "0")]));
-const stored = buildSeedClaims({ recall, hashes });
+const stored = buildSeedClaims({ recall, hashes, shift });
+// A claim's filing time on the visit's day, and the time of day alone, as the homepage's drawn-ahead replicas give it.
+const filedOf = (d: (typeof DEMO_CLAIMS)[number]) => new Date(Date.parse(d.filed) + shift).toISOString();
+const timeOf = (iso: string) => formatDayTime(iso).split(" ").pop();
 const console_ = stored.map((c) => toRow(summarize(c), recall));
 
 describe("the demo claims", () => {
@@ -55,6 +65,22 @@ describe("the demo claims", () => {
     for (let i = 0; i < prints.length; i++) for (let j = i + 1; j < prints.length; j++) expect(hamming(prints[i], prints[j]), `${files[i]} ~ ${files[j]}`).toBeGreaterThan(8);
   });
 
+  it("move to the visit's day: the newest filed yesterday, every time of day kept, none before the recall's date", () => {
+    expect(shift % 86_400_000).toBe(0);
+    expect(datasetNow().toISOString()).toBe("2026-11-21T09:00:00.000Z");
+    const { recall: r, claims } = demoDataset();
+    expect(claims.map((c) => c.id)).toEqual(DEMO_CLAIMS.map((d) => d.id));
+    expect(claims.map((c) => c.createdAt)).toEqual(DEMO_CLAIMS.map(filedOf));
+    expect(claims[0].createdAt.slice(0, 10)).toBe("2026-11-20");
+    expect(claims.map((c) => timeOf(c.createdAt))).toEqual(DEMO_CLAIMS.map((d) => timeOf(d.filed)));
+    expect(claims.at(-1)!.createdAt.slice(0, 10) >= r.recallDate).toBe(true);
+    // Never back: a visit before the dataset's own day reads it as written.
+    expect(datasetShift(Date.parse("2026-11-06T12:00:00Z"))).toBe(0);
+    expect(datasetShift(DATASET_NOW.getTime())).toBe(0);
+    // One build a day: the same visit day reads the same claims at any hour.
+    expect(demoDataset(Date.parse("2026-11-21T23:59:00Z")).claims[0].createdAt).toBe(claims[0].createdAt);
+  });
+
   it("pay only where PayPal paid: RM-0442 alone, 15 s from its photo", () => {
     expect(DEMO_CLAIMS.filter((d) => d.outcome === "paid").map((d) => d.id)).toEqual([GENUINE.id]);
     expect(GENUINE.toPayout).toBe(15);
@@ -63,7 +89,7 @@ describe("the demo claims", () => {
 });
 
 describe("every replica reads the demo claims", () => {
-  const expected = DEMO_CLAIMS.map((d) => [d.id, verdict[d.outcome], formatDayTime(d.filed), d.code, photosOf(d).length]);
+  const expected = DEMO_CLAIMS.map((d) => [d.id, verdict[d.outcome], formatDayTime(filedOf(d)), d.code, photosOf(d).length]);
 
   it("the console, the For companies tour and the sign-in page list the same claims, verdicts, codes and filing times", () => {
     const shape = (rows: { id: string; decision: Parameters<typeof verdictOf>[0]["decision"]; payoutStatus: string | null; createdAt: string; code: string | null; photoCount: number }[]) =>
@@ -83,7 +109,7 @@ describe("every replica reads the demo claims", () => {
 
   it("the hero line and How it works stage RM-0442 as the console has it", () => {
     const row = console_.find((r) => r.id === GENUINE.id)!;
-    expect([CLAIM.id, CLAIM.code, CLAIM.seconds, CLAIM.photo, CLAIM.filed]).toEqual([GENUINE.id, GENUINE.code, row.toPay, photosOf(GENUINE)[0], formatDayTime(GENUINE.filed)]);
+    expect([CLAIM.id, CLAIM.code, CLAIM.seconds, CLAIM.photo, CLAIM.filed]).toEqual([GENUINE.id, GENUINE.code, row.toPay, photosOf(GENUINE)[0], timeOf(row.createdAt)]);
     expect(`$${CLAIM.amount.toFixed(2)}`).toBe(row.amount);
     expect(verdictOf(row)).toBe("paid");
     expect(CHAPTERS.find((c) => c.n === "05")!.text).toContain(`${CLAIM.seconds} seconds`);
@@ -94,7 +120,7 @@ describe("every replica reads the demo claims", () => {
     expect(CONSOLE_ROWS.map((r) => [r.id, r.photo, r.status, r.reason, r.filed, r.time ?? null, r.amount === undefined ? null : `$${r.amount.toFixed(2)}`])).toEqual(
       rows.map((r) => {
         const d = DEMO_CLAIMS.find((x) => x.id === r.id)!;
-        return [r.id, photosOf(d)[0], verdictOf(r), r.note, formatDayTime(r.createdAt), r.modelSec === null ? null : duration(r.modelSec), r.amount];
+        return [r.id, photosOf(d)[0], verdictOf(r), r.note, timeOf(r.createdAt), r.modelSec === null ? null : duration(r.modelSec), r.amount];
       }),
     );
   });
@@ -115,8 +141,10 @@ describe("every replica reads the demo claims", () => {
     for (const p of EXHIBIT.earlier) expect(before).toContain(p);
   });
 
-  it("the CPSC report counts the same verdicts and says sent only for what PayPal paid", () => {
-    const { report } = reportPreview();
+  it("the CPSC report counts the same verdicts and says sent only for what PayPal paid, drawn up on the visit's day", () => {
+    const { report, generated, daysIn } = reportPreview();
+    expect(generated).toBe(formatDay(new Date().toISOString()));
+    expect(daysIn).toBe(16);
     const count = (o: string) => DEMO_CLAIMS.filter((d) => d.outcome === o).length;
     const outcomes = Object.fromEntries(report.outcomes.map((o) => [o.label, o.count]));
     // Approved, with nothing sent, has no claim, so the report leaves it out.
@@ -155,14 +183,13 @@ describe("the console over any store", () => {
   it("lists the seven claims from memory, no earlier seed's claims, and only this browser's demo runs", async () => {
     const { listedClaims } = await import("@/app/console/_lib/workspace");
     const { withDatasetRows } = await import("@/app/console/_lib/dataset");
-    const { demoDataset } = await import("./dataset");
     const round = "dr_0123456789abcdef0123456789abcdef";
     const viewer = { payerId: "COMPANY00001", decided: {}, round };
     const demoRecall_ = demoDataset().recall;
     // A store an earlier seed wrote: 40 claims, repeated photos and codes, M4T paid again and again.
     const earlier = Array.from({ length: 40 }, (_, i) => ({ ...summarize(stored[i % stored.length]), id: `RM-${String(7000 + i)}`, code: "M4T" }));
     // Demo runs: one of this browser's round, one of another's, one from before rounds, all from one sandbox account.
-    const run = (id: string, demoRound?: string) => ({ ...summarize(stored[0]), id, seeded: undefined, demo: true, payerId: "SANDBOX00001", createdAt: "2026-11-08T10:00:00.000Z", ...(demoRound ? { demoRound } : {}) });
+    const run = (id: string, demoRound?: string) => ({ ...summarize(stored[0]), id, seeded: undefined, demo: true, payerId: "SANDBOX00001", createdAt: new Date(datasetNow().getTime() + 3_600_000).toISOString(), ...(demoRound ? { demoRound } : {}) });
     // A stored claim under one of the dataset's ids gives way to the dataset's.
     const clash = { ...summarize(stored[0]), seeded: undefined, payerId: "COMPANY00001", code: "ZZZ" };
     const rows = withDatasetRows([...earlier, ...stored.map(summarize), clash, run("RM-8001", round), run("RM-8002", "dr_ffffffffffffffffffffffffffffffff"), run("RM-8003")]);

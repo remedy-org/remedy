@@ -46,8 +46,9 @@ describe("homepage console tour data", () => {
     expect(rows.filter((r) => r.evidence).map((r) => r.id)).toEqual(rows.filter((r) => r.photoCount > 0).map((r) => r.id));
     const { verdictOf } = await import("@/components/console/VerdictMark");
     const decided = rows.filter((r) => r.decision !== "pending" && r.id !== ARRIVE_ID);
+    // The time of day alone: this page is drawn ahead of time, and the claims move to the visit's day keeping their times.
     expect(CONSOLE_ROWS.map((r) => [r.id, r.status, r.filed, r.time ?? null])).toEqual(
-      decided.map((r) => [r.id, verdictOf(r), formatDayTime(r.createdAt), r.modelSec === null ? null : duration(r.modelSec)]),
+      decided.map((r) => [r.id, verdictOf(r), formatDayTime(r.createdAt).split(" ").pop(), r.modelSec === null ? null : duration(r.modelSec)]),
     );
     expect(CONSOLE_ROWS.find((r) => r.status === "held")?.id).toBe(PREVIEW_OPEN_ID);
   });
