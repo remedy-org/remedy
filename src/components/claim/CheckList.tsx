@@ -324,8 +324,10 @@ export function CheckList({ rows, label = "Checks", live, className }: { rows: S
             <span className="flex min-w-0 flex-col gap-0.5">
               {/* The failed check is the list's red thing, with its mark: its name in red, never just a 10px cross. */}
               <span className={clsx("text-body", quiet ? "text-faint" : r.state === "skipped" ? "text-muted" : failed ? "text-stop" : "text-text")}>
-                {r.label}
-                <span className="sr-only">{`: ${outcomeWord(r).toLowerCase()}`}</span>
+                {/* One run of text for a screen reader, "Taken in Remedy’s camera: passed", never the name and its state
+                    as two pieces with a space between them. */}
+                <span aria-hidden="true">{r.label}</span>
+                <span className="sr-only">{`${r.name.charAt(0).toUpperCase()}${r.name.slice(1)}: ${outcomeWord(r).toLowerCase()}`}</span>
               </span>
               {/* While the checks run every row keeps the line, so the list never changes height as rows land. */}
               {(live || reason) && (

@@ -40,7 +40,7 @@ export function LimitNotice({ refusal, demo, notice, now = new Date() }: { refus
   // The body may already say the refund is owed: the notice's line then only says where to ask for it.
   const owed = description.includes("still owed");
   return (
-    <div id="limit-notice" tabIndex={-1} className="rounded-control outline-hidden focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus">
+    <div id="limit-notice" tabIndex={-1} className="rounded-control outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-focus">
       <FocusTitle id="limit-notice" />
       <Notice tone="neutral" title={title}>
         {description} You can start {demo ? "one" : "a claim"} again <ResetTime until={refusal.until.toISOString()} prefix="after " fallback={retry} />.{" "}
