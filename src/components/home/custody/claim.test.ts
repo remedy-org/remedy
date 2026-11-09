@@ -36,6 +36,6 @@ describe("chapter 01, the consent screen", () => {
     expect(CLAIM.minutes).toBe(CAPTURE_SESSION_MINUTES);
     expect(CONSENT).toEqual(consentLines(demoRecall(), CAPTURE_SESSION_MINUTES));
     expect(CONSENT.title).toBe("$29.99 back for your X-VESOLJE Nursing Pillow");
-    expect(CONSENT.clock).toBe("Your code is good for 10 minutes, so cut the pillow first.");
+    expect(CONSENT.clock).toBe("Your code is good for 10 minutes, so cut the pillow and have paper and a marker ready first.");
   });
 });
