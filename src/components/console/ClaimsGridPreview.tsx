@@ -198,7 +198,7 @@ function FramedPreview({ rows, openId, height, ledger, counts, panelClassName, o
 
   return (
     <div className={clsx("overflow-hidden rounded-frame bg-bg text-text", className ?? "shadow-float")}>
-      {/* App chrome. Insights and Report are the console's other pages: faint, since this still can't open them. The
+      {/* App chrome. Insights and Report are the console’s other pages: faint, since this still can’t open them. The
           whole frame is a picture (the caller makes it inert). */}
       <div className="flex h-12 items-center gap-4 border-b border-line px-4 sm:gap-6 sm:px-5" aria-hidden="true">
         <span className="font-semibold">Remedy</span>
@@ -236,7 +236,7 @@ function FramedPreview({ rows, openId, height, ledger, counts, panelClassName, o
         )}
       </div>
       {/* The tab counts cover every claim; the frame holds only the first few, so it says how many it shows. */}
-      <p className="border-t border-line px-4 py-2 font-mono text-micro text-faint sm:px-5">
+      <p className="border-t border-line px-4 py-2 text-micro text-faint sm:px-5">
         {shown.length < tally.all ? `${shown.length} of ${tally.all} claims` : `${tally.all} claims`}
       </p>
     </div>
