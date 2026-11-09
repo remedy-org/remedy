@@ -142,7 +142,12 @@ function BareGrid({ rows, openId, filter = null, search = "", arrival, live, asi
   }, [ready, openId]);
 
   return (
-    <div className="flex h-full gap-3" data-live={live ? "arrive" : undefined}>
+    // The arriving claim (preview.ts ARRIVE_ID) comes in with its content, fading in from nothing the moment the rows
+    // under it step down to make room (they move at once), never held unseen over an empty 52px band first.
+    <div
+      className="flex h-full gap-3 motion-safe:[&[data-live=arrive]_.ag-row[row-id=RM-0442]]:animate-none! motion-safe:[&[data-live=arrive]_.ag-row[row-id=RM-0442]]:[transition:opacity_320ms_var(--ease-out-quart)]! motion-safe:[&[data-live=arrive]_.ag-row[row-id=RM-0442]]:starting:opacity-0!"
+      data-live={live ? "arrive" : undefined}
+    >
       <div className="min-w-0 flex-1 overflow-hidden">
         <ClaimsGrid
           ref={grid}
