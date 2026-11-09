@@ -92,12 +92,12 @@ export const CHECKS: readonly Check[] = [
 
 /**
  * The receipt's lines, all from the claim above: label, value, and whether the value is data (set in mono). The claim id
- * is the receipt's header, so it is not a row.
+ * is the receipt's header, so it is not a row, and the five checks are the check row's under it, so they are not one
+ * either: the receipt keeps six rows, its height as it was before PayPal's confirmation had a row of its own.
  */
 export const RECEIPT_ROWS: readonly [string, string, boolean][] = [
   ["Recall", EXHIBIT.recall, true],
   ["Code", EXHIBIT.code, true],
-  ["Checks", "All 5 passed", false],
   ["Decision", "Approved by the rule", false],
   // The times in the sans, as the console sets "15 s": in mono its space read as two. Sent, then PayPal's confirmation,
   // the two steps the console's timeline gives the claim.

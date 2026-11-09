@@ -4,6 +4,8 @@ import clsx from "clsx";
 import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { durationFigure, LedgerItem } from "@/components/console/Ledger";
+import { TABS } from "@/components/console/StatusTabs";
 import { VerdictMark } from "@/components/console/VerdictMark";
 import { ClockIcon, DURATION, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
 import { CLAIM, CODE_AT, CODE_STAGGER, CONSENT_AT, CONSENT_STAGGER, CONSOLE_ROWS, SHOT_AT, WRITE_FOR } from "./claim";
@@ -296,21 +298,31 @@ function Thumb({ src }: { src: string }) {
   );
 }
 
-const GRID = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[11rem_minmax(0,1fr)_6rem_6.5rem_5rem]";
+// The console's columns (ClaimsGrid): Claim, Verdict, Checks, Answered in, Payout, Amount; the payout comes in where the
+// window has room for it, as the console's does.
+const GRID =
+  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[9.5rem_minmax(0,1fr)_4.5rem_5.5rem_4.5rem] @min-[900px]:grid-cols-[9.5rem_minmax(0,1fr)_4.5rem_5.5rem_7rem_4.5rem]";
 
-/** Claim RM-0442 as the recall team's console lists it, paid, at its filing time: its photo check answered at 0:14,
- * the payout sent at 0:15 (the exhibit's clock, teardown/model.ts elapsed). Its line says the payout's time, so the 14 s
- * the photo check took never reads as the receipt's 15 s. */
+/** Claim RM-0442 as the recall team's console lists it, paid, at its filing time: its photo check answered in 14 s
+ * (the exhibit's clock, teardown/model.ts elapsed), and its payout PayPal confirmed. The console gives a paid claim no
+ * reason: its payout cell says it. */
 const M4T_ROW = {
   photo: CLAIM.photo,
   filed: CLAIM.filed,
   id: CLAIM.id,
   status: "paid" as const,
-  reason: `Paid ${CLAIM.seconds} s after the photo`,
+  reason: "",
   // The console's one time unit: seconds, "14 s".
   time: `${CLAIM.seconds - 1} s`,
   amount: CLAIM.amount,
 };
+
+const ROWS = [M4T_ROW, ...CONSOLE_ROWS];
+/** The status tabs' counts over the recall's seven claims, as the console's tabs count them. */
+const COUNTS: Record<string, number> = { all: ROWS.length, settling: 0, pending: 0 };
+for (const r of ROWS) COUNTS[r.status] = (COUNTS[r.status] ?? 0) + 1;
+/** The ledger's figures, as the console's strip (console/Ledger.tsx) gives them: paid or approved is remedied. */
+const REMEDIED = ROWS.filter((r) => r.status === "paid" || r.status === "approved").length;
 
 /** The ones a reviewer answers for are in full ink, as the console sets them. */
 const EXCEPTION = new Set<string>(["held", "rejected", "blocked"]);
@@ -324,20 +336,32 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
         <span className="flex min-w-0 flex-col leading-tight">
           {/* The tour's convention: the claim id first, when it was filed under it, newest first. */}
           <span className="font-mono font-medium">{row.id}</span>
-          <span className="truncate text-micro text-faint">{row.filed}</span>
+          <span className="truncate font-mono text-micro text-faint">{row.filed}</span>
         </span>
       </span>
       {/* The console's verdict mark in a track as wide as the widest (Approved), so every reason starts on one line. */}
       <span className="hidden min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-center gap-3 @min-[720px]:grid">
         <VerdictMark verdict={row.status} className={clsx("justify-self-start", EXCEPTION.has(row.status) && "text-text")} />
         {/* Two lines rather than an ellipsis: a cut sentence reads unfinished. */}
-        <span className={clsx("line-clamp-2 leading-tight", first ? "text-text" : "text-muted")}>{row.reason}</span>
+        {/* A paid or approved claim has no reason, as in the console. */}
+        <span className={clsx("line-clamp-2 leading-tight", first ? "text-text" : "text-muted")}>{EXCEPTION.has(row.status) ? <NoBreakHyphens>{row.reason}</NoBreakHyphens> : ""}</span>
       </span>
       <span className="hidden @min-[720px]:block">
         <Barcode bars={barsOf(row)} />
       </span>
       {/* Right-aligned on tabular figures, as the console's own column: "11 s" over "14 s" keeps one edge. */}
       <span className="hidden text-right text-faint tabular-nums @min-[720px]:block">{row.time ?? "—"}</span>
+      {/* The payout as the console's column says it: PayPal's word for RM-0442, nothing for a claim with nothing sent. */}
+      <span className="hidden min-w-0 flex-col leading-tight @min-[900px]:flex">
+        {row.status === "paid" ? (
+          <>
+            <span>Paid</span>
+            <span className="truncate text-micro text-muted">PayPal confirmed</span>
+          </>
+        ) : (
+          <span className="text-faint">—</span>
+        )}
+      </span>
       <span className="flex items-center justify-end gap-3">
         <span className="@min-[720px]:hidden">
           <VerdictMark verdict={row.status} className={EXCEPTION.has(row.status) ? "text-text" : undefined} />
@@ -371,19 +395,50 @@ export function ConsoleChapter({ p }: { p: Progress }) {
     <div className="h-full @container">
       <div className="flex h-full flex-col">
         <div data-console-queue className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="flex gap-6 border-b border-line px-4 text-ui">
-            {/* The console's own status tabs, in its words. */}
-            {["All", "Paid", "Approved", "Held", "Rejected", "Blocked"].map((t, i) => (
-              <span key={t} className={clsx("py-2.5", i === 0 ? "border-b-2 border-text text-text" : "text-muted")}>
-                {t}
-              </span>
-            ))}
+          {/* The console's ledger strip, in its order and words (console/Ledger.tsx), over its status tabs. */}
+          <dl className="flex h-12 shrink-0 items-center gap-x-6 overflow-hidden border-b border-line px-4 whitespace-nowrap @min-[720px]:gap-x-8">
+            <LedgerItem
+              value={
+                <>
+                  {REMEDIED}
+                  <span className="text-ui font-normal text-muted"> of {CLAIM.units.replace(/^About /, "")}</span>
+                </>
+              }
+              label="remedied"
+            />
+            <LedgerItem value={`$${CLAIM.amount.toFixed(2)}`} label="paid through PayPal" />
+            <LedgerItem className="hidden @min-[640px]:flex" value={durationFigure(CLAIM.seconds)} label="median photo to payout · 1 payout" />
+          </dl>
+          <div className="flex items-center gap-4 border-b border-line px-4">
+            {/* The console's own status tabs, in its words, with their counts in mono. */}
+            <span className="flex min-w-0 overflow-hidden">
+              {TABS.map((t, i) => (
+                <span
+                  key={t.id}
+                  className={clsx(
+                    "relative inline-flex h-10 shrink-0 items-center gap-1.5 px-2.5 text-ui font-medium whitespace-nowrap first:pl-0",
+                    i === 0 ? "text-text after:absolute after:inset-x-2.5 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted",
+                  )}
+                >
+                  {t.label}
+                  <span className={clsx("inline-block min-w-[2ch] font-mono text-micro font-normal tabular-nums", i === 0 ? "text-muted" : "text-faint")}>
+                    {COUNTS[t.id] ?? 0}
+                  </span>
+                </span>
+              ))}
+            </span>
+            {/* The console's search, as it sits at rest: its placeholder and the / that focuses it. */}
+            <span className="ml-auto hidden h-8 w-52 shrink-0 items-center justify-between rounded-control border border-line bg-surface px-3 text-ui text-faint @min-[960px]:flex">
+              Search claims, codes…
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro">/</span>
+            </span>
           </div>
           <div className={clsx(GRID, "hidden h-9 border-b border-line text-micro font-medium text-muted @min-[720px]:grid")}>
             <span>Claim</span>
             <span>Verdict</span>
             <span>Checks</span>
             <span className="text-right">Answered in</span>
+            <span className="hidden @min-[900px]:block">Payout</span>
             <span className="text-right">Amount</span>
           </div>
           {/* As many whole rows as the panel holds, so a tall screen shows more of the queue: a row that would not fit

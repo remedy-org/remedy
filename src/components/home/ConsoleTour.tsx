@@ -10,10 +10,11 @@ import { ClaimsGridPreviewLazy } from "@/components/console/ClaimsGridPreviewLaz
 import { EvidenceStill } from "@/components/console/EvidenceStill";
 import { formatCount } from "@/components/console/format";
 import { GridStill } from "@/components/console/GridStill";
+import { durationFigure, LedgerItem } from "@/components/console/Ledger";
 import { TABS, type Tab } from "@/components/console/StatusTabs";
 import { verdictOf, verdictWord } from "@/components/console/VerdictMark";
 import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME, type StudioFilter } from "@/components/insights/InsightsPreviewLazy";
-import { homeRowsFor, spokenTime } from "@/components/insights/report";
+import { homeRowsFor } from "@/components/insights/report";
 import { ConsoleFrame } from "./ConsoleFrame";
 import styles from "./tour.module.css";
 import { ReviewFoot, type ReviewPhase } from "./PayoutsNote";
@@ -165,7 +166,8 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
             )}
           >
             {t.label}
-            <span className={clsx("font-normal", on ? "text-muted" : "text-faint")}>
+            {/* The console's count: mono, two figures wide at least (StatusTabs.tsx). */}
+            <span className={clsx("inline-block min-w-[2ch] font-mono text-micro font-normal tabular-nums", on ? "text-muted" : "text-faint")}>
               <Roll value={String(counts[t.id])} />
             </span>
           </button>
@@ -207,7 +209,7 @@ function Toolbar({ search, onSearch, onExport, input }: { search: string; onSear
               onSearch("");
             }
           }}
-          aria-label="Search claims"
+          aria-label="Search claims by id, code, PayPal account or reason"
           placeholder={TOUR.toolbar.search}
           spellCheck={false}
           autoComplete="off"
@@ -225,32 +227,30 @@ function Toolbar({ search, onSearch, onExport, input }: { search: string; onSear
 }
 
 /**
- * The ledger over the grid, as the console's borderless stat strip: the money sent through PayPal and how fast, then
- * the units, then what waits for a person and what was rejected or blocked. Each figure in the sans at regular weight with its
- * proportional figures (its tabular ones space a stop or a colon like mono), its words after it in the UI size. A
- * figure the arriving claim changes rolls to its new value. On a narrow window the last figures drop whole (they wrap
- * out of the strip's one line) rather than being cut.
+ * The ledger over the grid, as the console's stat strip (console/Ledger.tsx) draws it, in its order and words: units
+ * remedied of units sold, what PayPal paid, then the median photo to payout once a payout was sent. Held and refused
+ * claims are counted on the tabs under it, as in the console. A figure the arriving claim changes rolls to its new value.
  */
 function TourLedger({ rows, unitsSold }: { rows: PreviewRow[]; unitsSold: number }) {
   const l = ledgerOf(rows, { unitsSold });
-  const items: [string, string][] = [
-    [formatCents(l.paidCents), "paid through PayPal"],
-    ...(l.medianToPay === null ? [] : ([[spokenTime(Math.round(l.medianToPay)), "median photo to payout"]] as [string, string][])),
-    [formatCount(l.remedied), `of ${formatCount(unitsSold)} units remedied`],
-    [formatCount(l.held), "held for a person"],
-    // The status tabs' own words: no "Refused" tab to find these under.
-    [formatCount(l.refused), "rejected or blocked"],
-  ];
   return (
-    <dl className="flex h-14 flex-wrap gap-x-8 overflow-hidden whitespace-nowrap max-xl:gap-x-6">
-      {items.map(([value, label]) => (
-        <div key={label} className="flex h-14 items-baseline gap-2 leading-[56px]">
-          <dd className="order-1 text-[22px]">
-            <Roll value={value} />
-          </dd>
-          <dt className="order-2 text-ui text-muted">{label}</dt>
-        </div>
-      ))}
+    <dl className="flex h-14 flex-wrap content-center items-center gap-x-8 overflow-hidden whitespace-nowrap max-xl:gap-x-6">
+      <LedgerItem
+        value={
+          <>
+            <Roll value={formatCount(l.remedied)} />
+            <span className="text-ui font-normal text-muted"> of {formatCount(unitsSold)}</span>
+          </>
+        }
+        label="remedied"
+      />
+      <LedgerItem value={<Roll value={formatCents(l.paidCents)} />} label="paid through PayPal" />
+      {l.medianToPay !== null && (
+        <LedgerItem
+          value={durationFigure(l.medianToPay)}
+          label={`median photo to payout · ${formatCount(l.timed)} ${l.timed === 1 ? "payout" : "payouts"}`}
+        />
+      )}
     </dl>
   );
 }
