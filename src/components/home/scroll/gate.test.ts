@@ -570,6 +570,10 @@ describe("wheel stops", () => {
     const flung = setup(8586, course, slow, undefined, undefined, pins, undefined, undefined, stories);
     flung.send([100, 100, 100], 16);
     expect(flung.lenis.landed).toEqual([9910]);
+    // A quick flick of four notches from the console beat lands on the open sheet, never 400px into its entrance.
+    const flick = setup(6698, course, slow, undefined, undefined, pins, undefined, undefined, stories);
+    flick.send([100, 100, 100, 100], 24);
+    expect(flick.lenis.landed).toEqual([7988]);
   });
 
   it("rests a push out of a story on the clean frame ahead when a line would be cut, never back against the hand", () => {

@@ -130,7 +130,7 @@ const DOLLY_TIME = 1.2;
  * the sheet's loop closing or its cut. The rest of the way is as quick as it can be already, so the time a transition
  * holds comes from here: two checks in a notched wheel's glide play in about a quarter of a second each. A notched wheel's,
  * in proportion to its shorter landing (NOTCH_TIME). */
-const SLOW_TIME = 0.15;
+const SLOW_TIME = 0.12;
 const NOTCH_SLOW_TIME = 0.12;
 /** A stop closer than this many windows to where the gesture began is where the reader already is: it goes on past. */
 const NEAR = 0.15;
@@ -257,6 +257,8 @@ export function createGate(read: () => Course) {
 
   /** Whether two positions lie in the same pinned story, whose beats a fling always lands on, however far apart. */
   const story = (a: number, b: number) => pins.some(([p, q]) => Math.min(a, b) >= p - 1 && Math.max(a, b) <= q + 1);
+  /** Whether `y` lies inside a pinned stretch, short of its ends. */
+  const inPin = (y: number) => pins.some(([p, q]) => y > p + 1 && y < q - 1);
   /** Whether a page at rest at `y` would hold a pinned story's transition half played: anywhere inside one but its ends. */
   const scrubbed = (y: number) => stories.some(([p, q]) => y > p + 1 && y < q - 1);
 
@@ -279,12 +281,13 @@ export function createGate(read: () => Course) {
   }
 
   /** Whether this gesture would carry the page at least CARRY of the way to `to` on its own; inside a pinned story any
-   * fling does, and so does one that would come to rest inside one, so a flick never rests on a beat half played. */
+   * fling does, and so does one that would come to rest inside a pinned stretch, so a flick never rests on a beat half
+   * played, nor on the Problem sheet half come up (a flick from the console beat rested 400px on). */
   function carries(l: GateLenis, to: number, dir: Dir, now: number) {
     if (story(l.animatedScroll, to) || (notched && Math.abs(to - l.animatedScroll) <= NOTCH_REACH * innerHeight)) return true;
     const aim = landing ? landing.to : l.targetScroll;
     const projected = (aim - l.animatedScroll) * dir + Math.min(rate(now) * MOMENTUM, sum(-Infinity, now));
-    return projected >= CARRY * Math.abs(to - l.animatedScroll) || scrubbed(l.animatedScroll + dir * projected);
+    return projected >= CARRY * Math.abs(to - l.animatedScroll) || inPin(l.animatedScroll + dir * projected);
   }
 
   function land(l: GateLenis, to: number, dir: Dir, now: number, cap = Infinity) {
