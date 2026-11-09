@@ -14,7 +14,7 @@ import styles from "./home.module.css";
 export const GATES: { title: string; text: string; ai: boolean }[] = [
   {
     title: CHECK_NAMES.session,
-    text: "Photos must arrive inside this claim’s 10-minute camera session, carrying that session’s key. A photo sent any other way is refused before the model sees it.",
+    text: "Photos must arrive inside this claim’s 10-minute camera session, carrying its key. A photo sent any other way is refused before the model sees it.",
     ai: false,
   },
   {
