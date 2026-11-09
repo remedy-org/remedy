@@ -1,4 +1,4 @@
-import { formatDay } from "@/components/console/format";
+import { formatDay, recallDays, reportNumber } from "@/components/console/format";
 import { PrintButton } from "@/components/console/PrintButton";
 import { ProgressReport } from "@/components/console/ProgressReport";
 import { RecallPicker } from "@/components/console/RecallPicker";
@@ -30,6 +30,7 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
 
   const claims = await loadClaims(store, recall, session);
   const report = buildReport(claims, recall);
+  const now = new Date();
   // The filed copy's foot on every printed page: who files it, which recall, and the page of how many.
   const css = (t: string) => JSON.stringify(t).replace(/</g, "\\3c ");
   // Printed, the sheet is white paper edge to edge: the page's own tint never shows around or under it, background
@@ -52,7 +53,13 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
             <PrintButton />
           </div>
         </div>
-        <ProgressReport recall={recall} report={report} generated={formatDay(new Date().toISOString())} />
+        <ProgressReport
+          recall={recall}
+          report={report}
+          generated={formatDay(now.toISOString())}
+          daysIn={recallDays(recall.recallDate, now)}
+          reportNo={reportNumber(recall.recallDate, now)}
+        />
       </div>
     </main>
   );

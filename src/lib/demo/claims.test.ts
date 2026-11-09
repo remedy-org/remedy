@@ -144,7 +144,8 @@ describe("every replica reads the demo claims", () => {
   it("the CPSC report counts the same verdicts and says sent only for what PayPal paid, drawn up on the visit's day", () => {
     const { report, generated, daysIn } = reportPreview();
     expect(generated).toBe(formatDay(new Date().toISOString()));
-    expect(daysIn).toBe(16);
+    // 5 to 21 Nov, counted as the reporting period reads: inclusive.
+    expect(daysIn).toBe(17);
     const count = (o: string) => DEMO_CLAIMS.filter((d) => d.outcome === o).length;
     const outcomes = Object.fromEntries(report.outcomes.map((o) => [o.label, o.count]));
     // Approved, with nothing sent, has no claim, so the report leaves it out.

@@ -11,6 +11,21 @@ export const formatDate = (isoDate: string) => dateFmt.format(new Date(`${isoDat
  * the same day as in the grid, the CSV and Insights, whatever the server's or the viewer's zone. */
 export const formatDay = (iso: string) => dateFmt.format(new Date(iso));
 
+const DAY = 86_400_000;
+
+/** How many days a recall has run at `now`, counted as its reporting period reads: inclusive, in UTC days, the recall's own
+ * date being day 1 ("5–9 Nov" is 5 days). The report's "5 days in", its preview's and Insights' "1 in 5 days" all read it. */
+export const recallDays = (recallDate: string, now: Date) =>
+  Math.max(1, Math.floor(now.getTime() / DAY) - Math.floor(Date.parse(`${recallDate.slice(0, 10)}T00:00:00Z`) / DAY) + 1);
+
+/** Which monthly progress report a draft at `now` is, in CPSC's sequence: 1 in the recall's first month (its date up to
+ * the day before the same date a month on), 2 in its second, and so on. */
+export function reportNumber(recallDate: string, now: Date): number {
+  const [y, m, d] = recallDate.slice(0, 10).split("-").map(Number);
+  const months = (now.getUTCFullYear() - y) * 12 + (now.getUTCMonth() + 1 - m) - (now.getUTCDate() < d ? 1 : 0);
+  return Math.max(1, months + 1);
+}
+
 /** A reporting period from the recall's date to the draft's day, as short as it reads: "5–8 Nov 2026",
  * "28 Nov – 3 Dec 2026", "20 Dec 2026 – 4 Jan 2027". Both ends are formatDate's "5 Nov 2026". */
 export function formatPeriod(from: string, to: string): string {
