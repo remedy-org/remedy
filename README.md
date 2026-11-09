@@ -65,7 +65,7 @@ The model only describes. A fixed rule in code, not the model, turns those answe
 
 - **Real:** the PayPal sandbox calls (login, payouts, status, webhooks), the vision model calls, the fingerprinting and the rule. Every demo claim you run makes these calls.
 - **Sandbox:** all money is PayPal sandbox money.
-- **Sample photos:** the judges' demo uses prepared photos instead of your camera, and says so on every screen. Real claims use the live camera only.
+- **Sample photos:** the judges' demo uses prepared photos instead of your camera, and says so on every screen. Real claims use the live camera: the page has no upload, and a photo counts only if it arrives inside the claim's 10-minute camera session.
 - **Seeded claims:** the console starts with 40 sample claims whose verdicts are real model answers from our eval runs; they are marked as samples, use fake PayPal accounts and were never paid.
 - **In this build** refunds are sent from Remedy's PayPal sandbox business account. At launch each company would connect its own.
 
