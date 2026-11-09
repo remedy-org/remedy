@@ -193,6 +193,22 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   // controls never crowd it into "Search cla". It opens on a click or /, and stays open while it holds words.
   const [searchOpen, setSearchOpen] = useState(false);
 
+  const bulkDock = useRef<HTMLDivElement>(null);
+  const picking = picked.length > 0;
+  useEffect(() => {
+    const el = bulkDock.current;
+    if (!el || fill) return;
+    const root = document.documentElement;
+    const set = () => (root.style.scrollPaddingBottom = `${el.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.scrollPaddingBottom = "";
+    };
+  }, [fill, picking]);
+
   const ledger = useMemo(() => ledgerOf(rows, recall), [rows, recall]);
   // Search: every word must appear in the claim id, code, PayPal account's last four, reason or verdict line, as the
   // grid's quick filter reads them (searchText: O and 0 match each other). It applies to every tab, so the tabs count
@@ -555,11 +571,13 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
 
       {/* From 1280px the open claim's panel is a column beside the tabs, grid and footer, from under the ledger to the
           foot of the window: the evidence has the height, and the search, the heading's actions and the footer stay in
-          reach. */}
-      <div className="flex min-h-0 flex-1 gap-3">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {/* One row while it fits: the search narrows first, and only a narrow queue wraps the controls to a second line. */}
-          <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-line">
+          reach. A grid, so the footer can come after the panel in the page's order (Tab goes from the list to the open
+          claim, then to the footer) while it sits under the list. */}
+      <div className={clsx("grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-x-3", wide && open ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)]")}>
+        <div className="col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col">
+          {/* One row from 640px, beside the open claim too: the tab strip gives way (it scrolls in its own box), so grouping,
+              export and search keep their place. Only a phone puts its sort and search on a second line. */}
+          <div className="mt-1 flex items-end gap-x-4 gap-y-2 border-b border-line max-sm:flex-wrap">
             <StatusTabs value={tab} counts={counts} onChange={changeTab} controls="claims-panel" />
             <div className="mb-1.5 ml-auto flex shrink-0 items-center gap-3 max-sm:hidden">
               <GroupControl value={groupBy} onChange={setGroupBy} />
@@ -748,8 +766,10 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           </div>
 
           {picked.length > 0 && (
-            // Docked under the grid, over the footer: the pick's actions in reach, and no row hidden behind them.
-            <div className="flex pt-2">
+            // Docked under the grid, over the footer: the pick's actions in reach, and no row hidden behind them. Below
+            // 1024px the page scrolls, so the bar sticks to the window's foot (clear of a phone's home bar), and the
+            // page's scroll padding keeps the keyboard's card above it.
+            <div ref={bulkDock} className="flex pt-2 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:bg-bg max-lg:pt-0 max-lg:pb-[env(safe-area-inset-bottom)]">
                 <BulkBar
                   rows={rows.filter((r) => pickedSet.has(r.id)).sort((a, b) => picked.indexOf(a.id) - picked.indexOf(b.id))}
                   mode={bulk}
@@ -764,49 +784,10 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                 />
               </div>
             )}
-          {/* One bar under the grid: what the filters show and its money on the left; freshness and the keys on the right. */}
-          <footer className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-micro text-muted">
-            <span>
-              <span className="text-text-2">
-                {shown === null || shown === rows.length ? plural(rows.length, "claim") : `${formatCount(shown)} of ${plural(rows.length, "claim")}`}
-              </span>
-              {/* The money the filters show, in the one payout vocabulary (lib/payoutWords.ts): each state once it holds any. */}
-              {totals &&
-                (["paid", "settling", "approved"] as const).map(
-                  (k) =>
-                    totals.cents[k] > 0 && (
-                      <span key={k}>
-                        {" · "}
-                        <span className="font-mono">{formatCents(totals.cents[k])}</span> {MONEY_WORD[k].toLowerCase()}
-                      </span>
-                    ),
-                )}
-              {tab === "held" && " · oldest first"}
-            </span>
-            <span className="ml-auto inline-flex items-center gap-4">
-              <span role="status" className={clsx("inline-flex items-center gap-1.5 text-text-2 transition-opacity duration-120", notice ? "opacity-100" : "opacity-0")}>
-                {notice && (
-                  <>
-                    <CheckIcon size={12} className="text-pay" />
-                    {notice.text}
-                  </>
-                )}
-              </span>
-              <Status state={state} at={at} failed={failed} onRefresh={refresh} />
-              <button type="button" onClick={() => setHelp(true)} className="-my-1 inline-flex h-8 items-center gap-1.5 rounded-control px-2 hover:text-text">
-                <Keys k={["?"]}>Shortcuts</Keys>
-              </button>
-            </span>
-            {/* What a screen reader hears: the count after a search or filter, and new claims. Never the clock. */}
-            <span className="sr-only" role="status">
-              {shown !== null && shown !== rows.length ? `${formatCount(shown)} of ${plural(rows.length, "claim")}` : ""}
-              {pending > 0 ? ` New claims: ${pending}` : ""}
-            </span>
-          </footer>
         </div>
 
         {wide && open && (
-          <div className={`evidence-dock flex min-h-0 ${PANEL_W} shrink-0 pt-2`}>
+          <div className={`evidence-dock col-start-2 row-span-2 row-start-1 flex min-h-0 ${PANEL_W} pt-2`}>
             {hydrated ? (
             <Suspense fallback={<EvidenceShell row={openRow} onClose={close} />}>
             <EvidencePanel
@@ -832,6 +813,45 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
             )}
           </div>
         )}
+        {/* One bar under the grid: what the filters show and its money on the left; freshness and the keys on the right. */}
+        <footer className="col-start-1 row-start-2 flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-micro text-muted">
+          <span>
+            <span className="text-text-2">
+              {shown === null || shown === rows.length ? plural(rows.length, "claim") : `${formatCount(shown)} of ${plural(rows.length, "claim")}`}
+            </span>
+            {/* The money the filters show, in the one payout vocabulary (lib/payoutWords.ts): each state once it holds any. */}
+            {totals &&
+              (["paid", "settling", "approved"] as const).map(
+                (k) =>
+                  totals.cents[k] > 0 && (
+                    <span key={k}>
+                      {" · "}
+                      <span className="font-mono">{formatCents(totals.cents[k])}</span> {MONEY_WORD[k].toLowerCase()}
+                    </span>
+                  ),
+              )}
+            {tab === "held" && " · oldest first"}
+          </span>
+          <span className="ml-auto inline-flex items-center gap-4">
+            <span role="status" className={clsx("inline-flex items-center gap-1.5 text-text-2 transition-opacity duration-120", notice ? "opacity-100" : "opacity-0")}>
+              {notice && (
+                <>
+                  <CheckIcon size={12} className="text-pay" />
+                  {notice.text}
+                </>
+              )}
+            </span>
+            <Status state={state} at={at} failed={failed} onRefresh={refresh} />
+            <button type="button" onClick={() => setHelp(true)} className="-my-1 inline-flex h-8 items-center gap-1.5 rounded-control px-2 hover:text-text">
+              <Keys k={["?"]}>Shortcuts</Keys>
+            </button>
+          </span>
+          {/* What a screen reader hears: the count after a search or filter, and new claims. Never the clock. */}
+          <span className="sr-only" role="status">
+            {shown !== null && shown !== rows.length ? `${formatCount(shown)} of ${plural(rows.length, "claim")}` : ""}
+            {pending > 0 ? ` New claims: ${pending}` : ""}
+          </span>
+        </footer>
       </div>
       {hydrated && !wide && open && (
         <Suspense fallback={null}>
@@ -945,13 +965,26 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
   );
 }
 
-// Each row: its keys, what joins them ("/" for either, "to" for a range, "+" for together), and what they do.
-const SHORTCUTS: [string[], "/" | "to" | "+" | null, string][] = [
+// Each row: its keys, what joins them ("/" for either, "to" for a range, "+" for together), and what they do. The tabs'
+// keys are a two-column list, each number beside its tab's name, so no line breaks between a number and its name.
+const SHORTCUTS: [string[], "/" | "to" | "+" | null, ReactNode][] = [
   [["/"], null, "Search"],
-  [["1", "8"], "to", "1 All · 2 Paid · 3 Sent, settling · 4 Approved · 5 Held · 6 Rejected · 7 Blocked · 8 In progress"],
+  [
+    ["1", "8"],
+    "to",
+    <span key="tabs" className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+      {TABS.map((t, i) => (
+        <span key={t.id} className="whitespace-nowrap">
+          <span className="font-mono text-micro text-faint">{i + 1}</span> {t.label}
+        </span>
+      ))}
+    </span>,
+  ],
   [["↓", "J"], "/", "Next claim"],
   [["↑", "K"], "/", "Previous claim"],
   [["Enter"], null, "Open the claim"],
+  [["↑"], null, "From the first row: the headings"],
+  [["Ctrl", "↵"], "+", "On a column heading: its filter"],
   [["⇧", "J/K"], "+", "Scroll the open claim’s evidence"],
   [["V", "Space"], "/", "The open claim’s photos"],
   [["⇧", "↑/↓"], "+", "Pick several claims"],
@@ -965,11 +998,20 @@ const SHORTCUTS: [string[], "/" | "to" | "+" | null, string][] = [
 
 function ShortcutSheet({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // On a short window the list scrolls under the title, its foot fading while there is more below.
+  const list = useRef<HTMLDListElement>(null);
+  const fade = () => {
+    const l = list.current;
+    l?.toggleAttribute("data-more", l.scrollTop + l.clientHeight < l.scrollHeight - 1);
+  };
   useEffect(() => {
     // Focus goes back where it was when the sheet closes (the grid's row, the panel), never to the page.
     const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     ref.current?.showModal();
+    fade();
+    window.addEventListener("resize", fade);
     return () => {
+      window.removeEventListener("resize", fade);
       if (before?.isConnected) before.focus();
     };
   }, []);
@@ -979,9 +1021,9 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       onClick={(e) => e.target === e.currentTarget && e.currentTarget.close()}
       aria-labelledby="shortcuts-title"
-      className="m-auto w-[420px] max-w-[calc(100vw-2rem)] rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0.1_0.004_75/0.5)]"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[420px] max-w-[calc(100vw-2rem)] flex-col rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0.1_0.004_75/0.5)] open:flex"
     >
-      <div className="flex items-center justify-between border-b border-line px-5 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-3">
         {/* Focus starts on the title, not on the Esc button, whose ring read as a stray selection. */}
         <h2 id="shortcuts-title" className="text-ui font-medium outline-none" tabIndex={-1} autoFocus>
           Keyboard
@@ -991,7 +1033,11 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
           <kbd className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-[4px] border border-line-strong/60 px-1.5 font-mono text-micro text-muted">Esc</kbd>
         </button>
       </div>
-      <dl className="flex flex-col gap-3 px-5 py-4">
+      <dl
+        ref={list}
+        onScroll={fade}
+        className="flex min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain px-5 py-4 data-more:[mask-image:linear-gradient(to_bottom,#000_calc(100%-24px),transparent)]"
+      >
         {SHORTCUTS.map(([keys, join, what]) => (
           <div key={keys.join()} className="grid grid-cols-[112px_1fr] items-center gap-3 text-ui text-pretty">
             <dt className="flex items-center gap-1">

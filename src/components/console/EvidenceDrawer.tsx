@@ -151,8 +151,10 @@ export function EvidenceDrawer({ claimId, row, viewPhotos, version, filedAt, onC
     const d = ref.current;
     if (!d) return;
     if (claimId && !d.open) d.showModal();
-    // Another claim in the open sheet (the next held one): focus starts at its heading, as on opening.
-    else if (claimId) d.querySelector<HTMLElement>("#drawer-title")?.focus();
+    // Focus starts at the claim's heading, on opening and for another claim in the open sheet (the next held one).
+    // Said outright: showModal's own pick is the first focusable area, which on a short window is the scrolling body
+    // (a focusable scroller), ringed whole.
+    if (claimId) d.querySelector<HTMLElement>("#drawer-title")?.focus();
     if (!claimId && d.open) d.close();
   }, [claimId]);
 
@@ -389,12 +391,12 @@ function EvidenceContent({
         >
           {busy && claim?.review ? (
             <span>Saving · keys you press now go to the next claim</span>
-          ) : mode === "approve" && labels && !labels.blocked ? (
+          ) : mode === "approve" && claim?.review && labels && !labels.blocked ? (
             <>
               <Keys k={["A"]}>{labels.confirmKey}</Keys>
               <Keys k={["Esc"]}>Cancel</Keys>
             </>
-          ) : mode === "reject" ? (
+          ) : mode === "reject" && claim?.review ? (
             <>
               {quickCount > 0 && <Keys k={[quickCount > 1 ? `1–${quickCount}` : "1"]}>Quick reason</Keys>}
               <Keys k={["⌘↵"]}>Reject</Keys>
@@ -469,6 +471,9 @@ function moneySteps(claim: DrawerClaim): Step[] {
       : [{ label: "Decision", at: ruled ?? review?.at ?? null }]),
   ];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
+  // Approved with nothing sent (the console's own claims, whose approve records the decision): it reads Approved, with no
+  // payout steps to wait on.
+  if (claim.decision === "paid" && !claim.payout) return steps;
   const failure = payoutFailure(claim);
   if (failure) {
     return [

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import type { DoesFilterPassParams, GridApi } from "ag-grid-community";
-import type { CustomFilterDisplayProps } from "ag-grid-react";
+import { useGridFilterDisplay, type CustomFilterDisplayProps } from "ag-grid-react";
 import { refusalLabel } from "@/app/console/_lib/view";
 import type { GridContext, GridRow } from "./cells";
 import { formatDate, formatCount } from "./format";
@@ -91,7 +91,7 @@ export function DecisionFilter({ model, onModelChange, api }: CustomFilterDispla
           <Check key={d} checked={current.decisions.includes(d)} onChange={() => set("decisions", d)} label={word} count={verdicts.get(d) ?? 0} />
         ))}
       </Facet>
-      <Facet title="Reason" scroll>
+      <Facet title="Reason">
         {reasons.map(([r, n]) => (
           <Check key={r} checked={current.reasons.includes(r)} onChange={() => set("reasons", r)} label={r} count={n} />
         ))}
@@ -110,7 +110,7 @@ export function ClaimFilter({ model, onModelChange, api }: CustomFilterDisplayPr
   };
   return (
     <Menu onClear={model ? () => onModelChange(null) : undefined} narrow>
-      <Facet title="Filed (UTC)" scroll>
+      <Facet title="Filed (UTC)">
         {days.map(([d, n]) => (
           <Check key={d} checked={current.days.includes(d)} onChange={() => set("days", d)} label={formatDate(d)} count={n} />
         ))}
@@ -120,11 +120,42 @@ export function ClaimFilter({ model, onModelChange, api }: CustomFilterDisplayPr
 }
 
 function Menu({ children, onClear, narrow }: { children: ReactNode; onClear?: () => void; narrow?: boolean }) {
+  // Open, the menu takes focus at its first choice (Ctrl+↵ on a heading opens it from the keyboard): Space picks, Tab
+  // stays in the menu (AG Grid keeps it there), and Esc closes it back to the heading (ClaimsGrid's closeFilter).
+  const box = useRef<HTMLDivElement>(null);
+  useGridFilterDisplay({
+    afterGuiAttached: (p) => {
+      const el = box.current;
+      const list = el?.querySelector<HTMLElement>("[data-list]");
+      if (!el || !list) return;
+      // The choices take the room between the grid's header and the foot of the grid's box, so the menu opens whole under
+      // its heading at any window height; past that they scroll under their section's heading, the foot fading while
+      // there is more below.
+      const host = el.closest<HTMLElement>(".claims-grid");
+      const head = host?.querySelector(".ag-header")?.getBoundingClientRect().bottom;
+      if (host && head !== undefined) {
+        const bottom = Math.min(window.innerHeight, host.getBoundingClientRect().bottom) - 8;
+        list.style.maxHeight = `${Math.max(128, Math.floor(bottom - head - 8 - (el.offsetHeight - list.offsetHeight)))}px`;
+      }
+      fade(list);
+      if (p?.suppressFocus) return;
+      // Opened from the keyboard (its heading had a visible focus ring), focus goes to the first choice; from a click,
+      // to the menu itself, so no choice wears a ring nobody asked for and Tab and Esc still work from there.
+      const keyed = document.activeElement?.matches(":focus-visible");
+      (keyed ? el.querySelector<HTMLElement>("input, button") : el)?.focus({ preventScroll: true });
+    },
+  });
   return (
-    <div className={`flex max-w-[calc(100vw-2rem)] flex-col py-2 text-ui text-text-2 ${narrow ? "w-[240px]" : "w-[360px]"}`}>
-      {children}
+    <div ref={box} tabIndex={-1} className={`flex max-w-[calc(100vw-2rem)] flex-col text-ui text-text-2 outline-none ${narrow ? "w-[240px]" : "w-[360px]"}`}>
+      <div
+        data-list=""
+        onScroll={(e) => fade(e.currentTarget)}
+        className="max-h-[min(70vh,40rem)] scroll-pt-9 scroll-pb-6 overflow-y-auto overscroll-contain pb-2 data-more:[mask-image:linear-gradient(to_bottom,#000_calc(100%-24px),transparent)]"
+      >
+        {children}
+      </div>
       {onClear && (
-        <div className="mt-2 flex justify-end border-t border-line px-3 pt-2">
+        <div className="flex justify-end border-t border-line px-3 py-2">
           <button type="button" onClick={onClear} className="inline-flex min-h-8 items-center rounded-control px-2 text-muted hover:text-text">
             Clear
           </button>
@@ -134,26 +165,23 @@ function Menu({ children, onClear, narrow }: { children: ReactNode; onClear?: ()
   );
 }
 
-function Facet({ title, children, scroll }: { title: string; children: ReactNode; scroll?: boolean }) {
+function Facet({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <fieldset className="border-line px-3 not-first:mt-2 not-first:border-t not-first:pt-2">
+    <fieldset className="border-line px-3 not-first:mt-2 not-first:border-t">
       <legend className="sr-only">{title}</legend>
-      <p aria-hidden="true" className="py-1 text-micro text-faint">
+      {/* Its heading stays in view while its choices scroll under it (the scroller has no top padding, which would hold a
+          sticky heading off its edge). */}
+      <p aria-hidden="true" className="sticky top-0 z-1 -mx-3 bg-surface px-3 pt-3 pb-1 text-micro text-faint">
         {title}
       </p>
-      {/* A long list is whole on a laptop's screen; only a short window scrolls it, its last row fading at the edge, so
-          the list reads as one that goes on, never as one that ends. */}
-      <div
-        className={
-          scroll
-            ? "max-h-[min(60vh,28rem)] overflow-y-auto overscroll-contain pb-1 [@media(max-height:799px)]:max-h-52 [@media(max-height:799px)]:[mask-image:linear-gradient(to_bottom,#000_calc(100%-16px),transparent)]"
-            : undefined
-        }
-      >
-        {children}
-      </div>
+      {children}
     </fieldset>
   );
+}
+
+/** Marks a scrolling list that has more below its foot (data-more), for the fade. */
+function fade(list: HTMLElement) {
+  list.toggleAttribute("data-more", list.scrollTop + list.clientHeight < list.scrollHeight - 1);
 }
 
 function Check({ checked, onChange, label, count, mono }: { checked: boolean; onChange: () => void; label: string; count?: number; mono?: boolean }) {

@@ -17,7 +17,7 @@ export function RowVerdict({ row }: { row: ClaimRow }) {
 /** The refund a paid or held claim carries, on the header's right edge. */
 export function RowAmount({ row }: { row: ClaimRow }) {
   if (!row.amount || (row.decision !== "paid" && row.decision !== "held")) return null;
-  return <span className="font-mono text-ui text-text sm:ml-auto">{row.amount}</span>;
+  return <span className={`font-mono text-ui sm:ml-auto ${row.decision === "paid" && !row.payoutStatus ? "text-text-2" : "text-text"}`}>{row.amount}</span>;
 }
 
 /** The header's second line from the grid row: when it was filed, the PayPal account and the code. */

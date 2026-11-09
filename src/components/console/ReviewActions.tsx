@@ -174,6 +174,7 @@ export function ReviewActions({
   // The second click of a double-click on Approve lands where Approve was: it doesn't pay, and the confirm says so. A
   // press from the keyboard (detail 0) always pays; a held key's repeats never reach it (payKeys).
   const pay = (e: MouseEvent) => {
+    if (busy) return;
     if (e.detail > 1) return setDropped(true);
     run(`${base}/approve`);
   };
@@ -334,8 +335,17 @@ export function ReviewActions({
             </p>
           )}
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel={claim.seeded ? "Approving" : "Paying through PayPal"} autoFocus className="flex-1 sm:flex-none">
-              {labels.confirmKey}
+            {/* Busy, it is aria-disabled rather than disabled, so it keeps focus while the decision saves: a save that
+                fails leaves focus here, under its error, never on the page. */}
+            <Button
+              onClick={pay}
+              onKeyDown={payKeys}
+              aria-disabled={busy || undefined}
+              aria-busy={busy || undefined}
+              autoFocus
+              className="flex-1 sm:flex-none"
+            >
+              {busy ? (claim.seeded ? "Approving" : "Paying through PayPal") : labels.confirmKey}
             </Button>
             <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>
               Cancel
