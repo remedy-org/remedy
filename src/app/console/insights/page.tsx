@@ -2,11 +2,13 @@ import { PartialNotice } from "@/components/console/PartialNotice";
 import { RecallPicker } from "@/components/console/RecallPicker";
 import { WorkspaceNote } from "@/components/console/WorkspaceNote";
 import { InsightsLoader } from "@/components/insights/InsightsLoader";
+import { InsightsReport } from "@/components/insights/InsightsReport";
 import { MobileSummary } from "@/components/insights/MobileSummary";
 import Link from "next/link";
 import { Button, EmptyState } from "@/components/ui";
 import { INSIGHTS_ACTIONS } from "@/components/insights/actions";
 import { keepHyphens } from "@/components/console/format";
+import { studioLicence } from "@/lib/agStudioLicence";
 import { requireSession } from "@/lib/session";
 import { viewerOf } from "../_lib/workspace";
 import { buildInsights } from "./facts";
@@ -83,7 +85,7 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/insights" />}
-            {/* "Ask about this recall" lands here once the report has loaded (InsightsStudio). */}
+            {/* "Ask the analyst" lands here once Studio's report has loaded (InsightsStudio); Remedy's own report has no analyst. */}
             <div id={INSIGHTS_ACTIONS} className="contents" />
           </div>
         </div>
@@ -94,9 +96,8 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
         </div>
       )}
       <MobileSummary data={data} />
-      <div className="hidden sm:block">
-        <InsightsLoader data={data} />
-      </div>
+      {/* AG Studio only under a valid, unexpired key; otherwise Remedy's own report, and Studio's module never loads. */}
+      <div className="hidden sm:block">{studioLicence() ? <InsightsLoader data={data} /> : <InsightsReport data={data} />}</div>
     </main>
   );
 }

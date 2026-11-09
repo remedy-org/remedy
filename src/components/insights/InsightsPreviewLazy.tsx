@@ -1,14 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { studioLicence } from "@/lib/agStudioLicence";
 
 // AG Studio's chunk (about 1.6MB gzipped) for the homepage's Insights step: imported only when the tour asks
 // (loadInsightsPreview, as the tour's frame comes near, or on hover, focus or pick of the Insights tab, at 1024px and up),
-// never with the page, never on phones. The step names AG Studio, so the real canvas mounts in every build, licensed or not (a
-// build without NEXT_PUBLIC_AG_STUDIO_LICENSE shows Studio's trial watermark): the still is only what stands in while it
-// loads, and on screens too narrow for its canvas. tour-state.test.ts keeps it on.
+// never with the page, never on phones, and only under a valid, unexpired key (lib/agStudioLicence.ts): without one the
+// still (InsightsStill, the same page in plain DOM) is the step, and Studio's module never loads. Read in the browser
+// at load, so a page built before the key expired still keeps Studio off after it.
 
-export const STUDIO_ON_HOME = true;
+export const STUDIO_ON_HOME = studioLicence() !== null;
 
 /** What a visitor has cross-filtered Studio's page to ("Filed 7 Nov"), and how to clear it. */
 export interface StudioFilter {

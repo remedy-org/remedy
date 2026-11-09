@@ -6,6 +6,7 @@ vi.mock("server-only", () => ({}));
 
 const { Companies } = await import("./Companies");
 const { STUDIO_ON_HOME } = await import("@/components/insights/InsightsPreviewLazy");
+const { studioLicence } = await import("@/lib/agStudioLicence");
 
 // What a visitor reads in the For companies section, laptop tour and phone story both: its text, and the words its
 // images and regions carry (alt, aria-label, title). Seed text is in it, so the model's recorded answers are covered.
@@ -37,7 +38,8 @@ describe("For companies, as rendered", () => {
     expect(words).not.toMatch(/\w'\w|"/);
   });
 
-  it("mounts real AG Studio on the Insights step in every build", () => {
-    expect(STUDIO_ON_HOME).toBe(true);
+  it("mounts AG Studio on the Insights step only under a valid key, so no visitor sees a licence notice", () => {
+    expect(STUDIO_ON_HOME).toBe(studioLicence() !== null);
+    expect(words).not.toMatch(/licen[cs]e|trial|watermark/i);
   });
 });
