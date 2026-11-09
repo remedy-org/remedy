@@ -104,7 +104,7 @@ beforeEach(async () => {
     pay: async () => ({ batchId: "LIVEBATCH1", batchStatus: "PENDING" }),
     hash: async (b) => createHash("sha256").update(b).digest("hex").slice(0, 16),
     now: () => new Date(),
-    limits: { vision: 100, draft: 20, claimsPerDay: 60, claimsPerMonth: 150, accountClaimsPerDay: 5, accountDemosPerDay: 12 },
+    limits: { vision: 100, draft: 20, claimsPerDay: 60, claimsPerMonth: 150, accountClaimsPerDay: 5, accountDemosPerDay: 12, demosPerDay: 1000, demosPerMonth: 1000 },
   };
 });
 afterEach(async () => {
@@ -407,13 +407,17 @@ describe("the paid receipt's live status", () => {
 
 describe("recall reads", () => {
   it("hit the cache on the second call", async () => {
+    // The demo slug opens its recall by id: no recalls.json (in production the app store has it in memory: 0).
     expect(await getRecallBySlug("kikea-x-vesolje", app)).not.toBeNull();
-    expect(counter.counts.reads).toBe(2);
+    expect(counter.counts.reads).toBe(1);
     counter.reset();
     expect((await getRecallBySlug("kikea-x-vesolje", app))?.id).toBe("27-071");
     expect(await app.getRecall("27-071")).not.toBeNull();
-    expect(await app.listRecalls()).toHaveLength(1);
     expect(counter.counts.reads).toBe(0);
+    // recalls.json, read once for a listing, then cached too.
+    expect(await app.listRecalls()).toHaveLength(1);
+    expect(await app.listRecalls()).toHaveLength(1);
+    expect(counter.counts.reads).toBe(1);
   });
 
   it("look an unknown slug up fresh at most once per 10 s, and an invalid one never", async () => {
@@ -469,8 +473,10 @@ describe("a demo run", () => {
       // index.json for the limits, the day's usage, then addClaim's conditional index write.
       start: 3,
       "claim page, open": 1,
-      // The route's claim and photo reads, the pre-checks and the check: see checkClaim.
-      "photos and check": 14,
+      // The route's claim and photo reads, the pre-checks and the check: see checkClaim. A demo claim on its way to
+      // PayPal is saved once with its payout, not first with its answer. (In production the sample photo and the demo
+      // recall come from the deployment and memory: 10.)
+      "photos and check": 12,
       "checking poll": 1,
       // PayPal still says PENDING: nothing to save, so no second read of the claim. A demo result also reads
       // index.json once, for this round's scoreboard and "Next sample".

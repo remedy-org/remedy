@@ -63,7 +63,7 @@ beforeEach(async () => {
     pay,
     hash: dHash,
     now: () => new Date(),
-    limits: { vision: 100, draft: 20, claimsPerDay: 200, claimsPerMonth: 500, accountClaimsPerDay: 5, accountDemosPerDay: 60 },
+    limits: { vision: 100, draft: 20, claimsPerDay: 200, claimsPerMonth: 500, accountClaimsPerDay: 5, accountDemosPerDay: 60, demosPerDay: 1000, demosPerMonth: 1000 },
   };
 });
 afterEach(async () => {

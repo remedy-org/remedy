@@ -345,13 +345,13 @@ export const SETTLING_LIVE_MS = PENDING_LIVE_MS + 30 * 60_000;
  * being sent (never one parked at UNCLAIMED or ONHOLD), or a demo claim filed in the last 10 minutes. Seeded samples
  * never change, so they never count. An abandoned claim or a slow payout never keeps a console polling.
  */
-export function isLive(rows: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "demo" | "createdAt">[], now = Date.now()): boolean {
+export function isLive(rows: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "demo" | "createdAt">[], now = Date.now(), { demo = true }: { demo?: boolean } = {}): boolean {
   return rows.some((r) => {
     if (r.seeded) return false;
     const age = now - Date.parse(r.createdAt);
     if (r.decision === "pending") return age < PENDING_LIVE_MS;
     if (isSettling(r) && !PAYPAL_SLOW.has(r.payoutStatus ?? "")) return age < SETTLING_LIVE_MS;
-    return r.demo && age < LIVE_WINDOW_MS;
+    return demo && r.demo === true && age < LIVE_WINDOW_MS;
   });
 }
 

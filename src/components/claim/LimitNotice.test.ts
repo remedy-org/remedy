@@ -29,6 +29,11 @@ describe("limitCopy", () => {
     }
   });
 
+  it("says a sample run's own totals are used up, never that a refund is owed", () => {
+    expect(limitCopy({ kind: "daily", limit: 40, until: tomorrow }, { now, demo: true })).toMatchObject({ title: "Today’s sample runs are used up", description: "Nothing was started and nothing was paid." });
+    expect(limitCopy({ kind: "monthly", limit: 200, until: tomorrow }, { now, demo: true }).description).not.toMatch(/owed/);
+  });
+
   it("gives days for the 30-day limit", () => {
     expect(limitCopy({ kind: "monthly", limit: 150, until: new Date("2026-11-10T09:00:00.000Z") }, { now }).retry).toBe("in 3 days");
   });

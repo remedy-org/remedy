@@ -81,7 +81,7 @@ beforeEach(async () => {
     },
     vision: vi.fn(async () => ({ verdict: verdict(), seconds: 12.3, model: "gpt-test" })),
     pay: vi.fn(async () => ({ batchId: "BATCH1", batchStatus: "PENDING" })),
-    limits: { vision: 100, draft: 20, claimsPerDay: 60, claimsPerMonth: 150, accountClaimsPerDay: 5, accountDemosPerDay: 12 },
+    limits: { vision: 100, draft: 20, claimsPerDay: 60, claimsPerMonth: 150, accountClaimsPerDay: 5, accountDemosPerDay: 12, demosPerDay: 1000, demosPerMonth: 1000 },
   };
 });
 

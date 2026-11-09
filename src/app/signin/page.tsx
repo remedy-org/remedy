@@ -33,8 +33,10 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   const error = ERRORS[one(params.auth_error) ?? ""];
   const signedOut = !error && one(params.signedout) === "1";
   const start = `/api/auth/paypal/start?${new URLSearchParams({ as: "company", next })}`;
-  // The demo business account. From a try result's "see this claim" link, it says why the console needs it.
-  const login = judgeLogin("business");
+  // The demo account. From a try result's "see this claim" link, it says why the console needs it. The sandbox personal
+  // login, the one /try shows: the business account that owns the Remedy app can't sign in to it (PayPal answers its
+  // userinfo with a 401, FEEDBACK.md #2), and any other PayPal account opens a workspace with the Kikea recall.
+  const login = judgeLogin("personal");
   const fromClaim = new URL(next, "http://n").searchParams.has("claim");
 
   // The console it opens, drawn as the console draws it: the same verdicts, reasons, payout words and figures.

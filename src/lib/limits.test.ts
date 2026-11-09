@@ -3,7 +3,7 @@ import { abandonedDemo, claimRefusal, nextUtcDay, parseRefusal, refusalQuery, re
 
 const NOW = new Date("2026-11-07T18:30:00.000Z");
 const TOMORROW = new Date("2026-11-08T00:00:00.000Z");
-const LIMITS: Limits = { vision: 100, draft: 20, claimsPerDay: 6, claimsPerMonth: 10, accountClaimsPerDay: 2, accountDemosPerDay: 3 };
+const LIMITS: Limits = { vision: 100, draft: 20, claimsPerDay: 6, claimsPerMonth: 10, accountClaimsPerDay: 2, accountDemosPerDay: 3, demosPerDay: 1000, demosPerMonth: 1000 };
 
 const row = (createdAt: string, over: { payerId?: string; demo?: boolean; seeded?: boolean } = {}) => ({ payerId: "PAYER1", createdAt, ...over });
 const refuse = (rows: ReturnType<typeof row>[], over: { payerId?: string; demo?: boolean; visionUsed?: number; limits?: Partial<Limits> } = {}) =>
@@ -99,6 +99,20 @@ describe("claimRefusal", () => {
     expect(refuse([], { demo: true, visionUsed: 100 })).toEqual({ kind: "checks", limit: 100, until: TOMORROW });
     expect(refuse([], { demo: true, visionUsed: 99 })).toBeNull();
     expect(refuse([], { visionUsed: 100 })).toBeNull();
+  });
+
+  it("caps demo claims for every account together, a day and in any 30 days, abandoned starts included", () => {
+    // Two accounts, one start each sent and one left before its photo an hour ago: all four cost Blob writes.
+    const demo = (createdAt: string, payerId: string, photoHashes: string[]) => ({ ...row(createdAt, { payerId, demo: true }), decision: "pending" as const, photoHashes });
+    const rows = [demo("2026-11-07T17:00:00.000Z", "PAYER1", []), demo("2026-11-07T17:10:00.000Z", "PAYER1", ["a"]), demo("2026-11-07T17:20:00.000Z", "PAYER2", []), demo("2026-11-07T17:30:00.000Z", "PAYER2", ["b"])];
+    expect(refuse(rows, { demo: true, payerId: "PAYER3", limits: { demosPerDay: 4 } })).toEqual({ kind: "daily", limit: 4, until: TOMORROW });
+    expect(refuse(rows, { demo: true, payerId: "PAYER3", limits: { demosPerDay: 5 } })).toBeNull();
+    // The account's own daily count still leaves its abandoned start out.
+    expect(refuse(rows, { demo: true, limits: { accountDemosPerDay: 2 } })).toBeNull();
+    const month = refuse(rows, { demo: true, payerId: "PAYER3", limits: { demosPerMonth: 4 } });
+    expect(month).toEqual({ kind: "monthly", limit: 4, until: new Date(Date.parse("2026-11-07T17:00:00.000Z") + 30 * 86_400_000) });
+    // Real claims never meet the demo totals.
+    expect(refuse(rows, { limits: { demosPerDay: 0, demosPerMonth: 0 } })).toBeNull();
   });
 
   it("names the limit that lasts longest when several are hit", () => {
