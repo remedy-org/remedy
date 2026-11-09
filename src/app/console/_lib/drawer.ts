@@ -272,7 +272,7 @@ export function duplicateFor(c: Claim, rows: ClaimSummary[]): DrawerClaim["dupli
 }
 
 /** A claim that came with the console isn't checked against the others (they share sample photos), so its one repost
- * names the claim it copied in its reason ("…already used in another claim, RM-2125"): that claim's matching photo. */
+ * names the claim it copied in its reason ("…already used in another claim, RM-6276"): that claim's matching photo. */
 function namedCopy(c: Claim, text: string, rows: ClaimSummary[]): { photo: number; id: string; theirs: number } | null {
   if (!c.seeded) return null;
   const id = text.match(/\bRM-\d{4}\b/)?.[0];

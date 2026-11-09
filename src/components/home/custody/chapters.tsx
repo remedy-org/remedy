@@ -256,15 +256,15 @@ export function CodeTag({ wipe, short, className }: { wipe?: MotionValue<string>
 
 type Bar = "pass" | "hold" | "reject" | "skip";
 /**
- * The five checks' bars for a row: paid, every one passed; held at the fifth (the same item in both photos); rejected or
- * blocked at the check that stopped it (`fails`), and a claim blocked before the photo check never ran the rest.
+ * The five checks' bars for a row, as the console draws them: paid or approved, every one passed; held at the fifth (the
+ * same item in both photos); rejected at the check that stopped it (`fails`); blocked at the pre-check that stopped it,
+ * the other two pre-checks run and passed, and the photo check's two never run.
  */
 const barsOf = (row: { status: string; fails?: number }): Bar[] =>
   [0, 1, 2, 3, 4].map((i) => {
     if (row.status === "held") return i === 4 ? "hold" : "pass";
-    if (row.fails === undefined || i < row.fails) return "pass";
     if (i === row.fails) return "reject";
-    return row.status === "blocked" ? "skip" : "pass";
+    return row.status === "blocked" && i > 2 ? "skip" : "pass";
   });
 
 function Barcode({ bars }: { bars: Bar[] }) {

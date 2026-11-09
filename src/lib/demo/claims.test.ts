@@ -99,6 +99,16 @@ describe("every replica reads the demo claims", () => {
     );
   });
 
+  it("How it works' console marks the check that stopped each claim where the console does", async () => {
+    const { fiveOutcomes } = await import("@/lib/fiveChecks");
+    for (const row of CONSOLE_ROWS) {
+      const c = stored.find((x) => x.id === row.id)!;
+      const items = [...toDrawerClaim(c, recall).fiveRows.flatMap((r) => r.parts.map((p) => ({ id: p.id, state: p.state })))];
+      const failed = fiveOutcomes(items).flatMap((o, i) => (o.outcome === "fail" ? [i] : []));
+      expect(failed, row.id).toEqual(row.fails === undefined ? [] : [row.fails]);
+    }
+  });
+
   it("the Opened Exhibit stages RM-0442, against the photos of the claims before it", () => {
     expect([EXHIBIT.id, EXHIBIT.code, EXHIBIT.seconds, EXHIBIT.photo, EXHIBIT.amount]).toEqual([CLAIM.id, CLAIM.code, CLAIM.seconds, CLAIM.photo, CLAIM.amount]);
     const before = DEMO_CLAIMS.filter((d) => d.filed < GENUINE.filed).flatMap(photosOf);
