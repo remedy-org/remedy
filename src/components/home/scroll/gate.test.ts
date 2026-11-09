@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createGate, type GateLenis } from "./gate";
+import { createGate, notchQuiet, type GateLenis } from "./gate";
 import type { Slow } from "./landing";
 
 // The gate against a stand-in Lenis: wheel streams in, which events it takes, and where it lands the page.
@@ -303,6 +303,70 @@ describe("wheel stops", () => {
     lenis.animatedScroll = 1900;
     send(flick, 20, 90);
     expect(lenis.landed).toEqual([1410, 2144, 2821]);
+  });
+
+  it("ends a notched wheel's gesture after 60 to 80 ms without a notch: 1.5 times its usual gap, 80 before it has one", () => {
+    expect(notchQuiet([])).toBe(80);
+    expect(notchQuiet([16, 20, 18])).toBe(60);
+    expect(notchQuiet([44, 46, 48])).toBe(69);
+    expect(notchQuiet([45, 60, 70, 300])).toBe(80);
+  });
+
+  it("takes each of three quick flicks to a stop of its own, whatever their pace, never throwing one away", () => {
+    const course = [0, 1000, 2000, 3000, 4000, 5000];
+    for (const dt of [12, 24, 40])
+      for (const quiet of [60, 80]) {
+        const { lenis, send, finish } = setup(0, course);
+        const flick = Array(4).fill(100);
+        send(flick, dt);
+        send(flick, dt, quiet - dt);
+        send(flick, dt, quiet - dt);
+        expect(lenis.landed, `${dt} ms notches, ${quiet} ms apart`).toEqual([1000, 2000, 3000]);
+        finish();
+      }
+  });
+
+  it("heads on to the next stop when a fresh flick comes mid-landing, however far that stop and however short the flick", () => {
+    // The landing on 1000 has all but finished: the next stop, 1400px on, is far more than a flick would carry alone.
+    const { lenis, send } = setup(0, [0, 1000, 2400]);
+    send(Array(4).fill(100), 20);
+    lenis.animatedScroll = 990;
+    send(Array(2).fill(100), 20, 200);
+    expect(lenis.landed).toEqual([1000, 2400]);
+  });
+
+  it("lets a fresh flick mid-landing run on when there is no stop ahead within reach, rather than drop it", () => {
+    const { lenis, send } = setup(0, [0, 1000, 4000]);
+    send(Array(4).fill(100), 20);
+    lenis.animatedScroll = 990;
+    expect(send(Array(4).fill(100), 20, 200)).toBeGreaterThan(0);
+    expect(lenis.landed).toEqual([1000]);
+  });
+
+  it("lands a short flick that would come to rest inside a pinned story, rather than leave a transition half played", () => {
+    const flick = Array(4).fill(100);
+    const open = setup(1000, [0, 1000, 2600]);
+    open.send(flick, 16);
+    expect(open.lenis.landed).toEqual([]);
+    // The story's scrub begins 100px on: a free run would stop inside it.
+    const lead = setup(1000, [0, 1000, 2600], [], undefined, undefined, [[1100, 2600]]);
+    lead.send(flick, 16);
+    expect(lead.lenis.landed).toEqual([2600]);
+  });
+
+  it("brings a free spin that stops inside a pinned story to rest on its next beat, however far, never half played", () => {
+    for (const pins of [[], [[900, 5000]]] as [number, number][][]) {
+      const { lenis, send, scroll } = setup(0, [0, 1000, 2400, 5000], [], undefined, undefined, pins);
+      send(Array(80).fill(100), 14);
+      // The hand has stopped with the page bound for 3700, 1300px short of the next stop.
+      lenis.targetScroll = 3700;
+      lenis.animatedScroll = 3600;
+      const now = performance.now() + 1000;
+      vi.spyOn(performance, "now").mockReturnValue(now);
+      scroll();
+      vi.restoreAllMocks();
+      expect(lenis.landed.at(-1)).toBe(pins.length ? 5000 : 1000);
+    }
   });
 
   it("lets a wheel held at speed run free at once, the landing or not, and keeps it free over a short pause", () => {

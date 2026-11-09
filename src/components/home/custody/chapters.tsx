@@ -384,8 +384,9 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             <span>Answered in</span>
             <span className="text-right">Amount</span>
           </div>
-          {/* The rows run on past the panel's foot, cut by it as a list is, so a tall screen shows more of the queue. */}
-          <div className="min-h-0 flex-1 overflow-hidden">
+          {/* As many whole rows as the panel holds, so a tall screen shows more of the queue: a row that would not fit
+              wraps out of sight beside the list, never cut through by the panel's foot. */}
+          <div className="flex min-h-0 flex-1 flex-col flex-wrap content-start overflow-hidden *:w-full *:shrink-0">
             <motion.div className="overflow-hidden" style={{ height }}>
               <motion.div style={{ opacity, backgroundColor: flash }}>
                 <ConsoleRow row={M4T_ROW} first />

@@ -42,6 +42,15 @@ describe("clean frames", () => {
     expect(nearestClean(1100, boxes, edges, { min: 1095, cap: 1990 - 900 })).toBe(1160);
   });
 
+  it("keeps the screen's foot out of the air under a hairline, so no rule lies along the foot", () => {
+    // A check's top rule at 1978: at scrollY 1080 it would sit 2px above a 900px screen's foot.
+    const rule: [number, number][] = [[1978, 1978 + 12]];
+    expect(nearestClean(1080, [], edges, { foot: rule })).toBe(1078);
+    expect(nearestClean(1086, [], edges, { foot: rule })).toBe(1090);
+    // Under the nav it is only a hairline tucked away: the top edge may sit on it.
+    expect(nearestClean(1914, [], edges, { foot: rule })).toBe(1914);
+  });
+
   it("cuts least when nothing in range is clean: an edge in a line's leading, never through its words", () => {
     // Fraud checks at 1024x768: the foot can clear gate 03 (its heading and text together) only above the range or
     // below it.
@@ -72,11 +81,9 @@ describe("scroll stops", () => {
     expect(custody).toHaveLength(6); // 01, 02, the exhibit's live photo, check 3 and paid receipt, the console
   });
 
-  it("goes up through the Chain of Custody on its finished beats, as Page Up does, and through the sheet on its first", () => {
-    const up = STOPS.filter((s) => !s.down).map((s) => s.name);
+  it("goes up on the same finished beats as down, as Page Up does: no stop is one way, the sheet's included", () => {
+    expect(STOPS.filter((s) => "down" in s).map((s) => s.name)).toEqual([]);
     const story = STOPS.filter((s) => s.name.startsWith("Chain of Custody ")).map((s) => s.name);
-    expect(up.filter((n) => n.startsWith("Chain of Custody "))).toEqual(story);
-    expect(up.filter((n) => n.startsWith("Problem"))).toEqual(["Problem, the sheet open"]);
     // A hard fling skims the story's inner beats, never a section's stop.
     const inner = STOPS.filter((s) => s.inner).map((s) => s.name);
     expect(inner).toEqual([...story.slice(1, -1), "Problem, the loop closed"]);

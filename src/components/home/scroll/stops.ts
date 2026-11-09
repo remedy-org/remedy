@@ -55,8 +55,6 @@ export type Page = {
 export type Stop = {
   name: string;
   at: (page: Page) => number | readonly number[] | undefined;
-  /** A stop going down only: a pinned story's inner beat, whose scrub played backwards shows nothing new (gate.ts). */
-  down?: true;
   /** A story's inner beat, which a hard fling may skim past (gate.ts SKIM); a flick still stops on it. */
   inner?: true;
 };
@@ -109,11 +107,10 @@ export const STOPS: readonly Stop[] = [
     name: "Problem, the sheet open",
     at: (p) => p.sheet(ANCHOR_AT - 0.4) ?? p.fit(p.line("#problem .eyebrow"), { min: p.line("#problem", 0), max: p.line("#problem .eyebrow", 16) }),
   },
-  { name: "Problem, the loop closed", at: (p) => p.sheet(T.mark[0] - 0.4), down: true, inner: true },
+  { name: "Problem, the loop closed", at: (p) => p.sheet(T.mark[0] - 0.4), inner: true },
   {
     name: "Problem, the loop cut",
     at: (p) => p.sheet(REST + 2) ?? p.fit(p.foot("#problem article", 0.78), { min: p.foot("#problem article", 0.8), max: p.foot("#problem article", 0.45) }),
-    down: true,
   },
   // Fraud checks: the heading on the top line over the four claims and the checks that need no AI. Never so high that
   // the Problem sheet shows above the section's edge, and the heading at least 40px under the nav.
@@ -234,6 +231,10 @@ function pinned(el: HTMLElement | null) {
 const INK = 2;
 /** Air a paper object (a tag, the console) keeps from the nav and the screen's foot: its shadow. */
 const AIR = 8;
+/** The checks' hairlines (each check's top rule), and the air under one that the screen's foot keeps out of: closer, the
+ * rule reads as a stray line along the foot (a 1920x1080 screen's Fraud checks frame left one 2px above it). */
+const RULES = "#checks ol > li";
+const RULE_AIR = 12;
 
 /** The intervals a frame edge may not fall inside: each line's ink, each object with its shadow. An outcome not yet
  * printed (its lane armed, Pipeline.tsx) counts as printed, so a stop is the same frame whichever way the page came to
@@ -261,17 +262,25 @@ function atoms(sheet: boolean): [number, number][] {
 
 /**
  * The scrollY in [min, max] nearest `prefer` whose two edges (under the nav, the screen's foot) cut nothing, and at most
- * `cap` when a clean frame allows it. When no clean frame fits the range, the one that cuts least: an edge in a line's
- * leading rather than through its words.
+ * `cap` when a clean frame allows it. `foot` are boxes only the last edge (the screen's foot) may not fall in: the air
+ * under a hairline, which would read as a stray rule along the screen's foot. When no clean frame fits the range, the
+ * one that cuts least: an edge in a line's leading rather than through its words.
  */
-export function nearestClean(prefer: number, boxes: readonly [number, number][], edges: readonly number[], { min = -Infinity, max = Infinity, cap = Infinity } = {}) {
+export function nearestClean(
+  prefer: number,
+  boxes: readonly [number, number][],
+  edges: readonly number[],
+  { min = -Infinity, max = Infinity, cap = Infinity, foot = [] as readonly [number, number][] } = {},
+) {
+  const footEdge = edges[edges.length - 1];
+  const pairs = [...boxes.flatMap((box) => edges.map((e) => [box, e] as const)), ...foot.map((box) => [box, footEdge] as const)];
   /** How deep the frame's edges go into whatever they cut, px: 0 for a clean frame. */
   const cut = (y: number) => {
     let worst = 0;
-    for (const [a, b] of boxes) for (const e of edges) worst = Math.max(worst, Math.min(y + e - a, b - y - e));
+    for (const [[a, b], e] of pairs) worst = Math.max(worst, Math.min(y + e - a, b - y - e));
     return worst;
   };
-  const inRange = [prefer, min, max, cap, ...boxes.flatMap(([a, b]) => edges.flatMap((e) => [a - e, b - e]))].filter((y) => y >= min && y <= max);
+  const inRange = [prefer, min, max, cap, ...pairs.flatMap(([[a, b], e]) => [a - e, b - e])].filter((y) => y >= min && y <= max);
   const nearest = (ys: number[]) => ys.reduce<number | undefined>((best, y) => (best === undefined || Math.abs(y - prefer) < Math.abs(best - prefer) ? y : best), undefined);
   const clean = inRange.filter((y) => cut(y) <= 0);
   if (clean.length) return nearest(clean.filter((y) => y <= cap)) ?? nearest(clean)!;
@@ -308,18 +317,21 @@ export function readPage(): Page {
       const cap = before ? at(before, (el) => docTop(el) - innerHeight) : undefined;
       // Never past the page's own ends, where the frame couldn't be.
       const limit = document.documentElement.scrollHeight - innerHeight;
-      return nearestClean(prefer, atoms(!problem), [n, innerHeight], { min: Math.max(0, min), max: Math.min(limit, max), cap });
+      const foot = [...document.querySelectorAll<HTMLElement>(RULES)].filter((el) => el.getClientRects().length).map((el) => [docTop(el), docTop(el) + RULE_AIR] as [number, number]);
+      return nearestClean(prefer, atoms(!problem), [n, innerHeight], { min: Math.max(0, min), max: Math.min(limit, max), cap, foot });
     },
   };
 }
 
 /** The pinned stretches as laid out now, [from, to] in scrollY: the Chain of Custody (the laptop's runway or the phone's)
- * and the Problem sheet. Their stops are paced for the keys, however far apart (keys.ts). */
+ * and the Problem sheet, from where its top comes up into the screen and its first cards start to land
+ * (problemTimeline.ts). Their stops are paced for the keys, however far apart (keys.ts), and the wheel never leaves the
+ * page at rest inside one (gate.ts). */
 export function pinnedStretches(): [number, number][] {
   const els = [visible("section[data-runway]"), visible("div[data-runway][data-scroll-stops]"), document.getElementById("problem")];
-  return els.flatMap((el) => {
+  return els.flatMap((el, i) => {
     const pin = pinned(el ?? null);
-    return pin ? [[pin.top, pin.top + pin.travel] as [number, number]] : [];
+    return pin ? [[i === 2 ? pin.top - innerHeight : pin.top, pin.top + pin.travel] as [number, number]] : [];
   });
 }
 
@@ -347,12 +359,12 @@ export function resolveStops(list: readonly Stop[] = STOPS, page = readPage()): 
   return tidy(readAll(list, page).flat().filter(Number.isFinite), document.documentElement.scrollHeight - innerHeight);
 }
 
-/** The stops (going down, and going up) and the slow stretches between them, read once when a gesture starts (gate.ts). */
+/** The stops (the same going up as going down) and the slow stretches between them, read once when a gesture starts
+ * (gate.ts). */
 export function resolveCourse(): Course {
   const page = readPage();
   return {
     stops: resolveStops(STOPS, page),
-    up: resolveStops(STOPS.filter((s) => !s.down), page),
     slow: readAll(SLOW, page),
     inner: resolveStops(STOPS.filter((s) => s.inner), page),
     pins: pinnedStretches(),
