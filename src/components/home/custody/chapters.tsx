@@ -8,6 +8,7 @@ import { durationFigure, LedgerItem } from "@/components/console/Ledger";
 import { TABS } from "@/components/console/StatusTabs";
 import { VerdictMark } from "@/components/console/VerdictMark";
 import { ClockIcon, DURATION, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
+import { EXHIBIT } from "../teardown/claim";
 import { CLAIM, CODE_AT, CODE_STAGGER, CONSENT_AT, CONSENT_STAGGER, CONSOLE_ROWS, SHOT_AT, WRITE_FOR } from "./claim";
 import { ENTER, LEAVE, useGate } from "./gate";
 
@@ -303,8 +304,8 @@ function Thumb({ src }: { src: string }) {
 const GRID =
   "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[9.5rem_minmax(0,1fr)_4.5rem_5.5rem_4.5rem] @min-[900px]:grid-cols-[9.5rem_minmax(0,1fr)_4.5rem_5.5rem_7rem_4.5rem]";
 
-/** Claim RM-0442 as the recall team's console lists it, paid, at its filing time: its photo check answered in 14 s
- * (the exhibit's clock, teardown/model.ts elapsed), and its payout PayPal confirmed. The console gives a paid claim no
+/** Claim RM-0442 as the recall team's console lists it, paid, at its filing time: its photo check answered in 11 s
+ * (its stored answer's 11.29 s, the exhibit's clock: teardown/model.ts elapsed), and its payout PayPal confirmed. The console gives a paid claim no
  * reason: its payout cell says it. */
 const M4T_ROW = {
   photo: CLAIM.photo,
@@ -312,8 +313,8 @@ const M4T_ROW = {
   id: CLAIM.id,
   status: "paid" as const,
   reason: "",
-  // The console's one time unit: seconds, "14 s".
-  time: `${CLAIM.seconds - 1} s`,
+  // The console's one time unit: seconds, "11 s".
+  time: `${Math.round(EXHIBIT.answered)} s`,
   amount: CLAIM.amount,
 };
 

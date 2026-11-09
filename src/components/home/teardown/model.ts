@@ -70,7 +70,7 @@ export const tickAt = (id: CheckId) => lerp(RANGES[id][0], RANGES[id][1], Math.m
 /**
  * Seconds since the photo, as claim RM-0442 ran (its timeline in the console): the three pre-checks are done by
  * EXHIBIT.prechecked (0.3 s), a tenth of a second each as their ticks land; the model reads the photo from there until
- * it answers at EXHIBIT.answered (14.4 s), as check 5 ticks; and the payout is sent at EXHIBIT.seconds (15 s), early in
+ * it answers at EXHIBIT.answered (11.3 s), as check 5 ticks; and the payout is sent at EXHIBIT.seconds (15 s), early in
  * the payout beat. So the clock moves from the first check on, never parked at 0:00 while checks pass.
  */
 const clockPoints = (): readonly (readonly [number, number])[] => [

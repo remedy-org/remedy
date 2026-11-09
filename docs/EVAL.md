@@ -132,3 +132,29 @@ Spend for the whole spike: about $18 of OpenAI usage. That's $0.83 on images and
 Shoot one real claim on any phone: a cheap pillow or cushion as the stand-in, cut in half, with a paper tag reading `X-VESOLJE` and that claim's code. Put it in `eval/photos/r01-real-capture/` with a `case.json` such as `{ "code": "<the code>", "expect": "pass", "spec": "eval/specs/standin-pillow.json" }` and run `npm run eval:run`. Save it as JPEG: the app's resizer, `sharp`, can't read an iPhone's HEIC.
 
 The model only describes what it sees; a fixed rule in the code decides pass, hold or reject.
+
+## The demo recall's photos, remade (9 Nov 2026)
+
+The demo claims used plain stand-in pillows, and the spec said a plain pillow of any colour counted. The spec is now
+`eval/specs/kikea-tagged.json` (word for word `DEMO_SPEC`): only the three recalled prints count, the pillow carries no
+label (CPSC), and the owner ties on a paper tag with X-VESOLJE and the claim's code. The photos (`k01`–`k11`) are edits
+of the CPSC photo (`w09`, with `h02` for the cut) by `eval/make-photos.ts`; each was checked by eye. The app's model
+(gpt-6.1-sol, high) ran three times on each (`eval/out/runs/kikea*-gpt-6.1-sol-r1..3.json`):
+
+| Case | Claim | Code | Decision, 3 runs | Deciding check |
+| --- | --- | --- | --- | --- |
+| k01 feather print, cut, tag M4T | RM-0442, the `/try` genuine sample | M4T | pass 3/3 | all pass |
+| k02 floral print, cut, tag K7Q | RM-0118, the `/try` wrong-code sample | K7P | reject 3/3 | the code alone |
+| k04 puzzle print, still joined by a strip | RM-6276 (RM-2125 reposts it) | F3X | reject 3/3 | cut in half |
+| k10 puzzle print, shot far and dim | RM-9629 | H9D | hold 3/3 | label, code, tag on pillow unclear |
+| k06 floral print on a laptop screen | dev preview | C7W | reject 3/3 | photo of a screen |
+| k05 puzzle print, cut, tag J4R | (replaced by k11) | J4R | pass 3/3 | all pass |
+| k03 one cut half in frame | not used | H9D | reject 3/3 | cut in half |
+| k07 tag lying loose | not used | H9D | reject 3/3 | tag on the pillow |
+| k08 smudge beside the code | not used | H9D | pass 3/3 | all pass (the code stayed readable) |
+| k09 only the H showing | not used | H9D | reject 3/3 | the code (reads H) |
+
+`k11` (feather print, J4R) is RM-9475's photo, blocked before the photo check, so it has no answer. The old RM-0442
+photo (a plain navy pillow, `c02`) under the new spec: rejected, "Label doesn't match the recalled product". Run 1 of
+each case in use is stored verbatim in `src/lib/demo/verdicts.json` and `src/lib/review/replay.json`
+(`npm run demo:assets`). Spend: about $0.62 on images and $0.36 on vision runs.
