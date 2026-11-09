@@ -26,6 +26,8 @@ import {
   noModelAnswer,
   nounOf,
   payoutHold,
+  payoutWords,
+  photoAlt,
   readableReasons,
   refusalHeadline,
   secondsBetween,
@@ -101,6 +103,9 @@ interface Parts {
   fold?: { arrive: boolean };
 }
 
+/** What the photo check read on the tag, once it has answered. */
+const readOf = (claim: Pick<Claim, "verdict">) => (claim.verdict ? { label: claim.verdict.label.text_seen, code: claim.verdict.challenge_code.text_seen } : undefined);
+
 /** A sentence as the page writes it: "We couldn’t…" for the pipeline's "Couldn't…", typeset (the rule stores straight
  * apostrophes), and a full stop. */
 const sentence = (s: string) => {
@@ -116,7 +121,7 @@ const sentence = (s: string) => {
 export function Result(props: ResultProps) {
   const { claim, recall, rows } = props;
   const cut = cutInHalf(recall.spec);
-  const read = claim.verdict ? { label: claim.verdict.label.text_seen, code: claim.verdict.challenge_code.text_seen } : undefined;
+  const read = readOf(claim);
   const paid = claim.decision === "paid";
   const options = {
     code: claim.code,
@@ -130,6 +135,7 @@ export function Result(props: ResultProps) {
     written: handWrittenLabel(recall.spec),
     read,
     steps: recall.spec.proof_steps,
+    company: companyName(recall),
   };
   // The outcome column says why a check failed or is held, so its row doesn't say it again.
   const six = sixRows(rows, { ...options, explained: true });
@@ -139,7 +145,7 @@ export function Result(props: ResultProps) {
   const page = (
     <ClaimLayout
       labelledBy="result-title"
-      head={<OutcomeHead id="result-title" thumb={parts.photosShown ? undefined : props.photoUrls[0]} title={parts.title} lead={parts.lead} />}
+      head={<OutcomeHead id="result-title" thumb={parts.photosShown ? undefined : props.photoUrls[0]} thumbAlt={photoAlt(claim.id, read)} title={parts.title} lead={parts.lead} />}
       checks={
         <>
           {parts.under && <div className={clsx(NARROW_ONLY, "flex flex-col gap-4")}>{parts.under}</div>}
@@ -216,11 +222,16 @@ function paidParts({ claim, recall, photoUrls, againHref, sample, round, now, sa
       )}
     </>
   );
+  // When PayPal confirmed it: the stored payout's time once its stored status is Received (the status route records when
+  // it changed), from the photo's arrival.
+  const photosAt = claim.events.find((e) => e.type === "photos_received")?.at;
+  const confirmed =
+    claim.payout && payoutWords(claim.payout.status).tone === "pay" && photosAt ? Math.max(0, Math.round((Date.parse(claim.payout.updatedAt) - Date.parse(photosAt)) / 1000)) : null;
   // Every check passed (a paid claim's always have): they fold into one line first, then the receipt prints.
   const delay = arrive ? FOLD_MS : 0;
   return {
     title: <PaidTitle />,
-    side: <ClaimPhotos urls={photoUrls} claimId={claim.id} />,
+    side: <ClaimPhotos urls={photoUrls} claimId={claim.id} read={readOf(claim)} />,
     fold: { arrive },
     next: (
       <>
@@ -229,15 +240,21 @@ function paidParts({ claim, recall, photoUrls, againHref, sample, round, now, sa
           recallId={recall.id}
           claimId={claim.id}
           account={account}
-          payerTail={claim.payerId.slice(-5)}
           payoutId={claim.payout?.batchId}
           sentAt={sentAt}
           took={secondsBetween(claim.events, "photos_received", "payout_sent")}
+          confirmed={confirmed}
           arrive={arrive}
           delay={delay}
           foot={foot}
         />
         {arrive && <BringIntoView id="receipt" title="result-title" after={delay} />}
+        {/* The last step the notice asks of the owner, once the money is sent: nothing left to do but this. */}
+        {cutInHalf(recall.spec) && (
+          <p className={clsx("text-ui text-pretty text-muted", arrive && styles.later)} style={{ ["--feed-delay" as string]: `${delay}ms` }}>
+            You&rsquo;re done. Throw both halves away so no one uses them again.
+          </p>
+        )}
         {/* The way on comes in once the receipt is out, so the paper is the only thing moving. */}
         {sample && (
           <div className={clsx(arrive && styles.later)} style={{ ["--feed-delay" as string]: `${delay}ms` }}>
@@ -277,9 +294,9 @@ function heldParts({ claim, recall, photoUrls, againHref, sample, round }: Resul
     ? `A person at ${company} sends ${refund} by ${by}. Nothing has been paid yet, and PayPal emails you when it arrives.`
     : `${company} decides by ${by}. If they approve it, PayPal sends you ${refund} and emails you.`;
   return {
-    title: payout ? `Your photos passed. ${company} will send your refund` : <>A person at {nb} will check this claim</>,
+    title: payout ? `Your photos passed. ${nb} will send your refund` : <>A person at {nb} will check this claim</>,
     lead,
-    side: <ClaimPhotos urls={photoUrls} claimId={claim.id} />,
+    side: <ClaimPhotos urls={photoUrls} claimId={claim.id} read={readOf(claim)} />,
     meta: true,
     next: (
       <>
@@ -337,7 +354,8 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
         <span className="block">
           Your claim&rsquo;s code is <span className="font-mono whitespace-nowrap">{marked("yours")}</span>.
         </span>
-        <span className="sr-only">{seen.caption}</span>
+        {/* The difference in words, so O and 0 (or a P and a Q) can't be mistaken: for everyone, not only a screen reader. */}
+        <span className="mt-1 block text-ui text-muted">{seen.caption}</span>
       </>
     ) : (
       <>
@@ -360,16 +378,24 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
   const rest = reviewed ? [] : reasons.slice(1).map((r: Reason) => sentence(refusalHeadline({ ...claim, reasons: [r] }, recall.spec)));
   // What to do differently, said once: never a sentence that only repeats the button under it ("Start a new claim"), and
   // never the review's terms, which sit under its own button. When starting over can't help (a second claim from one
-  // account), only that reason's advice applies.
+  // account), only that reason's advice applies. A photo taken as a screen keeps its advice beside the ask: retaking it
+  // in better light is the other way on.
   const advice = reviewed
     ? []
     : appeal
-      ? []
+      ? lead === "screen"
+        ? [adviceFor("screen")]
+        : []
       : lead === "code"
         ? ["Next time, write the code large and clear, in marker."]
         : lead === "session" || lead === "duplicate_photo"
           ? []
           : [...new Set((retry ? reasons : reasons.filter((r) => !canRetry([r]))).map((r) => adviceFor(r.check)))];
+  const adviceText = advice.map((a) => (
+    <p key={a} className="text-body text-pretty text-text">
+      {a}
+    </p>
+  ));
   const pair = lead === "duplicate_photo" && photoUrls[0] && duplicate?.earlier ? <DuplicatePair claimId={claim.id} photoUrls={photoUrls} earlier={duplicate.earlier} n={duplicate.photo} /> : null;
   const actions = Boolean(earlier || appeal || (!sample && retry && !reviewed) || sample);
   return {
@@ -384,7 +410,7 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
     // tag enlarged under it, at the photo's width).
     side: pair ?? (
       <>
-        <ClaimPhotos urls={photoUrls} claimId={claim.id} />
+        <ClaimPhotos urls={photoUrls} claimId={claim.id} read={readOf(claim)} />
         {tag && <TagCrop src={tag} read={tagRead} style={{ width: photoWidth(2 / 3) }} />}
       </>
     ),
@@ -393,12 +419,7 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
     meta: true,
     next: (advice.length > 0 || actions) && (
       <>
-        {!sample &&
-          advice.map((a) => (
-            <p key={a} className="text-body text-pretty text-text">
-              {a}
-            </p>
-          ))}
+        {!sample && !appeal && adviceText}
         {tag && <TagCrop src={tag} read={tagRead} className={NARROW_ONLY} />}
         {/* The demo's refusal answers the fair question, what a genuine owner who slipped can do, in the product's terms:
             no button of its own, since the demo's next step is the next claim. */}
@@ -429,6 +450,7 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
             </p>
           </form>
         )}
+        {!sample && appeal && adviceText}
         {!sample && retry && !reviewed && (
           <Button href={againHref} variant={appeal ? "secondary" : "primary"} size={appeal ? "md" : "lg"} block prefetch={false}>
             Start a new claim

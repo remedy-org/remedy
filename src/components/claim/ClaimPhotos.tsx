@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { PHOTO_TRANSITION, photoWidth } from "./Exhibit";
+import { photoAlt } from "./model";
 
 // A photo's shape, remembered for this page's life: the camera knows it as it takes the photo, so the checking screen
 // and the result after it draw the photo at its own size from the first frame, and nothing reflows when it loads.
@@ -21,7 +22,7 @@ export function rememberAspect(claimId: string, n: number, width: number, height
  * into it without shrinking, and, when there are several, every photo as an equal thumbnail under it, the one shown
  * outlined.
  */
-export function ClaimPhotos({ urls, claimId }: { urls: string[]; claimId: string }) {
+export function ClaimPhotos({ urls, claimId, read }: { urls: string[]; claimId: string; read?: { label?: string | null; code?: string | null } }) {
   const [active, setActive] = useState(0);
   const [aspect, setAspect] = useState(() => aspects.get(`${claimId}:1`) ?? 4 / 5);
   const img = useRef<HTMLImageElement>(null);
@@ -52,7 +53,7 @@ export function ClaimPhotos({ urls, claimId }: { urls: string[]; claimId: string
         ref={img}
         key={urls[active]}
         src={urls[active]}
-        alt={`Photo ${active + 1} of claim ${claimId}`}
+        alt={photoAlt(claimId, read, urls.length > 1 ? active + 1 : undefined)}
         onLoad={(e) => measure(e.currentTarget, active + 1)}
         // The first photo is the one the camera's still carries into this screen.
         style={{ aspectRatio: aspect, width: photoWidth(aspect), viewTransitionName: active === 0 ? PHOTO_TRANSITION : undefined }}

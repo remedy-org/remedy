@@ -78,13 +78,15 @@ export interface SixOptions {
   read?: { label?: string | null; code?: string | null };
   /** The recall's proof steps: the one about the tag counts under the tag's check, as in the console (keyOf). */
   steps?: readonly string[];
+  /** "Kikea Store": a held row whose reason the result's lead says names who looks at it. */
+  company?: string;
 }
 
 /** The account check on a demo claim after the genuine one: one account sends all four, and it counts once. */
 export const DEMO_ACCOUNT = "Counted once, on your genuine claim.";
 
 /** The six rows from a claim's recorded checks. */
-export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo, photos = 1, earlier, explained, written, read, steps = [] }: SixOptions): SixRow[] {
+export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo, photos = 1, earlier, explained, written, read, steps = [], company }: SixOptions): SixRow[] {
   const of = (key: SixKey) => rows.filter((r) => keyOf(r.id, steps) === key);
   const model = rows.find((r) => r.id === "model");
   const these = photos > 1 ? "these photos" : "this photo";
@@ -150,8 +152,9 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
       if (out.read && state === "reject" && own.some((r) => onTag(r) && r.state === "reject")) out.detail = undefined;
       // Unsure: one plain line in Remedy's voice, not the pipeline's list. The photo check's words stay in the evidence.
       if (state === "hold") {
-        const unsure = own.filter((r) => onTag(r) && r.state === "hold").map((r) => (r.id === "code" ? code : "the label"));
-        out.detail = unsure.length ? `We couldn’t read ${unsure.join(" or ")} on the tag.` : "We couldn’t see the tag clearly.";
+        // Each unsure word named by its text, as the owner wrote it: "X-VESOLJE or H9D".
+        const unsure = own.filter((r) => onTag(r) && r.state === "hold").map((r) => (r.id === "code" ? code : (written ?? "the label")));
+        out.detail = unsure.length ? `We couldn’t read ${unsure.join(" or ")} on your ${written ? "paper " : ""}tag.` : "We couldn’t see the tag clearly.";
         out.read = undefined;
       }
       if (state === "pass" && !out.read) out.because = "The tag matches this claim.";
@@ -159,16 +162,20 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
     if (b.key === "destroyed" && !model) {
       const steps = own.filter((r) => /^step_\d+$/.test(r.id) && r.state !== "pass" && r.state !== "skipped");
       if (steps.length) out.detail = steps.some((r) => r.state === "hold") ? `We couldn’t see ${cut ? "the cut" : "that it’s destroyed"} clearly.` : `We couldn’t see the ${noun.toLowerCase()} ${cut ? "cut in half" : "destroyed"}.`;
+      // The cut is plainly there and only the photo itself was refused: the row says both, so it never reads as "no cut".
+      else if (cut && own.some((r) => r.id === "screen" && r.state === "reject")) out.detail = "Both halves are in the photo, but it looks like a photo of a screen or a print.";
     }
     // The demo's other three claims skip it (one account sends all four): said on the row, which stays in the list.
     if (b.key === "account" && demo && state === "skipped") out.detail = DEMO_ACCOUNT;
+    // The pipeline's sentence, as the page writes one: a full stop ("… for this recall (RM-0442)."), the claim id kept.
+    if (b.key === "account" && out.detail && !/[.!?]$/.test(out.detail)) out.detail = `${out.detail}.`;
     if (model && (b.key === "code" || b.key === "destroyed")) out.detail = "The photo check didn’t answer.";
     if (b.key === "refund") out.reference = /PayPal reference (\S+)/.exec(own[0]?.detail ?? "")?.[1];
     if (b.key === "refund" && state === "hold") out.detail = own[0]?.detail;
-    // A held row's reason is the result's lead, so the row doesn't say it again. A failed row keeps its line, as a passed
-    // one does: the list reads the same from the checking screen to the result.
+    // A held row's reason is the result's lead, so the row doesn't say it again: it says who looks at it instead. A
+    // failed row keeps its line, as a passed one does: the list reads the same from the checking screen to the result.
     if (explained && b.key !== "refund" && state === "hold") {
-      out.detail = undefined;
+      out.detail = company ? `A person at ${company} will look at this.` : undefined;
       out.read = undefined;
     }
     return out;
@@ -240,7 +247,8 @@ function Glyph({ state }: { state: CheckState }) {
     case "running":
       return (
         <span className={clsx(dot, "relative ring-1 ring-line-strong ring-inset")}>
-          <span className={clsx("absolute inset-0 rounded-full border-[1.5px] border-transparent border-t-text", styles.turn)} />
+          {/* The brass arc: the checking screen's one amber, so the turning reads as work going on. */}
+          <span className={clsx("absolute inset-0 rounded-full border-[2px] border-transparent border-t-accent", styles.turn)} />
         </span>
       );
     case "skipped":
@@ -316,12 +324,19 @@ export function CheckList({ rows, label = "Checks", live, className }: { rows: S
             <span className="flex min-w-0 flex-col gap-0.5">
               {/* The failed check is the list's red thing, with its mark: its name in red, never just a 10px cross. */}
               <span className={clsx("text-body", quiet ? "text-faint" : r.state === "skipped" ? "text-muted" : failed ? "text-stop" : "text-text")}>
-                {r.label}
-                <span className="sr-only">: {outcomeWord(r).toLowerCase()}</span>
+                {/* One run of text for a screen reader, "Taken in Remedy’s camera: passed", never the name and its state
+                    as two pieces with a space between them. */}
+                <span aria-hidden="true">{r.label}</span>
+                <span className="sr-only">{`${r.name.charAt(0).toUpperCase()}${r.name.slice(1)}: ${outcomeWord(r).toLowerCase()}`}</span>
               </span>
               {/* While the checks run every row keeps the line, so the list never changes height as rows land. */}
               {(live || reason) && (
-                <span key={`${r.state}-${r.read?.code ?? ""}`} className={clsx("min-h-[1.45em] text-ui text-pretty", failed && !r.read ? "text-text" : r.unrun ? "text-faint" : "text-muted", live && reason && styles.swap)}>
+                // "Checking" only repeats the state the name's hidden word gives a screen reader: hidden from it.
+                <span
+                  key={`${r.state}-${r.read?.code ?? ""}`}
+                  aria-hidden={r.state === "running" || undefined}
+                  className={clsx("min-h-[1.45em] text-ui text-pretty", failed && !r.read ? "text-text" : r.unrun ? "text-faint" : "text-muted", live && reason && styles.swap)}
+                >
                   {reason}
                 </span>
               )}

@@ -1,23 +1,25 @@
 import { Button } from "@/components/ui";
-import { plural, retryIn, type Refusal } from "@/lib/limits";
+import { retryIn, type Refusal } from "@/lib/limits";
 import { FocusTitle } from "./FocusTitle";
 import { ResetTime } from "./LocalTime";
 import { Notice } from "./Notice";
 
 /**
- * What a start refused by a daily limit says: which limit and that nothing was started or paid. `retry` is when to
- * come back without a time zone ("in about 6 hours"); the notice shows the exact reset in the viewer's own time once it can.
+ * What a start refused by a daily limit says: which limit, and that nothing was started or paid (or, when it's Remedy's
+ * own limit, that the refund is still owed). `retry` is when to come back without a time zone ("in about 6 hours"); the
+ * notice shows the exact reset in the viewer's own time once it can.
  */
-export function limitCopy({ kind, limit, until }: Refusal, { now }: { now: Date }): { title: string; description: string; retry: string } {
+export function limitCopy({ kind, until }: Refusal, { now }: { now: Date }): { title: string; description: string; retry: string } {
   const nothing = "Nothing was started and nothing was paid.";
+  const owed = "We can’t start new claims right now. Your refund is still owed.";
   const retry = retryIn(until, now);
   switch (kind) {
     case "account":
-      return { title: "This PayPal account has started today’s claims", description: `Each PayPal account can start ${plural(limit, "claim")} a day. ${nothing}`, retry };
+      return { title: "This PayPal account has reached today’s claim limit", description: nothing, retry };
     case "daily":
-      return { title: "Remedy is at today’s limit for new claims", description: nothing, retry };
+      return { title: "Remedy is at today’s limit for new claims", description: owed, retry };
     case "monthly":
-      return { title: "Remedy is at this month’s limit for new claims", description: nothing, retry };
+      return { title: "Remedy is at this month’s limit for new claims", description: owed, retry };
     case "checks":
       return { title: "Today’s photo checks are used up", description: nothing, retry };
   }
@@ -35,15 +37,19 @@ export interface RecallNotice {
  */
 export function LimitNotice({ refusal, demo, notice, now = new Date() }: { refusal: Refusal; demo: boolean; notice?: RecallNotice; now?: Date }) {
   const { title, description, retry } = limitCopy(refusal, { now });
+  // The body may already say the refund is owed: the notice's line then only says where to ask for it.
+  const owed = description.includes("still owed");
   return (
-    <div id="limit-notice" tabIndex={-1} className="rounded-control outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus">
+    <div id="limit-notice" tabIndex={-1} className="rounded-control outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-focus">
       <FocusTitle id="limit-notice" />
       <Notice tone="neutral" title={title}>
         {description} You can start {demo ? "one" : "a claim"} again <ResetTime until={refusal.until.toISOString()} prefix="after " fallback={retry} />.{" "}
         {demo
           ? "The company console shows every claim so far."
           : notice
-            ? `Your refund is still owed: ${notice.company}’s recall notice says how to reach them for it.`
+            ? owed
+              ? `${notice.company}’s recall notice says how to reach them for it.`
+              : `Your refund is still owed: ${notice.company}’s recall notice says how to reach them for it.`
             : null}
       </Notice>
     </div>

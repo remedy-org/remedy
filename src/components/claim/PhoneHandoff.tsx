@@ -47,9 +47,10 @@ export function PhoneHandoff({ qrSvg, url, code, primary, className }: PhoneHand
         <p className="text-ui text-muted">
           Scan it with the phone&rsquo;s camera and log in with the same PayPal account. Your code stays <span className="font-mono text-text">{code}</span>.
         </p>
-        {/* The link on one line, its middle elided so it never breaks mid-word: Copy link carries the whole of it. Named for
-            what it is, so a screen reader doesn't spell out the address. */}
-        <a href={url} aria-label="Open this claim on your phone" className="truncate font-mono text-micro whitespace-nowrap text-faint underline decoration-line-2 underline-offset-4 hover:text-muted">
+        {/* The link on one line, its middle elided so it never breaks mid-word: Copy link carries the whole of it. Its name
+            starts with what it is and ends with the words on screen, so voice control finds it by what it shows. */}
+        <a href={url} className="truncate font-mono text-micro whitespace-nowrap text-faint underline decoration-line-2 underline-offset-4 hover:text-muted">
+          <span className="sr-only">Open this claim on your phone: </span>
           {shortUrl(url)}
         </a>
         <Button variant="secondary" size="sm" onClick={copy} className="self-start">

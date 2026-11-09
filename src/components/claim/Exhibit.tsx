@@ -96,7 +96,7 @@ export function ClaimLayout({ labelledBy, head, checks, outcome, photo }: { labe
  * line under it whose height is kept even when it's empty, so the checks under it never move when the outcome lands.
  * Below 640px that line runs the full width under the thumbnail, so a two-sentence reason never squeezes beside it.
  */
-export function OutcomeHead({ id, thumb, title, lead, small, aside }: { id: string; thumb?: string; title: ReactNode; lead?: ReactNode; small?: boolean; aside?: ReactNode }) {
+export function OutcomeHead({ id, thumb, thumbAlt, title, lead, small, aside }: { id: string; thumb?: string; thumbAlt?: string; title: ReactNode; lead?: ReactNode; small?: boolean; aside?: ReactNode }) {
   // A reason (the result's) runs the full width under the thumbnail on a phone; the checking screen's line stays beside it.
   const wide = Boolean(lead) && !small;
   return (
@@ -106,7 +106,8 @@ export function OutcomeHead({ id, thumb, title, lead, small, aside }: { id: stri
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={thumb}
-          alt=""
+          // The phone's only view of the photo (the laptop's whole photo is hidden here), so it says what the photo is.
+          alt={thumbAlt ?? ""}
           style={{ viewTransitionName: PHOTO_TRANSITION }}
           className={clsx(
             "col-start-1 row-start-1 mr-4 size-18 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_70%] ring-1 ring-line [@media(max-height:600px)]:size-14",
