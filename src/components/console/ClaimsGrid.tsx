@@ -761,7 +761,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         valueGetter: (p) => (p.data ? (p.data.payoutFailedAt ? `not sent ${p.data.payoutFailedAt}` : p.data.payoutStatus) : null),
         cellRenderer: PayoutCell,
         width: OPTIONAL[still ? "still" : "queue"].payoutStatus,
-        headerTooltip: still ? undefined : "Sent once PayPal has the payout (Settling, then Settled), Refused when PayPal didn’t take it.",
+        headerTooltip: still ? undefined : "Sent and settling once PayPal has the payout, Paid once PayPal confirms it, Refused when PayPal didn’t take it.",
         tooltipComponent: still ? undefined : HeaderOnlyTip,
         enableCellChangeFlash: true,
         // The homepage's still draws its claims as live ones: one the rule decided to pay during its arrival flashes paid.

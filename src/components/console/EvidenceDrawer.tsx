@@ -489,13 +489,13 @@ function moneySteps(claim: DrawerClaim): Step[] {
     return [
       ...steps,
       { label: "Not sent", at: failure.at, failed: true, note: `${failure.what} at ${formatClock(failure.at)} UTC: nothing was paid, and the claim is still held.` },
-      { label: "Settled", at: null },
+      { label: MONEY_WORD.paid, at: null },
     ];
   }
   return [
     ...steps,
     { label: "Sent", at: at((e) => e.type === "payout_sent"), note: claim.decision === "held" ? "Held: nothing is sent until a person at the company approves." : undefined },
-    { label: "Settled", at: at((e) => e.type === "payout_updated" && e.detail.endsWith("SUCCESS")) },
+    { label: MONEY_WORD.paid, at: at((e) => e.type === "payout_updated" && e.detail.endsWith("SUCCESS")) },
   ];
 }
 
@@ -520,7 +520,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
                 <span
                   className={clsx(
                     "relative z-10 size-2.5 shrink-0 rounded-full",
-                    s.failed ? "border-2 border-stop bg-surface" : done ? (s.label === "Sent" || s.label === "Settled" ? "bg-pay" : "bg-text") : "border border-line-strong bg-surface",
+                    s.failed ? "border-2 border-stop bg-surface" : done ? (s.label === "Sent" || s.label === MONEY_WORD.paid ? "bg-pay" : "bg-text") : "border border-line-strong bg-surface",
                   )}
                 />
                 {next && <span className={clsx("absolute inset-x-0 left-2.5 hidden h-px @[26rem]:block", done && next.at && !s.failed ? "bg-muted/70" : "bg-line-strong/40")} />}

@@ -665,7 +665,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   };
 
   const state = stateAt(step, "final", { openId: claim });
-  // The rows with a visitor's decisions on them: a held claim paid reads Paid (Sent, Settled), one rejected Rejected.
+  // The rows with a visitor's decisions on them: a held claim approved reads Approved (nothing sent), one rejected Rejected.
   const decided = useMemo(() => rows.map((r) => decide(r, review[r.id])), [rows, review]);
   const shownRows = useRef(decided);
   useEffect(() => {
