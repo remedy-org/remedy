@@ -36,6 +36,10 @@ const LOCALE = {
   aggregationMaxFieldName: "${name}",
   crossFilterSumFieldName: "${name}, in this filter",
   crossFilterMaxFieldName: "${name}, in this filter",
+  // A count of claims is said in words ("Claim count"), never Studio's "Claim (countd)".
+  aggregationCountdFieldName: "${name} count",
+  aggregationCountdBucketName: "${name} count",
+  crossFilterCountdFieldName: "${name} count, in this filter",
   panelTitleAi: "Recall analyst",
   aiMessageInputPlaceholder: "Ask about this recall’s claims…",
   aiNewChat: "This conversation",
@@ -60,6 +64,12 @@ function namePanels(root: HTMLElement) {
     const stop = panel.querySelector<HTMLElement>(":scope > .ag-studio-layout-widget-focus-container");
     const content = panel.querySelector(".ag-studio-layout-widget-content");
     if (!stop || !content) continue;
+    // Studio's editor overlay behind every panel (its field-mapping skeleton: "Column Chart", "Grouped", "Claim count")
+    // is for building a report, which nobody does here: out of the accessibility tree, on every panel.
+    for (const overlay of panel.querySelectorAll<HTMLElement>(".ag-studio-layout-widget-skeleton-overlay-container:not([inert])")) {
+      overlay.setAttribute("aria-hidden", "true");
+      overlay.inert = true;
+    }
     const text = (cls: string) => panel.querySelector(`.ag-studio-layout-widget-${cls}`)?.textContent?.trim() ?? "";
     // The day chart keeps its columns' skeleton until AG Charts has drawn (insights.css), so its heading never sits over
     // an empty panel.
@@ -75,10 +85,6 @@ function namePanels(root: HTMLElement) {
     set(stop, "role", "group");
     set(stop, "aria-label", panelName(text("title")) || "Panel");
     set(stop, "aria-describedby", PANEL_KEYS);
-    for (const overlay of panel.querySelectorAll<HTMLElement>(".ag-studio-layout-widget-skeleton-overlay-container:not([inert])")) {
-      overlay.setAttribute("aria-hidden", "true");
-      overlay.inert = true;
-    }
   }
 }
 
@@ -261,7 +267,7 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
             aria-expanded
             className="fixed top-[68px] right-4 z-40 inline-flex min-h-8 items-center rounded-control px-2 text-ui text-muted transition-colors duration-160 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-0"
           >
-            Close the analyst
+            Close
           </button>,
           document.body,
         )}
