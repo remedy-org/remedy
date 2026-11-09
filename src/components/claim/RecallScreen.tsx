@@ -7,7 +7,7 @@ import { getSession, loginPath } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
 import { consentAction, ConsentCard, JUDGE_LOGIN_ID, type AuthError, type ConsentCardProps, type YourClaim } from "./ConsentCard";
 import { ClaimFrame, STEP_GRID } from "./Exhibit";
-import { FlowShell } from "./FlowShell";
+import { FlowShell, recallContext } from "./FlowShell";
 import { MobileCta } from "./MobileCta";
 import { businessDaysAfter, day, maskPayer } from "./model";
 import { RecallBrief } from "./RecallBrief";
@@ -68,7 +68,8 @@ function yourClaim(recall: Recall, claim: Claim): YourClaim {
 export function RecallView(props: ConsentCardProps) {
   const claim = props.yourClaim;
   return (
-    <FlowShell>
+    // The header names the recall here too, as on every step after it (and on /try), so the bar never changes under the owner.
+    <FlowShell context={recallContext(props.recall)}>
       <ClaimFrame>
         {/* One bounded track on a phone, so the card's widest line can never widen the page. */}
         <div className={STEP_GRID}>

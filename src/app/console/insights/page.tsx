@@ -66,24 +66,26 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
     // The page scrolls as one: Studio's canvas is sized to the report, so no panel scrolls inside another. The analyst's
     // sheet floats over the page's right edge (insights.css), so opening it reflows neither the header nor the report.
     <main className="flex flex-col pb-8">
-      <div className="page flex flex-wrap items-end justify-between gap-x-8 gap-y-3 pt-8 pb-5">
-        <div className="min-w-0">
-          {/* 960px at most: at 1440 its Import link takes a second line, so the open sheet (400px) never covers it. */}
-          <div className="mb-3 max-w-[60rem] empty:hidden">
-            <WorkspaceNote recall={recall} recalls={recalls} company={session.name} />
-          </div>
-          <h1 className="text-h2 font-medium text-balance">{keepHyphens(recall.product)}</h1>
-          <p className="mt-1.5 text-ui text-muted">
-            {filed(data.claims.map((c) => c.filedAt))} ·{" "}
-            <Link href={`/console?recall=${recall.id}`} className="text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
-              Open in Claims
-            </Link>
-          </p>
+      {/* The note over the page's full width, as on Claims, so it breaks where Claims' does. */}
+      <div className="page pt-8 pb-5">
+        <div className="mb-3 empty:hidden">
+          <WorkspaceNote recall={recall} recalls={recalls} company={session.name} />
         </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/insights" />}
-          {/* "Ask about this recall" lands here once the report has loaded (InsightsStudio). */}
-          <div id={INSIGHTS_ACTIONS} className="contents" />
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <div className="min-w-0">
+            <h1 className="text-h2 font-medium text-balance">{keepHyphens(recall.product)}</h1>
+            <p className="mt-1.5 text-ui text-muted">
+              {filed(data.claims.map((c) => c.filedAt))} ·{" "}
+              <Link href={`/console?recall=${recall.id}`} className="text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
+                Open in Claims
+              </Link>
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {recalls.length > 1 && <RecallPicker recalls={recalls.map((r) => ({ id: r.id, product: r.product }))} current={recall.id} basePath="/console/insights" />}
+            {/* "Ask about this recall" lands here once the report has loaded (InsightsStudio). */}
+            <div id={INSIGHTS_ACTIONS} className="contents" />
+          </div>
         </div>
       </div>
       {unreadable.length > 0 && (

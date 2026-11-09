@@ -296,7 +296,10 @@ describe("recall import", () => {
     expect(slugify("Gourmia Stainless Steel Digital 9 Slice Digital Air Fryer Ovens")).toBe("gourmia-stainless-steel-digital-9-slice-digital");
     expect(slugify("Ekouaer Girls’ Nightgowns")).toBe("ekouaer-girls-nightgowns");
     // The demo recall's checks are shown as written: the three recalled prints, and the tag the owner ties on.
-    expect(shownSpec(DEMO_SPEC)).toEqual(DEMO_SPEC);
+    expect(shownSpec(DEMO_SPEC)).toMatchObject({ proof_steps: DEMO_SPEC.proof_steps, note: DEMO_SPEC.note });
+    // In the console's one spelling, the product a sentence: the spec the photo check reads is left as written.
+    expect(shownSpec(DEMO_SPEC).product).toMatch(/a paper tag handwritten with X-VESOLJE and their one-time code\.$/);
+    expect(shownSpec(DEMO_SPEC).label_must_show[0]).toMatch(/^X-VESOLJE, handwritten on a paper tag/);
     expect(DEMO_SPEC.product).not.toMatch(/demo|stand-in|any colour counts|also counts/);
     expect(DEMO_SPEC.label_must_show[0]).not.toMatch(/product’s label/);
     expect(shownSpec({ ...DEMO_SPEC, note: "Checked on a demo pillow." }).note).toBe("");

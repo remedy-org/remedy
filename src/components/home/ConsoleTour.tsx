@@ -883,7 +883,11 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
           {...gate("report")}
           // A scroller a keyboard can reach, so its pages scroll with the arrow keys too.
           tabIndex={0}
-          onScroll={(e) => e.currentTarget.toggleAttribute("data-scrolled", e.currentTarget.scrollTop > 0)}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            el.toggleAttribute("data-scrolled", el.scrollTop > 0);
+            el.toggleAttribute("data-end", el.scrollTop + el.clientHeight >= el.scrollHeight - 2);
+          }}
           aria-label="CPSC progress report draft"
           data-on={state.body === "report" || undefined}
           className={clsx(styles.body, styles.reportBody)}

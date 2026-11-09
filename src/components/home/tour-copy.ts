@@ -7,7 +7,7 @@ export const TOUR = {
   tablist: "A tour of the Remedy console",
   steps: [
     { name: "Claims", sentence: "Every claim lands in one queue and is decided the moment its photos are in: paid, held for a person, rejected or blocked." },
-    { name: "Claim", sentence: "Any claim opens to its photos and the model’s own words. Approve or reject a held one there." },
+    { name: "Held claim", sentence: "Any claim opens to its photos and the model’s own words. Approve or reject a held one there." },
     { name: "Insights", sentence: "Insights shows where claims stop and why, and what PayPal paid out each day." },
     { name: "Report", sentence: "The monthly CPSC progress report drafts itself from the same claims. Review it, then file." },
   ],
