@@ -4,6 +4,7 @@ import { money, productNoun } from "@/components/claim/model";
 import { RecallScreen } from "@/components/claim/RecallScreen";
 import { getAppStore } from "@/lib/demo";
 import { getRecallBySlug } from "@/lib/store";
+import { SHARE_IMAGE } from "@/lib/shareImage";
 
 export async function generateMetadata({ params }: PageProps<"/r/[recall]">): Promise<Metadata> {
   const recall = await getRecallBySlug((await params).recall, await getAppStore());
@@ -13,8 +14,8 @@ export async function generateMetadata({ params }: PageProps<"/r/[recall]">): Pr
   return {
     title,
     description,
-    openGraph: { title: `${title} · Remedy`, description, siteName: "Remedy", type: "website" },
-    twitter: { card: "summary_large_image", title: `${title} · Remedy`, description },
+    openGraph: { title: `${title} · Remedy`, description, siteName: "Remedy", type: "website", images: [SHARE_IMAGE] },
+    twitter: { card: "summary_large_image", title: `${title} · Remedy`, description, images: [SHARE_IMAGE] },
   };
 }
 

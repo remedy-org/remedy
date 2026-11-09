@@ -4,6 +4,7 @@ import { RecallScreen } from "@/components/claim/RecallScreen";
 import { getAppStore, isDemoAllowed } from "@/lib/demo";
 import { getSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
+import { SHARE_IMAGE } from "@/lib/shareImage";
 
 const description = "Send four claims on a real recall. Remedy pays the genuine one through PayPal and stops the three fakes.";
 
@@ -15,8 +16,8 @@ export async function generateMetadata({ params }: PageProps<"/r/[recall]/try">)
   return {
     title: "Try a claim",
     description,
-    openGraph: { title: "Try a claim · Remedy", description, siteName: "Remedy", type: "website" },
-    twitter: { card: "summary_large_image", title: "Try a claim · Remedy", description },
+    openGraph: { title: "Try a claim · Remedy", description, siteName: "Remedy", type: "website", images: [SHARE_IMAGE] },
+    twitter: { card: "summary_large_image", title: "Try a claim · Remedy", description, images: [SHARE_IMAGE] },
   };
 }
 

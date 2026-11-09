@@ -6,6 +6,7 @@ import { Hero } from "@/components/home/Hero";
 import { Nav } from "@/components/home/Nav";
 import { Problem } from "@/components/home/Problem";
 import { Proof } from "@/components/home/Proof";
+import { SHARE_IMAGE } from "@/lib/shareImage";
 
 const description =
   "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera, five checks stop the fakes, and PayPal pays the refund within a minute.";
@@ -13,8 +14,8 @@ const share = "Remedy · Recall refunds, paid in a minute";
 
 export const metadata: Metadata = {
   title: { absolute: share },
-  openGraph: { title: share, description, siteName: "Remedy", type: "website" },
-  twitter: { card: "summary_large_image", title: share, description },
+  openGraph: { title: share, description, siteName: "Remedy", type: "website", images: [SHARE_IMAGE] },
+  twitter: { card: "summary_large_image", title: share, description, images: [SHARE_IMAGE] },
 };
 
 // Drawn ahead of time and again every hour: the For companies tour, its Insights and its report draft read the console's
