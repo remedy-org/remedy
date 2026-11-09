@@ -157,7 +157,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       {/* Back from PayPal with a refusal: focus lands on it, as on a limit notice, so a screen reader reads it (an alert
           already on the page at load is not announced). A limit notice focuses itself. */}
       {(unverified || error) && (
-        <div id={NOTICE_ID} tabIndex={-1} className="flex flex-col gap-7 rounded-control outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-focus">
+        <div id={NOTICE_ID} tabIndex={-1} className="flex flex-col gap-7 outline-hidden">
           {!refusal && <FocusTitle id={NOTICE_ID} />}
           {unverified && (
             <Notice title="This PayPal account isn’t verified">PayPal only lets us refund verified accounts. Verify yours with PayPal (a confirmed email and a linked bank or card), then log in again.</Notice>
@@ -205,7 +205,7 @@ function ClaimStatus({ claim, company, action }: { claim: YourClaim; company: st
       : claim.decision === "paid"
         ? `Paid on ${claim.paidOn}. This account’s claim for this recall is done.`
         : checking
-          ? "Your claim is saved. You can close this page, then open the claim link on your recall notice again to see the result. If it’s paid, PayPal emails you too."
+          ? "Your claim is saved. You can close this page, then open the link on your recall notice again to see the result. If it’s paid, PayPal emails you too."
           : claim.decision === "pending"
             ? "Your code is still running. Pick up where you left off."
             : "Each PayPal account can claim once per recall.";

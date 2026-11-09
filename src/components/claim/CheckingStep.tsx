@@ -218,10 +218,10 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
     decided || elapsed === null
       ? ""
       : elapsed <= SAVED_S
-        ? "This usually takes under a minute."
+        ? "This usually takes about 15 seconds."
         : elapsed > SLOW_S
           ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn’t answer."
-          : "Your claim is saved. You can close this page, then open the claim link on your recall notice again to see the result. If it’s paid, PayPal emails you too.";
+          : "Your claim is saved. You can close this page, then open the link on your recall notice again to see the result. If it’s paid, PayPal emails you too.";
 
   // One line for a screen reader (role="status", so it waits its turn), written once a reveal has caught up, never per
   // row as a batch lands: a row that resolved alone after a poll's wait is said with its reason; a batch of passes as a
