@@ -464,12 +464,18 @@
   }
 
   /*
-   * Film grain over the homepage and the claim flow (not the console): put .grain on the layout root. A fixed 160px
-   * noise tile at 3.5%, no blend mode, so scrolling never repaints the whole viewport.
+   * Film grain over the homepage and the claim flow (not the console): put .grain on the layout root (it makes it relative).
+   * A 160px noise tile at 3.5%, no blend mode, laid over the whole page rather than fixed to the screen: a fixed layer
+   * covered only the first screen of a full-page capture (a hard seam at the hero's foot, the page below a step darker)
+   * and could leave a strip uncovered while a phone's toolbar resizes the viewport. It scrolls with the page, so
+   * scrolling still never repaints it.
    */
+  .grain {
+    position: relative;
+  }
   .grain::after {
     content: "";
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 100;
     pointer-events: none;
