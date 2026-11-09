@@ -490,11 +490,14 @@ describe("wheel stops", () => {
     // From a beat, a nudge moves the story on to the next one, however far.
     expect(nudgeTo(1000, gentle, pins)).toBe(2600);
     expect(nudgeTo(2600, gentle.map((x) => -x), pins)).toBe(1000);
-    // A brush under NUDGE springs back onto the beat it began on.
-    expect(nudgeTo(1000, [10, 10, 10], pins)).toBe(1000);
-    // Begun off a beat, it settles on whichever is nearer where it would rest.
-    expect(nudgeTo(1400, gentle, pins)).toBe(1000);
+    // A trackpad's gentlest push (about 36px) moves the story on too; only a tremor under TREMOR springs back.
+    expect(nudgeTo(1000, [12, 12, 12], pins)).toBe(2600);
+    expect(nudgeTo(2600, [-12, -12, -12], pins)).toBe(1000);
+    expect(nudgeTo(1000, [3, 3], pins)).toBe(1000);
+    // Begun off a beat, it goes on to the beat ahead in its direction, never back against the hand.
+    expect(nudgeTo(1400, gentle, pins)).toBe(2600);
     expect(nudgeTo(1900, gentle, pins)).toBe(2600);
+    expect(nudgeTo(1900, gentle.map((x) => -x), pins)).toBe(1000);
     // A finished beat that is no stop (an exhibit check at its hold) is as good a rest.
     expect(nudgeTo(1000, gentle, pins, [0, 1000, 1700, 2600, 4000])).toBe(1700);
     // Bound 3px past a beat the page is easing over: back onto it, not left 3px off.
@@ -502,6 +505,25 @@ describe("wheel stops", () => {
     // Outside a pinned story slow scrolling stays the reader's.
     expect(nudgeTo(2700, gentle, pins)).toBeUndefined();
     expect(nudgeTo(1000, gentle, [])).toBeUndefined();
+  });
+
+  it("moves the story on with every gentle push, from the top and from every beat, and never against the hand", () => {
+    const pins: [number, number][] = [[0, 4000]];
+    const beats = [0, 1000, 1700, 2600, 4000];
+    for (const dir of [1, -1]) {
+      for (const from of beats) {
+        const next = beats.filter((s) => (s - from) * dir > 0).sort((a, b) => (a - b) * dir)[0];
+        if (next === undefined) continue;
+        expect(nudgeTo(from, Array(3).fill(12 * dir), pins, beats)).toBe(next);
+      }
+    }
+    // Pushes of 36px from the hero, each from where the last landed: down every time.
+    let at = 0;
+    for (let i = 0; i < 4; i++) {
+      const to = nudgeTo(at, [12, 12, 12], pins, beats);
+      expect(to).toBeGreaterThan(at);
+      at = to!;
+    }
   });
 
   it("settles a nudge Lenis has finished easing before the wheel is quiet long enough to tell", () => {

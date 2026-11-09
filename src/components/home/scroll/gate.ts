@@ -65,9 +65,9 @@ const SETTLE = 0.6;
  * to rest on it when it is nearer than the stop ahead: the stops below the Problem sheet are about a window apart, so a
  * spin that ran 270px past Results' stop rested with its heading under the nav. */
 const SETTLE_BACK = 0.3;
-/** px a gesture the page took no stop for must have moved it off the beat it began on for it to settle on the next beat
- * rather than back on that one (nudge): one notch of a wheel, or a gentle push on a trackpad, moves the story on a beat. */
-const NUDGE = 40;
+/** px under which a gesture the page took no stop for is a tremor and settles on the nearer beat (nudge). Any more is a
+ * push: a trackpad's gentlest is about 36px, and it must move the story on a beat in its direction, never spring back. */
+const TREMOR = 8;
 /** px a free run with no stop near may move to rest on a clean frame (stops.ts fit): no line cut by the nav or the
  * screen's foot. */
 const CLEAN = 120;
@@ -300,9 +300,9 @@ export function createGate(read: () => Course) {
   /**
    * A gesture the page took no stop for has gone quiet. Inside a pinned story only a finished beat is a whole frame, so
    * when the page is bound for anywhere else in one it settles on the nearest beat (RESTS), measured from where it would
-   * have come to rest; on the next one in its direction when the gesture began on the beat behind and moved it NUDGE px
-   * or more, so a gentle nudge or one notch moves the story on a beat rather than springing back. Outside the pinned
-   * stories slow scrolling stays the reader's.
+   * have come to rest. A push of TREMOR px or more lands on the beat ahead of where the gesture began, in its direction,
+   * nearest where it would rest, so a gentle nudge or one notch moves the story on a beat and never lands against the
+   * hand (a 36px push from the hero sprang back to 0). Outside the pinned stories slow scrolling stays the reader's.
    */
   function nudge(l: GateLenis) {
     loose = false;
@@ -318,8 +318,13 @@ export function createGate(read: () => Course) {
         if (ahead === undefined || (s - ahead) * dir < 0) ahead = s;
       } else if (back === undefined || (s - back) * dir > 0) back = s;
     }
-    const on = back !== undefined && Math.abs(back - origin) <= 1 && (rest - origin) * dir >= NUDGE;
-    const to = ahead !== undefined && (on || back === undefined || Math.abs(ahead - rest) <= Math.abs(back - rest)) ? ahead : back;
+    let to: number | undefined;
+    if ((rest - origin) * dir >= TREMOR) {
+      for (const s of rests) {
+        if ((s - origin) * dir > 1 && (to === undefined || Math.abs(s - rest) < Math.abs(to - rest))) to = s;
+      }
+    }
+    if (to === undefined) to = ahead !== undefined && (back === undefined || Math.abs(ahead - rest) <= Math.abs(back - rest)) ? ahead : back;
     // Landed on even where the page is on it already: Lenis would ease on past it to where the gesture was bound.
     if (to !== undefined) land(l, to, to >= at ? 1 : -1, performance.now());
   }
