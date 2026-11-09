@@ -119,7 +119,9 @@ describe("every replica reads the demo claims", () => {
     const { report } = reportPreview();
     const count = (o: string) => DEMO_CLAIMS.filter((d) => d.outcome === o).length;
     const outcomes = Object.fromEntries(report.outcomes.map((o) => [o.label, o.count]));
-    expect(outcomes).toMatchObject({ Paid: count("paid"), Approved: count("approved"), Held: count("held"), Rejected: count("rejected"), Blocked: count("blocked") });
+    // Approved, with nothing sent, has no claim, so the report leaves it out.
+    expect(outcomes).toMatchObject({ Paid: count("paid"), Held: count("held"), Rejected: count("rejected"), Blocked: count("blocked") });
+    expect(outcomes.Approved ?? 0).toBe(count("approved"));
     expect(report.stats.total).toBe(DEMO_CLAIMS.length);
     expect(report.sent).toBe(count("paid"));
     expect(JSON.stringify(report)).not.toMatch(/starter|seeded|sample|came with|workspace/i);

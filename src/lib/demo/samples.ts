@@ -1,8 +1,9 @@
 import type { Claim, Decision } from "../types";
 
-// The judges' demo (/r/kikea-x-vesolje/try): four sample claims that run the real pipeline on our own AI-made photos.
-// Photos are served from public/demo. Checked live against DEMO_SPEC on 7 Nov 2026 (GPT-6.1 Sol, high):
-// genuine paid, wrong-code rejected on the code check.
+// The judges' demo (/r/kikea-x-vesolje/try): four sample claims that run the real pipeline on our own AI-made photos of
+// the recalled pillow. Photos are served from public/demo. Checked three times each against DEMO_SPEC on 9 Nov 2026
+// (gpt-6.1-sol, high; eval/out/runs/kikea-gpt-6.1-sol-r1..3.json): genuine passed 3/3, wrong-code rejected on the code
+// check alone 3/3. The other two never reach the model.
 
 export type DemoSampleId = "genuine" | "wrong-code" | "ai-no-session" | "reposted";
 
@@ -34,26 +35,26 @@ export const DEMO_SAMPLES: DemoSample[] = [
   {
     id: "genuine",
     title: "A genuine claim",
-    description: "The pillow cut in half, with the X-VESOLJE tag and this claim’s code, M4T, on it. Every check passes, so Remedy pays it.",
-    photos: ["/demo/c02-1.jpg"],
+    description: "The feather-print pillow cut in half, with the X-VESOLJE tag and this claim’s code, M4T, on it. Every check passes, so Remedy pays it.",
+    photos: ["/demo/k01-1.jpg"],
     code: "M4T",
     tagReads: "M4T",
     liveSession: true,
     expect: "paid",
     decidedBy: "all",
-    source: "c02-pillow-cut-lamplight",
+    source: "k01-feathers-M4T",
   },
   {
     id: "wrong-code",
     title: "The wrong code",
-    description: "A convincing cut pillow, but the tag reads K7Q and this claim’s code is K7P. The model reads the tag character by character, and the rule rejects it.",
-    photos: ["/demo/c11-1.jpg"],
+    description: "The floral pillow, really cut in half, but the tag reads K7Q and this claim’s code is K7P. The model reads the tag character by character, and the rule rejects it.",
+    photos: ["/demo/k02-1.jpg"],
     code: "K7P",
     tagReads: "K7Q",
     liveSession: true,
     expect: "rejected",
     decidedBy: "code",
-    source: "c11-wrong-code-K7P",
+    source: "k02-floral-K7Q",
   },
   {
     id: "ai-no-session",
@@ -73,14 +74,14 @@ export const DEMO_SAMPLES: DemoSample[] = [
     id: "reposted",
     title: "A reposted photo",
     description: "The genuine claim’s photo, sent again as a new claim. It matches a photo already claimed, so Remedy blocks it before the model.",
-    photos: ["/demo/c02-1.jpg"],
+    photos: ["/demo/k01-1.jpg"],
     code: null,
     tagReads: "M4T",
     liveSession: true,
     expect: "blocked",
     decidedBy: "duplicate_photo",
     after: "genuine",
-    source: "c02-pillow-cut-lamplight",
+    source: "k01-feathers-M4T",
   },
 ];
 

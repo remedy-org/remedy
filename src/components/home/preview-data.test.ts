@@ -15,20 +15,17 @@ describe("homepage console tour data", () => {
     const counts = previewProps().counts!;
     const { report } = reportPreview();
     const { totals } = insightsStill(insightsPreview());
-    expect(counts).toMatchObject({ all: 7, paid: 1, settling: 0, approved: 1, held: 1, rejected: 1, blocked: 3 });
-    expect(report.stats).toMatchObject({ total: 7, remedied: 2, held: 1 });
-    // Paid is only RM-0442, the claim PayPal paid; RM-6276 is approved with nothing sent.
-    expect(report.outcomes.filter((o) => o.decision === "paid").map((o) => [o.label, o.count])).toEqual([
-      ["Paid", 1],
-      ["Approved", 1],
-    ]);
-    expect(totals).toMatchObject({ claims: 7, paid: 1, held: 1, refused: 4 });
+    expect(counts).toMatchObject({ all: 7, paid: 1, settling: 0, approved: 0, held: 1, rejected: 2, blocked: 3 });
+    expect(report.stats).toMatchObject({ total: 7, remedied: 1, held: 1 });
+    // Paid is only RM-0442, the claim PayPal paid; no claim sits approved with nothing sent.
+    expect(report.outcomes.filter((o) => o.decision === "paid").map((o) => [o.label, o.count])).toEqual([["Paid", 1]]);
+    expect(totals).toMatchObject({ claims: 7, paid: 1, held: 1, refused: 5 });
     expect(totals.refused).toBe(counts.rejected + counts.blocked);
   });
 
-  it("reads the funnel 7 → 4 → 2 → 1", () => {
+  it("reads the funnel 7 → 4 → 1 → 1", () => {
     const { totals } = insightsStill(insightsPreview());
-    expect([totals.photos, totals.preChecked, totals.photoChecked, totals.paid]).toEqual([7, 4, 2, 1]);
+    expect([totals.photos, totals.preChecked, totals.photoChecked, totals.paid]).toEqual([7, 4, 1, 1]);
   });
 
   it("replays the arrival of RM-0442, already in the rows, never an extra claim", () => {

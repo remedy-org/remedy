@@ -24,7 +24,7 @@ import * as fx from "./fixtures";
 // /dev/claim?s=<state>: every step and result of the owner's claim flow with fixtures, for screenshots and review.
 // Dev only: a 404 in production.
 
-const SHOTS = ["/demo/c02-1.jpg", "/demo/c03-2.jpg"];
+const SHOTS = ["/demo/k01-1.jpg", "/demo/k11-1.jpg"];
 
 type Render = () => ReactNode | Promise<ReactNode>;
 
@@ -192,17 +192,17 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
       </FlowShell>
     ),
   },
-  capture: { group: "Camera", note: "Live, no shots yet (the AC state)", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/c02-1.jpg" } } }) },
+  capture: { group: "Camera", note: "Live, no shots yet (the AC state)", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/k01-1.jpg" } } }) },
   "camera-starting": { group: "Camera", note: "Asking for permission", render: () => flow({ preview: { phase: "capture", capture: { camera: "starting" } } }) },
-  "camera-live": { group: "Camera", note: "Live, no shots yet", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/c02-1.jpg" } } }) },
-  "camera-shots": { group: "Camera", note: "Two shots taken", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/c02-1.jpg", shots: SHOTS } } }) },
-  "camera-sending": { group: "Camera", note: "Uploading", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/c02-1.jpg", shots: SHOTS, sending: true } } }) },
+  "camera-live": { group: "Camera", note: "Live, no shots yet", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/k01-1.jpg" } } }) },
+  "camera-shots": { group: "Camera", note: "Two shots taken", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/k01-1.jpg", shots: SHOTS } } }) },
+  "camera-sending": { group: "Camera", note: "Uploading", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/k01-1.jpg", shots: SHOTS, sending: true } } }) },
   "camera-send-error": {
     group: "Camera",
     note: "Upload failed",
-    render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/c02-1.jpg", shots: SHOTS.slice(0, 1), sendError: "No connection. Your photos are still here: send them again when you're back online." } } }),
+    render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/k01-1.jpg", shots: SHOTS.slice(0, 1), sendError: "No connection. Your photos are still here: send them again when you're back online." } } }),
   },
-  "camera-phone": { group: "Camera", note: "Continue on a phone (QR)", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/c02-1.jpg", showPhone: true } } }) },
+  "camera-phone": { group: "Camera", note: "Continue on a phone (QR)", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/k01-1.jpg", showPhone: true } } }) },
   "camera-denied": { group: "Camera", note: "Permission denied", render: () => flow({ preview: { phase: "capture", capture: { camera: "denied" } } }) },
   "camera-nocamera": { group: "Camera", note: "No camera on this device", render: () => flow({ preview: { phase: "capture", capture: { camera: "nocamera" } } }) },
   "camera-error": { group: "Camera", note: "Camera in use elsewhere", render: () => flow({ preview: { phase: "capture", capture: { camera: "error" } } }) },
@@ -252,7 +252,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "blocked-account": {
     group: "Result",
     note: "Blocked: repost from a paid account, its earlier claim beside it",
-    render: () => result(fx.blockedAccount, { duplicate: { photo: 1, earlier: { id: "RM-0412", n: 1, src: "/demo/c02-1.jpg" } } }),
+    render: () => result(fx.blockedAccount, { duplicate: { photo: 1, earlier: { id: "RM-0412", n: 1, src: "/demo/k01-1.jpg" } } }),
   },
   "demo-paid": {
     group: "Result",

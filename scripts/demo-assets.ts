@@ -1,8 +1,9 @@
 // Rebuilds the committed demo assets from the local eval (eval/ is git-ignored, so this only runs on a machine that has it):
 //   public/demo/<case>-<n>.jpg     our own AI-made sample photos, max 1200 px. Never the w- cases: those are third-party photos.
-//   src/lib/demo/verdicts.json     real model answers from eval/out/runs, copied verbatim, for the seeded claims.
-//   src/lib/review/replay.json     the app model's run-1 answer for each case, verbatim, keyed by photo SHA-256, for
-//                                  the local review replay (src/lib/review/replay.ts).
+//   public/demo/<case>-tag.jpg     the wrong-code photo's tag, cut at 800 x 400 from its full-size original.
+//   src/lib/demo/verdicts.json     real model answers from eval/out/runs, copied verbatim: run 1 of each case.
+//   src/lib/review/replay.json     the same answers, keyed by photo SHA-256, for the local review replay
+//                                  (src/lib/review/replay.ts).
 // npm run demo:assets
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -13,24 +14,31 @@ const ROOT = process.cwd();
 const PHOTOS = join(ROOT, "eval/photos");
 const RUNS = join(ROOT, "eval/out/runs");
 
-// Our own generated cases only (eval/photos/SOURCES.md). c11 is c01's photo under another code.
-const CASES = ["c01-pillow-cut-daylight", "c02-pillow-cut-lamplight", "c03-pillow-two-photos", "c05-pillow-code-scrawled", "c08-kikea-cut", "c09-written-K7O", "c10-photo-of-screen", "c11-wrong-code-K7P"];
-
-// Which stored answers feed the seeded claims: the app's model (Sol) for paid and rejected claims, and Terra's
-// real holds on c03 (it couldn't confirm both photos show the same pillow) for held ones.
-const VERDICTS: { model: string; cases: string[] }[] = [
-  { model: "gpt-6.1-sol", cases: ["c01-pillow-cut-daylight", "c03-pillow-two-photos", "c05-pillow-code-scrawled", "c09-written-K7O", "c10-photo-of-screen"] },
-  { model: "gpt-6.1-terra", cases: ["c03-pillow-two-photos"] },
+// Our own generated cases only (eval/photos/SOURCES.md), each with the run files its answer comes from (<runs>-r1.json).
+// The k cases are the demo recall's claims (src/lib/demo/claims.ts), checked by the app's model (gpt-6.1-sol, high)
+// against eval/specs/kikea-tagged.json; k11 is blocked before the photo check, so it has no answer. c09 stays for the
+// claim flow's dev previews of a hedged read.
+const CASES: { name: string; runs?: string }[] = [
+  { name: "k01-feathers-M4T", runs: "kikea-gpt-6.1-sol" },
+  { name: "k02-floral-K7Q", runs: "kikea-gpt-6.1-sol" },
+  { name: "k04-puzzle-joined-F3X", runs: "kikea-gpt-6.1-sol" },
+  { name: "k06-floral-screen-C7W", runs: "kikea-gpt-6.1-sol" },
+  { name: "k10-puzzle-far-dim-H9D", runs: "kikea-held2-gpt-6.1-sol" },
+  { name: "k11-feathers-J4R" },
+  { name: "c09-written-K7O", runs: "spike2-gpt-6.1-sol" },
 ];
 
+// The wrong-code photo's tag, in its full-size original's pixels (2:1), for the refusal's enlarged tag.
+const TAG = { name: "k02-floral-K7Q", box: { left: 676, top: 1046, width: 300, height: 150 } };
+
 const short = (c: string) => c.slice(0, 3);
+const jpgs = async (c: string) => (await readdir(join(PHOTOS, c))).filter((f) => f.endsWith(".jpg")).sort();
 
 async function photos() {
   await mkdir(join(ROOT, "public/demo"), { recursive: true });
-  for (const c of CASES) {
+  for (const { name: c } of CASES) {
     if (c.startsWith("w")) throw new Error("third-party photos never leave eval/");
-    const files = (await readdir(join(PHOTOS, c))).filter((f) => f.endsWith(".jpg")).sort();
-    for (const [i, f] of files.entries()) {
+    for (const [i, f] of (await jpgs(c)).entries()) {
       const out = join(ROOT, "public/demo", `${short(c)}-${i + 1}.jpg`);
       await sharp(await readFile(join(PHOTOS, c, f)))
         .rotate()
@@ -40,72 +48,79 @@ async function photos() {
       console.log(out);
     }
   }
+  const tag = join(ROOT, "public/demo", `${short(TAG.name)}-tag.jpg`);
+  await sharp(await readFile(join(PHOTOS, TAG.name, "01.jpg")))
+    .extract(TAG.box)
+    .resize(800, 400)
+    .jpeg({ quality: 85, mozjpeg: true })
+    .toFile(tag);
+  console.log(tag);
 }
 
 interface Row {
   case: string;
   decision: string;
   seconds: number;
+  model: string;
   verdict: unknown;
 }
 
-async function verdicts() {
-  const out: unknown[] = [];
-  for (const { model, cases } of VERDICTS) {
-    for (const run of [1, 2, 3]) {
-      const file = `spike2-${model}-r${run}.json`;
-      const { rows } = JSON.parse(await readFile(join(RUNS, file), "utf8")) as { rows: Row[] };
-      for (const c of cases) {
-        const row = rows.find((r) => r.case === c);
-        if (!row?.verdict) throw new Error(`${file} has no verdict for ${c}`);
-        const kase = JSON.parse(await readFile(join(PHOTOS, c, "case.json"), "utf8")) as { code: string };
-        const n = (await readdir(join(PHOTOS, c))).filter((f) => f.endsWith(".jpg")).length;
-        out.push({
-          case: c,
-          source: `eval/out/runs/${file}`,
-          model,
-          code: kase.code,
-          photos: Array.from({ length: n }, (_, i) => `${short(c)}-${i + 1}.jpg`),
-          seconds: row.seconds,
-          verdict: row.verdict,
-        });
-      }
-    }
+// Run 1 of each case: one real answer per photo, verbatim.
+async function answers() {
+  const out = [];
+  for (const { name: c, runs } of CASES) {
+    if (!runs) continue;
+    const file = `${runs}-r1.json`;
+    const { rows } = JSON.parse(await readFile(join(RUNS, file), "utf8")) as { rows: Row[] };
+    const row = rows.find((r) => r.case === c);
+    if (!row?.verdict) throw new Error(`${file} has no verdict for ${c}`);
+    const kase = JSON.parse(await readFile(join(PHOTOS, c, "case.json"), "utf8")) as { code: string };
+    const files = await jpgs(c);
+    out.push({ c, file, row, code: kase.code, files });
   }
-  const file = join(ROOT, "src/lib/demo/verdicts.json");
-  await writeFile(file, JSON.stringify(out, null, 2) + "\n");
-  console.log(`${file} (${out.length} verdicts)`);
+  return out;
 }
 
 const sha256 = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 
-// Each photo is keyed by its bytes as committed in public/demo (what the demo samples send) and as in eval/photos.
-async function replay() {
-  const file = "spike2-gpt-6.1-sol-r1.json";
-  const { rows } = JSON.parse(await readFile(join(RUNS, file), "utf8")) as { rows: Row[] };
-  const out: unknown[] = [];
-  for (const c of CASES) {
-    const row = rows.find((r) => r.case === c);
-    if (!row?.verdict) throw new Error(`${file} has no verdict for ${c}`);
-    const kase = JSON.parse(await readFile(join(PHOTOS, c, "case.json"), "utf8")) as { code: string };
-    const files = (await readdir(join(PHOTOS, c))).filter((f) => f.endsWith(".jpg")).sort();
-    const photos = await Promise.all(
-      files.map(async (f, i) => {
-        const name = `${short(c)}-${i + 1}.jpg`;
-        return { name, sha256: [sha256(await readFile(join(ROOT, "public/demo", name))), sha256(await readFile(join(PHOTOS, c, f)))] };
-      }),
-    );
-    out.push({ case: c, source: `eval/out/runs/${file}`, model: "gpt-6.1-sol", code: kase.code, photos, verdict: row.verdict });
-  }
-  const target = join(ROOT, "src/lib/review/replay.json");
-  await writeFile(target, JSON.stringify(out, null, 2) + "\n");
-  console.log(`${target} (${out.length} answers)`);
+async function main() {
+  await photos();
+  const rows = await answers();
+  const verdicts = rows.map(({ c, file, row, code, files }) => ({
+    case: c,
+    source: `eval/out/runs/${file}`,
+    model: row.model,
+    code,
+    photos: files.map((_, i) => `${short(c)}-${i + 1}.jpg`),
+    seconds: row.seconds,
+    verdict: row.verdict,
+  }));
+  const vFile = join(ROOT, "src/lib/demo/verdicts.json");
+  await writeFile(vFile, JSON.stringify(verdicts, null, 2) + "\n");
+  console.log(`${vFile} (${verdicts.length} verdicts)`);
+
+  // Each photo is keyed by its bytes as committed in public/demo (what the demo samples send) and as in eval/photos.
+  const replay = await Promise.all(
+    rows.map(async ({ c, file, row, code, files }) => ({
+      case: c,
+      source: `eval/out/runs/${file}`,
+      model: row.model,
+      code,
+      photos: await Promise.all(
+        files.map(async (f, i) => {
+          const name = `${short(c)}-${i + 1}.jpg`;
+          return { name, sha256: [sha256(await readFile(join(ROOT, "public/demo", name))), sha256(await readFile(join(PHOTOS, c, f)))] };
+        }),
+      ),
+      verdict: row.verdict,
+    })),
+  );
+  const rFile = join(ROOT, "src/lib/review/replay.json");
+  await writeFile(rFile, JSON.stringify(replay, null, 2) + "\n");
+  console.log(`${rFile} (${replay.length} answers)`);
 }
 
-photos()
-  .then(verdicts)
-  .then(replay)
-  .catch((e) => {
-    console.error(e instanceof Error ? e.message : e);
-    process.exit(1);
-  });
+main().catch((e) => {
+  console.error(e instanceof Error ? e.message : e);
+  process.exit(1);
+});

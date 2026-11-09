@@ -2,8 +2,8 @@ import type { Verdict } from "@/components/console/VerdictMark";
 import { GENUINE } from "@/lib/demo/claims";
 
 // The one claim the homepage stages, start to finish: RM-0442 (src/lib/demo/claims.ts, GENUINE), the genuine claim (photo
-// c02, code M4T) on the X-VESOLJE recall (CPSC 27-071), sent to PayPal 15 s after its photos arrived and confirmed by PayPal at 55 s. Its photo is
-// generated (benchmark case c02-pillow-cut-lamplight, docs/EVAL.md), and it carries no label (owner rule: no internal
+// k01, code M4T) on the X-VESOLJE recall (CPSC 27-071), sent to PayPal 15 s after its photos arrived and confirmed by PayPal at 55 s. Its photo is
+// generated (eval case k01-feathers-M4T: the recalled feather print, cut in half and tagged), and it carries no label (owner rule: no internal
 // labels; the site's one sandbox line is in /terms). These are presentational copies of the claim screens: nothing here
 // imports src/components/claim/*.
 export const CLAIM = {
@@ -83,13 +83,13 @@ export const SHOT_AT = [0.432, 0.444, 0.456];
 // The console replica after the payout: RM-0442 slides in over the recall's other claims, exactly the rows the homepage's
 // console tour and the console list (src/lib/demo/claims.ts, built by the seed), newest first: the same ids, photos,
 // verdicts, reasons, filing times, photo-check times and amounts, so a claim reads the same in every picture
-// (claims.test.ts checks it). Paid only where PayPal paid; Approved is a claim the rule passed with nothing sent.
+// (claims.test.ts checks it). Paid only where PayPal paid.
 // `fails`: which of the five checks (0 to 4) stopped a rejected or blocked claim. `filed`: day and time, UTC.
 export const CONSOLE_ROWS: { photo: string; filed: string; id: string; status: Verdict; reason: string; time?: string; amount?: number; fails?: number }[] = [
-  { photo: "/demo/c09-1.jpg", filed: "7 Nov 10:26", id: "RM-9475", status: "blocked", reason: "PayPal account not verified", fails: 2 },
-  { photo: "/demo/c05-1.jpg", filed: "6 Nov 22:51", id: "RM-2125", status: "blocked", reason: "Photo already used in another claim · RM-6276", fails: 1 },
-  { photo: "/demo/c11-1.jpg", filed: "6 Nov 17:39", id: "RM-0118", status: "rejected", reason: "Tag reads K7Q · code is K7P", time: "10 s", fails: 3 },
-  { photo: "/demo/c03-1.jpg", filed: "6 Nov 13:05", id: "RM-9629", status: "held", reason: "Couldn’t tell if both photos show the same item", time: "12 s", amount: 29.99 },
-  { photo: "/demo/c05-1.jpg", filed: "6 Nov 08:17", id: "RM-6276", status: "approved", reason: "All checks passed", time: "11 s", amount: 29.99 },
+  { photo: "/demo/k11-1.jpg", filed: "7 Nov 10:26", id: "RM-9475", status: "blocked", reason: "PayPal account not verified", fails: 2 },
+  { photo: "/demo/k04-1.jpg", filed: "6 Nov 22:51", id: "RM-2125", status: "blocked", reason: "Photo already used in another claim · RM-6276", fails: 1 },
+  { photo: "/demo/k02-1.jpg", filed: "6 Nov 17:39", id: "RM-0118", status: "rejected", reason: "Tag reads K7Q · code is K7P", time: "9 s", fails: 3 },
+  { photo: "/demo/k10-1.jpg", filed: "6 Nov 13:05", id: "RM-9629", status: "held", reason: "Couldn’t read the label clearly", time: "20 s", amount: 29.99 },
+  { photo: "/demo/k04-1.jpg", filed: "6 Nov 08:17", id: "RM-6276", status: "rejected", reason: "Destruction not shown", time: "14 s", fails: 4 },
   { photo: "/demo/web-1.jpg", filed: "5 Nov 19:42", id: "RM-9545", status: "blocked", reason: "Photos outside the live camera session", fails: 0 },
 ];

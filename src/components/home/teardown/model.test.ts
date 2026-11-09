@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import storedVerdicts from "@/lib/demo/verdicts.json";
 import { CHECKS, EXHIBIT } from "./claim";
 import { ARRIVE, BEATS, DEPART, RANGES, RECEIPT_FADE, SHOTS, TOTAL_VH, clock, holdOf, shotAt, stateAt } from "./model";
 
@@ -164,8 +165,10 @@ describe("Opened Exhibit model", () => {
     expect(stateAt(0.4321)).toEqual(stateAt(0.4321));
   });
 
-  it("quotes the model verbatim from the stored run (RM-0442, case c02)", () => {
-    expect(CHECKS[3].quote).toBe("The handwritten code on the attached paper tag reads “M4T”, matching the expected code character by character.");
-    expect(CHECKS[4].quote).toBe("Two separated pillow halves are visible, with exposed cut edges and stuffing spilling out.");
+  it("quotes the model verbatim from the stored answer (RM-0442, case k01)", () => {
+    const answer = storedVerdicts.find((v) => v.case === "k01-feathers-M4T")!.verdict;
+    const curly = (t: string) => t.replace(/"([^"]*)"/g, "“$1”");
+    expect(CHECKS[3].quote).toBe(curly(answer.challenge_code.evidence));
+    expect(CHECKS[4].quote).toBe(curly(answer.steps[0].evidence));
   });
 });

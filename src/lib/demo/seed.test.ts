@@ -28,22 +28,29 @@ describe("buildSeedClaims", () => {
     expect(reposts).toHaveLength(1);
     const named = reposts[0].reasons.find((r) => r.check === "duplicate_photo")!.text.match(/RM-\d{4}/)?.[0];
     const copied = claims.find((c) => c.id === named);
-    expect(copied?.decision).toBe("paid");
+    // The claim it copied was decided on its own photo (RM-6276: rejected, not cut fully in half).
+    expect(copied?.decision).toBe("rejected");
     expect(copied!.photos.map((p) => p.hash)).toEqual(reposts[0].photos.map((p) => p.hash));
     expect(Date.parse(copied!.createdAt)).toBeLessThan(Date.parse(reposts[0].createdAt));
   });
 
-  it("issues codes Remedy could issue, except where the photos already carry an eval case's code", () => {
-    const evalCodes = new Set(storedVerdicts.map((v) => v.code));
-    for (const c of claims) expect(CODE_PATTERN.test(c.code) || evalCodes.has(c.code)).toBe(true);
+  it("issues every claim its own code, one Remedy could issue; a wrong code on a tag was never issued to anyone", () => {
+    for (const c of claims) expect(c.code).toMatch(CODE_PATTERN);
+    expect(new Set(claims.map((c) => c.code)).size).toBe(claims.length);
+    const misread = claims.filter((c) => c.reasons.some((r) => r.check === "code" && r.outcome === "reject"));
+    expect(misread.map((c) => c.id)).toEqual(["RM-0118"]);
+    const onTag = misread[0].verdict!.challenge_code.text_seen!;
+    expect(onTag).toBe("K7Q");
+    expect(onTag).not.toMatch(CODE_PATTERN);
+    expect(claims.map((c) => c.code)).not.toContain(onTag);
+    // Every stored answer is for one of these photos, under the claim's own code.
+    for (const c of claims.filter((c) => c.verdict)) expect(storedVerdicts.some((v) => v.code === c.code && v.photos.join() === c.photos.map((p) => p.key.slice(5)).join())).toBe(true);
   });
 
-  it("pays only RM-0442 through PayPal, 15 s after its photo; the other claim the rule passed has nothing sent", () => {
+  it("pays only RM-0442 through PayPal, 15 s after its photo, and leaves no claim approved with nothing sent", () => {
     const paid = claims.filter((c) => c.decision === "paid");
-    expect(paid.map((c) => [c.id, c.payout?.status ?? null])).toEqual([
-      ["RM-0442", "SUCCESS"],
-      ["RM-6276", null],
-    ]);
+    expect(paid.map((c) => [c.id, c.payout?.status ?? null])).toEqual([["RM-0442", "SUCCESS"]]);
+    expect(DEMO_CLAIMS.some((d) => d.outcome === "approved")).toBe(false);
     const genuine = paid[0];
     const photos = Date.parse(genuine.events.find((e) => e.type === "photos_received")!.at);
     expect((Date.parse(genuine.events.find((e) => e.type === "payout_sent")!.at) - photos) / 1000).toBe(15);
@@ -73,7 +80,7 @@ describe("buildSeedClaims", () => {
 describe("demo samples", () => {
   it("point at committed photos of our own cases", () => {
     for (const s of DEMO_SAMPLES) {
-      expect(s.source).toMatch(/^c\d\d-/);
+      expect(s.source).toMatch(/^[ck]\d\d-/);
       for (const p of s.photos) expect(existsSync(join(process.cwd(), "public", p))).toBe(true);
     }
   });

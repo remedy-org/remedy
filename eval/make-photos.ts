@@ -35,7 +35,21 @@ const STANDIN = "eval/specs/standin-pillow.json";
 const DONE = { label: "yes", steps: ["done", "done"], code: "yes", screen: "no" };
 const tag = (code: string, pen = "black marker") =>
   `A white paper luggage tag is tied to it with string. On the tag, in ${pen} handwriting, the first line reads "X-VESOLJE" and the second line reads "${code}", both clearly legible.`;
+// The demo claims' tag: tied to one half, in an owner's slightly messy marker, the code always readable.
+const ownerTag = (code: string, detail = "") =>
+  `A small white paper luggage tag is tied to one piece with thin string, facing the camera. On the tag, in slightly messy black marker handwriting, the first line reads "X-VESOLJE" and the second line reads "${code}"${detail ? `; ${detail}` : ""}. Every character is legible.`;
 const dir = (name: string) => join("eval/photos", name);
+// The demo recall's own pillow: the CPSC photo's prints, with the tag the spec asks for (no label: CPSC says it has none).
+const KIKEA = "eval/specs/kikea-tagged.json";
+const KIKEA_REFS = ["w09-kikea-product-photo/01.png", "h02-kikea-feathers-cut/01.jpg"];
+const MIXED = "Ordinary mixed indoor light: a ceiling light and a lamp, a little uneven, with soft shadows; not a studio photo. Slightly imperfect framing, real textures, and no writing anywhere except on the tag.";
+const PRINTS = {
+  leftmost: "white with small blue flowers and green leaves",
+  middle: "dark brown with small multicoloured feathers",
+  rightmost: "multicoloured jigsaw puzzle pieces in red, blue, teal, yellow and brown",
+};
+const kikea = (which: keyof typeof PRINTS, scene: string, tagText: string) =>
+  `An ordinary smartphone photo, taken at home, of the ${which} pillow in the first picture (${PRINTS[which]}): the same C shape and the same print, ${scene}. It has been cut fully in half with scissors, like the pillow in the second picture: two separate pieces with a gap between them, white polyester stuffing spilling out of both cut ends. ${tagText} ${MIXED}`;
 
 const CASES: GenCase[] = [
   {
@@ -126,6 +140,81 @@ const CASES: GenCase[] = [
     name: "h05-pillow-slit-only", code: "J4C", expect: ["reject", "hold"], spec: STANDIN, truth: { ...DONE, steps: [["not_done", "unclear"], "done"] },
     note: "Held out. Right tag and code, but the pillow only has a short slit; it is not cut in half.",
     photos: [{ prompt: `A grey C-shaped nursing pillow lies whole on a sofa, with one short slit about 10 cm long in its side and a little stuffing poking out of the slit; it is otherwise intact and in one piece. ${tag("J4C")} ${PHONE}` }],
+  },
+  // The demo recall's claims (src/lib/demo/claims.ts): the recalled pillow itself, in one of its three prints, cut in half
+  // and tagged. Edits of the CPSC photo (w09) for the print, with h02 for how a cut one looks.
+  {
+    name: "k01-feathers-M4T", code: "M4T", expect: "pass", spec: KIKEA, truth: DONE,
+    note: "RM-0442, the genuine claim: the feather print cut in half, tag with X-VESOLJE and M4T.",
+    photos: [{ from: KIKEA_REFS, prompt: kikea("middle", "lying on a beige living-room rug in the evening, a pair of kitchen scissors beside it", ownerTag("M4T")) }],
+  },
+  {
+    name: "k02-floral-K7Q", code: "K7P", expect: "reject", spec: KIKEA, truth: { ...DONE, code: "no" },
+    note: "RM-0118: the floral print cut in half, but the tag reads K7Q (Q is never issued) and the claim's code is K7P.",
+    photos: [{ from: KIKEA_REFS, prompt: kikea("leftmost", "lying on a grey tiled kitchen floor", ownerTag("K7Q", "the last character is a capital Q with a clear tail")) }],
+  },
+  {
+    name: "k03-feathers-half-H9D", code: "H9D", expect: ["hold", "reject"], spec: KIKEA, truth: { ...DONE, steps: [["unclear", "not_done"], "done"] },
+    note: "RM-9629: the feather print, but only one cut half is in the frame, so the photo can't show it was cut fully in half.",
+    photos: [{
+      from: KIKEA_REFS,
+      prompt: `An ordinary smartphone photo, taken at home, of one piece of the middle pillow in the first picture (dark brown with small multicoloured feathers), same print. The pillow has been cut with scissors and only one of its pieces is in the photo: a close shot of that one piece lying on a sofa cushion, its cut end toward the camera with white polyester stuffing coming out; whatever else there is lies outside the frame. ${ownerTag("H9D")} ${MIXED}`,
+    }],
+  },
+  {
+    name: "k04-puzzle-joined-F3X", code: "F3X", expect: ["hold", "reject"], spec: KIKEA, truth: { ...DONE, steps: [["unclear", "not_done"], "done"] },
+    note: "RM-6276 (and its repost RM-2125): the puzzle print cut most of the way across, the two halves still joined by a strip of uncut fabric.",
+    photos: [{
+      from: KIKEA_REFS,
+      prompt: `An ordinary smartphone photo, taken at home, of the rightmost pillow in the first picture (multicoloured jigsaw puzzle pieces in red, blue, teal, yellow and brown), same C shape and print, lying on a wooden bedroom floor. It has been cut with scissors across the middle, but not all the way: the two halves are still joined by a strip of uncut fabric about 5 cm wide along the inner edge of the C, and white stuffing spills out of the cut. ${ownerTag("F3X")} ${MIXED}`,
+    }],
+  },
+  {
+    name: "k05-puzzle-J4R", code: "J4R", expect: "pass", spec: KIKEA, truth: DONE,
+    note: "RM-9475: the puzzle print cut in half on a bed, tag with X-VESOLJE and J4R; the claim is blocked before the photo check (unverified account).",
+    photos: [{ from: KIKEA_REFS, prompt: kikea("rightmost", "lying on an unmade bed, a window to one side", ownerTag("J4R")) }],
+  },
+  {
+    name: "k07-feathers-tag-loose-H9D", code: "H9D", expect: ["hold", "reject"], spec: KIKEA, truth: { ...DONE, steps: ["done", ["unclear", "not_done"]] },
+    note: "The feather print cut in half, but the tag lies loose beside it, its string untied, so the photo can't show it was on this pillow.",
+    photos: [{
+      from: KIKEA_REFS,
+      prompt: kikea("middle", "lying on a grey sofa", `A small white paper luggage tag lies loose on the sofa a hand's width from the pillow, not tied to anything, its untied string trailing. On the tag, in slightly messy black marker handwriting, the first line reads "X-VESOLJE" and the second line reads "H9D". Every character is legible.`),
+    }],
+  },
+  {
+    name: "k08-feathers-smudged-H9D", code: "H9D", expect: ["hold", "reject"], spec: KIKEA, truth: { ...DONE, code: ["unclear", "no"] },
+    note: "The feather print cut in half, but the tag's last character is smudged by a thumb, so the code can't be read for sure.",
+    photos: [{ from: KIKEA_REFS, prompt: kikea("middle", "lying on a wooden floor by a radiator", ownerTag("H9D", "the marker on the last character has been smudged by a thumb into a soft grey smear, so it could be a D or an O")) }],
+  },
+  {
+    name: "k09-floral-tag-tucked-H9D", code: "H9D", expect: ["hold", "reject"], spec: KIKEA, truth: { ...DONE, code: ["unclear", "no"] },
+    note: "The floral print cut in half, the tag tied on, but its second line runs under the pillow's edge: only the H of H9D shows.",
+    photos: [{
+      from: KIKEA_REFS,
+      prompt: kikea("leftmost", "lying on a pale bedspread", `A small white paper luggage tag is tied to one piece with thin string. The tag has slipped partly under the edge of that piece: its first line, "X-VESOLJE" in slightly messy black marker, is fully visible, but of its second line only the first character, a hand-written "H", shows; the rest of that line is hidden under the pillow's fabric.`),
+    }],
+  },
+  {
+    name: "k10-puzzle-far-dim-H9D", code: "H9D", expect: ["hold", "reject"], spec: KIKEA, truth: { ...DONE, code: ["unclear", "no"] },
+    note: "The puzzle print cut in half, shot from standing height in a dim room: the tag is small and its writing too soft to read character by character.",
+    photos: [{
+      from: KIKEA_REFS,
+      prompt: `An ordinary smartphone photo taken from standing height, looking down from about two metres, of the rightmost pillow in the first picture (multicoloured jigsaw puzzle pieces in red, blue, teal, yellow and brown) lying in the middle of a large living-room rug, cut fully in half: two separate pieces, stuffing out of the cut ends. A small white paper tag is tied to one piece with string; it is small in the frame, and its two hand-written lines are too small and soft to make out character by character. The room is dim, lit by one lamp in the evening, and the photo is slightly blurred by camera shake. Real textures, no studio look, no other writing anywhere.`,
+    }],
+  },
+  {
+    name: "k11-feathers-J4R", code: "J4R", expect: "pass", spec: KIKEA, truth: DONE,
+    note: "RM-9475: the feather print cut in half on a bedroom floor, tag with X-VESOLJE and J4R; the claim is blocked before the photo check (unverified account).",
+    photos: [{ from: KIKEA_REFS, prompt: kikea("middle", "lying on a dark wooden bedroom floor beside the foot of a bed, grey morning light from a window mixing with a ceiling light", ownerTag("J4R")) }],
+  },
+  {
+    name: "k06-floral-screen-C7W", code: "C7W", expect: ["reject", "hold"], spec: KIKEA, truth: { code: "yes", screen: "yes" },
+    note: "A photo of a laptop screen showing the floral print cut in half, tag with X-VESOLJE and C7W.",
+    photos: [{
+      from: KIKEA_REFS,
+      prompt: `A smartphone photo of a laptop screen on a desk. The screen shows, full screen, a photo of the leftmost pillow in the first picture (white with small blue flowers and green leaves) cut fully in half, white stuffing out of the cut ends. ${ownerTag("C7W")} The laptop's bezel and part of its keyboard are visible, with a lamp's glare and faint moiré on the screen. ${MIXED}`,
+    }],
   },
   { name: "c11-wrong-code-K7P", copy: "c01-pillow-cut-daylight", code: "K7P", expect: "reject", spec: STANDIN, truth: { ...DONE, code: "no" }, note: "c01's photo (K7Q written), but this claim's code is K7P." },
   { name: "c12-wrong-code-K1Q", copy: "c06-steamfast-tag", code: "K1Q", expect: "reject", spec: "eval/specs/steamfast-steamer.json", truth: { ...DONE, code: "no" }, note: "c06's photo (K7Q written), but this claim's code is K1Q." },
