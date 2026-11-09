@@ -26,7 +26,7 @@ describe("Opened Exhibit model", () => {
     expect(z.sent).toBe(true);
     expect(z.stamped).toBe(true);
     expect(z.receipt).toBe(1);
-    expect(clock(z.seconds)).toBe(`0:${EXHIBIT.seconds}`);
+    expect(clock(z.seconds)).toBe(`0:${EXHIBIT.seconds}.0`);
   });
 
   it("shows each check at its hold finished: it and the checks before it passed, the camera still on it", () => {
@@ -138,6 +138,15 @@ describe("Opened Exhibit model", () => {
   it("has read all three characters by the code beat's hold, none still being read", () => {
     expect(stateAt(holdOf("code")).chars).toBe(3);
     expect(stateAt(holdOf("code")).charNow).toBe(-1);
+  });
+
+  it("moves the clock at every check's hold, in tenths through the pre-checks", () => {
+    const at = CHECKS.map((c) => clock(stateAt(holdOf(c.id)).seconds));
+    // Each check's stop shows a later time than the one before, the three pre-checks inside the first half second.
+    expect([...at].sort()).toEqual(at);
+    expect(new Set(at).size).toBe(CHECKS.length);
+    for (const t of at.slice(0, 3)) expect(t).toMatch(/^0:00\.[0-4]$/);
+    expect(at[0]).not.toBe("0:00.0");
   });
 
   it("never runs the clock backwards, and stays inside 0:00 to 0:15", () => {

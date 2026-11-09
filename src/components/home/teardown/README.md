@@ -103,8 +103,9 @@ The server always renders the static form.
 - The two quotes are the model's stored words on that photo. `claim.ts` gives the run file and the field each one
   comes from.
 - The fingerprints are the real dHash values of the demo photos, computed with `src/lib/fingerprint.ts`.
-- The clock follows the real 15 s: the pre-checks finish in under a second, the model reads until about 0:14, and the
-  payout goes at 0:15.
+- The clock follows the claim's real timeline, to the tenth: the three pre-checks are done by 0:00.3 (a tenth each as
+  they tick), the model reads until it answers at 0:14.3, and the payout is sent at 0:15.0 (PayPal confirmed it at
+  55 s, which the receipt says).
 
 ### Pacing
 

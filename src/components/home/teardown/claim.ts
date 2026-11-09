@@ -22,6 +22,9 @@ export const EXHIBIT = {
   seconds: GENUINE.toPayout!,
   /** Photo received to PayPal confirming the payout, as the console's timeline has it. */
   confirmed: 55,
+  /** Photo received to the three pre-checks done, and to the model's answer (the stored run's 14.366 s). */
+  prechecked: 0.3,
+  answered: 14.366,
   photo: `/demo/${GENUINE.photos[0]}`,
   /** The photos of the recall's three claims before it (RM-9475, RM-2125, RM-0118 in claims.ts), for the fingerprint
    * check. */
