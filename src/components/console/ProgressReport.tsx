@@ -169,42 +169,40 @@ export function ProgressReport({
       </section>
 
       {/* The figures CPSC's Monthly Progress Report asks for, from the claims alone; what Remedy can't know is named, not
-          guessed. */}
-      {!home && (
-        <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
-          <H>For the monthly progress report</H>
-          <table className="w-full text-ui">
-            <tbody>
-              {(
+          guessed. The homepage's sheet carries them too: it is the console's draft, word for word. */}
+      <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
+        <H>For the monthly progress report</H>
+        <table className="w-full text-ui">
+          <tbody>
+            {(
+              [
+                ["Units corrected by refund", formatCount(s.remedied), "Destroyed on camera and approved"],
+                ["Units corrected by repair or replacement", "0", "The remedy is a refund"],
                 [
-                  ["Units corrected by refund", formatCount(s.remedied), "Destroyed on camera and approved"],
-                  ["Units corrected by repair or replacement", "0", "The remedy is a refund"],
-                  [
-                    "Units remaining at consumer level",
-                    s.unitsSold ? formatCount(Math.max(0, s.unitsSold - s.remedied)) : "Not given",
-                    s.unitsSold
-                      ? `${formatCount(s.unitsSold)} sold less ${formatCount(s.remedied)} corrected: every unit sold counts as with a consumer until it is corrected`
-                      : "Units sold less units corrected, once CPSC gives units sold",
-                  ],
-                  ["Claims in progress or held", formatCount(s.pending + s.held), "Not yet counted as corrected"],
-                ] as const
-              ).map(([k, v, note]) => (
-                <tr key={k}>
-                  <td className={`${td} text-text`}>
-                    {k}
-                    <span className="mt-1 block text-muted sm:hidden">{note}</span>
-                  </td>
-                  <td className={`${td} w-24 text-right`}>{/\d/.test(v) ? n(v) : v}</td>
-                  <td className={`${td} hidden text-muted sm:table-cell`}>{note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="max-w-read text-ui text-muted">
-            Units still with manufacturers, distributors or retailers, and your notices, posters and posts, come from your own records: Remedy sees claims only.
-          </p>
-        </section>
-      )}
+                  "Units remaining at consumer level",
+                  s.unitsSold ? formatCount(Math.max(0, s.unitsSold - s.remedied)) : "Not given",
+                  s.unitsSold
+                    ? `${formatCount(s.unitsSold)} sold less ${formatCount(s.remedied)} corrected: every unit sold counts as with a consumer until it is corrected`
+                    : "Units sold less units corrected, once CPSC gives units sold",
+                ],
+                ["Claims in progress or held", formatCount(s.pending + s.held), "Not yet counted as corrected"],
+              ] as const
+            ).map(([k, v, note]) => (
+              <tr key={k}>
+                <td className={`${td} text-text`}>
+                  {k}
+                  <span className="mt-1 block text-muted sm:hidden">{note}</span>
+                </td>
+                <td className={`${td} w-24 text-right`}>{/\d/.test(v) ? n(v) : v}</td>
+                <td className={`${td} hidden text-muted sm:table-cell`}>{note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="max-w-read text-ui text-muted">
+          Units still with manufacturers, distributors or retailers, and your notices, posters and posts, come from your own records: Remedy sees claims only.
+        </p>
+      </section>
 
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
         <H>Why claims were refused</H>
@@ -223,7 +221,7 @@ export function ProgressReport({
           <p className="text-ui text-muted">No claims were refused.</p>
         )}
         <p className="text-ui text-muted">
-          {home ? "" : "A refused claim moves no money. "}The owner is told the exact reason and how to claim again.
+          A refused claim moves no money. The owner is told the exact reason and how to claim again.
         </p>
       </section>
 
@@ -241,7 +239,7 @@ export function ProgressReport({
         </section>
 
         <footer className="mt-12 border-t border-line pt-4 text-micro text-muted">
-          Draft for your review before filing.{home ? "" : " Days are in UTC, as in the console."}
+          Draft for your review before filing. Days are in UTC, as in the console.
         </footer>
       </div>
     </article>
