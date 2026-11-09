@@ -5,7 +5,7 @@ import type { Slow } from "./landing";
 // The gate against a stand-in Lenis: wheel streams in, which events it takes, and where it lands the page.
 const STOPS = [0, 1410, 2144, 2821, 3205];
 
-function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner?: number[], pins?: [number, number][], fit?: Course["fit"]) {
+function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner?: number[], pins?: [number, number][], fit?: Course["fit"], rests?: number[]) {
   const listeners = new Map<string, ((e: unknown) => void)[]>();
   vi.stubGlobal("innerHeight", 900);
   vi.stubGlobal("scrollY", at);
@@ -39,7 +39,7 @@ function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner
     },
     start() {},
   };
-  const gate = createGate(() => ({ stops, slow, up, inner, pins, fit }));
+  const gate = createGate(() => ({ stops, slow, up, inner, pins, fit, rests }));
   gate.attach(lenis as unknown as GateLenis);
   let t = 1000;
   /** Sends deltas `gap` ms apart, after `pause` ms; returns how many px reached Lenis (the events the gate let through). */
@@ -209,8 +209,8 @@ describe("wheel stops", () => {
   it("gives a slow stretch on the way more of the landing, and enters it at the page's speed all the same", () => {
     const plain = setup(0);
     plain.send(swipe(), 8);
-    // A slow stretch that isn't the dolly (the dolly's landing is held to DOLLY_TIME: tested below), so both take the
-    // same time and their curves compare.
+    // A slow stretch that isn't the dolly (the dolly's landing is held to DOLLY_TIME: tested below); it adds SLOW_TIME
+    // to the landing, and the curves still compare.
     const slowed = setup(0, STOPS, [[207, 670, 4]]);
     slowed.send(swipe(), 8);
     const e0 = plain.lenis.easing!;
@@ -470,6 +470,66 @@ describe("wheel stops", () => {
     const pinned = setup(1000, far, [], undefined, undefined, [[0, 6000]]);
     pinned.send(flick, 16);
     expect(pinned.lenis.landed).toEqual([3500]);
+  });
+
+  /** A gentle nudge (deltas `d`, 16 ms apart, well under FAST) from `at`, then the wheel quiet: where the page lands. */
+  function nudgeTo(at: number, d: number[], pins: [number, number][], rests?: number[]) {
+    const { lenis, send, scroll } = setup(at, [0, 1000, 2600, 4000], [], undefined, undefined, pins, undefined, rests);
+    expect(send(d)).toBe(d.reduce((a, b) => a + b, 0)); // the page took all of it as the reader's
+    expect(lenis.landed).toEqual([]);
+    lenis.animatedScroll = lenis.targetScroll - 4 * Math.sign(d[0]); // Lenis is still easing into it
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    scroll();
+    vi.restoreAllMocks();
+    return lenis.landed.at(-1);
+  }
+
+  it("settles a gentle nudge that goes quiet inside a pinned story on its nearest finished beat, never mid-beat", () => {
+    const pins: [number, number][] = [[900, 2600]];
+    const gentle = Array(16).fill(18); // about 1100 px/s, 288px
+    // From a beat, a nudge moves the story on to the next one, however far.
+    expect(nudgeTo(1000, gentle, pins)).toBe(2600);
+    expect(nudgeTo(2600, gentle.map((x) => -x), pins)).toBe(1000);
+    // A brush under NUDGE springs back onto the beat it began on.
+    expect(nudgeTo(1000, [10, 10, 10], pins)).toBe(1000);
+    // Begun off a beat, it settles on whichever is nearer where it would rest.
+    expect(nudgeTo(1400, gentle, pins)).toBe(1000);
+    expect(nudgeTo(1900, gentle, pins)).toBe(2600);
+    // A finished beat that is no stop (an exhibit check at its hold) is as good a rest.
+    expect(nudgeTo(1000, gentle, pins, [0, 1000, 1700, 2600, 4000])).toBe(1700);
+    // Outside a pinned story slow scrolling stays the reader's.
+    expect(nudgeTo(2700, gentle, pins)).toBeUndefined();
+    expect(nudgeTo(1000, gentle, [])).toBeUndefined();
+  });
+
+  it("settles a nudge Lenis has finished easing before the wheel is quiet long enough to tell", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { lenis, send } = setup(1000, [0, 1000, 2600], [], undefined, undefined, [[900, 2600]]);
+    send(Array(16).fill(18));
+    lenis.animatedScroll = lenis.targetScroll;
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    vi.advanceTimersByTime(200);
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    expect(lenis.landed).toEqual([2600]);
+  });
+
+  it("lets a gesture landed on a beat stay there, and leaves a nudge given up to a key alone", () => {
+    const pins: [number, number][] = [[0, 4000]];
+    const landed = setup(1410, STOPS, [], undefined, undefined, pins);
+    landed.send(power(), 8);
+    landed.finish();
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    landed.scroll();
+    vi.restoreAllMocks();
+    expect(landed.lenis.landed).toEqual([2144]);
+    const keyed = setup(1000, [0, 1000, 2600], [], undefined, undefined, pins);
+    keyed.send([30, 30, 30]);
+    keyed.fire("keydown", { key: "ArrowDown" });
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    keyed.scroll();
+    vi.restoreAllMocks();
+    expect(keyed.lenis.landed).toEqual([]);
   });
 
   it("goes up on its own stops when the course lists them", () => {

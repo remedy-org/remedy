@@ -10,7 +10,8 @@ import { landing as glide, landingTime, warp, type Slow } from "./landing";
 // nearest whole frame. A hard fling whose momentum keeps pouring in skims past a story's inner beats (SKIM); section
 // stops always catch. Going up, the page stops on the same finished beats as going down (stops.ts). Slow scrolling never
 // meets a stop, and a short flick that would not have carried halfway to the next stop runs free, unless it would come
-// to rest inside a pinned story. Only the wheel is gated: keys, anchor links,
+// to rest inside a pinned story; any gesture that goes quiet with the page bound for a transition half played inside one
+// settles on its nearest finished beat (nudge). Only the wheel is gated: keys, anchor links,
 // the scrollbar, find-in-page, focus moves, touch and screen readers scroll natively and cancel a landing at once.
 
 /** The input rate is measured over this many ms. */
@@ -64,6 +65,9 @@ const SETTLE = 0.6;
  * to rest on it when it is nearer than the stop ahead: the stops below the Problem sheet are about a window apart, so a
  * spin that ran 270px past Results' stop rested with its heading under the nav. */
 const SETTLE_BACK = 0.3;
+/** px a gesture the page took no stop for must have moved it off the beat it began on for it to settle on the next beat
+ * rather than back on that one (nudge): one notch of a wheel, or a gentle push on a trackpad, moves the story on a beat. */
+const NUDGE = 40;
 /** px a free run with no stop near may move to rest on a clean frame (stops.ts fit): no line cut by the nav or the
  * screen's foot. */
 const CLEAN = 120;
@@ -87,6 +91,10 @@ const NOTCH_DOLLY = 3.5;
 /** Seconds a trackpad's landing across the dolly takes at most: the dolly plays, and the page is at rest about a second
  * after. */
 const DOLLY_TIME = 1.2;
+/** Seconds a landing may take longer for each slow stretch on its way but the dolly (stops.ts SLOW): an exhibit check,
+ * the sheet's loop closing or its cut. The rest of the way is as quick as it can be already, so the time a transition
+ * holds comes from here: two checks in a notched wheel's 1.1 s glide played in about 0.25 s each. */
+const SLOW_TIME = 0.15;
 /** A stop closer than this many windows to where the gesture began is where the reader already is: it goes on past. */
 const NEAR = 0.15;
 /**
@@ -145,6 +153,9 @@ export type Course = {
   up?: number[];
   slow?: readonly Slow[];
   inner?: number[];
+  /** Every finished beat a gesture the page took no stop for may settle on inside a pin: the stops and more (stops.ts
+   * RESTS). The stops when it is missing. */
+  rests?: number[];
   pins?: readonly (readonly [number, number])[];
   fit?: (y: number, range: { min: number; max: number }) => number | undefined;
 };
@@ -158,11 +169,15 @@ export function createGate(read: () => Course) {
   let stops: number[] = [];
   let upStops: number[] = [];
   let innerStops: number[] = [];
+  let rests: number[] = [];
   let pins: readonly (readonly [number, number])[] = [];
   let slow: readonly Slow[] = [];
   let fit: Course["fit"];
   let hold: Hold | null = null;
   let landing: { to: number; dir: Dir } | null = null;
+  /** The page has taken some of this gesture as the reader's own scroll since it last landed (nudge). */
+  let loose = false;
+  let quietTimer: ReturnType<typeof setTimeout> | undefined;
   /** Something else took the page during this gesture (a key, a link, the scrollbar): the rest of it is the reader's. */
   let yielded = false;
   /** Where the page was when this gesture began. */
@@ -231,14 +246,18 @@ export function createGate(read: () => Course) {
     // The landing curve runs along the way with its slow stretches weighted, so each pinned transition on it gets its
     // share of the time; it enters at the page's own speed. A notched wheel's landing is short (NOTCH_TIME): it has no
     // momentum, so a longer one drives on alone after the hand has stopped; across the dolly it is slowed less and shorter
-    // still (NOTCH_DOLLY_TIME).
+    // still (NOTCH_DOLLY_TIME). Each other slow stretch on the way adds SLOW_TIME.
     const from = l.animatedScroll;
-    const dolly = slow.some(([a, b, k]) => k >= DOLLY_WEIGHT && Math.max(a, b) > Math.min(from, to) && Math.min(a, b) < Math.max(from, to));
+    const on = slow.filter(([a, b]) => Math.max(a, b) > Math.min(from, to) && Math.min(a, b) < Math.max(from, to));
+    const dolly = on.some(([, , k]) => k >= DOLLY_WEIGHT);
     const way = warp(from, to, notched ? slow.map(([a, b, k]) => [a, b, k >= DOLLY_WEIGHT ? NOTCH_DOLLY : k] as const) : slow);
-    const duration = Math.min(dolly ? (notched ? NOTCH_DOLLY_TIME : DOLLY_TIME) : notched ? NOTCH_TIME : Infinity, landingTime(way.length / innerHeight));
+    const duration =
+      Math.min(dolly ? (notched ? NOTCH_DOLLY_TIME : DOLLY_TIME) : notched ? NOTCH_TIME : Infinity, landingTime(way.length / innerHeight)) +
+      SLOW_TIME * on.filter(([, , k]) => k < DOLLY_WEIGHT).length;
     const v = Math.max(0, pageSpeed(l, dir));
     const curve = glide(way.length < 1 ? 0 : (v * duration * way.entry) / way.length);
     landing = { to, dir };
+    loose = false;
     fastSince = null;
     takenAt = total;
     chained++;
@@ -277,6 +296,47 @@ export function createGate(read: () => Course) {
     if (to === undefined || (stop === undefined && Math.abs(to - rest) <= 1) || Math.abs(to - at) <= 1) return;
     land(l, to, to > at ? 1 : -1, performance.now());
   }
+
+  /**
+   * A gesture the page took no stop for has gone quiet. Inside a pinned story only a finished beat is a whole frame, so
+   * when the page is bound for anywhere else in one it settles on the nearest beat (RESTS), measured from where it would
+   * have come to rest; on the next one in its direction when the gesture began on the beat behind and moved it NUDGE px
+   * or more, so a gentle nudge or one notch moves the story on a beat rather than springing back. Outside the pinned
+   * stories slow scrolling stays the reader's.
+   */
+  function nudge(l: GateLenis) {
+    loose = false;
+    if (yielded) return;
+    const dir = lastDir;
+    const rest = l.targetScroll;
+    const at = l.animatedScroll;
+    if (!scrubbed(rest) || rests.some((s) => Math.abs(s - rest) <= 1)) return;
+    let back: number | undefined;
+    let ahead: number | undefined;
+    for (const s of rests) {
+      if ((s - rest) * dir > 0) {
+        if (ahead === undefined || (s - ahead) * dir < 0) ahead = s;
+      } else if (back === undefined || (s - back) * dir > 0) back = s;
+    }
+    const on = back !== undefined && Math.abs(back - origin) <= 1 && (rest - origin) * dir >= NUDGE;
+    const to = ahead !== undefined && (on || back === undefined || Math.abs(ahead - rest) <= Math.abs(back - rest)) ? ahead : back;
+    if (to === undefined || Math.abs(to - at) <= 1) return;
+    land(l, to, to > at ? 1 : -1, performance.now());
+  }
+
+  /** The wheel has been quiet for QUIET ms with no landing under way: a free run, or a gesture the page took as the
+   * reader's own, comes to rest on a whole frame. */
+  function quieted(l: GateLenis) {
+    if (landing || performance.now() - lastWall <= QUIET) return;
+    if (free) settle(l);
+    else if (loose) nudge(l);
+  }
+
+  /** The page takes this event as the reader's own scroll. */
+  const pass = () => {
+    loose = true;
+    return true;
+  };
 
   /** Whether a held gesture has become a new one: a fresh swipe out of the momentum tail, or a hand scrolling on. */
   function released(h: Hold, now: number) {
@@ -344,7 +404,7 @@ export function createGate(read: () => Course) {
         hold.low = Infinity;
         hold.rising = 0;
       }
-      ({ stops, up: upStops = stops, slow = [], inner: innerStops = [], pins = [], fit } = read());
+      ({ stops, up: upStops = stops, slow = [], inner: innerStops = [], rests = stops, pins = [], fit } = read());
       origin = l.animatedScroll;
     }
     if (dir !== lastDir) {
@@ -356,6 +416,9 @@ export function createGate(read: () => Course) {
     lastA = a;
     lastDir = dir;
     lastWall = performance.now();
+    // Lenis may have stopped moving the page before the wheel has been quiet long enough to tell (a tiny nudge).
+    clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => lenis && quieted(lenis), QUIET + 20);
     if (notch && gap <= quiet && gaps.push(gap) > 8) gaps.shift();
     if (!notch) notched = false;
     samples.push({ t: now, a });
@@ -377,7 +440,7 @@ export function createGate(read: () => Course) {
     if ((hold && dir !== hold.dir) || (landing && dir !== landing.dir)) {
       hold = null;
       landing = null;
-      return true;
+      return pass();
     }
     if (hold && released(hold, now)) hold = null;
     // Input kept at FAST for SUSTAIN ms once the landing has finished is a fresh fling (a wheel spun on, a swipe laid on
@@ -405,7 +468,7 @@ export function createGate(read: () => Course) {
         const next = ahead(landing.to, landing.to, dir);
         if (next === undefined) {
           landing = null;
-          return true;
+          return pass();
         }
         land(l, next, dir, now);
       }
@@ -417,9 +480,10 @@ export function createGate(read: () => Course) {
       return swallow(event);
     }
     if (hold) return inner ? true : swallow(event);
-    if (!fast) return true;
+    if (!fast) return startedInner ? true : pass();
     const next = ahead(origin, l.animatedScroll, dir, pageSpeed(l, dir));
-    if (next === undefined || !carries(l, next, dir, now) || nested(event, dir)) return true;
+    if (next === undefined || !carries(l, next, dir, now)) return startedInner ? true : pass();
+    if (nested(event, dir)) return true;
     land(l, next, dir, now);
     return swallow(event);
   }
@@ -430,6 +494,7 @@ export function createGate(read: () => Course) {
     const cancel = () => {
       if (hold || landing) yielded = true;
       hold = null;
+      loose = false;
       if (!landing) return;
       landing = null;
       // Hands the page back where it is: stop() and start() both reset Lenis's animation to the actual scroll. A Lenis
@@ -450,8 +515,9 @@ export function createGate(read: () => Course) {
         landing = null;
         speed = 0;
       }
-      // A free run whose wheel has gone quiet comes to rest on a whole frame.
-      if (free && !landing && performance.now() - lastWall > QUIET) settle(l);
+      // A free run, or a gesture the page took as the reader's own, whose wheel has gone quiet comes to rest on a whole
+      // frame.
+      quieted(l);
     });
     // While a landing runs Lenis ignores native scrolls and would write over them: find-in-page, a focus move or a
     // screen reader's scroll into view, an overlay scrollbar's drag. Any of them moving the page from where Lenis put
@@ -475,6 +541,7 @@ export function createGate(read: () => Course) {
     addEventListener("pointerdown", onPointer, { capture: true });
     addEventListener("click", onClick, { capture: true });
     return () => {
+      clearTimeout(quietTimer);
       offScroll();
       removeEventListener("scroll", onWindowScroll);
       removeEventListener("keydown", onKey, { capture: true });

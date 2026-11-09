@@ -6,7 +6,9 @@
 import { HANDOFF, PAGE_STOPS } from "../custody/CustodyStage";
 import { DOLLY } from "../custody/HeroRunway";
 import { scrollAt } from "../custody/pace";
+import { EXHIBIT_RANGE } from "../custody/timeline";
 import { ANCHOR_AT, REST, T } from "../problemTimeline";
+import { BEATS as EXHIBIT_BEATS, RANGES, holdOf, tickAt, type BeatId } from "../teardown/model";
 import type { Course } from "./gate";
 import type { Slow } from "./landing";
 
@@ -85,6 +87,9 @@ const GATE_TEXT = "#checks ol > li > div:first-child";
  * edge, and the heading at least 40px under the nav. */
 const checksStop = (p: Page) => p.fit(p.line("#checks header"), { min: p.line("#checks", 0), max: p.line("#checks header", 40) });
 
+/** Check 3's stop in the Chain of Custody's (PAGE_STOPS after the page top: 01, 02, the live photo, check 3). */
+const CHECK_3 = 3;
+
 /** Check 3 of the laptop matrix (and of the phone list), and the first. */
 const GATE_3 = "#checks ol > li:nth-child(3)";
 const GATE_1 = "#checks ol > li:nth-child(1)";
@@ -100,21 +105,25 @@ export const STOPS: readonly Stop[] = [
   // the same beats: 01 and 02 with every line lit, the exhibit's live photo and five checks at their holds, the paid
   // receipt, then the console. Its first stop is the runway's top, the page top.
   // Going up it stops on the same finished beats, as Page Up does, so a flick up never rests on a check half played. A
-  // hard fling skims the beats between 01 and the console.
-  ...PAGE_STOPS.slice(1).map((f, i, all) => ({ name: `Chain of Custody ${i + 1}`, at: (p: Page) => p.beat(f), ...(i > 0 && i < all.length - 1 && { inner: true as const }) })),
+  // hard fling skims 02, the live photo and the paid receipt, never check 3: a fling down the exhibit rests once on the
+  // checks, so they never all pass in one glide.
+  ...PAGE_STOPS.slice(1).map((f, i, all) => ({
+    name: `Chain of Custody ${i + 1}`,
+    at: (p: Page) => p.beat(f),
+    ...(i > 0 && i < all.length - 1 && i !== CHECK_3 && { inner: true as const }),
+  })),
   // Laptops under 700px tall and windows under 1024px wide get the phone sequence: its chapters 01 and 02, then the
   // exhibit's beats, the stops its own Space and Page Down use (PhoneRunway).
   { name: "Chain of Custody, phone", at: (p) => p.beats("div[data-runway][data-scroll-stops]") },
-  // Problem, pinned: the sheet open (where the nav's Problem lands), the loop closed with its sources printed, then cut,
-  // the payoff printed and the lamp down. Each a hair before the next beat starts, so a whole pixel of rounding never
-  // shows card 4 or the slash beginning. Not pinned (laptops under 700px tall), the sheet plays as it comes up: a stop
-  // at its name, then its lower half whole, its foot from 78% of the screen up, past where the payoff has printed
-  // (Problem.tsx).
+  // Problem, pinned: the sheet open (where the nav's Problem lands), then cut, the payoff printed and the lamp down: two
+  // gestures, the loop closing and the cut playing on the glide between them (SLOW). The open sheet a hair before card 4
+  // lands, so a whole pixel of rounding never shows it beginning. Not pinned (laptops under 700px tall), the sheet plays
+  // as it comes up: a stop at its name, then its lower half whole, its foot from 78% of the screen up, past where the
+  // payoff has printed (Problem.tsx).
   {
     name: "Problem, the sheet open",
     at: (p) => p.sheet(ANCHOR_AT - 0.4) ?? p.fit(p.line("#problem .eyebrow"), { min: p.line("#problem", 0), max: p.line("#problem .eyebrow", 16) }),
   },
-  { name: "Problem, the loop closed", at: (p) => p.sheet(T.mark[0] - 0.4), inner: true },
   {
     name: "Problem, the loop cut",
     at: (p) => p.sheet(REST + 2) ?? p.fit(p.foot("#problem article", 0.78), { min: p.foot("#problem article", 0.8), max: p.foot("#problem article", 0.45) }),
@@ -174,6 +183,9 @@ export const STOPS: readonly Stop[] = [
   { name: "Footer", at: (p) => p.fit(p.end("footer"), { min: p.foot("main ~ footer", 1.5) }) },
 ];
 
+/** The exhibit checks the glides cross (check 3 draws as the glide to its own stop slows into it). */
+const DRAWN: readonly Exclude<BeatId, "intro" | "paid">[] = ["live", "fp", "code", "torn"];
+
 /**
  * The pinned transitions a glide crosses slowly, each `weight` times slower than the way around it (landing.ts warp), so
  * a fling sees them play rather than flash by: measured on the glide at 1440x900, each now takes about half a second.
@@ -182,6 +194,10 @@ export const STOPS: readonly Stop[] = [
 export const SLOW: readonly { name: string; at: (page: Page) => Slow | undefined }[] = [
   // The hero's laptop dollies in until its screen is the stage, and hands over to chapter 01 (0.22 s on a plain glide).
   { name: "The dolly", at: (p) => span(p.beat(scrollAt(DOLLY[0])), p.beat(scrollAt(HANDOFF[1])), 5) },
+  // Each exhibit check the glides to check 3 and to the paid receipt cross, from its beat's start (the camera moving on
+  // to the part) to its tick (its bar full): the live camera, the fingerprint, the tag's code, the cut (about 0.25 s
+  // each on a plain glide).
+  ...DRAWN.map((id) => ({ name: `Check ${id} draws`, at: (p: Page) => span(p.beat(exhibitAt(RANGES[id][0])), p.beat(exhibitAt(tickAt(id))), 3) })),
   // The sheet lands its first cards and unfolds, as the page settles on it.
   { name: "The sheet opens", at: (p) => span(p.sheet(T.card1[0]), p.sheet(T.card3[1]), 2) },
   // Card 4 lands and the string closes the loop back to card 1 (0.1 s and 0.2 s on a plain glide).
@@ -189,6 +205,21 @@ export const SLOW: readonly { name: string; at: (page: Page) => Slow | undefined
   // The slash is drawn and the string snaps (0.1 s each on a plain glide).
   { name: "The loop is cut", at: (p) => span(p.sheet(T.mark[0]), p.sheet(T.snip[1]), 4) },
 ];
+
+/** Where on the runway's raw scroll (0 to 1) the exhibit's own progress reaches q. */
+function exhibitAt(q: number) {
+  return scrollAt(EXHIBIT_RANGE[0] + q * (EXHIBIT_RANGE[1] - EXHIBIT_RANGE[0]));
+}
+
+/**
+ * Whole frames inside the Chain of Custody's pin that a gesture the page took no stop for may settle on besides the
+ * stops (gate.ts): every exhibit check at its hold, its bar full, so a slow reader can stop on any check, never on one
+ * half played.
+ */
+export const RESTS: readonly Stop[] = EXHIBIT_BEATS.filter((b) => b.id !== "intro" && b.id !== "paid").map((b) => ({
+  name: `Check ${b.id} at rest`,
+  at: (p: Page) => p.beat(exhibitAt(holdOf(b.id))),
+}));
 
 /** A slow stretch from two positions, either of which may be missing. */
 function span(a: number | undefined, b: number | undefined, weight: number): Slow | undefined {
@@ -383,6 +414,7 @@ export function resolveCourse(): Course {
     stops: resolveStops(STOPS, page),
     slow: readAll(SLOW, page),
     inner: resolveStops(STOPS.filter((s) => s.inner), page),
+    rests: resolveStops([...STOPS, ...RESTS], page),
     pins: pinnedStretches(),
     fit: (y, range) => page.fit(y, range),
   };
