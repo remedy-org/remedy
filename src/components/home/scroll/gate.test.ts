@@ -5,7 +5,7 @@ import type { Slow } from "./landing";
 // The gate against a stand-in Lenis: wheel streams in, which events it takes, and where it lands the page.
 const STOPS = [0, 1410, 2144, 2821, 3205];
 
-function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[]) {
+function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner?: number[], pins?: [number, number][]) {
   const listeners = new Map<string, ((e: unknown) => void)[]>();
   vi.stubGlobal("innerHeight", 900);
   vi.stubGlobal("scrollY", at);
@@ -39,7 +39,7 @@ function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[]) {
     },
     start() {},
   };
-  const gate = createGate(() => ({ stops, slow, up }));
+  const gate = createGate(() => ({ stops, slow, up, inner, pins }));
   gate.attach(lenis as unknown as GateLenis);
   let t = 1000;
   /** Sends deltas `gap` ms apart, after `pause` ms; returns how many px reached Lenis (the events the gate let through). */
@@ -292,6 +292,51 @@ describe("wheel stops", () => {
     lenis.animatedScroll = lenis.targetScroll = 2300;
     send(power(), 8, 600);
     expect(lenis.landed).toEqual([1410, 2821]);
+  });
+
+  it("takes three quick flicks of a notched wheel to three stops: a re-grip under QUIET is a new gesture", () => {
+    const { lenis, send } = setup(0);
+    const flick = Array(6).fill(100);
+    send(flick, 20);
+    lenis.animatedScroll = 900;
+    send(flick, 20, 90);
+    lenis.animatedScroll = 1900;
+    send(flick, 20, 90);
+    expect(lenis.landed).toEqual([1410, 2144, 2821]);
+  });
+
+  it("lets a wheel held at speed run free at once, the landing or not, and keeps it free over a short pause", () => {
+    const { lenis, send } = setup(0);
+    // 150 notches over 3 s: one stop is taken at the start, then the spin runs free.
+    let through = send(Array(40).fill(100), 20);
+    expect(lenis.landed).toEqual([1410]);
+    through += send(Array(40).fill(100), 20, 70);
+    expect(through).toBeGreaterThan(2000);
+    expect(lenis.landed).toEqual([1410]);
+  });
+
+  it("carries a hard fling past a story's inner beat while its momentum keeps pouring in, never past a section stop", () => {
+    const skim = setup(1410, STOPS, [], undefined, [2144]);
+    skim.send(trackpad());
+    expect(skim.lenis.landed).toEqual([2144, 2821]);
+    const flick = setup(1410, STOPS, [], undefined, [2144]);
+    flick.send(trackpad().slice(0, 30).map((d) => Math.round(d / 3)));
+    expect(flick.lenis.landed.at(-1)).not.toBe(2821);
+    const section = setup(1410, STOPS, [], undefined, []);
+    section.send(trackpad());
+    expect(section.lenis.landed).toEqual([2144]);
+  });
+
+  it("lands any fling inside a pinned story on the story's next beat, however far, so it never rests half played", () => {
+    const far = [0, 1000, 3500, 6000];
+    // A short flick: outside a story it would not carry halfway and runs free.
+    const flick = Array(6).fill(100);
+    const open = setup(1000, far);
+    open.send(flick, 16);
+    expect(open.lenis.landed).toEqual([]);
+    const pinned = setup(1000, far, [], undefined, undefined, [[0, 6000]]);
+    pinned.send(flick, 16);
+    expect(pinned.lenis.landed).toEqual([3500]);
   });
 
   it("goes up on its own stops when the course lists them", () => {

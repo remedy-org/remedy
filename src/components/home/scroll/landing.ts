@@ -18,10 +18,11 @@ export function landing(s0: number) {
 }
 
 /**
- * Seconds for a landing `d` windows long (slow stretches counted at their weight, warp): a beat of the exhibit (about
- * 0.7 of a window) in about 1.3 s, a long way in 2 s at most, a close stop in about a second, so it never creeps.
+ * Seconds for a landing `d` windows long (slow stretches counted at their weight, warp): a close stop in 0.9 s, a beat
+ * of the exhibit (about 0.7 of a window) in about 1.2 s, a long way in 1.4 s at most, so the page is at rest soon after
+ * the hand and never drives on alone.
  */
-export const landingTime = (d: number) => Math.min(2, Math.max(0.9, 0.8 + 0.75 * d));
+export const landingTime = (d: number) => Math.min(1.4, Math.max(0.9, 0.8 + 0.6 * d));
 
 /**
  * A stretch of the page, [from, to] in scrollY, that a glide crosses `weight` times slower than the rest: a pinned

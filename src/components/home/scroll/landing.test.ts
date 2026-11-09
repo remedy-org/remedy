@@ -32,9 +32,9 @@ describe("landing", () => {
 
   it("gives a longer way more time, within bounds", () => {
     expect(landingTime(0)).toBe(0.9);
-    expect(landingTime(0.75)).toBeCloseTo(1.36);
-    expect(landingTime(1.6)).toBe(2);
-    expect(landingTime(4)).toBe(2);
+    expect(landingTime(0.75)).toBeCloseTo(1.25);
+    expect(landingTime(1.6)).toBe(1.4);
+    expect(landingTime(4)).toBe(1.4);
   });
 
   it("gives a slow stretch its weight's worth of the way, in either direction", () => {

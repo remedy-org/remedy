@@ -72,10 +72,14 @@ describe("scroll stops", () => {
     expect(custody).toHaveLength(6); // 01, 02, the exhibit's live photo, check 3 and paid receipt, the console
   });
 
-  it("goes up through the pinned stories on their first beats only", () => {
+  it("goes up through the Chain of Custody on its finished beats, as Page Up does, and through the sheet on its first", () => {
     const up = STOPS.filter((s) => !s.down).map((s) => s.name);
-    expect(up.filter((n) => n.startsWith("Chain of Custody "))).toEqual(["Chain of Custody 1", "Chain of Custody 6"]);
+    const story = STOPS.filter((s) => s.name.startsWith("Chain of Custody ")).map((s) => s.name);
+    expect(up.filter((n) => n.startsWith("Chain of Custody "))).toEqual(story);
     expect(up.filter((n) => n.startsWith("Problem"))).toEqual(["Problem, the sheet open"]);
+    // A hard fling skims the story's inner beats, never a section's stop.
+    const inner = STOPS.filter((s) => s.inner).map((s) => s.name);
+    expect(inner).toEqual([...story.slice(1, -1), "Problem, the loop closed"]);
   });
 
   it("lands the Problem sheet open where the nav's Problem does, then on the closed loop, then cut and paid off", () => {

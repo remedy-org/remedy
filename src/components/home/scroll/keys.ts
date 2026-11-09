@@ -14,6 +14,12 @@ import type { Course } from "./gate";
 const REACH = 1.25;
 /** A stop this close to the page is where it already is. */
 const EPS = 4;
+/** Seconds a key's glide takes at most, as a notched wheel's landing (gate.ts): a key answers at once and never makes the
+ * reader wait; across the hero's dolly, a little longer, so the dolly still plays. */
+const KEY_TIME = 1;
+const KEY_DOLLY = 1.2;
+/** The slow stretch's weight that marks the dolly (stops.ts SLOW). */
+const DOLLY_WEIGHT = 5;
 
 const EDITABLE = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
 /** Widgets that page their own way (AG Grid's Page Down moves its focus) or hold the page (a dialog). */
@@ -68,8 +74,10 @@ export function attachKeys(lenis: Pick<Lenis, "scrollTo" | "isStopped" | "animat
     const to = keyStop(stops, from, dir, REACH * innerHeight, pins());
     if (to === null) return;
     e.preventDefault();
-    const way = warp(lenis.animatedScroll, to, slow);
-    const duration = landingTime(way.length / innerHeight);
+    const start = lenis.animatedScroll;
+    const way = warp(start, to, slow);
+    const dolly = slow.some(([a, b, k]) => k >= DOLLY_WEIGHT && Math.max(a, b) > Math.min(start, to) && Math.min(a, b) < Math.max(start, to));
+    const duration = Math.min(dolly ? KEY_DOLLY : KEY_TIME, landingTime(way.length / innerHeight));
     const curve = landing(0);
     aim = { to, until: performance.now() + duration * 1000 + 200 };
     lenis.scrollTo(to, { duration, easing: (t) => way.at(curve(t)) });

@@ -57,6 +57,8 @@ export type Stop = {
   at: (page: Page) => number | readonly number[] | undefined;
   /** A stop going down only: a pinned story's inner beat, whose scrub played backwards shows nothing new (gate.ts). */
   down?: true;
+  /** A story's inner beat, which a hard fling may skim past (gate.ts SKIM); a flick still stops on it. */
+  inner?: true;
 };
 
 /**
@@ -65,12 +67,12 @@ export type Stop = {
  * footer's tag).
  */
 const TEXT = [
-  "#checks header p, #checks h2, #checks [data-lanes-top] p, #checks [data-lanes-top] li > span:first-child, #checks ol > li h3, #checks ol > li p:not(.sr-only), #checks [data-try-cta]",
+  "#checks header p, #checks h2, #checks [data-lanes-top] p, #checks [data-lanes-top] li > span:first-child, #checks ol > li h3, #checks ol > li p:not(.sr-only), #checks ol > li > ul > li, #checks [data-try-cta]",
   "#proof h2, #proof p, #proof dt, #proof dd",
   "#companies header p, #companies h2, #companies [role=tab], #companies [data-story] ~ div > *",
   "main ~ footer h2, main ~ footer p, main ~ footer li a",
 ].join(", ");
-const OBJECTS = "#checks [data-lanes-top] img, #checks ol > li > ul > li, #companies [role=tablist], #companies [data-step], main ~ footer > div:first-child";
+const OBJECTS = "#checks [data-lanes-top] img, #companies [role=tablist], #companies [data-step], #companies [data-cta] a, main ~ footer > div:first-child";
 /** The Problem sheet's, only while it isn't pinned: pinned, its stage sticks, so its layout positions follow the scroll
  * and it is covered by Fraud checks wherever a section frame could meet it. */
 const PROBLEM_TEXT = "#problem h2, #problem p:not(.sr-only)";
@@ -92,8 +94,9 @@ export const STOPS: readonly Stop[] = [
   // The Chain of Custody: the stops Space and Page Down use in the pin (CustodyStage), so the keys and the wheel stop on
   // the same beats: 01 and 02 with every line lit, the exhibit's live photo and five checks at their holds, the paid
   // receipt, then the console. Its first stop is the runway's top, the page top.
-  // Going up, only 01 and the console stop: the beats between are the story told forwards.
-  ...PAGE_STOPS.slice(1).map((f, i, all) => ({ name: `Chain of Custody ${i + 1}`, at: (p: Page) => p.beat(f), ...(i > 0 && i < all.length - 1 && { down: true as const }) })),
+  // Going up it stops on the same finished beats, as Page Up does, so a flick up never rests on a check half played. A
+  // hard fling skims the beats between 01 and the console.
+  ...PAGE_STOPS.slice(1).map((f, i, all) => ({ name: `Chain of Custody ${i + 1}`, at: (p: Page) => p.beat(f), ...(i > 0 && i < all.length - 1 && { inner: true as const }) })),
   // Laptops under 700px tall and windows under 1024px wide get the phone sequence: its chapters 01 and 02, then the
   // exhibit's beats, the stops its own Space and Page Down use (PhoneRunway).
   { name: "Chain of Custody, phone", at: (p) => p.beats("div[data-runway][data-scroll-stops]") },
@@ -106,17 +109,17 @@ export const STOPS: readonly Stop[] = [
     name: "Problem, the sheet open",
     at: (p) => p.sheet(ANCHOR_AT - 0.4) ?? p.fit(p.line("#problem .eyebrow"), { min: p.line("#problem", 0), max: p.line("#problem .eyebrow", 16) }),
   },
-  { name: "Problem, the loop closed", at: (p) => p.sheet(T.mark[0] - 0.4), down: true },
+  { name: "Problem, the loop closed", at: (p) => p.sheet(T.mark[0] - 0.4), down: true, inner: true },
   {
     name: "Problem, the loop cut",
     at: (p) => p.sheet(REST + 2) ?? p.fit(p.foot("#problem article", 0.78), { min: p.foot("#problem article", 0.8), max: p.foot("#problem article", 0.45) }),
     down: true,
   },
   // Fraud checks: the heading on the top line over the four claims and the checks that need no AI. Never so high that
-  // the Problem sheet shows above the section's edge, and the heading at least 16px under the nav.
+  // the Problem sheet shows above the section's edge, and the heading at least 40px under the nav.
   {
     name: "Fraud checks",
-    at: (p) => p.fit(p.line("#checks header"), { min: p.line("#checks", 0), max: p.line("#checks header", 16) }),
+    at: (p) => p.fit(p.line("#checks header"), { min: p.line("#checks", 0), max: p.line("#checks header", 40) }),
   },
   // Then check 3 to the rule and "Try to fool it", as the last lanes draw down to the checks the model reads and the
   // genuine claim is paid: check 3's hairline tucked under the nav, so it never reads as a second rule under it. On a
@@ -347,7 +350,13 @@ export function resolveStops(list: readonly Stop[] = STOPS, page = readPage()): 
 /** The stops (going down, and going up) and the slow stretches between them, read once when a gesture starts (gate.ts). */
 export function resolveCourse(): Course {
   const page = readPage();
-  return { stops: resolveStops(STOPS, page), up: resolveStops(STOPS.filter((s) => !s.down), page), slow: readAll(SLOW, page) };
+  return {
+    stops: resolveStops(STOPS, page),
+    up: resolveStops(STOPS.filter((s) => !s.down), page),
+    slow: readAll(SLOW, page),
+    inner: resolveStops(STOPS.filter((s) => s.inner), page),
+    pins: pinnedStretches(),
+  };
 }
 
 /**

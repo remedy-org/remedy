@@ -2,7 +2,7 @@
 
 import Lenis from "lenis";
 import { useEffect } from "react";
-import { createGate, samePageHash } from "./scroll/gate";
+import { createGate, LERP, samePageHash } from "./scroll/gate";
 import { attachKeys } from "./scroll/keys";
 import { alignAnchor, pinnedStretches, resolveCourse } from "./scroll/stops";
 
@@ -22,7 +22,7 @@ export function SmoothScroll() {
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const gate = createGate(resolveCourse);
-    const lenis = new Lenis({ autoRaf: true, lerp: 0.1, smoothWheel: true, allowNestedScroll: true, stopInertiaOnNavigate: true, virtualScroll: gate.wheel });
+    const lenis = new Lenis({ autoRaf: true, lerp: LERP, smoothWheel: true, allowNestedScroll: true, stopInertiaOnNavigate: true, virtualScroll: gate.wheel });
     const detach = gate.attach(lenis);
     const detachKeys = attachKeys(lenis, resolveCourse, pinnedStretches);
     const lock = (e: Event) => ((e as CustomEvent<{ locked: boolean }>).detail.locked ? lenis.stop() : lenis.start());
