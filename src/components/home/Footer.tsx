@@ -31,7 +31,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   },
 ];
 
-const linkClass = "inline-flex min-h-11 items-center text-ui text-muted transition-colors duration-160 hover:text-text";
+// 28px rows where a mouse points (44px on touch screens, the touch target).
+const linkClass = "inline-flex min-h-11 items-center text-ui text-muted transition-colors duration-160 hover:text-text pointer-fine:min-h-7";
 
 /**
  * The closing call to action, as the brand's object: a large paper tag hanging on its string, on the page grid: its copy

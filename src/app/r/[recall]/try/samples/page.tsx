@@ -6,15 +6,15 @@ import { ClaimFrame } from "@/components/claim/Exhibit";
 import { inFourOrder } from "@/components/claim/fourOrder";
 import { companyName, maskPayer, noModelAnswer, productNoun } from "@/components/claim/model";
 import { SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
-import { DEMO_SAMPLES, demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
+import { askedSample, DEMO_SAMPLES, demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
 import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getDemoRound, requireSession } from "@/lib/session";
 import { getRecallBySlug } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Choose a claim" };
 
-// /r/<slug>/try/samples: after the PayPal login, the owner picks which demo claim to send. ?sample=<id> (a result's "Next
-// sample") selects that one when it can run.
+// /r/<slug>/try/samples: after the PayPal login, the owner picks which demo claim to send. ?claim=<name> (or the older
+// ?sample=<id>) selects that one when it can run.
 export default async function SamplesPage({ params, searchParams }: PageProps<"/r/[recall]/try/samples">) {
   const store = await getAppStore();
   const recall = await getRecallBySlug((await params).recall, store);
@@ -34,7 +34,8 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
 
   // Listed in Fraud checks' order (fourOrder.ts); the one it opens on is the guided order's first still to run.
   const options: SampleOption[] = inFourOrder(DEMO_SAMPLES).map((sample) => ({ sample, locked: notYet(sample, rows) ?? undefined }));
-  const asked = typeof query.sample === "string" ? options.find((o) => o.sample.id === query.sample && !o.locked)?.sample.id : undefined;
+  const wanted = askedSample(query);
+  const asked = wanted ? options.find((o) => o.sample.id === wanted && !o.locked)?.sample.id : undefined;
   const open = (id: string) => options.find((o) => o.sample.id === id && !o.locked && !ran.has(id));
   const selected = asked ?? DEMO_SAMPLES.find((s) => open(s.id))?.id ?? "genuine";
   const roundDone = DEMO_SAMPLES.every((s) => ran.has(s.id));

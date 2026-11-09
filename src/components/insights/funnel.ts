@@ -37,7 +37,7 @@ export interface FunnelStep {
 
 /**
  * One line for a set of reasons and their counts: the reasons themselves, commonest first, each with its count when the
- * counts differ ("Photo of a screen or a print 2, Code missing or wrong 1"). Never a templated count of reasons, and
+ * counts differ ("Photo of a screen or a print 2, Wrong or missing code on the tag 1"). Never a templated count of reasons, and
  * never a tie presented as the top reason.
  */
 export function reasonSummary(tally: ReadonlyMap<string, number>): string {

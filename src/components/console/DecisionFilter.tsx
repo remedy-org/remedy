@@ -32,7 +32,7 @@ export const reasonKey = (r: Pick<GridRow, "note" | "reason">) => r.note ?? r.re
 
 /**
  * The reason a claim is filtered and grouped by: a refused claim's category, in the words Insights and the CPSC report
- * use ("Code missing or wrong"), so "every code mismatch" is one choice; any other claim's line as it reads.
+ * use ("Wrong or missing code on the tag"), so "every code mismatch" is one choice; any other claim's line as it reads.
  * The cell keeps the specific sentence.
  */
 export function reasonGroup(r: Pick<GridRow, "decision" | "note" | "reason" | "bars">): string {

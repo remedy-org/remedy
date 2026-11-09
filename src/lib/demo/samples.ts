@@ -87,6 +87,17 @@ export const DEMO_SAMPLES: DemoSample[] = [
 
 export const demoSample = (id: string) => DEMO_SAMPLES.find((s) => s.id === id) ?? null;
 
+/** The plain name a link gives each demo claim (/try?claim=web-photo, the homepage's "Try to fool it"). */
+const LINK_NAMES: Record<DemoSampleId, string> = { genuine: "genuine", "wrong-code": "wrong-code", "ai-no-session": "web-photo", reposted: "reposted" };
+
+export const sampleLinkName = (id: DemoSampleId) => LINK_NAMES[id];
+
+/** The demo claim a /try link asks for: ?claim=<plain name>, or the older ?sample=<id>, kept so old links still open on it. */
+export function askedSample(query: Record<string, string | string[] | undefined>): DemoSampleId | null {
+  const named = typeof query.claim === "string" ? DEMO_SAMPLES.find((s) => LINK_NAMES[s.id] === query.claim) : undefined;
+  return (named ?? (typeof query.sample === "string" ? demoSample(query.sample) : null))?.id ?? null;
+}
+
 /** The sample a demo claim ran, from its history; null for a real claim. */
 export const demoSampleOf = (claim: Pick<Claim, "demo" | "events">) => (claim.demo ? (claim.events.find((e) => e.type === "demo_sample")?.detail ?? null) : null);
 

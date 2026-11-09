@@ -203,7 +203,7 @@ function noteOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes" | "c
 }
 
 /** "Tag reads K7Q · code is K7P": a refusal in the company's words, short enough for the grid that the character that
- * decided it is never cut (the claim page's wording). Other refusals lead with their category ("Code missing or wrong"). */
+ * decided it is never cut (the claim page's wording). Other refusals lead with their category ("Wrong or missing code on the tag"). */
 export function refusalLine(r: Pick<Reason, "check" | "text">, copiedFrom?: string | null): string {
   const lead = refusalLabel(r.check);
   if (lead === "Other") return r.text;
@@ -404,7 +404,7 @@ export function duration(sec: number): string {
 // Why a claim was refused, by the check that refused it: one wording for the grid's filter and grouping, Insights and
 // the CPSC report, so the three never disagree.
 const REFUSAL: Record<string, string> = {
-  code: "Code missing or wrong",
+  code: "Wrong or missing code on the tag",
   screen: "Photo of a screen or a print",
   label: "Label missing or not the recalled product",
   same_item: "Photos showed different items",

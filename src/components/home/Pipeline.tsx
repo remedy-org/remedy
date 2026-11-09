@@ -174,7 +174,7 @@ function useLanes(ref: RefObject<HTMLDivElement | null>) {
 }
 
 /**
- * Fraud checks on laptops: the five checks as rows on hairlines, each marked No AI or Model reads, and the four claims
+ * Fraud checks on laptops: the five checks as rows on hairlines, each marked No AI or Photo check, and the four claims
  * from /try as lanes beside them, each headed by its photo. A lane's line runs down through every check its claim
  * passes and ends at the one that stops it, with the outcome said once; the genuine claim runs on to the rule and is
  * paid. Every resting state is in the markup; the lines only draw in when motion is allowed.
@@ -215,7 +215,7 @@ export function Pipeline() {
                 <div className={clsx(GATE, "py-6 pr-12")}>
                   <h3 className="flex items-baseline gap-3 text-head-sm font-medium">
                     {g.title}
-                    <span className="text-ui font-normal whitespace-nowrap text-muted">{g.ai ? "Model reads" : "No AI"}</span>
+                    <span className="text-ui font-normal whitespace-nowrap text-muted">{g.ai ? "Photo check" : "No AI"}</span>
                   </h3>
                   <p className="mt-2 max-w-[56ch] text-ui text-muted">{g.text}</p>
                 </div>
@@ -288,7 +288,7 @@ export function PipelineList() {
         const bandStart = i === 0 || g.ai !== GATES[i - 1].ai;
         return (
           <li key={g.title} className={clsx("border-t py-6", bandStart && i > 0 ? "border-line-2" : "border-line")}>
-            {bandStart && <p className="eyebrow mb-4 text-muted">{g.ai ? "Model reads" : "No AI"}</p>}
+            {bandStart && <p className="eyebrow mb-4 text-muted">{g.ai ? "Photo check" : "No AI"}</p>}
             <h3 className="text-body font-medium">{g.title}</h3>
             <p className="mt-1 text-ui text-muted">{g.text}</p>
             {rows(i)}

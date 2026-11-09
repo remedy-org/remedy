@@ -58,12 +58,12 @@ export const CHAPTERS = [
     n: "04",
     title: "Five checks",
     // The five checks by their names (lib/fiveChecks.ts), set in a sentence.
-    text: "Three checks need no AI: taken in Remedy’s camera, photo not used before, one claim per verified PayPal account. Then the model checks the tag shows X-VESOLJE and M4T and the pillow is cut in half, quoting what it sees.",
+    text: "Three checks need no AI: taken in Remedy’s camera, photo not used before, one claim per verified PayPal account. Then the photo check confirms the tag shows X-VESOLJE and M4T and the pillow is cut in half, quoting what it sees.",
   },
   {
     n: "05",
     title: "Paid",
-    text: "Every check passed, so the rule sent $29.99 to the owner’s PayPal account 15 seconds after the photo, and PayPal confirmed it at 55 s.",
+    text: "Every check passed, so the rule sent $29.99 to the owner’s PayPal account 15 s after the photo, and PayPal confirmed it at 55 s.",
   },
   {
     n: "06",

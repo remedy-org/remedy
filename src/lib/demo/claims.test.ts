@@ -112,7 +112,7 @@ describe("every replica reads the demo claims", () => {
     expect([CLAIM.id, CLAIM.code, CLAIM.seconds, CLAIM.photo, CLAIM.filed]).toEqual([GENUINE.id, GENUINE.code, row.toPay, photosOf(GENUINE)[0], timeOf(row.createdAt)]);
     expect(`$${CLAIM.amount.toFixed(2)}`).toBe(row.amount);
     expect(verdictOf(row)).toBe("paid");
-    expect(CHAPTERS.find((c) => c.n === "05")!.text).toContain(`${CLAIM.seconds} seconds`);
+    expect(CHAPTERS.find((c) => c.n === "05")!.text).toContain(`${CLAIM.seconds} s after the photo`);
   });
 
   it("How it works' console lists the other claims as the tour does: photo, verdict, reason, filing time, check time, amount", () => {

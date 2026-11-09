@@ -278,7 +278,7 @@ describe("report", () => {
     expect(r.outcomes.find((o) => o.decision === "rejected")).toMatchObject({ count: 2, share: "50%", note: "A photo check failed, or a person rejected it on review" });
     expect(r.outcomes.find((o) => o.decision === "held")?.note).toContain("PayPal refused an approved payout");
     expect(r.refusals).toEqual([
-      { reason: "Code missing or wrong", count: 2 },
+      { reason: "Wrong or missing code on the tag", count: 2 },
       { reason: "Destruction not shown", count: 1 },
     ]);
     // A starter claim's payout has settled with the workspace's others: the report counts it as sent.

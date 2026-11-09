@@ -6,7 +6,7 @@ import { DEMO_RECALL_ID } from "./kikea";
 export { isDemoAllowed, isSandboxBuild } from "./allowed";
 export { DEMO_RECALL_ID, DEMO_SLUG, DEMO_SPEC, demoRecall } from "./kikea";
 export { DEMO_ROUND_COOKIE, demoRoundCookie, newDemoRound, parseDemoRound } from "./round";
-export { DEMO_SAMPLES, demoSample, demoSampleOf, oneClaimChecked, type DemoSample, type DemoSampleId } from "./samples";
+export { askedSample, DEMO_SAMPLES, demoSample, demoSampleOf, oneClaimChecked, sampleLinkName, type DemoSample, type DemoSampleId } from "./samples";
 export { buildSeedClaims, SEED_PHOTO_PREFIX } from "./seed";
 
 /** The store with the demo recall read from memory (dataset.ts), never from the store: a store an earlier seed wrote keeps
