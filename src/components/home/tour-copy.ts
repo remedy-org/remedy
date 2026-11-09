@@ -16,7 +16,7 @@ export const TOUR = {
    * (the steps above the window are the tour's one set); the queue's toolbar and its foot line, as the console draws
    * them. */
   recall: { product: "X-VESOLJE Nursing Pillows", id: "27-071", autoPay: "Auto-pay on" },
-  toolbar: { export: "Export CSV", search: "Search claims", live: "Updated just now", none: "No claims match this search." },
+  toolbar: { export: "Export CSV", search: "Search claims", live: "Updated just now", none: "No claims match this search.", empty: "No claims in this tab yet." },
   /** Step 03's sentence goes on to the analyst only when a recorded answer is there to show (AnalystRail.tsx). */
   analystSentence: " Then ask the recall analyst why.",
   cta: {

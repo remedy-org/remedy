@@ -5,7 +5,7 @@ import { summarize } from "@/lib/store/store";
 import type { Claim } from "@/lib/types";
 import { buildReport } from "../_lib/report";
 import { reasonSummary } from "@/components/insights/funnel";
-import { buildInsights, claimFact, funnel, STAGES } from "./facts";
+import { buildInsights, claimFact, funnel, refusalLabel, STAGES } from "./facts";
 
 const now = new Date("2026-11-07T12:00:00Z");
 const hashes = Object.fromEntries(SEED_PHOTOS.map((p, i) => [p, (i + 1).toString(16).padStart(16, "0")]));
@@ -109,6 +109,37 @@ describe("claimFact", () => {
     const approved: Claim = { ...base, seeded: false, reasons: [...base.reasons, { check: "review", outcome: "pass", text: "Approved on review by Kikea" }] };
     expect(claimFact(approved, recall).paidOnReview).toBe(1);
     expect(claimFact({ ...base, seeded: false }, recall).paidOnReview).toBe(0);
+  });
+  it("names the check the grid's drawer leads with, whatever order the checks were recorded in", () => {
+    // Recorded label first, then code: the code decides (lib/reasonOrder.ts), as the drawer reads it.
+    const rejected: Claim = {
+      ...base,
+      decision: "rejected",
+      payout: null,
+      reasons: [
+        { check: "label", outcome: "reject", text: "x" },
+        { check: "code", outcome: "reject", text: "y" },
+      ],
+    };
+    expect(claimFact(rejected, recall)).toMatchObject({
+      refusalReason: refusalLabel("code"),
+      refusalGate: "Model reads",
+      failedCheck: "code",
+      stage: "Passed the account checks",
+      stopReason: refusalLabel("code"),
+    });
+  });
+  it("keeps a pre-check's refusal with the account checks, with no AI in it", () => {
+    const blocked: Claim = {
+      ...base,
+      decision: "blocked",
+      payout: null,
+      reasons: [
+        { check: "payer", outcome: "reject", text: "x" },
+        { check: "code", outcome: "reject", text: "y" },
+      ],
+    };
+    expect(claimFact(blocked, recall)).toMatchObject({ refusalReason: refusalLabel("payer"), refusalGate: "No AI", stage: "Photos sent" });
   });
   it("stops a claim with no photos at Filed", () => {
     const pending: Claim = { ...base, decision: "pending", photos: [], payout: null, reasons: [], verdict: null };

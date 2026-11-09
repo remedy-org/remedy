@@ -1204,6 +1204,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
             tabToNextCell={noTab}
             focusGridInnerElement={handlers.focusGridInnerElement}
             overlayNoRowsTemplate="<span></span>"
+            suppressOverlays={["noMatchingRows"]}
             // The DOM follows the rows' order on screen, so a screen reader meets each group's heading before its claims.
             ensureDomOrder
             animateRows={animate}
