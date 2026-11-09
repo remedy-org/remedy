@@ -57,15 +57,19 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
   }
   const Drop = onToggle ? "button" : "div";
   const list = (
-    <ol className={clsx("flex min-h-0 flex-col", flush ? "flex-1" : "h-full pb-1", spread ? "justify-between gap-0.5" : "gap-4")} onClick={onReset} onKeyDown={onKeyDown}>
+    // Every stage one row of the same height, its bar on the row's top line and its drop in the slot under it, so the
+    // bars keep one pitch whether a stage has a drop or not (a drop of two kinds used to push its row 50px further down).
+    <ol className={clsx("grid min-h-0 auto-rows-[1fr]", flush ? "flex-1" : "h-full pb-1", spread ? "gap-0.5" : "gap-4")} onClick={onReset} onKeyDown={onKeyDown}>
       {steps.map((s, i) => {
         const last = i === steps.length - 1;
         return (
-          <li key={s.stage} className="flex flex-col gap-1">
-            <div className="grid grid-cols-[11.5rem_2.5rem_1fr] items-center gap-3">
+          // The stage's name, its count and its bar on the first line; the drop in the slot under the count and bar, beside
+          // a name's second line ("Passed checks before the photo check"), so no stage's row is taller than its slot.
+          <li key={s.stage} className="grid grid-cols-[11.5rem_2.5rem_1fr] content-start items-center gap-x-3 gap-y-1">
+            <div className="contents">
               {/* A long stage ("Passed checks before the photo check") wraps to a second line rather than cut. */}
-              <span className="text-ui leading-tight text-pretty text-text">{flush ? s.stage : shownAs(s.stage)}</span>
-              <span className={clsx("text-right text-ui text-text", figure)}>{s.reached}</span>
+              <span className="row-span-2 self-start text-ui leading-tight text-pretty text-text">{flush ? s.stage : shownAs(s.stage)}</span>
+              <span className={clsx("text-right text-ui leading-tight text-text", figure)}>{s.reached}</span>
               <span className="relative h-3 rounded-[3px] bg-surface-2" aria-hidden="true">
                 <span
                   data-bar="funnel"
@@ -88,7 +92,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                     }
                   : {})}
                 className={clsx(
-                  "group ml-[11.5rem] flex min-h-6 items-center gap-2 rounded-control py-0.5 text-left text-micro transition-colors",
+                  "group col-span-2 col-start-2 -ml-3 flex min-h-6 items-center gap-2 rounded-control py-0.5 text-left text-micro transition-colors",
                   // 8px of air inside the picked line's ring on the homepage's flush card, so its words never touch it.
                   flush ? "pr-2 pl-3" : "px-2",
                   onToggle && "disabled:cursor-default enabled:hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
