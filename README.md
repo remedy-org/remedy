@@ -1,6 +1,6 @@
 # Remedy
 
-**Recall refunds through PayPal, for companies running CPSC refund recalls. The owner photographs the destroyed product in the claim's own camera; AI describes the photo, a fixed rule in code decides, and PayPal Payouts pays. Stolen and reused photos get nothing. A fake has to arrive inside the claim's 10-minute camera session, carry the code issued in it, and come from a verified PayPal account with no other claim on the recall.**
+**Recall refunds through PayPal, for companies running CPSC refund recalls. The owner photographs the destroyed product in the claim's own camera; AI describes the photo, a fixed rule in code decides, and PayPal Payouts pays. Stolen and reused photos get nothing. A fake has to arrive inside the claim's 10-minute camera session, carry the code issued in it, and come from a verified PayPal account with no other paid or open claim on the recall.**
 
 - **Live:** https://remedy-recalls.vercel.app. The homepage tells one claim, RM-0442, a beat per swipe: how it works, the cut pillow in slate blue-grey 3D while the phone scans its own photo, the five checks, then the paid receipt folding into its row and gliding into the console.
 - **Judges' demo:** https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try (a PayPal sandbox login is on the page)
@@ -8,7 +8,7 @@
 
 <!-- Demo video: add the YouTube link here before submitting. -->
 
-I built Remedy solo for the PayPal AI Hackathon 2026. It runs on PayPal's sandbox, so no real money moves. MIT licensed.
+I built Remedy solo for the PayPal AI Hackathon 2026. It runs on PayPal's sandbox, so no real money moves. Open source under MIT.
 
 **Built with:** PayPal (Log in with PayPal, Payouts, Webhooks) · OpenAI (GPT-6.1 Sol through the Responses API; gpt-5.4-mini for the Recall analyst) · AG Grid · AG Studio · Next.js · TypeScript · Vercel · the CPSC recalls API
 
@@ -26,7 +26,7 @@ The demo runs on a real, public recall: **CPSC 27-071**, X-VESOLJE nursing pillo
    | Claim | What's in the photo | What Remedy does |
    |---|---|---|
    | **A genuine claim** | The feather-print pillow cut in half, its tag reading X-VESOLJE M4T | Passes all five checks; PayPal Payouts sends $29.99 in sandbox money to the PayPal account you logged in with |
-   | **Wrong code on the tag** | A real cut pillow, but the tag reads K7Q and this claim's code is K7P | Rejected: the model reads the code character by character, and the rule in code compares it |
+   | **Wrong code on the tag** | The floral-print pillow cut in half, but the tag reads K7Q and this claim's code is K7P | Rejected: the model reads the code character by character, and the rule in code compares it |
    | **A photo from the web** | A picture of a cut pillow, sent from outside this claim's camera session | Blocked before any AI runs, at **Sent in the camera session** |
    | **A photo used before** | The genuine claim's photo, sent again as a new claim | Blocked before any AI runs, at **Photo not used before**: its fingerprint matches an earlier claim |
 
@@ -53,7 +53,7 @@ When a product is recalled for safety, the company often refunds owners who dest
 - **It happens every week.** Matching the same API by keyword (approximate counts), 2026 to 5 Nov has 514 recalls, 362 with a refund, 268 requiring destruction plus a photo and 238 taking that photo by email, covering 5.28M units. 157 of 2026's refund recalls send the proof to a personal webmail inbox.
 - **AI broke photo proof, and the regulator says so.** CPSC's request for information CPSC-2026-0067 (15 Apr 2026) names "altered, fabricated, or artificially generated images... purporting to demonstrate product destruction", and warns that fraud controls "impose burdens on legitimate consumers and reduce recall participation" ([Federal Register](https://public-inspection.federalregister.gov/2026-07328.pdf)). The CPSC then launched a [national recall-fraud effort](https://www.cpsc.gov/Newsroom/News-Releases/2026/US-Consumer-Product-Safety-Commission-Launches-National-Recall-Fraud-Effort-as-Part-of-Trump-Administrations-Anti-Fraud-Initiative). Sedgwick, the largest recall administrator, reports 20,000 suspected fraudulent claims and "multimillion" exposure ([Foley, Jul 2026](https://www.foley.com/insights/publications/2026/07/when-recalls-go-rogue-the-impact-of-ai-fueled-recall-fraud/)).
 
-That is the trap: photo-only refunds raise participation, and AI fakes push firms back to physical returns, which kill it. Remedy keeps the refund easy for real owners. Stolen and reused photos get nothing, and a fake has to arrive inside the claim's 10-minute camera session, carry the code issued in it, and come from a verified PayPal account that has no other claim on the recall.
+That is the trap: photo-only refunds raise participation, and AI fakes push firms back to physical returns, which kill it. Remedy keeps the refund easy for real owners. Stolen and reused photos get nothing, and a fake has to arrive inside the claim's 10-minute camera session, carry the code issued in it, and come from a verified PayPal account that has no other paid or open claim on the recall.
 
 **Who it's for:** small and mid-size sellers running a CPSC refund recall from an inbox, often marketplace sellers. They are legally required to run the remedy, they review photos by hand, and they absorb the fraudulent refunds. Settlement tools verify the person. Remedy verifies that the product is destroyed.
 
@@ -77,7 +77,7 @@ Each check has one name, word for word the same on the homepage, the owner's che
 |---|---|---|---|
 | 1 | **Sent in the camera session** | Photos must arrive inside this claim's own unexpired 10-minute camera session, carrying its key. A photo sent any other way is refused before the model sees it | No |
 | 2 | **Photo not used before** | A perceptual fingerprint (dHash, 64 bits) of every photo; a match within 8 bits of any earlier claim's photo blocks it. A repost is refused even resized, re-saved or brightened | No |
-| 3 | **One claim per verified PayPal account** | PayPal says the account is verified, and it has no other live claim on this recall | No |
+| 3 | **One claim per verified PayPal account** | PayPal says the account is verified, and it has no other paid or open claim on this recall | No |
 | 4 | **Code and label** (on the demo recall: **Tag shows X-VESOLJE and M4T**) | GPT-6.1 Sol reads the label and the handwritten code, quoting what it sees; the code passes only if the text it read equals the code | Describes |
 | 5 | **Really destroyed** (on the demo recall: **Pillow cut in half**) | The model checks each proof step from the recall notice, whether it is a photo of a screen or a print, and whether all photos show the same item | Describes |
 
@@ -114,7 +114,7 @@ A company imports a recall by CPSC number or cpsc.gov link (from saferproducts.g
 AG Grid Community 36.2 runs the claims queue, themed from the app's CSS tokens (`themeQuartz.withParams`):
 
 - Custom cell renderers, plus tooltips for photos, checks and the claim's timeline.
-- Status tabs (All, Paid, Sent, settling, Approved, Held, Rejected, Blocked, In progress) that set a custom Verdict filter, plus a custom Claim filter and quick-filter search.
+- Status tabs (All, Paid, "Sent, settling", Approved, Held, Rejected, Blocked, In progress) that set a custom Verdict filter, plus a custom Claim filter and quick-filter search.
 - New claims stream in with `applyTransaction` from an 8-second poll; cells flash when a verdict or payout changes.
 - Keyboard navigation, group-by, **Export CSV** with readable headers, and a card layout on phones.
 
@@ -210,7 +210,7 @@ I tested the vision check before building on it, and again on the shipping check
 - 14 claims made of AI images carrying a code: genuine claims, wrong codes, a photo of a screen, and one AI image with a physical flaw (`c14`).
 - 5 held-out claims, written after the round-1 fixes.
 
-Each model ran 3 times at high effort. Every answer (label, each step, code, screen) was scored against an answer key, not just the decision. The runner calls the app's own `runVisionCheck` and `decide`, so it tests exactly the prompt, schema, image resizing and rule the app runs. The table is round 2 (31 claims), 3 runs per model:
+Each model ran 3 times at high effort. Every answer (label, each step, code, screen) was scored against an answer key, not just the decision. These results came from the first runner, a plain-JS copy of the app's check with the same prompt, schema and rule, which resized with macOS `sips`. The runner now calls the app's own `runVisionCheck` and `decide`, and the 9 Nov shipping-check re-run below used it. The table is round 2 (31 claims), 3 runs per model:
 
 | Model | Genuine claims paid | Fakes paid | Seconds a claim | Cost a claim |
 |---|---|---|---|---|
@@ -242,7 +242,7 @@ All four models rejected every wrong code and, with the code check on, every web
 | k03 one half in frame · k07 tag lying loose · k09 only the H showing | reject 3/3 each |
 | k05 another genuine claim · k08 smudge beside the code | pass 3/3 each |
 
-**The shipping check, re-run (9 Nov).** 97 cases, 3 runs each, on `gpt-6.1-sol` at high effort through the app's own `runVisionCheck` and `decide`: the four `/try` samples did what the page says in 3 of 3 runs; 0 of 57 tries on claims that should pay were refused (every one an AI-made photo; real phone photos aren't tested yet); 0 of 72 tries on 24 new web photos paid; every benchmark number on the homepage still holds; median 15.0 s, p95 26.2 s; about $0.011 a claim.
+**The shipping check, re-run (9 Nov).** 97 cases, 3 runs each, on `gpt-6.1-sol` at high effort through the app's own `runVisionCheck` and `decide`: the four `/try` samples did what the page says in 3 of 3 runs; 0 of 57 tries on claims that should pay were refused (every photo carrying a code is AI-made; real phone photos aren't tested yet); 0 of 72 tries on 24 new web photos paid; every benchmark number on the homepage still holds; median 15.0 s, p95 26.2 s; about $0.011 a claim.
 
 **The repost fingerprint against edits (9 Nov, no model calls).** A reposted photo still matches after a re-save, a resize to 50%, brightness or contrast moved 15%, or a 2% crop. A mirror image, a crop of 5% or more off one side, a screenshot or a rotation with white corners gets past the fingerprint; then a reposted tag still carries the earlier claim's code, and a screenshot meets the screen check. `fingerprint.test.ts` pins the edits the homepage names.
 
@@ -268,7 +268,7 @@ The eval photos and raw run files (`eval/photos/`, `eval/out/`) are git-ignored,
 - **Sandbox:** all money is PayPal sandbox money. This build sends every refund from Remedy's one PayPal sandbox business account. At launch, refunds go from each company's PayPal Business account straight to each owner's PayPal account, which needs PayPal partner onboarding.
 - **Prepared photos on `/try`:** the four photos are AI-made edits of the CPSC product photo, each with its tag already written. Your camera isn't used there. Real claims use the claim page's camera, which has no upload button, and a photo counts only if it arrives inside the claim's 10-minute camera session.
 - **The demo recall's claims in the console:** the seven claims (RM-0442, RM-9475, RM-2125, RM-0118, RM-9629, RM-6276, RM-9545) are built in memory on every request and never stored.
-  - Their model answers are stored real answers from the 9 Nov runs, and the app's own rule decides them.
+  - The four that reached the model (RM-0442, RM-0118, RM-9629, RM-6276) carry its stored real answers from the 9 Nov runs, and the app's own rule decides them. The other three were blocked before it.
   - Their PayPal payer IDs are generated, and their dates move forward so the newest is always yesterday.
   - RM-0442's payout record is a stand-in, not a PayPal call. So are its timings, 15 s from photo to payout and confirmed at 55 s.
   - The claims you run on `/try` are real, and appear next to these only in your browser.
@@ -377,6 +377,6 @@ FEEDBACK.md              issues I hit in PayPal's developer tools
 
 [FEEDBACK.md](FEEDBACK.md) logs what I hit in PayPal's developer tools while building this, including a `localhost` Return URL that fails to save with HTTP 520, a bare 401 from userinfo for the app-owner account, `verified_account` arriving as the string `"true"`, and India sandbox accounts refused by Payouts.
 
-## Licence
+## Open source
 
 [MIT](LICENSE) © 2026 mohit-1710
