@@ -10,8 +10,8 @@ import { payoutsLine, TOUR } from "./tour-copy";
 const BUTTON = "inline-flex h-9 items-center rounded-button px-3.5 text-ui font-medium whitespace-nowrap select-none";
 
 /**
- * The phone story's foot of the evidence: the console panel's own review buttons (ReviewActions.tsx), Pay in brass and
- * Reject as the quiet button, then one muted line on where the money goes. A picture of the console, never a control:
+ * The phone story's foot of the evidence: the console panel's own review buttons (ReviewActions.tsx), Approve in brass
+ * and Reject as the quiet button, then one muted line on what approving does. A picture of the console, never a control:
  * the buttons are drawn spans, hidden from screen readers, who read the line.
  */
 export function PayoutsNote({ amount, id }: { amount: string; id: string }) {
@@ -31,8 +31,8 @@ export type ReviewPhase = "idle" | "confirm" | "paying" | "paid" | "reject" | "r
 
 /**
  * The tour's foot of the evidence, as the console panel's review works (ReviewActions.tsx), played in the browser alone:
- * no request is made. A held claim: Pay $29.99… asks "Pay $29.99 to •••• DSFD?", and paying reads "Paying through PayPal"
- * for a moment before it is sent; Reject… shows the reason the owner would read, and rejecting it refuses the claim.
+ * no request is made. A held claim: Approve $29.99… asks "Approve $29.99 for •••• DSFD?", as the console does for its
+ * own claims (nothing is sent through PayPal), and reads "Approving…" for a moment before it lands; Reject… shows the reason the owner would read, and rejecting it refuses the claim.
  * A claim decided before: what happened to the money, in one line.
  */
 export function ReviewFoot({ claim, phase, onPhase }: { claim: StillClaim; phase: ReviewPhase; onPhase: (p: ReviewPhase) => void }) {
@@ -43,18 +43,19 @@ export function ReviewFoot({ claim, phase, onPhase }: { claim: StillClaim; phase
     </p>
   );
   if (!claim.review) {
-    if (claim.decision === "paid") return line(TOUR.payouts.sent(claim.amount, claim.id), true);
+    // Paid only where PayPal paid; a claim approved with nothing sent says so.
+    if (claim.decision === "paid") return claim.payout?.status === "SUCCESS" ? line(TOUR.payouts.sent(claim.amount, claim.id), true) : line(TOUR.payouts.approved(claim.amount), true);
     if (claim.decision === "rejected" || claim.decision === "blocked") return line(TOUR.payouts.refused);
     return null;
   }
-  if (phase === "paid") return line(TOUR.payouts.sent(claim.amount, claim.id), true);
+  if (phase === "paid") return line(TOUR.payouts.approved(claim.amount), true);
   if (phase === "rejected") return line(TOUR.payouts.rejected);
   const reason = quickReasons(claim.checks.map((c) => ({ id: c.id, state: c.outcome })))[0]?.text(claim.code) ?? null;
   return (
     <div className={styles.review}>
       {phase === "confirm" && (
         <p className="mb-2 text-ui text-text">
-          Pay <span className="font-mono">{claim.amount}</span> to <span className="font-mono">{claim.payer}</span>?
+          Approve <span className="font-mono">{claim.amount}</span> for <span className="font-mono">{claim.payer}</span>? Nothing is sent through PayPal.
         </p>
       )}
       {phase === "reject" && reason && <p className="mb-2 text-ui text-muted">{TOUR.payouts.reason(reason)}</p>}
@@ -78,7 +79,7 @@ export function ReviewFoot({ claim, phase, onPhase }: { claim: StillClaim; phase
             onClick={() => phase === "confirm" && onPhase("paying")}
             className={clsx("btn-primary", BUTTON, phase === "paying" ? "cursor-default opacity-60" : "cursor-pointer")}
           >
-            {phase === "paying" ? TOUR.payouts.paying : `Pay ${claim.amount}`}
+            {phase === "paying" ? TOUR.payouts.paying : `${TOUR.payouts.confirm} ${claim.amount}`}
           </button>
         )}
         {(phase === "reject" || phase === "rejecting") && (

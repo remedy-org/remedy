@@ -102,11 +102,12 @@ function rowsAt(rows: PreviewRow[], id: string, at: Arrival): PreviewRow[] {
   return rows.map((r) => (r.id === id ? { ...r, decision: "pending" } : r));
 }
 
-/** A held claim as a visitor's decision leaves it: paid (sent and settled, as the tour's other paid claims), or
- * rejected on review (no amount owed); otherwise as it was. */
+/** A held claim as a visitor's decision leaves it, as the console's approve does for its own claims: approved with
+ * nothing sent through PayPal (it reads Approved, never Paid), or rejected on review (no amount owed); otherwise as it
+ * was. */
 function decide(r: PreviewRow, phase: ReviewPhase | undefined): PreviewRow {
   if (phase === "paid") {
-    return { ...r, decision: "paid", payoutStatus: "SUCCESS", note: "Approved on review", evidence: r.evidence && { ...r.evidence, decision: "paid", payout: { status: "SUCCESS" } } };
+    return { ...r, decision: "paid", payoutStatus: null, note: "Approved on review", evidence: r.evidence && { ...r.evidence, decision: "paid", payout: null } };
   }
   if (phase === "rejected") {
     return { ...r, decision: "rejected", note: "Rejected on review", amount: null, cents: null, evidence: r.evidence && { ...r.evidence, decision: "rejected" } };
