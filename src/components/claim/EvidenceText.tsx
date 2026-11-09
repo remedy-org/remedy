@@ -57,7 +57,7 @@ export function ModelQuote({ children }: { children: string }) {
 
 // What failed, as a sentence an owner can read aloud.
 const FAILED: Record<string, (cut: boolean) => string> = {
-  session: () => "Not sent from Remedy’s camera",
+  session: () => "Not sent in the camera session",
   duplicate: () => "Photo sent before",
   account: () => "This PayPal account has claimed already",
   code: () => "The tag doesn’t match",
@@ -66,7 +66,7 @@ const FAILED: Record<string, (cut: boolean) => string> = {
 
 // A check by what it looks at, never by a number nobody was shown.
 const NAMED: Record<string, (cut: boolean) => string> = {
-  session: () => "the camera",
+  session: () => "the camera session",
   duplicate: () => "the photo match",
   account: () => "the PayPal account",
   code: () => "the tag",
@@ -77,7 +77,7 @@ const and = (parts: string[]) => (parts.length < 2 ? (parts[0] ?? "") : `${parts
 
 /**
  * The evidence in one line, said as what happened rather than as a tally: "All 5 checks passed", "The tag doesn't
- * match.", "Not sent from Remedy's camera. The photo check didn't run.", "The tag and the cut need a person to look." The
+ * match.", "Not sent in the camera session. The photo check didn't run.", "The tag and the cut need a person to look." The
  * refund isn't one of the checks, so it never counts.
  */
 export function evidenceSummary(six: Pick<SixRow, "key" | "state" | "unrun">[], { decision, cut, unanswered }: { decision: Decision; cut: boolean; unanswered: boolean }): string {

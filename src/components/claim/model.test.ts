@@ -26,7 +26,7 @@ describe("refusalHeadline", () => {
   it("names the check that decided it", () => {
     expect(refusalHeadline(refused("code"), DEMO_SPEC)).toBe("The code on the tag doesn’t match");
     expect(refusalHeadline(refused("step_1"), DEMO_SPEC)).toBe("The photo doesn’t show it cut fully in half");
-    expect(refusalHeadline(refused("session", "blocked"), DEMO_SPEC)).toBe("This photo wasn’t sent from Remedy’s camera");
+    expect(refusalHeadline(refused("session", "blocked"), DEMO_SPEC)).toBe("This photo wasn’t sent in the camera session");
     expect(refusalHeadline(refused("duplicate_photo", "blocked"), DEMO_SPEC)).toBe("This photo was already used in another claim");
   });
   it("falls back to the general sentence", () => {

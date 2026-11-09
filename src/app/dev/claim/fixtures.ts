@@ -52,8 +52,8 @@ function decided(prefix: string, model?: string, over: Partial<Claim> = {}) {
   const { outcome, reasons } = decide(s.verdict, { spec: recall.spec, code: s.code, photos: s.photos.length });
   const claim = base(s.code, { photos: photosOf(s.photos), verdict: s.verdict, reasons, decision: outcome === "pass" ? "paid" : outcome === "hold" ? "held" : "rejected", ...over });
   claim.events.push(
-    { at: at(0), type: "photos_received", detail: `${s.photos.length} photos from the live camera` },
-    { at: at(0.4), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
+    { at: at(0), type: "photos_received", detail: `${s.photos.length} photos in the camera session` },
+    { at: at(0.4), type: "prechecked", detail: "Sent in the camera session, new photos, no other paid or open claim from this account" },
     { at: at(11), type: "checked", detail: "Photo check answered in 10.6 s (gpt-6.1-sol)" },
   );
   if (outcome !== "pass") claim.events.push({ at: at(11.3), type: "decided", detail: "Decided by the rule" });
@@ -79,8 +79,8 @@ export const paidReceived = { ...paid, claim: { ...paid.claim, payout: { ...paid
 // checking states and checking-done show one claim.
 export const checkingModel = base(paid.claim.code, { photos: paid.claim.photos });
 checkingModel.events.push(
-  { at: at(0), type: "photos_received", detail: "1 photo from the live camera" },
-  { at: at(0.4), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
+  { at: at(0), type: "photos_received", detail: "1 photo in the camera session" },
+  { at: at(0.4), type: "prechecked", detail: "Sent in the camera session, new photos, no other paid or open claim from this account" },
 );
 
 // A repost: stopped by the duplicate-photo check alone.
@@ -91,7 +91,7 @@ export const blockedDuplicate = (() => {
     decision: "blocked",
     reasons: [{ check: "duplicate_photo", outcome: "reject", text: "Photo 1 was already used in another claim" }],
   });
-  claim.events.push({ at: at(0), type: "photos_received", detail: "1 photo from the live camera" }, { at: at(0.3), type: "blocked", detail: "Blocked before the photo check" });
+  claim.events.push({ at: at(0), type: "photos_received", detail: "1 photo in the camera session" }, { at: at(0.3), type: "blocked", detail: "Blocked before the photo check" });
   return { claim, photoUrls: ["/demo/k01-1.jpg"] };
 })();
 
@@ -104,7 +104,7 @@ export const demoWrongCode = (() => {
   const claim = base(wrongCode.code, { id: "RM-5307", demo: true, photos: photosOf(wrongCode.photos), verdict: wrongCode.verdict, reasons, decision: outcome === "reject" ? "rejected" : "held" });
   claim.events.push(
     { at: at(0), type: "photos_received", detail: "1 photo from the demo" },
-    { at: at(0.3), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
+    { at: at(0.3), type: "prechecked", detail: "Sent in the camera session, new photos, no other paid or open claim from this account" },
     { at: at(8.7), type: "checked", detail: "Photo check answered in 8.7 s (gpt-6.1-sol)" },
     { at: at(8.8), type: "decided", detail: "Rejected by the rule" },
   );
@@ -152,7 +152,7 @@ export const blocked = {
     id: "RM-9545",
     photos: photosOf(["web-1.jpg"]),
     decision: "blocked",
-    reasons: [{ check: "session", outcome: "reject", text: "This photo wasn't taken in this claim's camera session" }],
+    reasons: [{ check: "session", outcome: "reject", text: "This photo wasn't sent in this claim's camera session" }],
   }),
   photoUrls: ["/demo/web-1.jpg"],
 };

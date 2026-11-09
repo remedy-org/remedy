@@ -35,8 +35,8 @@ Only one thing moves money: a recalled product, physically destroyed, seen on ca
 
 Remedy does not try to spot AI images. It makes a fake worthless. The first three checks use no AI at all.
 
-1. **Live camera session.** Photos must arrive inside the 10-minute camera session Remedy opened for the claim, carrying that session's key. A photo sent any other way is refused before the model sees it.
-2. **Never seen before.** Every photo gets a perceptual fingerprint (dHash) that is compared against every earlier claim. A photo used on one claim is refused on another, even resized, re-saved or brightened.
+1. **Sent in the camera session.** Photos must arrive inside the 10-minute camera session Remedy opened for the claim, carrying that session's key. A photo sent any other way is refused before the model sees it.
+2. **Photo not used before.** Every photo gets a perceptual fingerprint (dHash) that is compared against every earlier claim. A photo used on one claim is refused on another, even resized, re-saved or brightened.
 3. **One claim per verified PayPal account per recall.** Whoever proves the destruction is paid, in their own verified name, once.
 4. **The code, character by character.** The vision model reads the handwritten code and the product label, quoting what it sees. A code that did not exist ten minutes ago cannot appear in a web photo, a stock photo or an old photo. There is precedent: Kobayashi HotHands (CPSC 27-011) already has owners write "Recalled" and their claim number on the unit.
 5. **Really destroyed, really the recalled product.** The model describes each step of the destruction, quoting the evidence, in schema-validated structured output.

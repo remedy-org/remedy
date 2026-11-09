@@ -78,8 +78,8 @@ describe("funnel", () => {
 
   it("never presents a tied reason as the top one", () => {
     const tally = (...counts: [string, number][]) => new Map(counts);
-    expect(reasonSummary(tally(["PayPal account not verified", 1], ["Photo already used in another claim", 1], ["Second claim from one PayPal account", 1], ["Photos outside the live camera session", 1]))).toBe(
-      "PayPal account not verified, Photo already used in another claim, Photos outside the live camera session, Second claim from one PayPal account",
+    expect(reasonSummary(tally(["PayPal account not verified", 1], ["Photo already used in another claim", 1], ["Second claim from one PayPal account", 1], ["Photos sent outside the camera session", 1]))).toBe(
+      "PayPal account not verified, Photo already used in another claim, Photos sent outside the camera session, Second claim from one PayPal account",
     );
     expect(reasonSummary(tally(["b", 3], ["a", 3], ["c", 1]))).toBe("a 3, b 3, c 1");
     expect(reasonSummary(tally(["Photos showed different items", 3]))).toBe("Photos showed different items");
@@ -103,7 +103,7 @@ describe("claimFact", () => {
   const base = claims.find((c) => c.decision === "paid")!;
   it("stops a blocked claim at the pre-checks with the pre-check's reason", () => {
     const blocked: Claim = { ...base, decision: "blocked", payout: null, reasons: [{ check: "session", outcome: "reject", text: "x" }] };
-    expect(claimFact(blocked, recall)).toMatchObject({ stage: "Photos sent", stopReason: "Photos outside the live camera session", refused: 1, amountPaid: 0 });
+    expect(claimFact(blocked, recall)).toMatchObject({ stage: "Photos sent", stopReason: "Photos sent outside the camera session", refused: 1, amountPaid: 0 });
   });
   it("marks a claim paid only after a person approved it, so its wait is named and not hidden in a median", () => {
     const approved: Claim = { ...base, seeded: false, reasons: [...base.reasons, { check: "review", outcome: "pass", text: "Approved on review by Kikea" }] };

@@ -7,7 +7,7 @@ export type CheckState = "waiting" | "running" | "pass" | "hold" | "reject" | "b
 export interface CheckStep {
   /** Stable key, e.g. "session" or "code". */
   id: string;
-  /** What is checked: "Live camera session". */
+  /** What is checked: "Sent in the camera session". */
   label: ReactNode;
   state: CheckState;
   /** The result in a sentence, or the model's quoted evidence (shown in mono when `evidence` is true). */

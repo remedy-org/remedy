@@ -41,7 +41,7 @@ Remedy is its own website built on PayPal's public APIs. Companies running a rec
 2. **PayPal login.** PayPal's own consent page. We get the payer ID and the verified flag.
 3. **Code.** A one-time code (letter-digit-letter, no look-alike characters) and how to write it on a tag. The capture session lasts 10 minutes.
 4. **Capture.** A live camera with no upload control. On a laptop: the webcam, or a QR code to continue on a phone. Up to 3 photos: the label, the destruction, the code (or one photo with all three).
-5. **Checking.** Each check appears as it resolves: live session, photo not seen before, first claim for this account, then the model's answers.
+5. **Checking.** Each check appears as it resolves: sent in the camera session, photo not used before, one claim per verified PayPal account, then the model's answers.
 6. **Result.**
    - **Paid:** the amount, PayPal's payout status, and the time.
    - **Held:** what a person will look at, and when.

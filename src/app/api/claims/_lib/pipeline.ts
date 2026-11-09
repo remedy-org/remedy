@@ -242,14 +242,14 @@ export async function receivePhotos(
   const keys = photos.map((_, i) => `${claim.payoutKey}/${i + 1}.jpg`);
   for (let i = 0; i < photos.length; i++) await deps.store.putPhoto(keys[i], photos[i]);
   claim.photos = keys.map((key, i) => ({ key, hash: hashes[i] }));
-  claim.events.push(event(now, "photos_received", claim.demo ? `${plural(photos.length, "photo")} from the demo` : `${plural(photos.length, "photo")} from the live camera`));
+  claim.events.push(event(now, "photos_received", claim.demo ? `${plural(photos.length, "photo")} from the demo` : `${plural(photos.length, "photo")} in the camera session`));
 
   if (reasons.length) {
     claim.decision = "blocked";
     claim.reasons = reasons;
     claim.events.push(event(now, "blocked", `Blocked before the photo check: ${reasons.map((r) => r.text).join("; ")}`));
   } else {
-    claim.events.push(event(now, "prechecked", oneClaimChecked(claim) ? "Live session, new photos, no other paid or open claim from this account" : "Live session, new photos; one-claim check not run on this demo claim"));
+    claim.events.push(event(now, "prechecked", oneClaimChecked(claim) ? "Sent in the camera session, new photos, no other paid or open claim from this account" : "Sent in the camera session, new photos; one-claim check not run on this demo claim"));
   }
   await deps.store.putClaim(claim);
   return claim;

@@ -10,7 +10,7 @@ export const SAMPLE_COPY: Record<string, { title: string; line: string; alt: str
     alt: "A floral pillow cut in half, its tag reading X-VESOLJE K7Q",
     tag: "/demo/k02-tag.jpg",
   },
-  "ai-no-session": { title: "A photo from the web", line: "A picture of a cut pillow that was never taken in this claim’s camera.", alt: "A floral pillow cut in half, a tag reading H6N beside it" },
+  "ai-no-session": { title: "A photo from the web", line: "A picture of a cut pillow, sent from outside this claim’s camera session.", alt: "A floral pillow cut in half, a tag reading H6N beside it" },
   reposted: { title: "A photo used before", line: "The genuine claim’s photo, sent again as a new claim.", alt: "A feather-print pillow cut in half, its tag reading X-VESOLJE M4T" },
 };
 

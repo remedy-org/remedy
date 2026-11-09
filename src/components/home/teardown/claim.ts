@@ -61,7 +61,7 @@ export const CHECKS: readonly Check[] = [
     n: "01",
     label: CHECK_NAMES.session,
     ai: false,
-    note: "Taken in this claim’s 10-minute camera session, in the page’s own camera. There is no upload button.",
+    note: "Arrived inside this claim’s 10-minute camera session, carrying its key. The page has no upload button.",
   },
   {
     id: "fp",

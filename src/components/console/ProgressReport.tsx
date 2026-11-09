@@ -239,8 +239,9 @@ export function ProgressReport({
         <section className="mt-10 flex flex-col gap-3">
           <H>How units were verified</H>
           <p className="max-w-read text-ui text-text">
-            Each owner logged in with PayPal, received a one-time code, and photographed the destroyed product with the code written on it, using a live camera
-            session of 10 minutes with no upload option. Before any photo was examined, Remedy checked the session, refused reused photos and second claims
+            Each owner logged in with PayPal, received a one-time code, and photographed the destroyed product with the code written on it, using the claim
+            page&rsquo;s camera, with no upload option. Before any photo was examined, Remedy checked that it was sent inside the claim&rsquo;s 10-minute camera
+            session, refused reused photos and second claims
             from one account, and required a verified PayPal account. A vision model then described the label, the code and each destruction step, quoting
             what it saw; a fixed rule paid only when every answer passed, and held any unclear answer for a person.
           </p>

@@ -182,7 +182,7 @@ function starterEvents(c: Claim, amount: string): Claim["events"] {
     e.type === "photos_received"
       ? [{ ...e, detail: `${n} ${n === 1 ? "photo" : "photos"} received` }]
       : e.type === "prechecked"
-        ? [{ ...e, detail: "Live session, new photos, no other paid or open claim from this account" }]
+        ? [{ ...e, detail: "Sent in the camera session, new photos, no other paid or open claim from this account" }]
         : e.type === "payout_sent"
           ? c.payout?.status === "SUCCESS"
             ? [{ ...e, detail: `Payout of ${amount} sent through PayPal` }]
