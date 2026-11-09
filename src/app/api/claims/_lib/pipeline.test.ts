@@ -1,11 +1,12 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { checkRows } from "@/components/claim/model";
 import { CODE_PATTERN } from "@/lib/codes";
 import { DEMO_SPEC, demoRecall, demoSample } from "@/lib/demo";
 import { PayPalError } from "@/lib/paypal/client";
+import { decide } from "@/lib/rule";
 import type { Store } from "@/lib/store";
 import { localStore } from "@/lib/store/local";
 import type { Claim, Recall, Verdict } from "@/lib/types";
@@ -579,6 +580,70 @@ describe("checkClaim", () => {
     await receivePhotos(deps, { claimId: next.id, payerId: third.payerId, sessionId: next.captureSession!.id, photos: [photo("0f0f0f0f0f0f0f0f")] });
     expect((await checkClaim(deps, next.id)).decision).toBe("paid");
     expect(deps.vision).toHaveBeenCalledTimes(2);
+  });
+});
+
+// A demo genuine claim isn't saved between the model and PayPal: its answer lands in the one save that decides it
+// (paid, held on a conflict, held when PayPal refuses), so its page goes from checking to the decision, never stuck.
+describe("checkClaim on a demo claim on its way to PayPal", () => {
+  const judge = { payerId: "JUDGE0000001", verified: true };
+  const A = "dr_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  let saves: MockInstance<Store["putClaim"]>;
+  const genuine = async () => {
+    const claim = await createClaim(deps, { recall, payer: judge, sample: demoSample("genuine")!, round: A });
+    const sent = await receivePhotos(deps, { claimId: claim.id, payerId: judge.payerId, sessionId: claim.captureSession!.id, photos: [photo("00000000000000ff")] });
+    expect(sent.decision).toBe("pending");
+    saves = vi.spyOn(store, "putClaim");
+    return sent;
+  };
+  // Only the saves after the model answered count.
+  const answeredThen = (before?: () => Promise<void>) =>
+    deps.vision.mockImplementationOnce(async () => {
+      await before?.();
+      saves.mockClear();
+      return { verdict: verdict(), seconds: 9, model: "gpt-test" };
+    });
+  const modelReasons = () => decide(verdict(), { spec: recall.spec, code: "M4T", photos: 1 }).reasons;
+  const tail = (c: Claim, n: number) => c.events.slice(-n).map((e) => e.type);
+
+  it("saves its answer with its payout, once", async () => {
+    const claim = await genuine();
+    answeredThen();
+    expect((await checkClaim(deps, claim.id)).decision).toBe("paid");
+    expect(saves).toHaveBeenCalledTimes(1);
+    const saved = (await store.getClaim(claim.id))!;
+    expect(saved.verdict).toEqual(verdict());
+    expect(saved.reasons).toEqual(modelReasons());
+    expect(tail(saved, 3)).toEqual(["checked", "decided", "payout_sent"]);
+  });
+
+  it("saves its answer with the hold when PayPal refuses the payout", async () => {
+    const claim = await genuine();
+    answeredThen();
+    deps.pay.mockRejectedValueOnce(new PayPalError("POST /v1/payments/payouts -> 422", 422, "RECEIVER_UNREGISTERED", "dbg-9", {}));
+    expect((await checkClaim(deps, claim.id)).decision).toBe("held");
+    expect(saves).toHaveBeenCalledTimes(1);
+    const saved = (await store.getClaim(claim.id))!;
+    expect(saved.verdict).toEqual(verdict());
+    expect(saved.reasons).toEqual([...modelReasons(), expect.objectContaining({ check: "payout", outcome: "hold" })]);
+    expect(tail(saved, 3)).toEqual(["checked", "payout_failed", "decided"]);
+  });
+
+  it("saves its answer with the hold when the round's other genuine claim was paid during the model call", async () => {
+    const claim = await genuine();
+    answeredThen(async () => {
+      // Another tab's genuine claim in the same round, paid while this one was at the model.
+      const other = await createClaim(deps, { recall, payer: judge, sample: demoSample("genuine")!, round: A });
+      expect(other.id).not.toBe(claim.id);
+      await store.putClaim({ ...other, photos: [{ key: "x/1.jpg", hash: "1111111111111111" }], decision: "paid" });
+    });
+    expect((await checkClaim(deps, claim.id)).decision).toBe("held");
+    expect(deps.pay).not.toHaveBeenCalled();
+    expect(saves).toHaveBeenCalledTimes(1);
+    const saved = (await store.getClaim(claim.id))!;
+    expect(saved.verdict).toEqual(verdict());
+    expect(saved.reasons).toEqual([...modelReasons(), expect.objectContaining({ check: "payer", outcome: "hold" })]);
+    expect(tail(saved, 2)).toEqual(["checked", "decided"]);
   });
 });
 

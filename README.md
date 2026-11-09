@@ -120,7 +120,7 @@ You need a PayPal developer account with a US business sandbox account (sends re
 | `BLOB_READ_WRITE_TOKEN` | Optional: Vercel Blob; without it data lives in `data/` |
 | `NEXT_PUBLIC_AG_STUDIO_LICENSE` | Optional: AG Studio licence; without it Insights shows the trial watermark |
 | `ANALYST_MODEL` | Optional: the Recall analyst's model; defaults to `gpt-5.4-mini` |
-| `VISION_DAILY_LIMIT`, `DRAFT_DAILY_LIMIT`, `CLAIM_DAILY_LIMIT`, `CLAIM_MONTHLY_LIMIT`, `ACCOUNT_CLAIM_DAILY_LIMIT`, `ACCOUNT_DEMO_DAILY_LIMIT` | Optional: what the live demo may spend. Per UTC day: 100 photo checks, 20 check drafts, 60 new claims (150 in any 30 days), and per PayPal account 5 real and 60 demo claims. Past the photo-check limit a real claim is held for a person, never lost ([docs/PRODUCT.md](docs/PRODUCT.md)) |
+| `VISION_DAILY_LIMIT`, `DRAFT_DAILY_LIMIT`, `CLAIM_DAILY_LIMIT`, `CLAIM_MONTHLY_LIMIT`, `ACCOUNT_CLAIM_DAILY_LIMIT`, `ACCOUNT_DEMO_DAILY_LIMIT`, `DEMO_DAILY_LIMIT`, `DEMO_MONTHLY_LIMIT` | Optional: what the live demo may spend. Per UTC day: 100 photo checks, 20 check drafts, 10 new claims (30 in any 30 days), 40 demo claims across all accounts (200 in any 30 days), and per PayPal account 5 real and 40 demo claims. Past the photo-check limit a real claim is held for a person, never lost ([docs/PRODUCT.md](docs/PRODUCT.md)) |
 
 Checks: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
 

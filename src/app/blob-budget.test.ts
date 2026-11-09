@@ -15,6 +15,8 @@ import type { Session } from "@/lib/session";
 import type { Claim, Decision, Recall, Verdict } from "@/lib/types";
 import type { PipelineDeps } from "./api/claims/_lib/pipeline";
 import { DEMO_CLAIMS } from "@/lib/demo/claims";
+import { DEMO_ROUND_COOKIE, DEMO_SAMPLES, withDemoRecall } from "@/lib/demo";
+import { dHash } from "@/lib/fingerprint";
 
 // The Vercel Blob plan caps reads at 10,000 a month (docs/PRODUCT.md, "Blob budget"). These pin how many store reads
 // each hot action costs, a write's own reads included (countingStore), so a change that reads every claim again
@@ -486,6 +488,68 @@ describe("a demo run", () => {
       // The claim, to check whose photo it is, then the photo itself (a CDN read after the first).
       "result photo": 2,
     });
+  });
+
+  // The Advanced Operations (put()s) each blob store write makes when nothing races it: a claim or index write is one
+  // put, and saving a claim writes its file and its index row.
+  const PUTS: Record<string, number> = { putRecall: 2, putClaim: 2, addClaim: 2, updateClaim: 2, reindexClaim: 1, takeUsage: 1, putPhoto: 1 };
+  const putsOf = (calls: Record<string, number>) => Object.entries(calls).reduce((n, [name, k]) => n + k * (PUTS[name] ?? 0), 0);
+
+  it("a round of the four samples costs what docs/PRODUCT.md says: 24 writes", async () => {
+    // As in production: the demo recall and the sample photos come from memory and the deployment (getAppStore).
+    app = withDemoRecall(withRecallCache(counter.store));
+    const tags: [Buffer, string][] = await Promise.all(
+      Object.entries({ "k01-1.jpg": "M4T", "k02-1.jpg": "K7Q", "web-1.jpg": "H6N" }).map(async ([name, tag]) => [await readFile(join(process.cwd(), "public/demo", name)), tag] as [Buffer, string]),
+    );
+    const read = (images: Buffer[]) => tags.find(([b]) => b.equals(images[0]))?.[1] ?? "???";
+    deps = { ...deps, store: app, hash: dHash, vision: async ({ spec, images }) => ({ verdict: pass({ ...sampleRecall(), spec }, read(images)), seconds: 12.3, model: "gpt-test" }) };
+    // PayPal settles the genuine payout by the time its result opens: saved once.
+    getPayoutStatus.mockImplementation(async (batchId: string) => ({ batchId, batchStatus: "SUCCESS", itemStatus: "SUCCESS" }));
+    await getRecallBySlug(slug, app);
+
+    let cookie = "";
+    const cost: Record<string, { puts: number; reads: number; check: number; decision?: string }> = {};
+    for (const sample of DEMO_SAMPLES) {
+      counter.reset();
+      const run = async (step: () => Promise<unknown>) => {
+        await step();
+        await Promise.all(later);
+        later.length = 0;
+      };
+      await run(() => SamplesPage({ params: Promise.resolve({ recall: slug }), searchParams: Promise.resolve({}) } as never));
+      let res!: Response;
+      await run(async () => {
+        const form = new FormData();
+        form.set("recall", slug);
+        form.set("sample", sample.id);
+        res = await startDemo(new NextRequest("http://127.0.0.1:3000/api/claims", { method: "POST", body: form, headers: cookie ? { cookie } : undefined }));
+      });
+      expect(res.status).toBe(303);
+      cookie ||= `${DEMO_ROUND_COOKIE}=${res.headers.get("set-cookie")!.match(new RegExp(`${DEMO_ROUND_COOKIE}=([^;]+)`))![1]}`;
+      const id = res.headers.get("location")!.split("/").pop()!;
+      await run(() => ClaimScreen({ slug, id, demo: true }));
+      const before = counter.counts.reads;
+      await run(() => sendPhotos(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}/photos`, { method: "POST", body: new FormData() }), params({ id })));
+      const check = counter.counts.reads - before;
+      await run(() => pollClaim(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}`), params({ id })));
+      await run(() => ClaimScreen({ slug, id, demo: true }));
+      await run(() => getPhoto(new NextRequest(`http://127.0.0.1:3000/api/claims/${id}/photos/1`), params({ id, n: "1" })));
+      cost[sample.id] = { puts: putsOf(counter.counts.calls), reads: counter.counts.reads, check, decision: (await inner.getClaim(id))?.decision };
+    }
+    getPayoutStatus.mockImplementation(async (batchId: string) => ({ batchId, batchStatus: "PENDING", itemStatus: "PENDING" }));
+
+    // Writes. Start: the index and its claim file (2). The check: the claim with its photos, the day's photo-check
+    // count, then the claim once more with its answer and its payout or decision (2 + 1 + 2), and for the genuine claim
+    // PayPal's settled status (2). The two the account checks block never reach the model. No sample photo is uploaded.
+    // Reads, from the picker to the result with one checking poll and one result photo: 64 for the round. check is the
+    // photo upload and check alone.
+    expect(cost).toEqual({
+      genuine: { puts: 9, reads: 21, check: 10, decision: "paid" },
+      "wrong-code": { puts: 7, reads: 17, check: 8, decision: "rejected" },
+      "ai-no-session": { puts: 4, reads: 13, check: 4, decision: "blocked" },
+      reposted: { puts: 4, reads: 13, check: 4, decision: "blocked" },
+    });
+    expect(counter.counts.calls.putPhoto).toBeUndefined();
   });
 
   it("doesn't ask PayPal about a settled payout on the result page", async () => {
