@@ -839,9 +839,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
                 fallback={<GridStill rows={still} openId={picked} filter={status === "all" ? null : status} flush />}
               />
             </div>
-            {/* The queue's foot, as the console's: updated just now, as the claim that has just arrived says. */}
+            {/* The queue's foot, as the console's: updated just now, as the claim that has just arrived says; a tab or a
+                search with no claims says so here, in the grid's place (ClaimsGrid shows no overlay of its own). */}
             <p inert aria-hidden="true" className={clsx(styles.foot, "text-ui text-muted")}>
-              {found.length ? TOUR.toolbar.live : TOUR.toolbar.none}
+              {counts[status] ? TOUR.toolbar.live : search.trim() ? TOUR.toolbar.none : TOUR.toolbar.empty}
             </p>
             {/* The evidence docks as the console's panel: flush to the window's right edge from under the app bar to the
                 foot, over the grid's right-hand columns (the money ones it repeats) and the empty right of the ledger's

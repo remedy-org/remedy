@@ -8,6 +8,7 @@ import { Money } from "@/components/ui";
 import { GENUINE } from "@/lib/demo/claims";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
 import styles from "./home.module.css";
+import { landingUnderWay } from "./scroll/landing";
 
 // The checks in the order they run (src/lib/rule.ts): preCheck's three need no model; then the model describes and a
 // fixed rule decides.
@@ -87,10 +88,11 @@ function Outcome({ sample, named }: { sample: Sample; named?: boolean }) {
 const LANE_GAP = 300;
 const DRAW_FOR = 720;
 /**
- * On a glide (a fling or Page Down landing on Fraud checks, the page moving faster than GLIDE px/ms with the matrix in
- * view: measured 1.6 to 2 as the matrix comes in, where one wheel notch eases at 1 at most), every lane still waiting
- * plays at once, FAST_GAP apart and at FAST_INK of its pace, so the ink is finished by the time the glide lands (it
- * comes into view about 630ms before at 1440x900), never still drawing after it.
+ * On a glide onto Fraud checks (a swipe, a fling or Page Down whose landing, landing.ts, rests with the matrix framed),
+ * every lane still waiting plays at once as the matrix comes into view, FAST_GAP apart and at FAST_INK of its pace, so
+ * the ink is finished by the time the glide lands, never still drawing after it. The calm glide's peak is under
+ * 1 px/ms, as slow as a wheel notch's ease, so its speed can't say it; only a page moving faster than GLIDE px/ms with
+ * the matrix in view (a native fling, where nothing glides) plays the same way.
  */
 const GLIDE = 1.2;
 const FAST_GAP = 50;
@@ -147,7 +149,11 @@ function useLanes(ref: RefObject<HTMLDivElement | null>) {
       const r = root.getBoundingClientRect();
       if (r.top < window.innerHeight / 2 && r.bottom > window.innerHeight / 2) stops.forEach((s) => play(s));
     };
-    // A glide over the matrix: the lanes still waiting play now, fast, so they have finished when it lands.
+    // A glide onto the matrix: the lanes still waiting play now, fast, so they have finished when it lands.
+    const framedAt = (y: number, r: DOMRect) => {
+      const top = r.top + window.scrollY - y;
+      return top < window.innerHeight / 2 && top + r.height > window.innerHeight / 2;
+    };
     let last = { y: window.scrollY, t: performance.now() };
     const onScroll = () => {
       window.clearTimeout(rest);
@@ -156,7 +162,9 @@ function useLanes(ref: RefObject<HTMLDivElement | null>) {
       const speed = Math.abs(now.y - last.y) / Math.max(1, now.t - last.t);
       last = now;
       const r = root.getBoundingClientRect();
-      if (speed > GLIDE && r.top < window.innerHeight && r.bottom > 0) stops.forEach((s) => play(s, true));
+      if (r.top >= window.innerHeight || r.bottom <= 0) return;
+      const glide = landingUnderWay();
+      if (speed > GLIDE || (glide && framedAt(glide.to, r))) stops.forEach((s) => play(s, true));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {

@@ -18,7 +18,7 @@ export const claimHref = (id: string) => `/console?claim=${encodeURIComponent(id
 
 const RULES = `You can't approve, reject or pay a claim. A person does that in the evidence panel on the Claims page, with a second click. If you are asked to approve, reject, pay or refund a claim, say plainly that you can't, name the evidence panel on the Claims page as the place a person does it, and offer to explain the claim or draft a review note instead. Never claim to have changed a claim.`;
 
-function instructions(api: AgStudioApi, data: InsightsData) {
+export function instructions(api: Pick<AgStudioApi, "getAiContext">, data: InsightsData) {
   const n = (k: "remedied" | "refused" | "held") => data.claims.reduce((sum, c) => sum + c[k], 0);
   const demo = data.claims.filter((c) => c.source === "Demo").length;
   const tables = api
@@ -43,6 +43,7 @@ Tables: ${tables}.
 - To show a claim, call open_claim: it shows a card with a link to the claim in the Claims queue.
 - To draft a note for a held claim, read it with explain_claim first, then call draft_review_note with a note of at most ${NOTE_LIMIT} characters that names the check and quotes the evidence. Only held claims can be reviewed. The person decides; your note is a draft.
 - When asked for a chart: if a widget on the page already shows it, name it by its title ("Why claims were refused") and give the numbers; otherwise build it. Building takes two steps: delegate to Page to place a widget, then to Widget to configure it, passing the widget id Page returns. Prefer a bar chart for reasons and counts; a column chart over calendar::day for time. Use the Remedy widgets (Recall progress, Decisions, Where claims stop, Why claims were refused), named as the page titles them, when they fit.
+- A blank refusalReason means the claim wasn't refused (paid, approved, held or in progress). It is never a reason: never count, chart or name it as one ("no reason listed").
 - Keep replies short: one or two sentences, then the evidence or the chart. Plain words, no hype. Refer to claims by id (RM-1234).
 - Once the conversation's subject is clear, call rename_thread with a 3-5 word name.
 
@@ -60,7 +61,7 @@ function starters(data: InsightsData): { label: string; how: string }[] {
   const list: { label: string; how: string }[] = [];
   // "Why was 1 claim refused?", "Why were 2 claims refused?".
   const many = (n: number, past: boolean) => (n === 1 ? `${past ? "was" : "is"} 1 claim` : `${past ? "were" : "are"} ${n} claims`);
-  if (refused) list.push({ label: `Why ${many(refused, true)} refused?`, how: "Count the refusals by reason and chart them by reason." });
+  if (refused) list.push({ label: `Why ${many(refused, true)} refused?`, how: 'Count only the refused claims (decision Rejected or Blocked), grouped by refusalReason, and leave out any row whose refusalReason is blank. The "Why claims were refused" widget on this page already charts them: name it by that title and give the counts.' });
   if (sameItem) list.push({ label: `Why ${many(sameItem, false)} held?`, how: "Show the held claims where only the same-item check was unclear, and quote what the photo check saw." });
   // Only a question this recall's data can answer: time to pay once something was paid, else the photo check's own time.
   if (data.claims.some((c) => c.timeToSendSec !== null)) list.push({ label: "Chart time to pay by day", how: "Chart the median seconds from photo to PayPal payout by day filed." });

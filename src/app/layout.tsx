@@ -36,8 +36,9 @@ export const metadata: Metadata = {
   title: { default: "Remedy", template: "%s · Remedy" },
   description,
   applicationName: "Remedy",
-  openGraph: { title: "Remedy", description, siteName: "Remedy", type: "website" },
-  twitter: { card: "summary_large_image", title: "Remedy", description },
+  // No title or description here: each page's link card takes its own <title> and description (Next fills them in).
+  openGraph: { siteName: "Remedy", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

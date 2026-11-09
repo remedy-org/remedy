@@ -99,7 +99,7 @@ function CheckCell({ i, done, active, onSeek }: { i: number; done: boolean; acti
     <>
       <span className="flex h-full min-w-0 flex-col">
         <span className={clsx("block text-balance text-ui font-medium", done || active ? "text-text" : "text-muted")}>{c.label}</span>
-        <span className="mt-auto block text-micro text-faint">{c.ai ? "Photo check" : "No AI"}</span>
+        <span className="mt-auto block pt-1.5 text-micro text-faint">{c.ai ? "Photo check" : "No AI"}</span>
       </span>
       <span className={clsx("text-pay transition-opacity duration-160", done ? "opacity-100" : "opacity-0")}>
         <CheckIcon />

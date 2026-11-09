@@ -23,7 +23,7 @@ export function NotFoundCard({
       <p className="text-body text-pretty text-muted">{description}</p>
       <div className="pt-4">
         {action ?? (
-          <Button href="/" size="lg">
+          <Button href="/" prefetch={false} size="lg">
             Go to Remedy
           </Button>
         )}

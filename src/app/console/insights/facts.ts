@@ -2,6 +2,7 @@ import { toDrawerClaim } from "@/app/console/_lib/drawer";
 import { amountOf, cents, reasonOf, refusalLabel, typeset } from "@/app/console/_lib/view";
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
+import { byCheck, decidingCheck } from "@/lib/reasonOrder";
 import { summarize } from "@/lib/store/store";
 import type { Claim, Recall } from "@/lib/types";
 import type { Stage } from "@/components/insights/funnel";
@@ -127,12 +128,14 @@ function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
   // Paid only where PayPal paid: an approved claim with nothing sent stops just short, waiting for its payout.
   if (c.decision === "paid") return c.payout?.status === "SUCCESS" ? { stage: "Paid", stopReason: null } : { stage: "Passed photo check", stopReason: "Nothing sent yet" };
   if (!c.photos.length && c.decision !== "blocked") return { stage: "Filed", stopReason: "No photos yet" };
-  const refusedBy = c.reasons.find((r) => r.outcome === "reject");
+  // The reason the grid's drawer leads with (lib/reasonOrder.ts), whatever order the checks were recorded in.
+  const deciding = decidingCheck(c.reasons);
+  const refusedBy = deciding?.outcome === "reject" ? deciding : null;
   if (c.decision === "blocked" || (refusedBy && PRE_CHECKS.has(refusedBy.check))) {
     return { stage: "Photos sent", stopReason: refusedBy ? refusalLabel(refusedBy.check) : "Blocked by the account checks" };
   }
   if (c.decision === "pending") return { stage: "Passed the account checks", stopReason: "Photo check running" };
-  const model = c.reasons.filter((r) => !PRE_CHECKS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK && r.check !== "state");
+  const model = byCheck(c.reasons).filter((r) => !PRE_CHECKS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK && r.check !== "state");
   const failed = model.find((r) => r.outcome === "reject") ?? model.find((r) => r.outcome === "hold");
   if (failed) return { stage: "Passed the account checks", stopReason: failed.outcome === "reject" ? refusalLabel(failed.check) : typeset(failed.text) };
   if (c.decision === "rejected") return { stage: "Passed photo check", stopReason: refusalLabel(refusedBy?.check ?? "review") };
@@ -143,9 +146,10 @@ function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
 const dollars = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 export function claimFact(c: Claim, recall: Recall): ClaimFact {
-  const failed = c.reasons.find((r) => r.outcome === "reject") ?? c.reasons.find((r) => r.outcome === "hold") ?? null;
+  // The deciding reason, as the grid's drawer leads with it (lib/reasonOrder.ts), not the first one recorded.
+  const failed = decidingCheck(c.reasons);
   const refused = c.decision === "rejected" || c.decision === "blocked";
-  const refusedBy = c.reasons.find((r) => r.outcome === "reject");
+  const refusedBy = failed?.outcome === "reject" ? failed : null;
   const photosIn = at(c, "photos_received");
   const sentPaid = c.decision === "paid" && c.payout?.status === "SUCCESS";
   return {

@@ -535,10 +535,16 @@ button.cellBody:hover .label {
 /* Compact, at 80% from the bottom right, with only the two rows the readouts don't already say (sent, then PayPal's
    confirmation), so it sits in the still's lower right corner and both halves of the evidence stay in view above it. */
 .small .receipt {
-  max-width: 15rem;
+  max-width: 20rem;
   margin-left: auto;
   scale: 0.8;
   transform-origin: 100% 100%;
+}
+
+/* Each of its rows on one line: the label, then its time. */
+.small .receipt dt,
+.small .receipt dd {
+  white-space: nowrap;
 }
 
 .small .receipt dl > :not(:nth-child(5), :nth-child(6)) {
