@@ -52,7 +52,7 @@ const SUSTAIN = 250;
  * it: one, so only a fresh gesture's first fling stops. */
 const ESCAPE = 1;
 /** ms of input held at FAST or more, not slowing (a wheel spun on, never a trackpad's decaying tail), after which the
- * gesture runs free at once, landing or not; when it ends, the page comes to rest on the nearest stop ahead (SETTLE). */
+ * gesture runs free at once, landing or not; when it ends, the page comes to rest on a stop or a clean frame (settle). */
 const SPIN = 600;
 /** The same for a notched wheel, sooner: a power scroller spinning hard from the top met a page that held for 0.6 s while
  * the dolly played, and felt it resist. A notched wheel has no momentum tail to mistake for a spin; under 450 ms a
