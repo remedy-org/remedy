@@ -1093,27 +1093,33 @@
     transform: translateZ(2px);
   }
 
-  /* Section B is a page laid over this one: opaque, above, a lit hairline on its leading edge and its shadow falling
-     on the sheet, so it reads as a sheet sliding over in both themes. It covers the whole held sheet before the pin
-     lets go, so the sheet is never carried off sliced, and it covers the payoff last, at full ink. */
+  /* Section B is the page coming up over the sheet: opaque, above, in the page's own colour, so it covers the whole
+     held sheet before the pin lets go (the sheet is never carried off sliced) and the payoff last, at full ink. Its
+     edge is soft: the sheet sinks into the page's colour over the 160px above it, eased, in both themes. A lit hairline
+     and a lighter band at its top read as a hard cut with a grey band part-way through the scroll. */
   .section + section {
     position: relative;
     z-index: 2;
-    /* Opaque, with a face: --section-lift at its leading edge, fading into the page over 288px. */
-    background: linear-gradient(var(--section-lift), var(--bg) 288px);
-    box-shadow:
-      0 -1px 0 oklch(1 0 0 / 0.09),
-      0 -2px 6px oklch(0 0 0 / 0.5),
-      0 -28px 56px -6px oklch(0 0 0 / 0.75);
-    /* The shadow falls on the sheet above only: below its foot it drew a seam across Results (light theme). */
-    clip-path: inset(-120px 0 0 0);
+    background: var(--bg);
+    /* Only the soft edge shows above it; nothing falls below its foot (a shadow there drew a seam across Results). */
+    clip-path: inset(-160px 0 0 0);
   }
 
-  :global([data-theme="light"]) .section + section {
-    box-shadow:
-      0 -1px 0 oklch(1 0 0 / 0.9),
-      0 -2px 6px oklch(0.23 0.01 65 / 0.2),
-      0 -28px 56px -6px oklch(0.23 0.01 65 / 0.34);
+  .section + section::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 100%;
+    height: 160px;
+    pointer-events: none;
+    background: linear-gradient(
+      to top,
+      var(--bg),
+      color-mix(in oklch, var(--bg) 80%, transparent) 20%,
+      color-mix(in oklch, var(--bg) 45%, transparent) 50%,
+      color-mix(in oklch, var(--bg) 15%, transparent) 78%,
+      transparent
+    );
   }
 }
 
