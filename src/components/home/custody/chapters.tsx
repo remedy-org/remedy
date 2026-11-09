@@ -273,7 +273,7 @@ function Barcode({ bars }: { bars: Bar[] }) {
             "h-4 w-1.5 rounded-[1.5px]",
             i === 3 ? "ml-2" : i > 0 && "ml-[3px]",
             // A pass in ink, as the console draws it: green means money moved, and a check moves none.
-            b === "pass" && "bg-text-2/45",
+            b === "pass" && "bg-text-2",
             b === "hold" && "bg-[linear-gradient(var(--hold)_50%,transparent_50%)] ring-1 ring-hold/60 ring-inset",
             b === "reject" && "bg-stop",
             b === "skip" && "border border-dashed border-line-strong",
