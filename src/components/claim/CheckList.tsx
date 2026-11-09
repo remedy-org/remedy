@@ -133,7 +133,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
     const detail = off.length && b.key !== "refund" ? off.map((r) => r.detail).filter(Boolean).join(". ") || undefined : undefined;
     const out: SixRow = { ...b, state, detail, because: state === "pass" ? b.because : undefined };
     if (state === "waiting" || state === "running") return out;
-    if (b.key === "session" && out.detail) out.detail = `${these.charAt(0).toUpperCase()}${these.slice(1)} came from outside the claim’s camera.`;
+    if (b.key === "session" && out.detail) out.detail = `${these.charAt(0).toUpperCase()}${these.slice(1)} came from outside the claim’s camera session.`;
     // "Already sent with claim RM-3481": a photo is numbered only when several were sent.
     if (b.key === "duplicate" && out.detail) {
       const where = earlier ? `claim ${earlier}` : "another claim";

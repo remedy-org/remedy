@@ -75,7 +75,7 @@ describe("sixRows", () => {
       { id: "account", group: "pre", label: "", state: "pass" },
     ];
     const rows = sixRows(blocked, base);
-    expect(rows.find((r) => r.key === "session")!.detail).toBe("This photo came from outside the claim’s camera.");
+    expect(rows.find((r) => r.key === "session")!.detail).toBe("This photo came from outside the claim’s camera session.");
     const code = rows.find((r) => r.key === "code")!;
     expect(code.unrun).toBe(true);
     expect(code.detail).toBe("Not run: this photo wasn’t sent in this claim’s camera session.");
