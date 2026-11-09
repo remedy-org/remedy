@@ -156,6 +156,19 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
 [data-theme="light"] .insights-report .ag-studio-root-panel-container-right {
   box-shadow: -1px 0 0 var(--line), -24px 0 48px oklch(0 0 0 / 0.14);
 }
+/* Below 1024px the page can't give it 400px, so it takes the window's width under the header: the page lies wholly
+   under it, never half covered with the workspace note cut mid-word at its edge. */
+@media (max-width: 1023.98px) {
+  .insights-report .ag-studio-root-panel-container-right {
+    width: 100vw;
+    box-shadow: none;
+  }
+  /* Studio sets the panel's 400px inline; its header, column and question box follow this. */
+  .insights-report .ag-studio-ai-panel {
+    --ag-studio-panel-width: 100vw !important;
+    box-shadow: none;
+  }
+}
 
 /* Before the first question, the intro and the starting questions sit at the top of the rail, not at its foot under an
    empty column. */
