@@ -16,8 +16,7 @@ export function SkipLink({ href, children }: { href: string; children: ReactNode
         // .page's content edge: the gutter, or the centred frame's edge on a wide screen.
         "focus:left-[max(var(--gutter),calc((100%-var(--container-content))/2))]",
         // In the console, over the wordmark on a phone (the nav is a row of its own there); from 640px, where the nav
-        // sits beside the wordmark, just under the header, so the chip never covers "Claims".
-        "[body:has([data-console-header])_&]:focus:top-2.5",
+        // sits beside the wordmark, just under the 64px header, so the chip never covers "Claims".
         "sm:[body:has([data-console-header])_&]:focus:top-[calc(4rem+6px)]",
       )}
     >
