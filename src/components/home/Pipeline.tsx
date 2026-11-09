@@ -14,12 +14,12 @@ import styles from "./home.module.css";
 export const GATES: { title: string; text: string; ai: boolean }[] = [
   {
     title: CHECK_NAMES.session,
-    text: "Photos must arrive inside this claim’s 10-minute camera session. An image made anywhere else is refused before the model sees it.",
+    text: "Photos must arrive inside this claim’s 10-minute camera session, carrying that session’s key. A photo sent any other way is refused before the model sees it.",
     ai: false,
   },
   {
     title: CHECK_NAMES.duplicate,
-    text: "Every photo is fingerprinted and compared with every earlier claim. A reposted or lightly edited photo is refused.",
+    text: "Every photo is fingerprinted and compared with every earlier claim. A reposted photo is refused, even resized, re-saved or brightened.",
     ai: false,
   },
   {

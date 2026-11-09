@@ -68,7 +68,7 @@ export const CHECKS: readonly Check[] = [
     n: "02",
     label: CHECK_NAMES.duplicate,
     ai: false,
-    note: "Its fingerprint matches no photo on any earlier claim. A reposted or lightly edited copy would match.",
+    note: "Its fingerprint matches no photo on any earlier claim. A reposted copy would match, even resized, re-saved or brightened.",
   },
   {
     id: "acct",

@@ -25,7 +25,7 @@ const mono = JetBrains_Mono({
 });
 
 const description =
-  "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera, five checks stop the fakes, and PayPal pays the refund within a minute.";
+  "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera, five checks and a fixed rule decide, and PayPal pays the refund within a minute.";
 
 // Absolute URLs for the link card: APP_URL, else Vercel's production domain, else the local dev server.
 const siteUrl = process.env.APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://127.0.0.1:3000");

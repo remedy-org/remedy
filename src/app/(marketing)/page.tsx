@@ -9,7 +9,7 @@ import { Proof } from "@/components/home/Proof";
 import { SHARE_IMAGE } from "@/lib/shareImage";
 
 const description =
-  "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera, five checks stop the fakes, and PayPal pays the refund within a minute.";
+  "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera, five checks and a fixed rule decide, and PayPal pays the refund within a minute.";
 const share = "Remedy · Recall refunds, paid in a minute";
 
 export const metadata: Metadata = {

@@ -18,7 +18,7 @@
 
 Remedy doesn't bet on spotting AI images. It makes a fake worthless, and the first three checks use no AI:
 
-1. **Live camera only.** No upload button. Laptop webcam, or a phone through a QR hand-off.
+1. **Live camera session.** No upload button: laptop webcam, or a phone through a QR hand-off. Photos must arrive inside the claim's 10-minute camera session, carrying its key.
 2. **Never seen before.** A perceptual fingerprint compares every photo against every earlier claim.
 3. **One verified PayPal account, one claim per recall.** Whoever proves the destruction is paid, in their own verified name.
 4. **A code that didn't exist ten minutes ago.** Letter, digit, letter, no look-alike characters, read back character by character. No web, stock or old photo can carry it. CPSC recalls already have owners write on the unit (HotHands, 27-011).

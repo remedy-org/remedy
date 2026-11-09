@@ -7,8 +7,10 @@ import { Section } from "./Section";
 // - genuine claims: 7 in round 2 and 2 held out, 9 claims, 27 tries, all paid;
 // - wrong codes: 4 cases, 12 tries, all refused;
 // - cost: $0.011 a claim.
-// The one fake the photo check passed (c14, an AI-made image with the code drawn on, in all 3 runs) is said once, in
-// body text under the lead, as the reason photos come only from the live camera.
+// The one fake the photo check passed (c14, an AI-made image with the code drawn on, in all 3 runs; the 9 Nov test's
+// two clean fakes passed too, 6 of 6) is said once, in body text under the lead, as the reason for what stops it: the
+// claim's own camera session and one claim per verified PayPal account. The session check proves the photos arrived
+// with the session's key inside its 10 minutes, not that a camera took them, so the sentence says only that.
 const WEB = { photos: 16, tries: 48 };
 const FIGURES: { figure: string; text: string }[] = [
   { figure: "9 of 9", text: "genuine claims paid, in all 27 tries" },
@@ -52,10 +54,11 @@ export function Proof() {
       }
       lead="We put Remedy up against real owner photos, official recall photos, photos of screens, wrong codes and AI-made fakes. It reads the code on every tag character by character, so one wrong letter refuses the claim."
       note={
-        // The one fake that passed, said once in the lead's own voice: it is why the camera is the first check.
+        // The fake that passed, said once in the lead's own voice: it is why the camera session is the first check.
         <p className="max-w-[60ch] text-body text-pretty text-text-2">
-          One fake passed the photo check in every try, a generated image of a cut pillow with the code drawn on, which is
-          why photos only come from the claim&rsquo;s live camera.
+          A generated image of a cut pillow with the right code drawn on can pass the photo check: ours did, in every try.
+          So a claim&rsquo;s photos must arrive inside its own 10-minute camera session, and each verified PayPal account
+          gets one claim per recall.
         </p>
       }
       aside={

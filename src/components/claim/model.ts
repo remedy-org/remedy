@@ -192,7 +192,7 @@ export function payoutHold(claim: Pick<Claim, "decision" | "reasons" | "events">
 
 // What to do next, per failed check. Keys are rule.ts check names (step_N share one).
 const ADVICE: Record<string, string> = {
-  session: "Only photos taken in the claim, within 10 minutes of its code, count. A new claim gives you a new code.",
+  session: "Only photos that arrive inside the claim’s 10-minute camera session count. A new claim gives you a new code.",
   duplicate_photo: "Start a new claim with new photos of your own product.",
   payer: "Each PayPal account can claim once per recall, so your earlier claim is the one that counts.",
   payer_verified: "Verify your account with PayPal, then start a new claim.",
