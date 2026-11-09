@@ -16,7 +16,7 @@ export const metadata = { title: "Insights" };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** "40 claims · filed 4–7 Nov 2026": how many, and the UTC days they were filed on, as the console dates a claim. */
+/** "7 claims · filed 5–7 Nov 2026": how many, and the UTC days they were filed on, as the console dates a claim. */
 function filed(dates: string[]): string {
   const n = `${dates.length.toLocaleString("en-US")} ${dates.length === 1 ? "claim" : "claims"}`;
   const days = dates.map((d) => d.slice(0, 10)).sort();

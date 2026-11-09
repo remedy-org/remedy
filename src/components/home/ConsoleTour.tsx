@@ -23,7 +23,7 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
 /*
  * The homepage's "For companies" tour (DESIGN.md, Screens §6), laptops only (1024px and up; phones get the stacked
  * story in ConsoleStory.tsx). Four tabs over one fixed console frame, a real view on each step:
- *   01 the claims queue, the real AG Grid on the recall's 40 claims, where the newest paid claim arrives at the top on
+ *   01 the claims queue, the real AG Grid on the recall's seven claims, where the newest paid claim arrives at the top on
  *      entering view however a visitor gets there (a row insert, its checks filling, then its verdict and payout). The
  *      real grid takes the still's place as soon as it has drawn, so a visitor may search it, filter it by status, sort
  *      it, hover its checks, export it as CSV, and click any claim with photos to open its evidence (step 02);
@@ -76,7 +76,7 @@ const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefe
 type Arrival = "before" | "interim" | "checked" | "final";
 
 export interface ConsoleTourProps {
-  /** The grid's rows, all 40 (the open claim's carries its evidence), memo-stable: the grid is driven through its API. */
+  /** The grid's rows, all seven (the open claim's carries its evidence), memo-stable: the grid is driven through its API. */
   rows: PreviewRow[];
   /** The rows the server-drawn still shows until the grid has drawn: the first of `rows`. */
   stillRows: number;

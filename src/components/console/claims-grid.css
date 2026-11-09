@@ -174,7 +174,7 @@
 }
 
 /* A narrow verdict column (a laptop at 200% zoom): the reason goes under its mark on the cell's whole width, a step
-   smaller, so what tells this claim apart ("reads K7Q, expected K7P", the earlier claim's id) is read, not cut. */
+   smaller, so what tells this claim apart ("Tag reads K7Q · code is K7P", the earlier claim's id) is read, not cut. */
 .claims-grid .ag-cell[col-id="decision"] {
   container-type: inline-size;
 }

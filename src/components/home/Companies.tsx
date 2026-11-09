@@ -17,7 +17,7 @@ const NOSCRIPT = `<style>[data-tour]{display:none!important}[data-story]{display
 
 /**
  * For companies: a four-step tour of the console on laptops (ConsoleTour), the same four steps as a story on phones and
- * without JS (ConsoleStory). Everything in both comes from one seed (components/console/preview.ts): the 40 claims,
+ * without JS (ConsoleStory). Everything in both comes from one seed (components/console/preview.ts): the seven claims,
  * their Insights and their CPSC report draft. The server renders both; CSS shows one by breakpoint.
  */
 export function Companies() {

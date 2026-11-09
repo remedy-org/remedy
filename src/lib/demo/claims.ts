@@ -1,5 +1,5 @@
-// The demo recall's claims (X-VESOLJE, CPSC 27-071): the one dataset every picture of Remedy reads. The seed builds the
-// console's claims from it (seed.ts), and the homepage's hero line, How it works' console, the Opened Exhibit, the For
+// The demo recall's claims (X-VESOLJE, CPSC 27-071): the one dataset every picture of Remedy reads. The console builds its
+// claims from it in memory at request time (dataset.ts, through seed.ts's builder; nothing is stored), and the homepage's hero line, How it works' console, the Opened Exhibit, the For
 // companies tour, the sign-in page and the CPSC report all draw those same claims (claims.test.ts checks every replica
 // against this list).
 //
