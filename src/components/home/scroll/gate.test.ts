@@ -244,18 +244,18 @@ describe("wheel stops", () => {
     const wheel = setup(2144);
     wheel.send(power(), 8);
     expect(wheel.lenis.landed).toEqual([2821]);
-    expect(wheel.lenis.duration).toBeLessThanOrEqual(1.1);
+    expect(wheel.lenis.duration).toBeLessThanOrEqual(0.9);
     const pad = setup(2144);
     pad.send(swipe(), 8);
     expect(pad.lenis.duration).toBeGreaterThan(wheel.lenis.duration);
-    // Across the dolly: 0.9 s, shorter than a trackpad's, so a wheel spun hard from the top never feels the page resist,
+    // Across the dolly: 0.75 s, shorter than a trackpad's, so a wheel spun hard from the top never feels the page resist,
     // and a lighter weight than a trackpad's.
     const notched = setup(0, STOPS, [[207, 670, 5]]);
     notched.send(power(), 8);
     const flung = setup(0, STOPS, [[207, 670, 5]]);
     flung.send(swipe(), 8);
     expect(notched.lenis.landed).toEqual([1410]);
-    expect(notched.lenis.duration).toBeLessThanOrEqual(0.9);
+    expect(notched.lenis.duration).toBeLessThanOrEqual(0.75);
     expect(notched.lenis.duration).toBeLessThan(flung.lenis.duration);
     // The share of the landing spent on the dolly.
     const share = (e: (t: number) => number) => {
@@ -526,6 +526,42 @@ describe("wheel stops", () => {
     }
   });
 
+  it("settles a gentle push from a story's last beat on the next story's first within 0.8 s, however far it is", () => {
+    // As 1920x1080: the Chain of Custody's console beat, its runway's end, then the Problem sheet coming up from the
+    // screen's foot (pinned from there) and open 1549px on, a slow stretch on the way (the sheet opening). A push of 36px
+    // glided on to the open sheet for 1.7 s after the hand stopped.
+    const course = [0, 8037, 9586, 10303, 11838];
+    const pins: [number, number][] = [
+      [64, 8294],
+      [8294, 10764],
+    ];
+    const slow: Slow[] = [[8900, 9500, 2]];
+    for (const d of [[12, 12, 12], Array(16).fill(18)]) {
+      const g = setup(8037, course, slow, undefined, undefined, pins);
+      g.send(d);
+      g.lenis.animatedScroll = g.lenis.targetScroll - 4;
+      vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+      g.scroll();
+      vi.restoreAllMocks();
+      expect(g.lenis.landed).toEqual([9586]); // still a beat on, in the hand's direction
+      expect(g.lenis.duration).toBeLessThanOrEqual(0.8);
+    }
+    // A trackpad's gentle push up from the cut onto the open sheet, the same.
+    const up = setup(10303, course, slow, undefined, undefined, pins);
+    up.send([-12, -12, -12]);
+    up.lenis.animatedScroll = up.lenis.targetScroll + 4;
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    up.scroll();
+    vi.restoreAllMocks();
+    expect(up.lenis.landed).toEqual([9586]);
+    expect(up.lenis.duration).toBeLessThanOrEqual(0.8);
+    // A fling is no nudge: its landing keeps its own length.
+    const flung = setup(8037, course, slow, undefined, undefined, pins);
+    flung.send(swipe(), 8);
+    expect(flung.lenis.landed).toEqual([9586]);
+    expect(flung.lenis.duration).toBeGreaterThan(1);
+  });
+
   /**
    * A notched wheel on a clock: `notches` deltas `gap` ms apart, then the wheel quiet for `after` ms, Lenis's frames
    * every 16 ms between them (the page easing 40px behind its target). Returns the landings and where the page was at
@@ -554,7 +590,7 @@ describe("wheel stops", () => {
     });
     frames(600);
     spy.mockRestore();
-    return { landed: g.lenis.landed, atLast, through };
+    return { landed: g.lenis.landed, atLast, through, duration: g.lenis.duration };
   }
 
   it("brings a slow roll of notches inside a pinned story to rest on the beat nearest where the hand stopped, never on past it", () => {
@@ -575,6 +611,19 @@ describe("wheel stops", () => {
     expect(wheelOnClock(1000, course, pins, [Array(18).fill(100)], { inside: 100, between: 100 }).landed).toEqual([3252]);
     // Going up, the same: ten notches from Fraud checks rest 465px above the cut, nearer it than the open sheet.
     expect(wheelOnClock(3252, course, pins, [Array(10).fill(-100)], { inside: 100, between: 100 }).landed).toEqual([1717]);
+  });
+
+  it("settles a slow roll of notches out of a story's last beat within 0.8 s of its settling, however far the beat ahead", () => {
+    // As 1920x1080: five notches 100 ms apart from the console beat, inside the pinned stretches all the way to the open
+    // sheet 1549px on. The roll settles once, on the open sheet, and the page is at rest 0.8 s later (it was 1.4 s).
+    const course = [0, 8037, 9586, 10303, 11838];
+    const pins: [number, number][] = [
+      [64, 8294],
+      [8294, 10764],
+    ];
+    const roll = wheelOnClock(8037, course, pins, [Array(5).fill(100)], { inside: 100, between: 100 });
+    expect(roll.landed).toEqual([9586]);
+    expect(roll.duration).toBeLessThanOrEqual(0.8);
   });
 
   it("still takes three quick flicks of a notched wheel, a pause between them, to three beats", () => {

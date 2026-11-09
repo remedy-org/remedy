@@ -7,8 +7,11 @@ import type { Course } from "./gate";
 // under the nav or a line cut at the foot. Space, Shift+Space, Page Down and Page Up go to the next stop in their
 // direction instead, gliding there as a fling's landing does (the pinned transitions on the way crossed slowly), when
 // that stop is near: within 1.25 screens, or anywhere when the page or the stop is inside a pinned stretch (the Chain of
-// Custody's beats, the Problem sheet's), whose stops are paced for the keys. Farther, the browser pages as usual. Keys
-// that type or press (a field, a button, a tab) keep their own meaning.
+// Custody's beats, the Problem sheet's), whose stops are paced for the keys. Farther, the browser pages as usual. A key
+// press is deliberate, so besides the wheel's stops it stops on every finished beat the wheel may come to rest on
+// (stops.ts RESTS): each of the exhibit's five checks at its hold, both ways, where the wheel's stops skip all but check
+// 3 and a Page Down crossed the other four in a quarter of a second each. Keys that type or press (a field, a button, a
+// tab) keep their own meaning.
 
 /** How far a key may take the page to a stop, in screens, outside a pinned stretch. */
 const REACH = 1.25;
@@ -58,7 +61,8 @@ function scrollsOn(el: Element, dir: 1 | -1) {
   return false;
 }
 
-/** Starts the pager on a Lenis. `read` gives the stops and slow stretches as laid out now, `pins` the pinned stretches. */
+/** Starts the pager on a Lenis. `read` gives the stops, the finished beats and the slow stretches as laid out now, `pins`
+ * the pinned stretches. */
 export function attachKeys(lenis: Pick<Lenis, "scrollTo" | "isStopped" | "animatedScroll">, read: () => Course, pins: () => [number, number][]) {
   // A held key, or presses quicker than the glide, step on from the stop last aimed at.
   let aim: { to: number; until: number } | null = null;
@@ -69,9 +73,9 @@ export function attachKeys(lenis: Pick<Lenis, "scrollTo" | "isStopped" | "animat
     if (target?.closest(EDITABLE) || target?.closest(OWN_KEYS) || (e.key === " " && target?.closest(PRESSABLE))) return;
     // A focused scroller with room in that direction (the tour's report) pages itself.
     if (target && scrollsOn(target, dir)) return;
-    const { stops, slow = [] } = read();
+    const { stops, rests = stops, slow = [] } = read();
     const from = aim && performance.now() < aim.until ? aim.to : scrollY;
-    const to = keyStop(stops, from, dir, REACH * innerHeight, pins());
+    const to = keyStop(rests, from, dir, REACH * innerHeight, pins());
     if (to === null) return;
     e.preventDefault();
     const start = lenis.animatedScroll;
