@@ -3,13 +3,14 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import type { ReactNode } from "react";
 import { ClaimErrorCard } from "@/components/claim/ClaimErrorCard";
+import { metadata as site } from "@/app/layout";
 import { ClaimFlow, type ClaimFlowProps } from "@/components/claim/ClaimFlow";
 import { ContinueCard } from "@/components/claim/ContinueCard";
 import { ExpiredCard } from "@/components/claim/ExpiredCard";
 import { FlowShell, recallContext } from "@/components/claim/FlowShell";
 import { ClaimFrame, STEP_GRID } from "@/components/claim/Exhibit";
 import { RecallBrief } from "@/components/claim/RecallBrief";
-import { checkRows, toView } from "@/components/claim/model";
+import { checkRows, maskEmail, toView } from "@/components/claim/model";
 import { NotFoundCard } from "@/components/claim/NotFoundCard";
 import { RecallView } from "@/components/claim/RecallScreen";
 import { Result, type ResultProps } from "@/components/claim/Result";
@@ -25,11 +26,14 @@ import * as fx from "./fixtures";
 // Dev only: a 404 in production.
 
 const SHOTS = ["/demo/k01-1.jpg", "/demo/k11-1.jpg"];
+// The owner's PayPal login on the receipt, masked as ClaimScreen masks it.
+const ACCOUNT = maskEmail("dan.okafor@example.com");
 
 type Render = () => ReactNode | Promise<ReactNode>;
 
 async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "preview">, claim: Claim = fx.open) {
-  const phoneUrl = `http://127.0.0.1:3000/r/${fx.recall.slug}/claim/${claim.id}`;
+  // The site's own origin (the layout's metadataBase), as the live claim page builds its phone link.
+  const phoneUrl = new URL(`/r/${fx.recall.slug}/claim/${claim.id}`, site.metadataBase ?? undefined).href;
   return (
     <FlowShell context={recallContext(fx.recall)}>
       <ClaimFlow
@@ -103,22 +107,22 @@ const reposted = demoSample("reposted")!;
 
 const STATES: Record<string, { group: string; note: string; render: Render }> = {
   consent: { group: "Recall", note: "Logged out", render: () => consent() },
-  "consent-signed-in": { group: "Recall", note: "Already logged in with PayPal", render: () => consent({ signedInAs: "Pat Doe" }) },
+  "consent-signed-in": { group: "Recall", note: "Already logged in with PayPal", render: () => consent({ signedInAs: "Dan Okafor" }) },
   "consent-denied": { group: "Recall", note: "PayPal login cancelled", render: () => consent({ authError: "denied" }) },
-  "consent-unverified": { group: "Recall", note: "Unverified PayPal account", render: () => consent({ signedInAs: "Pat Doe", unverified: true }) },
-  "consent-limit": { group: "Recall", note: "Claim start refused: account's daily limit", render: () => consent({ signedInAs: "Pat Doe", refusal: { kind: "account", limit: 5, until: nextUtcDay(new Date()) } }) },
+  "consent-unverified": { group: "Recall", note: "Unverified PayPal account", render: () => consent({ signedInAs: "Dan Okafor", unverified: true }) },
+  "consent-limit": { group: "Recall", note: "Claim start refused: account's daily limit", render: () => consent({ signedInAs: "Dan Okafor", refusal: { kind: "account", limit: 5, until: nextUtcDay(new Date()) } }) },
   "consent-returning": {
     group: "Recall",
     note: "Back from the notice with a held claim",
-    render: () => consent({ signedInAs: "Pat Doe", yourClaim: { id: "RM-0996", href: "#", decision: "held", photos: 1, decideBy: "Tue 10 Nov" } }),
+    render: () => consent({ signedInAs: "Dan Okafor", yourClaim: { id: "RM-0996", href: "#", decision: "held", photos: 1, decideBy: "Tue 10 Nov" } }),
   },
   "consent-returning-paid": {
     group: "Recall",
     note: "Back from the notice with a paid claim",
-    render: () => consent({ signedInAs: "Pat Doe", yourClaim: { id: "RM-0442", href: "#", decision: "paid", photos: 1, paidOn: "7 Nov 2026" } }),
+    render: () => consent({ signedInAs: "Dan Okafor", yourClaim: { id: "RM-0442", href: "#", decision: "paid", photos: 1, paidOn: "7 Nov 2026" } }),
   },
   "demo-consent": { group: "Recall", note: "Demo mode", render: () => consent({ demo: true, judgeLogin: judgeLogin("personal") }) },
-  "demo-consent-signed-in": { group: "Recall", note: "Demo mode, logged in", render: () => consent({ demo: true, signedInAs: "Pat Doe" }) },
+  "demo-consent-signed-in": { group: "Recall", note: "Demo mode, logged in", render: () => consent({ demo: true, signedInAs: "Dan Okafor" }) },
   picker: {
     group: "Demo",
     note: "Sample picker, first visit (repost locked)",
@@ -130,7 +134,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     render: () =>
       picker({
         selected: "ai-no-session",
-        runs: [run("RM-5307", "wrong-code", "rejected"), run("RM-4127", "genuine", "paid")],
+        runs: [run("RM-5307", "wrong-code", "rejected"), run("RM-0442", "genuine", "paid")],
         roundDone: false,
         options: DEMO_SAMPLES.map((sample) => ({ sample })),
       }),
@@ -152,7 +156,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     render: () =>
       picker({
         selected: "wrong-code",
-        runs: [run("RM-4127", "genuine", "held")],
+        runs: [run("RM-0442", "genuine", "held")],
         roundDone: false,
         options: DEMO_SAMPLES.map((sample) => ({ sample })),
       }),
@@ -163,7 +167,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     render: () =>
       picker({
         selected: "genuine",
-        runs: [run("RM-5310", "reposted", "blocked"), run("RM-5309", "ai-no-session", "blocked"), run("RM-5307", "wrong-code", "rejected"), run("RM-4127", "genuine", "paid")],
+        runs: [run("RM-5310", "reposted", "blocked"), run("RM-5309", "ai-no-session", "blocked"), run("RM-5307", "wrong-code", "rejected"), run("RM-0442", "genuine", "paid")],
         roundDone: true,
         options: DEMO_SAMPLES.map((sample) => ({ sample })),
       }),
@@ -174,7 +178,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     render: () => picker({ selected: "genuine", runs: [], roundDone: false, options: DEMO_SAMPLES.map((sample) => ({ sample })), refusal: { kind: "checks", limit: 100, until: nextUtcDay(new Date()) } }),
   },
   handoff: { group: "Code", note: "Phone from the QR, logged out: time left", render: () => handoff() },
-  "handoff-other": { group: "Code", note: "Phone from the QR, another PayPal account", render: () => handoff("Sam Doe") },
+  "handoff-other": { group: "Code", note: "Phone from the QR, another PayPal account", render: () => handoff("Priya Raman") },
   code: { group: "Code", note: "Code, timer and the phone's QR", render: () => flow({ preview: { phase: "code" } }) },
   "code-low": {
     group: "Code",
@@ -214,19 +218,19 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "demo-capture": { group: "Camera", note: "Demo: the sample in the viewfinder", render: () => flow({ sample: genuine, preview: { phase: "capture" } }) },
   "demo-capture-wrong-code": { group: "Camera", note: "Demo: the wrong code, its tag reading another", render: () => flow({ sample: wrongCode, preview: { phase: "capture" } }, { ...fx.open, code: "K7P" }) },
   "demo-capture-ai": { group: "Camera", note: "Demo: the uploaded photo, sent from outside", render: () => flow({ sample: demoSample("ai-no-session"), preview: { phase: "capture" } }, { ...fx.open, code: "H6W" }) },
-  checking: { group: "Checking", note: "Photo 1 read by the model, 18 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 18 }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
+  checking: { group: "Checking", note: "Photo 1 read by the model, 9 s in", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 9 }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
   "checking-model": { group: "Checking", note: "Pre-checks passed, model running (6 s)", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 6 }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
   "checking-slow": { group: "Checking", note: "Past 40 s: taking longer than usual", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 47 }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
   "checking-offline": { group: "Checking", note: "Polling lost the connection", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 21, offline: true }, photoUrls: fx.paid.photoUrls } }, fx.checkingModel) },
   climax: {
     group: "Checking",
     note: "The climax, live: the checks land, the list holds, the receipt prints",
-    render: () => flow({ preview: { phase: "checking", checking: { elapsed: 4, animate: true, next: "/dev/claim?s=paid-arrive" }, photoUrls: fx.paid.photoUrls } }, fx.paid.claim),
+    render: () => flow({ preview: { phase: "checking", checking: { elapsed: 13, animate: true, next: "/dev/claim?s=paid-arrive" }, photoUrls: fx.paid.photoUrls } }, fx.paid.claim),
   },
   "climax-refused": {
     group: "Checking",
     note: "Live: the checks land on a wrong code, then the refusal",
-    render: () => flow({ preview: { phase: "checking", checking: { elapsed: 4, animate: true, next: "/dev/claim?s=rejected" }, photoUrls: fx.rejected.photoUrls } }, fx.rejected.claim),
+    render: () => flow({ preview: { phase: "checking", checking: { elapsed: 13, animate: true, next: "/dev/claim?s=rejected" }, photoUrls: fx.rejected.photoUrls } }, fx.rejected.claim),
   },
   "checking-done": { group: "Checking", note: "All checks resolved: quotes and green code cells", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 19 }, photoUrls: fx.paid.photoUrls } }, fx.paid.claim) },
   "checking-blocked": { group: "Checking", note: "Stopped by a pre-check", render: () => flow({ preview: { phase: "checking", checking: { elapsed: 1 }, photoUrls: fx.blocked.photoUrls } }, fx.blocked.claim) },
@@ -235,24 +239,25 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     note: "Demo: the sample being read",
     render: () => flow({ sample: genuine, preview: { phase: "checking", checking: { elapsed: 12 }, photoUrls: genuine.photos } }, { ...fx.checkingModel, code: "M4T", demo: true }),
   },
-  paid: { group: "Result", note: "Paid, payout processing", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, account: "p••@owner.test" }) },
-  "paid-arrive": { group: "Result", note: "Paid just now: the receipt prints", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, now: fx.NOW + 24_000 }) },
-  "paid-settled": { group: "Result", note: "Paid, payout received", render: () => result(fx.paid, { payout: { status: "SUCCESS", fresh: true } }) },
-  "paid-received": { group: "Result", note: "Paid, payout received (old name)", render: () => result(fx.paid, { payout: { status: "SUCCESS", fresh: true } }) },
-  "paid-partial": { group: "Result", note: "Paid, PayPal status unreachable", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: false } }) },
+  paid: { group: "Result", note: "Paid, payout processing", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, account: ACCOUNT }) },
+  "paid-arrive": { group: "Result", note: "Paid just now: the receipt prints", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: true }, now: fx.NOW + 24_000, account: ACCOUNT }) },
+  "paid-settled": { group: "Result", note: "Paid, payout received", render: () => result(fx.paidReceived, { payout: { status: "SUCCESS", fresh: true }, account: ACCOUNT }) },
+  "paid-received": { group: "Result", note: "Paid, payout received (old name)", render: () => result(fx.paidReceived, { payout: { status: "SUCCESS", fresh: true }, account: ACCOUNT }) },
+  "paid-partial": { group: "Result", note: "Paid, PayPal status unreachable", render: () => result(fx.paid, { payout: { status: "PENDING", fresh: false }, account: ACCOUNT }) },
+  "paid-no-email": { group: "Result", note: "Paid, no email on the PayPal login", render: () => result(fx.paidReceived, { payout: { status: "SUCCESS", fresh: true } }) },
   held: { group: "Result", note: "Held: unclear answers", render: () => result(fx.held) },
   "held-model": { group: "Result", note: "Held: the model was down", render: () => result(fx.heldModel) },
   "held-limit": { group: "Result", note: "Held: the daily photo-check limit was reached", render: () => result(fx.heldLimit) },
   "held-payout": { group: "Result", note: "Held: PayPal refused the payout", render: () => result(fx.heldPayout) },
-  rejected: { group: "Result", note: "Rejected: wrong code (the code diff), uncertain read: ask a person", render: () => result(fx.rejected) },
+  rejected: { group: "Result", note: "Rejected: wrong code (the code diff)", render: () => result(fx.rejected) },
   "review-asked": { group: "Result", note: "Held: the owner asked a person to look", render: () => result(fx.reviewAsked) },
-  "rejected-screen": { group: "Result", note: "Rejected: photo of a screen", render: () => result(fx.rejectedScreen) },
+  "rejected-screen": { group: "Result", note: "Rejected: photo of a screen, ask a person", render: () => result(fx.rejectedScreen) },
   blocked: { group: "Result", note: "Blocked: outside the camera session", render: () => result(fx.blocked) },
   "blocked-duplicate": { group: "Result", note: "Blocked: another account's photo, reposted", render: () => result(fx.blockedDuplicate) },
   "blocked-account": {
     group: "Result",
     note: "Blocked: repost from a paid account, its earlier claim beside it",
-    render: () => result(fx.blockedAccount, { duplicate: { photo: 1, earlier: { id: "RM-0412", n: 1, src: "/demo/k01-1.jpg" } } }),
+    render: () => result(fx.blockedAccount, { duplicate: { photo: 1, earlier: { id: "RM-0442", n: 1, src: "/demo/k01-1.jpg" } } }),
   },
   "demo-paid": {
     group: "Result",
@@ -277,7 +282,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
       result(fx.blockedDuplicate, {
         sample: reposted,
         round: fx.roundAfter(["genuine", "wrong-code", "ai-no-session", "reposted"]),
-        duplicate: { photo: 1, earlier: { id: "RM-0412", n: 1, src: reposted.photos[0] } },
+        duplicate: { photo: 1, earlier: { id: "RM-0442", n: 1, src: reposted.photos[0] } },
       }),
   },
   "not-found": { group: "States", note: "Unknown link", render: () => <FlowShell><NotFoundCard /></FlowShell> },
@@ -286,7 +291,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
     note: "Page failed to render",
     render: () => (
       <FlowShell>
-        <ClaimErrorCard recall="kikea-x-vesolje" id="RM-0412" />
+        <ClaimErrorCard recall="kikea-x-vesolje" id="RM-0442" />
       </FlowShell>
     ),
   },

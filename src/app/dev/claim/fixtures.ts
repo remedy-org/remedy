@@ -7,7 +7,8 @@ import { Verdict, type Claim, type Reason, type Recall } from "@/lib/types";
 
 // Dev-only fixtures for /dev/claim: every step and result of the claim flow without PayPal, a camera or the model.
 // Model answers are real stored ones from the eval (src/lib/demo/verdicts.json), decided by the app's own rule. Decided
-// fixtures keep the codes written in their photos.
+// fixtures keep the codes written in their photos. The numbers are the homepage's for the genuine claim: RM-0442, the
+// photo check's answer at 11 s, sent to PayPal at 15 s, confirmed by PayPal at 55 s (DESIGN.md).
 
 export const NOW = Date.parse("2026-11-07T14:32:00.000Z");
 const at = (s: number) => new Date(NOW + s * 1000).toISOString();
@@ -21,7 +22,7 @@ const stored = (prefix: string, model = "gpt-6.1-sol") => {
 
 function base(code: string, over: Partial<Claim> = {}): Claim {
   return {
-    id: "RM-4127",
+    id: "RM-0442",
     recallId: recall.id,
     payerId: "8WQ3JX5KPUJ3Q",
     payerVerified: true,
@@ -51,9 +52,9 @@ function decided(prefix: string, model?: string, over: Partial<Claim> = {}) {
   claim.events.push(
     { at: at(0), type: "photos_received", detail: `${s.photos.length} photos from the live camera` },
     { at: at(0.4), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
-    { at: at(16.8), type: "checked", detail: "Photo check answered in 16.4 s (gpt-6.1-sol)" },
+    { at: at(11), type: "checked", detail: "Photo check answered in 10.6 s (gpt-6.1-sol)" },
   );
-  if (outcome !== "pass") claim.events.push({ at: at(17.1), type: "decided", detail: "Decided by the rule" });
+  if (outcome !== "pass") claim.events.push({ at: at(11.3), type: "decided", detail: "Decided by the rule" });
   return { claim, photoUrls: s.photos.map((p) => `/demo/${p}`) };
 }
 
@@ -61,15 +62,18 @@ export const open = base("M4T");
 
 export const paid = (() => {
   const d = decided("k01");
-  d.claim.payout = { batchId: "5UXD2E8A7NQ6G", status: "PENDING", updatedAt: at(19) };
+  d.claim.payout = { batchId: "5UXD2E8A7NQ6G", status: "PENDING", updatedAt: at(15) };
   d.claim.events.push(
-    { at: at(19), type: "payout_sent", detail: "Payout of $29.99 sent through PayPal" },
-    { at: at(19.2), type: "decided", detail: "Every check passed" },
+    { at: at(15), type: "payout_sent", detail: "Payout of $29.99 sent through PayPal" },
+    { at: at(15.2), type: "decided", detail: "Every check passed" },
   );
   return d;
 })();
 
-// The model is reading the photo: received and pre-checked, 18 s in. The same claim, code and photo as `paid`, so the
+// The same claim once PayPal has confirmed the payout, 55 s after the photo: the status route stores the time it changed.
+export const paidReceived = { ...paid, claim: { ...paid.claim, payout: { ...paid.claim.payout!, status: "SUCCESS", updatedAt: at(55) } } };
+
+// The model is reading the photo: received and pre-checked, 9 s in. The same claim, code and photo as `paid`, so the
 // checking states and checking-done show one claim.
 export const checkingModel = base(paid.claim.code, { photos: paid.claim.photos });
 checkingModel.events.push(
@@ -122,10 +126,14 @@ export const heldPayout = (() => {
   return d;
 })();
 
-export const rejected = decided("c09");
-// c09 rejected on an uncertain read ("appears to read K7O"), then the owner asked a person to look (src/lib/appeal.ts).
+// The wrong code as an owner's claim (not the demo's): k02's photo, the tag reading K7Q on claim K7P, a code from the
+// issued alphabet (src/lib/codes.ts). A confident read, so the way on is a new claim.
+export const rejected = decided("k02");
+// A refusal the owner may contest, then contested (src/lib/appeal.ts): k06, refused only as a photo of a screen, is the
+// one stored case with an issued code that a person may be asked to look at. (c09's claim code K7Q is outside the
+// alphabet, so that claim could never exist.)
 export const reviewAsked = (() => {
-  const d = decided("c09");
+  const d = decided("k06");
   d.claim.decision = "held";
   d.claim.reasons = [...d.claim.reasons, appealReason()];
   d.claim.events.push({ at: at(4 * 60), type: "review_requested", detail: "The owner asked a person to look at the photos" });
@@ -145,11 +153,12 @@ blocked.claim.events.push({ at: at(0), type: "photos_received", detail: "1 photo
 
 export const blockedAccount = {
   claim: base("T6K", {
+    id: "RM-0457",
     photos: photosOf(["k01-1.jpg"]),
     decision: "blocked",
     reasons: [
       { check: "duplicate_photo", outcome: "reject", text: "Photo 1 was already used in another claim" },
-      { check: "payer", outcome: "reject", text: "This PayPal account already has a claim for this recall (RM-0412)" },
+      { check: "payer", outcome: "reject", text: "This PayPal account already has a claim for this recall (RM-0442)" },
     ],
   }),
   photoUrls: ["/demo/k01-1.jpg"],
