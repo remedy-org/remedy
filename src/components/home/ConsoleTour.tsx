@@ -23,8 +23,9 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
 /*
  * The homepage's "For companies" tour (DESIGN.md, Screens §6), laptops only (1024px and up; phones get the stacked
  * story in ConsoleStory.tsx). Four tabs over one fixed console frame, a real view on each step:
- *   01 the claims queue, the real AG Grid on the recall's 40 claims, where the newest paid claim arrives at the top on
- *      entering view however a visitor gets there (a row insert, its checks filling, then its verdict and payout). The
+ *   01 the claims queue, the real AG Grid on the recall's claims, settled whenever it comes into view (the newest claim
+ *      paid at the top), where that claim replays its arrival once a visitor has rested on it (a row insert, its checks
+ *      filling, then its verdict and payout). The
  *      real grid takes the still's place as soon as it has drawn, so a visitor may search it, filter it by status, sort
  *      it, hover its checks, export it as CSV, and click any claim with photos to open its evidence (step 02);
  *   02 the same grid with a claim selected and its evidence laid over the grid's right-hand columns: a held claim's Pay
@@ -42,7 +43,9 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
  */
 
 const ENTER = 0.35;
-const LEAVE = 0.25;
+// How long the page must rest with the frame in view before 01's claim replays its arrival: a visitor who arrives sees
+// the queue settled (RM-0442 paid, the ledger counting it), and one who stays sees how it came in.
+const DWELL = 1500;
 // On 02 the held claim's row is selected at once and its evidence docks a beat later, so the panel reads as the row's.
 const OPEN_AFTER = 180;
 // In at +600ms, its checks back at +1400ms (the bars fill over 480ms), the verdict at +2000ms.
@@ -59,8 +62,8 @@ const STILL_ENTRANCE = 1500;
 // The nav's height, and the air the nav jump leaves under it.
 const NAV = 64;
 const AIR = 16;
-// The space between the steps and the frame.
-const GAP = 20;
+// The space between the steps and the frame (the root's gap-4).
+const GAP = 16;
 // The frame's tallest (tour.module.css .stage), and the least it takes to keep the heading in view with it.
 const FRAME_MAX = 680;
 const FIT_MIN = 560;
@@ -253,6 +256,7 @@ function TourLedger({ rows, unitsSold }: { rows: PreviewRow[]; unitsSold: number
 
 export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arriveId, descriptions, insights, report, studio }: ConsoleTourProps) {
   const [step, setStep] = useState<Step>(0);
+  const rowCount = rows.length;
   const [open, setOpen] = useState<string | null>(null);
   // The row the grid shows selected: the open claim's, a beat before its panel docks.
   const [picked, setPicked] = useState<string | null>(null);
@@ -341,34 +345,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     setFresh(null);
   }, []);
 
-  // 01's arrival, the one moment that plays without a click: when the real grid is in and the frame is 35% in view.
-  // Once the frame has left view on 01, the claim is taken back out of sight, so it arrives again on the way back;
-  // picking 01 again simply shows the queue.
-  useEffect(() => {
-    const el = frame.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        const { step, swapped, arrival } = now.current;
-        if (e.intersectionRatio >= ENTER && !played.current && step === 0 && swapped && arrival === "before" && !reduced()) {
-          played.current = true;
-          playArrival();
-        } else if (e.intersectionRatio < LEAVE && e.intersectionRatio === 0 && step === 0 && swapped && !reduced() && played.current) {
-          clear(arriving.current);
-          setLive(false);
-          setFresh(null);
-          setArrival("before");
-          played.current = false;
-        } else if (e.intersectionRatio < LEAVE && arriving.current.length && arrival !== "final") finishArrival();
-        // Out of sight, the queue is put back as it was: a claim a visitor paid or rejected is held again.
-        if (e.intersectionRatio === 0) setReview((r) => (Object.keys(r).length ? {} : r));
-      },
-      { threshold: [0, LEAVE, ENTER] },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [playArrival, finishArrival]);
-
   /** How much of the frame is in view, read from the layout now (an observer only reports when a threshold is crossed). */
   const inView = () => {
     const r = frame.current?.getBoundingClientRect();
@@ -376,14 +352,54 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     return Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)) / r.height;
   };
 
-  // Once the page has loaded with the frame out of view, the arriving claim is held back (still and grid alike), so it
-  // arrives when the frame comes into view, however a visitor gets there (a scroll, the nav's jump, a deep link).
+  // 01's arrival, the one moment that plays without a click: the queue is settled whenever the frame comes into view
+  // (RM-0442 paid, the ledger counting it), and replays how the claim came in only once the page has rested on it
+  // (DWELL), with the real grid in. Once the frame has left view, the queue is settled again and another rest replays it;
+  // picking 01 again simply shows the queue.
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      if (!reduced() && inView() === 0) setArrival("before");
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
+    const el = frame.current;
+    if (!el) return;
+    let dwell = 0;
+    const wait = () => {
+      window.clearTimeout(dwell);
+      dwell = window.setTimeout(() => {
+        const { step, swapped, arrival } = now.current;
+        if (played.current || step !== 0 || arrival !== "final" || reduced() || inView() < ENTER) return;
+        // The real grid isn't in yet: the arrival waits for it (it inserts the row through the grid's API).
+        if (!swapped) return wait();
+        played.current = true;
+        playArrival();
+      }, DWELL);
+    };
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.intersectionRatio >= ENTER && !played.current) wait();
+        if (e.intersectionRatio === 0) {
+          window.clearTimeout(dwell);
+          dwell = 0;
+          // Out of sight, the queue is put back as it was: a claim a visitor paid or rejected is held again, an arrival
+          // half played is finished, and the next rest on it replays the arrival.
+          setReview((r) => (Object.keys(r).length ? {} : r));
+          if (now.current.step === 0) {
+            finishArrival();
+            played.current = false;
+          }
+        }
+      },
+      { threshold: [0, ENTER] },
+    );
+    // A scroll restarts the wait: the arrival plays for a page at rest, never under a fling passing through.
+    const onScroll = () => {
+      if (!played.current && dwell) wait();
+    };
+    io.observe(el);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      io.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(dwell);
+    };
+  }, [playArrival, finishArrival]);
 
   /*
    * The pointer over the queue and the report. The report takes the wheel from a pointer resting on it once the page is
@@ -460,18 +476,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     };
   }, []);
 
-  // The claim was taken out of sight to arrive, but the frame is already in view (the grid swapped in while the observer
-  // had last seen it out of view, and it has crossed no threshold since): it arrives now, rather than never.
-  useEffect(() => {
-    if (step !== 0 || !swapped || arrival !== "before" || played.current || reduced()) return;
-    const frameId = requestAnimationFrame(() => {
-      if (played.current || inView() < ENTER) return;
-      played.current = true;
-      playArrival();
-    });
-    return () => cancelAnimationFrame(frameId);
-  }, [step, swapped, arrival, playArrival]);
-
   // Real Studio replaces the Insights still at 1024px and up, on intent (hover, focus or pick of tab 03, or of the app
   // bar's Insights), and never on Save-Data: a visitor who only scrolls past never loads it (nor its licence notice in
   // the console). Its canvas is measured from the frame, so it fills the body with nothing cut off. If it hasn't drawn
@@ -487,9 +491,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     later(studioWait.current, STUDIO_WAIT, () => setStudioState((s) => (s === "mounted" ? "failed" : s)));
   };
 
-  // The frame fits under the steps on a laptop screen (tour.module.css .stage reads the steps row's height), and the
-  // nav's "For companies" jump lands so a visitor sees the whole frame: from the heading when it all fits, else from
-  // the steps.
+  // The frame fits under the steps on a laptop screen (tour.module.css .stage reads the steps row's height), and is
+  // never taller than the queue's rows: a tall screen gets a window as tall as its claims, never a half-empty table. The
+  // nav's "For companies" jump lands so a visitor sees the whole frame: from the heading when it all fits, else from the
+  // steps.
   useLayoutEffect(() => {
     const el = root.current;
     const tabsRow = rail.current;
@@ -506,10 +511,14 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       const withHead = window.innerHeight - NAV - AIR - (tabs - head) - railH - GAP - AIR;
       if (withHead >= FIT_MIN && withHead < FRAME_MAX) frame.current?.style.setProperty("--frame-h", `${Math.floor(withHead)}px`);
       else frame.current?.style.removeProperty("--frame-h");
-      // The grid area holds whole rows: the frame gives up what would show of a row cut at its foot.
+      // The grid area holds whole rows, and no more rows than the queue has: the frame gives up what would show of a row
+      // cut at its foot, and the slots under its last claim.
       const grid = gridGate.current;
-      const cut = grid && frame.current ? (grid.clientHeight - GRID_HEAD) % GRID_ROW : 0;
-      if (cut > 0) frame.current?.style.setProperty("--frame-h", `${Math.floor(frame.current.getBoundingClientRect().height - cut)}px`);
+      if (grid && frame.current) {
+        const slots = Math.min(rowCount, Math.floor((grid.clientHeight - GRID_HEAD) / GRID_ROW));
+        const extra = grid.clientHeight - GRID_HEAD - slots * GRID_ROW;
+        if (extra > 0) frame.current.style.setProperty("--frame-h", `${Math.floor(frame.current.getBoundingClientRect().height - extra)}px`);
+      }
       const bottom = (frame.current?.getBoundingClientRect().bottom ?? 0) - top;
       const from = bottom - head + AIR <= window.innerHeight - NAV ? head : tabs;
       // The page's scroll padding already keeps the jump under the nav: the margin only adds the air and skips the
@@ -524,7 +533,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       ro.disconnect();
       window.removeEventListener("resize", place);
     };
-  }, []);
+  }, [rowCount]);
 
   // The evidence panel's left edge lands on a column boundary: it covers the columns after Checks (the time, the payer
   // and the money, which it repeats), or from Checks on where those leave it too narrow, at least 380px.
@@ -706,7 +715,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const filtered = step === 2 && studioState === "shown" && studioFilter;
 
   return (
-    <div ref={root} className="flex flex-col gap-5">
+    <div ref={root} className="flex flex-col gap-4">
       {/* The steps: four words on column 1, the active step's one sentence on column 8 (the page's two text lines). */}
       <div ref={rail} className="grid-12 items-baseline gap-y-3">
         <div ref={tablist} role="tablist" aria-label={TOUR.tablist} className={clsx("relative col-span-12 flex gap-x-7 lg:col-span-7", styles.steps)}>

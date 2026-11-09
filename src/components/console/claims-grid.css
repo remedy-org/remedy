@@ -195,17 +195,17 @@
    groups of its checks strip fill (the pre-checks, then the photo check's answers 160ms later), each bar over
    --dur-ui, before its verdict turns. Every cell the arrival changes flashes the one neutral tint. Scoped to the
    tour's still while the arrival plays (data-live), so /console keeps its near-zero motion. */
-[data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] .ag-cell {
+[data-live="arrive"] .claims-grid .ag-row[row-id="RM-0442"] .ag-cell {
   --ag-value-change-value-highlight-background-color: color-mix(in oklch, var(--text) 8%, transparent);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span > [data-state="pass"] {
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0442"] [role="img"] > span > [data-state="pass"] {
     transform-origin: bottom;
     animation: bar-fill var(--dur-ui) var(--ease-snap) both;
   }
 
-  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] [role="img"] > span:nth-child(2) > [data-state="pass"] {
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0442"] [role="img"] > span:nth-child(2) > [data-state="pass"] {
     animation-delay: 160ms;
   }
 }
@@ -213,7 +213,7 @@
 /* The arriving row waits, unseen, while the rows below slide away to open its slot (AG Grid's 400ms row animation),
    then fades in whole: never a half-row uncovered over a blank band, never drawn over the row it displaces. */
 @media (prefers-reduced-motion: no-preference) {
-  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0553"] {
+  [data-live="arrive"] .claims-grid .ag-row[row-id="RM-0442"] {
     animation: row-open 680ms var(--ease-out-quart) both;
   }
 }

@@ -149,19 +149,19 @@
 
 /* A claim that has just arrived carries a soft tint across its whole row while it is being checked, its changed cells
    flash in that same tint (never a patchwork of cell flashes), and once its verdict lands the tint lets go over 1.4s:
-   the queue's own "new" mark. RM-0553 is the arriving claim (components/console/preview.ts ARRIVE_ID), as in
+   the queue's own "new" mark. RM-0442 is the arriving claim (components/console/preview.ts ARRIVE_ID), as in
    claims-grid.css. */
 .gate {
   --fresh-tint: color-mix(in oklch, var(--text) 6%, var(--bg));
 }
 
-.gate[data-fresh] :global(.ag-row[row-id="RM-0553"] .ag-cell) {
+.gate[data-fresh] :global(.ag-row[row-id="RM-0442"] .ag-cell) {
   --ag-value-change-value-highlight-background-color: var(--fresh-tint);
   background-color: var(--fresh-tint);
 }
 
 /* Settled, every cell lets go together: over AG Grid's own flash and the fade it sets on the cells it changed. */
-.gate[data-fresh="settled"] :global(.ag-row[row-id="RM-0553"] .ag-cell) {
+.gate[data-fresh="settled"] :global(.ag-row[row-id="RM-0442"] .ag-cell) {
   background-color: var(--bg) !important;
   transition: background-color 1400ms var(--ease-out-quart) 400ms !important;
 }

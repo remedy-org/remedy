@@ -36,7 +36,7 @@ export function Companies() {
       exhibit="For companies"
       title={TOUR.title}
       headingSpan={12}
-      bodyClassName="mt-10 lg:mt-8"
+      bodyClassName="mt-10 lg:mt-6"
       // The console frame and its heading share one laptop screen: less air above than the page's other sections.
       padClassName="py-18 lg:pt-20 lg:pb-24"
       reveal="rise"
