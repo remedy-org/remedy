@@ -100,10 +100,11 @@ const pageOf = (state: AgReportState<InsightsRegistry>) => state.pages.find((p) 
 
 const plural = (n: number, one: string) => `${n.toLocaleString("en-US")} ${n === 1 ? one : `${one}s`}`;
 
-// Studio's canvas rows are 16px, inside its 32px padding top and bottom: the host is sized to the report, so the page
-// scrolls as one and no panel scrolls inside another.
+// Studio's canvas rows are 16px, inside its 32px padding top and bottom and a pixel of edge each side (measured: at 64
+// Studio's own layout was a 2px scroller that took the wheel): the host is sized to the report, so the page scrolls as
+// one and no panel scrolls inside another.
 const ROW = 16;
-const CANVAS_PAD = 64;
+const CANVAS_PAD = 66;
 
 export default function InsightsStudio({ data, narrow = false }: { data: InsightsData; narrow?: boolean }) {
   const host = useRef<HTMLDivElement>(null);
