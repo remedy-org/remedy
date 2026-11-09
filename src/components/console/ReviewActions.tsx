@@ -44,9 +44,9 @@ const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 
 /**
  * One name for each review action, the same on the panel's buttons, its confirm, the photo viewer's and the key hints.
- * A claim the console starts with has no PayPal payout behind it, so its word is Approve, as the homepage tour says
- * ("Approve $29.99…", confirm "Approve $29.99"); any other claim's is Pay ("Pay $29.99…", or "Try again: pay…" after a
- * payout that failed on the way to PayPal). blocked: approve's checks would stop the payout now (DrawerClaim.stops), so
+ * A claim the console starts with has no PayPal payout behind it: approving records the company's decision, so its word
+ * is Approve, with no amount, as the homepage tour says ("Approve…", confirm "Approve"); any other claim's is Pay
+ * ("Pay $29.99…", or "Try again: pay…" after a payout that failed on the way to PayPal). blocked: approve's checks would stop the payout now (DrawerClaim.stops), so
  * Reject leads and approve isn't offered as a button. confirmKey: what A does once the confirm is open.
  */
 export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "decision" | "events" | "stops" | "seeded">) {
@@ -55,9 +55,9 @@ export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "dec
   return {
     blocked: claim.stops.length > 0,
     word,
-    approve: `${failure ? "Try again: pay" : word} ${claim.amount}…`,
+    approve: claim.seeded ? "Approve…" : `${failure ? "Try again: pay" : word} ${claim.amount}…`,
     approveKey: word,
-    confirmKey: `${word} ${claim.amount}`,
+    confirmKey: claim.seeded ? word : `${word} ${claim.amount}`,
     reject: "Reject…",
   };
 }
@@ -316,13 +316,23 @@ export function ReviewActions({
         <>
           {/* One line, so the evidence above keeps its height. */}
           {/* A claim the console starts with has no PayPal payout behind it: approve records the team's decision (the
-              queue, ledger and report read Approved) and sends nothing, so it says Approve, never Pay, and says both. */}
-          <p className="text-ui text-muted">
-            <span className="font-medium text-text">
-              {claim.seeded ? "Approve" : "Pay"} <span className="font-mono">{claim.amount}</span> {claim.seeded ? "for" : "to"} <span className="font-mono">{claim.payer}</span>?
-            </span>{" "}
-            {claim.seeded ? "Your queue, ledger and report record it as Approved; no PayPal payout goes out for it." : "Through PayPal Payouts."}
-          </p>
+              queue, ledger and report read Approved), so it says Approve, never Pay, names no amount and says what it
+              records. */}
+          {claim.seeded ? (
+            <p className="text-ui text-muted">
+              <span className="font-medium text-text">
+                Approve <span className="font-mono">{claim.id}</span>?
+              </span>{" "}
+              Remedy records your decision, and the queue, ledger and report read Approved.
+            </p>
+          ) : (
+            <p className="text-ui text-muted">
+              <span className="font-medium text-text">
+                Pay <span className="font-mono">{claim.amount}</span> to <span className="font-mono">{claim.payer}</span>?
+              </span>{" "}
+              Through PayPal Payouts.
+            </p>
+          )}
           {dropped && (
             <p role="status" className="text-ui text-text-2">
               {claim.seeded ? "Not approved yet: that was the second click of a double-click. Press Approve once to record it." : "Not paid yet: that was the second click of a double-click. Press Pay once to send it."}

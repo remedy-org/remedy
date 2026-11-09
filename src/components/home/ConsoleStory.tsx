@@ -48,7 +48,7 @@ export function ConsoleStory({
       </p>
       <GridStill rows={rows.filter((r) => r.decision !== "pending").slice(0, SHOWN)} openId={evidence?.id} phone flush className="max-md:[&>:nth-child(5)]:hidden max-md:[&>:nth-child(7)]:hidden" />
     </div>,
-    evidence ? <EvidenceStill key="evidence" claim={evidence} note={<PayoutsNote amount={evidence.amount} id={evidence.id} />} fluid /> : null,
+    evidence ? <EvidenceStill key="evidence" claim={evidence} note={<PayoutsNote id={evidence.id} />} fluid /> : null,
     <div key="insights">{insights}</div>,
     <ReportPeek key="report">{report}</ReportPeek>,
   ];
