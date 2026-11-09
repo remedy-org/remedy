@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import type { CSSProperties } from "react";
+import { previewProps } from "@/components/console/preview";
 import { Button } from "@/components/ui";
 import { CLAIM } from "./custody/claim";
 import { HeroRunway } from "./custody/HeroRunway";
@@ -58,5 +59,7 @@ export function Hero() {
       </div>
     </>
   );
-  return <HeroRunway copy={copy} />;
+  // Chapter 06's queue: the recall's claims exactly as /console draws them (its words, its cells), newest first.
+  const consoleRows = previewProps(560, { asConsole: true }).rows;
+  return <HeroRunway copy={copy} consoleRows={consoleRows} />;
 }

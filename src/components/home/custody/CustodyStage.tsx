@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { frame as motionFrame, motion, useMotionValueEvent, useTransform } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import type { ClaimRow } from "@/app/console/_lib/view";
 import { BEATS as EXHIBIT_BEATS, holdOf } from "../teardown/model";
 import { CHAPTERS, CONSENT_AT, SHOT_AT } from "./claim";
 import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, type Progress } from "./chapters";
@@ -158,9 +159,11 @@ export interface CustodyStageProps {
   p: Progress;
   stage: RefObject<HTMLDivElement | null>;
   skip: ReactNode;
+  /** Chapter 06's queue, as /console draws it. */
+  consoleRows: ClaimRow[];
 }
 
-export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
+export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps) {
   const screen = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const [chapter, setChapter] = useState(0);
@@ -277,7 +280,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
               </Layer>
               {/* Chapters 03 to 05 are the Opened Exhibit, a full-stage layer above the screen and the rail (below). */}
               <Layer p={p} i={5} compact={compact} fill>
-                <ConsoleChapter p={p} />
+                <ConsoleChapter p={p} rows={consoleRows} />
               </Layer>
             </Compact.Provider>
           </motion.div>

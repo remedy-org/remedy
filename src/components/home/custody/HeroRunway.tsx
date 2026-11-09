@@ -2,6 +2,7 @@
 
 import { motion, useMotionValue, useMotionValueEvent, useScroll, useTransform, type MotionValue } from "motion/react";
 import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
+import type { ClaimRow } from "@/app/console/_lib/view";
 import { EASE } from "@/components/ui";
 import { HeroDevice, useMedia } from "../HeroDevice";
 import { CHAPTERS } from "./claim";
@@ -133,7 +134,8 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
   };
 }
 
-export function HeroRunway({ copy }: { copy: ReactNode }) {
+/** `consoleRows`: chapter 06's queue, drawn on the server from the claims /console reads (Hero.tsx). */
+export function HeroRunway({ copy, consoleRows }: { copy: ReactNode; consoleRows: ClaimRow[] }) {
   const wide = useMedia("(min-width: 1024px) and (min-height: 700px)");
   const motionOk = useMedia("(prefers-reduced-motion: no-preference)");
   const mode: Mode = !motionOk ? "static" : wide ? "pinned" : "phone";
@@ -172,7 +174,7 @@ export function HeroRunway({ copy }: { copy: ReactNode }) {
             <HeroPhone />
           </div>
         </div>
-        {pinned && <CustodyStage p={p} stage={stage} skip={<SkipLink />} />}
+        {pinned && <CustodyStage p={p} stage={stage} skip={<SkipLink />} consoleRows={consoleRows} />}
       </div>
       {mode === "static" && (
         <div id="how" tabIndex={-1} className="outline-none">
