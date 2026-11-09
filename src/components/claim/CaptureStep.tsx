@@ -52,7 +52,7 @@ export interface CaptureStepProps {
   /** Starts over with a fresh code once this session has ended. */
   newClaimHref: string;
   loginHref: string;
-  /** What the photo needs, the instruction bar's one line: "Photograph your paper tag with X-VESOLJE M4T beside the pillow cut in half." */
+  /** What the photo needs, the instruction bar's one line: "Put your paper tag with X-VESOLJE and M4T on the pillow cut in half, and photograph them together." */
   reminder: string;
   /** The label hand-written on the tag beside the code, for the tag shown beside the camera on a laptop. */
   written?: string | null;
