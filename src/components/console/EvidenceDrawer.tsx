@@ -9,7 +9,7 @@ import type { ApiError } from "@/app/console/_lib/api";
 // The model's words set as the owner's pages set them: curly quotes, codes in mono.
 import { ModelQuote } from "@/components/claim/EvidenceText";
 import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
-import { duration, isPreCheck, type ClaimRow } from "@/app/console/_lib/view";
+import { duration, isPreCheck, typeset as typesetText, type ClaimRow } from "@/app/console/_lib/view";
 import { api } from "./api";
 import { DurationText, EXCEPTION } from "./cells";
 import { DrawerSkeleton, GhostFooter, RowAmount, RowMeta, RowVerdict } from "./EvidenceShell";
@@ -595,11 +595,12 @@ function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: string)
   return (
     <section aria-labelledby="deciding-title" className="flex flex-col gap-1.5">
       <h3 id="deciding-title" className="text-ui font-medium text-text">
-        <LinkedIds text={d.title} onOpen={onOpen} self={claim.id} />
+        {/* Typeset, with no capital after a colon ("Not done: the pillow is cut fully in half…"). */}
+        <LinkedIds text={lowerAfterColons(typesetText(d.title))} onOpen={onOpen} self={claim.id} />
       </h3>
       {d.detail && (
         <p className="text-ui text-muted">
-          <LinkedIds text={d.detail} onOpen={onOpen} self={claim.id} />
+          <LinkedIds text={typesetText(d.detail)} onOpen={onOpen} self={claim.id} />
         </p>
       )}
       {d.evidence && <q className="block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted"><ModelQuote>{d.evidence}</ModelQuote></q>}
@@ -712,7 +713,7 @@ function Evidence({
             start={viewer}
             zoomAt={viewing?.zoom}
             code={claim.code}
-            question={d && { title: d.title, detail: d.detail }}
+            question={d && { title: lowerAfterColons(typesetText(d.title)), detail: d.detail && typesetText(d.detail) }}
             labels={claim.review ? reviewLabels(claim) : undefined}
             onOpen={onOpen}
             onReview={onReview}
@@ -789,7 +790,12 @@ function Evidence({
               <span className="min-w-0 text-muted">
                 {/* One format for a span, as the grid and timeline print it ("11 s", not "10.8 s"), and one figure: the photo
                     check's span is counted from the same timestamps as the grid's "Answered in" and the timeline. */}
-                <LinkedIds text={e.detail.replace(/(\d+\.\d+) s\b/, (_, n: string) => duration(e.type === "checked" && photosIn !== null ? Math.max(0, Math.round((Date.parse(e.at) - photosIn) / 1000)) : Number(n)))} onOpen={onOpen} self={claim.id} />
+                {/* Typeset, with no capital after a colon ("Held for a person: couldn’t read the label clearly"). */}
+                <LinkedIds
+                  text={lowerAfterColons(typesetText(e.detail)).replace(/(\d+\.\d+) s\b/, (_, n: string) => duration(e.type === "checked" && photosIn !== null ? Math.max(0, Math.round((Date.parse(e.at) - photosIn) / 1000)) : Number(n)))}
+                  onOpen={onOpen}
+                  self={claim.id}
+                />
                 {e.raw && (
                   <details className="mt-1">
                     <summary className="cursor-pointer text-micro text-faint hover:text-muted">Service&rsquo;s answer</summary>
