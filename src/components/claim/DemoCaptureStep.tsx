@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeftIcon, Button } from "@/components/ui";
 import type { DemoSample } from "@/lib/demo";
 import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
@@ -77,6 +77,23 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
     }
   }
 
+  // Laptops: the space bar is the shutter, as in the live camera, unless focus is on something space already presses.
+  const sendRef = useRef(send);
+  useEffect(() => {
+    sendRef.current = send;
+  });
+  useEffect(() => {
+    if (upload) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat || e.defaultPrevented) return;
+      if (e.target instanceof Element && e.target.closest("button, a, input, textarea, select, summary, dialog, [contenteditable]")) return;
+      e.preventDefault();
+      void sendRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [upload]);
+
   // The owner's situation in one line: what is in the photo, never what the checks will make of it.
   const line = SAMPLE_COPY[sample.id]?.line ?? sample.description;
   const back = (
@@ -87,9 +104,26 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
 
   return (
     <section aria-label={title} className="grid w-full max-w-[40rem] items-start gap-5 lg:max-w-none lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:gap-y-6">
+      {/* A laptop's right column, first in the page's order (the photo is placed in the left column), so Tab from the
+          title goes on to the shutter. */}
+      <div className="hidden flex-col gap-6 lg:col-start-2 lg:row-start-1 lg:flex">
+        <div className="flex flex-col gap-3">
+          <h1 id="sample-title-wide" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+            {title}
+          </h1>
+          <p className="text-body text-pretty text-muted">{line}</p>
+        </div>
+        {/* This claim's code, as the owner would have written it: the tag in the photo is checked against it. */}
+        <figure className="flex flex-col gap-3">
+          <CodeTag code={code} written={written} />
+          <figcaption className="text-ui text-muted">
+            {upload ? "Your one-time code. Only a photo taken in this claim’s camera can carry it." : "Your one-time code. This photo’s tag is already written. Press the shutter to send it."}
+          </figcaption>
+        </figure>
+      </div>
       {upload ? (
         // A picture from the web: no viewfinder, no shutter. The picture on its own, and the button that sends it.
-        <div className="flex flex-col gap-5 lg:row-span-2">
+        <div className="flex flex-col gap-5 lg:col-start-1 lg:row-span-2 lg:row-start-1">
           <a href={backHref} className="inline-flex min-h-11 items-center gap-1.5 self-start text-ui text-muted hover:text-text lg:hidden">
             <ArrowLeftIcon className="shrink-0" /> All four claims
           </a>
@@ -124,7 +158,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
           <MobileCta target="send-picture" label="Send this picture" onClick={send} disabled={sending} />
         </div>
       ) : (
-        <div data-theme="dark" data-camera="" className={clsx(CAMERA_FRAME, HUG, "lg:row-span-2")}>
+        <div data-theme="dark" data-camera="" className={clsx(CAMERA_FRAME, HUG, "lg:col-start-1 lg:row-span-2 lg:row-start-1")}>
           <CameraTopBar back={back}>
             {/* Said, not left bare: "Code" in the bar's muted sans, the code itself in mono. */}
             <span className="text-[oklch(0.86_0.005_80)]">
@@ -168,6 +202,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
                 onClick={send}
                 aria-disabled={sending || undefined}
                 aria-label="Take the photo and send it"
+                aria-keyshortcuts="Space"
                 className={clsx(
                   "flex size-[4.5rem] items-center justify-center rounded-full border-4 border-[oklch(1_0_0/0.9)] transition-opacity duration-160 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus aria-disabled:opacity-35",
                   styles.shutter,
@@ -183,21 +218,6 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
         {sending ? (upload ? "Sending the picture." : "Photo taken. Sending it.") : ""}
       </p>
 
-      <div className="hidden flex-col gap-6 lg:col-start-2 lg:flex">
-        <div className="flex flex-col gap-3">
-          <h1 id="sample-title-wide" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
-            {title}
-          </h1>
-          <p className="text-body text-pretty text-muted">{line}</p>
-        </div>
-        {/* This claim's code, as the owner would have written it: the tag in the photo is checked against it. */}
-        <figure className="flex flex-col gap-3">
-          <CodeTag code={code} written={written} />
-          <figcaption className="text-ui text-muted">
-            {upload ? "Your one-time code. Only a photo taken in this claim’s camera can carry it." : "Your one-time code. This photo’s tag is already written. Press the shutter to send it."}
-          </figcaption>
-        </figure>
-      </div>
       {error && (
         <div className="lg:col-start-2">
           <Notice title="The photo didn’t send">{error}</Notice>
