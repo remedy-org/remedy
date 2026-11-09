@@ -21,13 +21,13 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/claims/
   try {
     const session = await getSession("owner");
     if (!session) return json(401, "Your PayPal login expired. Log in again to send the photos.");
-    if (Number(request.headers.get("content-length") ?? 0) > MAX_BYTES) return json(413, "The photos are too large to send. Retake them and try again.");
+    if (Number(request.headers.get("content-length") ?? 0) > MAX_BYTES) return json(413, "That was too large to send. Retake and send again.");
 
     const deps = await liveDeps();
     const claim = await deps.store.getClaim(id);
     if (!claim || claim.payerId !== session.payerId) return json(404, "No such claim for this PayPal account");
     const form = await request.formData().catch(() => null);
-    if (!form) return json(400, "The photos didn't arrive. Try sending them again.");
+    if (!form) return json(400, "Nothing arrived. Send again.");
 
     let photos: Buffer[];
     let sessionId: string;

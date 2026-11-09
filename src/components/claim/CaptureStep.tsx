@@ -277,7 +277,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     const blobs = shots.map((s) => s.blob).filter((b): b is Blob => b !== null);
     if (!blobs.length || sending) return;
     if (blobs.reduce((n, b) => n + b.size, 0) > MAX_BYTES) {
-      setSendError({ status: 413, message: "These photos are too large to send together. Remove one and try again." });
+      setSendError({ status: 413, message: blobs.length === 1 ? "This photo is too large to send. Retake it and try again." : "These photos are too large to send together. Remove one and try again." });
       return;
     }
     setSending(true);
