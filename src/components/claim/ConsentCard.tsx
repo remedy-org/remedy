@@ -1,6 +1,7 @@
+import clsx from "clsx";
 import { Button, NoBreakHyphens } from "@/components/ui";
 import type { JudgeLogin } from "@/lib/demo/judgeLogin";
-import { sampleTitle } from "@/lib/demo/sampleCopy";
+import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import { DEMO_SAMPLES } from "@/lib/demo/samples";
 import type { Refusal } from "@/lib/limits";
 import { CAPTURE_SESSION_MINUTES } from "@/lib/ids";
@@ -47,6 +48,9 @@ export interface ConsentCardProps {
   yourClaim?: YourClaim | null;
   /** /try: the demo account's PayPal login, shown just before the login button. */
   judgeLogin?: JudgeLogin | null;
+  /** /try?sample=<id> (the homepage's "Try to fool it"): the claim it pointed at, ringed among the four with its line,
+   * and the one the picker opens on after the login. */
+  sample?: string | null;
 }
 
 /** The demo account's login in the card: the phone's bar shows it before it offers the PayPal login. */
@@ -70,7 +74,7 @@ const thingOf = (recall: Recall) => (taggedThing(recall.spec)?.split(" ").pop() 
  * The consent card: what the owner gets back, in one headline, how in one line, then one action. A
  * returning owner sees only their claim and the way back to it.
  */
-export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin }: ConsentCardProps) {
+export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin, sample }: ConsentCardProps) {
   const company = companyName(recall);
   const action = consentAction({ signedInAs, demo, unverified, yourClaim });
   // Refused by a limit, a real owner's way on is the company's recall notice.
@@ -114,22 +118,37 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       </div>
 
       {/* /try: the four claims about to be sent, so the page reads as the product, not a login form. A preview under its
-          own label, not a menu: no ring or hover on the photos, the names in the second tone. They are picked after the
-          login. */}
+          own label, not a menu: no hover on the photos, the names in the second tone. They are picked after the login.
+          Come from "Try to fool it" (?sample=), the claim it named is ringed, its name in full ink, and its line opens
+          under the four: the picker opens on it once PayPal returns. */}
       {demo && !signedInAs && (
         <div className="flex flex-col gap-3">
           <p id="four-claims" className="text-ui text-muted">
             The four claims you&rsquo;ll send
           </p>
           <ul aria-labelledby="four-claims" className="grid grid-cols-2 gap-x-4 gap-y-3">
-            {DEMO_SAMPLES.map((sample) => (
-              <li key={sample.id} className="flex min-w-0 items-center gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={sample.photos[0]} alt="" width={56} height={56} className="size-14 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_65%]" />
-                <span className="text-ui text-balance text-muted">{sampleTitle(sample.id, sample.title)}</span>
-              </li>
-            ))}
+            {DEMO_SAMPLES.map((s) => {
+              const asked = s.id === sample;
+              return (
+                <li key={s.id} aria-current={asked || undefined} className="flex min-w-0 items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={s.photos[0]}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className={clsx("size-14 shrink-0 rounded-control bg-surface-2 object-cover object-[50%_65%]", asked && "ring-2 ring-text ring-offset-2 ring-offset-bg")}
+                  />
+                  <span className={clsx("text-ui text-balance", asked ? "font-medium text-text" : "text-muted")}>{sampleTitle(s.id, s.title)}</span>
+                </li>
+              );
+            })}
           </ul>
+          {sample && SAMPLE_COPY[sample] && (
+            <p className="text-ui text-pretty text-text-2">
+              {SAMPLE_COPY[sample].line} You start with this one.
+            </p>
+          )}
         </div>
       )}
 

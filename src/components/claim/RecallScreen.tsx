@@ -43,6 +43,7 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
       unverified={unverified}
       refusal={parseRefusal(query, now) ?? refused}
       judgeLogin={demo ? judgeLogin("personal") : null}
+      sample={sample}
     />
   );
 }

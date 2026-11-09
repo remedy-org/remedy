@@ -12,6 +12,9 @@ export type MoneyState = "paid" | "settling" | "approved";
 
 export const MONEY_WORD: Record<MoneyState, string> = { paid: "Paid", settling: "Sent, settling", approved: "Approved" };
 
+/** A claim's history line when PayPal confirms its payout (PayPal's own word, SUCCESS, is what the store records). */
+export const PAYPAL_CONFIRMED = "PayPal confirmed the payout";
+
 const NOT_LANDED = new Set(["FAILED", "RETURNED", "BLOCKED", "DENIED", "REVERSED", "REFUNDED", "CANCELED"]);
 
 /** Where an approved claim's money is, or null for a claim nobody approved. */

@@ -117,9 +117,9 @@ function paint(tokens: Record<string, string>, spec: string): RGBA {
   return spec.split("+").reduce((acc, part) => over(layer(tokens, part), acc), { r: 0, g: 0, b: 0, a: 1 } as RGBA);
 }
 
-// Every surface text can sit on: the three steps, the section fade's top, the console's open row, and the light
-// table's pool at its brightest (the pool sits under content, so text over it is measured at its peak).
-const surfaces = ["--bg", "--surface", "--surface-2", "--surface-3", "--section-lift", "--surface+--accent-soft", "--bg+--pool"];
+// Every surface text can sit on: the three steps, the console's open row, and the light table's pool at its brightest
+// (the pool sits under content, so text over it is measured at its peak).
+const surfaces = ["--bg", "--surface", "--surface-2", "--surface-3", "--surface+--accent-soft", "--bg+--pool"];
 const app: Pair[] = [
   ...["--text", "--text-2", "--muted", "--faint"].flatMap((fg) => surfaces.map((bg) => ({ fg, bg, min: 4.5 }))),
   ...["--accent-text"].flatMap((fg) => surfaces.map((bg) => ({ fg, bg, min: 4.5 }))),
@@ -142,7 +142,7 @@ const app: Pair[] = [
   ...["--bg", "--surface", "--surface-2"].map((bg) => ({ fg: "--line-strong", bg, min: 3, note: "input border" })),
   { fg: "--photo-scrim-text", bg: "white+--photo-scrim", min: 4.5, note: "AI-made photo label, scrim over a white photo" },
   // The 2px focus ring, 2px off the control: 3:1 against every surface it can lie on (WCAG 1.4.11, 2.4.13).
-  ...["--bg", "--surface", "--surface-2", "--surface-3", "--section-lift"].map((bg) => ({ fg: "--focus", bg, min: 3, note: "focus ring" })),
+  ...["--bg", "--surface", "--surface-2", "--surface-3"].map((bg) => ({ fg: "--focus", bg, min: 3, note: "focus ring" })),
 ];
 
 // The ring around the amber primary button. In light it must clear the button itself; in dark it is the button's own

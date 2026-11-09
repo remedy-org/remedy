@@ -61,7 +61,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["modelSec", "Photo check time", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the model's answer." }],
           ["photoCount", "Photos", "integerFormat"],
           ["payoutStatus", "PayPal status", "textFormat", { description: "PayPal's own payout status: SUCCESS, PENDING, UNCLAIMED and so on." }],
-          ["stage", "Furthest stage", "textFormat", { description: "The last stage the claim passed: Filed, Photos sent, Passed account checks, Passed photo check, Paid." }],
+          ["stage", "Furthest stage", "textFormat", { description: "The last stage the claim passed: Filed, Photos sent, Passed checks before the photo check, Passed photo check, Paid." }],
           ["stopReason", "Stopped because", "textFormat", { description: "Why the claim went no further than its furthest stage. Blank for paid claims." }],
         ]),
       },

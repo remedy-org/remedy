@@ -47,10 +47,11 @@ export function Hero() {
         </Button>
       </div>
       <div className={clsx("mt-4 flex flex-col gap-1.5", styles.focusIn)} style={line(3)}>
-        {/* One proof, from a real claim, as the console's timeline has it: sent at CLAIM.seconds, confirmed at CLAIM.confirmed. */}
+        {/* One proof, from a real claim, as the console's timeline has it: sent at CLAIM.seconds, confirmed at CLAIM.confirmed,
+            both in one unit ("15 s", "55 s"). */}
         {/* The claim's ids on a line of their own, so the sentence wraps clear of the receipt (44ch at 1024). */}
         <p className="max-w-[44ch] text-ui text-pretty text-text-2 xl:max-w-none">
-          Sent to the owner&rsquo;s PayPal {CLAIM.seconds} seconds after the photo, confirmed at {CLAIM.confirmed}&nbsp;s
+          Sent to the owner&rsquo;s PayPal {CLAIM.seconds}&nbsp;s after the photo, confirmed by PayPal at {CLAIM.confirmed}&nbsp;s
           <span className="block">
             Claim <span className="font-mono whitespace-nowrap">{CLAIM.id}</span> · CPSC{" "}
             <span className="font-mono whitespace-nowrap">{CLAIM.recall.replace(/^CPSC /, "")}</span>

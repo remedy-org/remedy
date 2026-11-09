@@ -115,6 +115,12 @@
   padding: 0;
 }
 
+/* The checks card is taller than a short list: fixed to the screen, it escapes the grid's clipped frame, and places
+   itself under or over its row (cells.tsx ChecksCard). */
+.claims-grid .ag-tooltip-custom:has([data-float]) {
+  position: fixed;
+}
+
 /* A hover card leaves in 120ms (AG Grid's own fade is 1s, which left a see-through card over the next tab's rows), and
    one card only: the one opening replaces the one leaving at once. A tab, search or grouping change takes it at once
    (ClaimsGrid sets data-tips-off). */

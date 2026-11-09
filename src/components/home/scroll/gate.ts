@@ -52,7 +52,7 @@ const SUSTAIN = 250;
  * it: one, so only a fresh gesture's first fling stops. */
 const ESCAPE = 1;
 /** ms of input held at FAST or more, not slowing (a wheel spun on, never a trackpad's decaying tail), after which the
- * gesture runs free at once, landing or not; when it ends, the page comes to rest on the nearest stop ahead (SETTLE). */
+ * gesture runs free at once, landing or not; when it ends, the page comes to rest on a stop or a clean frame (settle). */
 const SPIN = 600;
 /** The same for a notched wheel, sooner: a power scroller spinning hard from the top met a page that held for 0.6 s while
  * the dolly played, and felt it resist. A notched wheel has no momentum tail to mistake for a spin; under 450 ms a
@@ -60,6 +60,17 @@ const SPIN = 600;
 const NOTCH_SPIN = 450;
 /** How far past where a free run would stop the nearest stop may be, in windows, for the run to come to rest on it. */
 const SETTLE = 0.6;
+/** How far short of where a free run would stop a stop it has just passed may be, in windows, for the run to come back
+ * to rest on it when it is nearer than the stop ahead: the stops below the Problem sheet are about a window apart, so a
+ * spin that ran 270px past Results' stop rested with its heading under the nav. */
+const SETTLE_BACK = 0.3;
+/** px a free run with no stop near may move to rest on a clean frame (stops.ts fit): no line cut by the nav or the
+ * screen's foot. */
+const CLEAN = 120;
+/** A notched wheel's quick flick is taken to the next stop this many windows away or nearer however short it is, as
+ * Page Down is (keys.ts REACH): the stops below the Problem sheet are about a window apart, so three notches carried
+ * about half the way and a flick ran free or glided to the stop by a few px of timing. */
+const NOTCH_REACH = 1.25;
 /** Input a held fling keeps putting in past the stop it was taken to, in windows, that carries it on past a story's
  * inner beat (a hard fling skims; a flick stops on each beat). Section stops always catch. */
 const SKIM = 2;
@@ -128,8 +139,15 @@ export function samePageHash(e: Event) {
 }
 
 /** The stops in scrollY, sorted (going down, and going up when they differ), and the stretches between them a glide
- * crosses slowly (landing.ts warp). */
-export type Course = { stops: number[]; up?: number[]; slow?: readonly Slow[]; inner?: number[]; pins?: readonly (readonly [number, number])[] };
+ * crosses slowly (landing.ts warp). `fit` is the clean frame in [min, max] nearest a position (stops.ts Page fit). */
+export type Course = {
+  stops: number[];
+  up?: number[];
+  slow?: readonly Slow[];
+  inner?: number[];
+  pins?: readonly (readonly [number, number])[];
+  fit?: (y: number, range: { min: number; max: number }) => number | undefined;
+};
 
 export function createGate(read: () => Course) {
   let lenis: GateLenis | null = null;
@@ -142,6 +160,7 @@ export function createGate(read: () => Course) {
   let innerStops: number[] = [];
   let pins: readonly (readonly [number, number])[] = [];
   let slow: readonly Slow[] = [];
+  let fit: Course["fit"];
   let hold: Hold | null = null;
   let landing: { to: number; dir: Dir } | null = null;
   /** Something else took the page during this gesture (a key, a link, the scrollbar): the rest of it is the reader's. */
@@ -202,7 +221,7 @@ export function createGate(read: () => Course) {
   /** Whether this gesture would carry the page at least CARRY of the way to `to` on its own; inside a pinned story any
    * fling does, and so does one that would come to rest inside one, so a flick never rests on a beat half played. */
   function carries(l: GateLenis, to: number, dir: Dir, now: number) {
-    if (story(l.animatedScroll, to)) return true;
+    if (story(l.animatedScroll, to) || (notched && Math.abs(to - l.animatedScroll) <= NOTCH_REACH * innerHeight)) return true;
     const aim = landing ? landing.to : l.targetScroll;
     const projected = (aim - l.animatedScroll) * dir + Math.min(rate(now) * MOMENTUM, sum(-Infinity, now));
     return projected >= CARRY * Math.abs(to - l.animatedScroll) || scrubbed(l.animatedScroll + dir * projected);
@@ -234,17 +253,29 @@ export function createGate(read: () => Course) {
   }
 
   /** A free run has ended: it comes to rest on the stop ahead nearest to where it would have stopped, when that is close,
-   * and however far when it would stop inside a pinned story, where only a beat is a whole frame. */
+   * and however far when it would stop inside a pinned story, where only a beat is a whole frame; or back on the stop it
+   * has just passed (SETTLE_BACK), when that one is nearer. With no stop near, it rests on the clean frame nearest
+   * (CLEAN), so a free run never leaves a line cut by the nav or the screen's foot. */
   function settle(l: GateLenis) {
     free = false;
     if (yielded) return;
     const dir = lastDir;
-    let best: number | undefined;
-    for (const s of dir > 0 ? stops : upStops) {
-      if ((s - l.animatedScroll) * dir <= 1) continue;
-      if (best === undefined || Math.abs(s - l.targetScroll) < Math.abs(best - l.targetScroll)) best = s;
+    const rest = l.targetScroll;
+    const at = l.animatedScroll;
+    const list = dir > 0 ? stops : upStops;
+    let ahead: number | undefined;
+    let back: number | undefined;
+    for (const s of list) {
+      if ((s - at) * dir > 1) {
+        if (ahead === undefined || Math.abs(s - rest) < Math.abs(ahead - rest)) ahead = s;
+      } else if ((rest - s) * dir <= SETTLE_BACK * innerHeight && (back === undefined || Math.abs(s - rest) < Math.abs(back - rest))) back = s;
     }
-    if (best !== undefined && (Math.abs(best - l.targetScroll) <= SETTLE * innerHeight || scrubbed(l.targetScroll))) land(l, best, dir, performance.now());
+    if (ahead !== undefined && !(Math.abs(ahead - rest) <= SETTLE * innerHeight || scrubbed(rest))) ahead = undefined;
+    const stop = back !== undefined && (ahead === undefined || Math.abs(back - rest) < Math.abs(ahead - rest)) ? back : ahead;
+    const to = stop ?? fit?.(rest, { min: rest - CLEAN, max: rest + CLEAN });
+    // A clean frame where the run rests already: Lenis finishes the run.
+    if (to === undefined || (stop === undefined && Math.abs(to - rest) <= 1) || Math.abs(to - at) <= 1) return;
+    land(l, to, to > at ? 1 : -1, performance.now());
   }
 
   /** Whether a held gesture has become a new one: a fresh swipe out of the momentum tail, or a hand scrolling on. */
@@ -313,7 +344,7 @@ export function createGate(read: () => Course) {
         hold.low = Infinity;
         hold.rising = 0;
       }
-      ({ stops, up: upStops = stops, slow = [], inner: innerStops = [], pins = [] } = read());
+      ({ stops, up: upStops = stops, slow = [], inner: innerStops = [], pins = [], fit } = read());
       origin = l.animatedScroll;
     }
     if (dir !== lastDir) {

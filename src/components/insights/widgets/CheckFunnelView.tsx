@@ -63,7 +63,8 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
         return (
           <li key={s.stage} className="flex flex-col gap-1">
             <div className="grid grid-cols-[11.5rem_2.5rem_1fr] items-center gap-3">
-              <span className="truncate text-ui text-text">{flush ? s.stage : shownAs(s.stage)}</span>
+              {/* A long stage ("Passed checks before the photo check") wraps to a second line rather than cut. */}
+              <span className="text-ui leading-tight text-pretty text-text">{flush ? s.stage : shownAs(s.stage)}</span>
               <span className={clsx("text-right text-ui text-text", figure)}>{s.reached}</span>
               <span className="relative h-3 rounded-[3px] bg-surface-2" aria-hidden="true">
                 <span

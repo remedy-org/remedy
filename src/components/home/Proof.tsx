@@ -21,15 +21,17 @@ const FIGURES: { figure: string; text: string }[] = [
  * with what it counts beside it, the lead and the method's footnote under it; the three supporting counts stand beside
  * them on columns 8 to 12, a list on hairlines with room to breathe, ending on the footnote's last line, so the frame is
  * one balanced slide, never a lone figure with an empty half. On a laptop screen 860px tall and up it is a screen of its
- * own (scroll/stops.ts frames the section's top under the nav), so For companies never shows at its foot, with its
- * content 18% of the screen down, where a centred block left a tall screen's frame half paper above and below.
+ * own (scroll/stops.ts frames the section's top under the nav), so For companies never shows at its foot: the block sits
+ * a little above the screen's middle, the counts' rows opened up to hold it, so the slide is composed rather than its
+ * top 40% used over 500px of empty paper (1920x1080).
  */
 export function Proof() {
   return (
     <Section
       id="proof"
-      className="lg:[@media(min-height:860px)]:min-h-[calc(100svh-4rem)]"
-      padClassName="py-18 lg:py-24 lg:[@media(min-height:860px)]:pt-[calc(18svh-4rem)]"
+      className="lg:[@media(min-height:860px)]:flex lg:[@media(min-height:860px)]:min-h-[calc(100svh-4rem)] lg:[@media(min-height:860px)]:flex-col lg:[@media(min-height:860px)]:justify-center"
+      padClassName="py-18 lg:py-24 lg:[@media(min-height:860px)]:pt-16 lg:[@media(min-height:860px)]:pb-28"
+      pageClassName="w-full"
       exhibit="Results"
       headingSpan={7}
       stack
@@ -47,7 +49,10 @@ export function Proof() {
       aside={
         <dl className="flex flex-col">
           {FIGURES.map((f) => (
-            <div key={f.text} className="flex items-baseline gap-x-4 border-t border-line py-4 first:border-t-0 first:pt-0 last:pb-0 lg:py-8 lg:first:pt-0 lg:last:pb-0">
+            <div
+              key={f.text}
+              className="flex items-baseline gap-x-4 border-t border-line py-4 first:border-t-0 first:pt-0 last:pb-0 lg:py-8 lg:first:pt-0 lg:last:pb-0 lg:[@media(min-height:860px)]:py-11"
+            >
               <dt className="w-[5.5ch] shrink-0 text-head-sm font-medium whitespace-nowrap sm:w-[6.5ch] sm:text-title">
                 {f.figure}
               </dt>

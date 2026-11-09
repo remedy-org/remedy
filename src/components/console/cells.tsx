@@ -471,34 +471,81 @@ export function HeaderOnlyTip({ location, value }: CustomTooltipProps<GridRow>) 
 }
 
 
-/** Hovering the strip: the count, then each check by name with its result, under the five checks by the names the
- * evidence, the homepage and the owner's receipt give them (fiveChecks.ts fiveNames): the finer answers sit only here. A
- * check that doesn't apply to this claim keeps its dash in the strip but isn't listed. */
+/** Hovering the strip: the count, then each of the five checks by the name the evidence, the homepage and the owner's
+ * receipt give it (fiveChecks.ts fiveNames), one row each with its bar and word as the strip draws it; under a check,
+ * its finer answers (the tag's label and code, the photo's steps), which sit only here. An answer named as its check is
+ * that check's own row, never a heading over a row that repeats it. A check that doesn't apply to this claim keeps its
+ * dash in the strip but isn't listed. */
 export function ChecksTooltip({ data, location, value, context }: CustomTooltipProps<GridRow, unknown, GridContext>) {
   if (location === "header") return <HeaderTip text={value} />;
   if (!data?.bars) return null;
   if (context?.stacked) return <FiveCard row={data} bars={data.bars} />;
-  const shown = data.bars.filter((b) => !(isPreCheck(b.id) && b.state === "skipped"));
-  const groups = FIVE_CHECKS.map((c) => ({ title: data.checkNames?.[c.n - 1] ?? c.short, bars: shown.filter((b) => checkOf(b.id) === c.n) })).filter((g) => g.bars.length);
+  return <ChecksCard row={data} bars={data.bars} />;
+}
+
+/**
+ * The console's checks card. It escapes the grid (claims-grid.css fixes it to the screen, so the grid's rounded frame
+ * never clips it on the last rows) and sits 8px under the hovered row, or over it where the screen's foot has no room,
+ * never under the app bar.
+ */
+function ChecksCard({ row, bars }: { row: GridRow; bars: CheckBar[] }) {
+  const card = useRef<HTMLDivElement>(null);
+  const id = row.id;
+  useLayoutEffect(() => {
+    const el = card.current;
+    const cell = el?.ownerDocument.querySelector<HTMLElement>(`.claims-grid .ag-row[row-id="${CSS.escape(id)}"] .ag-cell[col-id="checks"]`);
+    if (!el || !cell) return;
+    // AG Grid places its popup at the pointer after this renders: measured once it has, then moved from there.
+    let frame = 0;
+    const place = () => {
+      el.style.translate = "";
+      const box = el.getBoundingClientRect();
+      const at = cell.closest(".ag-row")!.getBoundingClientRect();
+      const bar = 72;
+      const foot = innerHeight - 8;
+      const below = at.bottom + 8;
+      const above = at.top - 8 - box.height;
+      const top = below + box.height <= foot ? below : above >= bar ? above : Math.max(bar, foot - box.height);
+      const left = Math.max(8, Math.min(cell.getBoundingClientRect().left, innerWidth - 8 - box.width));
+      el.style.translate = `${Math.round(left - box.left)}px ${Math.round(top - box.top)}px`;
+    };
+    place();
+    frame = requestAnimationFrame(() => (place(), (frame = requestAnimationFrame(place))));
+    return () => cancelAnimationFrame(frame);
+  }, [id]);
+  const shown = bars.filter((b) => !(isPreCheck(b.id) && b.state === "skipped"));
+  const five = fiveOf(bars);
+  const checks = FIVE_CHECKS.map((c) => {
+    const title = row.checkNames?.[c.n - 1] ?? c.short;
+    const of = shown.filter((b) => checkOf(b.id) === c.n);
+    return { n: c.n, title, state: FIVE_BAR[five[c.n - 1].outcome], listed: of.length > 0, answers: of.filter((b) => b.label !== title) };
+  }).filter((c) => c.listed);
   return (
     // Wide enough for the longest check beside its longest word ("Same item in both photos", "One photo, not needed");
     // a longer one wraps, never cut.
-    <div className="w-[360px] rounded-card bg-surface px-3.5 py-3 shadow-float">
-      <p className="text-ui text-text">{barsSentence(data.bars)}</p>
-      {groups.map((g) => (
-        <div key={g.title} className="mt-3">
-          <p className="text-micro text-faint">{g.title}</p>
-          <ul className="mt-1.5 flex flex-col gap-1">
-            {g.bars.map((b) => (
-              <li key={b.id} className="flex items-center gap-2.5 text-ui">
-                <Bar bar={b} />
-                <span className="min-w-0 flex-1 text-text-2">{b.label}</span>
-                {barWord(b) && <span className="shrink-0 text-micro text-muted">{barWord(b)}</span>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+    <div ref={card} data-float="" className="w-[360px] rounded-card bg-surface px-3.5 py-3 shadow-float">
+      <p className="text-ui text-text">{barsSentence(bars)}</p>
+      <ul className="mt-2.5 flex flex-col gap-2">
+        {checks.map((c) => (
+          <li key={c.n}>
+            <span className="flex items-center gap-2.5 text-ui">
+              <Bar bar={{ state: c.state }} />
+              <span className="min-w-0 flex-1 text-text-2">{c.title}</span>
+              {BAR_WORD[c.state] && <span className="shrink-0 text-micro text-muted">{BAR_WORD[c.state]}</span>}
+            </span>
+            {c.answers.length > 0 && (
+              <ul className="mt-1 flex flex-col gap-0.5 pl-[18px]">
+                {c.answers.map((b) => (
+                  <li key={b.id} className="flex items-baseline gap-2.5 text-micro">
+                    <span className="min-w-0 flex-1 text-muted">{b.label}</span>
+                    {barWord(b) && <span className="shrink-0 text-faint">{barWord(b)}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
