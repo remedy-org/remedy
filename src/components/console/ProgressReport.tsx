@@ -16,22 +16,6 @@ function H({ children }: { children: ReactNode }) {
 const th = "py-2 pr-4 text-left text-micro font-medium text-muted last:pr-0";
 const td = "border-t border-line py-2.5 pr-4 align-top last:pr-0";
 
-/**
- * Shares of a total to one decimal place that add up to 100.0% (largest remainder over tenths), so two equal counts
- * always show the same share and the column never totals 100.1%.
- */
-export function shares(counts: number[]): string[] {
-  const total = counts.reduce((a, b) => a + b, 0);
-  if (!total) return counts.map(() => "0%");
-  const raw = counts.map((c) => (c / total) * 1000);
-  const floor = raw.map((r) => Math.floor(r + 1e-9));
-  let left = 1000 - floor.reduce((a, b) => a + b, 0);
-  const order = raw.map((r, i) => [r - Math.floor(r + 1e-9), i] as const).sort((a, b) => b[0] - a[0]);
-  for (const [, i] of order) if (left-- > 0) floor[i]++;
-  // A whole share prints whole (65%, not 65.0%), as the console's own report does.
-  return floor.map((n) => `${(n / 10).toFixed(1).replace(/\.0$/, "")}%`);
-}
-
 // CPSC's own wording of units sold, only when it says more than the figure above it (a range, several products).
 const cpscUnits = (recall: Recall, sold: number) => (recall.units && recall.units.replace(/[^\d]/g, "") !== String(sold) ? `CPSC: ${recall.units}` : undefined);
 
@@ -55,8 +39,8 @@ export function ProgressReport({
   /** Which monthly progress report this is in CPSC's sequence (format.ts reportNumber). */
   reportNo?: number;
   /**
-   * The homepage's sheet, inside the console tour's frame: sized by its own width, sans figures, shares to one decimal
-   * that add up to 100.0%, and the marks its phone peek (ReportPeek.tsx) cuts on.
+   * The homepage's sheet, inside the console tour's frame: sized by its own width, sans figures, and the marks its phone
+   * peek (ReportPeek.tsx) cuts on. Its shares are the console's, word for word.
    */
   home?: boolean;
 }) {
@@ -64,7 +48,7 @@ export function ProgressReport({
   // Every figure in the body face; the console's keep their digits one width (Digits), so a column of counts lines up.
   const figure = "";
   const n = (text: string) => (home ? text : <Digits text={text} />);
-  const share = home ? shares(report.outcomes.map((o) => o.count)) : report.outcomes.map((o) => o.share);
+  const share = report.outcomes.map((o) => o.share);
   const refused = s.rejected + s.blocked;
   const each = report.paidEachCents === null ? "" : ` at ${formatCents(report.paidEachCents)}`;
   const firm = firmOf(recall);
@@ -127,7 +111,7 @@ export function ProgressReport({
         <H>Progress</H>
         <div data-peek-row className="grid gap-6 sm:grid-cols-3">
           <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={cpscUnits(recall, s.unitsSold)} home={home} />
-          <Figure label={home ? "Remedied" : "Units remedied"} value={formatCount(s.remedied)} note="Destroyed on camera" home={home} />
+          <Figure label="Units remedied" value={formatCount(s.remedied)} note="Destroyed on camera" home={home} />
           <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} home={home} />
         </div>
         {s.unitsSold > 0 && <ReturnRuler remedied={s.remedied} sold={s.unitsSold} daysIn={daysIn} />}
