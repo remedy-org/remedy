@@ -289,14 +289,15 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   }, [open]);
   const [session, setSession] = useState<{ since: number | null; done: { id: string; decision: string; at: number }[] }>({ since: null, done: [] });
   const decided = useCallback(
-    (id: string, decision?: string, claim?: { amount?: string } | null) => {
+    (id: string, decision?: string, claim?: { amount?: string; sent?: boolean } | null) => {
       const order = grid.current?.displayedIds() ?? found.map((r) => r.id);
       const byId = new Map(rows.map((r) => [r.id, r]));
       const held = order.filter((x) => x === id || byId.get(x)?.decision === "held");
       const i = held.indexOf(id);
       const nextId = (held[i + 1] ?? held[i - 1]) || null;
       setNext({ after: id, id: nextId });
-      const said = decision === "rejected" ? `${id} rejected` : `${id} approved · ${claim?.amount ?? "refund"} sent`;
+      // Sent only where a payout went to PayPal: approving one of the console's own claims records the decision alone.
+      const said = decision === "rejected" ? `${id} rejected` : claim?.sent === false ? `${id} approved` : `${id} approved · ${claim?.amount ?? "refund"} sent`;
       // Keys typed while it saved are for the claim that opens next: they wait for its panel (keyQueue).
       decidedNow.current = true;
       const start = openedAt.current;
@@ -326,7 +327,9 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     (results: BulkResult[], decision: "approve" | "reject") => {
       const done = results.filter((r) => r.ok);
       const failed = results.filter((r) => !r.ok).map((r) => r.id);
-      if (done.length) setHint(`${plural(done.length, "claim")} ${decision === "reject" ? "rejected" : "paid through PayPal"}`);
+      // Paid through PayPal only where a payout went out: approving the console's own claims records the decision alone.
+      const sent = done.some((r) => r.claim?.payout);
+      if (done.length) setHint(`${plural(done.length, "claim")} ${decision === "reject" ? "rejected" : sent ? "paid through PayPal" : "approved"}`);
       setBulk("idle");
       setPicked(failed);
       if (failed.length) return;

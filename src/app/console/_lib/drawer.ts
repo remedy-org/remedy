@@ -351,7 +351,8 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     fiveRows: rows,
     photoAlt: photoAltsOf(c, recall),
     tagSpot: datasetTagSpot(c.photos.map((p) => p.key)),
-    sentence: decisionSentence(c, recall),
+    // A starter claim a person approved sends nothing, ever: the decision is what was recorded, never "nothing sent yet".
+    sentence: c.seeded && c.decision === "paid" && !c.payout && c.reasons.some((r) => r.check === "review") ? "Approved on review: your decision is recorded." : decisionSentence(c, recall),
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,
     // A starter claim's payout has settled; its batch ids are the workspace's own, so the panel shows no PayPal ids for it.

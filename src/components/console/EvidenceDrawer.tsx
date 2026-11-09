@@ -46,7 +46,8 @@ export interface EvidenceProps {
   // Opens another claim of the queue (the claim a repost copied, the next held claim).
   onOpen?: (id: string) => void;
   // A person approved or rejected this claim (ClaimsQueue works out the next held one). claim: what was decided.
-  onDecided?: (id: string, decision: DrawerClaim["decision"], claim?: { amount?: string } | null) => void;
+  // sent: a payout went to PayPal (the console's own claims send none: approving one records the decision).
+  onDecided?: (id: string, decision: DrawerClaim["decision"], claim?: { amount?: string; sent?: boolean } | null) => void;
   // After a decision: the next held claim in the list, null when none is left, undefined before.
   nextHeld?: string | null;
   // The claim this one was opened from through a link in its evidence: the header offers the way back.
@@ -218,7 +219,7 @@ function EvidenceContent({
     seen.clear();
     replace(c);
     setSaved({ id: c.id, decision: c.decision, at: new Date().toISOString() });
-    onDecided?.(c.id, c.decision, { amount: c.amount });
+    onDecided?.(c.id, c.decision, { amount: c.amount, sent: Boolean(c.payout) });
     reread();
   };
   const heading = useRef<HTMLHeadingElement>(null);
@@ -387,7 +388,8 @@ function EvidenceContent({
             <span className="font-medium text-text">
               {justSaved.decision === "paid" ? "Approved" : "Rejected"} at <span className="font-mono">{formatClock(justSaved.at)}</span> UTC.
             </span>{" "}
-            {justSaved.decision !== "paid" ? "The owner sees your reason on their claim page." : `${claim.amount} sent through PayPal.`}
+            {/* Sent only where a payout went to PayPal: approving one of the console's own claims records the decision. */}
+            {justSaved.decision !== "paid" ? "The owner sees your reason on their claim page." : claim.payout ? `${claim.amount} sent through PayPal.` : null}
             {nextHeld === null && " No held claims are left in this list."}
           </p>
           {nextHeld && onOpen && (
