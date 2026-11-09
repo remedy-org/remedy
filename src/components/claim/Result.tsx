@@ -129,6 +129,7 @@ export function Result(props: ResultProps) {
     earlier: props.duplicate?.earlier?.id,
     written: handWrittenLabel(recall.spec),
     read,
+    steps: recall.spec.proof_steps,
   };
   // The outcome column says why a check failed or is held, so its row doesn't say it again.
   const six = sixRows(rows, { ...options, explained: true });

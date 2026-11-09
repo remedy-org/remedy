@@ -86,7 +86,7 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
   }
 
   const decided = isDecided(view.decision);
-  const all = sixRows(view.rows, { code: view.code, noun: nounOf(spec), cut: cutInHalf(spec), decided, held: view.decision === "held", demo: view.demo, photos: Math.max(view.photos, photoUrls?.length ?? 0), written: handWrittenLabel(spec) });
+  const all = sixRows(view.rows, { code: view.code, noun: nounOf(spec), cut: cutInHalf(spec), decided, held: view.decision === "held", demo: view.demo, photos: Math.max(view.photos, photoUrls?.length ?? 0), written: handWrittenLabel(spec), steps: spec.proof_steps });
   const known = sending ? 0 : firstWaiting(all);
   const [shown, setShown] = useState(preview && !preview.animate ? known : 0);
   const done = decided && shown >= all.length;

@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
 import type { CheckState } from "@/components/ui";
-import { CHECK_NAMES } from "@/lib/fiveChecks";
+import { CHECK_NAMES, checkOf, type CheckNumber } from "@/lib/fiveChecks";
 import { EvidenceText } from "./EvidenceText";
 import styles from "./flow.module.css";
 import { codeDiff, type CheckRow } from "./model";
@@ -40,14 +40,14 @@ export interface TagRead {
   off?: number[];
 }
 
-const KEY_OF = (id: string): SixKey | null => {
-  if (id === "session") return "session";
-  if (id === "duplicate_photo") return "duplicate";
-  if (id === "account") return "account";
-  if (id === "label" || id === "code") return "code";
-  if (/^step_\d+$/.test(id) || id === "same_item" || id === "screen") return "destroyed";
+const KEYS: Record<CheckNumber, SixKey> = { 1: "session", 2: "duplicate", 3: "account", 4: "code", 5: "destroyed" };
+
+/** The row a recorded check counts under, grouped as the console groups it (fiveChecks.ts checkOf): with the recall's
+ * proof steps, the step about the tag ("The X-VESOLJE tag is on the cut pillow") is the tag's check, never the cut's. */
+export const keyOf = (id: string, steps: readonly string[] = []): SixKey | null => {
   if (id === "payout") return "refund";
-  return null;
+  const n = checkOf(id, steps);
+  return n === null ? null : KEYS[n];
 };
 
 // Worst first: a row is as bad as its worst answer.
@@ -76,14 +76,16 @@ export interface SixOptions {
   written?: string | null;
   /** What the photo check read, when the verdict is at hand; otherwise it's taken from its quotes. */
   read?: { label?: string | null; code?: string | null };
+  /** The recall's proof steps: the one about the tag counts under the tag's check, as in the console (keyOf). */
+  steps?: readonly string[];
 }
 
 /** The account check on a demo claim after the genuine one: one account sends all four, and it counts once. */
 export const DEMO_ACCOUNT = "Counted once, on your genuine claim.";
 
 /** The six rows from a claim's recorded checks. */
-export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo, photos = 1, earlier, explained, written, read }: SixOptions): SixRow[] {
-  const of = (key: SixKey) => rows.filter((r) => KEY_OF(r.id) === key);
+export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo, photos = 1, earlier, explained, written, read, steps = [] }: SixOptions): SixRow[] {
+  const of = (key: SixKey) => rows.filter((r) => keyOf(r.id, steps) === key);
   const model = rows.find((r) => r.id === "model");
   const these = photos > 1 ? "these photos" : "this photo";
   const base: { key: SixKey; name: string; label: ReactNode; because?: string }[] = [
@@ -143,12 +145,13 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
           ? { label: label || undefined, code: diff.cells.map((c) => c.seen).join(""), off: diff.cells.flatMap((c, i) => (c.same ? [] : [i])) }
           : { label: label || undefined, code: seen || undefined };
       }
-      // What was read says it: the pipeline's sentence would only repeat it.
-      if (out.read && state === "reject") out.detail = undefined;
+      // What was read says it: the pipeline's sentence would only repeat it (unless only the tag's own step failed).
+      const onTag = (r: CheckRow) => r.id === "code" || r.id === "label";
+      if (out.read && state === "reject" && own.some((r) => onTag(r) && r.state === "reject")) out.detail = undefined;
       // Unsure: one plain line in Remedy's voice, not the pipeline's list. The photo check's words stay in the evidence.
       if (state === "hold") {
-        const unsure = own.filter((r) => r.state === "hold").map((r) => (r.id === "code" ? code : "the label"));
-        out.detail = `We couldn’t read ${unsure.join(" or ")} on the tag.`;
+        const unsure = own.filter((r) => onTag(r) && r.state === "hold").map((r) => (r.id === "code" ? code : "the label"));
+        out.detail = unsure.length ? `We couldn’t read ${unsure.join(" or ")} on the tag.` : "We couldn’t see the tag clearly.";
         out.read = undefined;
       }
       if (state === "pass" && !out.read) out.because = "The tag matches this claim.";
