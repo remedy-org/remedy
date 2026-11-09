@@ -12,7 +12,7 @@ export async function readCpsc(ref: string): Promise<CpscRecord | NextResponse<A
   try {
     parseRecallRef(ref);
   } catch {
-    return fail(400, "That isn't a CPSC recall number or a cpsc.gov recall URL.", { fields: { ref: "Paste a cpsc.gov recall URL or a number like 27-071" } });
+    return fail(400, "That isn't a CPSC recall number or a cpsc.gov recall URL.", { fields: { ref: "Paste a cpsc.gov recall URL or a number like 27-068" } });
   }
   let record: CpscRecord | null;
   try {

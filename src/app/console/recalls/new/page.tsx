@@ -1,7 +1,8 @@
 import { ImportRecall } from "@/components/console/ImportRecall";
 import { requireSession } from "@/lib/session";
 
-export const metadata = { title: "Import a recall" };
+// The nav's name for the page.
+export const metadata = { title: "New recall" };
 
 export default async function NewRecallPage() {
   const session = await requireSession("company", "/console/recalls/new");

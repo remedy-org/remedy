@@ -87,6 +87,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
                 login={login}
                 heading="h2"
                 title="Demo account"
+                // The summary above already says it: no second "Demo account" right under "Use the demo account".
+                quietTitle
                 why={fromClaim ? "This claim is in the company console. Log in with the demo account to see it." : undefined}
                 className="mt-3"
               />
@@ -94,7 +96,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           )}
 
           {/* An owner's way in is the recall's own page, with its notice and PayPal login: never the demo. */}
-          <p className="mt-10 border-t border-line pt-5 text-ui text-muted">
+          <p className="mt-6 border-t border-line pt-5 text-ui text-muted">
             Own a recalled product? Use the claim link on the recall notice, or{" "}
             <Link href="/r/kikea-x-vesolje" className="text-link text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
               file a claim
@@ -104,7 +106,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
         </div>
 
         <div className="hidden lg:col-span-7 lg:col-start-6 lg:block">
-          <SigninPreview rows={preview.rows} ledger={preview.ledger!} counts={preview.counts!} height={preview.height} />
+          {/* Decided claims lead (the claims still waiting for photos at the foot), and no figure or count is drawn: the
+              console a visitor opens has its own, live ones, so the picture never shows a number that then changes. */}
+          <SigninPreview rows={[...preview.rows.filter((r) => r.decision !== "pending"), ...preview.rows.filter((r) => r.decision === "pending")]} height={preview.height} />
         </div>
       </main>
     </div>

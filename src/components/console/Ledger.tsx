@@ -9,7 +9,6 @@ export function LedgerItem({ value, label, title, className }: { value: ReactNod
   return (
     <div className={clsx("flex min-w-0 items-baseline gap-x-2 whitespace-nowrap", className)} title={title}>
       <dt className="order-2 text-micro text-muted">{label}</dt>
-      {/* Proportional figures: Schibsted's tabular set spaces the comma and point ("19 , 596"). */}
       <dd className="order-1 text-head-sm leading-7 font-medium">{value}</dd>
     </div>
   );
@@ -20,9 +19,29 @@ export function LedgerStrip({ className, children }: { className?: string; child
   return <dl className={clsx("flex min-h-12 flex-wrap items-center gap-x-6 gap-y-2 border-y border-line py-2.5 min-[900px]:gap-x-8", className)}>{children}</dl>;
 }
 
+/**
+ * A figure whose digits keep one width as it changes ($779.74 to $809.73), so the words beside it never shift, while its
+ * comma and point keep their own: Schibsted's tabular set spaces those ("19 , 596"), so only the digit runs are tabular.
+ */
+export function Figure({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\d+)/).map((part, i) =>
+        /\d/.test(part) ? (
+          <span key={i} className="tabular-nums">
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 /** What PayPal sent: the one money figure, in the words the tour and the report use. */
 export function MoneyItems({ sentCents }: { sentCents: number }) {
-  return <LedgerItem value={formatCents(sentCents)} label="paid through PayPal" />;
+  return <LedgerItem value={<Figure text={formatCents(sentCents)} />} label="paid through PayPal" />;
 }
 
 /**
@@ -36,7 +55,7 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
       <LedgerItem
         value={
           <>
-            {formatCount(ledger.remedied)}
+            <Figure text={formatCount(ledger.remedied)} />
             <span className="text-ui font-normal text-muted"> of {known ? formatCount(ledger.unitsSold) : "unknown"}</span>
           </>
         }
@@ -58,7 +77,7 @@ export function durationFigure(sec: number): ReactNode {
   return duration(sec)
     .split(" ")
     .map((t, i) => (
-      <span key={i} className={/\d/.test(t) ? undefined : "text-ui font-normal text-muted"}>
+      <span key={i} className={/\d/.test(t) ? "tabular-nums" : "text-ui font-normal text-muted"}>
         {/* A unit after its figure: a narrow no-break space, as the grid and the panel print a span ("3 s"). */}
         {i > 0 && (/\d/.test(t) ? "\u00a0" : "\u202f")}
         {t}

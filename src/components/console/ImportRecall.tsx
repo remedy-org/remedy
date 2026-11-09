@@ -110,7 +110,7 @@ export function ImportRecall({ example, company }: { example: string; company?: 
             <h2 ref={stage} tabIndex={-1} className="text-body font-medium outline-none">
               Drafting the photo checks
             </h2>
-            <p className="mt-1 text-ui text-muted">From the notice and its photos, Remedy writes what an owner&apos;s photos must show. You review every line before it goes live.</p>
+            <p className="mt-1 text-ui text-muted">From the notice and its photos, Remedy writes what an owner&apos;s photos must show.</p>
           </div>
           <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn't finish", running: "Drafting" }} quiet={["draft"]} />
           {/* The failure in the card's own type, one line and its two ways on: no box inside the box. */}
@@ -139,7 +139,9 @@ export function ImportRecall({ example, company }: { example: string; company?: 
   // moves between steps, and a laptop's first screen isn't a narrow form beside an empty half.
   return (
     <Frame intro={INTRO.find} asideLast aside={<CheckList label="Import progress" steps={importSteps(step.at)} words={{ running: "Reading" }} className="rounded-card border border-line bg-surface px-6 py-2" />}>
-      <form onSubmit={read} className="flex max-w-[40rem] flex-col gap-6" noValidate>
+      <form onSubmit={read} className="flex max-w-[40rem] flex-col gap-4" noValidate>
+        {/* The field and what happened to it, 8px apart; the button 24px under them, never 48. */}
+        <div className="flex flex-col gap-2">
         <Field
           label="The cpsc.gov link or recall number"
           placeholder={example}
@@ -152,6 +154,8 @@ export function ImportRecall({ example, company }: { example: string; company?: 
           required
           // Read-only, not disabled, while CPSC is read: focus stays in the field rather than dropping to the page.
           readOnly={step.at === "reading"}
+          // The page is for this one field: the cursor is in it on arrival.
+          autoFocus
         />
         {/* What happened, announced: a recall already here isn't a failure, so it says where it is. */}
         <div role="status">
@@ -168,6 +172,7 @@ export function ImportRecall({ example, company }: { example: string; company?: 
               {error.error}
             </p>
           )}
+        </div>
         </div>
         <div>
           <Button type="submit" size="lg" pending={step.at === "reading"} pendingLabel="Reading the notice">

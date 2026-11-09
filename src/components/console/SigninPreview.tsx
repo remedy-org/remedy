@@ -3,11 +3,9 @@
 import clsx from "clsx";
 import dynamic from "next/dynamic";
 import { useState, useSyncExternalStore } from "react";
-import type { Ledger as LedgerData } from "@/app/console/_lib/view";
 import { Wordmark } from "@/components/ui";
-import { Ledger } from "./Ledger";
 import type { PreviewRow } from "./ClaimsGridPreview";
-import { StatusTabs, type Tab } from "./StatusTabs";
+import { TABS } from "./StatusTabs";
 
 const ClaimsGrid = dynamic(() => import("./ClaimsGrid").then((m) => m.ClaimsGrid), { ssr: false });
 
@@ -26,7 +24,7 @@ const noop = () => {};
  * phone never loads the grid. Inert and out of the accessibility tree: the form beside it says what it is in words. It
  * fades in once the grid has drawn, over an empty frame of the same size, so nothing moves.
  */
-export function SigninPreview({ rows, ledger, counts, height }: { rows: PreviewRow[]; ledger: LedgerData; counts: Record<Tab, number>; height: number }) {
+export function SigninPreview({ rows, height }: { rows: PreviewRow[]; height: number }) {
   const large = useSyncExternalStore(subscribe, () => window.matchMedia(LARGE).matches, () => false);
   const [ready, setReady] = useState(false);
   if (!large) return null;
@@ -49,9 +47,13 @@ export function SigninPreview({ rows, ledger, counts, height }: { rows: PreviewR
         </div>
         <div className="px-5 pt-5">
           <p className="text-head-sm font-medium">X-VESOLJE Nursing Pillows</p>
-          <Ledger ledger={ledger} className="mt-3" />
-          <div className="mt-1 border-b border-line">
-            <StatusTabs value="all" counts={counts} onChange={noop} controls="signin-preview" />
+          {/* The tabs by name alone: their counts are the live console's to give. */}
+          <div className="mt-3 flex border-b border-line">
+            {TABS.map((t, i) => (
+              <span key={t.id} className={clsx("relative inline-flex min-h-11 items-center px-3 text-ui font-medium first:pl-0", i === 0 ? "text-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted")}>
+                {t.label}
+              </span>
+            ))}
           </div>
         </div>
         <div className={clsx("px-5 pt-3 transition-opacity duration-500 ease-out", ready ? "opacity-100" : "opacity-0")} style={{ height }}>

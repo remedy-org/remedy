@@ -5,6 +5,7 @@ import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
 import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
 import { formatCount, formatDate, formatPeriod, keepHyphens, plural } from "./format";
+import { Figure as Digits } from "./Ledger";
 import { VerdictMark } from "./VerdictMark";
 
 function H({ children }: { children: ReactNode }) {
@@ -56,8 +57,9 @@ export function ProgressReport({
   home?: boolean;
 }) {
   const s = report.stats;
-  // The homepage's figures are proportional: this sans's tabular ones space a stop like mono ("65 . 0%").
-  const figure = home ? "" : "font-mono";
+  // Every figure in the body face; the console's keep their digits one width (Digits), so a column of counts lines up.
+  const figure = "";
+  const n = (text: string) => (home ? text : <Digits text={text} />);
   const share = home ? shares(report.outcomes.map((o) => o.count)) : report.outcomes.map((o) => o.share);
   const refused = s.rejected + s.blocked;
   const each = report.paidEachCents === null ? "" : ` at ${formatCents(report.paidEachCents)}`;
@@ -65,9 +67,12 @@ export function ProgressReport({
     // On screen it is a paper document, like every receipt, tag and notice (light-theme tokens inside, which pass on
     // --paper); printed, plain white.
     <article
-      data-theme="light"
+      // The homepage's sheet is paper in both themes; the console's takes the page's theme on screen (a dark sheet in the
+      // dark room, the paper in light), and prints light on white (PrintButton turns the page light while it prints).
+      data-theme={home ? "light" : undefined}
       className={clsx(
-        "w-full max-w-[52rem] rounded-card bg-paper px-6 text-text shadow-[var(--paper-shadow-flat)] print:max-w-none print:rounded-none print:bg-white print:p-0 print:shadow-none",
+        "report-sheet w-full max-w-[52rem] rounded-card px-6 text-text print:max-w-none print:rounded-none print:!bg-white print:p-0 print:!shadow-none",
+        home ? "bg-paper shadow-[var(--paper-shadow-flat)]" : "bg-surface shadow-[0_0_0_1px_var(--line-2)] in-data-[theme=light]:bg-paper in-data-[theme=light]:shadow-[var(--paper-shadow-flat)]",
         home ? "@container mx-auto py-7 sm:px-10 sm:py-9" : "py-8 sm:px-12 sm:py-12",
       )}
     >
@@ -135,14 +140,14 @@ export function ProgressReport({
                   </VerdictMark>
                   <span className="mt-1.5 block text-muted sm:hidden">{o.note}</span>
                 </td>
-                <td className={`${td} text-right ${figure}`}>{formatCount(o.count)}</td>
-                <td className={`${td} text-right ${figure} text-muted`}>{share[i]}</td>
+                <td className={`${td} text-right ${figure}`}>{n(formatCount(o.count))}</td>
+                <td className={`${td} text-right ${figure} text-muted`}>{n(share[i])}</td>
                 <td className={`${td} hidden text-muted sm:table-cell`}>{o.note}</td>
               </tr>
             ))}
             <tr>
               <td className={`${td} font-medium`}>Total</td>
-              <td className={`${td} text-right ${figure} font-medium`}>{formatCount(s.total)}</td>
+              <td className={`${td} text-right ${figure} font-medium`}>{n(formatCount(s.total))}</td>
               <td className={td} />
               <td className={`${td} hidden sm:table-cell`} />
             </tr>
@@ -184,7 +189,7 @@ export function ProgressReport({
                     {k}
                     <span className="mt-1 block text-muted sm:hidden">{note}</span>
                   </td>
-                  <td className={`${td} w-24 text-right font-mono`}>{v}</td>
+                  <td className={`${td} w-24 text-right`}>{/\d/.test(v) ? n(v) : v}</td>
                   <td className={`${td} hidden text-muted sm:table-cell`}>{note}</td>
                 </tr>
               ))}
@@ -204,7 +209,7 @@ export function ProgressReport({
               {report.refusals.map((r) => (
                 <tr key={r.reason}>
                   <td className={`${td} text-text`}>{r.reason}</td>
-                  <td className={`${td} w-20 text-right ${figure}`}>{formatCount(r.count)}</td>
+                  <td className={`${td} w-20 text-right ${figure}`}>{n(formatCount(r.count))}</td>
                 </tr>
               ))}
             </tbody>
@@ -217,7 +222,8 @@ export function ProgressReport({
         </p>
       </section>
 
-      <section className="mt-10 flex flex-col gap-3 break-inside-avoid">
+      {/* Prose: it may break across printed pages, rather than leave one paragraph alone on the last. */}
+      <section className="mt-10 flex flex-col gap-3">
         <H>How units were verified</H>
         <p className="max-w-read text-ui text-text">
           Each owner logged in with PayPal, received a one-time code, and photographed the destroyed product with the code written on it, using a live camera
@@ -244,7 +250,8 @@ function ReturnRuler({ remedied, sold, daysIn }: { remedied: number; sold: numbe
   const share = remedied / sold;
   return (
     <div className="flex flex-col gap-2">
-      <p aria-hidden="true" className="text-micro text-pay-ink">
+      {/* On paper (light) the paper's inks; on the console's dark sheet, the room's own. */}
+      <p aria-hidden="true" className="text-micro text-pay in-data-[theme=light]:text-pay-ink">
         This recall{daysIn ? `, ${plural(daysIn, "day")} in` : " so far"}
       </p>
       <div
@@ -255,7 +262,7 @@ function ReturnRuler({ remedied, sold, daysIn }: { remedied: number; sold: numbe
         aria-valuenow={remedied}
         aria-valuetext={`${percent(remedied, sold)}${daysIn ? `, ${plural(daysIn, "day")} in` : ""}; over a whole recall, recalls typically reach ${TYPICAL_RETURN.from * 100} to ${TYPICAL_RETURN.to * 100}%`}
         // Printed with its colours, background graphics on or off: the report's one graphic.
-        className="relative h-1 rounded-full bg-paper-2 [print-color-adjust:exact] [-webkit-print-color-adjust:exact] *:[print-color-adjust:exact] *:[-webkit-print-color-adjust:exact]"
+        className="relative h-1 rounded-full bg-surface-3 [--hatch:var(--faint)] in-data-[theme=light]:bg-paper-2 in-data-[theme=light]:[--hatch:var(--ink-muted)] [print-color-adjust:exact] [-webkit-print-color-adjust:exact] *:[print-color-adjust:exact] *:[-webkit-print-color-adjust:exact]"
       >
         <span
           aria-hidden="true"
@@ -263,13 +270,13 @@ function ReturnRuler({ remedied, sold, daysIn }: { remedied: number; sold: numbe
           style={{
             left: on(TYPICAL_RETURN.from),
             width: `calc(${on(TYPICAL_RETURN.to)} - ${on(TYPICAL_RETURN.from)})`,
-            background: "repeating-linear-gradient(135deg, var(--ink-muted) 0 1px, transparent 1px 5px)",
+            background: "repeating-linear-gradient(135deg, var(--hatch) 0 1px, transparent 1px 5px)",
           }}
         />
-        <span aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-pay-ink" style={{ width: `max(3px, ${on(share)})` }} />
+        <span aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-pay in-data-[theme=light]:bg-pay-ink" style={{ width: `max(3px, ${on(share)})` }} />
       </div>
       <p aria-hidden="true" className="relative h-4 text-micro text-muted">
-        <span className="absolute left-0 font-mono">0</span>
+        <span className="absolute left-0">0%</span>
         {/* Under the band, from its start; on a phone ending at its end, so it never runs into the scale's last figure. */}
         <span
           className="absolute whitespace-nowrap max-sm:right-[calc(100%-var(--to))] sm:left-(--from)"
@@ -279,7 +286,7 @@ function ReturnRuler({ remedied, sold, daysIn }: { remedied: number; sold: numbe
           <span className="max-sm:hidden">Typical over a whole recall, </span>
           {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}%<span className="max-sm:hidden"> ({TYPICAL_RETURN.source.replace(/^PIRG, .*?, /, "PIRG, ")})</span>
         </span>
-        <span className="absolute right-0 font-mono">{RULER * 100}%</span>
+        <span className="absolute right-0">{RULER * 100}%</span>
       </p>
     </div>
   );
@@ -291,7 +298,7 @@ function Figure({ label, value, note, more, home }: { label: string; value: stri
   return (
     <div className="flex flex-col gap-1">
       <span className="text-ui text-muted">{label}</span>
-      <span className={clsx("text-head-sm", !home && "font-medium")}>{value}</span>
+      <span className={clsx("text-head-sm", !home && "font-medium")}>{home ? value : <Digits text={value} />}</span>
       {note && (
         <span data-peek-hide className="text-ui text-muted">
           {note}

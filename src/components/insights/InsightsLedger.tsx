@@ -1,4 +1,4 @@
-import { durationFigure, LedgerItem, LedgerStrip, MoneyItems } from "@/components/console/Ledger";
+import { durationFigure, Figure, LedgerItem, LedgerStrip, MoneyItems } from "@/components/console/Ledger";
 import { formatCount } from "@/components/console/format";
 import { insightsLedger } from "./report";
 
@@ -13,7 +13,7 @@ export function InsightsLedger({ claims, unitsSold, className }: { claims: Rows;
       <LedgerItem
         value={
           <>
-            {formatCount(l.remedied)}
+            <Figure text={formatCount(l.remedied)} />
             <span className="text-ui font-normal text-muted"> of {unitsSold > 0 ? formatCount(unitsSold) : "unknown"}</span>
           </>
         }
@@ -26,7 +26,7 @@ export function InsightsLedger({ claims, unitsSold, className }: { claims: Rows;
           label={`${l.timeLabel} · ${formatCount(l.timed)} ${l.timed === 1 ? l.timedOne : `${l.timedOne}s`}`}
         />
       )}
-      <LedgerItem value={formatCount(l.refused)} label="rejected or blocked" />
+      <LedgerItem value={<Figure text={formatCount(l.refused)} />} label="rejected or blocked" />
     </LedgerStrip>
   );
 }

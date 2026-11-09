@@ -30,6 +30,12 @@ export function ConsoleSkeleton() {
           {["w-10", "w-20", "w-11", "w-16", "w-14", "w-20"].map((w, i) => (
             <Skeleton key={i} className={`h-4 ${w}`} />
           ))}
+          {/* The grouping control, Export CSV and the search box, at the row's right end as the queue draws them. */}
+          <span className="ml-auto hidden items-center gap-4 sm:flex">
+            <Skeleton className="h-8 w-32 rounded-control" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-9 w-64 rounded-control" />
+          </span>
         </div>
         <SkeletonGrid rows={10} />
       </div>
@@ -47,13 +53,15 @@ export function SkeletonGrid({ rows, cards }: { rows: number; cards?: boolean })
     <div aria-hidden="true" className="@container">
       <div className="overflow-hidden rounded-card border border-line bg-surface">
         <div className={clsx("h-[37px] items-center border-b border-line", cards ? "hidden" : "hidden @min-[720px]:flex")}>
+          {/* The grid's columns in its order and widths (ClaimsGrid hiddenAt): claim, verdict (to 460px), checks, time,
+              PayPal and payout (sharing what is left), amount. */}
           {[
             ["w-[220px]", "w-10"],
-            ["min-w-[260px] flex-1", "w-14"],
-            ["w-[132px]", "w-12"],
-            ["w-[168px] hidden @min-[876px]:block", "w-24"],
-            ["w-[132px] hidden @min-[1120px]:block", "w-12"],
-            ["w-[112px] hidden @min-[988px]:block", "w-12"],
+            ["min-w-[260px] max-w-[460px] flex-1", "w-14"],
+            ["w-[112px] hidden @min-[748px]:block", "w-12"],
+            ["w-[124px] hidden @min-[992px]:flex justify-end", "w-16"],
+            ["min-w-[172px] flex-1 hidden @min-[1600px]:block", "w-12"],
+            ["min-w-[120px] flex-1 hidden @min-[868px]:block", "w-12"],
             ["w-[96px] flex justify-end", "w-12"],
           ].map(([w, s], i) => (
             <span key={i} className={col(w)}>
@@ -81,20 +89,20 @@ export function SkeletonGrid({ rows, cards }: { rows: number; cards?: boolean })
                   <Skeleton className="h-3 w-20" />
                 </span>
               </span>
-              <span className={col("flex min-w-[260px] flex-1 items-center gap-3")}>
+              <span className={col("flex min-w-[260px] max-w-[460px] flex-1 items-center gap-3")}>
                 <Skeleton className="h-6 w-16 rounded-full" />
                 <Skeleton className={i % 3 === 1 ? "h-3.5 w-2/5" : "h-3.5 w-1/3"} />
               </span>
-              <span className={col("w-[132px]")}>
-                <Skeleton className="h-4 w-24" />
+              <span className={col("hidden w-[112px] @min-[748px]:block")}>
+                <Skeleton className="h-4 w-16" />
               </span>
-              <span className={col("hidden w-[168px] @min-[876px]:block")}>
-                <Skeleton className="h-3 w-32" />
+              <span className={col("hidden w-[124px] justify-end @min-[992px]:flex")}>
+                <Skeleton className="h-3.5 w-8" />
               </span>
-              <span className={col("hidden w-[132px] @min-[1120px]:block")}>
+              <span className={col("hidden min-w-[172px] flex-1 @min-[1600px]:block")}>
                 <Skeleton className="h-3.5 w-20" />
               </span>
-              <span className={col("hidden w-[112px] @min-[988px]:block")}>
+              <span className={col("hidden min-w-[120px] flex-1 @min-[868px]:block")}>
                 <Skeleton className="h-3.5 w-14" />
               </span>
               <span className={col("flex w-[96px] justify-end")}>

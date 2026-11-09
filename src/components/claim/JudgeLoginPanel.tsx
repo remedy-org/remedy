@@ -14,6 +14,7 @@ export function JudgeLoginPanel({
   id,
   heading: Heading = "h3",
   title = "Demo account",
+  quietTitle = false,
   className,
 }: {
   login: JudgeLogin;
@@ -22,6 +23,8 @@ export function JudgeLoginPanel({
   heading?: "h2" | "h3";
   /** The panel's name: "Demo account" on /try and /signin alike. */
   title?: string;
+  /** The name for assistive tech only, where a disclosure's summary already says it on screen (/signin). */
+  quietTitle?: boolean;
   className?: string;
 }) {
   const rows = [
@@ -36,7 +39,7 @@ export function JudgeLoginPanel({
       aria-label={title}
       className={clsx("flex scroll-mt-24 flex-col gap-2 text-ui outline-none focus:outline-2 focus:outline-offset-4 focus:outline-focus", className)}
     >
-      <Heading className="font-medium text-text">{title}</Heading>
+      <Heading className={quietTitle ? "sr-only" : "font-medium text-text"}>{title}</Heading>
       {why && <p className="text-muted">{why}</p>}
       {/* Said first, in neutral text, before the email and password. */}
       <p className="text-muted">Use these when PayPal asks you to log in.</p>
