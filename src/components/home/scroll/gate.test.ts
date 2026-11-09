@@ -689,14 +689,14 @@ describe("wheel stops", () => {
         [0, 8037],
         [9586, 10303],
       ],
-      unfolds: [[8402, 9460, 9586]],
+      unfolds: [[8390, 9374, 9586]],
     });
     expect(roll.landed).toEqual([9586]);
     expect(roll.duration).toBeLessThanOrEqual(0.8);
   });
 
   // As 1440x900: the Chain of Custody's story from the hero to its console beat (an inner beat at 6140), the Problem
-  // sheet's from open to cut, Fraud checks past it; the sheet rises and unfolds from 7002 (its last frame unseen) to 7884
+  // sheet's from open to cut, Fraud checks past it; the sheet rises and unfolds from 7002 (its last frame unseen) to 7812
   // (its first lying flat), the open sheet at 7988.
   const SHEET = {
     course: [0, 6140, 6698, 7988, 8586, 9910],
@@ -708,7 +708,7 @@ describe("wheel stops", () => {
       [0, 6698],
       [7988, 8586],
     ] as [number, number][],
-    unfolds: [[7002, 7884, 7988]] as [number, number, number][],
+    unfolds: [[7002, 7812, 7988]] as [number, number, number][],
   };
 
   it("settles a slow roll that began inside a story and ran up to half a window past its last beat back onto that beat", () => {
@@ -747,7 +747,7 @@ describe("wheel stops", () => {
       [7988, -1],
       [6698, 1],
     ] as const) {
-      for (const px of [36, 60, 100]) {
+      for (const px of [36, 60, 100, 150]) {
         const g = setup(from, course, [], undefined, undefined, pins, undefined, undefined, stories, unfolds);
         g.send(Array(6).fill((dir * px) / 6));
         g.lenis.animatedScroll = g.lenis.targetScroll - 4 * dir;

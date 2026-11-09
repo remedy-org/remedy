@@ -405,10 +405,11 @@ export function storyStretches(page = readPage()): [number, number][] {
 /** The Problem sheet's last frame unseen, on its timeline (its eyebrow comes up at the screen's foot from about t 11), and
  * no more than UNSEEN px past the Chain of Custody's pin, where its stage starts to scroll away: the chapter list's first
  * line sits about 110px under the nav at the console beat, and at 1920x1080 t 10 put it under the nav. Then the sheet's
- * first frame lying flat, card 3 about to land (a push of 100px up from the open sheet rests past it, 1:1). */
+ * first frame lying flat, as the pin takes hold, before card 3 lands (a push of up to about 170px up from the open sheet
+ * rests past it, 1:1). */
 const SHEET_HIDDEN = 10;
 const UNSEEN = 96;
-const SHEET_FLAT = T.card3[0];
+const SHEET_FLAT = T.tilt[1];
 
 /**
  * The stretches outside the stories that are a transition half played all the way across (gate.ts Course unfolds), as
