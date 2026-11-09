@@ -6,7 +6,7 @@ vi.mock("server-only", () => ({}));
 type Recording = { question: string; answer: string; tools: { name: string; id?: string }[] };
 const recorded = (sample as { recorded: Recording | null }).recorded;
 
-// The homepage's analyst answer is a recording: every claim id and count in it must be true of the 40 sample claims.
+// The homepage's analyst answer is a recording: every claim id and count in it must be true of the demo claims (lib/demo/claims.ts).
 describe.skipIf(!recorded)("analyst recording", () => {
   it("names only claims in the seed, and the seed's refusal count", async () => {
     const { previewSeed } = await import("@/components/console/preview");

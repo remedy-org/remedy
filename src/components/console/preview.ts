@@ -95,13 +95,19 @@ const CHECK_NAME: Record<string, (code: string) => string> = {
   step_2: () => "Tag on the cut pillow",
 };
 
-/** A claim's evidence for the homepage, only what the still draws: its photos, the checks by name (a pre-check that
- * stopped it first), and the model's words only where they held or failed it (the still shows no other quote). */
+/** A claim's evidence for the homepage, only what the still draws: its photos, and the five checks by the names the
+ * console's panel gives them (fiveRows), each that ran once, with the model's words only where one held or failed it
+ * (the still shows no other quote). The finer answers stay in the queue's hover card. */
 function evidenceOf(claim: Claim, recall: Recall): StillClaim {
   const d = toDrawerClaim(claim, recall);
-  const stopped = d.preChecks
-    .filter((p) => p.state === "hold" || p.state === "reject")
-    .map((p) => ({ id: p.id, label: p.label, outcome: p.state === "hold" ? ("hold" as const) : ("reject" as const), rule: p.detail, evidence: null }));
+  const checks = d.fiveRows
+    .filter((r) => !r.unrun && (r.state === "pass" || r.state === "hold" || r.state === "reject"))
+    .map((r) => {
+      const outcome = r.state as "pass" | "hold" | "reject";
+      // The answer that decided it: the first that didn't pass.
+      const off = r.parts.find((p) => p.state === outcome) ?? r.parts[0];
+      return { id: off?.id ?? `check_${r.n}`, label: r.name, outcome, rule: off?.text ?? "", evidence: outcome === "pass" ? null : (off?.evidence ?? null) };
+    });
   return {
     id: d.id,
     decision: d.decision,
@@ -113,10 +119,7 @@ function evidenceOf(claim: Claim, recall: Recall): StillClaim {
     payout: d.payout && { status: d.payout.status },
     summary: d.summary,
     photos: claim.photos.map((p) => image(p.key, 384)),
-    checks: [
-      ...stopped,
-      ...d.checks.map((c) => ({ id: c.id, label: CHECK_NAME[c.id]?.(d.code) ?? c.label, outcome: c.outcome, rule: c.rule, evidence: c.outcome === "pass" ? null : c.evidence })),
-    ],
+    checks,
   };
 }
 
