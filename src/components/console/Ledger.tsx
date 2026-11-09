@@ -65,7 +65,8 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
       {ledger.medianToPay !== null && (
         <LedgerItem
           value={durationFigure(ledger.medianToPay)}
-          label={`median photo to payout · ${formatCount(ledger.timed)} ${ledger.timed === 1 ? "payout" : "payouts"}`}
+          // Photo to the payout sent through PayPal (its confirmation lands later, in the panel's timeline as Paid).
+          label={`median photo to payout sent · ${formatCount(ledger.timed)} ${ledger.timed === 1 ? "payout" : "payouts"}`}
         />
       )}
     </LedgerStrip>
