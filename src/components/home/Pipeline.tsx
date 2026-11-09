@@ -85,7 +85,10 @@ const LINE = "absolute left-6 w-px bg-muted";
 
 /**
  * Arms each lane separately: a lane's line draws only once the check that stops it is in view (its top above 70% of the
- * viewport), so the reader sees every claim stop, the wrong code at the fourth check and the payout at the foot.
+ * viewport), so the reader sees every claim stop, the wrong code at the fourth check and the payout at the foot. Once
+ * the page comes to rest with the matrix framed (its top above the middle of the screen, as the section's scroll stop
+ * leaves it at any size), every lane still waiting plays, in order: a tall screen's stop keeps the last checks under
+ * the 70% line, and a frame never settles with lanes idle.
  * Nothing is armed without JS, under reduced motion, or when the matrix is already on screen at load.
  */
 function useLanes(ref: RefObject<HTMLDivElement | null>) {
@@ -96,25 +99,40 @@ function useLanes(ref: RefObject<HTMLDivElement | null>) {
     const cells = (lane: string) => root.querySelectorAll<HTMLElement>(`[data-lane="${lane}"]`);
     root.querySelectorAll<HTMLElement>("[data-lane]").forEach((el) => (el.dataset.go = "armed"));
     let next = 0;
+    const play = (stop: HTMLElement) => {
+      io.unobserve(stop);
+      const lane = stop.dataset.stop!;
+      if (cells(lane)[0]?.dataset.go === "play") return;
+      // Lanes that come into view together still draw one after another.
+      const now = performance.now();
+      next = Math.max(now, next + LANE_GAP);
+      cells(lane).forEach((el) => {
+        el.style.setProperty("--go-at", `${Math.round(next - now)}ms`);
+        el.dataset.go = "play";
+      });
+    };
     const io = new IntersectionObserver(
       (entries) => {
-        for (const e of entries) {
-          if (!e.isIntersecting) continue;
-          const lane = (e.target as HTMLElement).dataset.stop!;
-          io.unobserve(e.target);
-          // Lanes that come into view together still draw one after another.
-          const now = performance.now();
-          next = Math.max(now, next + LANE_GAP);
-          cells(lane).forEach((el) => {
-            el.style.setProperty("--go-at", `${Math.round(next - now)}ms`);
-            el.dataset.go = "play";
-          });
-        }
+        for (const e of entries) if (e.isIntersecting) play(e.target as HTMLElement);
       },
       { rootMargin: "0px 0px -30% 0px" },
     );
-    root.querySelectorAll("[data-stop]").forEach((el) => io.observe(el));
+    const stops = [...root.querySelectorAll<HTMLElement>("[data-stop]")];
+    stops.forEach((el) => io.observe(el));
+    // At rest with the matrix framed: the lanes still waiting play, in their order.
+    let rest = 0;
+    const settle = () => {
+      const r = root.getBoundingClientRect();
+      if (r.top < window.innerHeight / 2 && r.bottom > window.innerHeight / 2) stops.forEach(play);
+    };
+    const onScroll = () => {
+      window.clearTimeout(rest);
+      rest = window.setTimeout(settle, 160);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
+      window.clearTimeout(rest);
+      window.removeEventListener("scroll", onScroll);
       io.disconnect();
       // Disarm, so a second run (React's StrictMode in dev, or a remount) starts from the resting state.
       root.querySelectorAll<HTMLElement>("[data-lane]").forEach((el) => {
