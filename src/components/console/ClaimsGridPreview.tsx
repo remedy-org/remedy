@@ -7,6 +7,7 @@ import { ClaimsGrid, type ClaimsGridHandle } from "./ClaimsGrid";
 import { EvidenceStill, type StillClaim } from "./EvidenceStill";
 import { Ledger } from "./Ledger";
 import { StatusTabs, TABS, type Tab } from "./StatusTabs";
+import { verdictOf, type Verdict } from "./VerdictMark";
 
 /** A preview row: a grid row, and for a claim with photos its evidence (built on the server, so nothing is fetched). */
 export type PreviewRow = ClaimRow & { evidence?: StillClaim };
@@ -32,7 +33,7 @@ export interface ClaimsGridPreviewProps {
    */
   bare?: boolean;
   /** bare: show only the claims with this decision (AG Grid's own filter, so the rows animate). */
-  filter?: ClaimRow["decision"] | null;
+  filter?: Verdict | null;
   /** bare: show only the claims whose id, code, PayPal account or reason holds these words (the toolbar's search). */
   search?: string;
   /** bare: a click on a row (the tour opens a held claim's evidence). */
@@ -111,7 +112,7 @@ function BareGrid({ rows, openId, filter = null, search = "", arrival, live, asi
   useEffect(() => {
     if (!ready) return;
     const q = search.trim();
-    grid.current?.setFilter(filter || q ? (r) => (!filter || r.decision === filter) && (!q || matchesSearch(r, q)) : null);
+    grid.current?.setFilter(filter || q ? (r) => (!filter || verdictOf(r) === filter) && (!q || matchesSearch(r, q)) : null);
   }, [ready, filter, search]);
 
   // A row the page has changed (a claim a visitor paid or rejected in the tour, or put back) is redrawn in place, its

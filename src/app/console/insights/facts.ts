@@ -5,6 +5,7 @@ import { CHECK_NAMES } from "@/lib/fiveChecks";
 import { summarize } from "@/lib/store/store";
 import type { Claim, Decision, Recall } from "@/lib/types";
 import type { Stage } from "@/components/insights/funnel";
+import { verdictOf, verdictWord, type Verdict } from "@/components/console/VerdictMark";
 
 export { funnel, STAGES } from "@/components/insights/funnel";
 
@@ -19,8 +20,12 @@ export const DECISION_LABEL: Record<Decision, string> = {
   pending: "In progress",
 };
 
-// The order every chart, the funnel and the agent list decisions in, which is also the chart palette's order.
-export const DECISION_RANK: Record<Decision, number> = { paid: 1, held: 2, rejected: 3, blocked: 4, pending: 5 };
+// The order every chart, the funnel and the agent list verdicts in, which is also the chart palette's order. An approved
+// claim is Paid, Sent, settling or Approved (lib/payoutWords.ts), as the queue's tabs and the CPSC report count it.
+export const VERDICT_RANK: Record<Verdict, number> = { paid: 1, settling: 2, approved: 3, held: 4, rejected: 5, blocked: 6, pending: 7 };
+
+/** A claim's verdict in the console's words: "Paid", "Sent, settling", "Approved", "Held"… */
+const verdictLabel = (c: Pick<Claim, "decision" | "payout">) => verdictWord(verdictOf({ decision: c.decision, payoutStatus: c.payout?.status ?? null }));
 
 // The same wording as the CPSC report and the claims grid's filter (console/_lib/view.ts), so they never disagree.
 export { refusalLabel };
@@ -153,8 +158,8 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
   return {
     id: c.id,
     filedAt: c.createdAt,
-    decision: DECISION_LABEL[c.decision],
-    decisionRank: DECISION_RANK[c.decision],
+    decision: verdictLabel(c),
+    decisionRank: VERDICT_RANK[verdictOf({ decision: c.decision, payoutStatus: c.payout?.status ?? null })],
     refusalReason: refused ? refusalLabel(refusedBy?.check ?? "") : null,
     refusalGate: !refused ? null : refusedBy?.check === "review" ? "Person" : !refusedBy || PRE_CHECKS.has(refusedBy.check) ? "No AI" : "Model reads",
     failedCheck: failed?.check ?? null,
@@ -215,7 +220,7 @@ export function dossier(c: Claim, recall: Recall): Dossier {
   const d = toDrawerClaim(c, recall);
   return {
     id: d.id,
-    decision: DECISION_LABEL[d.decision],
+    decision: verdictWord(verdictOf({ decision: d.decision, payoutStatus: d.payout?.status ?? null })),
     filedAt: d.createdAt,
     code: d.code,
     source: sourceOf(c),

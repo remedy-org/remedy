@@ -10,6 +10,7 @@ import type { Claim, Recall } from "@/lib/types";
 import type { ClaimsGridPreviewProps, PreviewRow } from "./ClaimsGridPreview";
 import type { StillClaim } from "./EvidenceStill";
 import { formatDay } from "./format";
+import { verdictOf } from "./VerdictMark";
 
 // The homepage's console preview, built on the server from the claims every workspace starts with (lib/demo/claims.ts,
 // built by lib/demo/dataset.ts, the same claims the console reads): real stored model answers, the app's own rule. No
@@ -53,8 +54,9 @@ export function previewProps(height = 560, { asConsole = false } = {}): ClaimsGr
       return claim ? { ...row, evidence: evidenceOf(claim, recall) } : row;
     }),
   );
-  const counts = { all: all.length, paid: 0, held: 0, rejected: 0, blocked: 0, pending: 0 };
-  for (const r of all) counts[r.decision]++;
+  // By verdict, as the console's tabs count (lib/payoutWords.ts).
+  const counts = { all: all.length, paid: 0, settling: 0, approved: 0, held: 0, rejected: 0, blocked: 0, pending: 0 };
+  for (const r of all) counts[verdictOf(r)]++;
   return { rows, openId: PREVIEW_OPEN_ID, height, ledger: ledgerOf(all, recall), counts };
 }
 

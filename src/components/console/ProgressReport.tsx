@@ -135,7 +135,7 @@ export function ProgressReport({
               <tr key={o.label}>
                 <td className={td}>
                   {/* The console's mark and word, in the sheet's ink: a filed document reads in words, not in chips. */}
-                  <VerdictMark verdict={o.decision === "paid" ? (o.label === "Paid" ? "paid" : "approved") : o.decision} className="text-text">
+                  <VerdictMark verdict={o.verdict} className="text-text">
                     {o.label}
                   </VerdictMark>
                   <span className="mt-1.5 block text-muted sm:hidden">{o.note}</span>

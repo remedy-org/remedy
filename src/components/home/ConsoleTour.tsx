@@ -141,8 +141,8 @@ function Roll({ value }: { value: string }) {
   );
 }
 
-/** The status tabs as the console has them, in its words (Approved holds every claim the rule or a person approved; its
- * rows say Paid once PayPal has settled, as here): each filters the live grid (AG Grid's own filter, so the rows
+/** The status tabs as the console has them, in its words (lib/payoutWords.ts: Paid once PayPal confirmed, Sent, settling
+ * before that, Approved with nothing sent): each filters the live grid (AG Grid's own filter, so the rows
  * animate), their counts following the arriving claim, a visitor's decision and the search. */
 function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>; value: Tab; onChange: (t: Tab) => void }) {
   return (
@@ -680,7 +680,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const counts = useMemo(() => {
     const c = Object.fromEntries(TABS.map((t) => [t.id, 0])) as Record<Tab, number>;
     c.all = found.length;
-    for (const r of found) c[r.decision]++;
+    for (const r of found) c[verdictOf(r)]++;
     return c;
   }, [found]);
 

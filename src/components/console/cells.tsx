@@ -309,17 +309,18 @@ const FAILED = new Set(["FAILED", "RETURNED", "BLOCKED", "DENIED", "REVERSED", "
 /** Whether money left for this claim (a payout PayPal took). */
 export const sent = (r: Pick<ClaimRow, "decision" | "payoutStatus">) => r.decision === "paid" && Boolean(r.payoutStatus);
 
-export type PayoutState = { word: "Sent" | "Refused"; detail: string | null; title: string };
+export type PayoutState = { word: "Paid" | "Sent" | "Refused"; detail: string | null; title: string };
 
 /**
- * The money's one column, in two words: Sent once PayPal has the payout (settling, then settled), Refused when PayPal
- * didn't take it. Null while nothing is owed: a held claim waits for a person, a refused one owes nothing.
+ * The money's one column, in the one payout vocabulary (lib/payoutWords.ts): Sent and Settling once PayPal has the
+ * payout, Paid once PayPal confirmed it, Refused when PayPal didn't take it. Null while nothing is owed: a held claim
+ * waits for a person, a refused one owes nothing, an approved one has nothing sent.
  */
 export function payoutState(r: Pick<ClaimRow, "decision" | "payoutStatus" | "payoutFailedAt">): PayoutState | null {
   if (r.payoutFailedAt) return { word: "Refused", detail: `PayPal ${formatClock(r.payoutFailedAt).slice(0, 5)}`, title: `PayPal didn’t take the payout at ${formatTime(r.payoutFailedAt)}: nothing was paid` };
   if (!r.payoutStatus) return null;
   if (FAILED.has(r.payoutStatus)) return { word: "Refused", detail: "PayPal", title: `PayPal: ${r.payoutStatus}` };
-  return { word: "Sent", detail: r.payoutStatus === "SUCCESS" ? "Settled" : "Settling", title: `PayPal: ${r.payoutStatus}` };
+  return r.payoutStatus === "SUCCESS" ? { word: "Paid", detail: "PayPal confirmed", title: "PayPal: SUCCESS" } : { word: "Sent", detail: "Settling", title: `PayPal: ${r.payoutStatus}` };
 }
 
 /** The Payout column: the word, and under it where PayPal has it or when it refused. Refused is the only colour. */

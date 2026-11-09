@@ -2,11 +2,17 @@
 
 import clsx from "clsx";
 import type { KeyboardEvent } from "react";
+import { MONEY_WORD } from "@/lib/payoutWords";
+import type { Verdict } from "./VerdictMark";
 
-export type Tab = "all" | "paid" | "held" | "rejected" | "blocked" | "pending";
+// A tab per verdict, in the one payout vocabulary (lib/payoutWords.ts): Paid, Sent, settling and Approved are three
+// tabs, so each tab's count is the count every other surface gives.
+export type Tab = "all" | Verdict;
 export const TABS: { id: Tab; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "paid", label: "Approved" },
+  { id: "paid", label: MONEY_WORD.paid },
+  { id: "settling", label: MONEY_WORD.settling },
+  { id: "approved", label: MONEY_WORD.approved },
   { id: "held", label: "Held" },
   { id: "rejected", label: "Rejected" },
   { id: "blocked", label: "Blocked" },

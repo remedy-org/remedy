@@ -4,18 +4,18 @@ import { useMemo, type ReactNode } from "react";
 import type { DoesFilterPassParams, GridApi } from "ag-grid-community";
 import type { CustomFilterDisplayProps } from "ag-grid-react";
 import { refusalLabel } from "@/app/console/_lib/view";
-import type { Decision } from "@/lib/types";
 import type { GridContext, GridRow } from "./cells";
 import { formatDate, formatCount } from "./format";
+import { verdictOf, verdictWord, type Verdict } from "./VerdictMark";
 
 // The grid's two faceted filters, as filter handlers (ClaimsGrid sets enableFilterHandlers): the grid runs
 // doesFilterPass from the first filter change, so a status tab filters on its first click, before anyone has opened
 // the column's menu. The components below only draw the menus.
 
-/** The Verdict column's filter: decisions and the reasons behind them. The status tabs set the same model, so the tabs
- * and the column's filter are one filter. */
+/** The Verdict column's filter: verdicts (Paid, Sent, settling and Approved apart) and the reasons behind them. The
+ * status tabs set the same model, so the tabs and the column's filter are one filter. */
 export interface DecisionModel {
-  decisions: Decision[];
+  decisions: Verdict[];
   reasons: string[];
 }
 
@@ -25,13 +25,7 @@ export interface ClaimModel {
   days: string[];
 }
 
-export const DECISION_WORDS: [Decision, string][] = [
-  ["paid", "Approved"],
-  ["held", "Held"],
-  ["rejected", "Rejected"],
-  ["blocked", "Blocked"],
-  ["pending", "In progress"],
-];
+export const DECISION_WORDS: [Verdict, string][] = (["paid", "settling", "approved", "held", "rejected", "blocked", "pending"] as const).map((v) => [v, verdictWord(v)]);
 
 /** The verdict's line, as the grid shows it. */
 export const reasonKey = (r: Pick<GridRow, "note" | "reason">) => r.note ?? r.reason;
@@ -50,7 +44,7 @@ export function reasonGroup(r: Pick<GridRow, "decision" | "note" | "reason" | "b
 /** Whether a row passes: group rows always do (the grid hides a group with nothing left in it). */
 export function passesDecision(model: DecisionModel | null | undefined, row: GridRow | undefined): boolean {
   if (!model || !row || row.group) return true;
-  if (model.decisions.length && !model.decisions.includes(row.decision)) return false;
+  if (model.decisions.length && !model.decisions.includes(verdictOf(row))) return false;
   return !model.reasons.length || model.reasons.includes(reasonGroup(row));
 }
 
@@ -84,7 +78,7 @@ function toggled<M extends object>(current: M, key: keyof M, value: string): M {
 const isEmpty = (m: object) => Object.values(m).every((v) => !(v as string[]).length);
 
 export function DecisionFilter({ model, onModelChange, api }: CustomFilterDisplayProps<GridRow, GridContext, DecisionModel>) {
-  const { reasons, verdicts } = useMemo(() => ({ reasons: tally(api, reasonGroup), verdicts: new Map(tally(api, (r) => r.decision)) }), [api]);
+  const { reasons, verdicts } = useMemo(() => ({ reasons: tally(api, reasonGroup), verdicts: new Map(tally(api, (r) => verdictOf(r))) }), [api]);
   const current = model ?? { decisions: [], reasons: [] };
   const set = (key: keyof DecisionModel, v: string) => {
     const next = toggled(current, key, v);

@@ -52,7 +52,6 @@ import {
   ToPayCell,
   HeaderOnlyTip,
   payoutWord,
-  sent,
   TimeCell,
   TimelineTooltip,
   VerdictCell,
@@ -66,6 +65,7 @@ import { ClaimFilter, claimFilterPass, DecisionFilter, decisionFilterPass, reaso
 import { formatDate } from "./format";
 import { gridTheme, stillTheme } from "./gridTheme";
 import { verdictOf, verdictWord } from "./VerdictMark";
+import { moneyCents, type MoneyState } from "@/lib/payoutWords";
 import "./claims-grid.css";
 
 // Community modules only (no Enterprise, no licence): the Claim and Verdict columns' faceted filters, the quick filter
@@ -156,8 +156,8 @@ const DECISION_ORDER: Record<ClaimRow["decision"], number> = { held: 0, pending:
 
 export interface GridTotals {
   count: number;
-  approvedCents: number;
-  sentCents: number;
+  // The approved claims' money by where it is (lib/payoutWords.ts): paid, sent and settling, approved with nothing sent.
+  cents: Record<MoneyState, number>;
 }
 
 export interface ClaimsGridHandle {
@@ -815,15 +815,13 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       setShort(grid.getDisplayedRowCount() > 0 && h + 48 <= wrap.current.clientHeight ? h : null);
     }
     let count = 0;
-    let approvedCents = 0;
-    let sentCents = 0;
+    const shown: GridRow[] = [];
     const groups = new Map<string, GroupTotal>();
     grid.forEachNodeAfterFilter((n) => {
       const r = n.data;
       if (!r || r.group) return;
       count++;
-      if (r.decision === "paid") approvedCents += r.cents ?? 0;
-      if (sent(r)) sentCents += r.cents ?? 0;
+      shown.push(r);
       if (groupRef.current !== "none") {
         const key = groupOf(r, groupRef.current).key;
         const g = groups.get(key) ?? { count: 0, cents: 0, mix: {}, folded: folded.current.has(key) };
@@ -837,9 +835,10 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       }
     });
     stats.set(groups);
+    const cents = moneyCents(shown);
     const last = lastTotals.current;
-    if (last && last.count === count && last.approvedCents === approvedCents && last.sentCents === sentCents) return;
-    lastTotals.current = { count, approvedCents, sentCents };
+    if (last && last.count === count && (Object.keys(cents) as MoneyState[]).every((k) => last.cents[k] === cents[k])) return;
+    lastTotals.current = { count, cents };
     onShown?.(lastTotals.current);
   };
 

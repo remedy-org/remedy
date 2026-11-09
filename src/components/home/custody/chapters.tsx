@@ -372,7 +372,7 @@ export function ConsoleChapter({ p }: { p: Progress }) {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex gap-6 border-b border-line px-4 text-ui">
             {/* The console's own status tabs, in its words. */}
-            {["All", "Approved", "Held", "Rejected", "Blocked"].map((t, i) => (
+            {["All", "Paid", "Approved", "Held", "Rejected", "Blocked"].map((t, i) => (
               <span key={t} className={clsx("py-2.5", i === 0 ? "border-b-2 border-text text-text" : "text-muted")}>
                 {t}
               </span>

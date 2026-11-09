@@ -12,16 +12,19 @@ import { num, useRows } from "./useRows";
 // Custom widget 4: what the rule decided, as one 100% bar in the charts' palette (theme.ts): Paid as an area is --pay-fill.
 // A built-in donut takes its colours from palette order, so a decision's colour would depend on the data; this can't.
 
-const ORDER = ["Paid", "Held", "Rejected", "Blocked", "In progress"];
+// Paid, Sent, settling and Approved apart (lib/payoutWords.ts), as the queue's tabs and the CPSC report count them.
+const ORDER = ["Paid", "Sent, settling", "Approved", "Held", "Rejected", "Blocked", "In progress"];
 const FILL: Record<string, string> = {
   Paid: "bg-pay-fill",
+  "Sent, settling": "bg-[color-mix(in_oklch,var(--pay-fill)_65%,var(--surface))]",
+  Approved: "bg-[color-mix(in_oklch,var(--pay-fill)_35%,var(--surface))]",
   Held: "bg-hold",
   Rejected: "bg-stop",
   Blocked: "bg-[color-mix(in_oklch,var(--stop)_55%,var(--surface))]",
   "In progress": "bg-faint",
 };
 // Shape as well as colour: each decision's key is the queue's own verdict glyph.
-const GLYPH: Record<string, Verdict> = { Paid: "paid", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
+const GLYPH: Record<string, Verdict> = { Paid: "paid", "Sent, settling": "settling", Approved: "approved", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
 
 export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
   const { dataMapping, widgetApi } = params;

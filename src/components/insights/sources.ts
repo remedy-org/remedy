@@ -38,9 +38,9 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           // The grid widget renders this column as a link to the claim in the queue (widgets/index.ts).
           ["id", "Claim", "textFormat", { context: { claimOf: data.recall.id } }],
           ["filedAt", "Filed", "dateTimeFormat", { formatOptions: { format: new Intl.DateTimeFormat("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC", timeZoneName: "short" }) } }],
-          // The grid shows "Paid" as "Approved", as the console's pill does (widgets/index.ts).
-          ["decision", "Verdict", "textFormat", { context: { decision: true }, description: "Paid means approved by the rule (shown as Approved); amountSent says whether money was really sent." }],
-          ["decisionRank", "Verdict order", "integerFormat", { hide: true, description: "1 Paid, 2 Held, 3 Rejected, 4 Blocked, 5 In progress." }],
+          // The console's verdict words (lib/payoutWords.ts), drawn with its marks (widgets/index.ts).
+          ["decision", "Verdict", "textFormat", { context: { decision: true }, description: "Paid: PayPal confirmed the payout. Sent, settling: sent through PayPal, not confirmed yet. Approved: the rule or a person approved it, nothing sent." }],
+          ["decisionRank", "Verdict order", "integerFormat", { hide: true, description: "1 Paid, 2 Sent, settling, 3 Approved, 4 Held, 5 Rejected, 6 Blocked, 7 In progress." }],
           ["refusalReason", "Refusal reason", "textFormat", { description: "Why a rejected or blocked claim was refused, in the CPSC report's wording. Blank for other claims." }],
           ["refusalGate", "Refused by", "textFormat", { description: "Where the claim was refused: before the model read the photo (an account check), by the model (the photo check) or by a person (a review). Blank unless refused." }],
           ["failedCheck", "Deciding check", "textFormat", { description: "The check that refused or held the claim (code, label, same_item, screen, step_N, session, duplicate_photo, payer, payer_verified, review)." }],

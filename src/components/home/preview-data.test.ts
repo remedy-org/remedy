@@ -15,7 +15,7 @@ describe("homepage console tour data", () => {
     const counts = previewProps().counts!;
     const { report } = reportPreview();
     const { totals } = insightsStill(insightsPreview());
-    expect(counts).toMatchObject({ all: 7, paid: 2, held: 1, rejected: 1, blocked: 3 });
+    expect(counts).toMatchObject({ all: 7, paid: 1, settling: 0, approved: 1, held: 1, rejected: 1, blocked: 3 });
     expect(report.stats).toMatchObject({ total: 7, remedied: 2, held: 1 });
     // Paid is only RM-0442, the claim PayPal paid; RM-6276 is approved with nothing sent.
     expect(report.outcomes.filter((o) => o.decision === "paid").map((o) => [o.label, o.count])).toEqual([
