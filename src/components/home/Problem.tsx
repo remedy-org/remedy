@@ -300,7 +300,7 @@ export function Problem() {
         // than the sheet or reads as the face of a box.
         set("--y", `${(6 * (1 - outExpo(seg(t, T.rise)))).toFixed(3)}vh`);
         set("--lean", `${(14 * (1 - outExpo(seg(t, T.lean)))).toFixed(3)}deg`);
-        set("--tilt", `${(-5.5 + 5.1 * outExpo(seg(t, T.tilt))).toFixed(3)}deg`);
+        set("--tilt", `${(-5.5 * (1 - outExpo(seg(t, T.tilt)))).toFixed(3)}deg`);
         const th = 95 * (1 - inOutQuart(seg(t, T.fold)));
         const rad = (th * Math.PI) / 180;
         const light = seg(t, T.shade);
@@ -313,6 +313,10 @@ export function Problem() {
         set("--open", seg(t, [T.fold[1], T.fold[1] + 6]));
         const phase = th > 0.05 ? "fold" : "open";
         if (el.dataset.phase !== phase) el.dataset.phase = phase;
+        // Open, it has settled level, so it drops its transform until it starts to sink: drawn flat, the headline is
+        // crisp, never a layer resampled at an angle (at -0.4deg on its own layer it read slightly soft at rest).
+        const flat = phase === "open" && t < T.sink[0];
+        if (el.hasAttribute("data-flat") !== flat) el.toggleAttribute("data-flat", flat);
         // After the cut the lamp narrows to a pool on it; as B scrolls over, the whole sheet sinks a little further.
         set("--dim", outQuart(seg(t, T.dim)));
         set("--dimx", 0.12 * outQuart(seg(t, T.sink)));
@@ -603,6 +607,7 @@ export function Problem() {
       for (const k of written_.keys()) el.style.removeProperty(k);
       written_.clear();
       delete el.dataset.phase;
+      delete el.dataset.flat;
       delete el.dataset.armed;
       delete el.dataset.play;
       el.querySelectorAll("[data-span], [data-head], [data-slash]").forEach((p) => p.removeAttribute("style"));
