@@ -123,7 +123,7 @@ export function ConsentChapter({ p }: { p?: Progress }) {
           {/* The offer heads the card, as the claim page's does: no company badge (the seller is in the recall's facts).
               On a phone, where the brief is hidden, the recall is said once above it; a short phone gives it way. */}
           <span className={clsx("text-ui text-muted @min-[720px]:hidden", compact && "@max-[719px]:hidden")}>
-            <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall · <span className="font-mono">{CLAIM.recall}</span>
+            <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall · <span className="font-mono whitespace-nowrap">{CLAIM.recall}</span>
           </span>
           {/* The claim page's headline and the line under it (ConsentCard.tsx): one ink, the line a step down. */}
           <div className="flex flex-col gap-2">

@@ -79,9 +79,10 @@ export function Proof() {
       }
       note={
         <p id="proof-note" className="mt-3 max-w-[80ch] scroll-mt-24 text-[0.75rem]/[1.5] text-pretty text-faint lg:mt-5">
-          ¹ Remedy fraud benchmark, 7 Nov 2026: 36 claims, each run 3 times. The photo check passed one AI-made image of a cut
-          pillow with the code drawn on, in every try; in Remedy a photo comes only from the claim&rsquo;s own live camera, so
-          an image like it would have to be shown to the camera on a screen or a print, which the photo check looks for.
+          ¹ Remedy fraud benchmark, 7 Nov 2026: 36 claims, each run 3 times. The photo check passed one{" "}
+          <span className="whitespace-nowrap">AI-made</span> image of a cut pillow with the code drawn on, in every try; in
+          Remedy a photo comes only from the claim&rsquo;s own live camera, so an image like it would have to be shown to the
+          camera on a screen or a print, which the photo check looks for.
         </p>
       }
     />
