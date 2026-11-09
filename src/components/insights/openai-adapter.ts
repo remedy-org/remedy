@@ -585,8 +585,11 @@ async function* streamOpenAi(
     });
 
     if (!response.ok) {
+        // Remedy's route says what went wrong as `{ error: { message } }`, a proxy in front of it may say `{ error: "…" }`;
+        // anything else (a gateway's HTML page, an empty body) reads in words, never as "HTTP 503: Service Unavailable".
         const body = await response.json().catch(() => ({}));
-        throw new Error(body.error?.message || `HTTP ${response.status}: ${response.statusText}`);
+        const said = typeof body?.error === 'string' ? body.error : body?.error?.message;
+        throw new Error((typeof said === 'string' && said.trim()) || 'The analyst couldn’t answer just now. Try again.');
     }
 
     const reader = response.body!.getReader();

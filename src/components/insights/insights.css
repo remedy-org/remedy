@@ -378,3 +378,22 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   color: var(--text);
   text-decoration-color: var(--text);
 }
+
+/* "Try again" under an answer that failed: a quiet text button on its own line, the console's link in the text colour. */
+.insights-report .insights-retry {
+  display: block;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.insights-report .insights-retry:hover {
+  text-decoration-color: var(--text);
+}
