@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PAGE_STOPS } from "../custody/CustodyStage";
 import { ANCHOR_AT, REST, SECTION_VH, T } from "../problemTimeline";
-import { ANCHORED, framed, LINE, MERGE, nearestClean, STOPS, tidy, type Page } from "./stops";
+import { ANCHORED, framed, LINE, MERGE, nearestClean, RESTS, SLOW, STOPS, tidy, type Page } from "./stops";
 
 /** A stand-in page at 1440x900: the runway at 64 with 7316px of travel, the Problem sheet's top at 8280. */
 const page: Page = {
@@ -84,24 +84,51 @@ describe("scroll stops", () => {
   it("goes up on the same finished beats as down, as Page Up does: no stop is one way, the sheet's included", () => {
     expect(STOPS.filter((s) => "down" in s).map((s) => s.name)).toEqual([]);
     const story = STOPS.filter((s) => s.name.startsWith("Chain of Custody ")).map((s) => s.name);
-    // A hard fling skims the story's inner beats, never a section's stop.
+    // A hard fling skims the story's inner beats, never a section's stop, nor check 3: a fling down the exhibit rests
+    // once on the checks.
     const inner = STOPS.filter((s) => s.inner).map((s) => s.name);
-    expect(inner).toEqual([...story.slice(1, -1), "Problem, the loop closed"]);
+    expect(inner).toEqual(story.slice(1, -1).filter((n) => n !== "Chain of Custody 4"));
+    expect(inner).not.toContain("Chain of Custody 4");
   });
 
-  it("lands the Problem sheet open where the nav's Problem does, then on the closed loop, then cut and paid off", () => {
+  it("lands the Problem sheet open where the nav's Problem does, then cut and paid off: two gestures, the loop closing between", () => {
     const sheet = STOPS.filter((s) => s.name.startsWith("Problem")).map((s) => s.at(page) as number);
+    expect(sheet).toHaveLength(2);
     // Where the nav's Problem lands (t = ANCHOR_AT, the section's top 20vh above the nav line), a hair before card 4.
     expect(8280 + 0.2 * 900 - sheet[0]).toBeGreaterThan(1);
     expect(8280 + 0.2 * 900 - sheet[0]).toBeLessThan(5);
     expect(ANCHOR_AT).toBeLessThanOrEqual(T.card4[0]);
-    // The loop closed: after the sources print, a hair before the slash.
-    expect(sheet[1]).toBeGreaterThan(page.sheet(T.sources[1] - 1)!);
-    expect(sheet[1]).toBeLessThan(page.sheet(T.mark[0])!);
     // The cut stop rests past every beat and before Fraud checks starts to cover the sheet.
-    expect(sheet[2]).toBeGreaterThan(page.sheet(REST)!);
-    expect(sheet[2]).toBeLessThan(page.sheet(T.cover[0])!);
+    expect(sheet[1]).toBeGreaterThan(page.sheet(REST)!);
+    expect(sheet[1]).toBeLessThan(page.sheet(T.cover[0])!);
     expect(T.cover[1]).toBe(SECTION_VH);
+    // The loop closing is no stop, only a slow stretch three times slower on the glide from open to cut, and the cut
+    // after it.
+    expect(STOPS.map((s) => s.name)).not.toContain("Problem, the loop closed");
+    const slow = (name: string) => SLOW.find((s) => s.name === name)!.at(page)!;
+    expect(slow("The loop closes")).toEqual([page.sheet(T.card4[0]), page.sheet(T.ring[1]), 3]);
+    for (const name of ["The loop closes", "The loop is cut"]) {
+      expect(slow(name)[0]).toBeGreaterThan(sheet[0]);
+      expect(slow(name)[1]).toBeLessThan(sheet[1]);
+    }
+  });
+
+  it("slows each exhibit check's draw three times on a glide, and lets a slow gesture rest on any check at its hold", () => {
+    const custody = STOPS.filter((s) => /^Chain of Custody \d/.test(s.name)).map((s) => s.at(page) as number);
+    const draws = SLOW.filter((s) => s.name.startsWith("Check ")).map((s) => s.at(page)!);
+    // The live camera, the fingerprint, the tag's code and the cut: two on the glide to check 3, two on the one to paid.
+    expect(draws).toHaveLength(4);
+    for (const [a, b, k] of draws) {
+      expect(k).toBe(3);
+      expect(b - a).toBeGreaterThan(400); // most of a beat's 70vh of scroll
+    }
+    expect(draws.slice(0, 2).every(([a, b]) => a > custody[2] && b < custody[3])).toBe(true);
+    expect(draws.slice(2).every(([a, b]) => a > custody[3] && b < custody[4])).toBe(true);
+    // Every check's hold is a rest, check 3's being its stop; each just after its draw.
+    const rests = RESTS.map((s) => s.at(page) as number);
+    expect(rests).toHaveLength(5);
+    expect(rests[2]).toBeCloseTo(custody[3], 6);
+    for (const [i, [, b]] of draws.entries()) expect(rests[i < 2 ? i : i + 1] - b).toBeGreaterThan(0);
   });
 
   it("names every stop once, and every anchored section's stop exists", () => {
