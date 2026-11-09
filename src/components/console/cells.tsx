@@ -3,8 +3,8 @@
 import clsx from "clsx";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
-import { barsSentence, duration, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
-import { checkOf, FIVE_CHECKS, fiveOutcomes, type Outcome } from "@/lib/fiveChecks";
+import { barsSentence, duration, fiveOf, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
+import { checkOf, FIVE_CHECKS, type Outcome } from "@/lib/fiveChecks";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
 import { VerdictMark, verdictOf, verdictWord } from "./VerdictMark";
@@ -23,7 +23,6 @@ export interface GridContext {
   compact?: boolean;
   /** Opens a claim a row's reason names ("Second claim from one PayPal account · RM-7306"). */
   open?: (id: string) => void;
-  slots?: { pre: number; model: number };
   groups?: GroupStats;
 }
 
@@ -174,51 +173,26 @@ const BAR_WORD: Record<BarState, string> = { pass: "", hold: "Held", reject: "Fa
 const barWord = (b: Pick<CheckBar, "id" | "state">) =>
   b.id === "model" && b.state === "hold" ? "No answer" : b.id === "same_item" && b.state === "skipped" ? "One photo, not needed" : BAR_WORD[b.state];
 
-// One bar's shape by state; the hover card (ChecksTooltip) uses the same shapes as its legend. A pass is a filled bar
+// One bar's shape by state; the hover card (ChecksTooltip) uses the same shapes as its legend. A pass is a solid bar
 // in ink: green means money moved, and a strip of checks moves none, so only what held or failed takes a colour and
-// stands out down the column.
+// stands out down the column. A check not run is a dashed outline, one still waiting a solid one: neither reads as a
+// pass at a glance.
 function Bar({ bar }: { bar: Pick<CheckBar, "state"> }) {
   return (
     <span
       data-state={bar.state}
       className={clsx(
         "relative h-4 w-2 shrink-0 overflow-hidden rounded-[1.5px]",
-        bar.state === "pass" && "bg-text-2/45",
+        bar.state === "pass" && "bg-text-2",
         // Held: the top half filled, so it reads without colour.
         bar.state === "hold" && "border border-hold bg-[linear-gradient(var(--hold)_50%,transparent_50%)]",
         // Failed: filled, with a slash in the background colour.
         bar.state === "reject" && "bg-stop after:absolute after:top-1/2 after:-left-1 after:h-px after:w-4 after:-rotate-60 after:bg-bg",
         bar.state === "waiting" && "border border-line-strong",
-        // Not needed or not run: a centred 2px dash, so the strip keeps its slots without claiming a check or reading as
-        // one still waiting.
-        bar.state === "skipped" && "after:absolute after:inset-x-0 after:top-1/2 after:h-0.5 after:-translate-y-1/2 after:rounded-full after:bg-line-strong",
+        // Not run: a dashed outline, empty, so the strip keeps its slot without claiming a check.
+        bar.state === "skipped" && "border border-dashed border-line-strong",
       )}
     />
-  );
-}
-
-const splitBars = (bars: CheckBar[]) => ({ pre: bars.filter((b) => isPreCheck(b.id)), model: bars.filter((b) => !isPreCheck(b.id)) });
-
-/** The checks as a fixed strip: the four account checks, a 10px gap, then the photo check's answers, padded to the
- * recall's longest so every row's strip has the same slots in the same place. Shape carries the outcome as well as
- * colour (filled, half, slashed, outline, dash). */
-export function Barcode({ bars, slots }: { bars: CheckBar[]; slots?: GridContext["slots"] }) {
-  const { pre, model } = splitBars(bars);
-  const group = (list: CheckBar[], n = 0) => (
-    <span className="flex gap-0.5">
-      {list.map((b) => (
-        <Bar key={b.id} bar={b} />
-      ))}
-      {Array.from({ length: Math.max(0, n - list.length) }, (_, i) => (
-        <Bar key={`pad-${i}`} bar={{ state: "skipped" }} />
-      ))}
-    </span>
-  );
-  return (
-    <span role="img" aria-label={barsSentence(bars)} className="flex items-center gap-2.5">
-      {group(pre, slots?.pre)}
-      {group(model, slots?.model)}
-    </span>
   );
 }
 
@@ -246,12 +220,12 @@ export function DurationText({ sec, plus = false, className }: { sec: number; pl
   );
 }
 
-export function ChecksCell({ data, context }: Cell) {
+export function ChecksCell({ data }: Cell) {
   if (!data) return null;
   if (!data.bars) return <span className="text-faint" aria-label="Checks not recorded on this row">—</span>;
   return (
     <span className="flex h-full items-center">
-      {context?.stacked ? <FiveBarcode bars={data.bars} /> : <Barcode bars={data.bars} slots={context?.slots} />}
+      <FiveBarcode bars={data.bars} />
     </span>
   );
 }
@@ -260,14 +234,12 @@ export function ChecksCell({ data, context }: Cell) {
 const FIVE_STATE: Record<Outcome, BarState> = { pass: "pass", skipped: "skipped", hold: "hold", fail: "reject", open: "waiting" };
 
 /**
- * The homepage's strip: the five checks the page names, three that run before any AI and the model's two, one bar each
- * (fiveOutcomes groups the recorded answers under them, as the hover card does), so the picture matches the page's
- * "five checks" and How it works' console.
+ * The strip, in the console and on the homepage alike: the five checks the page names, three that run before any AI and
+ * the model's two, one bar each, coloured by its worst answer (fiveOf groups the recorded answers under them; the hover
+ * card lists them), so the grid counts five checks as the panel, the receipt and How it works do.
  */
 function FiveBarcode({ bars }: { bars: CheckBar[] }) {
-  // "Same item in both photos" is not needed on a one-photo claim: it never keeps "really destroyed" from passing.
-  const ran = bars.filter((b) => !(b.id === "same_item" && b.state === "skipped"));
-  const five = fiveOutcomes(ran.map((b) => ({ id: b.id, state: b.state }))).map((c) => ({ id: String(c.n), state: FIVE_STATE[c.outcome] }));
+  const five = fiveOf(bars).map((c) => ({ id: String(c.n), state: FIVE_STATE[c.outcome] }));
   return (
     <span role="img" aria-label={barsSentence(bars)} className="flex items-center gap-2.5">
       <span className="flex gap-0.5">
@@ -291,10 +263,21 @@ export function TimeCell({ data, context }: Cell) {
   if (!data.timeline || data.modelSec === null) return <span className="text-ui text-faint">—</span>;
   // The homepage's still sets its figures in the sans, as the page around it does.
   if (context?.stacked) return <span className="text-ui text-text-2">{duration(data.modelSec)}</span>;
+  // The payout time under it, faint, only where it says something the answer doesn't: a person approved the claim
+  // later, or PayPal took a while. Most claims are paid a second after the answer.
+  const later = sent(data) && data.toPay !== null && data.toPay - data.modelSec > 5 ? data.toPay : null;
   return (
-    <span className="text-ui text-text-2">
-      <span className="sr-only">Photo check answered in </span>
-      <DurationText sec={data.modelSec} />
+    <span className="flex h-full flex-col items-end justify-center leading-tight">
+      <span className="text-ui text-text-2">
+        <span className="sr-only">Photo check answered in </span>
+        <DurationText sec={data.modelSec} />
+      </span>
+      {later !== null && (
+        <span className="mt-0.5 text-micro text-faint">
+          <span className="font-sans">paid </span>
+          <DurationText sec={later} />
+        </span>
+      )}
     </span>
   );
 }

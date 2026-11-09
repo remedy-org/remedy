@@ -8,7 +8,7 @@ import type { ApiError } from "@/app/console/_lib/api";
 // The model's words set as the owner's pages set them: curly quotes, codes in mono.
 import { ModelQuote } from "@/components/claim/EvidenceText";
 import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
-import { duration, type ClaimRow } from "@/app/console/_lib/view";
+import { duration, isPreCheck, type ClaimRow } from "@/app/console/_lib/view";
 import { api } from "./api";
 import { DurationText, EXCEPTION } from "./cells";
 import { DrawerSkeleton, GhostFooter, RowAmount, RowMeta, RowVerdict } from "./EvidenceShell";
@@ -18,6 +18,7 @@ import { formatClock, formatTime } from "./format";
 import { Keys } from "./Keys";
 import { LinkedIds } from "./LinkedIds";
 import { PhotoViewer } from "./PhotoViewer";
+import { quickReasons } from "./quickReasons";
 import { payoutFailure, ReviewActions, reviewLabels, type ReviewIntent } from "./ReviewActions";
 import { VerdictMark, verdictOf } from "./VerdictMark";
 
@@ -32,8 +33,6 @@ export interface EvidenceProps {
   claimId: string | null;
   // The claim's grid row: the header draws from it the moment the panel opens, before the evidence loads.
   row?: ClaimRow | null;
-  // A decision just made on the claim before this one, said in the header for 2 s ("RM-5250 approved · $29.99 sent").
-  notice?: string | null;
   // V or Space from the queue: opens the photo viewer at the first photo each time it changes.
   viewPhotos?: number;
   // The grid row's version: the panel asks for the claim at it, which the server caches (Blob budget).
@@ -54,6 +53,8 @@ export interface EvidenceProps {
   onBack?: () => void;
   // Two or more claims are picked: the bulk bar acts on them, so this claim's own actions step back.
   picking?: boolean;
+  // Puts the keyboard back on the claim's row (after the photo viewer closes), so ↓ and ↑ walk on from there.
+  onReturn?: () => void;
 }
 
 // Claims this page view already loaded, by id and version: walking back up the queue costs nothing.
@@ -109,7 +110,7 @@ function useClaim(id: string, version: number | null | undefined, filedAt: strin
 }
 
 /** Laptops: an aside beside the grid. No backdrop, the grid stays live; Esc closes it (ClaimsQueue returns focus). */
-export function EvidencePanel({ claimId, row, notice, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack, picking }: EvidenceProps) {
+export function EvidencePanel({ claimId, row, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack, picking, onReturn }: EvidenceProps) {
   if (!claimId) return null;
   return (
     <aside
@@ -120,7 +121,6 @@ export function EvidencePanel({ claimId, row, notice, viewPhotos, version, filed
       <EvidenceContent
         id={claimId}
         row={row}
-        notice={notice}
         viewPhotos={viewPhotos}
         version={version}
         filedAt={filedAt}
@@ -132,6 +132,7 @@ export function EvidencePanel({ claimId, row, notice, viewPhotos, version, filed
         back={back}
         onBack={onBack}
         picking={picking}
+        onReturn={onReturn}
         variant="panel"
       />
     </aside>
@@ -185,7 +186,6 @@ export function EvidenceDrawer({ claimId, row, viewPhotos, version, filedAt, onC
 function EvidenceContent({
   id,
   row,
-  notice,
   viewPhotos,
   version,
   filedAt,
@@ -197,6 +197,7 @@ function EvidenceContent({
   back,
   onBack,
   picking,
+  onReturn,
   variant,
 }: Omit<EvidenceProps, "claimId"> & { id: string; variant: "panel" | "sheet" }) {
   const router = useRouter();
@@ -228,10 +229,15 @@ function EvidenceContent({
   const photos = useRef<HTMLElement>(null);
   // The footer's open form, so the key line says what A and Enter do now.
   const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle");
+  const lastMode = useRef<"idle" | "approve" | "reject">("idle");
   // A decision saving: the key line says that keys typed now wait for the next claim.
   const [busy, setBusy] = useState(false);
   const onMode = useCallback((mode: "idle" | "approve" | "reject") => {
     setMode(mode);
+    const was = lastMode.current;
+    lastMode.current = mode;
+    // A reject cancelled: the panel goes back to its top, where the reason the claim was held leads.
+    if (was === "reject" && mode === "idle") requestAnimationFrame(() => scroller.current?.scrollTo({ top: 0 }));
     // Scrolled within the panel only (scrollIntoView would scroll the page under it too): the photos end just over the
     // form, clear of the scroller's fading edge, so no heading below them peeks half-cut above it; photos taller than
     // the panel's room start at its top.
@@ -254,6 +260,7 @@ function EvidenceContent({
   }
   const review = claim?.review ? (mode: ReviewIntent["mode"]) => setAct((i) => ({ mode, n: (i?.n ?? 0) + 1 })) : undefined;
   const labels = claim?.review ? reviewLabels(claim) : null;
+  const quickCount = claim?.review ? quickReasons(claim.fiveRows.flatMap((r) => r.parts)).length : 0;
   const body = claim ?? stale;
   const pad = variant === "panel" ? "px-5" : "px-4 sm:px-6";
 
@@ -294,10 +301,6 @@ function EvidenceContent({
             </span>
             {claim ? <MoneyLine claim={claim} /> : row?.id === id && <RowAmount row={row} />}
           </div>
-          {/* The decision just made on the claim before this one takes the meta line's place for 2 s, cross-faded in the
-              same slot, so nothing under the header moves. */}
-          <div className="grid">
-          <div className={clsx("col-start-1 row-start-1 transition-opacity duration-120 ease-out", notice && "opacity-0")} aria-hidden={notice ? true : undefined}>
           {!claim && row?.id === id ? (
             <RowMeta row={row} />
           ) : claim ? (
@@ -319,16 +322,12 @@ function EvidenceContent({
           ) : (
             <Skeleton className="mt-2 h-4 w-64 max-w-full" />
           )}
-          </div>
-          <p role="status" className={clsx("col-start-1 row-start-1 mt-0.5 truncate text-ui text-text-2 transition-opacity duration-120 ease-out", notice ? "opacity-100" : "pointer-events-none opacity-0")}>
-            {notice}
-          </p>
-          </div>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="-mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-muted hover:bg-surface-2 hover:text-text"
+          // Centred on the first line (the id, verdict and amount), not on the header's top edge.
+          className="-mt-2.5 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-muted hover:bg-surface-2 hover:text-text"
           aria-label="Close the evidence"
         >
           <CrossIcon />
@@ -339,6 +338,7 @@ function EvidenceContent({
           without a containing block of its own they reached past the window and the whole page scrolled into a void. */}
       <div
         ref={scroller}
+        data-scroller
         className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain [mask-image:linear-gradient(to_bottom,#000_calc(100%-20px),transparent)] [@media(max-height:600px)]:flex-none [@media(max-height:600px)]:overflow-visible [@media(max-height:600px)]:[mask-image:none]"
       >
         {load.state === "error" && (
@@ -357,7 +357,7 @@ function EvidenceContent({
         {load.state !== "error" && !body && <DrawerSkeleton row={row?.id === id ? row : null} />}
         {load.state !== "error" && body && (
           <div className={clsx("transition-opacity duration-120", stale && "opacity-50")}>
-            <Evidence claim={body} pad={pad} onReview={stale ? undefined : review} onOpen={onOpen} photosRef={photos} viewPhotos={stale ? undefined : viewPhotos} />
+            <Evidence claim={body} pad={pad} onReview={stale ? undefined : review} onOpen={onOpen} photosRef={photos} viewPhotos={stale ? undefined : viewPhotos} onReturn={onReturn} />
           </div>
         )}
       </div>
@@ -405,13 +405,13 @@ function EvidenceContent({
             </>
           ) : mode === "reject" ? (
             <>
-              <Keys k={["1–4"]}>Quick reason</Keys>
+              {quickCount > 0 && <Keys k={[quickCount > 1 ? `1–${quickCount}` : "1"]}>Quick reason</Keys>}
               <Keys k={["⌘↵"]}>Reject</Keys>
               <Keys k={["Esc"]}>Cancel</Keys>
             </>
           ) : (
             <>
-              <Keys k={["↓", "↑"]}>Next claim</Keys>
+              <Keys k={["↓", "↑"]}>Next / previous</Keys>
               {/* On a wide screen only, where the line has room: the ? sheet lists it everywhere. */}
               {(claim ?? stale)?.photos.length ? (
                 <span className="hidden min-[1600px]:inline-flex">
@@ -453,15 +453,27 @@ function Section({ title, children, aside }: { title: ReactNode; children: React
 
 type Step = { label: string; at: string | null; note?: string; failed?: boolean; value?: string };
 
-/** The money's path for this claim, from its events: photos in, photo check, decision, PayPal sent, settled. */
+/** Who decided a held claim on review, from its history ("Approved on review by Kikea Store", "… (by Kikea Store)"). */
+const reviewerOf = (e: DrawerClaim["events"][number]) => e.detail.match(/(?:on review by (.+)$)|(?:\(by (.+)\)$)/)?.slice(1).find(Boolean) ?? null;
+
+/** The money's path for this claim, from its events: photos in, photo check, the rule's decision (or its hold and the
+ * person's review, with who reviewed it), PayPal sent, settled. */
 function moneySteps(claim: DrawerClaim): Step[] {
   const at = (match: (e: DrawerClaim["events"][number]) => boolean) => claim.events.find(match)?.at ?? null;
   const photos = at((e) => e.type === "photos_received");
-  const decided = at((e) => e.type === "decided" || e.type === "blocked" || e.type === "rejected");
+  const review = claim.events.find((e) => e.type === "approved" || e.type === "rejected");
+  const ruled = at((e) => e.type === "decided" || e.type === "blocked");
+  const byPerson = Boolean(review) || claim.decision === "held";
+  const by = review && reviewerOf(review);
   const steps: Step[] = [
     { label: "Photos in", at: photos },
     { label: "Photo check", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "The account checks stopped it, so the photos were never read." : undefined },
-    { label: "Decision", at: decided },
+    ...(byPerson
+      ? [
+          { label: "Held", at: ruled },
+          { label: "Reviewed", at: review?.at ?? null, note: by ? `Reviewed by ${by}.` : undefined },
+        ]
+      : [{ label: "Decision", at: ruled ?? review?.at ?? null }]),
   ];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
   const failure = payoutFailure(claim);
@@ -500,7 +512,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
                 <span
                   className={clsx(
                     "relative z-10 size-2.5 shrink-0 rounded-full",
-                    s.failed ? "border-2 border-stop bg-surface" : done ? (i >= 3 ? "bg-pay" : "bg-text") : "border border-line-strong bg-surface",
+                    s.failed ? "border-2 border-stop bg-surface" : done ? (s.label === "Sent" || s.label === "Settled" ? "bg-pay" : "bg-text") : "border border-line-strong bg-surface",
                   )}
                 />
                 {next && <span className={clsx("absolute inset-x-0 left-2.5 hidden h-px @[26rem]:block", done && next.at && !s.failed ? "bg-muted/70" : "bg-line-strong/40")} />}
@@ -605,6 +617,7 @@ function Evidence({
   onOpen,
   photosRef,
   viewPhotos,
+  onReturn,
 }: {
   claim: DrawerClaim;
   pad: string;
@@ -612,6 +625,7 @@ function Evidence({
   onOpen?: (id: string) => void;
   photosRef?: RefObject<HTMLElement | null>;
   viewPhotos?: number;
+  onReturn?: () => void;
 }) {
   // The "model" hold is the photo check not answering, not an answer: it isn't counted as a check that didn't pass.
   // Before any photo arrives every check is waiting: one line says when they run, the rows are their names alone.
@@ -677,7 +691,11 @@ function Evidence({
             labels={claim.review ? reviewLabels(claim) : undefined}
             onOpen={onOpen}
             onReview={onReview}
-            onClose={() => setViewing(null)}
+            onClose={() => {
+              setViewing(null);
+              // Unless the viewer handed off to approve or reject (the footer's form takes focus), back to the row.
+              requestAnimationFrame(() => !document.querySelector(".evidence-panel [data-review-open]") && onReturn?.());
+            }}
           />
         )}
       </section>
@@ -760,24 +778,46 @@ function Evidence({
   );
 }
 
+// What a part that didn't pass says in a word, after its name: the reason itself is the panel's heading.
+const PART_STATE: Partial<Record<string, string>> = { hold: "couldn't tell", reject: "failed" };
+
 /**
- * Under one of the five checks: why it was skipped, or each thing recorded under it. One part says its line alone; several
- * name themselves ("Code K7P: the tag reads K7Q…"). The photo check's own words are quoted, except the answer the panel
- * already leads with, which is its name and state alone here. Undefined when there is nothing more to say.
+ * Under one of the five checks: why it was skipped, or each thing recorded under it, what held or failed first. One part
+ * says its line alone; several name themselves. A photo-check answer that passed is its name and the model's own words,
+ * never its rule restated ("Pillow cut fully in half: The pillow is cut fully in half"). The answer the panel already
+ * leads with keeps its line here, as its name and state ("Same item: couldn't tell, see above"), without the quote.
+ * Undefined when there is nothing more to say.
  */
 function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<typeof deciding>, link: (text: string) => ReactNode): ReactNode {
-  const led = (p: DrawerClaim["fiveRows"][number]["parts"][number]) => Boolean(decided && p.text === decided.title && (p.evidence ?? null) === decided.evidence);
-  const shown = row.parts.filter((p) => (p.text || p.evidence) && !led(p));
+  type Part = DrawerClaim["fiveRows"][number]["parts"][number];
+  const led = (p: Part) => Boolean(decided && p.text === decided.title && (p.evidence ?? null) === decided.evidence);
+  const shown = row.parts.filter((p) => p.text || p.evidence).sort((a, b) => Number(a.state === "pass") - Number(b.state === "pass"));
   if (!row.note && !shown.length) return undefined;
-  const named = row.parts.filter((p) => p.text || p.evidence).length > 1;
+  const named = shown.length > 1;
+  // An account check's line says what was checked; a photo-check answer's rule only restates its name.
+  const restates = (p: Part) => p.state === "pass" && !isPreCheck(p.id);
   return (
     <span className="flex flex-col gap-1.5">
       {row.note && <span>{row.note}</span>}
       {shown.map((p) => (
         <span key={p.id} className="block">
-          {named && <span className={p.state === "pass" ? "text-text-2" : "text-text"}>{p.label}: </span>}
-          {link(p.text)}
-          {p.evidence && (
+          {led(p) ? (
+            <span className="text-text">
+              {p.label}: {PART_STATE[p.state] ?? "see above"}
+              {PART_STATE[p.state] && <span className="text-muted">, see above</span>}
+            </span>
+          ) : restates(p) && (named || p.evidence) ? (
+            <span className="text-text-2">
+              {p.label}
+              {!p.evidence && <span className="text-muted"> · passed</span>}
+            </span>
+          ) : (
+            <>
+              {named && <span className={p.state === "pass" ? "text-text-2" : "text-text"}>{p.label}: </span>}
+              {link(p.text)}
+            </>
+          )}
+          {p.evidence && !led(p) && (
             <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">
               <ModelQuote>{p.evidence}</ModelQuote>
             </q>

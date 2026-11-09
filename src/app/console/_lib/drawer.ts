@@ -64,21 +64,21 @@ export function fiveRowsOf(c: Pick<Claim, "code" | "decision" | "photos" | "seed
         : { n, name: names[n], state: "waiting", unrun: false, note: null, parts: [] };
     }
     const state = RANK.find((s) => own.some((p) => p.state === s)) ?? "pass";
-    // A demo claim after the genuine one: the account check counts once, on the genuine claim, as the owner was told.
-    const note = state !== "skipped" ? null : n === 3 && c.demo ? "Counted once, on the genuine claim." : "Not run on this claim.";
+    // A demo claim after the genuine one: the account check counts once, on the genuine claim, as the owner was told. Any
+    // other check not run says so once, in its row's state ("Not run"), with no note repeating it.
+    const note = state === "skipped" && n === 3 && c.demo ? "Counted once, on the genuine claim." : null;
     return { n, name: names[n], state, unrun: false, note, parts: own.filter((p) => p.state !== "skipped") };
   });
 }
 
-/** The five in one line: "4 of 5 checks passed · 1 skipped". */
+/** The five in one line: "4 of 5 checks passed · 1 not run", in the rows' own words. */
 export function fiveLine(rows: FiveRow[]): string {
   const count = (pred: (r: FiveRow) => boolean) => rows.filter(pred).length;
   const passed = count((r) => r.state === "pass");
   const rest: [number, string][] = [
     [count((r) => r.state === "reject"), "failed"],
     [count((r) => r.state === "hold"), "held"],
-    [count((r) => r.state === "skipped" && !r.unrun), "skipped"],
-    [count((r) => r.unrun), "not run"],
+    [count((r) => r.state === "skipped"), "not run"],
     [count((r) => r.state === "waiting"), "waiting"],
   ];
   return [`${passed} of ${rows.length} checks passed`, ...rest.filter(([k]) => k > 0).map(([k, w]) => `${k} ${w}`)].join(" · ");

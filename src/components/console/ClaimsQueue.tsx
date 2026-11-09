@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { CrossIcon } from "@/components/ui";
+import { CheckIcon, CrossIcon } from "@/components/ui";
 import { duration, formatCents, ledgerOf, searchKey, searchText, type ClaimRow } from "@/app/console/_lib/view";
 import type { Recall } from "@/lib/types";
 import { BulkBar, type BulkMode, type BulkResult } from "./BulkBar";
@@ -135,11 +135,12 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const [intent, setIntent] = useState<ReviewIntent | null>(null);
   // V or Space on the open claim: its photo viewer, at the first photo (a count, so each press opens it).
   const [viewPhotos, setViewPhotos] = useState(0);
-  // A decision just made: said in the panel's header for 2 s, where the reviewer is looking, as the next claim opens.
+  // A decision just made: said for 4 s in the footer's status line, beside the queue's freshness, so the next claim's
+  // header keeps its own facts as it opens.
   const [notice, setNotice] = useState<{ id: string; text: string } | null>(null);
   useEffect(() => {
     if (!notice) return;
-    const t = window.setTimeout(() => setNotice(null), 2000);
+    const t = window.setTimeout(() => setNotice(null), 4000);
     return () => window.clearTimeout(t);
   }, [notice]);
   const [help, setHelp] = useState(false);
@@ -356,7 +357,8 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     if (!wide) return;
     const replayed = new WeakSet<Event>();
     const gated = () => {
-      const panel = document.querySelector(".evidence-panel");
+      // The dock, not the panel: while the panel's module loads, its shell stands in, and keys typed then still wait.
+      const panel = document.querySelector(".evidence-dock");
       if (!panel) {
         awaiting.current = null;
         return false;
@@ -445,13 +447,26 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         return;
       }
       if (typing(e.target)) return;
+      const reviewing = Boolean(document.querySelector(".evidence-panel [data-review-open]"));
       if (e.key === "/") {
         e.preventDefault();
         setSearchOpen(true);
         requestAnimationFrame(() => searchBox.current?.focus());
+      } else if ((e.key === "J" || e.key === "K") && e.shiftKey && open) {
+        // ⇧J and ⇧K scroll the open claim's evidence by most of a screen, wherever focus is: the grid keeps its row.
+        const scroller = document.querySelector<HTMLElement>(".evidence-panel [data-scroller], .evidence-sheet [data-scroller]");
+        if (!scroller) return;
+        e.preventDefault();
+        scroller.scrollBy({ top: (e.key === "J" ? 1 : -1) * scroller.clientHeight * 0.8, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      } else if (wide && open && !reviewing && ["ArrowDown", "ArrowUp", "j", "k"].includes(e.key) && e.target instanceof Element && e.target.closest(".evidence-panel")) {
+        // Focus on one of the panel's buttons (a photo, Cancel just pressed, a link): ↓ ↑ j k still walk the queue, as
+        // the key line says, and the list takes focus back.
+        e.preventDefault();
+        grid.current?.step(open, e.key === "ArrowDown" || e.key === "j" ? 1 : -1);
       } else if (/^[1-6]$/.test(e.key)) {
-        // Never while a claim's confirm, reason or save is up: a digit there is a quick reason or a slip, not a new list.
-        if (!document.querySelector(".evidence-panel [data-review-open]")) changeTab(TABS[Number(e.key) - 1].id);
+        // Never while a claim's confirm, reason or save is up, nor while an A, R or Enter waits for its claim to load: a
+        // digit there is a quick reason or a slip, not a new list.
+        if (!reviewing && !awaiting.current) changeTab(TABS[Number(e.key) - 1].id);
       } else if ((e.key === "v" || e.key === "V") && open) {
         // The open claim's photos, full size.
         e.preventDefault();
@@ -642,7 +657,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               // Held claims wait for a person: the longest waiting first.
               oldestFirst={tab === "held"}
               openId={open}
-              onOpen={openClaim}
+              onOpen={(id) => {
+                // Enter (or a click) on a claim: keys typed before its evidence loads wait for it (keyQueue), as after A or R.
+                if (wide) awaiting.current = id;
+                openClaim(id);
+              }}
               onViewPhotos={() => setViewPhotos((n) => n + 1)}
               onOpenLinked={goTo}
               onFocusRow={(id) => open && wide && id !== open && openClaim(id)}
@@ -651,6 +670,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               decisionFilter={filter}
               onDecisionFilter={onDecisionFilter}
               groupBy={groupBy}
+              footnote={tab === "held" && !search ? "That's every claim waiting for a person." : undefined}
               onShown={setTotals}
               picked={pickedSet}
               onPick={pick}
@@ -748,6 +768,14 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               {tab === "held" && " · oldest first"}
             </span>
             <span className="ml-auto inline-flex items-center gap-4">
+              <span role="status" className={clsx("inline-flex items-center gap-1.5 text-text-2 transition-opacity duration-120", notice ? "opacity-100" : "opacity-0")}>
+                {notice && (
+                  <>
+                    <CheckIcon size={12} className="text-pay" />
+                    {notice.text}
+                  </>
+                )}
+              </span>
               <Status state={state} at={at} failed={failed} onRefresh={refresh} />
               <button type="button" onClick={() => setHelp(true)} className="-my-1 inline-flex h-8 items-center gap-1.5 rounded-control px-2 hover:text-text">
                 <Keys k={["?"]}>Shortcuts</Keys>
@@ -762,13 +790,12 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         </div>
 
         {wide && open && (
-          <div className={`flex min-h-0 ${PANEL_W} shrink-0 pt-2`}>
+          <div className={`evidence-dock flex min-h-0 ${PANEL_W} shrink-0 pt-2`}>
             {hydrated ? (
-            <Suspense fallback={<EvidenceShell row={openRow} />}>
+            <Suspense fallback={<EvidenceShell row={openRow} onClose={close} />}>
             <EvidencePanel
               claimId={open}
               row={openRow}
-              notice={notice?.id === open ? notice.text : null}
               viewPhotos={viewPhotos}
               version={openRow?.version}
               filedAt={openRow?.createdAt}
@@ -780,10 +807,11 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               back={back}
               onBack={goBack}
               picking={picked.length > 1}
+              onReturn={() => open && grid.current?.focusRow(open)}
             />
             </Suspense>
             ) : (
-              <EvidenceShell row={openRow} />
+              <EvidenceShell row={openRow} onClose={close} />
             )}
           </div>
         )}
@@ -834,6 +862,9 @@ function RowHint({ text, row }: { text: string; row: string | null }) {
     const r = at?.getBoundingClientRect();
     if (!r || r.bottom < b.top || r.top > b.bottom) return;
     const below = r.bottom - b.top + 4;
+    // Under the row's verdict, which it is about, never over the next row's claim id.
+    const verdict = at?.querySelector('.ag-cell[col-id="decision"]')?.getBoundingClientRect();
+    if (verdict) el.style.left = `${Math.max(16, Math.min(verdict.left - b.left, b.width - el.offsetWidth - 16))}px`;
     el.style.bottom = "auto";
     el.style.top = `${below + el.offsetHeight > b.height - 8 ? r.top - b.top - el.offsetHeight - 4 : below}px`;
   }, [row]);
@@ -899,10 +930,11 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
 // Each row: its keys, what joins them ("/" for either, "to" for a range, "+" for together), and what they do.
 const SHORTCUTS: [string[], "/" | "to" | "+" | null, string][] = [
   [["/"], null, "Search"],
-  [["1", "6"], "to", "Status tab"],
+  [["1", "6"], "to", "1 All · 2 Approved · 3 Held · 4 Rejected · 5 Blocked · 6 In progress"],
   [["↓", "J"], "/", "Next claim"],
   [["↑", "K"], "/", "Previous claim"],
   [["Enter"], null, "Open the claim"],
+  [["⇧", "J/K"], "+", "Scroll the open claim's evidence"],
   [["V", "Space"], "/", "The open claim's photos"],
   [["⇧", "↑/↓"], "+", "Pick several claims"],
   [["X"], null, "Pick or drop a claim"],
@@ -916,7 +948,12 @@ const SHORTCUTS: [string[], "/" | "to" | "+" | null, string][] = [
 function ShortcutSheet({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
+    // Focus goes back where it was when the sheet closes (the grid's row, the panel), never to the page.
+    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     ref.current?.showModal();
+    return () => {
+      if (before?.isConnected) before.focus();
+    };
   }, []);
   return (
     <dialog
@@ -931,18 +968,14 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
         <h2 id="shortcuts-title" className="text-ui font-medium outline-none" tabIndex={-1} autoFocus>
           Keyboard
         </h2>
-        <button
-          type="button"
-          onClick={() => ref.current?.close()}
-          aria-label="Close shortcuts (Esc)"
-          className="inline-flex h-8 items-center rounded-control px-2.5 font-mono text-micro text-faint hover:text-text"
-        >
-          Esc
+        {/* Esc drawn as the keycap it is, as every key on the sheet is. */}
+        <button type="button" onClick={() => ref.current?.close()} aria-label="Close shortcuts (Esc)" className="-mr-1.5 inline-flex h-8 items-center rounded-control px-1.5 text-micro text-faint hover:text-text">
+          <kbd className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-[4px] border border-line-strong/60 px-1.5 font-mono text-micro text-muted">Esc</kbd>
         </button>
       </div>
       <dl className="flex flex-col gap-3 px-5 py-4">
         {SHORTCUTS.map(([keys, join, what]) => (
-          <div key={keys.join()} className="grid grid-cols-[112px_1fr] items-center gap-3 text-ui">
+          <div key={keys.join()} className="grid grid-cols-[112px_1fr] items-center gap-3 text-ui text-pretty">
             <dt className="flex items-center gap-1">
               {keys.map((k, i) => (
                 <span key={k} className="inline-flex items-center gap-1">

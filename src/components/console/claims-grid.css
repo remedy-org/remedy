@@ -26,18 +26,8 @@
   z-index: 5;
 }
 
-/* The keyboard's row also wears the 2px focus ring every other control does, drawn inside its edges, so a row being
-   arrowed through is as easy to follow as a button. The ink edge on the left stays the open claim's. AG Grid's theme
-   paints its own ::after, so the ring clears its background. */
-.claims-grid:has(.ag-cell:focus-visible) .ag-row.ag-row-focus::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 6;
-  pointer-events: none;
-  background: none;
-  box-shadow: inset 0 0 0 2px var(--focus);
-}
+/* The keyboard's row is its ink tint and 3px ink edge (below), never a box drawn around the whole row: a rectangle
+   on every row a run of j passes read as crude against the warm palette. */
 
 /* A clicked cell takes focus (so the arrow keys work next) but only the keyboard shows the ring: the open row's amber
    edge already marks a click. */
@@ -327,4 +317,13 @@
 /* A cell's 1px border sits inside its padding: its words start 20px in, on the header's. */
 .claims-grid[data-still] .ag-cell[col-id="payer"] {
   padding-left: 19px;
+}
+
+/* The vertical scrollbar while it scrolls: only its thin thumb shows, over a clear track, so a keyboard run or a tab
+   switch never paints a 16px band over the Amount column's money. */
+.claims-grid .ag-body-vertical-scroll,
+.claims-grid .ag-body-vertical-scroll-viewport,
+.claims-grid .ag-body-vertical-scroll.ag-scrollbar-scrolling,
+.claims-grid .ag-body-vertical-scroll.ag-apple-scrollbar {
+  background: transparent !important;
 }

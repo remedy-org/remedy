@@ -8,19 +8,13 @@ import type { DrawerClaim, PayoutFailureWords, ReviewedClaim } from "@/app/conso
 import { api } from "./api";
 import { formatClock } from "./format";
 import { idsIn, LinkedIds } from "./LinkedIds";
+import { quickReasons } from "./quickReasons";
 
 type Mode = "idle" | "approve" | "reject";
 
 // The reject route's own minimum (reject/route.ts), checked here first so an empty reason never sends a request.
 export const REASON_MIN = 8;
 export const REASON_SHORT = "Say why in a few words, so the owner knows what to fix";
-// One-click reasons for the common refusals, in the words the owner reads; the reviewer can edit them.
-export const QUICK: { label: string; text: (code: string) => string }[] = [
-  { label: "Wrong code", text: (code) => `The tag in the photo doesn't read ${code}, this claim's code.` },
-  { label: "No tag", text: (code) => `The tag with the code ${code} isn't in the photo.` },
-  { label: "Not destroyed", text: () => "The photos don't show the product destroyed as the recall asks." },
-  { label: "Wrong product", text: () => "The photos don't show the recalled product." },
-];
 
 export interface ReviewIntent {
   mode: "approve" | "reject";
@@ -197,12 +191,17 @@ export function ReviewActions({
   // The checks run again on approve would stop the payout (they did, or would now): approve steps back to a quiet button.
   const stuck = labels.blocked || Boolean(notPaid);
   const openReject = () => (setNotPaid(null), setMode("reject"));
+  // This claim's quick reasons (quickReasons.ts): what held it first, never one a passed check contradicts.
+  const QUICK = quickReasons(claim.fiveRows.flatMap((r) => r.parts));
+  const quickKey = (k: string) => /^[1-9]$/.test(k) && Number(k) <= QUICK.length;
   const quick = (i: number) => {
     const q = QUICK[i];
     if (!q) return;
     setReason(q.text(claim.code));
     setError(null);
   };
+  // What held the claim, said again over the reason as it is written: the form scrolls the panel's heading away.
+  const heldFor = claim.checks.find((c) => c.outcome !== "pass")?.rule ?? claim.preChecks.find((p) => p.state === "hold" || p.state === "reject")?.detail ?? null;
 
   return (
     <div
@@ -354,6 +353,11 @@ export function ReviewActions({
           {/* On a short window the reason and the quick reasons scroll, so the photos keep their room and the buttons stay in
               view below them. The padding keeps the field's focus ring inside the scroller. */}
           <div className="-m-1 flex max-h-[max(7.5rem,calc(100dvh-34rem))] flex-col gap-3 overflow-y-auto overscroll-contain p-1 [@media(max-height:600px)]:max-h-none [@media(max-height:600px)]:overflow-visible">
+            {heldFor && (
+              <p className="text-ui text-muted">
+                <span className="text-text-2">Held:</span> <LinkedIds text={heldFor} onOpen={onOpen} self={claim.id} />
+              </p>
+            )}
             <Field
               label="Why it's rejected"
               hint="The owner reads this on their claim page"
@@ -367,11 +371,11 @@ export function ReviewActions({
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   onKeyDown={(e) => {
-                    // ⌘↵ or Ctrl+Enter sends it; 1 to 4 pick a quick reason while the field is empty or holds one.
+                    // ⌘↵ or Ctrl+Enter sends it; 1, 2… pick a quick reason while the field is empty or holds one.
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
                       form.current?.requestSubmit();
-                    } else if ((!reason || QUICK.some((q) => q.text(claim.code) === reason)) && /^[1-4]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                    } else if ((!reason || QUICK.some((q) => q.text(claim.code) === reason)) && quickKey(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
                       e.preventDefault();
                       e.stopPropagation();
                       quick(Number(e.key) - 1);
@@ -384,12 +388,12 @@ export function ReviewActions({
               )}
             </Field>
             {/* Outlined, in the text colour: choices, not disabled chips. One row in the panel, each with its number key. */}
-            <div
+            {QUICK.length > 0 && <div
               className="-mt-1 flex flex-wrap gap-1.5"
               role="group"
               aria-label="Quick reasons"
               onKeyDown={(e) => {
-                if (/^[1-4]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                if (quickKey(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
                   e.preventDefault();
                   e.stopPropagation();
                   quick(Number(e.key) - 1);
@@ -417,7 +421,7 @@ export function ReviewActions({
                   </button>
                 );
               })}
-            </div>
+            </div>}
           </div>
           {/* On a short window the panel scrolls as one: these two stay in view at its foot. */}
           <div className="flex flex-wrap gap-3 [@media(max-height:600px)]:sticky [@media(max-height:600px)]:bottom-0 [@media(max-height:600px)]:-mb-4 [@media(max-height:600px)]:bg-surface [@media(max-height:600px)]:py-3">

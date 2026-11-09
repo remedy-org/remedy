@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import { Button, CrossIcon } from "@/components/ui";
 import { Keys } from "./Keys";
 import { LinkedIds } from "./LinkedIds";
@@ -26,16 +26,50 @@ export interface PhotoViewerProps {
   onClose: () => void;
 }
 
+// How far a click zooms in: enough to read the weave of the fabric and the tag's pen strokes.
+const ZOOM = 3;
+
 /**
- * The photos full size, over the console: every photo of the claim side by side, uncropped, with the claim id and the
- * question that held it on top. A and R approve or reject from here as in the panel (the viewer closes on the panel's
- * confirm, which takes the second A), ← and → move between the photos where one shows at a time, Esc goes back to the
- * panel (the dialog returns focus to the thumbnail that opened it). On a phone it shows one photo at a time.
+ * The photos full size, over the console, as prints on a light table: every photo of the claim side by side at one
+ * height, each frame the photo's own shape (no matte), with the claim id and the question that held it on top. A click
+ * zooms every photo into the same spot, and moving the pointer moves them together, so two photos of one item can be
+ * compared fibre by fibre; a second click (or Esc) zooms back out. A and R approve or reject from here as in the panel
+ * (the viewer closes on the panel's confirm, which takes the second A), ← and → move between the photos where one shows
+ * at a time, Esc goes back to the panel. On a phone it shows one photo at a time.
  */
 export function PhotoViewer({ claimId, photos, start, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const figures = useRef<(HTMLElement | null)[]>([]);
   const [current, setCurrent] = useState(start);
+  // Each photo's width over its height, once loaded; the table's room; and where the photos are zoomed (0 to 1), if they are.
+  const [ratios, setRatios] = useState<(number | null)[]>(() => photos.map(() => null));
+  const table = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState<{ w: number; h: number } | null>(null);
+  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = table.current;
+    if (!el) return;
+    const measure = () => {
+      const s = getComputedStyle(el);
+      const px = (v: string) => Number.parseFloat(v) || 0;
+      setRoom({ w: el.clientWidth - px(s.paddingLeft) - px(s.paddingRight), h: el.clientHeight - px(s.paddingTop) - px(s.paddingBottom) });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // One height for every photo shown, as tall as the table allows and as wide as their shapes fit side by side (a 16px
+  // gap, the caption's 24px under each). A phone shows one at a time.
+  const GAP = 16;
+  const CAPTION = 24;
+  const shown = room && room.w < 640 ? [current] : photos.map((_, i) => i);
+  const known = shown.every((i) => ratios[i]);
+  const height = room && known ? Math.max(80, Math.min(room.h - CAPTION, (room.w - GAP * (shown.length - 1)) / shown.reduce((n, i) => n + ratios[i]!, 0))) : null;
+  const at = (e: MouseEvent<HTMLElement>) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    return { x: Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)), y: Math.min(1, Math.max(0, (e.clientY - box.top) / box.height)) };
+  };
 
   useEffect(() => {
     ref.current?.showModal();
@@ -60,6 +94,12 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
       onClose={(e) => {
         e.stopPropagation();
         onClose();
+      }}
+      // Esc zooms back out first; the next one goes back to the evidence.
+      onCancel={(e) => {
+        if (!zoom) return;
+        e.preventDefault();
+        setZoom(null);
       }}
       onKeyDown={(e) => {
         // The panel's keys, where the call is made: A opens the approve confirm (A again pays), R the reason.
@@ -112,28 +152,51 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
         </button>
       </header>
 
-      <div className="grid min-h-0 flex-1 gap-4 p-4 sm:p-5" style={{ gridTemplateColumns: `repeat(${photos.length}, minmax(0, 1fr))` }}>
-        {photos.map((src, i) => (
-          <figure
-            key={src}
-            ref={(el) => {
-              figures.current[i] = el;
-            }}
-            tabIndex={-1}
-            aria-label={`Photo ${i + 1} of ${photos.length}`}
-            // A phone shows the current photo alone; wider screens show them all.
-            className={clsx("flex min-h-0 min-w-0 flex-col gap-2 rounded-control outline-none max-sm:col-span-full", i !== current && "max-sm:hidden")}
-          >
-            <div className={clsx("relative min-h-0 flex-1 overflow-hidden rounded-control border bg-surface-2", i === current && photos.length > 1 ? "border-line-strong" : "border-line")}>
-              {/* A private, session-checked route at full size: next/image's optimizer can't fetch it with the cookie. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt={`Photo ${i + 1} of ${photos.length} for ${claimId}`} className="absolute inset-0 size-full object-contain" />
-            </div>
-            <figcaption className={clsx("text-micro", i === current ? "text-text" : "text-muted")}>
-              Photo {i + 1} of {photos.length}
-            </figcaption>
-          </figure>
-        ))}
+      <div ref={table} className="flex min-h-0 flex-1 items-center justify-center gap-4 p-4 sm:p-5">
+        {photos.map((src, i) => {
+          const r = ratios[i];
+          const size = height && r ? { width: Math.round(height * r), height: Math.round(height) } : undefined;
+          return (
+            <figure
+              key={src}
+              ref={(el) => {
+                figures.current[i] = el;
+              }}
+              tabIndex={-1}
+              aria-label={`Photo ${i + 1} of ${photos.length}`}
+              // A phone shows the current photo alone; wider screens show them all. Until the shapes are known, each
+              // takes an even share of the table, unseen, so nothing is drawn at a wrong size.
+              className={clsx("flex min-w-0 flex-col gap-2 rounded-control outline-none", !shown.includes(i) && "hidden", !size && "invisible flex-1")}
+            >
+              <div
+                className={clsx("relative overflow-hidden rounded-control ring-1 ring-line", zoom ? "cursor-zoom-out" : "cursor-zoom-in", !size && "h-40")}
+                style={size}
+                onClick={(e) => {
+                  const p = at(e);
+                  setZoom((z) => (z ? null : p));
+                }}
+                onPointerMove={(e) => zoom && setZoom(at(e))}
+              >
+                {/* A private, session-checked route at full size: next/image's optimizer can't fetch it with the cookie. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt={`Photo ${i + 1} of ${photos.length} for ${claimId}`}
+                  draggable={false}
+                  onLoad={(e) => {
+                    const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+                    if (w && h) setRatios((rs) => rs.map((v, j) => (j === i ? w / h : v)));
+                  }}
+                  className="absolute inset-0 size-full object-cover transition-transform duration-160 ease-out select-none motion-reduce:transition-none"
+                  style={zoom ? { transform: `scale(${ZOOM})`, transformOrigin: `${zoom.x * 100}% ${zoom.y * 100}%` } : undefined}
+                />
+              </div>
+              <figcaption className={clsx("h-4 text-micro", i === current ? "text-text" : "text-muted")}>
+                Photo {i + 1} of {photos.length}
+              </figcaption>
+            </figure>
+          );
+        })}
       </div>
 
       <footer className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line px-5 py-3">
@@ -160,7 +223,8 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
               <Keys k={["←", "→"]}>Switch photo</Keys>
             </span>
           )}
-          <Keys k={["Esc"]}>Back to the evidence</Keys>
+          <span className="hidden sm:inline">{zoom ? "Click to zoom out" : "Click a photo to zoom both"}</span>
+          <Keys k={["Esc"]}>{zoom ? "Zoom out" : "Back to the evidence"}</Keys>
         </p>
       </footer>
     </dialog>

@@ -80,7 +80,7 @@ describe("duplicateFor", () => {
       ["Pillow cut in half", "pass"],
     ]);
     expect(d.fiveRows[2].note).toBe("Counted once, on the genuine claim.");
-    expect(d.five).toBe("3 of 5 checks passed · 1 failed · 1 skipped");
+    expect(d.five).toBe("3 of 5 checks passed · 1 failed · 1 not run");
     // The photo's name is built from what the checks read, never the photo check's prose.
     expect(d.photoAlt).toBe("Claim photo: pillow cut in half, tag reads X-VESOLJE K7Q");
   });

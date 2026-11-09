@@ -1,6 +1,6 @@
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
-import { CHECK_NAMES } from "@/lib/fiveChecks";
+import { CHECK_NAMES, fiveOutcomes } from "@/lib/fiveChecks";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
@@ -149,30 +149,17 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
 
 }
 
-// Holds from the process (the model not answering, PayPal, auto-pay) aren't answers: they are counted in neither group.
-const PROCESS = new Set(["model", "payout", "auto_pay"]);
+/** The five checks a row's recorded answers fall under, each as its worst answer ("Same item" isn't asked of one photo,
+ * so it never keeps "Really destroyed" from passing). The strip draws one bar for each. */
+export const fiveOf = (bars: Pick<CheckBar, "id" | "state">[]) => fiveOutcomes(bars.filter((b) => !(b.id === "same_item" && b.state === "skipped")));
 
-/**
- * "Account checks 4 of 4 · Photo check 5 of 5": the one count the console gives everywhere (the barcode's label and hover,
- * the panel). Each group counts what passed of what ran; a group where nothing ran says why ("waiting", "not run"). A
- * check that was not run is left out of its total and shown as a dotted slot in the barcode.
- */
-export function checkCount(items: { id: string; state: BarState | PreCheckState }[]): string {
-  const group = (name: string, of: typeof items) => {
-    const ran = of.filter((b) => b.state !== "waiting" && b.state !== "skipped");
-    if (!ran.length) return `${name} ${of.some((b) => b.state === "waiting") ? "waiting" : "not run"}`;
-    return `${name} ${ran.filter((b) => b.state === "pass").length} of ${ran.length}`;
-  };
-  const model = items.filter((b) => !PRE_IDS.has(b.id) && !PROCESS.has(b.id));
-  const pre = items.filter((b) => PRE_IDS.has(b.id));
-  // A pre-check that stopped the claim means the model never ran, which isn't waiting.
-  const none = pre.some((b) => b.state === "reject") ? "Photo check not run" : "Photo check waiting";
-  return `${group("Account checks", pre)} · ${model.length ? group("Photo check", model) : none}`;
-}
-
-/** The barcode as a sentence, for screen readers: the console's one count. */
-export function barsSentence(bars: CheckBar[]): string {
-  return checkCount(bars);
+/** The strip as a sentence, in the evidence panel's words: "3 of 5 checks passed · 1 held · 1 not run". The hover card,
+ * screen readers and the CSV say it, so the console counts five checks everywhere. */
+export function barsSentence(bars: Pick<CheckBar, "id" | "state">[]): string {
+  const five = fiveOf(bars);
+  const n = (o: string) => five.filter((x) => x.outcome === o).length;
+  const rest = ([["fail", "failed"], ["hold", "held"], ["skipped", "not run"], ["open", "waiting"]] as const).filter(([o]) => n(o)).map(([o, w]) => `${n(o)} ${w}`);
+  return [`${n("pass")} of ${five.length} checks passed`, ...rest].join(" · ");
 }
 
 const since = (from: string | undefined, to: string | undefined) => (from && to ? Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 1000)) : null);

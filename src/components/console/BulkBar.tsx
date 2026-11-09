@@ -10,7 +10,8 @@ import { api } from "./api";
 import { plural } from "./format";
 import { Keys } from "./Keys";
 import { LinkedIds } from "./LinkedIds";
-import { QUICK, REASON_MIN, REASON_SHORT } from "./ReviewActions";
+import { sharedQuickReasons, type QuickReason } from "./quickReasons";
+import { REASON_MIN, REASON_SHORT } from "./ReviewActions";
 
 export type BulkMode = "idle" | "approve" | "reject";
 
@@ -25,7 +26,7 @@ export interface BulkResult {
 
 // A quick reason as one sentence for many claims: each claim gets its own code in it when it is sent.
 const CODE = "{code}";
-const generic = (q: (typeof QUICK)[number]) => q.text(CODE).replace(`read ${CODE}, this claim's code`, "read this claim's code").replace(`code ${CODE}`, "code");
+const generic = (q: QuickReason) => q.text(CODE).replace(`read ${CODE}, this claim's code`, "read this claim's code").replace(`code ${CODE}`, "code");
 
 /**
  * The pick's actions, docked under the grid (Linear's selection bar): how many are picked and how many of
@@ -54,6 +55,9 @@ export function BulkBar({
 }) {
   const held = rows.filter((r) => r.decision === "held");
   const cents = held.reduce((n, r) => n + (r.cents ?? 0), 0);
+  // The quick reasons every held claim in the pick can be given (quickReasons.ts).
+  const QUICK = sharedQuickReasons(held.map((r) => r.bars ?? []));
+  const quickKey = (k: string) => /^[1-9]$/.test(k) && Number(k) <= QUICK.length;
   const [progress, setProgress] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -134,11 +138,11 @@ export function BulkBar({
               setError(null);
             }}
             onKeyDown={(e) => {
-              // As in the panel: ⌘↵ or Ctrl+Enter sends it, and 1 to 4 pick a quick reason while the box is empty or holds one.
+              // As in the panel: ⌘↵ or Ctrl+Enter sends it, and 1, 2… pick a quick reason while the box is empty or holds one.
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 e.currentTarget.form?.requestSubmit();
-              } else if ((!reason || QUICK.some((q) => generic(q) === reason)) && /^[1-4]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+              } else if ((!reason || QUICK.some((q) => generic(q) === reason)) && quickKey(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
                 e.preventDefault();
                 e.stopPropagation();
                 setReason(generic(QUICK[Number(e.key) - 1]));
@@ -153,7 +157,7 @@ export function BulkBar({
             {error ?? "Each owner reads this on their claim page, with their own code where the reason names it."}
           </p>
           {/* The panel's quick reasons: outlined choices in the text colour, each with its number key. */}
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick reasons">
+          {QUICK.length > 0 && <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick reasons">
             {QUICK.map((q, i) => {
               const text = generic(q);
               return (
@@ -178,7 +182,7 @@ export function BulkBar({
                 </button>
               );
             })}
-          </div>
+          </div>}
         </form>
       )}
 
@@ -259,7 +263,7 @@ export function BulkBar({
         <p aria-hidden="true" className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-4 py-2 text-micro text-faint">
           {mode === "reject" ? (
             <>
-              <Keys k={["1–4"]}>Quick reason</Keys>
+              {QUICK.length > 0 && <Keys k={[QUICK.length > 1 ? `1–${QUICK.length}` : "1"]}>Quick reason</Keys>}
               <Keys k={["⌘↵"]}>Reject {held.length}</Keys>
               <Keys k={["Esc"]}>Cancel</Keys>
             </>

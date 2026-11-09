@@ -45,6 +45,9 @@ export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; 
             aria-selected={active}
             aria-controls={controls}
             tabIndex={active ? 0 : -1}
+            // The key that opens it, said to assistive tech and on hover; the ? sheet lists them all.
+            aria-keyshortcuts={String(i + 1)}
+            title={`${t.label} (${i + 1})`}
             onClick={() => onChange(t.id)}
             onKeyDown={(e) => move(e, i)}
             className={clsx(

@@ -36,8 +36,9 @@
   --accent-edge: oklch(0.64 0.11 74);
   --accent-ink: oklch(0.22 0.03 65);
   --accent-text: oklch(0.86 0.11 82);
-  /* The focus ring: amber on the dark room, where it clears 3:1 on every surface. Never the screen's amber focal element. */
-  --focus: var(--accent);
+  /* The focus ring: ink, as in light, 3:1 on every surface. Brass is the money's colour (the one Pay button), so a focus
+     ring never competes with it. */
+  --focus: var(--text-2);
   --pay: oklch(0.79 0.13 150);
   --hold: oklch(0.78 0.08 240);
   --stop: oklch(0.72 0.16 28);

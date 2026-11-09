@@ -1,6 +1,6 @@
 "use client";
 
-import { Skeleton, SkeletonText } from "@/components/ui";
+import { CrossIcon, Skeleton, SkeletonText } from "@/components/ui";
 import type { ClaimRow } from "@/app/console/_lib/view";
 import { EXCEPTION } from "./cells";
 import { formatTime } from "./format";
@@ -40,7 +40,7 @@ export function RowMeta({ row }: { row: ClaimRow }) {
 
 /** The panel's frame while its module or its claim loads: the row's header, the skeleton of the evidence, and a held
  * claim's foot, each at the loaded panel's own geometry, so nothing moves when the evidence lands. */
-export function EvidenceShell({ row }: { row: ClaimRow | null }) {
+export function EvidenceShell({ row, onClose }: { row: ClaimRow | null; onClose?: () => void }) {
   return (
     <div aria-busy="true" className="flex h-full w-full shrink-0 flex-col overflow-hidden rounded-card bg-surface shadow-float">
       <div className="flex items-start gap-3 border-b border-line px-5 py-3">
@@ -60,7 +60,19 @@ export function EvidenceShell({ row }: { row: ClaimRow | null }) {
             <Skeleton className="h-5 w-40" />
           )}
         </div>
-        <span className="-mr-2 size-11 shrink-0" />
+        {/* The close button from the first frame, where the loaded header has it. */}
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="-mt-2.5 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-muted hover:bg-surface-2 hover:text-text"
+            aria-label="Close the evidence"
+          >
+            <CrossIcon />
+          </button>
+        ) : (
+          <span className="-mt-2.5 -mr-2 size-11 shrink-0" />
+        )}
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         <DrawerSkeleton row={row} />
