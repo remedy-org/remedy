@@ -79,7 +79,7 @@ const or = (values: string[]) => values.map(shownAs).join(" or ");
 const STOPPED: Record<string, string> = {
   Filed: "claims still waiting for photos",
   "Photos sent": "claims stopped before the photo check",
-  "Passed checks before the photo check": "claims stopped at the photo check",
+  "Passed the account checks": "claims stopped at the photo check",
   "Passed photo check": "claims held after passing every check",
   Paid: "approved claims",
 };

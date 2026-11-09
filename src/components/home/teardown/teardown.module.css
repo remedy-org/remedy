@@ -529,6 +529,12 @@ button.cellBody:hover .label {
   left: 0;
 }
 
+/* Its slide rises from the foot of the stage, never over the check row under it: the stage is cut at its own foot, so
+   the receipt comes up out of that edge as it fades in (it used to show half opaque over the five bars). */
+.small .main {
+  clip-path: inset(-100vh -100vw 0 -100vw);
+}
+
 /* The static form. */
 .static {
   max-width: calc(var(--container-content, 82rem) + 2 * var(--gutter, clamp(24px, 4.45vw, 64px)));

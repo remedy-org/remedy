@@ -50,7 +50,7 @@ const SOURCES = [
     href: "https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf",
   },
   {
-    label: "Remedy analysis of the CPSC recalls API, 1 Oct–5 Nov 2026",
+    label: "CPSC recalls API, 1 Oct–5 Nov 2026 (JSON), counted by Remedy",
     href: "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2026-10-01&RecallDateEnd=2026-11-05",
   },
   {

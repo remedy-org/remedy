@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FlowShell } from "@/components/claim/FlowShell";
 import { NotFoundCard } from "@/components/claim/NotFoundCard";
 
-export const metadata: Metadata = { title: "Not found" };
+export const metadata: Metadata = { title: "Not found", description: "This Remedy page doesn’t exist." };
 
 /** Any URL nothing else matches: the claim flow's frame and card, in the site's palette and type. */
 export default function NotFound() {

@@ -45,10 +45,10 @@ export function JudgeLoginPanel({
       <p className="text-muted">Use these when PayPal asks you to log in.</p>
       <dl className="flex flex-col border-b border-line">
         {rows.map((r) => (
-          // One line each: the value never breaks mid-address. Copy carries the whole of it if a narrow screen cuts it.
+          // The whole value always shows: on a narrow screen the address wraps, mid-address if it must.
           <div key={r.label} data-copy className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-line py-2">
             <dt className="text-faint capitalize">{r.label}</dt>
-            <dd data-copy-value className="col-start-1 truncate font-mono text-text select-all">
+            <dd data-copy-value className="col-start-1 font-mono break-all text-text select-all">
               {r.value}
             </dd>
             <dd className="col-start-2 row-span-2 row-start-1">

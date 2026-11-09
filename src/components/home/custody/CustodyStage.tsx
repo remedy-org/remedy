@@ -239,13 +239,14 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
     return () => window.clearTimeout(t);
   }, [chapter, stage, p]);
 
-  // As p passes 0.12, in time, the laptop's own screen dissolves straight into the consent screen: the layer and its
-  // content come in together (200ms and 240ms), so the screen never shows a frame of bare ground between the two UIs.
-  // Back, both leave in 160ms. Opacity and pointer events as well as visibility: a chapter
-  // layer sets its own visibility, which would show through a hidden parent and catch the hero's clicks and pointer
-  // (the laptop's tilt) while invisible.
-  const handIn = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.2 }, { ...LEAVE, duration: 0.16 });
-  const content = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.24 }, { ...LEAVE, duration: 0.16 });
+  // As p passes 0.12, in time, the laptop's own screen hands over to the consent screen in two halves: the layer's
+  // ground covers the laptop's checks list in 110ms, and only then does the consent screen's content rise in (140ms), so
+  // no frame shows the two UIs' words printed over each other (together, the checks list ran half see-through over the
+  // headline and the brass button). Back, the content goes first (80ms), then the ground (80ms). Opacity and pointer
+  // events as well as visibility: a chapter layer sets its own visibility, which would show through a hidden parent and
+  // catch the hero's clicks and pointer (the laptop's tilt) while invisible.
+  const handIn = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.11 }, { ...LEAVE, duration: 0.08, delay: 0.08 });
+  const content = useGate(p, (v) => v >= HANDOFF[0], { ...ENTER, duration: 0.14, delay: 0.11 }, { ...LEAVE, duration: 0.08 });
   const screenStyle = {
     opacity: handIn,
     visibility: useTransform(handIn, (o) => (o > 0 ? "visible" : "hidden")),

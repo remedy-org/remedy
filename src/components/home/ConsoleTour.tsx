@@ -159,9 +159,10 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
             aria-pressed={on}
             onClick={() => onChange(t.id)}
             className={clsx(
-              // Eight tabs and the toolbar share the frame's row: tighter below 1280px, so the search stays inside it at 1024.
-              "relative inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-2 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px] xl:px-3",
-              on ? "text-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0 xl:after:inset-x-3" : "text-muted hover:text-text",
+              // Nine tabs and the toolbar share the frame's row: tighter below 1440px, so the search stays inside it at 1024
+              // and at 1280 the last tab ("In progress 0") ends clear of the evidence docked over the row's right end.
+              "relative inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-2 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px] min-[1440px]:px-3",
+              on ? "text-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0 min-[1440px]:after:inset-x-3" : "text-muted hover:text-text",
             )}
           >
             {t.label}
@@ -537,8 +538,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   }, [rowCount]);
 
   // The evidence panel's left edge lands on a column boundary: it covers the columns after Checks (the time, the payer
-  // and the money, which it repeats), or from Checks on where those leave it too narrow, at least 380px.
+  // and the money, which it repeats), or from Checks on where those leave it too narrow, at least 380px. Where the status
+  // tabs would run under it (1280px, where "In progress 0" read "In prog"), it starts under their row instead.
   const [dockW, setDockW] = useState<number | null>(null);
+  const [dockLow, setDockLow] = useState(false);
   useLayoutEffect(() => {
     const gate = gridGate.current;
     if (!gate) return;
@@ -548,7 +551,11 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       if (!checks || !g.width) return;
       const c = checks.getBoundingClientRect();
       const after = g.right - c.right;
-      setDockW(Math.round(after >= 400 ? after : Math.max(380, g.right - c.left)));
+      const w = Math.round(after >= 400 ? after : Math.max(380, g.right - c.left));
+      setDockW(w);
+      const lastTab = gate.parentElement?.querySelector<HTMLElement>('[role="group"] > button:last-child');
+      // The tab's own 8px of side padding is the air between its count and the panel.
+      setDockLow(!!lastTab && lastTab.getBoundingClientRect().right > g.right - w);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -836,13 +843,14 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
             </p>
             {/* The evidence docks as the console's panel: flush to the window's right edge from under the app bar to the
                 foot, over the grid's right-hand columns (the money ones it repeats) and the empty right of the ledger's
-                row (from 1280px, where the ledger's figures end well left of it; below, from under the status row), so the
+                row (from 1280px, where the ledger's figures end well left of it, unless the status tabs reach under it;
+                below, from under the status row), so the
                 grid keeps its width and its columns as the claim opens, and the held check is in the panel's first view. */}
             {dock && evidence && (
               <div
                 data-out={dockOut || undefined}
                 style={dockW ? { width: dockW } : undefined}
-                className={clsx(styles.dock, "absolute top-0 right-0 bottom-0 z-10 w-[400px] max-xl:top-[45px] max-xl:w-[380px] xl:-top-14")}
+                className={clsx(styles.dock, "absolute top-0 right-0 bottom-0 z-10 w-[400px] max-xl:top-[45px] max-xl:w-[380px]", dockLow ? "xl:top-[45px]" : "xl:-top-14")}
               >
                 <EvidenceStill
                   claim={evidence}
@@ -861,7 +869,13 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
           inert={studioState !== "shown"}
           data-on={state.body === "insights" || undefined}
           data-studio-shown={studioState === "shown" || undefined}
-          className={styles.body}
+          // The page under it (the still's or Studio's) scrolls: at its end the foot's fade goes, as the draft's does.
+          onScrollCapture={(e) => {
+            const el = e.target as HTMLElement;
+            if (!el.matches("[data-still], [data-insights-scroll]")) return;
+            e.currentTarget.toggleAttribute("data-end", el.scrollTop + el.clientHeight >= el.scrollHeight - 2);
+          }}
+          className={clsx(styles.body, styles.insightsBody)}
         >
           {insights}
           {studio && (studioState === "mounted" || studioState === "shown") && (

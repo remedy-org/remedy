@@ -297,6 +297,15 @@
   outline: none !important;
 }
 
+/* Insights in the window: Where claims stop's stages sit at their own height under its title, 16px apart, as the
+   still and Studio both draw them here (the console's canvas spreads them over the panel, 84px apart in this frame,
+   and its last stages fell under the window's foot). The console's own page is unchanged. */
+.body :global(ol[data-funnel]) {
+  grid-template-rows: none !important;
+  align-content: start;
+  row-gap: 1rem;
+}
+
 /* Once Studio has drawn over it, the still leaves in the same frame: a cut, never a crossfade, so no figure or label
    is ever on screen twice. */
 .body[data-studio-shown] :global([data-still]) {
@@ -319,6 +328,11 @@
 /* The draft runs on under the window's foot: its last 96px fade into the window, as /signin's preview does, so the foot
    never cuts a line through its letters. At the draft's end the fade goes. */
 .reportBody:not([data-end]) {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 96px), transparent calc(100% - 8px));
+}
+
+/* Insights' page runs on under the window's foot the same way: its last 96px fade into the window until its end. */
+.insightsBody:not([data-end]) {
   mask-image: linear-gradient(to bottom, #000 calc(100% - 96px), transparent calc(100% - 8px));
 }
 

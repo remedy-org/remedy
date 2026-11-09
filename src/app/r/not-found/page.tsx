@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FlowShell } from "@/components/claim/FlowShell";
 import { NotFoundCard } from "@/components/claim/NotFoundCard";
 
-export const metadata: Metadata = { title: "Recall not found" };
+export const metadata: Metadata = { title: "Recall not found", description: "This recall link doesn’t exist on Remedy." };
 
 // Where /api/claims/start sends an unknown recall. Static, so it never matches /r/[recall] and reads no recall.
 export default function RecallNotFound() {
