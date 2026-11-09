@@ -129,10 +129,11 @@ The server always renders the static form.
 - A part opens as the camera arrives and closes over the last 12% of its beat; its leader draws on over the tenth of
   the beat before the camera arrives and fades (never retracts) over 6% as the camera leaves. The callout is up or
   down, eased in time by CSS, never scrubbed. The paid beat's halves part and stay parted to the end.
-- In the custody pin the exhibit comes and goes as one opaque layer, cut in time (`custody/gate.ts`) like the claim
+- In the custody pin the exhibit comes in as one opaque layer, cut in time (`custody/gate.ts`) like the claim
   screens: the outgoing layer leaves in 180ms and the incoming one rises in over 360ms, 140ms later. Out onto the
-  console its receipt (`data-receipt`, exported as `Receipt`) stays: `custody/arrival.ts` folds it into RM-0442's row
-  and glides it into the console.
+  console it goes scrubbed, as the first part of one move (`custody/arrival.ts`): past the paid stop it fades and
+  lifts 16px away, a little each frame, while its receipt (`data-receipt`, exported as `Receipt`) stays where it lay;
+  the arrival then folds the receipt into RM-0442's row and glides it into the console, which fills in round it.
 - The live canvas replaces the beat's still in one frame once warm, so the stage never shows the ground alone.
 
 ### Regenerating the stills
