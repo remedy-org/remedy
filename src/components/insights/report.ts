@@ -118,10 +118,30 @@ const rowsOf = (data: InsightsData, narrow: boolean) => {
 // The dollars-by-day chart: a row tall enough for its title, the columns and their day labels.
 const PAID_ROWS = 15;
 
+const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+/** The UTC days PayPal paid on, as the day chart groups them (the day each paid claim was filed), oldest first: "8 Nov",
+ * its dollars and its payouts. */
+export function paidDays(claims: Pick<InsightsData["claims"][number], "filedAt" | "paidOnDay">[]) {
+  const days = new Map<string, { day: string; dollars: number; payouts: number }>();
+  for (const c of [...claims].sort((a, b) => a.filedAt.localeCompare(b.filedAt))) {
+    if (c.paidOnDay === null) continue;
+    const key = c.filedAt.slice(0, 10);
+    const d = days.get(key) ?? { day: dayFmt.format(new Date(c.filedAt)), dollars: 0, payouts: 0 };
+    days.set(key, { ...d, dollars: d.dollars + c.paidOnDay, payouts: d.payouts + 1 });
+  }
+  return [...days.values()];
+}
+
+/** The day chart needs three days of payouts to read as a chart; fewer draw as plain lines under the report
+ * (InsightsStudio), never one green column alone across the page. */
+export const chartsPaidByDay = (data: InsightsData) => paidDays(data.claims).length >= 3;
+
 /** The canvas rows the report takes: what the page sizes Studio's host to, so the page scrolls and the canvas never does. */
 export const reportRows = (data: InsightsData, narrow = false) => {
   const r = rowsOf(data, narrow);
-  return narrow ? r.progress + r.decisions + r.funnel + r.refusals + r.paid : r.progress + r.funnel + r.paid;
+  const paid = chartsPaidByDay(data) ? r.paid : 0;
+  return narrow ? r.progress + r.decisions + r.funnel + r.refusals + paid : r.progress + r.funnel + paid;
 };
 
 /** The console's day chart: 72px columns, wide enough for a day's dollars inside them ("$1,109.63"). */
@@ -164,6 +184,7 @@ export function paidByDayChart(labelColor?: string, labels = true, { column }: {
 // second table of the same rows. Below 1024px each panel takes the canvas's full width, one under another.
 const overview = (data: InsightsData, narrow: boolean, labelColor?: string): AgPageState<InsightsRegistry> => {
   const r = rowsOf(data, narrow);
+  const chart = chartsPaidByDay(data);
   return {
     id: "overview",
     widgets: {
@@ -200,7 +221,7 @@ const overview = (data: InsightsData, narrow: boolean, labelColor?: string): AgP
         },
         format: titled("Why claims were refused"),
       },
-      "paid-by-day": paidByDayChart(labelColor, true, CONSOLE_CHART),
+      ...(chart && { "paid-by-day": paidByDayChart(labelColor, true, CONSOLE_CHART) }),
     } as AgPageState<InsightsRegistry>["widgets"],
     widgetLayout: narrow
       ? {
@@ -208,7 +229,7 @@ const overview = (data: InsightsData, narrow: boolean, labelColor?: string): AgP
           decisions: at(0, r.progress, 24, r.decisions),
           funnel: at(0, r.progress + r.decisions, 24, r.funnel),
           refusals: at(0, r.progress + r.decisions + r.funnel, 24, r.refusals),
-          "paid-by-day": at(0, r.progress + r.decisions + r.funnel + r.refusals, 24, r.paid),
+          ...(chart && { "paid-by-day": at(0, r.progress + r.decisions + r.funnel + r.refusals, 24, r.paid) }),
         }
       : {
           progress: at(0, 0, 16, r.progress),
@@ -216,7 +237,7 @@ const overview = (data: InsightsData, narrow: boolean, labelColor?: string): AgP
           funnel: at(0, r.progress, 16, r.funnel),
           refusals: at(16, r.progress, 8, r.refusals),
           // The page's full width, so it ends on one line rather than an empty third beside the chart.
-          "paid-by-day": at(0, r.progress + r.funnel, 24, r.paid),
+          ...(chart && { "paid-by-day": at(0, r.progress + r.funnel, 24, r.paid) }),
         },
   };
 };
