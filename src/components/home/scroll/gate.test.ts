@@ -565,7 +565,8 @@ describe("wheel stops", () => {
     up.scroll();
     vi.restoreAllMocks();
     expect(up.lenis.landed).toEqual([7988]);
-    expect(up.lenis.duration).toBeLessThanOrEqual(0.65);
+    expect(up.lenis.duration).toBeGreaterThanOrEqual(0.9);
+    expect(up.lenis.duration).toBeLessThanOrEqual(1.1);
     // A fling is no nudge: any one, however short, still lands on the next section's stop, as before.
     const flung = setup(8586, course, slow, undefined, undefined, pins, undefined, undefined, stories);
     flung.send([100, 100, 100], 16);
@@ -598,7 +599,8 @@ describe("wheel stops", () => {
     g.scroll();
     vi.restoreAllMocks();
     expect(g.lenis.landed).toEqual([823]);
-    expect(g.lenis.duration).toBeLessThanOrEqual(0.65);
+    expect(g.lenis.duration).toBeGreaterThanOrEqual(0.9);
+    expect(g.lenis.duration).toBeLessThanOrEqual(1.1);
   });
 
   it("skims a notched power spin past a story's inner beats, three notches a beat, never past a section stop", () => {
@@ -825,4 +827,136 @@ describe("wheel stops", () => {
     send([40, 44, 48, 52, 60, 70, 80, 92, 104, 118, 132, 140, 140, 140, 140, 140, 140, 140]);
     expect(lenis.landed).toEqual([2144, 2821]);
   });
+
 });
+
+// Mac trackpad traces, as the trace harness sends them: a finger phase of n events ramping from 2px to its peak, then a
+// momentum tail decaying by f a frame down to 1px, 16 ms apart.
+function macSwipe(peak: number, n = 6, f = 0.95) {
+  const d: number[] = [];
+  for (let i = 0; i < n; i++) d.push(2 + ((peak - 2) * i) / (n - 1));
+  for (let v = peak * f; v >= 1; v *= f) d.push(v);
+  return [...d, 1, 1];
+}
+/** A swipe of about `total` px. */
+function macSized(total: number, n = 6, f = 0.95) {
+  let lo = 1;
+  let hi = 400;
+  for (let k = 0; k < 40; k++) {
+    const mid = (lo + hi) / 2;
+    if (macSwipe(mid, n, f).reduce((a, b) => a + b, 0) < total) lo = mid;
+    else hi = mid;
+  }
+  return macSwipe(lo, n, f);
+}
+const TINY = () => macSized(90, 5, 0.95);
+const SMALL = () => macSized(220, 6, 0.95);
+const MEDIUM = () => macSized(600, 8, 0.955);
+const HARD = () => macSized(2200, 9, 0.96);
+const flip = (d: number[]) => d.map((x) => -x);
+
+describe("trackpad swipes", () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  // As 1440x900: the hero, How it works, chapters 01 and 02, the live photo, check 3, the paid receipt, the console; the
+  // Chain of Custody's story from the hero to its console beat, the dolly a slow stretch.
+  const BEATS = [0, 414, 823, 1858, 2534, 4278, 6140, 6698];
+  const course = (at: number) => setup(at, BEATS, [[144, 700, 5]], undefined, [1858, 2534, 6140], [[64, 6912]], undefined, undefined, [[0, 6698]]);
+
+  it("F1: a tiny or small swipe from the hero moves one beat, to How it works, and its momentum never carries it on", () => {
+    for (const d of [TINY(), SMALL()]) {
+      const g = course(0);
+      g.send(d);
+      expect(g.lenis.landed).toEqual([414]);
+      g.finish();
+      // The next small swipe goes on to chapter 01, and the one after to chapter 02.
+      g.send(SMALL(), 16, 300);
+      expect(g.lenis.landed).toEqual([414, 823]);
+      g.finish();
+      g.send(SMALL(), 16, 300);
+      expect(g.lenis.landed).toEqual([414, 823, 1858]);
+    }
+  });
+
+  it("F1: one beat a swipe up the story too", () => {
+    const g = course(1858);
+    for (const to of [823, 414, 0]) {
+      g.send(flip(SMALL()), 16, 300);
+      expect(g.lenis.landed.at(-1)).toBe(to);
+      g.finish();
+    }
+    expect(g.lenis.landed).toEqual([823, 414, 0]);
+  });
+
+  it("F2: no swipe of any size moves more than one stop, from any beat", () => {
+    for (const shape of [TINY, SMALL, MEDIUM, HARD]) {
+      for (const from of BEATS.slice(0, -1)) {
+        const g = course(from);
+        g.send(shape());
+        const next = BEATS[BEATS.indexOf(from) + 1];
+        expect(g.lenis.landed, `${shape.name} from ${from}`).toEqual([next]);
+      }
+    }
+  });
+
+  it("F2: a second swipe while the landing still glides moves on exactly one more stop", () => {
+    const g = course(0);
+    const first = SMALL();
+    // The second swipe's fingers stop the first's momentum 350 ms in, as macOS does.
+    g.send(first.slice(0, Math.round(350 / 16)));
+    expect(g.lenis.landed).toEqual([414]);
+    g.lenis.animatedScroll = 300; // part way there
+    g.send(SMALL(), 16, 24);
+    expect(g.lenis.landed).toEqual([414, 823]);
+  });
+
+  it("F2: a swipe's momentum merged into fewer, larger events after a stall is still its own tail", () => {
+    const g = course(823);
+    const d = SMALL();
+    g.send(d.slice(0, 20));
+    expect(g.lenis.landed).toEqual([1858]);
+    // A busy frame: 200 ms of momentum arrives as one event, then the rest.
+    const merged = d.slice(20, 32).reduce((a, b) => a + b, 0);
+    g.send([merged], 200);
+    g.send(d.slice(32));
+    expect(g.lenis.landed).toEqual([1858]);
+  });
+
+  it("F3: a one-beat landing takes 0.95 to 1.2 s and ends on the stop", () => {
+    for (const from of [0, 414, 823, 4278]) {
+      const g = course(from);
+      g.send(SMALL());
+      expect(g.lenis.duration).toBeGreaterThanOrEqual(0.95);
+      expect(g.lenis.duration).toBeLessThanOrEqual(1.2);
+      expect(g.lenis.easing!(1)).toBeCloseTo(1, 6);
+    }
+  });
+
+  it("F4: a tiny swipe's first 40px follow the hand before the landing takes over", () => {
+    const g = course(0);
+    const d = TINY();
+    let through = 0;
+    for (const x of d) {
+      through += g.send([x]);
+      if (g.lenis.landed.length) break;
+    }
+    expect(g.lenis.landed).toEqual([414]);
+    expect(through).toBeGreaterThanOrEqual(40);
+    expect(through).toBeLessThan(d.reduce((a, b) => a + b, 0));
+  });
+
+  it("F5: a slow drag follows the hand all the way and settles on the beat ahead of where it stopped, never back", () => {
+    const g = course(0);
+    const drag = Array.from({ length: 94 }, (_, i) => 6 + 1.6 * Math.sin(i / 7) + 0.4 * Math.sin(i * 1.7));
+    const total = drag.reduce((a, b) => a + b, 0);
+    expect(g.send(drag)).toBeCloseTo(total, 6);
+    expect(g.lenis.landed).toEqual([]);
+    g.lenis.animatedScroll = g.lenis.targetScroll - 4;
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    g.scroll();
+    vi.restoreAllMocks();
+    expect(total).toBeGreaterThan(414);
+    expect(g.lenis.landed).toEqual([823]);
+  });
+});
+

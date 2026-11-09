@@ -18,6 +18,18 @@ export function landing(s0: number) {
 }
 
 /**
+ * A trackpad's landing, and a key's: progress over its time t (0 to 1), entered at speed s0 (distance over duration).
+ * From rest it eases in and out (smoothstep, its peak 1.5 times its average speed), so the page never sets off at full
+ * speed; entered moving, it carries on at the page's own speed and slows to rest, never a jolt. A speed over 3, which
+ * this curve would carry past the stop, takes the brake (landing).
+ */
+export function calm(s0: number) {
+  const v = Math.max(0, s0);
+  if (v > 3) return landing(v);
+  return (t: number) => v * (t * t * t - 2 * t * t + t) + (3 * t * t - 2 * t * t * t);
+}
+
+/**
  * Seconds for a landing `d` windows long (slow stretches counted at their weight, warp): a close stop in 0.9 s, a beat
  * of the exhibit (about 0.7 of a window) in about 1.2 s, a long way in 1.4 s at most, so the page is at rest soon after
  * the hand and never drives on alone.

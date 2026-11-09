@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { landing, landingTime, warp } from "./landing";
+import { calm, landing, landingTime, warp } from "./landing";
 
 describe("landing", () => {
   it("starts at 0, ends exactly on the stop and never turns back, from rest to a hard fling", () => {
@@ -65,5 +65,27 @@ describe("landing", () => {
     expect(warp(0, 100, [[-50, 40, 3]]).entry).toBe(3);
     expect(warp(0, 100, [[0, 40, 3]]).entry).toBe(3);
     expect(warp(0, 100, [[10, 40, 3]]).entry).toBe(1);
+  });
+
+  it("calm: eases in from rest and carries on at the page's own speed when moving, onto the stop, never turning back", () => {
+    const h = 1e-5;
+    for (const s0 of [0, 0.5, 1, 2, 3, 6]) {
+      const e = calm(s0);
+      expect(e(0)).toBeCloseTo(0, 9);
+      expect(e(1)).toBeCloseTo(1, 9);
+      expect(e(h) / h).toBeCloseTo(Math.min(s0, s0 > 3 ? s0 : 3), 2);
+      let prev = 0;
+      for (let i = 1; i <= 400; i++) {
+        const v = e(i / 400);
+        expect(v).toBeGreaterThanOrEqual(prev - 1e-9);
+        expect(v).toBeLessThanOrEqual(1 + 1e-9);
+        prev = v;
+      }
+    }
+    // From rest: no abrupt start (a tenth of the way in its first fifth of the time) and a peak speed 1.5 times the
+    // average, where the brake curve set off at twice the average.
+    const rest = calm(0);
+    expect(rest(0.2)).toBeLessThan(0.11);
+    expect((rest(0.5 + h) - rest(0.5 - h)) / (2 * h)).toBeCloseTo(1.5, 3);
   });
 });

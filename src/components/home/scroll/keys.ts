@@ -1,5 +1,5 @@
 import type Lenis from "lenis";
-import { landing, landingTime, warp } from "./landing";
+import { calm, landingTime, warp } from "./landing";
 import type { Course } from "./gate";
 
 // The keyboard's paging on the homepage, on the wheel's own stops (stops.ts). A browser page is about 95% of the
@@ -82,7 +82,7 @@ export function attachKeys(lenis: Pick<Lenis, "scrollTo" | "isStopped" | "animat
     const way = warp(start, to, slow);
     const dolly = slow.some(([a, b, k]) => k >= DOLLY_WEIGHT && Math.max(a, b) > Math.min(start, to) && Math.min(a, b) < Math.max(start, to));
     const duration = Math.min(dolly ? KEY_DOLLY : KEY_TIME, landingTime(way.length / innerHeight));
-    const curve = landing(0);
+    const curve = calm(0);
     aim = { to, until: performance.now() + duration * 1000 + 200 };
     lenis.scrollTo(to, { duration, easing: (t) => way.at(curve(t)) });
   };
