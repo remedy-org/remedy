@@ -90,7 +90,7 @@ export function StaticFigures({ filed }: { filed: string }) {
               <ScreenBar compact />
               <div className="flex items-center gap-3 px-4 py-3">
                 <span className="relative h-6 w-8 shrink-0 overflow-hidden rounded-[4px] border border-line">
-                  <Image src={CLAIM.photo} alt="" fill sizes="32px" className="object-cover" style={{ objectPosition: CLAIM.objectPosition }} />
+                  <Image src={CLAIM.photo} alt="" width={32} height={24} className="size-full object-cover" style={{ objectPosition: CLAIM.objectPosition }} />
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col leading-tight">
                   <span className="font-mono text-ui font-medium">{CLAIM.id}</span>
