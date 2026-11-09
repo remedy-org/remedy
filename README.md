@@ -1,6 +1,6 @@
 # Remedy
 
-**Recall refunds through PayPal for owners who prove, on a live camera, that they destroyed the product. Five checks stop the fake photos; AI describes the evidence and never moves the money.**
+**Recall refunds through PayPal, for companies running CPSC refund recalls. The owner proves on a live camera that the product is destroyed; AI describes the photo, a fixed rule in code decides, and PayPal Payouts pays. Stolen and reused photos get nothing. A fake has to beat a live camera, a 10-minute code and a verified PayPal account.**
 
 - **Live:** https://remedy-recalls.vercel.app
 - **Judges' demo:** https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try (a PayPal sandbox login is on the page)
@@ -10,7 +10,7 @@
 
 I built Remedy solo for the PayPal AI Hackathon 2026. It runs on PayPal's sandbox, so no real money moves. MIT licensed.
 
-**Built with:** PayPal (Log in with PayPal, Payouts, Webhooks) · OpenAI (GPT-6.1 Sol through the Responses API) · AG Grid · AG Studio · Next.js · TypeScript · Vercel · the CPSC recalls API
+**Built with:** PayPal (Log in with PayPal, Payouts, Webhooks) · OpenAI (GPT-6.1 Sol through the Responses API; gpt-5.4-mini for the Recall analyst) · AG Grid · AG Studio · Next.js · TypeScript · Vercel · the CPSC recalls API
 
 ---
 
@@ -50,10 +50,10 @@ When a product is recalled for safety, the company often refunds owners who dest
 
 - **Recalls mostly fail.** "Only 6 to 10 percent of recalled products are returned or discarded." Fisher-Price's infant sleepers had so few returns that the recall was reannounced; linked deaths rose to about 100, at least eight of them after the original recall. Of 2023's 323 recalls, 167 offered refunds, and 87 of those had burdensome steps. ([PIRG, *Too Much to Recall*, Jan 2024](https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf))
 - **The "system" is an email inbox.** I pulled every recall from 1 Oct to 5 Nov 2026 from the [CPSC recalls API](https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2026-10-01): 55 recalls, 36 offering refunds, 27 requiring a photo of the destroyed or marked product, and **20 telling owners to email that photo to an inbox**, some of them `@gmail.com` and `@outlook.com`. 23 of the 55 were sold on Amazon.
-- **It is growing fast.** Matching the same API by keyword (approximate counts), 2026 to 5 Nov has 514 recalls, 362 with a refund, 268 requiring destruction plus a photo and 238 taking that photo by email, covering 5.28M units, up from 49 and 34 in all of 2023. 157 of 2026's refund recalls send the proof to a personal webmail inbox.
+- **It happens every week.** Matching the same API by keyword (approximate counts), 2026 to 5 Nov has 514 recalls, 362 with a refund, 268 requiring destruction plus a photo and 238 taking that photo by email, covering 5.28M units. 157 of 2026's refund recalls send the proof to a personal webmail inbox.
 - **AI broke photo proof, and the regulator says so.** CPSC's request for information CPSC-2026-0067 (15 Apr 2026) names "altered, fabricated, or artificially generated images... purporting to demonstrate product destruction", and warns that fraud controls "impose burdens on legitimate consumers and reduce recall participation" ([Federal Register](https://public-inspection.federalregister.gov/2026-07328.pdf)). The CPSC then launched a [national recall-fraud effort](https://www.cpsc.gov/Newsroom/News-Releases/2026/US-Consumer-Product-Safety-Commission-Launches-National-Recall-Fraud-Effort-as-Part-of-Trump-Administrations-Anti-Fraud-Initiative). Sedgwick, the largest recall administrator, reports 20,000 suspected fraudulent claims and "multimillion" exposure ([Foley, Jul 2026](https://www.foley.com/insights/publications/2026/07/when-recalls-go-rogue-the-impact-of-ai-fueled-recall-fraud/)).
 
-That is the trap: photo-only refunds raise participation, and AI fakes push firms back to physical returns, which kill it. Remedy keeps the refund easy for real owners and makes it expensive to fake.
+That is the trap: photo-only refunds raise participation, and AI fakes push firms back to physical returns, which kill it. Remedy keeps the refund easy for real owners. Stolen and reused photos get nothing, and a fake has to beat a live camera, a 10-minute code and a verified PayPal account.
 
 **Who it's for:** small and mid-size sellers running a CPSC refund recall from an inbox, often marketplace sellers. They are legally required to run the remedy, they review photos by hand, and they absorb the fraudulent refunds. Settlement tools verify the person. Remedy verifies that the product is destroyed.
 
@@ -204,16 +204,18 @@ I tested the vision check before building on it. Every number here comes from [d
 - 14 claims made of AI images carrying a code: genuine claims, wrong codes, a photo of a screen, and one AI image with a physical flaw (`c14`).
 - 5 held-out claims, written after the round-1 fixes.
 
-Each model ran 3 times at high effort. Every answer (label, each step, code, screen) was scored against an answer key, not just the decision. The runner calls the app's own `runVisionCheck` and `decide`, so it tests exactly the prompt, schema, image resizing and rule the app runs. In each cell below, the first number is round 2 (31 claims) and the second is the held-out set (5 claims):
+Each model ran 3 times at high effort. Every answer (label, each step, code, screen) was scored against an answer key, not just the decision. The runner calls the app's own `runVisionCheck` and `decide`, so it tests exactly the prompt, schema, image resizing and rule the app runs. The table is round 2 (31 claims), 3 runs per model:
 
-| Model | Decisions right | Genuine claims paid (3 runs) | Fakes paid (3 runs) | Answers right | Seconds a claim | Cost a claim |
-|---|---|---|---|---|---|---|
-| **GPT-6.1 Sol** (in production) | 29–30 of 31 · 5 of 5 | 21 of 21 · 6 of 6 | 3, all `c14` · 0 | 91% · 96% | 16 (max 40) | $0.011 |
-| GPT-6 Astra | 29–30 of 31 · 5 of 5 | 21 of 21 · 6 of 6 | 1, `c14` · 0 | 90% · 96% | 26 (max 67) | $0.064 |
-| GPT-6.1 Terra | 29–30 of 31 · 5 of 5 | 18 of 21 · 6 of 6 | 2, `c14` · 0 | 93% · 96% | 10 (max 19) | $0.005 |
-| GPT-6 Luna | 28–29 of 31 · 4–5 of 5 | 16 of 21 · 6 of 6 | 3, `c14` · 2, `h03` | 93% · 96% | 10 (max 27) | $0.0006 |
+| Model | Genuine claims paid | Fakes paid | Seconds a claim | Cost a claim |
+|---|---|---|---|---|
+| **GPT-6.1 Sol** (in production) | 21 of 21 | 3, all `c14` | 16 | $0.011 |
+| GPT-6 Astra | 21 of 21 | 1, `c14` | 26 | $0.064 |
+| GPT-6.1 Terra | 18 of 21 | 2, `c14` | 10 | $0.005 |
+| GPT-6 Luna | 16 of 21 | 3, `c14`, plus 2 held-out (`h03`) | 10 | $0.0006 |
 
-For GPT-6.1 Sol:
+GPT-6.1 Sol in full, round 2 then the 5 held-out claims: decisions right 29–30 of 31 and 5 of 5; genuine claims paid 21 of 21 and 6 of 6; fakes paid 3 (all `c14`) and 0; answers right 91% and 96%; 16 seconds a claim, 40 at most.
+
+Across both sets, for GPT-6.1 Sol:
 
 - **0 of 16 web photos paid**, across 48 tries.
 - **9 of 9 genuine claims paid**, in all 27 tries.
