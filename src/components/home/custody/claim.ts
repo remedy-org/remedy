@@ -59,7 +59,7 @@ export const CHAPTERS = [
     n: "04",
     title: "Five checks",
     // The five checks by their names (lib/fiveChecks.ts), set in a sentence.
-    text: "Three checks need no AI: taken in Remedy’s camera, photo not used before, one claim per verified PayPal account. Then the photo check confirms the tag shows X-VESOLJE and M4T and the pillow is cut in half, quoting what it sees.",
+    text: "Three checks need no AI: sent in the camera session, photo not used before, one claim per verified PayPal account. Then the photo check confirms the tag shows X-VESOLJE and M4T and the pillow is cut in half, quoting what it sees.",
   },
   {
     n: "05",
@@ -99,5 +99,5 @@ export const CONSOLE_ROWS: { photo: string; filed: string; id: string; status: V
   { photo: "/demo/k02-1.jpg", filed: "17:39", id: "RM-0118", status: "rejected", reason: "Tag reads K7Q · code is K7P", time: "9 s", fails: 3 },
   { photo: "/demo/k10-1.jpg", filed: "13:05", id: "RM-9629", status: "held", reason: "Tag unreadable · code is H9D", time: "20 s", amount: 29.99 },
   { photo: "/demo/k04-1.jpg", filed: "08:17", id: "RM-6276", status: "rejected", reason: "Destruction not shown", time: "14 s", fails: 4 },
-  { photo: "/demo/web-1.jpg", filed: "19:42", id: "RM-9545", status: "blocked", reason: "Photos outside the live camera session", fails: 0 },
+  { photo: "/demo/web-1.jpg", filed: "19:42", id: "RM-9545", status: "blocked", reason: "Photos sent outside the camera session", fails: 0 },
 ];

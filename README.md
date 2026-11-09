@@ -28,8 +28,8 @@ The model is not the defence against AI images: in our tests, no model could rel
 
 | # | Check | Uses AI? |
 |---|---|---|
-| 1 | Live camera session: photos must arrive inside this claim's 10-minute session, carrying that session's key | No |
-| 2 | Never seen before: a perceptual fingerprint (dHash) compares every photo with every earlier claim; a repost is refused even resized, re-saved or brightened | No |
+| 1 | Sent in the camera session: photos must arrive inside this claim's 10-minute session, carrying that session's key | No |
+| 2 | Photo not used before: a perceptual fingerprint (dHash) compares every photo with every earlier claim; a repost is refused even resized, re-saved or brightened | No |
 | 3 | One claim per verified PayPal account per recall | No |
 | 4 | The code, character by character: GPT-6.1 Sol reads the handwritten code and the product label, with quoted evidence | Yes, it describes |
 | 5 | Really destroyed: the model describes each step of the cut, quoting what it sees | Yes, it describes |

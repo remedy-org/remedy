@@ -5,8 +5,8 @@
 
 // Each one's short name heads its answers in a list (the evidence, the console's barcode hover).
 export const FIVE_CHECKS = [
-  { n: 1, short: "Live camera" },
-  { n: 2, short: "Never seen before" },
+  { n: 1, short: "Camera session" },
+  { n: 2, short: "Not used before" },
   { n: 3, short: "One claim per verified account" },
   { n: 4, short: "Code and label" },
   { n: 5, short: "Really destroyed" },
@@ -20,7 +20,9 @@ export type CheckNumber = (typeof FIVE_CHECKS)[number]["n"];
  * in half").
  */
 export const CHECK_NAMES = {
-  session: "Taken in Remedy’s camera",
+  // What the check proves and no more: the photo arrived inside the claim's own 10-minute camera session, carrying its
+  // key (rule.ts). It can't tell that a camera took it.
+  session: "Sent in the camera session",
   duplicate: "Photo not used before",
   // Both halves of the check: a verified PayPal account, and one claim from it (a claim fails it either way).
   account: "One claim per verified PayPal account",
@@ -65,7 +67,7 @@ export const numberOf = (i: { id: string; n?: CheckNumber | null }, steps: reado
 
 /** A recorded check's name in a sentence: "failed: the code". */
 function nameOf(id: string, steps: readonly string[]): string {
-  if (id === "session") return "the live camera";
+  if (id === "session") return "the camera session";
   // Named by what went wrong: it only ever fails, and "failed: photo not seen before" reads as its opposite.
   if (id === "duplicate_photo") return "the photo was used before";
   if (id === "label") return "the label";
@@ -99,7 +101,7 @@ export function fiveOutcomes(items: { id: string; state: State; n?: CheckNumber 
 
 /**
  * The five checks in one line, in the words the check list uses: "5 of 5 checks passed", "1 of 5 failed: the code · 3
- * passed · 1 not run", "1 of 5 failed: the live camera · 1 passed · 3 not run". `open` names a check with nothing
+ * passed · 1 not run", "1 of 5 failed: the camera session · 1 passed · 3 not run". `open` names a check with nothing
  * recorded yet, `skipped` one that was skipped; the same word counts once.
  */
 export function fiveSummary(items: { id: string; state: State }[], { open = "not run", skipped = "not run", steps = [] }: { open?: string; skipped?: string; steps?: readonly string[] } = {}): string {

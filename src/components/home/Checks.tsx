@@ -8,7 +8,7 @@ export function Checks() {
       id="checks"
       exhibit="Fraud checks"
       title="A fake has to beat five checks."
-      lead="Anyone can now generate a photo of a cut-up pillow. So the first three checks run before any AI: Remedy accepts photos only inside the claim’s own 10-minute camera session, refuses any photo it has seen before, and pays only verified PayPal accounts."
+      lead="Anyone can now generate a photo of a cut-up pillow. So the first three checks run before any AI: Remedy accepts photos only inside the claim’s own 10-minute camera session, refuses a reposted photo, and pays only verified PayPal accounts."
     >
       <Pipeline />
       <PipelineList />

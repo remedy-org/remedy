@@ -32,7 +32,7 @@ describe("the five checks", () => {
 
   it("says the photo check never ran when a check without AI stopped the claim", () => {
     const blocked = [{ id: "session", state: "blocked" as const }, { id: "duplicate_photo", state: "pass" as const }, { id: "account", state: "skipped" as const }];
-    expect(fiveSummary(blocked)).toBe("1 of 5 failed: the live camera · 1 passed · 3 not run");
+    expect(fiveSummary(blocked)).toBe("1 of 5 failed: the camera session · 1 passed · 3 not run");
   });
 
   it("names a held check, and words open checks as the caller asks", () => {

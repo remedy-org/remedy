@@ -152,7 +152,7 @@ export const blocked = {
     id: "RM-9545",
     photos: photosOf(["web-1.jpg"]),
     decision: "blocked",
-    reasons: [{ check: "session", outcome: "reject", text: "This photo wasn't taken in this claim's camera session" }],
+    reasons: [{ check: "session", outcome: "reject", text: "This photo wasn't sent in this claim's camera session" }],
   }),
   photoUrls: ["/demo/web-1.jpg"],
 };

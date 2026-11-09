@@ -350,7 +350,7 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
     // The catch at a glance, read against each other: what the tag says, then what it should say (CheckList.tsx).
     <CodeLead code={claim.code} seen={claim.verdict?.challenge_code.text_seen} />
   ) : lead === "session" ? (
-    // The row under it says this photo came from outside the camera: the lead says the rule, once.
+    // The row under it says this photo came from outside the camera session: the lead says the rule, once.
     "Only photos that arrive inside this claim’s 10-minute camera session count."
   ) : lead === "duplicate_photo" ? (
     // The row and the pair beside it carry the earlier claim's number: said there, once.

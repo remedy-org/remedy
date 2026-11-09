@@ -15,7 +15,7 @@ import { RecallBrief } from "./RecallBrief";
 const AUTH_ERRORS = new Set<AuthError>(["denied", "state", "paypal", "refused"]);
 
 /** /try?claim=web-photo (the homepage's "Try to fool it"): the page says the attempt it was opened for. The web photo
- * is stopped by the first check, Taken in Remedy's camera, one of the three that run before any AI. */
+ * is stopped by the first check, Sent in the camera session, one of the three that run before any AI. */
 const ATTEMPTS: Partial<Record<DemoSampleId, { title: string; lede: string }>> = {
   "ai-no-session": { title: "Try to fool it: send a photo from the web", lede: "Remedy refuses it at the first check, before any AI sees the photo." },
 };

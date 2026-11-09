@@ -57,7 +57,7 @@ interface Sample {
 // Each refusal in the console's own words (console/_lib/view.ts refusalLine, from the rule's reason), so a claim reads
 // the same here, in the console's queue and in How it works' copy of it.
 const SAMPLES: Sample[] = [
-  { name: "A photo from the web", short: "Web photo", photo: "/demo/web-1.jpg", stop: 0, reason: refusalLine({ check: "session", text: "This photo wasn't taken in this claim's camera session" }) },
+  { name: "A photo from the web", short: "Web photo", photo: "/demo/web-1.jpg", stop: 0, reason: refusalLine({ check: "session", text: "This photo wasn't sent in this claim's camera session" }) },
   { name: "A photo used before", short: "Used before", photo: "/demo/k01-1.jpg", stop: 1, reason: refusalLine({ check: "duplicate_photo", text: "Photo 1 was already used in another claim" }) },
   { name: "Wrong code on the tag", short: "Wrong code", photo: "/demo/k02-1.jpg", stop: 3, reason: refusalLine({ check: "code", text: "Written code reads K7Q; this claim's code is K7P" }) },
   { name: "A genuine claim", short: "Genuine claim", photo: "/demo/k01-1.jpg", stop: 5, paid: true, reason: <><Money value={29.99} /> to the owner&rsquo;s PayPal</> },

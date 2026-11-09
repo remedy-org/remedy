@@ -102,7 +102,7 @@ export function preCheck({
   const reject = (check: string, text: string) => reasons.push({ check, outcome: "reject", text });
 
   const session = claim.captureSession;
-  if (!session || session.id !== sessionId) reject("session", `${photoHashes.length === 1 ? "This photo wasn't" : "These photos weren't"} taken in this claim's camera session`);
+  if (!session || session.id !== sessionId) reject("session", `${photoHashes.length === 1 ? "This photo wasn't" : "These photos weren't"} sent in this claim's camera session`);
   else if (now > new Date(session.expiresAt)) reject("session", "The camera session expired before the photos arrived; start a new one");
 
   conflicts(claim, photoHashes, others, reject);

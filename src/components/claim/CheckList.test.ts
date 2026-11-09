@@ -51,9 +51,9 @@ describe("sixRows", () => {
     expect([explained.detail, explained.marks]).toEqual(["A person at Kikea Store will look at this.", undefined]);
   });
 
-  it("says the camera check passed without repeating its name", () => {
+  it("says the session check passed without repeating its name", () => {
     const session = sixRows([...pre("pass"), ...model("pass")], base).find((r) => r.key === "session")!;
-    expect(session.because).toBe("Taken live, inside the code’s 10 minutes.");
+    expect(session.because).toBe("Arrived from this page, inside the code’s 10 minutes.");
   });
 
   it("gives the cut a fixed line, never the photo check's sentence", () => {
@@ -65,12 +65,12 @@ describe("sixRows", () => {
 
   it("names the checks as the homepage and the console do", () => {
     const names = sixRows([...pre("pass"), ...model("pass")], base).map((r) => r.name);
-    expect(names.slice(0, 5)).toEqual(["taken in Remedy’s camera", "photo not used before", "one claim per verified PayPal account", "tag shows X-VESOLJE and M4T", "pillow cut in half"]);
+    expect(names.slice(0, 5)).toEqual(["sent in the camera session", "photo not used before", "one claim per verified PayPal account", "tag shows X-VESOLJE and M4T", "pillow cut in half"]);
   });
 
   it("says why a check that never ran didn't, so the row keeps its line", () => {
     const blocked: CheckRow[] = [
-      { id: "session", group: "pre", label: "", state: "blocked", detail: "This photo wasn't taken in this claim's camera session" },
+      { id: "session", group: "pre", label: "", state: "blocked", detail: "This photo wasn't sent in this claim's camera session" },
       { id: "duplicate_photo", group: "pre", label: "", state: "pass" },
       { id: "account", group: "pre", label: "", state: "pass" },
     ];
@@ -78,7 +78,7 @@ describe("sixRows", () => {
     expect(rows.find((r) => r.key === "session")!.detail).toBe("This photo came from outside the claim’s camera.");
     const code = rows.find((r) => r.key === "code")!;
     expect(code.unrun).toBe(true);
-    expect(code.detail).toBe("Not run: this photo wasn’t taken in this claim’s camera.");
+    expect(code.detail).toBe("Not run: this photo wasn’t sent in this claim’s camera session.");
   });
 
   it("marks the wrong characters of a code the tag shows", () => {

@@ -418,7 +418,7 @@ const REFUSAL: Record<string, string> = {
   label: "Label missing or not the recalled product",
   same_item: "Photos showed different items",
   step: "Destruction not shown",
-  session: "Photos outside the live camera session",
+  session: "Photos sent outside the camera session",
   duplicate_photo: "Photo already used in another claim",
   payer: "Second claim from one PayPal account",
   payer_verified: "PayPal account not verified",
@@ -532,7 +532,7 @@ export function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | 
     return ran ? { id, label, state: "pass", detail: pass } : { id, label, state: "waiting", detail: "" };
   };
   return [
-    row("session", CHECK_NAMES.session, "Taken in this claim’s camera session, before it expired"),
+    row("session", CHECK_NAMES.session, "Arrived inside this claim’s camera session with its key, before it expired"),
     // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the same
     // sample photo once: say that, next to the other rounds' claims with the same photo and code. The company reads a
     // round as a demo session.

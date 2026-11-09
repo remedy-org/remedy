@@ -93,8 +93,9 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
   const model = rows.find((r) => r.id === "model");
   const these = photos > 1 ? "these photos" : "this photo";
   const base: { key: SixKey; name: string; label: ReactNode; because?: string }[] = [
-    // One name, demo and real: what the check can know is that the photo came through this claim's own camera.
-    { key: "session", name: CHECK_NAMES.session.toLowerCase().replace("remedy", "Remedy"), label: CHECK_NAMES.session, because: "Taken live, inside the code’s 10 minutes." },
+    // One name, demo and real: what the check can know is that the photo arrived from this claim's page, inside its
+    // session, never that a camera took it.
+    { key: "session", name: CHECK_NAMES.session.toLowerCase(), label: CHECK_NAMES.session, because: "Arrived from this page, inside the code’s 10 minutes." },
     { key: "duplicate", name: CHECK_NAMES.duplicate.toLowerCase(), label: CHECK_NAMES.duplicate, because: `No earlier claim has ${these}.` },
     { key: "account", name: CHECK_NAMES.account.toLowerCase().replace("paypal", "PayPal"), label: CHECK_NAMES.account, because: "No other claim from this PayPal account." },
     {
@@ -198,7 +199,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
 function stoppedBy(key: SixKey, these: string): string {
   switch (key) {
     case "session":
-      return `Not run: ${these} wasn’t taken in this claim’s camera.`.replace("these photos wasn’t", "these photos weren’t");
+      return `Not run: ${these} wasn’t sent in this claim’s camera session.`.replace("these photos wasn’t", "these photos weren’t");
     case "duplicate":
       return `Not run: ${these} ${these === "this photo" ? "was" : "were"} claimed before.`;
     case "account":
@@ -386,7 +387,7 @@ export function CheckList({ rows, label = "Checks", live, className }: { rows: S
             <span className="flex min-w-0 flex-col gap-0.5">
               {/* The failed check is the list's red thing, with its mark: its name in red, never just a 10px cross. */}
               <span className={clsx("text-body", quiet ? "text-faint" : r.state === "skipped" ? "text-muted" : failed ? "text-stop" : "text-text")}>
-                {/* One run of text for a screen reader, "Taken in Remedy’s camera: passed", never the name and its state
+                {/* One run of text for a screen reader, "Sent in the camera session: passed", never the name and its state
                     as two pieces with a space between them. */}
                 <span aria-hidden="true">{r.label}</span>
                 <span className="sr-only">{`${r.name.charAt(0).toUpperCase()}${r.name.slice(1)}: ${outcomeWord(r).toLowerCase()}`}</span>

@@ -50,7 +50,7 @@ export type ClaimStatus = Pick<ClaimView, "decision" | "photos"> & { payout?: st
 export type ClaimLike = Pick<Claim, "decision" | "reasons" | "photos" | "verdict" | "payout" | "code" | "demo" | "events">;
 
 const PRE = [
-  { id: "session", label: CHECK_NAMES.session, checks: ["session"], pass: "Taken on this page’s camera before the code expired" },
+  { id: "session", label: CHECK_NAMES.session, checks: ["session"], pass: "Sent from this page before the code expired" },
   { id: "duplicate_photo", label: CHECK_NAMES.duplicate, checks: ["duplicate_photo"], pass: "No match among earlier claims' photos" },
   { id: "account", label: CHECK_NAMES.account, checks: ["state", "payer_verified", "payer"], pass: "A verified PayPal account with no other paid or open claim for this recall" },
 ] as const;
@@ -418,7 +418,7 @@ export function refusalHeadline(claim: Pick<Claim, "decision" | "reasons" | "pho
     case "same_item":
       return "The photos show different items";
     case "session":
-      return claim.photos.length > 1 ? "These photos weren’t sent from Remedy’s camera" : "This photo wasn’t sent from Remedy’s camera";
+      return claim.photos.length > 1 ? "These photos weren’t sent in the camera session" : "This photo wasn’t sent in the camera session";
     case "duplicate_photo":
       return claim.photos.length > 1 ? "These photos were already used in another claim" : "This photo was already used in another claim";
     case "payer":
