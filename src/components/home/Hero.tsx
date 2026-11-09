@@ -47,9 +47,10 @@ export function Hero() {
         </Button>
       </div>
       <div className={clsx("mt-4 flex flex-col gap-1.5", styles.focusIn)} style={line(3)}>
-        {/* One proof, from a real claim: RM-0442's photo to payout (CLAIM.seconds). */}
+        {/* One proof, from a real claim, as the console's timeline has it: sent at CLAIM.seconds, confirmed at CLAIM.confirmed. */}
         <p className="text-ui text-pretty text-text-2">
-          Paid {CLAIM.seconds} seconds after the photo on claim <span className="font-mono whitespace-nowrap">{CLAIM.id}</span> · CPSC{" "}
+          Sent to the owner&rsquo;s PayPal {CLAIM.seconds} seconds after the photo, confirmed at {CLAIM.confirmed}&nbsp;s ·{" "}
+          <span className="font-mono whitespace-nowrap">{CLAIM.id}</span> · CPSC{" "}
           <span className="font-mono whitespace-nowrap">{CLAIM.recall.replace(/^CPSC /, "")}</span>
         </p>
         {/* An owner with a real recall: the demo above is not her claim, and this is where hers is. */}

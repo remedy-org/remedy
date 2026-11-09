@@ -164,7 +164,7 @@ function ScreenReaderSummary() {
         ))}
       </ol>
       <p>
-        A fixed rule approved it, and PayPal paid ${EXHIBIT.amount} to the owner&rsquo;s account {EXHIBIT.seconds} seconds after the photo.
+        A fixed rule approved it, and ${EXHIBIT.amount} was sent to the owner&rsquo;s PayPal account {EXHIBIT.seconds} seconds after the photo; PayPal confirmed it at {EXHIBIT.confirmed} seconds.
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 # Remedy
 
-> Remedy turns proof of destruction into a payment trigger. When a recall says "destroy it and send a photo," the owner logs in with PayPal, writes a one-time code on the recalled unit and cuts it apart in front of a live camera. Code checks the evidence, and the refund lands in the exact PayPal account that logged in: 15 seconds from photo to payout on claim RM-0442. No account, no form, no email. Settlement tools verify the person. Remedy verifies the product is destroyed.
+> Remedy turns proof of destruction into a payment trigger. When a recall says "destroy it and send a photo," the owner logs in with PayPal, writes a one-time code on the recalled unit and cuts it apart in front of a live camera. Code checks the evidence, and the refund lands in the exact PayPal account that logged in: on claim RM-0442 it was sent to PayPal 15 seconds after the photo, and PayPal confirmed it at 55 seconds. No account, no form, no email. Settlement tools verify the person. Remedy verifies the product is destroyed.
 
 ## The problem
 
@@ -28,7 +28,7 @@ Remedy doesn't bet on spotting AI images. It makes a fake worthless, and the fir
 
 ## Results
 
-- **15 seconds, photo to PayPal payout** (claim RM-0442). A passing claim is usually paid within a minute.
+- **Sent to PayPal 15 seconds after the photo, confirmed by PayPal at 55 seconds** (claim RM-0442). A passing claim is usually paid within a minute.
 - **Zero web photos ever paid** with the code check on. Every wrong code caught.
 - **Genuine owners paid**, including on claims the system had never seen, where 96% of the model's check answers were right. Every answer carries a quote a reviewer can check.
 - **$0.011 of AI per claim**, about 16 seconds of vision. A penny to verify a refund.
