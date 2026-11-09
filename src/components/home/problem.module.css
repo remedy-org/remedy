@@ -1044,6 +1044,13 @@
     will-change: transform;
   }
 
+  /* Open and still (Problem.tsx data-flat): level, so it needs no transform and no layer of its own, and its type is
+     drawn crisp rather than resampled. */
+  .section[data-flat] .lift {
+    transform: none;
+    will-change: auto;
+  }
+
   .section[data-armed] .land {
     will-change: transform, opacity;
   }

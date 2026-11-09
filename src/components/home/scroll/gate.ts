@@ -91,11 +91,16 @@ const NOTCH_REACH = 1.25;
 const SKIM = 2;
 /** A wheel's notches (|deltaY| this big or more, whole px): no momentum to play out, so its landings stay short. */
 const NOTCH = 50;
-/** Seconds a notched wheel's landing takes at most, so the page never drives on long after the hand has stopped; across
- * the hero's dolly, less still: a wheel spun hard from the top meets the dolly first, and a longer landing there read
- * as the page resisting the hand. */
-const NOTCH_TIME = 1.1;
-const NOTCH_DOLLY_TIME = 0.9;
+/** Seconds a notched wheel's landing takes at most, so the page stays under the hand and never drives on long after it
+ * has stopped; across the hero's dolly, less still: a wheel spun hard from the top meets the dolly first, and a longer
+ * landing there read as the page resisting the hand. */
+const NOTCH_TIME = 0.9;
+const NOTCH_DOLLY_TIME = 0.75;
+/** Seconds a landing a gesture the page took as the reader's own settles with (nudge: a gentle push, a slow roll of
+ * notches) takes at most, slow stretches and the dolly included. A push of 36px is a small move of the hand: leaving the
+ * Chain of Custody's console beat or the Problem sheet's cut, the beat ahead is 1.4 windows on, and it glided 1.3 to 1.5
+ * windows on for 1.7 s after the hand had stopped. */
+const NUDGE_TIME = 0.8;
 /** The slow stretch's weight that marks the hero's dolly (stops.ts SLOW), and the weight a notched wheel crosses it at. */
 const DOLLY_WEIGHT = 5;
 const NOTCH_DOLLY = 3.5;
@@ -104,8 +109,10 @@ const NOTCH_DOLLY = 3.5;
 const DOLLY_TIME = 1.2;
 /** Seconds a landing may take longer for each slow stretch on its way but the dolly (stops.ts SLOW): an exhibit check,
  * the sheet's loop closing or its cut. The rest of the way is as quick as it can be already, so the time a transition
- * holds comes from here: two checks in a notched wheel's 1.1 s glide played in about 0.25 s each. */
+ * holds comes from here: two checks in a notched wheel's glide play in about a quarter of a second each. A notched wheel's,
+ * in proportion to its shorter landing (NOTCH_TIME). */
 const SLOW_TIME = 0.15;
+const NOTCH_SLOW_TIME = 0.12;
 /** A stop closer than this many windows to where the gesture began is where the reader already is: it goes on past. */
 const NEAR = 0.15;
 /**
@@ -253,18 +260,21 @@ export function createGate(read: () => Course) {
     return projected >= CARRY * Math.abs(to - l.animatedScroll) || scrubbed(l.animatedScroll + dir * projected);
   }
 
-  function land(l: GateLenis, to: number, dir: Dir, now: number) {
+  function land(l: GateLenis, to: number, dir: Dir, now: number, cap = Infinity) {
     // The landing curve runs along the way with its slow stretches weighted, so each pinned transition on it gets its
     // share of the time; it enters at the page's own speed. A notched wheel's landing is short (NOTCH_TIME): it has no
     // momentum, so a longer one drives on alone after the hand has stopped; across the dolly it is slowed less and shorter
-    // still (NOTCH_DOLLY_TIME). Each other slow stretch on the way adds SLOW_TIME.
+    // still (NOTCH_DOLLY_TIME). Each other slow stretch on the way adds SLOW_TIME (NOTCH_SLOW_TIME). `cap` holds the whole
+    // landing to that many seconds (NUDGE_TIME).
     const from = l.animatedScroll;
     const on = slow.filter(([a, b]) => Math.max(a, b) > Math.min(from, to) && Math.min(a, b) < Math.max(from, to));
     const dolly = on.some(([, , k]) => k >= DOLLY_WEIGHT);
     const way = warp(from, to, notched ? slow.map(([a, b, k]) => [a, b, k >= DOLLY_WEIGHT ? NOTCH_DOLLY : k] as const) : slow);
-    const duration =
+    const duration = Math.min(
+      cap,
       Math.min(dolly ? (notched ? NOTCH_DOLLY_TIME : DOLLY_TIME) : notched ? NOTCH_TIME : Infinity, landingTime(way.length / innerHeight)) +
-      SLOW_TIME * on.filter(([, , k]) => k < DOLLY_WEIGHT).length;
+        (notched ? NOTCH_SLOW_TIME : SLOW_TIME) * on.filter(([, , k]) => k < DOLLY_WEIGHT).length,
+    );
     const v = Math.max(0, pageSpeed(l, dir));
     const curve = glide(way.length < 1 ? 0 : (v * duration * way.entry) / way.length);
     landing = { to, dir };
@@ -313,7 +323,8 @@ export function createGate(read: () => Course) {
    * when the page is bound for anywhere else in one it settles on the nearest beat (RESTS), measured from where it would
    * have come to rest. A push of TREMOR px or more lands on the beat ahead of where the gesture began, in its direction,
    * nearest where it would rest, so a gentle nudge or one notch moves the story on a beat and never lands against the
-   * hand (a 36px push from the hero sprang back to 0). Outside the pinned stories slow scrolling stays the reader's.
+   * hand (a 36px push from the hero sprang back to 0). It lands within NUDGE_TIME, however far that beat. Outside the
+   * pinned stories slow scrolling stays the reader's.
    */
   function nudge(l: GateLenis) {
     loose = false;
@@ -337,7 +348,7 @@ export function createGate(read: () => Course) {
     }
     if (to === undefined) to = ahead !== undefined && (back === undefined || Math.abs(ahead - rest) <= Math.abs(back - rest)) ? ahead : back;
     // Landed on even where the page is on it already: Lenis would ease on past it to where the gesture was bound.
-    if (to !== undefined) land(l, to, to >= at ? 1 : -1, performance.now());
+    if (to !== undefined) land(l, to, to >= at ? 1 : -1, performance.now(), NUDGE_TIME);
   }
 
   /** Whether this notched gesture is a quick flick: its notches under ROLL_NOTCH ms apart (a lone notch is not one). */

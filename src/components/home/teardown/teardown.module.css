@@ -501,9 +501,10 @@ button.cellBody:hover .label {
 }
 
 /* The phone's tag macro still has the pillow's body across its top (the desktop's mask above is not used on phones):
-   fade the top of the still away, so the tag and its string hang alone, as on the desktop. */
+   fade the top of the still away, so the tag and its string hang alone, as on the desktop. The body's underside ends
+   at 26% of the still: clear to there, so no faded slab of pillow hangs over the tag. */
 .small[data-beat="code"] .posters img {
-  mask-image: linear-gradient(to bottom, transparent 22%, #000 33%);
+  mask-image: linear-gradient(to bottom, transparent 26%, #000 33%);
 }
 
 /* Compact, at 80% from the bottom right, with only the two rows the readouts don't already say (sent, then PayPal's

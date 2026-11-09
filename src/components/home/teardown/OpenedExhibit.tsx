@@ -60,14 +60,8 @@ const noop = () => () => {};
 const POSTER_BEATS: BeatId[] = ["intro", "live", "fp", "acct", "code", "torn", "paid"];
 const posterSrc = (beat: BeatId, dark: boolean, small: boolean) => `/teardown/${dark ? "dark" : "light"}-${beat}-${small ? "m" : "d"}.webp`;
 
-/** How far the dissolve into poster k (from poster k - 1) has got at p, 0 to 1: centred on beat k's start, 3% of a
- * beat wide, and never begun before the beat before's hold has been left. */
-function dissolve(k: number, p: number) {
-  const [a, z] = RANGES[POSTER_BEATS[k]];
-  const half = ((z - a) * 0.03) / 2;
-  const from = Math.max(a - half, holdOf(POSTER_BEATS[k - 1]) + 0.0005);
-  return Math.min(1, Math.max(0, (p - from) / (a + half - from)));
-}
+/** ms a still dissolves into the next over, in time once p crosses the beat's start. */
+const DISSOLVE = 240;
 
 /** Resolves any CSS colour (oklch, color-mix, var-free) to #rrggbb through a 1px canvas. */
 function resolveColor(css: string, fallback: string) {
@@ -332,6 +326,8 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
   const dot = useRef<SVGCircleElement>(null);
   const receipt = useRef<HTMLDivElement>(null);
   const posters = useRef<HTMLDivElement>(null);
+  /** The still the posters show, and on which posters element (a fallback mounts a new one). */
+  const shown = useRef<{ el: HTMLDivElement | null; at: number }>({ el: null, at: -1 });
   const [s, setS] = useState<ExhibitState>(() => stateAt(p.get()));
   const [dark, setDark] = useState(true);
   const [warm, setWarm] = useState(false);
@@ -440,15 +436,22 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
       const t = Math.min(1, Math.max(0, (st.p - a) / (tickAt(id) - a)));
       f.style.transform = `scaleX(${t})`;
     });
-    // Posters: a short dissolve (3% of a beat) centred on each beat's start, where the callout, readouts and check row
-    // change, so the still and the callout always describe the same check, and a scroll that stops there never lands
-    // on two stills half-drawn for long. Never begun at a stop: the intro's rests 0.002 before the live photo's start,
-    // inside the half-width, so a dissolve starts only past the beat before's hold (a couple of pixels' margin), and the
-    // next still is exactly 0 there (no faint double exposure).
+    // Posters: the still of the beat p is in, switched at the beat's start, where the callout, readouts and check row
+    // change, so the still and the callout always describe the same check. The switch dissolves in time (DISSOLVE), never
+    // scrubbed: the upper still of the two fades in over the lower going down, and out off it going up, the lower held
+    // whole under it, so the dissolve never dims to the ground and a page stopped anywhere rests on one still. Scrubbed
+    // over 3% of a beat, a page stopped inside it showed two pillows and a ghost of the tag.
     if (posters.current && (!live || !scene.current)) {
-      posters.current.querySelectorAll<HTMLElement>("[data-poster]").forEach((img, k) => {
-        img.style.opacity = String(Math.min(k === 0 ? 1 : dissolve(k, st.p), k === POSTER_BEATS.length - 1 ? 1 : 1 - dissolve(k + 1, st.p)));
-      });
+      const on = POSTER_BEATS.indexOf(st.beat);
+      const was = posters.current === shown.current.el ? shown.current.at : -1;
+      if (on !== was) {
+        const upper = Math.max(on, was);
+        posters.current.querySelectorAll<HTMLElement>("[data-poster]").forEach((img, k) => {
+          img.style.transition = was < 0 ? "none" : k === upper ? `opacity ${DISSOLVE}ms ease-out` : k === on ? "none" : `opacity 0s ${DISSOLVE}ms`;
+          img.style.opacity = k === on ? "1" : "0";
+        });
+        shown.current = { el: posters.current, at: on };
+      }
     }
   }, [p, live, watchFrames]);
 

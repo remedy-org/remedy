@@ -18,11 +18,6 @@ import type { Slow } from "./landing";
  */
 export const LINE = 48;
 
-/** A laptop screen tall enough (a 900px one and up) for Results to be a screen of its own (Proof.tsx). */
-const TALL = 860;
-const slide = (p: Page) => p.size.height >= TALL && p.size.width >= 1024;
-/** How much of Results' slide, in screens, the frame before it may show at its foot: its top padding, not its block. */
-const SLIDE_EDGE = 0.15;
 
 /** What a frame may not cut, and where it may sit. */
 export type Frame = {
@@ -133,31 +128,24 @@ export const STOPS: readonly Stop[] = [
   { name: "Fraud checks", at: checksStop },
   // Then check 3 to the rule and "Try to fool it", as the last lanes draw down to the checks the model reads and the
   // genuine claim is paid: check 3's hairline tucked under the nav, so it never reads as a second rule under it. On a
-  // tall screen, as high as check 1's, so Results' heading stays below the fold; where Results is a screen of its own,
-  // at most SLIDE_EDGE of it under Fraud checks' foot unless check 1 is already at the top, so the frame ends on the
-  // checks rather than on the empty paper above Results' block (Proof.tsx). On a screen tall
-  // enough that Fraud checks' own stop already shows "Try to fool it" whole (2560x1440), there is none: it could only
-  // add Results under it.
+  // tall screen, as high as check 1's, so Results' heading stays below the fold. On a screen tall enough that Fraud
+  // checks' own stop already shows "Try to fool it" whole (2560x1440), there is none: it could only add Results under it.
   {
     name: "Fraud checks, the rule",
     at: (p) => {
       const head = checksStop(p);
       const cta = p.foot("#checks [data-try-cta]", 1);
       if (head !== undefined && cta !== undefined && head >= cta + 8) return undefined;
-      const min = p.line(GATE_1, -1);
-      if (!slide(p)) return p.fit(p.line(GATE_3, -1), { min, before: "#proof header" });
-      return p.fit(p.line(GATE_3, -1), { min, max: Math.max(min ?? 0, (p.foot("#checks", 1) ?? Infinity) + SLIDE_EDGE * p.size.height) });
+      return p.fit(p.line(GATE_3, -1), { min: p.line(GATE_1, -1), before: "#proof header" });
     },
   },
-  // Results: the heading, the zero and the footnote, For companies kept below the fold rather than cut by it. Never
-  // showing the end of Fraud checks above it. On a laptop screen 860px tall and up the section is a screen of its own,
-  // its block a little above the middle (Proof.tsx): its top goes straight under the nav, so it reads as one slide.
+  // Results: the heading on the top line (never lower than 16px under the nav), the zero and the footnote, For companies
+  // kept below the fold rather than cut by it where a clean frame allows. Never showing the end of Fraud checks above
+  // it. On a screen whose foot can only fall in For companies' console from there (1920x1080), the frame that cuts it
+  // least: Results stays the frame's head, as the nav's Results lands it.
   {
     name: "Results",
-    at: (p) =>
-      slide(p)
-        ? p.line("#proof", 0)
-        : p.fit(p.line("#proof header"), { min: p.past("#checks [data-try-cta]"), before: "#companies header" }),
+    at: (p) => p.fit(p.line("#proof header"), { min: p.past("#checks [data-try-cta]"), max: p.line("#proof header", 16), before: "#companies header" }),
   },
   // For companies: the eyebrow on the top line with the whole tour under it, wherever the console frame's foot still
   // clears the screen's foot from there (a 900px laptop screen and taller: ConsoleTour sizes the window to its rows and

@@ -153,6 +153,7 @@ describe("scroll stops", () => {
       },
       // "Try to fool it" ends at 11520, below the foot of Fraud checks' own frame.
       foot: (sel, f) => (sel === "#checks [data-try-cta]" ? 11520 - f * 900 : 0),
+      past: (sel) => (sel === "#checks [data-try-cta]" ? 11520 - 64 : 0),
       // Results, framed clean: For companies' heading (12530) kept just under the screen's foot.
       fit: (y, frame) => (y === framed(11940, 64, LINE) && frame?.before === "#companies header" ? 12530 - 900 : y),
     };
@@ -160,19 +161,19 @@ describe("scroll stops", () => {
     // Every stop but the phone sequence's, which this laid-out laptop page doesn't have.
     expect(ys).toHaveLength(STOPS.length - 1);
     expect([...ys].sort((a, b) => a - b)).toEqual(ys);
-    // A 900px laptop screen and up: Results is a screen of its own, its top straight under the nav.
+    // Results: its heading on the top line, For companies' heading kept under the screen's foot.
     const results = STOPS.find((s) => s.name === "Results")!;
-    expect(results.at(real)).toBe(framed(11844, 64, 0));
+    expect(results.at(real)).toBe(12530 - 900);
     // A screen so tall that Fraud checks' own stop shows "Try to fool it" whole has no stop at the rule: it would only
     // bring Results up under it.
     const rule = STOPS.find((s) => s.name === "Fraud checks, the rule")!;
     expect(rule.at(real)).toBe(framed(11050, 64, -1));
     expect(rule.at({ ...real, foot: (sel, f) => (sel === "#checks [data-try-cta]" ? 11200 - f * 1440 : 0) })).toBeUndefined();
-    // A shorter one: Results keeps For companies below the fold, its heading under the screen's foot.
+    // A shorter screen, the same.
     expect(results.at({ ...real, size: { width: 1440, height: 800 }, fit: (y, frame) => (y === framed(11940, 64, LINE) && frame?.before === "#companies header" ? 12530 - 800 : y) })).toBe(12530 - 800);
   });
 
-  it("keeps Fraud checks' rule frame off Results' empty top where Results is a screen of its own", () => {
+  it("keeps Results' heading below the foot of Fraud checks' rule frame", () => {
     const rule = STOPS.find((s) => s.name === "Fraud checks, the rule")!;
     const tops: Record<string, number> = { "#checks header": 10514, "#checks ol > li:nth-child(1)": 10600, "#checks ol > li:nth-child(3)": 11050 };
     const frames: unknown[] = [];
@@ -183,9 +184,9 @@ describe("scroll stops", () => {
       foot: (sel, f) => (sel === "#checks" ? 11700 - f * 900 : sel === "#checks [data-try-cta]" ? 11520 - f * 900 : 0),
       fit: (y, frame) => (frames.push(frame), y === undefined ? y : Math.min(frame?.max ?? Infinity, y)),
     };
-    // 1440x900: at most 0.15 of a screen (135px) of Results under Fraud checks' foot, short of check 3 at the top.
-    expect(rule.at(real)).toBe(11700 - 900 + 135);
-    // 1440x800, where Results is no slide: its heading is what stays below the fold.
+    // 1440x900 and 1440x800: check 3 on the top line, no higher than check 1, Results' heading kept below the fold.
+    expect(rule.at(real)).toBe(framed(11050, 64, -1));
+    expect(frames.at(-1)).toMatchObject({ min: framed(10600, 64, -1), before: "#proof header" });
     rule.at({ ...real, size: { width: 1440, height: 800 } });
     expect(frames.at(-1)).toMatchObject({ before: "#proof header" });
   });
