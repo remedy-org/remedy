@@ -45,16 +45,17 @@ export function Thumbs({ row, size = "md" }: { row: Pick<ClaimRow, "photos" | "p
   const shown = row.photos.slice(0, 2);
   if (!shown.length) {
     return (
-      <span aria-hidden="true" className={clsx("flex shrink-0", size === "md" ? "w-14" : "w-[70px]")}>
-        <span className={clsx(box, "mx-auto rounded-[4px] border border-dashed border-line-strong", row.photoCount > 0 && "bg-surface-2")} />
+      <span aria-hidden="true" className={clsx("flex shrink-0", size === "md" ? "w-14" : "w-12")}>
+        <span className={clsx(box, size === "md" && "mx-auto", "rounded-[4px] border border-dashed border-line-strong", row.photoCount > 0 && "bg-surface-2")} />
       </span>
     );
   }
-  // A fixed slot, so claim ids line up whether a claim has one photo or two, each centred in it. Two photos stack as two
-  // prints: the second behind the first, 6px up and to the right, the first ringed in the row's ground, so they never
-  // read as one wide photo.
+  // A fixed slot, so claim ids line up whether a claim has one photo or two, each centred in it; a phone's card starts its
+  // photo on the card's 16px inset instead, in a slot just wide enough for two. Two photos stack as two prints: the
+  // second behind the first, 6px up and to the right, the first ringed in the row's ground, so they never read as one
+  // wide photo.
   return (
-    <span aria-hidden="true" className={clsx("thumbs relative flex shrink-0 justify-center", size === "md" ? "w-14" : "w-[70px]")}>
+    <span aria-hidden="true" className={clsx("thumbs relative flex shrink-0", size === "md" ? "w-14 justify-center" : "w-12")}>
       <span className={clsx("relative flex", shown.length > 1 && (size === "md" ? "pt-1.5 pr-1.5" : "pt-2 pr-2"))}>
         {shown.map((p, i) => (
           // A private, session-checked route: next/image's optimizer can't fetch it with the company's cookie.

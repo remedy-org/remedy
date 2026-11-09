@@ -244,8 +244,8 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
   const filtered = picks.length > 0;
   return (
     // While the analyst's sheet is open, the page gives it its width (from 1024px), so the panels reflow beside it
-    // rather than lie half under it.
-    <div className={clsx("flex w-full flex-col transition-[padding] duration-160", askOpen && "lg:pr-[400px]")}>
+    // rather than lie half under it; the page's header follows data-analyst (insights/page.tsx).
+    <div data-analyst={askOpen ? "open" : undefined} className={clsx("flex w-full flex-col transition-[padding] duration-160", askOpen && "lg:pr-[400px]")}>
       {actions &&
         !askOpen &&
         createPortal(
