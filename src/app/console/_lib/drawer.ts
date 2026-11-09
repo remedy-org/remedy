@@ -5,6 +5,7 @@ import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Outcome, Reason, Recall } from "@/lib/types";
 import { isSandboxBuild } from "@/lib/demo/allowed";
 import { demoSample } from "@/lib/demo/samples";
+import { PAYPAL_CONFIRMED } from "@/lib/payoutWords";
 import { checkOf, fiveNames, type CheckNumber } from "@/lib/fiveChecks";
 import { allPreChecks, amountOf, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow, type PreCheckState } from "./view";
 
@@ -176,7 +177,7 @@ function starterEvents(c: Claim, amount: string): Claim["events"] {
             : []
           : e.type === "payout_updated"
             ? c.payout?.status === "SUCCESS"
-              ? [{ ...e, detail: "PayPal: SUCCESS" }]
+              ? [{ ...e, detail: PAYPAL_CONFIRMED }]
               : []
             : [e],
   );
@@ -245,6 +246,8 @@ export function payoutFailureWords(detail: string): (PayoutFailureWords & { raw:
 /** The history in the company's words: no internal ids, and a service's raw answer kept apart. */
 function plainEvents(events: Claim["events"]): DrawerEvent[] {
   return events.map((e) => {
+    // PayPal's raw status for a settled payout ("PayPal: SUCCESS", lib/paypal/status.ts) in the console's words.
+    if (e.type === "payout_updated" && e.detail === "PayPal: SUCCESS") return { ...e, detail: PAYPAL_CONFIRMED };
     if (e.type === "demo_sample") {
       const title = demoSample(e.detail)?.title;
       return { ...e, detail: title ? `Filed from the demo: "${title}"` : "Filed from the demo" };

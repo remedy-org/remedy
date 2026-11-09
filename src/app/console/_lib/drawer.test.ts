@@ -85,3 +85,18 @@ describe("duplicateFor", () => {
     expect(d.photoAlt).toEqual(["Claim photo: pillow cut in half, tag reads X-VESOLJE K7Q"]);
   });
 });
+
+describe("history", () => {
+  it("says a payout PayPal confirmed in words, never PayPal's raw SUCCESS", () => {
+    const events = [
+      { at: "2026-11-07T10:00:15.000Z", type: "payout_sent", detail: "Payout of $29.99 sent through PayPal" },
+      { at: "2026-11-07T10:00:55.000Z", type: "payout_updated", detail: "PayPal: SUCCESS" },
+    ];
+    const payout = { batchId: "B1", status: "SUCCESS", updatedAt: "2026-11-07T10:00:55.000Z" };
+    for (const seeded of [false, true]) {
+      const d = toDrawerClaim(sampleClaim({ decision: "paid", payout, events, seeded }), demoRecall(new Date("2026-11-04T12:00:00Z")));
+      expect(d.events.map((e) => e.detail)).toContain("PayPal confirmed the payout");
+      expect(d.events.some((e) => /SUCCESS/.test(e.detail))).toBe(false);
+    }
+  });
+});

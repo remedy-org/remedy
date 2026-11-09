@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { MONEY_WORD } from "@/lib/payoutWords";
+import { MONEY_WORD, PAYPAL_CONFIRMED } from "@/lib/payoutWords";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Button, CrossIcon, ErrorState, Skeleton } from "@/components/ui";
@@ -495,7 +495,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
   return [
     ...steps,
     { label: "Sent", at: at((e) => e.type === "payout_sent"), note: claim.decision === "held" ? "Held: nothing is sent until a person at the company approves." : undefined },
-    { label: MONEY_WORD.paid, at: at((e) => e.type === "payout_updated" && e.detail.endsWith("SUCCESS")) },
+    { label: MONEY_WORD.paid, at: at((e) => e.type === "payout_updated" && (e.detail === PAYPAL_CONFIRMED || e.detail.endsWith("SUCCESS"))) },
   ];
 }
 
