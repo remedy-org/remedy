@@ -6,7 +6,7 @@ import type { Slow } from "./landing";
 // The gate against a stand-in Lenis: wheel streams in, which events it takes, and where it lands the page.
 const STOPS = [0, 1410, 2144, 2821, 3205];
 
-function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner?: number[], pins?: [number, number][], fit?: Course["fit"], rests?: number[], stories?: [number, number][]) {
+function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner?: number[], pins?: [number, number][], fit?: Course["fit"], rests?: number[], stories?: [number, number][], unfolds?: [number, number, number][]) {
   const listeners = new Map<string, ((e: unknown) => void)[]>();
   vi.stubGlobal("innerHeight", 900);
   vi.stubGlobal("scrollY", at);
@@ -40,7 +40,7 @@ function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner
     },
     start() {},
   };
-  const gate = createGate(() => ({ stops, slow, up, inner, pins, fit, rests, stories }));
+  const gate = createGate(() => ({ stops, slow, up, inner, pins, fit, rests, stories, unfolds }));
   gate.attach(lenis as unknown as GateLenis);
   let t = 1000;
   /** Sends deltas `gap` ms apart, after `pause` ms; returns how many px reached Lenis (the events the gate let through). */
@@ -623,8 +623,15 @@ describe("wheel stops", () => {
    * every 16 ms between them (the page easing 40px behind its target). Returns the landings and where the page was at
    * the last notch.
    */
-  function wheelOnClock(at: number, stops: number[], pins: [number, number][], flicks: number[][], gaps: { inside: number; between: number }) {
-    const g = setup(at, stops, [], undefined, undefined, pins);
+  function wheelOnClock(
+    at: number,
+    stops: number[],
+    pins: [number, number][],
+    flicks: number[][],
+    gaps: { inside: number; between: number },
+    more: { stories?: [number, number][]; unfolds?: [number, number, number][] } = {},
+  ) {
+    const g = setup(at, stops, [], undefined, undefined, pins, undefined, undefined, more.stories, more.unfolds);
     let clock = 5000;
     const spy = vi.spyOn(performance, "now").mockImplementation(() => clock);
     const frames = (ms: number) => {
@@ -670,16 +677,93 @@ describe("wheel stops", () => {
   });
 
   it("settles a slow roll of notches out of a story's last beat within 0.8 s of its settling, however far the beat ahead", () => {
-    // As 1920x1080: five notches 100 ms apart from the console beat, inside the pinned stretches all the way to the open
-    // sheet 1549px on. The roll settles once, on the open sheet, and the page is at rest 0.8 s later (it was 1.4 s).
+    // As 1920x1080: five notches 100 ms apart from the console beat rest 500px on, the sheet half risen, the open sheet
+    // 1549px on. The roll settles once, on the open sheet, and the page is at rest 0.8 s later (it was 1.4 s).
     const course = [0, 8037, 9586, 10303, 11838];
     const pins: [number, number][] = [
       [64, 8294],
       [8294, 10764],
     ];
-    const roll = wheelOnClock(8037, course, pins, [Array(5).fill(100)], { inside: 100, between: 100 });
+    const roll = wheelOnClock(8037, course, pins, [Array(5).fill(100)], { inside: 100, between: 100 }, {
+      stories: [
+        [0, 8037],
+        [9586, 10303],
+      ],
+      unfolds: [[8402, 9460, 9586]],
+    });
     expect(roll.landed).toEqual([9586]);
     expect(roll.duration).toBeLessThanOrEqual(0.8);
+  });
+
+  // As 1440x900: the Chain of Custody's story from the hero to its console beat (an inner beat at 6140), the Problem
+  // sheet's from open to cut, Fraud checks past it; the sheet rises and unfolds from 7002 (its last frame unseen) to 7884
+  // (its first lying flat), the open sheet at 7988.
+  const SHEET = {
+    course: [0, 6140, 6698, 7988, 8586, 9910],
+    pins: [
+      [64, 6912],
+      [6912, 9918],
+    ] as [number, number][],
+    stories: [
+      [0, 6698],
+      [7988, 8586],
+    ] as [number, number][],
+    unfolds: [[7002, 7884, 7988]] as [number, number, number][],
+  };
+
+  it("settles a slow roll that began inside a story and ran up to half a window past its last beat back onto that beat", () => {
+    // Ten notches from the open sheet ran 402px past the cut and rested there, the held sheet under Fraud checks' edge.
+    const { course, pins, stories, unfolds } = SHEET;
+    for (const gap of [80, 100, 120, 150]) {
+      const down = wheelOnClock(7988, course, pins, [Array(10).fill(100)], { inside: gap, between: gap }, { stories, unfolds });
+      expect(down.through, `${gap} ms`).toBe(1000);
+      expect(down.landed, `down ${gap} ms`).toEqual([8586]);
+      expect(down.duration).toBeLessThanOrEqual(0.8);
+      // Up from the cut: 402px past the open sheet, the sheet half unfolded; back onto the open sheet.
+      expect(wheelOnClock(8586, course, pins, [Array(10).fill(-100)], { inside: gap, between: gap }, { stories, unfolds }).landed, `up ${gap} ms`).toEqual([7988]);
+    }
+    // The same through the Chain of Custody: ten notches from its inner beat run 442px past the console beat.
+    expect(wheelOnClock(6140, course, pins, [Array(10).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([6698]);
+    // A roll begun on the last beat and leaving the story follows the hand: three notches from the cut rest 300px on.
+    expect(wheelOnClock(8586, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([]);
+    // Past half a window, the roll is the reader's: fifteen notches from the open sheet rest 902px past the cut.
+    expect(wheelOnClock(7988, course, pins, [Array(15).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([]);
+  });
+
+  it("never leaves the Problem sheet half risen or half unfolded: a gesture that goes quiet there goes on to a whole frame", () => {
+    const { course, pins, stories, unfolds } = SHEET;
+    // Three notches up from the open sheet rested at 7688, the sheet half unfolded: on up to its last frame unseen.
+    const up = wheelOnClock(7988, course, pins, [Array(3).fill(-100)], { inside: 90, between: 90 }, { stories, unfolds });
+    expect(up.landed).toEqual([7002]);
+    expect(up.duration).toBeLessThanOrEqual(0.8);
+    // Ten notches down from the console beat rested at 7698: on to the open sheet.
+    const down = wheelOnClock(6698, course, pins, [Array(10).fill(100)], { inside: 100, between: 100 }, { stories, unfolds });
+    expect(down.landed).toEqual([7988]);
+    expect(down.duration).toBeLessThanOrEqual(0.8);
+    // Three notches down from the console beat rest at 6998, the sheet still unseen: where the hand left it.
+    expect(wheelOnClock(6698, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([]);
+    // Gentle pushes up from the open sheet rest 1:1 on the sheet lying flat; down from the console beat, 1:1 too.
+    for (const [from, dir] of [
+      [7988, -1],
+      [6698, 1],
+    ] as const) {
+      for (const px of [36, 60, 100]) {
+        const g = setup(from, course, [], undefined, undefined, pins, undefined, undefined, stories, unfolds);
+        g.send(Array(6).fill((dir * px) / 6));
+        g.lenis.animatedScroll = g.lenis.targetScroll - 4 * dir;
+        vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+        g.scroll();
+        vi.restoreAllMocks();
+        expect(g.lenis.landed, `${px}px from ${from}`).toEqual([]);
+      }
+    }
+    // A tremor from the frame unseen goes back onto it, never on 986px to the open sheet.
+    const tremor = setup(7002, course, [], undefined, undefined, pins, undefined, undefined, stories, unfolds);
+    tremor.send([2, 2, 1]);
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    tremor.scroll();
+    vi.restoreAllMocks();
+    expect(tremor.lenis.landed).toEqual([7002]);
   });
 
   it("still takes three quick flicks of a notched wheel, a pause between them, to three beats", () => {
