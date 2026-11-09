@@ -166,8 +166,9 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
             )}
           >
             {t.label}
-            {/* The console's count: mono, two figures wide at least (StatusTabs.tsx). */}
-            <span className={clsx("inline-block min-w-[2ch] font-mono text-micro font-normal tabular-nums", on ? "text-muted" : "text-faint")}>
+            {/* The console's count: mono, two figures wide at least from 1280px (StatusTabs.tsx); at 1024 the search
+                needs that room in the row. */}
+            <span className={clsx("inline-block font-mono text-micro font-normal tabular-nums xl:min-w-[2ch]", on ? "text-muted" : "text-faint")}>
               <Roll value={String(counts[t.id])} />
             </span>
           </button>
