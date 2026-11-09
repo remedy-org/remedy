@@ -35,10 +35,11 @@ const LOCALE = {
   crossFilterCountdFieldName: "${name} count, in this filter",
 };
 
-// Studio's canvas rows are 16px, under no padding at the top (insights.css) and 20px at the foot: the host is sized to
-// the report, so the frame scrolls as one and no panel scrolls inside another.
+// Studio's canvas rows are 16px, inside its 20px of padding top and bottom and a pixel of edge each side (measured: a
+// host any shorter leaves Studio's own layout a scroller, which would take the wheel): the host is sized to the report,
+// so the frame scrolls as one and no panel scrolls inside another.
 const ROW = 16;
-const CANVAS_PAD = 20;
+const CANVAS_PAD = 42;
 
 const pageOf = (state: AgReportState<InsightsRegistry>) => state.pages.find((p) => p.id === state.selectedPageId);
 
@@ -150,7 +151,8 @@ export default function InsightsPreview({
 
   const claims = shown ?? data.claims;
   return (
-    <div className="flex h-full w-full flex-col overflow-y-auto pt-5 pb-5">
+    // The tour hands this the wheel once a visitor rests on it, clicks or focuses it (tour.module.css data-insights-scroll).
+    <div data-insights-scroll className="flex h-full w-full flex-col overflow-y-auto pt-5 pb-5">
       <InsightsLedger claims={claims} unitsSold={data.recall.unitsSold} className="mx-5" />
       <div
         ref={host}

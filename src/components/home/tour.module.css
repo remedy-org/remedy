@@ -77,12 +77,14 @@
 }
 
 /*
- * The grid and the report scroll inside the frame only once a visitor has clicked or focused them (ConsoleTour.tsx
- * gate()): until then they don't scroll, so a wheel passing over the frame moves the page. Their own scrollbars stay
+ * The grid, Insights and the report scroll inside the frame only once a visitor has clicked or focused them (Insights
+ * and the report: or rested on them; ConsoleTour.tsx gate()): until then they don't scroll, so a wheel passing over the
+ * frame moves the page. Their own scrollbars stay
  * out of the picture.
  */
 .gate:not([data-engaged]) :global(.ag-grid-viewport),
-.reportBody:not([data-engaged]) {
+.reportBody:not([data-engaged]),
+.body:not([data-engaged]) :global([data-insights-scroll]) {
   overflow-y: hidden !important;
 }
 
