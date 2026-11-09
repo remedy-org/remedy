@@ -130,10 +130,10 @@ function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
   if (c.decision === "blocked" || (refusedBy && PRE_CHECKS.has(refusedBy.check))) {
     return { stage: "Photos sent", stopReason: refusedBy ? refusalLabel(refusedBy.check) : "Blocked by the account checks" };
   }
-  if (c.decision === "pending") return { stage: "Passed account checks", stopReason: "Photo check running" };
+  if (c.decision === "pending") return { stage: "Passed checks before the photo check", stopReason: "Photo check running" };
   const model = c.reasons.filter((r) => !PRE_CHECKS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK && r.check !== "state");
   const failed = model.find((r) => r.outcome === "reject") ?? model.find((r) => r.outcome === "hold");
-  if (failed) return { stage: "Passed account checks", stopReason: failed.outcome === "reject" ? refusalLabel(failed.check) : typeset(failed.text) };
+  if (failed) return { stage: "Passed checks before the photo check", stopReason: failed.outcome === "reject" ? refusalLabel(failed.check) : typeset(failed.text) };
   if (c.decision === "rejected") return { stage: "Passed photo check", stopReason: refusalLabel(refusedBy?.check ?? "review") };
   // Held with every check passed: auto-pay off, or a payout that couldn't be sent.
   return { stage: "Passed photo check", stopReason: typeset(c.reasons.find((r) => r.outcome === "hold")?.text ?? "Held for a person") };
