@@ -151,8 +151,10 @@ export function EvidenceDrawer({ claimId, row, viewPhotos, version, filedAt, onC
     const d = ref.current;
     if (!d) return;
     if (claimId && !d.open) d.showModal();
-    // Another claim in the open sheet (the next held one): focus starts at its heading, as on opening.
-    else if (claimId) d.querySelector<HTMLElement>("#drawer-title")?.focus();
+    // Focus starts at the claim's heading, on opening and for another claim in the open sheet (the next held one).
+    // Said outright: showModal's own pick is the first focusable area, which on a short window is the scrolling body
+    // (a focusable scroller), ringed whole.
+    if (claimId) d.querySelector<HTMLElement>("#drawer-title")?.focus();
     if (!claimId && d.open) d.close();
   }, [claimId]);
 
