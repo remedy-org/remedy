@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Schibsted_Grotesk } from "next/font/google";
 import { RouteFocus } from "@/components/ui/RouteFocus";
 import { SkipLink } from "@/components/ui/SkipLink";
+import { ThemeScript } from "@/components/ui/ThemeScript";
 import { ThemeSync } from "@/components/ui/ThemeSync";
 import { THEME_STORAGE_KEY } from "@/components/ui/theme";
 import "./globals.css";
@@ -55,7 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <ThemeScript code={themeScript} />
       </head>
       <body className="min-h-dvh bg-bg text-text antialiased">
         {/* The first Tab stop on every page, after a client-side page change too (RouteFocus). Each frame's main content
