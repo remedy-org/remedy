@@ -422,16 +422,16 @@ describe("recall reads", () => {
     expect(counter.counts.reads).toBe(1);
   });
 
-  it("look an unknown slug up fresh at most once per 10 s, and an invalid one never", async () => {
+  it("look an unknown slug up fresh at most once a minute, and an invalid one never", async () => {
     const t = Date.parse("2026-11-08T00:00:00.000Z");
     expect(await getRecallBySlug("no-such-recall", app, t)).toBeNull();
     expect(counter.counts.calls).toEqual({ listRecalls: 2 });
     counter.reset();
-    expect(await getRecallBySlug("no-such-recall", app, t + 9_999)).toBeNull();
-    expect(await getRecallBySlug("another-one", app, t + 9_999)).toBeNull();
-    expect(await getRecallBySlug("../../etc", app, t + 60_000)).toBeNull();
+    expect(await getRecallBySlug("no-such-recall", app, t + 59_999)).toBeNull();
+    expect(await getRecallBySlug("another-one", app, t + 59_999)).toBeNull();
+    expect(await getRecallBySlug("../../etc", app, t + 120_000)).toBeNull();
     expect(counter.counts.reads).toBe(0);
-    await getRecallBySlug("no-such-recall", app, t + 10_000);
+    await getRecallBySlug("no-such-recall", app, t + 60_000);
     expect(counter.counts.calls).toEqual({ listRecalls: 1 });
   });
 });
