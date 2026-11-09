@@ -164,17 +164,21 @@ const CATCH = 0.05;
  * lurched a whole screen on before the reader saw the page answer their hand. */
 const FOLLOW = 40;
 /** px/s of trackpad input over WINDOW at which a swipe is taken to its beat at once, past FOLLOW, without waiting for the
- * finger to lift: a quick hand never drags the page a beat on by itself. A slow drag is about 400. */
-const QUICK = 1400;
+ * finger to lift: a quick hand never drags the page a beat on by itself (at 1,400 a medium swipe up from chapter 01 ran
+ * past How it works, 345px away, before its finger lifted). A slow drag is 250 to 500. */
+const QUICK = 900;
 /**
- * The finger has lifted and the momentum begun: LIFT_RUN events in a row, each no quicker than the one before (macOS
- * synthesises momentum as a smooth decay; a finger's own input jitters, and a merged event is as quick as its two), and the
- * pace under LIFT of the gesture's peak.
+ * The finger has lifted and the momentum begun: LIFT_RUN events in a row, each no larger than the one before (macOS
+ * synthesises momentum as a smooth decay, a delta a frame; a finger's own input jitters), and the pace under LIFT of the
+ * gesture's peak. Deltas, not deltas over time: an event's timestamp jitters by a few ms, which broke the run.
  */
 const LIFT_RUN = 6;
 const LIFT = 0.75;
-/** A fresh swipe on a landing's momentum: once that momentum has fallen under FELL of its top speed, RISE_RUN events in
- * a row each quicker than the one before, to RISE times the slowest since (a momentum tail only ever slows). */
+/** A momentum tail still to come is about this many times its last delta (it decays by 0.94 to 0.96 a frame). */
+const TAIL_FRAMES = 18;
+/** A fresh swipe on a landing's momentum: once that momentum has fallen under FELL of its top, RISE_RUN events in a row
+ * each larger than the one before, to RISE times the smallest since (a momentum tail only ever slows; a merged event is
+ * one larger delta, never three). */
 const FELL = 0.7;
 const RISE_RUN = 3;
 const RISE = 1.8;
@@ -204,8 +208,8 @@ type Hold = {
   low: number;
   rising: number;
   paced: number;
-  /** A trackpad's momentum under the hold, in px/ms an event: its top, whether it has fallen under FELL of it, the
-   * slowest since, the last, and how many events in a row have been quicker than the one before. */
+  /** A trackpad's momentum under the hold, its deltas: its top, whether it has fallen under FELL of it, the smallest
+   * since, the last, and how many events in a row have been larger than the one before. */
   top: number;
   fell: boolean;
   floor: number;
@@ -305,10 +309,10 @@ export function createGate(read: () => Course) {
   let gaps: number[] = [];
   /** ms before this roll's last notch, while the wheel is rolled a notch at a time (rolling); 0 otherwise. */
   let rollGap = 0;
-  /** This trackpad swipe's input the page has followed (FOLLOW), its peak pace, and its last few events' speeds, px/ms. */
+  /** This trackpad swipe's input the page has followed (FOLLOW), its peak pace, and its last few deltas. */
   let followed = 0;
   let peakPace = 0;
-  let rates: number[] = [];
+  let deltas: number[] = [];
   /** The page's own speed, px/ms, from Lenis's last two frames. */
   let speed = 0;
   let prev: { t: number; y: number } | null = null;
@@ -333,8 +337,8 @@ export function createGate(read: () => Course) {
   const paced = (a: number, b: number) => stories.some(([p, q]) => Math.min(a, b) >= p - 1 && Math.max(a, b) <= q + 1);
   /** Whether this trackpad swipe's finger has lifted: its momentum decays (LIFT_RUN, LIFT). */
   function lifted(now: number) {
-    if (rates.length <= LIFT_RUN || sum(now - PACE, now) >= LIFT * peakPace) return false;
-    for (let i = rates.length - LIFT_RUN; i < rates.length; i++) if (rates[i] > rates[i - 1] * 1.03) return false;
+    if (deltas.length <= LIFT_RUN || sum(now - PACE, now) >= LIFT * peakPace) return false;
+    for (let i = deltas.length - LIFT_RUN; i < deltas.length; i++) if (deltas[i] > deltas[i - 1] * 1.03) return false;
     return true;
   }
 
@@ -393,7 +397,7 @@ export function createGate(read: () => Course) {
     fastSince = null;
     takenAt = total;
     chained++;
-    const r = rates.at(-1) ?? 0;
+    const r = deltas.at(-1) ?? 0;
     hold = { dir, peak: sum(now - PACE, now), low: Infinity, rising: 0, paced: now, top: r, fell: false, floor: Infinity, last: r, ups: 0 };
     l.scrollTo(to, {
       duration,
@@ -523,15 +527,15 @@ export function createGate(read: () => Course) {
   /** Whether a held gesture has become a new one: a fresh swipe out of the momentum tail, or a hand scrolling on. */
   function released(h: Hold, now: number) {
     if (!notched) {
-      // A fresh swipe laid on the momentum (or after it): once the momentum has fallen, events quickening RISE_RUN in a
-      // row, to RISE times its slowest. A momentum tail never quickens; a merged event is no quicker than its two.
-      const r = rates.at(-1) ?? 0;
+      // A fresh swipe laid on the momentum (or after it): once the momentum has fallen, deltas growing RISE_RUN in a row,
+      // to RISE times its smallest. A momentum tail never grows.
+      const r = deltas.at(-1) ?? 0;
       h.top = Math.max(h.top, r);
       if (!h.fell && r < FELL * h.top) h.fell = true;
       if (h.fell) {
         h.ups = r > h.last * 1.04 ? h.ups + 1 : 0;
         h.floor = Math.min(h.floor, r);
-        if (h.ups >= RISE_RUN && r >= RISE * h.floor && r * 16 >= 2.5) return true;
+        if (h.ups >= RISE_RUN && r >= RISE * h.floor && r >= 2.5) return true;
       }
       h.last = r;
     }
@@ -578,7 +582,7 @@ export function createGate(read: () => Course) {
       // still slowing down, it is the same gesture.
       const slowing = sum(lastT - 200, lastT) < 0.9 * sum(lastT - 400, lastT - 200);
       // Or with the stall's events merged into one: as large as all of them, but no quicker than the last.
-      const tail = !notch && hold && dir === hold.dir && gap < TAIL_GAP && ((slowing && a <= 1.5 * lastA) || a / gap <= (rates.at(-1) ?? 0));
+      const tail = !notch && hold && dir === hold.dir && gap < TAIL_GAP && ((slowing && a <= 1.5 * lastA) || a <= (lastA * gap) / 16);
       // A spin running free that only paused for less than QUIET (a hand turning the wheel on, a busy frame) runs on.
       const spinning = free && dir === lastDir && gap <= QUIET;
       // A wheel rolled on a notch at a time, 80 to 150 ms apart, the page taking each notch as the reader's own and no
@@ -603,7 +607,7 @@ export function createGate(read: () => Course) {
         gaps = [];
         followed = 0;
         peakPace = 0;
-        rates = [];
+        deltas = [];
       } else if (hold) {
         hold.paced = now + PACE;
         hold.low = Infinity;
@@ -629,7 +633,7 @@ export function createGate(read: () => Course) {
     samples.push({ t: now, a });
     while (samples[0].t < now - 500) samples.shift();
     total += a;
-    if (rates.push(a / Math.min(50, Math.max(8, gap))) > 12) rates.shift();
+    if (deltas.push(a) > 12) deltas.shift();
     const pace = sum(now - PACE, now);
     peakPace = Math.max(peakPace, pace);
     const fast = rate(now) >= FAST;
@@ -700,9 +704,11 @@ export function createGate(read: () => Course) {
     // A trackpad swipe inside a pinned story moves one beat: it follows the hand for FOLLOW px, then is taken to the next
     // stop as the finger lifts, or at once when the hand is quick. One whose momentum would carry the page into the
     // sheet's unfolding goes on to its finished frame (unfolds) in the same move, never resting there first.
-    if (!notched && !startedInner && followed >= FOLLOW && (rate(now) >= QUICK || lifted(now))) {
+    const lift = !notched && lifted(now);
+    if (!notched && !startedInner && followed >= FOLLOW && (lift || rate(now) >= QUICK)) {
       const next = ahead(origin, l.animatedScroll, dir, pageSpeed(l, dir));
-      const unfold = unfolding(l.targetScroll + dir * rate(now) * MOMENTUM);
+      // The momentum to come, once it is momentum: its last delta TAIL_FRAMES times over.
+      const unfold = lift ? unfolding(l.targetScroll + dir * deltas[deltas.length - 1] * TAIL_FRAMES) : undefined;
       const to = next !== undefined && paced(origin, next) ? next : unfold && (dir > 0 ? unfold[2] : unfold[0]);
       if (to !== undefined && (to - l.animatedScroll) * dir > 1) {
         if (nested(event, dir)) return true;

@@ -487,7 +487,7 @@ describe("wheel stops", () => {
 
   it("settles a gentle nudge that goes quiet inside a pinned story on its nearest finished beat, never mid-beat", () => {
     const pins: [number, number][] = [[900, 2600]];
-    const gentle = Array(16).fill(18); // about 1100 px/s, 288px
+    const gentle = Array(36).fill(8); // a slow drag, 500 px/s, 288px
     // From a beat, a nudge moves the story on to the next one, however far.
     expect(nudgeTo(1000, gentle, pins)).toBe(2600);
     expect(nudgeTo(2600, gentle.map((x) => -x), pins)).toBe(1000);
@@ -502,7 +502,7 @@ describe("wheel stops", () => {
     // A finished beat that is no stop (an exhibit check at its hold) is as good a rest.
     expect(nudgeTo(1000, gentle, pins, [0, 1000, 1700, 2600, 4000])).toBe(1700);
     // Bound 3px past a beat the page is easing over: back onto it, not left 3px off.
-    expect(nudgeTo(1000, [...Array(40).fill(20), 3], pins, [0, 1000, 1800, 2600, 4000])).toBe(1800);
+    expect(nudgeTo(1000, [...Array(100).fill(8), 3], pins, [0, 1000, 1800, 2600, 4000])).toBe(1800);
     // Outside a pinned story slow scrolling stays the reader's.
     expect(nudgeTo(2700, gentle, pins)).toBeUndefined();
     expect(nudgeTo(1000, gentle, [])).toBeUndefined();
@@ -957,6 +957,20 @@ describe("trackpad swipes", () => {
     vi.restoreAllMocks();
     expect(total).toBeGreaterThan(414);
     expect(g.lenis.landed).toEqual([823]);
+  });
+
+  it("F6: one notch of a mouse wheel moves one beat, How it works included", () => {
+    let at = 0;
+    for (const to of [414, 823, 1858]) {
+      const g = course(at);
+      g.send([100]);
+      g.lenis.animatedScroll = g.lenis.targetScroll - 4;
+      vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+      g.scroll();
+      vi.restoreAllMocks();
+      expect(g.lenis.landed).toEqual([to]);
+      at = to;
+    }
   });
 });
 
