@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterClaims, filterLabel, filterPicks, insightsLedger, panelName, refusalRows, timeField } from "./report";
+import { filterClaims, filterLabel, filterPicks, FUNNEL_ROWS, insightsLedger, panelName, refusalRows, timeField } from "./report";
 
 type Row = Parameters<typeof insightsLedger>[0][number];
 const row = (over: Partial<Row> = {}): Row => ({ remedied: 0, refused: 0, amountPaid: 0, amountSent: 0, timeToSendSec: null, modelSec: 2, ...over });
@@ -19,12 +19,14 @@ describe("figures", () => {
 });
 
 describe("layout", () => {
-  it("gives the refusals row room for every reason, never less than the 22-row default", () => {
-    expect(refusalRows(0)).toBe(22);
-    expect(refusalRows(3)).toBe(22);
-    expect(refusalRows(5)).toBeGreaterThan(22);
-    // Every reason (its full text over the check that caught it, about 58px) fits in the 224px the 22-row card leaves on a 1280px laptop, plus 16px a row.
-    for (let n = 4; n <= 11; n++) expect(224 + (refusalRows(n) - 22) * 16).toBeGreaterThanOrEqual(n * 58);
+  it("gives the funnel and refusals row the taller of the two: the funnel's own height, or every reason", () => {
+    expect(FUNNEL_ROWS).toBe(21);
+    expect(refusalRows(0)).toBe(FUNNEL_ROWS);
+    expect(refusalRows(3)).toBe(FUNNEL_ROWS);
+    // Today's five reasons: 23 rows (368px), where the funnel stretched over 27.
+    expect(refusalRows(5)).toBe(23);
+    // Every reason (its full text over the check that caught it, about 58px) fits under the card's title, 16px a row.
+    for (let n = 1; n <= 11; n++) expect(refusalRows(n) * 16 - 64).toBeGreaterThanOrEqual(n * 58);
   });
 
   it("names a panel's keyboard stop by its title", () => {

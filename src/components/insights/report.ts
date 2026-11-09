@@ -95,11 +95,17 @@ export function filterLabel(picks: FilterPick[]) {
 }
 
 /**
- * Rows (16px each) for the row the funnel and the refusals share, tall enough to list every refusal reason with none cut off at the
- * panel's foot: a reason takes about 58px (the reason, where it was caught, its bar), and the 22-row minimum leaves
- * 224px for the list on a 1280px laptop.
+ * The funnel's own rows: it sits from the card's top at its own height (CheckFunnelView), its title (about 56px), four
+ * stages of one pitch (a stage's line and a drop of two kinds, about 62px) and Paid's line.
  */
-export const refusalRows = (reasons: number) => Math.max(22, 22 + Math.ceil((reasons * 58 - 224) / 16));
+export const FUNNEL_ROWS = Math.ceil((56 + 4 * 62 + 24) / 16);
+
+/**
+ * Rows (16px each) for the row the funnel and the refusals share: the taller of the two, so neither card cuts off a row
+ * and neither leaves a band of empty card over the next section. A refusal reason takes about 58px (the reason, where it
+ * was caught, its bar), under the card's title.
+ */
+export const refusalRows = (reasons: number) => Math.max(FUNNEL_ROWS, Math.ceil((64 + reasons * 58) / 16));
 
 const reasonCount = (data: InsightsData) => new Set(data.claims.flatMap((c) => (c.refusalReason ? [c.refusalReason] : []))).size;
 
