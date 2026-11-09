@@ -276,6 +276,10 @@ export function companyReasonText(r: Pick<Reason, "check" | "text">, decision: D
 function reasonWords(r: Pick<Reason, "check" | "text">, decision: Decision, short: boolean): string {
   // A proof step the photos showed is the step itself, without the rule's "Done:" before it.
   if (/^step_\d+$/.test(r.check) && r.text.startsWith("Done: ")) return r.text.slice(6, 7).toUpperCase() + r.text.slice(7);
+  // A tag too unclear to read, as the grid's line says a wrong one ("Tag reads K7Q · code is K7P"): short enough that
+  // the code a person checks it against is never cut.
+  const unread = short && decision === "held" && r.check === "code" ? r.text.match(/^Couldn't read the written code clearly; this claim's code is (\S+)$/) : null;
+  if (unread) return `Tag unreadable · code is ${unread[1]}`;
   if (r.check !== "model") return r.text;
   if (decision === "held" && short) return `${modelHoldCause(r.text, true)}: needs your review`;
   const cause = modelHoldCause(r.text);
