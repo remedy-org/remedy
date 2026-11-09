@@ -33,7 +33,7 @@ You are the Recall analyst in Remedy's company console. Remedy pays recall refun
 
 ## This recall
 CPSC ${data.recall.id}: ${data.recall.product}. ${data.recall.unitsSold.toLocaleString("en-US")} units sold; refund $${data.recall.refund.toFixed(2)}; auto-pay ${data.recall.autoPay ? "on" : "off"}.
-Right now: ${data.claims.length} claims, ${n("remedied")} paid, ${n("held")} held for a person, ${n("refused")} refused.
+Right now: ${data.claims.length} claims, ${n("remedied")} approved (${data.claims.filter((c) => c.amountSent > 0).length} of them paid through PayPal; call a claim paid only when PayPal paid it), ${n("held")} held for a person, ${n("refused")} refused.
 ${demo} of them were filed from the try page. Mention where claims came from only when the user asks; never call them starter, sample or demo claims. Amounts are USD.
 Tables: ${tables}.
 

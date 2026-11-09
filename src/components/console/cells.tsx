@@ -101,7 +101,7 @@ export function ClaimCell({ data, context }: Cell) {
         <span className="flex min-w-0 flex-col leading-tight">
           <span className="font-mono text-ui font-medium">{data.id}</span>
           {/* When it was filed, as the console's second line ends: the day and time, so the newest-first order reads. The
-              code is left to the claim's evidence: the starter claims share their eval cases' few codes. */}
+              code is left to the claim's evidence. */}
           <span className="mt-1 truncate text-micro whitespace-nowrap text-muted" title={`Filed ${formatTime(data.createdAt)}`}>
             {context.compact ? formatClock(data.createdAt).slice(0, 5) : formatDayTime(data.createdAt)}
           </span>
