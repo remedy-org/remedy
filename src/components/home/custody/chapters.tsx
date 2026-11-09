@@ -158,13 +158,17 @@ export function ConsentChapter({ p }: { p?: Progress }) {
             <p className="text-title font-medium text-balance text-text">
               <NoBreakHyphens>{CONSENT.title}</NoBreakHyphens>
             </p>
+            {/* What Remedy is, under the headline as on the page; the phone's frame leaves it out, so its button and the
+                consent line stay inside the frame. */}
+            <p className="text-ui text-pretty text-muted @max-[719px]:hidden">{CONSENT.about}</p>
             <p className="text-body text-pretty text-muted">{CONSENT.how}</p>
           </div>
           <div className="flex flex-col gap-4">
             {/* The claim page's own button, as it looks there: brass, the screen's one amber. A picture, so it is no
-                control (the whole screen is hidden from screen readers and takes no pointer). */}
+                control (the whole screen is hidden from screen readers and takes no pointer). The code's clock is read first,
+                as on the page. */}
+            <p className="text-ui text-pretty text-muted">{CONSENT.clock}</p>
             <span className="btn-primary pointer-events-none flex h-12 items-center justify-center rounded-button-lg text-body font-medium select-none">Log in with PayPal</span>
-            <p className="-mt-1 text-ui text-pretty text-muted">{CONSENT.clock}</p>
             <p className={clsx("text-ui text-pretty text-faint", compact && "@max-[719px]:hidden")}>{PAYPAL_CONSENT}</p>
           </div>
         </div>

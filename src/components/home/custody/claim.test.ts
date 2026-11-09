@@ -36,6 +36,9 @@ describe("chapter 01, the consent screen", () => {
     expect(CLAIM.minutes).toBe(CAPTURE_SESSION_MINUTES);
     expect(CONSENT).toEqual(consentLines(demoRecall(), CAPTURE_SESSION_MINUTES));
     expect(CONSENT.title).toBe("$29.99 back for your X-VESOLJE Nursing Pillow");
+    expect(CONSENT.about).toBe("Remedy checks a live photo that the pillow is cut in half, then sends your refund through PayPal.");
+    // What Remedy is, never who it works for: the demo recall's seller is not a Remedy customer (DESIGN.md:95).
+    expect(Object.values(CONSENT).join(" ")).not.toMatch(/Kikea/);
     expect(CONSENT.clock).toBe("Your code is good for 10 minutes, so cut the pillow and have paper and a marker ready first.");
   });
 });
