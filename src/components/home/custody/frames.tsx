@@ -6,7 +6,8 @@ import { CLAIM } from "./claim";
 /**
  * The claim page's own top bar, inside every screen the custody sequence shows: the app chrome's lockup, then, as the
  * claim flow's header has it (FlowShell), a hairline and the recall the claim is for. No step meter: the rail beside it
- * is the sequence's one list of chapters. The console's bar carries the recall's CPSC number instead.
+ * is the sequence's one list of chapters. The console's bar is the For companies tour's: the same lockup, and on the
+ * right the recall it shows, its product as CPSC titles it and its number.
  */
 export function ScreenBar({ console: isConsole, compact }: { console?: boolean; compact?: boolean }) {
   return (
@@ -14,7 +15,7 @@ export function ScreenBar({ console: isConsole, compact }: { console?: boolean; 
       {/* The app chrome's lockup (Wordmark sm): 600 at -0.025em, the mark 0.25em from the name on the 18 x 12 pixel grid. */}
       <span className="inline-flex items-baseline gap-[0.25em] text-body font-semibold tracking-[-0.025em]">
         <RemedyMark className="relative top-[0.172px] h-3 w-[1.125rem]" />
-        {isConsole ? "Console" : "Remedy"}
+        Remedy
       </span>
       {!compact && !isConsole && (
         <>
@@ -22,7 +23,14 @@ export function ScreenBar({ console: isConsole, compact }: { console?: boolean; 
           <span className="truncate text-ui text-muted">{CLAIM.product} recall</span>
         </>
       )}
-      {isConsole && <span className="ml-auto font-mono text-micro text-faint">{CLAIM.recall}</span>}
+      {isConsole && (
+        <span className="ml-auto flex items-baseline gap-2 text-ui whitespace-nowrap">
+          <span className="text-text-2">{CLAIM.product}</span>
+          <span className="text-muted">
+            CPSC <span className="font-mono">{CLAIM.recall.replace(/^CPSC /, "")}</span>
+          </span>
+        </span>
+      )}
     </div>
   );
 }

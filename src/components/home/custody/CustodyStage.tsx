@@ -11,7 +11,7 @@ import { useBeatPaging } from "./paging";
 import { scrollAt } from "./pace";
 import { ScreenBar } from "./frames";
 import { CUT_IN, ENTER, IN_OUT, LEAVE, useChapterGate, useGate } from "./gate";
-import { EXHIBIT_RANGE, STARTS, chapterAt, clamp01, inExhibit } from "./timeline";
+import { EXHIBIT_RANGE, chapterAt, clamp01, inExhibit } from "./timeline";
 import styles from "./custody.module.css";
 
 // The pinned Chain of Custody on laptops (spec H2). Everything here is drawn from one timeline p (paced against the
@@ -22,7 +22,7 @@ import styles from "./custody.module.css";
 export const HANDOFF = [0.12, 0.17] as const;
 /** The rail's chapter list comes in as the hero copy goes (the dolly's first quarter), so the left of the screen is
  * never empty while the laptop moves into the window: just after the copy leaves (HeroRunway DOLLY[0] + 0.005). */
-const RAIL_IN = 0.05;
+const RAIL_IN = 0.045;
 /** The screen's own frame and bar come in with the consent screen: the glass already spans the window's width and top,
  * so the clip only grows down and never slices them. */
 const ON_GRID = HANDOFF[0];
@@ -39,7 +39,8 @@ function Layer({ p, i, compact, fill, children }: { p: Progress; i: number; comp
     // half empty, a tall one its upper); the console fills it.
     <motion.div
       data-layer={i}
-      className={clsx("absolute inset-0 flex justify-center px-8", compact ? "pt-6 pb-4" : "pt-12 pb-8", fill ? "items-start" : "items-center")}
+      // The console's queue starts 24px under its bar, as the tour's does under its ledger, never a well of empty ground.
+      className={clsx("absolute inset-0 flex justify-center px-8", compact || fill ? "pt-6 pb-4" : "pt-12 pb-8", fill ? "items-start" : "items-center")}
       style={{ opacity, y, visibility }}
     >
       <div className={clsx("w-full max-w-[66rem]", fill && "h-full")}>{children}</div>
@@ -58,18 +59,12 @@ function RailItem({ p, i }: { p: Progress; i: number }) {
   const on = useOn(p, i);
   const opacity = useTransform(() => enter.get() * (0.35 + 0.65 * on.get()));
   const x = useTransform(enter, (k) => -12 * (1 - k));
-  // The amber edge marks the chapter on screen, and for 01 and 02 fills down from a quarter through the chapter's
-  // beat (01 from the end of the dolly), so a long hold always shows progress. Chapters 03 to 05 are under the exhibit;
-  // 06's edge marks the console.
-  const lead = useTransform(() => {
-    if (i >= 2) return on.get();
-    const v = p.get();
-    const from = i === 0 ? HANDOFF[1] : STARTS[i];
-    return on.get() * (0.25 + 0.75 * clamp01((v - from) / (STARTS[i + 1] - from)));
-  });
+  // The amber edge marks the chapter on screen, full height beside its name as soon as it is on (in time, with the
+  // chapter's own cut, never scrubbed): a mark, not a meter, so it never rests as a stub. Chapters 03 to 05 are under
+  // the exhibit; 06's edge marks the console.
   return (
     <motion.li className="relative py-2.5" style={{ opacity, x }}>
-      <motion.span className="absolute inset-y-1.5 -left-4 w-0.5 rounded-full bg-accent" style={{ scaleY: lead, originY: 0 }} />
+      <motion.span className="absolute inset-y-1.5 -left-4 w-0.5 rounded-full bg-accent" style={{ scaleY: on, originY: 0 }} />
       <span className="text-body font-medium">{c.title}</span>
     </motion.li>
   );

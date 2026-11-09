@@ -6,8 +6,8 @@ import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionV
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { VerdictMark } from "@/components/console/VerdictMark";
 import { ClockIcon, DURATION, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
-import { CLAIM, CODE_AT, CONSENT_AT, CONSENT_STAGGER, CONSOLE_ROWS, SHOT_AT, WRITE_AT } from "./claim";
-import { ENTER, useGate } from "./gate";
+import { CLAIM, CODE_AT, CODE_STAGGER, CONSENT_AT, CONSENT_STAGGER, CONSOLE_ROWS, SHOT_AT, WRITE_FOR } from "./claim";
+import { ENTER, LEAVE, useGate } from "./gate";
 
 // The five chapters of the Chain of Custody, as presentational copies of the real claim screens. Each one is drawn from
 // a scroll progress `p` (0 to 1 over the whole runway, spec H2); a progress fixed at 1 (useDone) gives every chapter's
@@ -144,9 +144,10 @@ export function ConsentChapter({ p }: { p?: Progress }) {
 
 /* --------------------------------------------------------------------------------------------- 02 The code */
 
-function CodeCell({ p, at, char }: { p: Progress; at: number; char: string }) {
-  // Each character drops into its cell in time once p reaches it, so a stop never rests on one half there.
-  const t = useGate(p, (v) => v >= at - 0.004);
+function CodeCell({ p, i, char }: { p: Progress; i: number; char: string }) {
+  // Each character drops into its cell in time once p reaches the code's moment, one after another, so a stop never
+  // rests on one half there.
+  const t = useGate(p, (v) => v >= CODE_AT - 0.004, { ...ENTER, delay: i * CODE_STAGGER });
   const y = useTransform(t, (v) => (1 - v) * 10);
   return (
     <span className="flex h-16 w-14 items-center justify-center rounded-control border border-line-strong bg-surface">
@@ -169,7 +170,9 @@ export function CodeChapter({ p }: { p: Progress }) {
   const compact = useContext(Compact);
   const swung = useAfter(p, 0.34);
   const left = useTransform(p, sessionLeft);
-  const wipe = useTransform(p, (v) => `inset(-0.2em ${((1 - ramp(v, WRITE_AT[0], WRITE_AT[1])) * 100).toFixed(2)}% -0.2em 0)`);
+  // The tag is written in the same event as the boxes fill: left to right as the last character lands, in time.
+  const write = useGate(p, (v) => v >= CODE_AT - 0.004, { duration: WRITE_FOR, ease: EASE.outQuart, delay: 2 * CODE_STAGGER }, LEAVE);
+  const wipe = useTransform(write, (k) => `inset(-0.2em ${((1 - k) * 100).toFixed(2)}% -0.2em 0)`);
   return (
     <div className="@container">
       <div className={clsx("grid items-center @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] @min-[720px]:gap-14", compact ? "gap-6" : "gap-10")}>
@@ -183,7 +186,7 @@ export function CodeChapter({ p }: { p: Progress }) {
           </div>
           <div className="flex gap-2" aria-hidden="true">
             {CLAIM.code.split("").map((c, i) => (
-              <CodeCell key={c} p={p} at={CODE_AT[i]} char={c} />
+              <CodeCell key={c} p={p} i={i} char={c} />
             ))}
           </div>
           <p className={clsx("max-w-[44ch] text-body text-muted", compact && "@max-[719px]:hidden")}>Write it on a tag with <NoBreakHyphens>X-VESOLJE</NoBreakHyphens>, big, in marker. Then photograph the cut pillow with the tag on it, in this page&rsquo;s camera.</p>
@@ -208,7 +211,8 @@ export function CodeChapter({ p }: { p: Progress }) {
               preserveAspectRatio="none"
               aria-hidden="true"
             >
-              <path d="M3 80 C 6 52, -6 30, 10 0" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              {/* From the hole's top rim, never its middle, so the hole reads as a hole, not a dial with a hand in it. */}
+              <path d="M3.5 74 C 6 52, -6 30, 10 0" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
             </svg>
             {/* What it hangs from: a brass pin at the string's top end, as the Problem board's pins (never a string ending
                 in the air). */}
@@ -295,13 +299,14 @@ function Thumb({ src }: { src: string }) {
 const GRID = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[11rem_minmax(0,1fr)_6rem_6.5rem_5rem]";
 
 /** Claim RM-0442 as the recall team's console lists it, paid, just filed: its photo check answered at 0:14, the
- * payout sent at 0:15 (the exhibit's clock, teardown/model.ts elapsed). */
+ * payout sent at 0:15 (the exhibit's clock, teardown/model.ts elapsed). Its line says the payout's time, so the 14 s the
+ * photo check took never reads as the receipt's 15 s. */
 const M4T_ROW = {
   photo: CLAIM.photo,
   filed: "Just now",
   id: CLAIM.id,
   status: "paid" as const,
-  reason: "Every check passed",
+  reason: `Paid ${CLAIM.seconds} s after the photo`,
   // The console's one time unit: seconds, "14 s".
   time: `${CLAIM.seconds - 1} s`,
   amount: CLAIM.amount,
@@ -338,7 +343,8 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
         </span>
         {/* Plain figures in a table, as the console tour prints them: superscript cents are the hero receipt's alone. */}
         {row.amount ? (
-          <span className="tabular-nums">${row.amount.toFixed(2)}</span>
+          // Schibsted's proportional figures: its tabular ones space the point like mono ("$29 .99").
+          <span>${row.amount.toFixed(2)}</span>
         ) : (
           <span className="text-faint">—</span>
         )}
@@ -358,26 +364,20 @@ export function ConsoleChapter({ p }: { p: Progress }) {
   const flash = useTransform(p, (v) => `color-mix(in oklch, var(--text) ${(8 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
   // It fills the stage down to its foot, so as the pin releases the stage never shows an empty band under it.
   return (
+    // The queue sits straight in the console's window on hairlines, as the tour draws it: no card inside the window, and
+    // no heading over it (the rail already says who sees it; RM-0442's own row says when it was paid).
     <div className="h-full @container">
-      <div className="flex h-full flex-col gap-6">
-        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
-          <p className="text-head-sm font-medium">The recall team sees it here: photo, checks and payout in one row.</p>
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card bg-surface shadow-card">
-          <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-3">
-            <span className="text-ui font-medium">
-              <NoBreakHyphens>Kikea X-VESOLJE nursing pillows</NoBreakHyphens>
-            </span>
-          </div>
+      <div className="flex h-full flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex gap-6 border-b border-line px-4 text-ui">
             {/* The console's own status tabs, in its words. */}
-            {["All", "Paid", "Held", "Rejected", "Blocked"].map((t, i) => (
+            {["All", "Approved", "Held", "Rejected", "Blocked"].map((t, i) => (
               <span key={t} className={clsx("py-2.5", i === 0 ? "border-b-2 border-text text-text" : "text-muted")}>
                 {t}
               </span>
             ))}
           </div>
-          <div className={clsx(GRID, "hidden h-9 border-b border-line bg-surface-2 text-micro font-medium text-muted @min-[720px]:grid")}>
+          <div className={clsx(GRID, "hidden h-9 border-b border-line text-micro font-medium text-muted @min-[720px]:grid")}>
             <span>Claim</span>
             <span>Verdict</span>
             <span>Checks</span>

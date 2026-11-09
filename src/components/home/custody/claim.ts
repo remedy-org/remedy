@@ -65,10 +65,12 @@ export const CHAPTERS = [
  * too) finds them all lit and a fling never drifts on to reach them. */
 export const CONSENT_AT = [0.2, 0.2, 0.2];
 export const CONSENT_STAGGER = 0.3;
-/** 02: when each code character appears. */
-export const CODE_AT = [0.352, 0.372, 0.392];
-/** The tag is written left to right after the last character appears. */
-export const WRITE_AT = [0.398, 0.436] as const;
+/** 02: the code appears in its boxes and on the tag as one event, in time once p passes CODE_AT: its characters drop in
+ * CODE_STAGGER seconds apart, and the tag is written left to right over WRITE_FOR seconds as the last one lands, so no
+ * stop ever rests on empty boxes beside a blank tag, or on two pictures of the code that disagree. */
+export const CODE_AT = 0.352;
+export const CODE_STAGGER = 0.1;
+export const WRITE_FOR = 0.3;
 /** Then what the photo must show lights in turn, leading into 03. */
 export const SHOT_AT = [0.432, 0.444, 0.456];
 
@@ -87,4 +89,10 @@ export const CONSOLE_ROWS: { photo: string; filed: string; id: string; status: S
   { photo: "/demo/c05-1.jpg", filed: "8 Nov 02:40", id: "RM-6276", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
   { photo: "/demo/c03-1.jpg", filed: "7 Nov 23:32", id: "RM-2125", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
   { photo: "/demo/c01-1.jpg", filed: "7 Nov 23:28", id: "RM-8501", status: "paid", reason: "Every check passed", time: "15 s", amount: 29.99 },
+  { photo: "/demo/c05-1.jpg", filed: "7 Nov 19:09", id: "RM-8466", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
+  { photo: "/demo/c03-1.jpg", filed: "7 Nov 17:16", id: "RM-8121", status: "paid", reason: "Every check passed", time: "13 s", amount: 29.99 },
+  { photo: "/demo/c09-1.jpg", filed: "7 Nov 16:47", id: "RM-0118", status: "rejected", reason: "Code missing or wrong · reads K7O, expected K7Q", time: "12 s", fails: 3 },
+  { photo: "/demo/c01-1.jpg", filed: "7 Nov 14:47", id: "RM-6827", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
+  { photo: "/demo/c05-1.jpg", filed: "7 Nov 12:38", id: "RM-0017", status: "paid", reason: "Every check passed", time: "14 s", amount: 29.99 },
+  { photo: "/demo/c03-1.jpg", filed: "7 Nov 10:21", id: "RM-0375", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
 ];

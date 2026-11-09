@@ -52,9 +52,10 @@ describe("Opened Exhibit model", () => {
 
   it("puts the callout up or down, never part way, so a stop never rests on half-drawn words", () => {
     for (let p = 0; p <= 1; p += 0.001) expect([0, 1]).toContain(stateAt(p).callout);
+    // The intro's is up from its first frame, with the pillow: the side column is never empty beside it.
     const [a, z] = RANGES.intro;
-    expect(stateAt(a + 0.1 * (z - a)).callout).toBe(0);
-    expect(stateAt(a + 0.13 * (z - a)).callout).toBe(1);
+    expect(stateAt(a + 0.001 * (z - a)).callout).toBe(1);
+    expect(stateAt(a + 0.5 * (z - a)).callout).toBe(1);
   });
 
   it("hands the last check's column to the receipt with no blank frame, and rules Pay before the stamp lands", () => {

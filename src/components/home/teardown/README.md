@@ -27,8 +27,8 @@ const exhibitP = useTransform(p, [STARTS[2], STARTS[5]], [0, 1]);
 ```
 
 - It fills its parent and does not pin itself.
-- Give that stretch of the custody pin `TOTAL_VH` (520vh in `model.ts`): 7 beats at 70 to 85vh each, none under
-  DESIGN.md's 70vh floor. It ends on the paid pose; the pin cuts to the console from there.
+- Give that stretch of the custody pin `TOTAL_VH` (500vh in `model.ts`): 7 beats at 70 to 80vh each, none under
+  DESIGN.md's 70vh floor, the camera moving at an even pace through every hold. It ends on the paid pose; the pin cuts to the console from there.
 
 **On its own.** `<OpenedExhibit />` renders its own pinned section, `TOTAL_VH + 100svh` tall (400vh + 100svh on
 phones). It includes a "Skip the five checks" link, and the check row's buttons jump to each check.

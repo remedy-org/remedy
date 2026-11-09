@@ -7,8 +7,8 @@ import { CHECKS, EXHIBIT, type CheckId } from "./claim";
 export type BeatId = "intro" | CheckId | "paid";
 
 /**
- * Beats and their share of the pin, in vh of scroll: 520vh in all, and no beat under DESIGN.md's 70vh floor. The code
- * check and the payout are the signature shots and hold longest. The exhibit ends on the paid pose: the pin cuts to
+ * Beats and their share of the pin, in vh of scroll: 500vh in all, and no beat under DESIGN.md's 70vh floor. The code
+ * check is the signature shot and holds longest; every hold keeps the camera moving (HOLD_PUSH). The exhibit ends on the paid pose: the pin cuts to
  * the console from there, so a return to the hero view would never be seen.
  */
 export const BEATS: readonly { id: BeatId; vh: number }[] = [
@@ -16,9 +16,9 @@ export const BEATS: readonly { id: BeatId; vh: number }[] = [
   { id: "live", vh: 70 },
   { id: "fp", vh: 70 },
   { id: "acct", vh: 70 },
-  { id: "code", vh: 85 },
+  { id: "code", vh: 80 },
   { id: "torn", vh: 70 },
-  { id: "paid", vh: 85 },
+  { id: "paid", vh: 70 },
 ];
 
 export const TOTAL_VH = BEATS.reduce((a, b) => a + b.vh, 0);
@@ -100,7 +100,8 @@ export const HERO: Shot = {
   ry: 0.27,
 };
 
-/** Each beat's shot, held while its part hangs open. The camera pushes in 6% over the hold. */
+/** Each beat's shot, held while its part hangs open. Over the hold the camera keeps moving, at an even pace, so every
+ * turn of the wheel moves the frame: it pushes in 12% and turns 3 degrees round the part (HOLD_PUSH, HOLD_TURN). */
 export const SHOTS: Record<BeatId, Shot> = {
   intro: HERO,
   // The whole cut pillow with the owner's phone held off its front right, between it and the callout: the phone's
@@ -130,27 +131,37 @@ export const SHOTS: Record<BeatId, Shot> = {
 export const ARRIVE: Record<BeatId, number> = { intro: 0.22, live: 0.22, fp: 0.22, acct: 0.22, code: 0.36, torn: 0.36, paid: 0.22 };
 export const DEPART: Record<BeatId, number> = { intro: 0.88, live: 0.88, fp: 0.88, acct: 0.8, code: 0.8, torn: 0.88, paid: 0.88 };
 
-/** Camera keys in p: each beat arrives at ARRIVE and holds to DEPART, pushing in. */
+/** How far the camera pushes in over a beat's hold (a share of the shot's half-width), and how far it turns (degrees). */
+const HOLD_PUSH = 0.88;
+const HOLD_TURN = 3;
+
+/** Camera keys in p: each beat arrives at ARRIVE and holds to DEPART, pushing in and turning a little. */
 const KEYS: { p: number; shot: Shot }[] = (() => {
   const keys: { p: number; shot: Shot }[] = [{ p: 0, shot: HERO }];
   for (const b of BEATS) {
     const [a, z] = RANGES[b.id];
     const s = SHOTS[b.id];
-    const push = b.id === "intro" ? 1 : 0.94;
+    const push = b.id === "intro" ? 1 : HOLD_PUSH;
+    const turn = b.id === "intro" ? 0 : HOLD_TURN;
     keys.push({ p: lerp(a, z, ARRIVE[b.id]), shot: s });
     keys.push({
       p: lerp(a, z, DEPART[b.id]),
-      shot: { ...s, rx: s.rx * push, ry: s.ry * push },
+      shot: { ...s, az: s.az + turn, rx: s.rx * push, ry: s.ry * push },
     });
   }
   return keys;
 })();
 
-/** The two camera keys p sits between, and how far it is from the first to the second (0 to 1, eased). */
+/**
+ * The two camera keys p sits between, and how far it is from the first to the second (0 to 1): eased for a move between
+ * two shots, even over a hold (the odd segments, arrive to depart), so a slow reader's every wheel tick moves the frame
+ * as much as the last.
+ */
 function keysAt(p: number) {
   let i = 0;
   while (i < KEYS.length - 2 && p > KEYS[i + 1].p) i++;
-  return { a: KEYS[i].shot, b: KEYS[i + 1].shot, x: inOutCubic(inv(KEYS[i].p, KEYS[i + 1].p, p)) };
+  const x = inv(KEYS[i].p, KEYS[i + 1].p, p);
+  return { a: KEYS[i].shot, b: KEYS[i + 1].shot, x: i % 2 === 1 ? x : inOutCubic(x) };
 }
 
 /** How far the camera pulls back mid-move, per metre the aim travels, as extra half-width (metres). */
@@ -245,12 +256,12 @@ const receiptAt = (p: number) => (p < RANGES.paid[0] ? 0 : easeOut(inv(0.02, 0.2
 
 /**
  * Whether the side callout is up (1) or down (0): a state, not a fade, so the stage animates it in time and a reader
- * who stops never rests on half-drawn words. The intro's comes up at 12% of its beat, as the cut opens. Each check's is
+ * who stops never rests on half-drawn words. The intro's is up from the beat's first frame, with the pillow, so the side
+ * column is never empty beside it. Each check's is
  * up from its beat's first frame: the outgoing words hold to the hand-off and the next ones cut in there, so the column
  * is never blank between checks. The last check's holds into the payout and goes as the receipt is half opaque over it.
  */
 function calloutAt(beat: BeatId, p: number) {
-  if (beat === "intro") return local(beat, p) >= 0.12 ? 1 : 0;
   if (beat === "paid") return receiptAt(p) * RECEIPT_FADE >= 0.5 ? 0 : 1;
   return 1;
 }

@@ -12,7 +12,7 @@ const BEATS: [p: number, vh: number][] = [
   [0.2, 48], // 01 Log in with PayPal: a held screen, its lines lit in time (claim.ts CONSENT_AT)
   [0.34, 80], // 02 One-time code
   // 03 to 05: the Opened Exhibit, one linear stretch, so its own seven beats (teardown/model.ts) keep the share of
-  // the scroll they were designed for: 70 to 85vh each, the code check and the payout longest.
+  // the scroll they were designed for: 70 to 80vh each, the code check longest.
   [0.48, EXHIBIT_VH],
   [0.9, 60], // the console
 ];
