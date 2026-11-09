@@ -446,6 +446,8 @@ const OUTCOME: Partial<Record<DrawerClaim["decision"], string>> = {
   rejected: "Rejected. No money moves.",
   blocked: "Blocked before the photo check. No money moves.",
 };
+// A held claim the console starts with: approving it records the decision and sends nothing (ReviewActions).
+const HELD_RECORDS = "Held for your review. Approve or reject it to record your decision.";
 
 function Section({ title, children, aside }: { title: ReactNode; children: ReactNode; aside?: ReactNode }) {
   return (
@@ -494,7 +496,12 @@ function moneySteps(claim: DrawerClaim): Step[] {
   }
   return [
     ...steps,
-    { label: "Sent", at: at((e) => e.type === "payout_sent"), note: claim.decision === "held" ? "Held: nothing is sent until a person at the company approves." : undefined },
+    {
+      label: "Sent",
+      at: at((e) => e.type === "payout_sent"),
+      // A claim the console starts with has no payout behind it: approving it records the decision (ReviewActions).
+      note: claim.decision !== "held" ? undefined : claim.seeded ? "Held: approve or reject it to record your decision." : "Held: nothing is sent until a person at the company approves.",
+    },
     { label: MONEY_WORD.paid, at: at((e) => e.type === "payout_updated" && (e.detail === PAYPAL_CONFIRMED || e.detail.endsWith("SUCCESS"))) },
   ];
 }
@@ -508,7 +515,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
   const note = steps.find((s) => s.note)?.note;
   return (
     <div className="@container">
-      <ol className="flex flex-col gap-2 @[26rem]:grid @[26rem]:gap-0" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label={`Timeline for ${claim.id}`}>
+      <ol className="flex flex-col gap-2 @[26rem]:grid @[26rem]:gap-0" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(max-content, 1fr))` }} aria-label={`Timeline for ${claim.id}`}>
         {steps.map((s, i) => {
           const done = s.at !== null;
           const next = steps[i + 1];
@@ -525,7 +532,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
                 />
                 {next && <span className={clsx("absolute inset-x-0 left-2.5 hidden h-px @[26rem]:block", done && next.at && !s.failed ? "bg-muted/70" : "bg-line-strong/40")} />}
               </span>
-              <span className={clsx("min-w-0 flex-1 text-micro @[26rem]:flex-none @[26rem]:leading-tight", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
+              <span className={clsx("min-w-0 flex-1 text-micro @[26rem]:flex-none @[26rem]:leading-tight @[26rem]:whitespace-nowrap", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
               {/* The figures in mono, the unit in the sans after a thin space, as the grid prints a span. */}
               <span className="text-micro text-muted">
                 {!done ? <span className="text-faint">{s.value ?? "—"}</span> : s.failed ? <span className="font-mono">{formatClock(s.at!)}</span> : <DurationText sec={i === 0 ? 0 : plus!} plus={i > 0} />}
@@ -642,7 +649,7 @@ function Evidence({
   // Before any photo arrives every check is waiting: one line says when they run, the rows are their names alone.
   const waiting = claim.preChecks.every((p) => p.state === "waiting");
   // The photo viewer, open on a photo (0-based); keyed by claim, so ↑/↓ to another claim closes it.
-  const [viewing, setViewing] = useState<{ id: string; n: number } | null>(null);
+  const [viewing, setViewing] = useState<{ id: string; n: number; zoom?: { x: number; y: number } } | null>(null);
   const viewer = viewing?.id === claim.id ? viewing.n : null;
   // V or Space from the queue opens the viewer at the first photo (a count that changes on each press).
   const [seenView, setSeenView] = useState(viewPhotos);
@@ -666,7 +673,12 @@ function Evidence({
             {claim.photos.length ? "Photos" : "No photos yet"}
           </h3>
           {/* A person deciding a held claim reads the tag against this: one glance, beside the photos. */}
-          {claim.review && claim.photos.length > 0 && <TagCode code={claim.code} />}
+          {claim.review && claim.photos.length > 0 && (
+            <TagCode
+              code={claim.code}
+              onZoom={claim.tagSpot ? () => setViewing({ id: claim.id, n: claim.tagSpot!.photo, zoom: { x: claim.tagSpot!.x, y: claim.tagSpot!.y } }) : undefined}
+            />
+          )}
         </div>
         {claim.duplicate ? (
           <Duplicate claim={claim} onOpen={onOpen} onView={(n) => setViewing({ id: claim.id, n })} />
@@ -696,6 +708,7 @@ function Evidence({
             claimId={claim.id}
             photos={claim.photos}
             start={viewer}
+            zoomAt={viewing?.zoom}
             code={claim.code}
             question={d && { title: d.title, detail: d.detail }}
             labels={claim.review ? reviewLabels(claim) : undefined}
@@ -719,6 +732,7 @@ function Evidence({
           (an account check, the photo check's answers and its quoted words) under it. */}
       <Section title="Checks" aside={waiting ? undefined : claim.five}>
         <CheckList
+          glyphs
           label={`Checks for ${claim.id}`}
           steps={claim.fiveRows.map((r) => ({
             id: String(r.n),
@@ -732,7 +746,7 @@ function Evidence({
 
       <Section title="Decision">
         {/* What decided a held or refused claim leads the panel; here, only what the rule did with it. */}
-        <p className="text-ui text-text-2">{d ? OUTCOME[claim.decision] ?? claim.sentence : claim.sentence}</p>
+        <p className="text-ui text-text-2">{d ? (claim.seeded && claim.decision === "held" ? HELD_RECORDS : OUTCOME[claim.decision]) ?? claim.sentence : claim.sentence}</p>
         {claim.review?.note && <p className="text-ui text-muted">{claim.review.note}</p>}
       </Section>
 
@@ -792,6 +806,10 @@ function Evidence({
 // What a part that didn't pass says in a word, after its name: the reason itself is the panel's heading.
 const PART_STATE: Partial<Record<string, string>> = { hold: "couldn’t tell", reject: "failed" };
 
+// No capital after a colon in these rows: "…: Couldn't confirm: The tag…" reads "…: couldn't confirm: the tag…". A
+// word that is a name or a code (PayPal, X-VESOLJE, H9D) keeps its case: only a plain capitalised word is lowered.
+const lowerAfterColons = (text: string) => text.replace(/(:\s+)([A-Z])(?=[a-z’']*\b)(?![a-z’']*[A-Z0-9-])/g, (_, c: string, l: string) => c + l.toLowerCase());
+
 /**
  * Under one of the five checks: why it was skipped, or each thing recorded under it, what held or failed first. One part
  * says its line alone; several name themselves. A photo-check answer that passed is its name and the model's own words,
@@ -809,7 +827,7 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
   const restates = (p: Part) => p.state === "pass" && !isPreCheck(p.id);
   return (
     <span className="flex flex-col gap-1.5">
-      {row.note && <span>{row.note}</span>}
+      {row.note && <span>{lowerAfterColons(row.note)}</span>}
       {shown.map((p) => (
         <span key={p.id} className="block">
           {led(p) ? (
@@ -822,10 +840,15 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
               {p.label}
               {!p.evidence && <span className="text-muted"> · passed</span>}
             </span>
+          ) : named && PART_STATE[p.state] ? (
+            // Its name and state; the rule's own line would only restate the name ("Couldn't confirm: The tag is on…").
+            <span className="text-text">
+              {p.label}: {PART_STATE[p.state]}
+            </span>
           ) : (
             <>
               {named && <span className={p.state === "pass" ? "text-text-2" : "text-text"}>{p.label}: </span>}
-              {link(p.text)}
+              {link(lowerAfterColons(p.text))}
             </>
           )}
           {p.evidence && !led(p) && (
@@ -870,11 +893,21 @@ function payoutStatusWord(status: string): string {
   }
 }
 
-/** "Tag must read K7P": the code the owner wrote, in mono at a size that reads against the photo's tag. */
-function TagCode({ code }: { code: string }) {
+/** "Tag must read K7P": the code the owner wrote, in mono at a size that reads against the photo's tag; where Remedy
+ * knows where the tag is, Zoom to tag opens the photo viewer zoomed on it. */
+function TagCode({ code, onZoom }: { code: string; onZoom?: () => void }) {
   return (
     <p className="flex shrink-0 items-baseline gap-2 text-ui text-muted">
       Tag must read <span className="font-mono text-body font-medium tracking-wide text-text">{code}</span>
+      {onZoom && (
+        <button
+          type="button"
+          onClick={onZoom}
+          className="ml-1 cursor-zoom-in text-text underline decoration-line-strong underline-offset-4 hover:decoration-text"
+        >
+          Zoom to tag
+        </button>
+      )}
     </p>
   );
 }

@@ -4,6 +4,7 @@ import { APPEAL_CHECK, reviewAsked } from "@/lib/appeal";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Outcome, Reason, Recall } from "@/lib/types";
 import { isSandboxBuild } from "@/lib/demo/allowed";
+import { datasetTagSpot } from "@/lib/demo/dataset";
 import { demoSample } from "@/lib/demo/samples";
 import { PAYPAL_CONFIRMED } from "@/lib/payoutWords";
 import { checkOf, fiveNames, type CheckNumber } from "@/lib/fiveChecks";
@@ -113,6 +114,8 @@ export interface DrawerClaim {
   // What the photo shows, in a few words from the checks (never the model's prose): the photo's accessible name.
   /** Each photo's description, in order (photoAltsOf). */
   photoAlt: (string | null)[];
+  /** Where the tag is, when Remedy knows it: the photo (0-based) and the spot (0 to 1), for the panel's Zoom to tag. */
+  tagSpot: { photo: number; x: number; y: number } | null;
   sentence: string;
   amount: string;
   // itemId: PayPal's id for this one payout (older claims have only the batch's).
@@ -347,6 +350,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     five: fiveLine(fiveRowsOf(c, recall, all, checks)),
     fiveRows: rows,
     photoAlt: photoAltsOf(c, recall),
+    tagSpot: datasetTagSpot(c.photos.map((p) => p.key)),
     sentence: decisionSentence(c, recall),
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,

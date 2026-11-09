@@ -13,6 +13,8 @@ export interface PhotoViewerProps {
   photos: string[];
   /** The photo that was clicked (0-based). */
   start: number;
+  /** Opens zoomed on this spot (0 to 1), as Zoom to tag does. */
+  zoomAt?: { x: number; y: number } | null;
   /** The one-time code the tag must read: on top, beside the photos it is checked against. */
   code?: string;
   /** What decided a held or refused claim, as the panel's heading says it: the question to look at the photos with. */
@@ -37,7 +39,7 @@ const ZOOM = 3;
  * (the viewer closes on the panel's confirm, which takes the second A), ← and → move between the photos where one shows
  * at a time, Esc goes back to the panel. On a phone it shows one photo at a time.
  */
-export function PhotoViewer({ claimId, photos, start, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
+export function PhotoViewer({ claimId, photos, start, zoomAt, code, question, onReview, labels, onOpen, onClose }: PhotoViewerProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const figures = useRef<(HTMLElement | null)[]>([]);
   const [current, setCurrent] = useState(start);
@@ -45,7 +47,7 @@ export function PhotoViewer({ claimId, photos, start, code, question, onReview, 
   const [ratios, setRatios] = useState<(number | null)[]>(() => photos.map(() => null));
   const table = useRef<HTMLDivElement>(null);
   const [room, setRoom] = useState<{ w: number; h: number } | null>(null);
-  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
+  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(zoomAt ?? null);
   useLayoutEffect(() => {
     const el = table.current;
     if (!el) return;
