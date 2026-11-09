@@ -581,7 +581,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     const grid = api.current;
     if (!grid || still || lastList.current === listKey) return;
     lastList.current = listKey;
-    const inGrid = Boolean(wrap.current?.contains(document.activeElement));
+    // A choice ticked in a column's open filter keeps focus in that menu, so the next Space or Tab stays there.
+    const inGrid = Boolean(wrap.current?.contains(document.activeElement)) && !document.activeElement?.closest(".ag-popup");
     // After the filter and the sort have run (both apply on the grid's next pass).
     const t = window.setTimeout(() => {
       if (grid.isDestroyed()) return;
@@ -817,7 +818,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     }
     let count = 0;
     const shown: GridRow[] = [];
-    const groups = new Map<string, GroupTotal>();
+    const members = new Map<string, GridRow[]>();
     grid.forEachNodeAfterFilter((n) => {
       const r = n.data;
       if (!r || r.group) return;
@@ -825,16 +826,17 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       shown.push(r);
       if (groupRef.current !== "none") {
         const key = groupOf(r, groupRef.current).key;
-        const g = groups.get(key) ?? { count: 0, cents: 0, mix: {}, folded: folded.current.has(key) };
-        groups.set(key, {
-          ...g,
-          count: g.count + 1,
-          // Approved money only, as the footer counts it: a held claim's refund isn't owed until a person approves it.
-          cents: g.cents + (r.decision === "paid" ? (r.cents ?? 0) : 0),
-          mix: { ...g.mix, [r.decision]: (g.mix[r.decision] ?? 0) + 1 },
-        });
+        members.set(key, [...(members.get(key) ?? []), r]);
       }
     });
+    const groups = new Map<string, GroupTotal>();
+    for (const [key, rs] of members) {
+      const mix: GroupTotal["mix"] = {};
+      for (const r of rs) mix[r.decision] = (mix[r.decision] ?? 0) + 1;
+      // The money as the footer counts it (paid, sent and settling, approved): a held claim's refund isn't owed until a
+      // person approves it.
+      groups.set(key, { count: rs.length, cents: moneyCents(rs), mix, folded: folded.current.has(key) });
+    }
     stats.set(groups);
     const cents = moneyCents(shown);
     const last = lastTotals.current;
@@ -1029,6 +1031,9 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
     return {
       onGridReady(e: GridReadyEvent<GridRow>) {
         api.current = e.api;
+        // Filter menus and hover cards open in the grid's box, not AG Grid's own (which clips them at its edge, and a
+        // short list's grid ends at its last row): a menu opened over a short list stays whole.
+        if (!still && wrap.current) e.api.setGridOption("popupParent", wrap.current);
         const { openId: id, decisionFilter: model } = latest.current;
         if (id) e.api.getRowNode(id)?.setSelected(true, true);
         if (model) e.api.setColumnFilterModel("decision", model).then(() => e.api.onFilterChanged());

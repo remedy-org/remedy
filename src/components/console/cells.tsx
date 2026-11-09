@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { barsSentence, duration, fiveOf, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
 import { FIVE_CHECKS, numberOf, type Outcome } from "@/lib/fiveChecks";
+import { MONEY_WORD, type MoneyState } from "@/lib/payoutWords";
 import { EXCEPTION } from "./EvidenceParts";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
@@ -29,7 +30,7 @@ export interface GridContext {
 
 export interface GroupTotal {
   count: number;
-  cents: number;
+  cents: Record<MoneyState, number>;
   mix: Partial<Record<ClaimRow["decision"], number>>;
   folded: boolean;
 }
@@ -423,7 +424,7 @@ export function payoutWord(r: Pick<ClaimRow, "decision" | "payoutStatus" | "payo
 }
 
 /** Group by: the row heading a group, which folds it (a click, Enter, → and ←). Its name, how many claims it holds now
- * (filters apply) and which of them wait on a person or were refused, in words; what the approved ones add up to sits on
+ * (filters apply) and which of them wait on a person or were refused, in words; its money, in the footer's words, sits on
  * the Amount column's edge. */
 export function GroupRow({ data, context }: Cell) {
   const key = data?.group?.key ?? "";
@@ -453,9 +454,15 @@ export function GroupRow({ data, context }: Cell) {
         {exceptions.length > 0 && `, ${exceptions.join(", ")}`}
         <span className="sr-only">{folded ? ", folded" : ", expanded"}</span>
       </span>
-      {total && total.cents > 0 && (
+      {total && MONEY_STATES.some((k) => total.cents[k] > 0) && (
+        // In the footer's words (lib/payoutWords.ts): each state once it holds any.
         <span className="ml-auto shrink-0 text-ui text-muted">
-          <span className="font-mono text-text-2 tabular-nums">{formatCents(total.cents)}</span> approved
+          {MONEY_STATES.filter((k) => total.cents[k] > 0).map((k, i) => (
+            <span key={k}>
+              {i > 0 && " · "}
+              <span className="font-mono text-text-2 tabular-nums">{formatCents(total.cents[k])}</span> {MONEY_WORD[k].toLowerCase()}
+            </span>
+          ))}
         </span>
       )}
     </span>
@@ -463,7 +470,8 @@ export function GroupRow({ data, context }: Cell) {
 }
 
 const MIX_ORDER: ClaimRow["decision"][] = ["paid", "held", "rejected", "blocked", "pending"];
-const MIX_WORD: Record<ClaimRow["decision"], string> = { paid: "approved", held: "held", rejected: "rejected", blocked: "blocked", pending: "in progress" };
+const MONEY_STATES: MoneyState[] = ["paid", "settling", "approved"];
+const MIX_WORD: Record<ClaimRow["decision"], string> = { paid: "paid", held: "held", rejected: "rejected", blocked: "blocked", pending: "in progress" };
 
 const noop = () => () => {};
 
