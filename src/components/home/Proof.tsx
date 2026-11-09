@@ -51,7 +51,7 @@ export function Proof() {
       lead="We put Remedy up against real owner photos, official recall photos, photos of screens, wrong codes and AI-made fakes. It reads the code on every tag character by character, so one wrong letter refuses the claim."
       note={
         // The one fake that passed, said once in the lead's own voice: it is why the camera is the first check.
-        <p className="mt-4 max-w-[60ch] text-body text-pretty text-text-2 lg:mt-0">
+        <p className="max-w-[60ch] text-body text-pretty text-text-2">
           One fake passed the photo check in every try, a generated image of a cut pillow with the code drawn on, which is
           why photos only come from the claim&rsquo;s live camera.
         </p>
