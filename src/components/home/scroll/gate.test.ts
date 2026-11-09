@@ -234,30 +234,31 @@ describe("wheel stops", () => {
     expect(slowed.lenis.duration * (time(e1, 492) - time(e1, 207))).toBeGreaterThan(1.1 * plain.lenis.duration * (time(e0, 492) - time(e0, 207)));
   });
 
-  it("lands a trackpad across the hero's dolly calmly, at rest within 1.65 s of the take for a way under two screens", () => {
+  it("lands a trackpad across the hero's dolly calmly, at rest within 2 s of the take for a way under two screens", () => {
     const pad = setup(0, STOPS, [[207, 670, 5]]);
     pad.send(swipe(), 8);
     expect(pad.lenis.landed).toEqual([1410]);
-    expect(pad.lenis.duration).toBeLessThanOrEqual(1.65);
+    expect(pad.lenis.duration).toBeGreaterThanOrEqual(1.6);
+    expect(pad.lenis.duration).toBeLessThanOrEqual(2 + 1e-9);
   });
 
-  it("keeps a notched wheel's landing short, shortest across the hero's dolly, and crosses the dolly lighter", () => {
+  it("S1: lands a notched wheel on the same calm glide as a trackpad, and crosses the dolly lighter", () => {
     const wheel = setup(2144);
     wheel.send(power(), 8);
     expect(wheel.lenis.landed).toEqual([2821]);
-    expect(wheel.lenis.duration).toBeLessThanOrEqual(0.9);
+    // 677px, under a screen: 1.3 s, as a trackpad's (it was 0.6 s, the page sped off ahead of a gentle hand).
+    expect(wheel.lenis.duration).toBeCloseTo(1.3, 6);
     const pad = setup(2144);
     pad.send(swipe(), 8);
-    expect(pad.lenis.duration).toBeGreaterThan(wheel.lenis.duration);
-    // Across the dolly: 0.75 s, shorter than a trackpad's, so a wheel spun hard from the top never feels the page resist,
-    // and a lighter weight than a trackpad's.
+    expect(pad.lenis.duration).toBeCloseTo(wheel.lenis.duration, 6);
+    // Across the dolly: no longer than a trackpad's, and lighter, so a wheel spun hard from the top never feels the page
+    // resist.
     const notched = setup(0, STOPS, [[207, 670, 5]]);
     notched.send(power(), 8);
     const flung = setup(0, STOPS, [[207, 670, 5]]);
     flung.send(swipe(), 8);
     expect(notched.lenis.landed).toEqual([1410]);
-    expect(notched.lenis.duration).toBeLessThanOrEqual(0.75);
-    expect(notched.lenis.duration).toBeLessThan(flung.lenis.duration);
+    expect(notched.lenis.duration).toBeLessThanOrEqual(flung.lenis.duration);
   });
 
   it("lets a notched wheel spun hard from the top run free within half a second, while its first landing still plays", () => {
@@ -554,8 +555,8 @@ describe("wheel stops", () => {
     up.scroll();
     vi.restoreAllMocks();
     expect(up.lenis.landed).toEqual([7988]);
-    expect(up.lenis.duration).toBeGreaterThanOrEqual(0.9);
-    expect(up.lenis.duration).toBeLessThanOrEqual(1.1);
+    expect(up.lenis.duration).toBeGreaterThanOrEqual(1.3);
+    expect(up.lenis.duration).toBeLessThanOrEqual(1.6);
     // A fling is no nudge: any one, however short, still lands on the next section's stop, as before.
     const flung = setup(8586, course, slow, undefined, undefined, pins, undefined, undefined, stories);
     flung.send([100, 100, 100], 16);
@@ -577,7 +578,7 @@ describe("wheel stops", () => {
     g.scroll();
     vi.restoreAllMocks();
     expect(g.lenis.landed).toEqual([8700]);
-    expect(g.lenis.duration).toBeLessThanOrEqual(0.8);
+    expect(g.lenis.duration).toBeCloseTo(1.3, 6);
   });
 
   it("takes a 36px push from the hero on to chapter 01, the story starting at the page top", () => {
@@ -589,8 +590,8 @@ describe("wheel stops", () => {
     g.scroll();
     vi.restoreAllMocks();
     expect(g.lenis.landed).toEqual([823]);
-    expect(g.lenis.duration).toBeGreaterThanOrEqual(0.9);
-    expect(g.lenis.duration).toBeLessThanOrEqual(1.1);
+    expect(g.lenis.duration).toBeGreaterThanOrEqual(1.3);
+    expect(g.lenis.duration).toBeLessThanOrEqual(1.6 + 1e-9);
   });
 
   it("skims a notched power spin past a story's inner beats, three notches a beat, never past a section stop", () => {
@@ -603,11 +604,11 @@ describe("wheel stops", () => {
     const flick = setup(823, beats, [], undefined, inner, [[0, 6698]]);
     flick.send(Array(4).fill(100), 24);
     expect(flick.lenis.landed).toEqual([1858]);
-    // Its landing scales with the way: under a window, about 0.6 s.
+    // Its landing is the calm one: under a window, 1.3 s.
     const near = setup(1858, beats, [], undefined, inner, [[0, 6698]]);
     near.send(Array(4).fill(100), 24);
     expect(near.lenis.landed).toEqual([2534]);
-    expect(near.lenis.duration).toBeLessThanOrEqual(0.65);
+    expect(near.lenis.duration).toBeCloseTo(1.3, 6);
   });
 
   /**
@@ -668,9 +669,9 @@ describe("wheel stops", () => {
     expect(wheelOnClock(3252, course, pins, [Array(10).fill(-100)], { inside: 100, between: 100 }).landed).toEqual([1717]);
   });
 
-  it("settles a slow roll of notches out of a story's last beat within 0.8 s of its settling, however far the beat ahead", () => {
+  it("settles a slow roll of notches out of a story's last beat once, on the calm glide, however far the beat ahead", () => {
     // As 1920x1080: five notches 100 ms apart from the console beat rest 500px on, the sheet half risen, the open sheet
-    // 1549px on. The roll settles once, on the open sheet, and the page is at rest 0.8 s later (it was 1.4 s).
+    // 1549px on. The roll settles once, on the open sheet, gently: about 1.4 s for its last 1,049px.
     const course = [0, 8037, 9586, 10303, 11838];
     const pins: [number, number][] = [
       [64, 8294],
@@ -684,7 +685,8 @@ describe("wheel stops", () => {
       unfolds: [[8390, 9374, 9586]],
     });
     expect(roll.landed).toEqual([9586]);
-    expect(roll.duration).toBeLessThanOrEqual(0.8);
+    expect(roll.duration).toBeGreaterThanOrEqual(1.3);
+    expect(roll.duration).toBeLessThanOrEqual(1.6);
   });
 
   // As 1440x900: the Chain of Custody's story from the hero to its console beat (an inner beat at 6140), the Problem
@@ -710,7 +712,7 @@ describe("wheel stops", () => {
       const down = wheelOnClock(7988, course, pins, [Array(10).fill(100)], { inside: gap, between: gap }, { stories, unfolds });
       expect(down.through, `${gap} ms`).toBe(1000);
       expect(down.landed, `down ${gap} ms`).toEqual([8586]);
-      expect(down.duration).toBeLessThanOrEqual(0.8);
+      expect(down.duration).toBeCloseTo(1.3, 6);
       // Up from the cut: 402px past the open sheet, the sheet half unfolded; back onto the open sheet.
       expect(wheelOnClock(8586, course, pins, [Array(10).fill(-100)], { inside: gap, between: gap }, { stories, unfolds }).landed, `up ${gap} ms`).toEqual([7988]);
     }
@@ -729,11 +731,13 @@ describe("wheel stops", () => {
     // last frame unseen was a rest of its own, off a beat).
     const up = wheelOnClock(7988, course, pins, [Array(3).fill(-100)], { inside: 90, between: 90 }, { stories, unfolds });
     expect(up.landed).toEqual([6698]);
-    expect(up.duration).toBeLessThanOrEqual(0.8);
+    expect(up.duration).toBeGreaterThanOrEqual(1.3);
+    expect(up.duration).toBeLessThanOrEqual(1.6);
     // Ten notches down from the console beat rested at 7698: on to the open sheet.
     const down = wheelOnClock(6698, course, pins, [Array(10).fill(100)], { inside: 100, between: 100 }, { stories, unfolds });
     expect(down.landed).toEqual([7988]);
-    expect(down.duration).toBeLessThanOrEqual(0.8);
+    expect(down.duration).toBeGreaterThanOrEqual(1.3);
+    expect(down.duration).toBeLessThanOrEqual(1.6);
     // Three notches down from the console beat rested at 6998, the sheet still unseen, off a beat: on to the open sheet.
     expect(wheelOnClock(6698, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([7988]);
     // A trackpad's gentle pushes up from the open sheet go on to the console beat, down from the console beat to the open
@@ -916,14 +920,14 @@ describe("trackpad swipes", () => {
     expect(g.lenis.landed).toEqual([1858]);
   });
 
-  it("F3: a one-beat landing takes 0.95 s under a screen, longer with the way, 1.65 s at most, and ends on the stop", () => {
+  it("F3: a one-beat landing takes 1.3 s under a screen, longer with the way, and ends on the stop", () => {
     for (const from of [0, 414, 823, 4278]) {
       const g = course(from);
       g.send(SMALL());
       const way = BEATS[BEATS.indexOf(from) + 1] - from;
-      expect(g.lenis.duration).toBeGreaterThanOrEqual(0.95);
+      expect(g.lenis.duration).toBeGreaterThanOrEqual(1.3);
       // 1,862px (check 3 to the paid receipt with no check rests between) takes as long as its calm peak needs.
-      expect(g.lenis.duration).toBeLessThanOrEqual(Math.max(1.65, (1.5 * way) / CALM_PEAK) + 1e-9);
+      expect(g.lenis.duration).toBeLessThanOrEqual(Math.max(1.6 + 0.7 * Math.max(0, way / 900 - 1), way / (0.86 * CALM_PEAK)) + 1e-9);
       expect(g.lenis.easing!(1)).toBeCloseTo(1, 6);
     }
   });
@@ -953,6 +957,72 @@ describe("trackpad swipes", () => {
     vi.restoreAllMocks();
     expect(total).toBeGreaterThan(414);
     expect(g.lenis.landed).toEqual([823]);
+  });
+
+  /** The wheel goes quiet: the page settles (nudge). */
+  const quiet = (g: ReturnType<typeof course>) => {
+    g.lenis.animatedScroll = g.lenis.targetScroll - 4 * Math.sign(g.lenis.targetScroll - g.lenis.animatedScroll || 1);
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    g.scroll();
+    vi.restoreAllMocks();
+  };
+  /** The first beat at or past `y` going down. */
+  const beatAhead = (y: number) => BEATS.find((b) => b >= y - 8);
+
+  it("S3: a slow drag held at an even pace, 4 to 12px a frame for 1.5 s, follows the hand all the way and settles on the beat just ahead", () => {
+    // The probe's drags at 250, 500 and 750 px/s: the 500 px/s one of 750px from chapter 01 lifted to a beat, read its
+    // next stretch as a fresh swipe and travelled 2,868px.
+    for (const from of [0, 823])
+      for (const px of [4, 8, 12]) {
+        const g = course(from);
+        const drag = Array(94).fill(px);
+        expect(g.send(drag), `${px}px from ${from}`).toBe(94 * px);
+        expect(g.lenis.landed, `${px}px from ${from}`).toEqual([]);
+        quiet(g);
+        const rest = from + 94 * px;
+        expect(g.lenis.landed, `${px}px from ${from}`).toEqual([beatAhead(rest)]);
+      }
+  });
+
+  it("S3: a slow drag that sways, its pace easing off and picking up as a hand's does, never reads as a lift and a fresh swipe", () => {
+    // Long, smooth sways: each easing-off looks like momentum for a dozen frames and more, then the hand picks up again.
+    const sways = [
+      Array.from({ length: 94 }, (_, i) => 8 + 4 * Math.sin(i / 10)),
+      Array.from({ length: 94 }, (_, i) => 8 - 4 * Math.cos(i / 8)),
+      Array.from({ length: 94 }, (_, i) => 7 + 3 * Math.sin(i / 6) + 0.6 * Math.sin(i * 1.3)),
+      Array.from({ length: 120 }, (_, i) => 6 + 2 * Math.sin(i / 9 + 1)),
+    ];
+    for (const from of [0, 823, 1858])
+      sways.forEach((drag, k) => {
+        const g = course(from);
+        const total = drag.reduce((a, b) => a + b, 0);
+        expect(g.send(drag), `sway ${k} from ${from}`).toBeCloseTo(total, 6);
+        expect(g.lenis.landed, `sway ${k} from ${from}`).toEqual([]);
+        quiet(g);
+        // Never more than one beat beyond where the hand left the page.
+        expect(g.lenis.landed, `sway ${k} from ${from}`).toEqual([beatAhead(from + total)]);
+      });
+  });
+
+  it("S3: a drag that eases off and lifts with a little momentum still only settles on the beat ahead", () => {
+    const g = course(823);
+    const drag = [...Array.from({ length: 60 }, (_, i) => 8 + 2 * Math.sin(i / 7)), ...Array.from({ length: 30 }, (_, i) => 8 * 0.95 ** (i + 1))];
+    const total = drag.reduce((a, b) => a + b, 0);
+    expect(g.send(drag)).toBeCloseTo(total, 6);
+    expect(g.lenis.landed).toEqual([]);
+    quiet(g);
+    expect(g.lenis.landed).toEqual([beatAhead(823 + total)]);
+  });
+
+  it("S3: a swipe still lifts to its beat as its momentum starts, while a held, even input never does", () => {
+    // A small swipe's finger is down for about 100 ms: it lifts to How it works at once.
+    const g = course(0);
+    g.send(SMALL());
+    expect(g.lenis.landed).toEqual([414]);
+    // The same peak held: no lift.
+    const held = course(0);
+    held.send([...SMALL().slice(0, 6), ...Array(30).fill(SMALL()[5])]);
+    expect(held.lenis.landed).toEqual([]);
   });
 
   it("F6: one notch of a mouse wheel moves one beat, How it works included", () => {
@@ -1044,7 +1114,7 @@ describe("trackpad swipes", () => {
     expect(tremor.lenis.landed).toEqual([6698]);
   });
 
-  it("G2: every beat's landing is calm: under 1,600 px/s at its peak, eased in and out, no 60 Hz frame over 60px, its time growing with the way", () => {
+  it("G2 S1: every beat's landing is calm: under 1,100 px/s at its peak, eased in and out, no 60 Hz frame over 40px, its time growing with the way", () => {
     const times: [number, number][] = [];
     BEATS_ALL.slice(0, -1).forEach((from, i) => {
       const to = BEATS_ALL[i + 1];
@@ -1057,14 +1127,14 @@ describe("trackpad swipes", () => {
       let step = 0;
       for (let k = 1; k <= 1000; k++) peak = Math.max(peak, Math.abs(y(k / 1000) - y((k - 1) / 1000)) / (T / 1000));
       for (let t = 0; t < T; t += 1 / 60) step = Math.max(step, Math.abs(y(Math.min(1, (t + 1 / 60) / T)) - y(t / T)));
-      expect(peak, `${from} to ${to}`).toBeLessThan(1600);
-      expect(step, `${from} to ${to}`).toBeLessThan(60);
-      expect(T).toBeGreaterThanOrEqual(0.95);
-      expect(T).toBeLessThanOrEqual(1.65);
+      expect(peak, `${from} to ${to}`).toBeLessThan(1100);
+      expect(step, `${from} to ${to}`).toBeLessThan(40);
+      expect(T).toBeGreaterThanOrEqual(1.3);
+      expect(T).toBeLessThanOrEqual(Math.max(2.4, Math.abs(to - from) / 860 + 0.3));
       // Entered at the page's own speed (it has followed the hand), never a jolt; eased out: the last tenth of the time
       // covers under 6% of the way.
-      expect((e(1e-4) / 1e-4) * (Math.abs(to - g.lenis.animatedScroll) / T)).toBeLessThan(1600);
-      expect(1 - e(0.9)).toBeLessThan(0.06);
+      expect((e(1e-4) / 1e-4) * (Math.abs(to - g.lenis.animatedScroll) / T)).toBeLessThan(1100);
+      expect(1 - e(0.9), `${from} to ${to}`).toBeLessThan(0.06);
       times.push([Math.abs(to - from), T]);
     });
     // Farther takes no less time.

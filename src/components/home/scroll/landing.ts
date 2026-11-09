@@ -1,40 +1,34 @@
-// The glide a fling lands on its stop with (gate.ts). Pure, so its shape is unit-tested (landing.test.ts).
+// The one calm glide every landing takes, a trackpad swipe's, a wheel notch's and a key's (gate.ts, keys.ts). Pure, so
+// its shape is unit-tested (landing.test.ts).
 
-/** How fast a landing sheds the extra speed it was caught with: an e-fold every 3.5% of the landing (about 50 ms). */
-const TAU = 0.035;
-const TAU_ = TAU * (1 - Math.exp(-1 / TAU));
+/** The least share of a landing's time each of its ease in and ease out takes; the most is half (no cruise between). */
+const EASE_MIN = 0.14;
+const EASE_MAX = 0.5;
+/** The ease a landing keeps when it crosses slow stretches: they are weighted only as far as leaves it this much, so the
+ * page never speeds up sharply leaving one near the stop. */
+const EASE_SOFT = 0.18;
 
 /**
- * A landing's progress over its time t (0 to 1), entered at speed s0 (distance over duration, the page's own speed when
- * it was caught): a short brake from that speed, then a glide whose speed falls evenly to rest on the stop. The catch
- * never jolts and from rest it eases in.
+ * A calm landing's progress over its time t (0 to 1), entered at speed s0 (distance over duration, the page's own speed
+ * when it was caught), easing for the share `ease` of its time at each end. Its speed rises on a half cosine from s0 to
+ * a steady cruise, holds it, and falls on a half cosine to rest on the stop, so the page never sets off, changes pace or
+ * stops with a jolt: from rest its acceleration starts at nothing too. With `ease` at a half it has no cruise and peaks
+ * at twice its average speed; at the least, 1.16 times. Entered faster than it can carry onto the stop (over 1 / ease),
+ * it is entered at that.
  */
-export function landing(s0: number) {
-  // Up to 16 times the landing's average speed: the glide after the brake stays forward-moving up to about 28.
-  const v = Math.min(16, Math.max(0, s0));
-  const glide = (1 - v * TAU_) / (0.5 - TAU_);
-  const brake = v - glide;
-  return (t: number) => brake * TAU * (1 - Math.exp(-t / TAU)) + glide * (t - (t * t) / 2);
+export function calm(s0: number, ease = EASE_MAX) {
+  const r = Math.min(EASE_MAX, Math.max(0.01, ease));
+  const v0 = Math.min(1 / r, Math.max(0, s0));
+  const vc = (1 - (v0 * r) / 2) / (1 - r);
+  const ramp = (r * (v0 + vc)) / 2;
+  return (t: number) => {
+    const u = Math.min(1, Math.max(0, t));
+    if (u < r) return v0 * u + (vc - v0) * (u / 2 - (r / (2 * Math.PI)) * Math.sin((Math.PI * u) / r));
+    if (u <= 1 - r) return ramp + vc * (u - r);
+    const w = u - (1 - r);
+    return Math.min(1, ramp + vc * (1 - 2 * r) + vc * (w / 2 + (r / (2 * Math.PI)) * Math.sin((Math.PI * w) / r)));
+  };
 }
-
-/**
- * A trackpad's landing, and a key's: progress over its time t (0 to 1), entered at speed s0 (distance over duration).
- * From rest it eases in and out (smoothstep, its peak 1.5 times its average speed), so the page never sets off at full
- * speed; entered moving, it carries on at the page's own speed and slows to rest, never a jolt. A speed over 3, which
- * this curve would carry past the stop, takes the brake (landing).
- */
-export function calm(s0: number) {
-  const v = Math.max(0, s0);
-  if (v > 3) return landing(v);
-  return (t: number) => v * (t * t * t - 2 * t * t + t) + (3 * t * t - 2 * t * t * t);
-}
-
-/**
- * Seconds for a landing `d` windows long (slow stretches counted at their weight, warp): a close stop in 0.9 s, a beat
- * of the exhibit (about 0.7 of a window) in about 1.2 s, a long way in 1.4 s at most, so the page is at rest soon after
- * the hand and never drives on alone.
- */
-export const landingTime = (d: number) => Math.min(1.4, Math.max(0.9, 0.8 + 0.6 * d));
 
 /**
  * A stretch of the page, [from, to] in scrollY, that a glide crosses `weight` times slower than the rest: a pinned
@@ -78,33 +72,43 @@ export function warp(from: number, to: number, slow: readonly Slow[] = []) {
   };
 }
 
-/** A trackpad landing's top speed, px/s. The owner's Mac trackpad felt the exhibit's landings, up to 5,000 px/s, as
- * "very fast"; a calm glide from rest peaks at 1.5 times its average speed, so a landing takes at least 1.5 times its
- * way over this. */
-export const CALM_PEAK = 1450;
-/** Seconds a trackpad landing takes: CALM_MIN for a stop under a screen away, CALM_PER more a screen beyond that, CALM_MAX
- * at two screens; up to CALM_SLOW more when the way crosses slow stretches, so their transitions play. */
-const CALM_MIN = 0.95;
-const CALM_PER = 0.65;
-const CALM_MAX = 1.6;
+/** A landing's top speed, px/s. The owner's Mac trackpad felt the exhibit's landings, up to 5,000 px/s, as "very fast",
+ * and then 1,450 as "scrolling way faster than it should be": slow, smooth and calm (1,000, so the renderer's frame jitter
+ * never reads over 1,100). */
+export const CALM_PEAK = 1000;
+/** Seconds a landing takes: CALM_MIN for a stop up to a screen away, CALM_PER more for each screen beyond, and longer
+ * still when its way is too long to cover at CALM_PEAK easing gently; up to CALM_SLOW more when the way crosses slow
+ * stretches, so their transitions play. */
+const CALM_MIN = 1.3;
+const CALM_PER = 0.7;
 const CALM_SLOW = 0.3;
 
 /**
- * A trackpad landing from `from` to `to` on a screen `screen` px tall: how long it takes, and its way (warp) with the
- * slow stretches weighted no more than its time allows at CALM_PEAK. Its time scales with the distance and never lets the
- * calm curve from rest pass CALM_PEAK anywhere: on a slow stretch the page goes slower still, and the rest of the way is
- * never sped up past CALM_PEAK to pay for it (an exhibit landing over two checks at 3x peaked at 5,000 px/s). `cap`
+ * A landing from `from` to `to` on a screen `screen` px tall: how long it takes, its way (warp) with the slow stretches
+ * weighted no more than its time allows at CALM_PEAK, and its ease (calm). Its time scales with the distance: a beat
+ * under a screen away in 1.3 s, two screens in about 2.1 s, never so short that the page passes CALM_PEAK easing in and
+ * out over EASE_MIN of it each; on a slow stretch the page goes slower still, as far as leaves it EASE_SOFT to ease
+ * over, and the rest of the way is never sped up past CALM_PEAK to pay for it. Its ease is as long as CALM_PEAK leaves room for, half the time each way at most. `cap`
  * shortens it, but never under that floor.
  */
 export function calmLanding(from: number, to: number, screen: number, slow: readonly Slow[] = [], cap = Infinity) {
   const px = Math.abs(to - from);
   const full = warp(from, to, slow);
-  const base = Math.min(CALM_MAX, Math.max(CALM_MIN, CALM_MIN + (CALM_PER * (px - screen)) / screen));
-  const want = Math.max(base, Math.min(base + CALM_SLOW, (1.5 * full.length) / CALM_PEAK));
-  const duration = Math.max((1.5 * px) / CALM_PEAK, Math.min(cap, want));
-  // The share of each slow stretch's extra weight this time has room for.
+  const soft = CALM_PEAK * (1 - EASE_SOFT);
+  const base = CALM_MIN + (CALM_PER * Math.max(0, px - screen)) / screen;
+  const want = full.length > px ? Math.max(base, Math.min(base + CALM_SLOW, full.length / soft)) : base;
+  const duration = Math.max(px / (CALM_PEAK * (1 - EASE_MIN)), Math.min(cap, want));
+  // The share of each slow stretch's extra weight this time has room for, easing over EASE_SOFT of it.
   const extra = full.length - px;
-  const k = extra > 0 ? Math.min(1, Math.max(0, ((CALM_PEAK * duration) / 1.5 - px) / extra)) : 1;
+  const k = extra > 0 ? Math.min(1, Math.max(0, (soft * duration - px) / extra)) : 1;
   const way = k >= 1 ? full : warp(from, to, slow.map(([a, b, w]) => [a, b, 1 + (w - 1) * k] as const));
-  return { duration, way };
+  const ease = Math.min(EASE_MAX, Math.max(EASE_MIN, 1 - way.length / (CALM_PEAK * Math.max(duration, 1e-6))));
+  return { duration, way, ease };
+}
+
+/** The speed, as calm's s0, that a landing (calmLanding) is entered at when the page moves at `v` px/s toward its stop:
+ * no more than CALM_PEAK. */
+export function entry(v: number, landing: { duration: number; way: ReturnType<typeof warp> }) {
+  const { duration, way } = landing;
+  return way.length < 1 ? 0 : (Math.min(Math.max(0, v), CALM_PEAK) * duration * way.entry) / way.length;
 }

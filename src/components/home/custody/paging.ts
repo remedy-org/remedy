@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { calm, calmLanding } from "../scroll/landing";
 import { HOW_IT_WORKS, scrollAt } from "./pace";
 
 // Keyboard paging through a pinned runway. A browser page (Space, Page Down) is about 95vh, but a beat inside the pin
@@ -23,15 +24,13 @@ function direction(e: KeyboardEvent): 1 | -1 | 0 {
   return 0;
 }
 
-/** The state-to-state curve, cubic-bezier(0.65, 0, 0.35, 1). */
-const inOutCubic = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
-
-/** How long a page takes: at least 600ms, and no faster than 1.6px a millisecond, so every page moves at one pace. */
-export const glideMs = (distance: number) => Math.max(600, Math.abs(distance) / 1.6);
+/** How long a page takes, ms, on a screen `screen` px tall: the homepage's one calm glide (scroll/landing.ts
+ * calmLanding), 1.3 s for a beat under a screen away, its peak under CALM_PEAK, as the wheel's and the keys'. */
+export const glideMs = (distance: number, screen = innerHeight) => 1000 * calmLanding(0, Math.abs(distance), screen).duration;
 
 let glide = 0;
 /**
- * Scrolls to `top` on the state-to-state curve over glideMs. The browser's own smooth scroll picks its duration from
+ * Scrolls to `top` on the calm glide (calm) over glideMs. The browser's own smooth scroll picks its duration from
  * the distance, so a long page (the hero to chapter 01) flashed the whole dolly by in a few frames. A wheel or touch
  * takes the scroll back at once.
  */
@@ -40,6 +39,7 @@ function glideTo(top: number) {
   const from = scrollY;
   const d = top - from;
   const ms = glideMs(d);
+  const curve = calm(0, calmLanding(0, Math.abs(d), innerHeight).ease);
   const t0 = performance.now();
   const stop = () => {
     cancelAnimationFrame(glide);
@@ -50,7 +50,7 @@ function glideTo(top: number) {
   addEventListener("touchstart", stop, { passive: true });
   const step = (now: number) => {
     const x = Math.min(1, (now - t0) / ms);
-    scrollTo({ top: from + d * inOutCubic(x), behavior: "instant" });
+    scrollTo({ top: from + d * curve(x), behavior: "instant" });
     if (x < 1) glide = requestAnimationFrame(step);
     else stop();
   };

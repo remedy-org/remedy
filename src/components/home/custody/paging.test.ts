@@ -31,10 +31,12 @@ describe("keyboard paging through the pin", () => {
     expect(SCROLL_VH).toBeGreaterThan(95);
   });
 
-  it("moves every page at one pace: never under 600ms, never faster than 1.6px a millisecond", () => {
-    expect(glideMs(200)).toBe(600);
-    expect(glideMs(-200)).toBe(600);
-    expect(glideMs(1600)).toBe(1000);
+  it("S1: moves every page on the calm glide: 1.3 s under a screen, about 2 s across two, never over 1,000 px/s on average", () => {
+    expect(glideMs(200, 900)).toBeCloseTo(1300, 6);
+    expect(glideMs(-200, 900)).toBeCloseTo(1300, 6);
+    expect(glideMs(1800, 900)).toBeGreaterThanOrEqual(1900);
+    expect(glideMs(1800, 900)).toBeLessThanOrEqual(2100);
+    for (const d of [300, 900, 1800, 3000]) expect(d / glideMs(d, 900)).toBeLessThan(1.05);
   });
 
   it("stops on How it works between the hero and chapter 01, just before the screen hands over, once", () => {

@@ -1,42 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { calm, landing, landingTime, warp } from "./landing";
+import { CALM_PEAK, calm, calmLanding, entry, warp } from "./landing";
+
+/** The page's top speed over a landing, px/s, and its largest 60 Hz frame, px, sampled finely. */
+function motion(from: number, to: number, screen: number, slow: Parameters<typeof calmLanding>[3] = [], v = 0) {
+  const l = calmLanding(from, to, screen, slow);
+  const e = calm(entry(v, l), l.ease);
+  const y = (t: number) => from + (to - from) * l.way.at(e(Math.min(1, t / l.duration)));
+  let peak = 0;
+  let frame = 0;
+  let back = 0;
+  const dt = 1 / 1000;
+  for (let t = 0; t < l.duration; t += dt) {
+    const d = (y(t + dt) - y(t)) * Math.sign(to - from);
+    peak = Math.max(peak, d / dt);
+    if (d < -1e-9) back++;
+    frame = Math.max(frame, Math.abs(y(t + 1 / 60) - y(t)));
+  }
+  return { ...l, peak, frame, back, end: y(l.duration) };
+}
 
 describe("landing", () => {
-  it("starts at 0, ends exactly on the stop and never turns back, from rest to a hard fling", () => {
-    for (const s0 of [0, 1, 2, 4, 8, 16, 30]) {
-      const e = landing(s0);
-      expect(e(0)).toBeCloseTo(0, 9);
-      expect(e(1)).toBeCloseTo(1, 9);
-      let prev = 0;
-      for (let i = 1; i <= 400; i++) {
-        const v = e(i / 400);
-        expect(v).toBeGreaterThanOrEqual(prev - 1e-9);
-        expect(v).toBeLessThanOrEqual(1 + 1e-9);
-        prev = v;
-      }
-    }
-  });
-
-  it("enters at the page's own speed", () => {
-    const h = 1e-5;
-    for (const s0 of [0, 2, 5, 12]) expect(landing(s0)(h) / h).toBeCloseTo(s0, 2);
-  });
-
-  it("then slows evenly: after the brake, each tenth of the time is slower than the last by the same step", () => {
-    const e = landing(4);
-    const speed = (t: number) => (e(t + 1e-4) - e(t)) / 1e-4;
-    const steps = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8].map((t) => speed(t) - speed(t + 0.1));
-    for (const s of steps) expect(s).toBeCloseTo(steps[0], 3);
-    expect(speed(0.999)).toBeLessThan(0.01);
-  });
-
-  it("gives a longer way more time, within bounds", () => {
-    expect(landingTime(0)).toBe(0.9);
-    expect(landingTime(0.75)).toBeCloseTo(1.25);
-    expect(landingTime(1.6)).toBe(1.4);
-    expect(landingTime(4)).toBe(1.4);
-  });
-
   it("gives a slow stretch its weight's worth of the way, in either direction", () => {
     // The hero to chapter 01: the dolly and hand-off (207 to 670) five times slower.
     const w = warp(0, 1410, [[207, 670, 5]]);
@@ -67,25 +50,78 @@ describe("landing", () => {
     expect(warp(0, 100, [[10, 40, 3]]).entry).toBe(1);
   });
 
-  it("calm: eases in from rest and carries on at the page's own speed when moving, onto the stop, never turning back", () => {
-    const h = 1e-5;
-    for (const s0 of [0, 0.5, 1, 2, 3, 6]) {
-      const e = calm(s0);
-      expect(e(0)).toBeCloseTo(0, 9);
-      expect(e(1)).toBeCloseTo(1, 9);
-      expect(e(h) / h).toBeCloseTo(Math.min(s0, s0 > 3 ? s0 : 3), 2);
-      let prev = 0;
-      for (let i = 1; i <= 400; i++) {
-        const v = e(i / 400);
-        expect(v).toBeGreaterThanOrEqual(prev - 1e-9);
-        expect(v).toBeLessThanOrEqual(1 + 1e-9);
-        prev = v;
+  it("calm: starts at 0, ends on the stop, never turns back and enters at the page's own speed", () => {
+    const h = 1e-6;
+    for (const ease of [0.18, 0.3, 0.5])
+      for (const s0 of [0, 0.5, 1, 1.5, 2]) {
+        const e = calm(s0, ease);
+        expect(e(0)).toBeCloseTo(0, 9);
+        expect(e(1)).toBeCloseTo(1, 9);
+        expect(e(h) / h).toBeCloseTo(Math.min(s0, 1 / ease), 3);
+        let prev = 0;
+        let prevV = s0;
+        for (let i = 1; i <= 1000; i++) {
+          const v = e(i / 1000);
+          expect(v).toBeGreaterThanOrEqual(prev - 1e-12);
+          expect(v).toBeLessThanOrEqual(1 + 1e-9);
+          // Its speed changes smoothly: no step from one thousandth of the time to the next.
+          const speed = (v - prev) * 1000;
+          expect(Math.abs(speed - prevV)).toBeLessThan(0.05);
+          prev = v;
+          prevV = speed;
+        }
       }
+  });
+
+  it("S1 calm: from rest it eases in from no speed at all, holds an even cruise and eases out to rest", () => {
+    const e = calm(0, 0.25);
+    const speed = (t: number) => (e(t + 1e-6) - e(t - 1e-6)) / 2e-6;
+    // Sets off gently: a fiftieth of the time in, it has barely moved, and its speed grows from none.
+    expect(e(0.02)).toBeLessThan(0.001);
+    expect(speed(0.01)).toBeLessThan(speed(0.05) / 10);
+    // The cruise: 1 / (1 - ease) times the average speed, held evenly.
+    for (const t of [0.3, 0.5, 0.7]) expect(speed(t)).toBeCloseTo(1 / 0.75, 4);
+    expect(speed(0.999)).toBeLessThan(0.001);
+    // With no room for a cruise it is one bell, twice the average at its peak.
+    expect((calm(0)(0.5 + 1e-6) - calm(0)(0.5 - 1e-6)) / 2e-6).toBeCloseTo(2, 4);
+  });
+
+  it("S1: a beat under a screen away lands in about 1.3 s, two screens in about 2 s, never over CALM_PEAK", () => {
+    for (const screen of [900, 1080]) {
+      for (const px of [40, 300, 0.7 * screen, screen]) {
+        const m = motion(1000, 1000 + px, screen);
+        expect(m.duration).toBeGreaterThanOrEqual(1.3);
+        expect(m.duration).toBeLessThanOrEqual(1.4);
+        expect(m.peak).toBeLessThanOrEqual(CALM_PEAK + 1);
+        expect(m.end).toBeCloseTo(1000 + px, 6);
+      }
+      // Two screens: a little over 2 s, or as long as CALM_PEAK needs.
+      const two = motion(5000, 5000 - 2 * screen, screen);
+      expect(two.duration).toBeGreaterThanOrEqual(1.9);
+      expect(two.duration).toBeLessThanOrEqual(screen === 900 ? 2.1 : 2.6);
+      expect(two.peak).toBeLessThanOrEqual(CALM_PEAK + 1);
+      expect(two.back).toBe(0);
     }
-    // From rest: no abrupt start (a tenth of the way in its first fifth of the time) and a peak speed 1.5 times the
-    // average, where the brake curve set off at twice the average.
-    const rest = calm(0);
-    expect(rest(0.2)).toBeLessThan(0.11);
-    expect((rest(0.5 + h) - rest(0.5 - h)) / (2 * h)).toBeCloseTo(1.5, 3);
+    expect(calmLanding(0, 1800, 900).duration).toBeCloseTo(2.09, 2);
+  });
+
+  it("S1: no 60 Hz frame moves over 40px, from rest or entered at the page's own speed, slow stretches and all", () => {
+    for (const screen of [900, 1080])
+      for (const v of [0, 400, 1050, 4000])
+        for (const [from, to] of [[0, 478], [478, 823], [823, 1858], [4278, 4972], [6698, 7988], [7988, 9910], [9910, 7988]]) {
+          const m = motion(from, to, screen, [[207, 670, 5], [4400, 4800, 3], [7988, 8586, 2]], v);
+          expect(m.frame).toBeLessThanOrEqual(40);
+          expect(m.peak).toBeLessThanOrEqual(CALM_PEAK + 1);
+          expect(m.back).toBe(0);
+          expect(m.end).toBeCloseTo(to, 6);
+        }
+  });
+
+  it("S1: crossing a slow stretch takes a little longer, up to 0.3 s, and the stretch plays slower than the rest", () => {
+    const plain = calmLanding(0, 823, 900);
+    const dolly = calmLanding(0, 823, 900, [[207, 670, 5]]);
+    expect(dolly.duration).toBeGreaterThan(plain.duration);
+    expect(dolly.duration).toBeLessThanOrEqual(plain.duration + 0.3 + 1e-9);
+    expect(dolly.way.length).toBeGreaterThan(823);
   });
 });
