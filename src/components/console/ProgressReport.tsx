@@ -71,7 +71,7 @@ export function ProgressReport({
       // dark room, the paper in light), and prints light on white (PrintButton turns the page light while it prints).
       data-theme={home ? "light" : undefined}
       className={clsx(
-        "report-sheet w-full max-w-[52rem] rounded-card px-6 text-text print:max-w-none print:rounded-none print:!bg-white print:p-0 print:!shadow-none",
+        "report-sheet w-full max-w-[52rem] rounded-card px-6 text-text print:max-w-none print:rounded-none print:bg-[#fff]! print:p-0 print:shadow-none!",
         home ? "bg-paper shadow-[var(--paper-shadow-flat)]" : "bg-surface shadow-[0_0_0_1px_var(--line-2)] in-data-[theme=light]:bg-paper in-data-[theme=light]:shadow-[var(--paper-shadow-flat)]",
         home ? "@container mx-auto py-7 sm:px-10 sm:py-9" : "py-8 sm:px-12 sm:py-12",
       )}
