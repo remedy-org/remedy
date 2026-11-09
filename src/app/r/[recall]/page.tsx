@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: PageProps<"/r/[recall]">): Pr
   const recall = await getRecallBySlug((await params).recall, await getAppStore());
   if (!recall) return { title: "Recall not found" };
   const title = `Refund for ${recall.product}`;
-  const description = `Get ${money(recall.refund)} back for your recalled ${productNoun(recall)}. Prove it's destroyed on a live camera and Remedy pays you through PayPal.`;
+  const description = `Get ${money(recall.refund)} back for your recalled ${productNoun(recall)}. Prove it’s destroyed on a live camera and Remedy pays you through PayPal.`;
   return {
     title,
     description,

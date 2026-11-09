@@ -201,14 +201,14 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
         ? PAID_TITLE.sent
         : view.decision === "held"
           ? `A person at ${company.replace(/ /g, "\u00a0")} will check this claim`
-          : "We couldn't pay this claim"
+          : "We couldn’t pay this claim"
       : `Checking your ${count > 1 ? "photos" : "photo"}`;
   // Said only when the wait is long enough that someone might want to leave; never once the claim is decided.
   const lead =
     decided || elapsed === null || elapsed <= SAVED_S
       ? ""
       : elapsed > SLOW_S
-        ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn't answer."
+        ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn’t answer."
         : "Your claim is saved. You can close this page.";
 
   // One line for a screen reader, rewritten as each row lands (role="status", so it waits its turn): the check, its
@@ -269,7 +269,7 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
           {offline && (
             <p role="status" className="flex gap-2.5 text-ui text-muted">
               <AlertIcon className="mt-0.5 shrink-0" />
-              <span>Lost the connection for a moment. Your claim is still being checked; this page catches up when you&apos;re back online.</span>
+              <span>Lost the connection for a moment. Your claim is still being checked; this page catches up when you&rsquo;re back online.</span>
             </p>
           )}
           {refundRow && <RefundRow amount={refund} state={refundRow.state} />}

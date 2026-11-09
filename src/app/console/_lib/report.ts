@@ -40,7 +40,7 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   // One definition per state, in the words the claims grid uses; Held is only a claim waiting for a person.
   const rows: [Decision, string, number, string][] = [
     ["paid", "Paid", stats.remedied, "Unit destroyed on camera; refund sent through PayPal"],
-    ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn't run, auto-pay was off, or PayPal refused an approved payout"],
+    ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn’t run, auto-pay was off, or PayPal refused an approved payout"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
     ["pending", "In progress", stats.pending, "Code issued; photos not yet checked"],

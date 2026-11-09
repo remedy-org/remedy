@@ -30,7 +30,7 @@ export function ContinueCard({ id, product, company, loginHref, expiresAt, start
   const ended = Boolean(expiresAt) && left <= 0;
   // Only a live code carries over; with none (a claim already sent, or decided) there is nothing to say about one.
   const live = Boolean(expiresAt) && !ended;
-  const carry = live ? " Your code and its 10 minutes carry over." : ended ? " Its code's 10 minutes are up, so you can get a new code there." : "";
+  const carry = live ? " Your code and its 10 minutes carry over." : ended ? " Its code’s 10 minutes are up, so you can get a new code there." : "";
   // A link's id is only echoed back when it has a claim number's shape.
   const claim = /^RM-\d{4,}$/.test(id) ? <span className="font-mono whitespace-nowrap">{id}</span> : null;
   return (
@@ -51,7 +51,7 @@ export function ContinueCard({ id, product, company, loginHref, expiresAt, start
         </div>
         {signedInAs ? (
           <p className="text-body text-pretty text-muted">
-            You&apos;re logged in as <span className="text-text">{signedInAs}</span>. Log in with the {account} that started {claim ? <>claim {claim}</> : "this claim"} to see it.{carry}
+            You&rsquo;re logged in as <span className="text-text">{signedInAs}</span>. Log in with the {account} that started {claim ? <>claim {claim}</> : "this claim"} to see it.{carry}
           </p>
         ) : (
           <p className="text-body text-pretty text-muted">
@@ -73,7 +73,7 @@ export function ContinueCard({ id, product, company, loginHref, expiresAt, start
           Log in with PayPal
         </Button>
       )}
-      <p className="-mt-3 text-ui text-faint">You log in on PayPal&apos;s own page, then come straight back here. Remedy never sees your password.</p>
+      <p className="-mt-3 text-ui text-faint">You log in on PayPal&rsquo;s own page, then come straight back here. Remedy never sees your password.</p>
     </section>
   );
 }

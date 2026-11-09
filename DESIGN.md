@@ -82,6 +82,7 @@ Remedy reads like a funded product at launch: confident, plain and specific. Eve
 - Lead with the outcome ("Every genuine claim paid."), then the support. State the vision in the present tense; never invent users, customers, logos, partnerships or numbers we didn't measure.
 - Banned: seamless, leverage, empower, revolutionize, unlock, harness, robust, cutting-edge, game-changer, "in today's world", "not just X, but Y", "it's not X, it's Y", triplets for rhythm, em-dash asides, colon-then-reveal, rhetorical questions as headings, colon-label CTAs ("For companies: run a recall").
 - "two minutes" is words in running text; figures (15 s, 1.1¢, $29.99) are numerals.
+- Typeset quotes: curly apostrophes and quotes (’ “ ”) in every string a person reads, `&rsquo;` in JSX, never `&apos;`. A reason the rule stores keeps its straight apostrophe (the console's patterns match it) and is typeset where the console, Insights and the report show it (`typeset` in `view.ts`).
 - Proof is stated as results a buyer cares about, counted in what was tested (photos, claims, codes) with the tries behind them beside it ("0 of 16 stolen web photos paid, across 48 tries"), never a try counted as a photo; the method, and the one fake the photo check passed, in one footnote: no answer keys, model bake-offs or spike names on the page.
 - The four checks before the photo check are the **account checks** wherever a company reads them (grid, panel, Insights, report, the analyst's field notes). The vision model is named once, in the report's method paragraph.
 

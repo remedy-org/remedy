@@ -1,5 +1,5 @@
 import { toDrawerClaim } from "@/app/console/_lib/drawer";
-import { amountOf, cents, reasonOf, refusalLabel } from "@/app/console/_lib/view";
+import { amountOf, cents, reasonOf, refusalLabel, typeset } from "@/app/console/_lib/view";
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
 import { summarize } from "@/lib/store/store";
@@ -134,10 +134,10 @@ function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
   if (c.decision === "pending") return { stage: "Passed account checks", stopReason: "Photo check running" };
   const model = c.reasons.filter((r) => !PRE_CHECKS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK && r.check !== "state");
   const failed = model.find((r) => r.outcome === "reject") ?? model.find((r) => r.outcome === "hold");
-  if (failed) return { stage: "Passed account checks", stopReason: failed.outcome === "reject" ? refusalLabel(failed.check) : failed.text };
+  if (failed) return { stage: "Passed account checks", stopReason: failed.outcome === "reject" ? refusalLabel(failed.check) : typeset(failed.text) };
   if (c.decision === "rejected") return { stage: "Passed photo check", stopReason: refusalLabel(refusedBy?.check ?? "review") };
   // Held with every check passed: auto-pay off, or a payout that couldn't be sent.
-  return { stage: "Passed photo check", stopReason: c.reasons.find((r) => r.outcome === "hold")?.text ?? "Held for a person" };
+  return { stage: "Passed photo check", stopReason: typeset(c.reasons.find((r) => r.outcome === "hold")?.text ?? "Held for a person") };
 }
 
 const dollars = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });

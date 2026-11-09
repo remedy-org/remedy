@@ -28,8 +28,8 @@ type PayoutFailure = PayoutFailureWords & { at: string; raw: string };
 
 const typingIn = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
 
-const NETWORK: PayoutFailureWords = { kind: "network", what: "Remedy couldn't reach PayPal (a network error)", next: "Nothing was sent, so it's safe to try again." };
-const REFUSED: PayoutFailureWords = { kind: "paypal", what: "PayPal didn't take the payout", next: "Nothing was sent." };
+const NETWORK: PayoutFailureWords = { kind: "network", what: "Remedy couldn’t reach PayPal (a network error)", next: "Nothing was sent, so it’s safe to try again." };
+const REFUSED: PayoutFailureWords = { kind: "paypal", what: "PayPal didn’t take the payout", next: "Nothing was sent." };
 
 /** A held claim whose last payout attempt failed: when, what happened in words (drawer.ts), and the raw answer for
  * support. The panel keeps saying so (and offers to try again) until a payout goes through; the history keeps it after. */
@@ -294,7 +294,7 @@ export function ReviewActions({
       {mode === "approve" && labels.blocked && (
         <>
           <p className="text-ui text-muted">
-            <span className="font-medium text-text">Approve won&apos;t pay:</span>{" "}
+            <span className="font-medium text-text">Approve won&rsquo;t pay:</span>{" "}
             <LinkedIds text={lowerFirst(claim.stops.join("; "))} onOpen={onOpen} self={claim.id} />. Remedy runs this check again on approve and would stop the payout, so
             nothing would be sent.
           </p>
@@ -359,7 +359,7 @@ export function ReviewActions({
               </p>
             )}
             <Field
-              label="Why it's rejected"
+              label="Why it’s rejected"
               hint="The owner reads this on their claim page"
               error={error?.fields?.reason}
             >

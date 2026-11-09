@@ -39,7 +39,7 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
         <EmptyState
           className="my-auto"
           title="Nothing to analyse yet"
-          description="Insights reads a recall's claims. Import a recall and share its claim link; the report fills in as owners file."
+          description="Insights reads a recall’s claims. Import a recall and share its claim link; the report fills in as owners file."
           action={<Button href="/console/recalls/new">Import a recall</Button>}
         />
       </main>

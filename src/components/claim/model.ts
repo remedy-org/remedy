@@ -49,7 +49,7 @@ export type ClaimStatus = Pick<ClaimView, "decision" | "photos"> & { payout?: st
 export type ClaimLike = Pick<Claim, "decision" | "reasons" | "photos" | "verdict" | "payout" | "code" | "demo" | "events">;
 
 const PRE = [
-  { id: "session", label: CHECK_NAMES.session, checks: ["session"], pass: "Taken on this page's camera before the code expired" },
+  { id: "session", label: CHECK_NAMES.session, checks: ["session"], pass: "Taken on this page’s camera before the code expired" },
   { id: "duplicate_photo", label: CHECK_NAMES.duplicate, checks: ["duplicate_photo"], pass: "No match among earlier claims' photos" },
   { id: "account", label: CHECK_NAMES.account, checks: ["state", "payer_verified", "payer"], pass: "A verified PayPal account with no other paid or open claim for this recall" },
 ] as const;
@@ -88,7 +88,7 @@ export function checkRows(claim: ClaimLike, spec: CheckSpec): CheckRow[] {
         ? { id: p.id, group: "pre", label: p.label, state: "pass", detail: "A verified PayPal account. Checked within this demo round: no other paid or open genuine claim" }
         : { id: p.id, group: "pre", label: p.label, state: "skipped", detail: "A verified PayPal account. Skipped on the demo: one demo account runs all four claims, so this check would stop the rest" };
     }
-    return { id: p.id, group: "pre", label: p.label, state: "pass", detail: claim.demo && p.id === "session" ? "Sent inside this claim's 10-minute session" : p.pass };
+    return { id: p.id, group: "pre", label: p.label, state: "pass", detail: claim.demo && p.id === "session" ? "Sent inside this claim’s 10-minute session" : p.pass };
   });
   if (blocked) return rows;
 
@@ -229,7 +229,7 @@ export function payoutWords(status: string | null | undefined): { label: string;
     case "REVERSED":
     case "REFUNDED":
     case "CANCELED":
-      return { label: "Didn't go through", tone: "stop", note: "The company's recall team has been told and will send it again." };
+      return { label: "Didn’t go through", tone: "stop", note: "The company’s recall team has been told and will send it again." };
     case "":
       return { label: "Unknown", tone: "muted", note: "" };
     // Sent, and PayPal hasn't finished: said as the fact it is (it's coming), not as a doubt beside the PAID stamp. One
@@ -385,7 +385,7 @@ export const acceptsStandIn = (spec: Pick<CheckSpec, "product">) => /\bstand-in\
 /** A refusal's headline, from the check that decided it: specific where it can be, the general sentence otherwise. */
 export function refusalHeadline(claim: Pick<Claim, "decision" | "reasons" | "photos">, spec: Pick<CheckSpec, "proof_steps">): string {
   const check = decidingReasons(claim)[0]?.check ?? "";
-  const photo = claim.photos.length > 1 ? "The photos don't" : "The photo doesn't";
+  const photo = claim.photos.length > 1 ? "The photos don’t" : "The photo doesn’t";
   const step = /^step_(\d+)$/.exec(check);
   if (step) {
     const text = spec.proof_steps[Number(step[1]) - 1] ?? "";
@@ -393,25 +393,25 @@ export function refusalHeadline(claim: Pick<Claim, "decision" | "reasons" | "pho
   }
   switch (check) {
     case "code":
-      return "The code on the tag doesn't match";
+      return "The code on the tag doesn’t match";
     case "label":
-      return "We couldn't read the recall label";
+      return "We couldn’t read the recall label";
     case "screen":
       return "This looks like a photo of a screen or a print";
     case "same_item":
       return "The photos show different items";
     case "session":
-      return claim.photos.length > 1 ? "These photos weren't sent from Remedy's camera" : "This photo wasn't sent from Remedy's camera";
+      return claim.photos.length > 1 ? "These photos weren’t sent from Remedy’s camera" : "This photo wasn’t sent from Remedy’s camera";
     case "duplicate_photo":
       return claim.photos.length > 1 ? "These photos were already used in another claim" : "This photo was already used in another claim";
     case "payer":
       return "This PayPal account already has a claim for this recall";
     case "payer_verified":
-      return "This PayPal account isn't verified";
+      return "This PayPal account isn’t verified";
     case "state":
       return "This claim was already decided";
   }
-  return claim.decision === "blocked" ? "Stopped before the photo check" : `${claim.photos.length > 1 ? "These photos don't" : "This photo doesn't"} prove the claim`;
+  return claim.decision === "blocked" ? "Stopped before the photo check" : `${claim.photos.length > 1 ? "These photos don’t" : "This photo doesn’t"} prove the claim`;
 }
 
 export interface CodeCell {
@@ -437,7 +437,7 @@ export function codeDiff(code: string, seen: string | null | undefined): { cells
   const n = Math.max(yours.length, read.length);
   const cells = Array.from({ length: n }, (_, i) => ({ yours: yours[i] ?? "", seen: read[i] ?? "", same: yours[i] === read[i] }));
   const off = cells.flatMap((c, i) => (c.same ? [] : [i]));
-  if (!off.length) return { cells, caption: `The tag reads ${read}, but the photo check couldn't confirm it's your code.`, readable: true };
+  if (!off.length) return { cells, caption: `The tag reads ${read}, but the photo check couldn’t confirm it’s your code.`, readable: true };
   const [i] = off;
   if (off.length === 1 && cells[i].yours && cells[i].seen) {
     return { cells, caption: `The ${ORDINAL[i] ?? `character ${i + 1}`} character: ${charName(cells[i].yours)} in your code, ${charName(cells[i].seen)} on the tag.`, readable: true };

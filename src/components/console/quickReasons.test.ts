@@ -7,7 +7,7 @@ describe("quick reasons", () => {
   it("lead with what held the claim, and never offer one a passed check contradicts", () => {
     const sameItem = quickReasons(checks({ session: "pass", label: "pass", code: "pass", same_item: "hold", screen: "pass", step_1: "pass", step_2: "pass" }));
     expect(sameItem.map((q) => q.label)).toEqual(["Not the same item"]);
-    expect(sameItem[0].text("R8D")).toBe("The two photos don't show the same product. Take both photos of one product in a new claim.");
+    expect(sameItem[0].text("R8D")).toBe("The two photos don’t show the same product. Take both photos of one product in a new claim.");
   });
 
   it("offer the general reasons when the photo check never answered, numbered as they remain", () => {

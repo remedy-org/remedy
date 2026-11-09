@@ -196,7 +196,7 @@ function paidParts({ claim, recall, photoUrls, againHref, sample, round, now, sa
   // activity page instead.
   const foot = (
     <>
-      {payout && !payout.fresh && <p>PayPal didn&apos;t answer just now, so this is the last status we saved.</p>}
+      {payout && !payout.fresh && <p>PayPal didn&rsquo;t answer just now, so this is the last status we saved.</p>}
       {sandbox || demo ? (
         <p>
           See it in your{" "}
@@ -264,9 +264,9 @@ function heldParts({ claim, recall, photoUrls, againHref, sample, round }: Resul
   // What's wrong, once: the checks that need a person, in the rows' own words.
   const unsure = six.filter((r) => r.key !== "refund" && r.state === "hold" && r.detail).map((r) => sentence(r.detail!));
   const lead = payout
-    ? `${payout === "network" ? "Remedy couldn't reach PayPal to send it." : "PayPal didn't accept the transfer."}${payout === "refused" ? " If your PayPal account shows a notice, sort it out there." : ""}`
+    ? `${payout === "network" ? "Remedy couldn’t reach PayPal to send it." : "PayPal didn’t accept the transfer."}${payout === "refused" ? " If your PayPal account shows a notice, sort it out there." : ""}`
     : unanswered
-      ? "We couldn't finish the photo check, so a person will look at your photos instead."
+      ? "We couldn’t finish the photo check, so a person will look at your photos instead."
       : asked
         ? `You asked for a review. ${reasons.filter((r) => r.outcome === "reject").map((r) => sentence(refusalHeadline({ ...claim, decision: "rejected", reasons: [r] }, recall.spec))).join(" ")}`
         : [...new Set(unsure)].join(" ") || "Some of the checks need a person to look.";
@@ -333,24 +333,24 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
           The tag in your photo reads <span className="font-mono whitespace-nowrap">{marked("seen")}</span>.
         </span>
         <span className="block">
-          Your claim&apos;s code is <span className="font-mono whitespace-nowrap">{marked("yours")}</span>.
+          Your claim&rsquo;s code is <span className="font-mono whitespace-nowrap">{marked("yours")}</span>.
         </span>
         <span className="sr-only">{seen.caption}</span>
       </>
     ) : (
       <>
-        We couldn&apos;t read a code on the tag. Your claim&apos;s code is <span className="font-mono whitespace-nowrap">{claim.code}</span>.
+        We couldn&rsquo;t read a code on the tag. Your claim&rsquo;s code is <span className="font-mono whitespace-nowrap">{claim.code}</span>.
       </>
     )
   ) : lead === "session" ? (
     // The row under it says this photo came from outside the camera: the lead says the rule, once.
-    "Only photos taken in this claim's camera, within 10 minutes of its code, count."
+    "Only photos taken in this claim’s camera, within 10 minutes of its code, count."
   ) : lead === "duplicate_photo" ? (
     // The row and the pair beside it carry the earlier claim's number: said there, once.
     duplicate?.earlier ? (
       `A photo can be claimed once, and ${these === "This photo was" ? "this one already was" : "these already were"}.`
     ) : (
-      `${these} already sent with ${duplicate ? "another PayPal account's claim" : "another claim"}.`
+      `${these} already sent with ${duplicate ? "another PayPal account’s claim" : "another claim"}.`
     )
   ) : (
     sentence(refusalHeadline(claim, recall.spec))
@@ -371,7 +371,7 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
   const pair = lead === "duplicate_photo" && photoUrls[0] && duplicate?.earlier ? <DuplicatePair claimId={claim.id} photoUrls={photoUrls} earlier={duplicate.earlier} n={duplicate.photo} /> : null;
   const actions = Boolean(earlier || appeal || (!sample && retry && !reviewed) || sample);
   return {
-    title: reviewed ? `A person at ${company} looked at this and refused it` : "We couldn't pay this claim",
+    title: reviewed ? `A person at ${company} looked at this and refused it` : "We couldn’t pay this claim",
     lead: (
       <>
         {first}

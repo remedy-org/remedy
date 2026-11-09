@@ -15,12 +15,12 @@ export const metadata: Metadata = {
 };
 
 const ERRORS: Record<string, { title: string; description: string }> = {
-  denied: { title: "PayPal login was cancelled", description: "Nothing was shared with Remedy. Log in again when you're ready." },
+  denied: { title: "PayPal login was cancelled", description: "Nothing was shared with Remedy. Log in again when you’re ready." },
   state: { title: "That login link expired", description: "Logins time out after 10 minutes, or the page was opened in another browser. Start again here." },
-  paypal: { title: "PayPal didn't confirm the login", description: "PayPal's login service didn't answer us. Try again in a minute." },
+  paypal: { title: "PayPal didn’t confirm the login", description: "PayPal’s login service didn’t answer us. Try again in a minute." },
   refused: {
-    title: "PayPal wouldn't share this account",
-    description: "Log in with a different PayPal account. The business account that owns the Remedy app can't sign in to it.",
+    title: "PayPal wouldn’t share this account",
+    description: "Log in with a different PayPal account. The business account that owns the Remedy app can’t sign in to it.",
   },
 };
 
@@ -63,7 +63,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           {signedOut && (
             <p role="status" className="mt-6 flex items-center gap-2.5 text-ui text-text-2">
               <CheckIcon className="shrink-0 text-pay" />
-              You&apos;re signed out.
+              You&rsquo;re signed out.
             </p>
           )}
 

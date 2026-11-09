@@ -8,15 +8,15 @@ const tomorrow = new Date("2026-11-08T00:00:00.000Z");
 describe("limitCopy", () => {
   it("tells an owner which limit, that nothing was started or paid, and when to come back", () => {
     expect(limitCopy({ kind: "account", limit: 5, until: tomorrow }, { now })).toEqual({
-      title: "This PayPal account has started today's claims",
+      title: "This PayPal account has started today’s claims",
       description: "Each PayPal account can start 5 claims a day. Nothing was started and nothing was paid.",
       retry: "in about 6 hours",
     });
   });
 
   it("names Remedy's own limits plainly, with no internal words", () => {
-    expect(limitCopy({ kind: "daily", limit: 60, until: tomorrow }, { now }).title).toBe("Remedy is at today's limit for new claims");
-    expect(limitCopy({ kind: "checks", limit: 100, until: tomorrow }, { now }).title).toBe("Today's photo checks are used up");
+    expect(limitCopy({ kind: "daily", limit: 60, until: tomorrow }, { now }).title).toBe("Remedy is at today’s limit for new claims");
+    expect(limitCopy({ kind: "checks", limit: 100, until: tomorrow }, { now }).title).toBe("Today’s photo checks are used up");
     for (const kind of ["account", "daily", "monthly", "checks"] as const) {
       const { title, description } = limitCopy({ kind, limit: 60, until: tomorrow }, { now });
       expect(`${title} ${description}`).not.toMatch(/sandbox|demo|judge|costs/i);

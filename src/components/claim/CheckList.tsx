@@ -126,7 +126,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
     const detail = off.length && b.key !== "refund" ? off.map((r) => r.detail).filter(Boolean).join(". ") || undefined : undefined;
     const out: SixRow = { ...b, state, detail, because: state === "pass" ? b.because : undefined };
     if (state === "waiting" || state === "running") return out;
-    if (b.key === "session" && out.detail) out.detail = `${these.charAt(0).toUpperCase()}${these.slice(1)} came from outside the claim's camera.`;
+    if (b.key === "session" && out.detail) out.detail = `${these.charAt(0).toUpperCase()}${these.slice(1)} came from outside the claim’s camera.`;
     // "Already sent with claim RM-3481": a photo is numbered only when several were sent.
     if (b.key === "duplicate" && out.detail) {
       const where = earlier ? `claim ${earlier}` : "another claim";
@@ -148,18 +148,18 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
       // Unsure: one plain line in Remedy's voice, not the pipeline's list. The photo check's words stay in the evidence.
       if (state === "hold") {
         const unsure = own.filter((r) => r.state === "hold").map((r) => (r.id === "code" ? code : "the label"));
-        out.detail = `We couldn't read ${unsure.join(" or ")} on the tag.`;
+        out.detail = `We couldn’t read ${unsure.join(" or ")} on the tag.`;
         out.read = undefined;
       }
       if (state === "pass" && !out.read) out.because = "The tag matches this claim.";
     }
     if (b.key === "destroyed" && !model) {
       const steps = own.filter((r) => /^step_\d+$/.test(r.id) && r.state !== "pass" && r.state !== "skipped");
-      if (steps.length) out.detail = steps.some((r) => r.state === "hold") ? `We couldn't see ${cut ? "the cut" : "that it's destroyed"} clearly.` : `We couldn't see the ${noun.toLowerCase()} ${cut ? "cut in half" : "destroyed"}.`;
+      if (steps.length) out.detail = steps.some((r) => r.state === "hold") ? `We couldn’t see ${cut ? "the cut" : "that it’s destroyed"} clearly.` : `We couldn’t see the ${noun.toLowerCase()} ${cut ? "cut in half" : "destroyed"}.`;
     }
     // The demo's other three claims skip it (one account sends all four): said on the row, which stays in the list.
     if (b.key === "account" && demo && state === "skipped") out.detail = DEMO_ACCOUNT;
-    if (model && (b.key === "code" || b.key === "destroyed")) out.detail = "The photo check didn't answer.";
+    if (model && (b.key === "code" || b.key === "destroyed")) out.detail = "The photo check didn’t answer.";
     if (b.key === "refund") out.reference = /PayPal reference (\S+)/.exec(own[0]?.detail ?? "")?.[1];
     if (b.key === "refund" && state === "hold") out.detail = own[0]?.detail;
     // A held row's reason is the result's lead, so the row doesn't say it again. A failed row keeps its line, as a passed
@@ -184,13 +184,13 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
 function stoppedBy(key: SixKey, these: string): string {
   switch (key) {
     case "session":
-      return `Not run: ${these} wasn't taken in this claim's camera.`.replace("these photos wasn't", "these photos weren't");
+      return `Not run: ${these} wasn’t taken in this claim’s camera.`.replace("these photos wasn’t", "these photos weren’t");
     case "duplicate":
       return `Not run: ${these} ${these === "this photo" ? "was" : "were"} claimed before.`;
     case "account":
       return "Not run: this PayPal account has claimed already.";
     case "code":
-      return "Not run: the tag doesn't match this claim.";
+      return "Not run: the tag doesn’t match this claim.";
     default:
       return "Not run: an earlier check stopped the claim.";
   }

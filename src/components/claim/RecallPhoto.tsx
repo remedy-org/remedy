@@ -15,7 +15,7 @@ export function RecallPhoto({ url, caption, product }: { url: string; caption?: 
         type="button"
         onClick={() => dialog.current?.showModal()}
         aria-haspopup="dialog"
-        aria-label={`Enlarge CPSC's photo of the recalled ${product}`}
+        aria-label={`Enlarge CPSC’s photo of the recalled ${product}`}
         className="group relative flex h-28 w-full items-center justify-center rounded-control bg-paper p-2 ring-1 ring-line brightness-[0.84] transition-shadow duration-160 hover:ring-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus in-data-[theme=light]:brightness-100"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -30,7 +30,7 @@ export function RecallPhoto({ url, caption, product }: { url: string; caption?: 
       </button>
       <dialog
         ref={dialog}
-        aria-label={`CPSC's photo of the recalled ${product}`}
+        aria-label={`CPSC’s photo of the recalled ${product}`}
         onClick={(e) => e.target === dialog.current && dialog.current?.close()}
         className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[min(calc(100%-2rem),40rem)] max-w-none overflow-y-auto rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0_0_0/0.6)]"
       >

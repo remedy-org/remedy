@@ -10,11 +10,11 @@ export interface QuickReason {
 
 type Check = { id: string; state: string };
 
-const SAME_ITEM: QuickReason = { label: "Not the same item", text: () => "The two photos don't show the same product. Take both photos of one product in a new claim." };
-const WRONG_CODE: QuickReason = { label: "Wrong code", text: (code) => `The tag in the photo doesn't read ${code}, this claim's code.` };
-const NO_TAG: QuickReason = { label: "No tag", text: (code) => `The tag with the code ${code} isn't in the photo.` };
-const NOT_DESTROYED: QuickReason = { label: "Not destroyed", text: () => "The photos don't show the product destroyed as the recall asks." };
-const WRONG_PRODUCT: QuickReason = { label: "Wrong product", text: () => "The photos don't show the recalled product." };
+const SAME_ITEM: QuickReason = { label: "Not the same item", text: () => "The two photos don’t show the same product. Take both photos of one product in a new claim." };
+const WRONG_CODE: QuickReason = { label: "Wrong code", text: (code) => `The tag in the photo doesn’t read ${code}, this claim’s code.` };
+const NO_TAG: QuickReason = { label: "No tag", text: (code) => `The tag with the code ${code} isn’t in the photo.` };
+const NOT_DESTROYED: QuickReason = { label: "Not destroyed", text: () => "The photos don’t show the product destroyed as the recall asks." };
+const WRONG_PRODUCT: QuickReason = { label: "Wrong product", text: () => "The photos don’t show the recalled product." };
 const NOT_REAL: QuickReason = { label: "Not a real photo", text: () => "The photo is of a screen or a print, not of the product itself." };
 
 // The reason a check stands for when it held or failed the claim.

@@ -37,7 +37,7 @@ const LOCALE = {
   crossFilterSumFieldName: "${name}, in this filter",
   crossFilterMaxFieldName: "${name}, in this filter",
   panelTitleAi: "Recall analyst",
-  aiMessageInputPlaceholder: "Ask about this recall's claims…",
+  aiMessageInputPlaceholder: "Ask about this recall’s claims…",
   aiNewChat: "This conversation",
   aiNewThreadButton: "Start over",
 };
@@ -305,11 +305,11 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
       <div
         ref={host}
         // The analyst's empty column says what it answers from (insights.css prints it).
-        style={{ height, ["--analyst-intro" as string]: JSON.stringify(`Answers from this recall's ${plural(data.claims.length, "claim")}, naming the claim IDs it used. Ask for a chart and it adds one to this page.`) }}
+        style={{ height, ["--analyst-intro" as string]: JSON.stringify(`Answers from this recall’s ${plural(data.claims.length, "claim")}, naming the claim IDs it used. Ask for a chart and it adds one to this page.`) }}
         className={clsx("insights-report insights-frame [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!", !askOpen && "insights-ask-closed")}
       />
       <p id={PANEL_KEYS} hidden>
-        Press Enter to use this panel&apos;s controls, the arrow keys or Tab to move between them, and Escape to come back out. A pick filters the whole page until you
+        Press Enter to use this panel&rsquo;s controls, the arrow keys or Tab to move between them, and Escape to come back out. A pick filters the whole page until you
         pick it again or press Clear filter above the report.
       </p>
     </div>

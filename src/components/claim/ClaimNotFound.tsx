@@ -17,10 +17,10 @@ export function ClaimNotFound({ demo }: { demo?: boolean }) {
       title={
         shaped ? (
           <>
-            We can&apos;t find claim <span className="font-mono">{id}</span>
+            We can&rsquo;t find claim <span className="font-mono">{id}</span>
           </>
         ) : (
-          "We can't find this claim"
+          "We can’t find this claim"
         )
       }
       description="Check the link, or log in with the PayPal account that started it."

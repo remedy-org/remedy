@@ -46,7 +46,7 @@ export const PREVIEW_ROWS: PreviewRow[] = [
     id: "RM-9629",
     code: "R8D",
     status: "held",
-    reason: "Couldn't tell if both photos show the same item",
+    reason: "Couldn’t tell if both photos show the same item",
     photos: ["/demo/c03-1.jpg", "/demo/c03-2.jpg"],
     checks: [pre, two("hold")],
     payer: "DSFD",

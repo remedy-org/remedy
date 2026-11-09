@@ -316,7 +316,7 @@ export type PayoutState = { word: "Sent" | "Refused"; detail: string | null; tit
  * didn't take it. Null while nothing is owed: a held claim waits for a person, a refused one owes nothing.
  */
 export function payoutState(r: Pick<ClaimRow, "decision" | "payoutStatus" | "payoutFailedAt">): PayoutState | null {
-  if (r.payoutFailedAt) return { word: "Refused", detail: `PayPal ${formatClock(r.payoutFailedAt).slice(0, 5)}`, title: `PayPal didn't take the payout at ${formatTime(r.payoutFailedAt)}: nothing was paid` };
+  if (r.payoutFailedAt) return { word: "Refused", detail: `PayPal ${formatClock(r.payoutFailedAt).slice(0, 5)}`, title: `PayPal didn’t take the payout at ${formatTime(r.payoutFailedAt)}: nothing was paid` };
   if (!r.payoutStatus) return null;
   if (FAILED.has(r.payoutStatus)) return { word: "Refused", detail: "PayPal", title: `PayPal: ${r.payoutStatus}` };
   return { word: "Sent", detail: r.payoutStatus === "SUCCESS" ? "Settled" : "Settling", title: `PayPal: ${r.payoutStatus}` };

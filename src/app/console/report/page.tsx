@@ -21,7 +21,7 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
         <EmptyState
           className="my-auto"
           title="No recall to report on"
-          description="The progress report is drafted from a recall's claims. Import a recall first."
+          description="The progress report is drafted from a recall’s claims. Import a recall first."
           action={<Button href="/console/recalls/new">Import a recall</Button>}
         />
       </main>

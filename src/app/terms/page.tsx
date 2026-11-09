@@ -15,7 +15,7 @@ export default function TermsPage() {
       sections={[
         {
           title: "What Remedy does",
-          body: "Remedy runs refund claims for product recalls. When an owner's photo passes every check, Remedy pays the refund through PayPal Payouts.",
+          body: "Remedy runs refund claims for product recalls. When an owner’s photo passes every check, Remedy pays the refund through PayPal Payouts.",
         },
         {
           title: "Claims",
@@ -23,11 +23,11 @@ export default function TermsPage() {
         },
         {
           title: "Payouts",
-          body: "During the pilot, payouts on remedy-recalls.vercel.app run in PayPal's sandbox, so no real money moves.",
+          body: "During the pilot, payouts on remedy-recalls.vercel.app run in PayPal’s sandbox, so no real money moves.",
         },
         {
           title: "PayPal",
-          body: "Remedy uses Log in with PayPal and PayPal Payouts. PayPal's own terms apply to your PayPal account. PayPal is a trademark of PayPal, Inc.",
+          body: "Remedy uses Log in with PayPal and PayPal Payouts. PayPal’s own terms apply to your PayPal account. PayPal is a trademark of PayPal, Inc.",
         },
       ]}
     />

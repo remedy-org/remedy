@@ -95,13 +95,13 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
         <div className={clsx("lg:col-start-1 lg:row-span-2 lg:row-start-1", ended && "max-lg:hidden")}>
           <CodeTag code={code} written={written} expired={ended} foot={ended ? undefined : "Write it big, about 1\u00a0inch (3\u00a0cm), in marker."} />
           {/* What happens at 0:00, said once, under the tag the timer is for. */}
-          {!ended && <p className="mt-3 text-ui text-muted">If time runs out, you&apos;ll get a new code.</p>}
+          {!ended && <p className="mt-3 text-ui text-muted">If time runs out, you&rsquo;ll get a new code.</p>}
         </div>
 
         <div className="flex flex-col gap-6 lg:col-start-2">
           {ended ? (
             <p role="alert" className="text-body text-muted">
-              Codes last 10 minutes, so photos can&apos;t be taken in advance. Get a new one to start again.
+              Codes last 10 minutes, so photos can&rsquo;t be taken in advance. Get a new one to start again.
             </p>
           ) : (
             <p className="text-body text-pretty text-text">
@@ -138,7 +138,7 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
                 <div className="hidden flex-col gap-4 sm:pointer-fine:flex">
                   <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} primary />
                   <Button variant="secondary" size="lg" block onClick={onContinue}>
-                    Use this computer&apos;s camera
+                    Use this computer&rsquo;s camera
                   </Button>
                 </div>
               )}

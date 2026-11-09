@@ -20,7 +20,7 @@ export type CheckNumber = (typeof FIVE_CHECKS)[number]["n"];
  * in half").
  */
 export const CHECK_NAMES = {
-  session: "Taken in Remedy's camera",
+  session: "Taken in Remedy’s camera",
   duplicate: "Photo not used before",
   account: "One claim per PayPal account",
   code: (code: string, written?: string | null) => (written ? `Tag shows ${written} and ${code}` : `Label and code ${code}`),
