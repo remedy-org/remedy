@@ -127,7 +127,7 @@ export const sourceOf = (c: Pick<Claim, "seeded" | "demo">): Source => (c.demo ?
 
 function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
   // Paid only where PayPal paid: an approved claim with nothing sent stops just short, waiting for its payout.
-  if (c.decision === "paid") return c.payout?.status === "SUCCESS" ? { stage: "Paid", stopReason: null } : { stage: "Passed photo check", stopReason: "Approved, nothing sent yet" };
+  if (c.decision === "paid") return c.payout?.status === "SUCCESS" ? { stage: "Paid", stopReason: null } : { stage: "Passed photo check", stopReason: "Nothing sent yet" };
   if (!c.photos.length && c.decision !== "blocked") return { stage: "Filed", stopReason: "No photos yet" };
   const refusedBy = c.reasons.find((r) => r.outcome === "reject");
   if (c.decision === "blocked" || (refusedBy && PRE_CHECKS.has(refusedBy.check))) {

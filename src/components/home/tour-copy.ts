@@ -70,7 +70,7 @@ export function describe(t: TourTotals, open: { id: string; amount: string }, an
   return [
     `The claims queue for the Kikea recall: ${t.claims} claims, ${t.paid} paid, ${t.held} held for a person, ${t.refused} rejected or blocked. Click a claim to open its evidence, search the queue, filter it by status, or sort it by claim, verdict or the photo check’s time.`,
     `Claim ${open.id}, held: photos 1 and 2, and the model’s answer that it couldn’t tell if both photos show the same item. A person approves or rejects it; approving records the ${open.amount} refund and sends nothing through PayPal.`,
-    `Insights: of ${t.claims} claims, ${t.photos} sent photos, ${t.preChecked} passed the pre-checks, ${t.paid} passed the photo check and were paid; ${t.refused} were refused. Payouts by day beside it.` +
+    `Insights: of ${t.claims} claims, ${t.photos} sent photos, ${t.preChecked} passed the pre-checks and ${t.paid} ${t.paid === 1 ? "was" : "were"} paid through PayPal; ${t.refused} were refused. Payouts by day beside it.` +
       (analyst ? ` Recall analyst, asked “${analyst.question}”: ${analyst.answer}` : ""),
     `The CPSC progress report draft for recall 27-071, built from the same ${t.claims} claims: units remedied, claims by outcome, refunds paid and why claims were refused.`,
   ];
