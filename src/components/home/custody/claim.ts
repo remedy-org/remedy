@@ -1,11 +1,13 @@
+import { consentLines, PAYPAL_CONSENT } from "@/components/claim/consentCopy";
 import type { Verdict } from "@/components/console/VerdictMark";
 import { GENUINE } from "@/lib/demo/claims";
+import { demoRecall } from "@/lib/demo/kikea";
 
 // The one claim the homepage stages, start to finish: RM-0442 (src/lib/demo/claims.ts, GENUINE), the genuine claim (photo
 // k01, code M4T) on the X-VESOLJE recall (CPSC 27-071), sent to PayPal 15 s after its photos arrived and confirmed by PayPal at 55 s. Its photo is
 // generated (eval case k01-feathers-M4T: the recalled feather print, cut in half and tagged), and it carries no label (owner rule: no internal
-// labels; the site's one sandbox line is in /terms). These are presentational copies of the claim screens: nothing here
-// imports src/components/claim/*.
+// labels; the site's one sandbox line is in /terms). These are presentational copies of the claim screens; only the
+// consent screen's words come from the claim page's own (claim/consentCopy.ts), so chapter 01 reads as the page does.
 export const CLAIM = {
   id: GENUINE.id,
   code: GENUINE.code,
@@ -24,16 +26,22 @@ export const CLAIM = {
   company: "Kikea Store",
   units: "About 19,596",
   recalled: "5 Nov 2026",
+  /** The camera session's length (lib/ids.ts CAPTURE_SESSION_MINUTES; claim.test.ts holds the two equal). */
+  minutes: 10,
   /** CPSC's own product photo, as the recall page shows it (hot-linked from cpsc.gov, so it stays the official one). */
   cpscPhoto: "https://www.cpsc.gov/s3fs-public/Kikea1.png?VersionId=fn.ALOuj6jGY0PDI69W9G92X7BBbt49Q",
 } as const;
+
+/** The real claim page's consent screen for this recall, word for word: its headline, how, and the code's clock. */
+export const CONSENT = consentLines(demoRecall(), CLAIM.minutes);
 
 /** The chapter rail, the static captions and the screen-reader list: the claim's five chapters, then the console. */
 export const CHAPTERS = [
   {
     n: "01",
     title: "Log in with PayPal",
-    text: "The owner opens the recall’s claim link and logs in with PayPal. Remedy sees the PayPal account ID, whether it’s verified, and the photos; never the password, balance or cards.",
+    // What Remedy sees, in the login screen's own sentence (consentCopy.ts PAYPAL_CONSENT).
+    text: `The owner opens the recall’s claim link and logs in with PayPal. The screen tells them: “${PAYPAL_CONSENT}”`,
   },
   {
     n: "02",
@@ -66,11 +74,9 @@ export const CHAPTERS = [
 // The scroll thresholds (spec H2), spread across each chapter's beat (01 is 0.2 to 0.34, 02 is 0.34 to 0.48 in
 // pace.ts) so no stretch of a hold is still. (Chapters 03 to 05, with the five checks and their quotes, are the Opened
 // Exhibit's: src/components/home/teardown/claim.ts.)
-/** 01: the consent steps light in turn once the chapter has settled (0.2, the dolly done), CONSENT_STAGGER seconds apart,
- * in time rather than over a stretch of scroll, so the stop right after the dolly (0.215, where the #how anchor lands
- * too) finds them all lit and a fling never drifts on to reach them. */
+/** 01: the consent screen has settled (0.2, the dolly done); the stop right after it (0.215, where the #how anchor lands
+ * too) rests on the finished screen. It has no steps to light: the claim page has none. */
 export const CONSENT_AT = [0.2, 0.2, 0.2];
-export const CONSENT_STAGGER = 0.3;
 /** 02: the code appears in its boxes and on the tag as one event, in time once p passes CODE_AT: its characters drop in
  * CODE_STAGGER seconds apart, and the tag is written left to right over WRITE_FOR seconds as the last one lands, so no
  * stop ever rests on empty boxes beside a blank tag, or on two pictures of the code that disagree. */
