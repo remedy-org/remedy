@@ -70,7 +70,7 @@ describe("console view", () => {
   it("says why a claim is held: the model, auto-pay, PayPal or a conflict before the payout", () => {
     const held = (check: string, text: string) => sampleClaim({ decision: "held", reasons: [{ check: "label", outcome: "pass", text: "ok" }, { check, outcome: "hold", text }] });
     expect(decisionSentence(held("payout", "PayPal didn't accept the payout, so a person will send it"), recall)).toBe(
-      "All checks passed, but PayPal didn't accept the payout, so a person will send it.",
+      "All checks passed, but PayPal didn’t accept the payout, so a person will send it.",
     );
     expect(decisionSentence(held("auto_pay", "Auto-pay is off for this recall, so a person approves each refund"), recall)).toBe(
       "All checks passed. Auto-pay is off, so a person approves the $29.99 refund.",
@@ -121,7 +121,7 @@ describe("console view", () => {
     expect(companyReasonText(model, "paid")).toBe("The photo check didn’t answer (a service error), so a person at the company reviewed it.");
     expect(companyReasonText({ check: "same_item", text: "Couldn't tell" }, "held")).toBe("Couldn’t tell");
     const claim = sampleClaim({ decision: "held", reasons: [{ ...model, outcome: "hold" }] });
-    expect(decisionSentence(claim, recall)).toBe("The photo check gave no answer, so the rule couldn't decide: a person approves or rejects the $29.99 refund.");
+    expect(decisionSentence(claim, recall)).toBe("The photo check gave no answer, so the rule couldn’t decide: a person approves or rejects the $29.99 refund.");
     expect(toDrawerClaim(claim, recall).checks[0].rule).not.toContain("your photos");
   });
 
@@ -169,11 +169,11 @@ describe("console view", () => {
     expect(payoutFailureWords("PayPal didn't take the payout: getaddrinfo ENOTFOUND api-m.sandbox.paypal.com")?.kind).toBe("network");
     expect(payoutFailureWords("PayPal refused the payout: RECEIVER_UNREGISTERED, debug id dbg-9")).toEqual({
       kind: "paypal",
-      what: "PayPal didn't take the payout: the owner's PayPal account can't receive payouts",
+      what: "PayPal didn’t take the payout: the owner’s PayPal account can’t receive payouts",
       next: "Nothing was sent.",
       raw: "RECEIVER_UNREGISTERED, debug id dbg-9",
     });
-    expect(payoutFailureWords("PayPal didn't take the payout: SOMETHING_NEW")?.what).toBe("PayPal didn't take the payout (SOMETHING_NEW)");
+    expect(payoutFailureWords("PayPal didn't take the payout: SOMETHING_NEW")?.what).toBe("PayPal didn’t take the payout (SOMETHING_NEW)");
     expect(payoutFailureWords("Payout of $29.99 sent through PayPal")).toBeNull();
   });
 
@@ -186,7 +186,7 @@ describe("console view", () => {
     expect(before.preChecks.find((p) => p.id === "payer")?.state).toBe("pass");
     const d = toDrawerClaim(claim, recall, { stops: [conflict] });
     expect(d.stops).toEqual([conflict]);
-    expect(d.preChecks.find((p) => p.id === "payer")).toMatchObject({ state: "hold", detail: expect.stringMatching(/^Approve won't pay: this PayPal account already has a claim for this recall \(RM-2584\)/) });
+    expect(d.preChecks.find((p) => p.id === "payer")).toMatchObject({ state: "hold", detail: expect.stringMatching(/^Approve won’t pay: this PayPal account already has a claim for this recall \(RM-2584\)/) });
     // The five-check line is what was recorded, as the grid's barcode counts it, not the forecast.
     expect(d.five).toBe(before.five);
     // Only a held claim a person can pay has a forecast.
@@ -208,8 +208,8 @@ describe("console view", () => {
     expect(d.rejected).toEqual({ at: "2026-11-07T10:03:00.000Z", by: "Kikea Store", reason: "The tag reads K7Q." });
     expect(d.events.map((e) => e.detail)).toEqual([
       'Filed from the demo: "The wrong code"',
-      "Held for a person: the photo check service didn't answer",
-      "Remedy couldn't reach PayPal (a network error). Nothing was sent, so it's safe to try again.",
+      "Held for a person: the photo check service didn’t answer",
+      "Remedy couldn’t reach PayPal (a network error). Nothing was sent, so it’s safe to try again.",
       "Rejected on review: The tag reads K7Q. (by Kikea Store)",
     ]);
     expect(d.events[2].failure?.kind).toBe("network");

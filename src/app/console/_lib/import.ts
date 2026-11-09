@@ -12,14 +12,14 @@ export async function readCpsc(ref: string): Promise<CpscRecord | NextResponse<A
   try {
     parseRecallRef(ref);
   } catch {
-    return fail(400, "That isn't a CPSC recall number or a cpsc.gov recall URL.", { fields: { ref: "Paste a cpsc.gov recall URL or a number like 27-068" } });
+    return fail(400, "That isn’t a CPSC recall number or a cpsc.gov recall URL.", { fields: { ref: "Paste a cpsc.gov recall URL or a number like 27-068" } });
   }
   let record: CpscRecord | null;
   try {
     record = await fetchCpscRecall(ref);
   } catch (e) {
     console.error("CPSC lookup failed:", e instanceof Error ? e.message : e);
-    return fail(502, "CPSC's recall service didn't answer. Try again in a minute.");
+    return fail(502, "CPSC’s recall service didn’t answer. Try again in a minute.");
   }
   return record ?? fail(404, "CPSC has no recall at that address or number. Check it against the notice on cpsc.gov.", { fields: { ref: "No CPSC recall matches this" } });
 }

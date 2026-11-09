@@ -80,7 +80,7 @@ export function sanitize(raw: Body, model = analystModel()): Sanitized {
 export function upstreamMessage(status: number): string {
   if (status === 401 || status === 403) return "The analyst is unavailable right now. The numbers on this page are current.";
   if (status === 429) return "The analyst's model is busy. Try again in a minute.";
-  if (status === 400 || status === 413) return "The analyst couldn't read this conversation. Start a new one.";
+  if (status === 400 || status === 413) return "The analyst couldn’t read this conversation. Start a new one.";
   return "The analyst's model didn't answer. Try again in a moment.";
 }
 

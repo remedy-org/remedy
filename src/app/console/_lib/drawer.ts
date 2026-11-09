@@ -227,7 +227,7 @@ function rejectedOf(c: Claim): DrawerClaim["rejected"] {
 }
 
 // Raw answers some events carry after their plain words: a failed photo check's API error, PayPal's message.
-const RAW: [RegExp, string][] = [[/^Held for a person: photo check failed \(([\s\S]*)\)$/, "Held for a person: the photo check service didn't answer"]];
+const RAW: [RegExp, string][] = [[/^Held for a person: photo check failed \(([\s\S]*)\)$/, "Held for a person: the photo check service didn’t answer"]];
 
 // A failed payout's history line (pipeline.ts payoutFailedDetail; older claims say "PayPal refused the payout", and
 // called a network error PayPal's answer).
@@ -236,9 +236,9 @@ const PAYOUT_FAILED = /^(?:Remedy couldn't reach PayPal|PayPal didn't take the p
 const NETWORK = /fetch failed|ECONN|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|socket|network|timed? ?out|aborted/i;
 // PayPal's refusals a company can act on, in words.
 const ISSUES: Record<string, string> = {
-  RECEIVER_UNREGISTERED: "the owner's PayPal account can't receive payouts",
-  INSUFFICIENT_FUNDS: "the paying PayPal account's balance is too low",
-  RECEIVER_ACCOUNT_LOCKED: "the owner's PayPal account is locked",
+  RECEIVER_UNREGISTERED: "the owner’s PayPal account can’t receive payouts",
+  INSUFFICIENT_FUNDS: "the paying PayPal account’s balance is too low",
+  RECEIVER_ACCOUNT_LOCKED: "the owner’s PayPal account is locked",
 };
 
 /** A failed payout's history line as people read it: what happened and that nothing was sent, the raw answer apart. */
@@ -247,11 +247,11 @@ export function payoutFailureWords(detail: string): (PayoutFailureWords & { raw:
   if (!m) return null;
   const raw = m[1];
   if (detail.startsWith("Remedy couldn't reach PayPal") || NETWORK.test(raw)) {
-    return { kind: "network", what: "Remedy couldn't reach PayPal (a network error)", next: "Nothing was sent, so it's safe to try again.", raw };
+    return { kind: "network", what: "Remedy couldn’t reach PayPal (a network error)", next: "Nothing was sent, so it’s safe to try again.", raw };
   }
   const issue = raw.match(/^[A-Z][A-Z_]+/)?.[0];
   const why = issue && ISSUES[issue];
-  return { kind: "paypal", what: `PayPal didn't take the payout${why ? `: ${why}` : issue ? ` (${issue})` : ""}`, next: "Nothing was sent.", raw };
+  return { kind: "paypal", what: `PayPal didn’t take the payout${why ? `: ${why}` : issue ? ` (${issue})` : ""}`, next: "Nothing was sent.", raw };
 }
 
 /** The history in the company's words: no internal ids, and a service's raw answer kept apart. */
@@ -304,7 +304,7 @@ function namedCopy(c: Claim, text: string, rows: ClaimSummary[]): { photo: numbe
 const willStop = (rows: PreCheckRow[], stops: string[]): PreCheckRow[] =>
   rows.map((row) => {
     const text = stops.find((t) => CONFLICT.some(([re, check]) => check === row.id && re.test(t)));
-    return text && row.state !== "hold" && row.state !== "reject" ? { ...row, state: "hold", detail: `Approve won't pay: ${text.charAt(0).toLowerCase()}${text.slice(1)}. Remedy runs this check again on approve.` } : row;
+    return text && row.state !== "hold" && row.state !== "reject" ? { ...row, state: "hold", detail: `Approve won’t pay: ${text.charAt(0).toLowerCase()}${text.slice(1)}. Remedy runs this check again on approve.` } : row;
   });
 
 const ORDINAL: Record<string, number> = { first: 0, second: 1, third: 2 };

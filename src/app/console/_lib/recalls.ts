@@ -20,7 +20,7 @@ export const RecallRefInput = z.object({ ref: z.string().trim().min(5, "Paste a 
 export const SpecInput = CheckSpec.extend({
   product: z.string().trim().min(3, "Describe the product").max(600),
   label_must_show: z.array(z.string().trim().min(2).max(300)).max(8),
-  proof_steps: z.array(z.string().trim().min(3, "A step can't be empty").max(300)).min(1, "Keep at least one step").max(8),
+  proof_steps: z.array(z.string().trim().min(3, "A step can’t be empty").max(300)).min(1, "Keep at least one step").max(8),
   note: z.string().trim().max(800).optional(),
 });
 

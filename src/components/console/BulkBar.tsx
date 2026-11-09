@@ -26,7 +26,7 @@ export interface BulkResult {
 
 // A quick reason as one sentence for many claims: each claim gets its own code in it when it is sent.
 const CODE = "{code}";
-const generic = (q: QuickReason) => q.text(CODE).replace(`read ${CODE}, this claim's code`, "read this claim's code").replace(`code ${CODE}`, "code");
+const generic = (q: QuickReason) => q.text(CODE).replace(`read ${CODE}, this claim’s code`, "read this claim’s code").replace(`code ${CODE}`, "code");
 
 /**
  * The pick's actions, docked under the grid (Linear's selection bar): how many are picked and how many of

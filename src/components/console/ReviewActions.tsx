@@ -147,7 +147,7 @@ export function ReviewActions({
       if (result.status === 502 && mode === "approve") {
         // The payout didn't reach PayPal or PayPal didn't take it: back to the held claim's buttons, under the titled
         // alert the reload keeps showing.
-        setRefused({ at: new Date().toISOString(), ...(result.error.error.startsWith("Remedy couldn't reach PayPal") ? NETWORK : REFUSED), raw: "" });
+        setRefused({ at: new Date().toISOString(), ...(/^Remedy couldn[’']t reach PayPal/.test(result.error.error) ? NETWORK : REFUSED), raw: "" });
         setBack("approve");
         setMode("idle");
       } else if (result.status === 409 && mode === "approve" && result.error.reasons?.length) {

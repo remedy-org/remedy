@@ -102,7 +102,7 @@ export interface NoteData {
 
 // A request that never reached Remedy (offline, a dropped connection) fails as the browser's own "Failed to fetch": the
 // rail says what happened in words instead. Anything Remedy's proxy answered keeps its own message.
-export const UNREACHABLE = "The analyst couldn't be reached. Check your connection and try again.";
+export const UNREACHABLE = "The analyst couldn’t be reached. Check your connection and try again.";
 const NETWORK = /failed to fetch|networkerror|load failed|fetch failed|network connection/i;
 export const plainError = (e: unknown): unknown =>
   e instanceof Error && e.name !== "AbortError" && (e instanceof TypeError || NETWORK.test(e.message)) ? new Error(UNREACHABLE) : e;

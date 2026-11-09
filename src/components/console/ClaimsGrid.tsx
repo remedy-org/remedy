@@ -975,6 +975,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       if (!isClaim(here)) return;
       const id = here!.data!.id;
       if (key === "Enter" || key === " ") {
+        // On a claim id linked in the row's reason, the key presses that link, which opens the claim it names.
+        if (target.closest("[data-claim-link]")) return;
         stop();
         if (key === " " && id === latest.current.openId) latest.current.onViewPhotos?.();
         else latest.current.onOpen(id);
@@ -1065,6 +1067,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         if (JSON.stringify(model) !== latest.current.filterJson) latest.current.onDecisionFilter?.(model);
       },
       onRowClicked(e: RowClickedEvent<GridRow>) {
+        // A claim id linked in the row's reason ("… · RM-6276") opens the claim it names (LinkedIds.tsx), not this row.
+        if ((e.event?.target as Element | null)?.closest?.("[data-claim-link]")) return;
         if (still) {
           if (e.data && isClaim(e.node)) latest.current.onStillClick?.(e.data);
           return;
