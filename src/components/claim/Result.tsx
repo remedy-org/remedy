@@ -5,7 +5,7 @@ import { canAskForReview, reviewAsked } from "@/lib/appeal";
 import type { DemoSample } from "@/lib/demo";
 import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import type { Claim, Recall, Reason } from "@/lib/types";
-import { CheckList, MonoWords, sixRows, type SixRow } from "./CheckList";
+import { CheckList, CodeLead, MonoWords, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
 import { evidenceSummary } from "./EvidenceText";
 import { ClaimFrame, ClaimLayout, NARROW_ONLY, OutcomeHead, photoWidth } from "./Exhibit";
@@ -339,17 +339,6 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
   // Each PayPal account claims once per recall: the way forward is the claim that counts (same account, so it's theirs).
   const earlier = !sample ? /\((RM-\d+)\)/.exec(reasons.find((r) => r.check === "payer")?.text ?? "")?.[1] : undefined;
   const seen = codeDiff(claim.code, claim.verdict?.challenge_code.text_seen);
-  // The catch at a glance: the characters that differ, marked in both lines (the tag's in red), and said in words.
-  const marked = (side: "seen" | "yours") =>
-    seen.cells.map((c, i) =>
-      c.same ? (
-        c[side]
-      ) : (
-        <span key={i} className={clsx("underline decoration-2 underline-offset-[5px]", side === "seen" ? "text-stop decoration-stop" : "decoration-text-2")}>
-          {c[side]}
-        </span>
-      ),
-    );
   // A demo claim's photo whose tag is known: the tag itself, enlarged. On a laptop under the photo it was cut from; on a
   // phone after the checks, the column's full width.
   const tag = sample && lead === "code" && seen.readable ? SAMPLE_COPY[sample.id]?.tag : undefined;
@@ -358,23 +347,8 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
   const first = reviewed ? (
     `${asked ? "You asked for a review, and" : "Your claim was held for a person, and"} ${company} refused it: ${reasons[0]?.text ?? ""}`
   ) : lead === "code" ? (
-    seen.readable ? (
-      // Two lines, read against each other: what the tag says, then what it should say.
-      <>
-        <span className="block">
-          The tag in your photo reads <span className="font-mono whitespace-nowrap">{marked("seen")}</span>.
-        </span>
-        <span className="block">
-          Your claim&rsquo;s code is <span className="font-mono whitespace-nowrap">{marked("yours")}</span>.
-        </span>
-        {/* The difference in words, so O and 0 (or a P and a Q) can't be mistaken: for everyone, not only a screen reader. */}
-        <span className="mt-1 block text-ui text-muted">{seen.caption}</span>
-      </>
-    ) : (
-      <>
-        We couldn&rsquo;t read a code on the tag. Your claim&rsquo;s code is <span className="font-mono whitespace-nowrap">{claim.code}</span>.
-      </>
-    )
+    // The catch at a glance, read against each other: what the tag says, then what it should say (CheckList.tsx).
+    <CodeLead code={claim.code} seen={claim.verdict?.challenge_code.text_seen} />
   ) : lead === "session" ? (
     // The row under it says this photo came from outside the camera: the lead says the rule, once.
     "Only photos taken in this claim’s camera, within 10 minutes of its code, count."

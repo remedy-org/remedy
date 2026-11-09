@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { AlertIcon } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
-import { CheckList, outcomeWord, sixRows, type SixRow } from "./CheckList";
+import { CheckList, CodeLead, outcomeWord, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
 import { ClaimLayout, OutcomeHead } from "./Exhibit";
 import styles from "./flow.module.css";
@@ -245,6 +245,14 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
           ? `${shown} of ${checks} checks passed.`
           : "";
   const refundRow = rows.find((r) => r.key === "refund");
+  // A wrong code: the moment its row fails, the result's lead (the tag's code read against the claim's) takes its place
+  // under the headline, fading in, so nothing moves when the result replaces this screen.
+  const codeLead =
+    done && view.decision === "rejected" && stopper?.key === "code" && stopper.state === "reject" ? (
+      <span className={clsx("block", styles.swap)}>
+        <CodeLead code={view.code} seen={stopper.read?.code} />
+      </span>
+    ) : null;
 
   // Tall laptops: the photo on the left, where the camera held it; the headline, the checks ticking under it and the
   // refund on the right. Phones and short screens: the headline with a thumbnail, the checks, then the refund. The
@@ -257,13 +265,13 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
           id="checking-title"
           thumb={srcs[0]}
           thumbAlt={photoAlt(view.id)}
-          small
+          small={!codeLead}
           title={
             <span key={title} className={clsx("block", styles.swap)}>
               {title}
             </span>
           }
-          lead={lead || undefined}
+          lead={codeLead ?? (lead || undefined)}
           aside={
             elapsed !== null &&
             !done && (

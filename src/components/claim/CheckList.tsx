@@ -303,6 +303,45 @@ function Reason({ r }: { r: SixRow }) {
   return null;
 }
 
+/**
+ * A wrong code's lead, the refusal's designed moment: two lines read against each other, what the tag says and what it
+ * should say, the characters that differ underlined in both (the tag's in red), and the difference in words under them.
+ * The result's lead, and the checking screen's from the moment the code check fails, so nothing moves when the result
+ * replaces it. `seen`: what the photo check read as the code (null when nothing was readable).
+ */
+export function CodeLead({ code, seen }: { code: string; seen?: string | null }) {
+  const diff = codeDiff(code, seen);
+  if (!diff.readable) {
+    return (
+      <>
+        We couldn&rsquo;t read a code on the tag. Your claim&rsquo;s code is <span className="font-mono whitespace-nowrap">{code}</span>.
+      </>
+    );
+  }
+  const marked = (side: "seen" | "yours") =>
+    diff.cells.map((c, i) =>
+      c.same ? (
+        c[side]
+      ) : (
+        <span key={i} className={clsx("underline decoration-2 underline-offset-[5px]", side === "seen" ? "text-stop decoration-stop" : "decoration-text-2")}>
+          {c[side]}
+        </span>
+      ),
+    );
+  return (
+    <>
+      <span className="block">
+        The tag in your photo reads <span className="font-mono whitespace-nowrap">{marked("seen")}</span>.
+      </span>
+      <span className="block">
+        Your claim&rsquo;s code is <span className="font-mono whitespace-nowrap">{marked("yours")}</span>.
+      </span>
+      {/* The difference in words, so O and 0 (or a P and a Q) can't be mistaken: for everyone, not only a screen reader. */}
+      <span className="mt-1 block text-ui text-muted">{diff.caption}</span>
+    </>
+  );
+}
+
 /** A line with the given words (a hand-written label, a code) each set in mono and never broken, as the code step sets them. */
 export function MonoWords({ children, words }: { children: string; words: readonly (string | null | undefined)[] }) {
   const marks = words.filter((w): w is string => Boolean(w)).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
