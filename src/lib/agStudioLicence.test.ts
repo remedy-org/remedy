@@ -10,6 +10,8 @@ const AFTER = Date.UTC(2026, 11, 23);
 
 describe("studioLicence", () => {
   it("is null when the key is unset", () => {
+    // Passing undefined falls back to the env default, so a build env with the key set must not leak in here.
+    vi.stubEnv("NEXT_PUBLIC_AG_STUDIO_LICENSE", undefined);
     expect(studioLicence(BEFORE, undefined)).toBeNull();
   });
 
