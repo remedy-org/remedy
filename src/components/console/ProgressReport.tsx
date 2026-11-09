@@ -222,8 +222,8 @@ export function ProgressReport({
         </p>
       </section>
 
-      {/* Prose: it may break across printed pages, rather than leave one paragraph alone on the last. */}
-      <section className="mt-10 flex flex-col gap-3">
+      {/* One short paragraph: kept whole on a printed page with its heading, so it never leaves two lines alone on the next. */}
+      <section className="mt-10 flex flex-col gap-3 break-inside-avoid">
         <H>How units were verified</H>
         <p className="max-w-read text-ui text-text">
           Each owner logged in with PayPal, received a one-time code, and photographed the destroyed product with the code written on it, using a live camera

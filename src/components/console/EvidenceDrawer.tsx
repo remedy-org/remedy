@@ -475,7 +475,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
   const by = review && reviewerOf(review);
   const steps: Step[] = [
     { label: "Photos in", at: photos },
-    { label: "Photo check", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "The account checks stopped it, so the photos were never read." : undefined },
+    { label: "Photo check", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "A check before the photo check stopped it, so the photos were never read." : undefined },
     ...(byPerson
       ? [
           { label: "Held", at: ruled },
@@ -525,7 +525,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
                 />
                 {next && <span className={clsx("absolute inset-x-0 left-2.5 hidden h-px @[26rem]:block", done && next.at && !s.failed ? "bg-muted/70" : "bg-line-strong/40")} />}
               </span>
-              <span className={clsx("min-w-0 flex-1 text-micro @[26rem]:flex-none @[26rem]:truncate", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
+              <span className={clsx("min-w-0 flex-1 text-micro @[26rem]:flex-none @[26rem]:leading-tight", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
               {/* The figures in mono, the unit in the sans after a thin space, as the grid prints a span. */}
               <span className="text-micro text-muted">
                 {!done ? <span className="text-faint">{s.value ?? "—"}</span> : s.failed ? <span className="font-mono">{formatClock(s.at!)}</span> : <DurationText sec={i === 0 ? 0 : plus!} plus={i > 0} />}
@@ -635,6 +635,9 @@ function Evidence({
   viewPhotos?: number;
   onReturn?: () => void;
 }) {
+  // When the photos arrived: the history's photo-check span counts from it, as the timeline does.
+  const photosAt = claim.events.find((e) => e.type === "photos_received")?.at;
+  const photosIn = photosAt ? Date.parse(photosAt) : null;
   // The "model" hold is the photo check not answering, not an answer: it isn't counted as a check that didn't pass.
   // Before any photo arrives every check is waiting: one line says when they run, the rows are their names alone.
   const waiting = claim.preChecks.every((p) => p.state === "waiting");
@@ -652,8 +655,6 @@ function Evidence({
   const [unfolded, setUnfolded] = useState<{ id: string; open: boolean }>({ id: claim.id, open: false });
   const open = unfolded.id === claim.id && unfolded.open;
   const link = (text: string) => <LinkedIds text={text} onOpen={onOpen} self={claim.id} />;
-  // What a screen reader hears for each photo: what it shows and what the tag reads, in a few words from the checks.
-  const seen = claim.photoAlt ?? undefined;
   return (
     // Paragraphs wrap with no word left alone on a last line ("it.").
     <div className={clsx("flex flex-col gap-7 py-5 [&_p]:text-pretty [&_q]:text-pretty", pad)}>
@@ -678,7 +679,8 @@ function Evidence({
                 n={i + 1}
                 of={claim.photos.length}
                 tall={claim.photos.length === 2}
-                description={seen}
+                // What a screen reader hears for this photo: what it shows and what the tag reads, from the checks.
+                description={claim.photoAlt[i] ?? undefined}
                 onOpen={() => setViewing({ id: claim.id, n: i })}
                 className={claim.photos.length === 3 && i === 0 ? "col-span-2" : undefined}
               />
@@ -769,8 +771,9 @@ function Evidence({
                 {formatClock(e.at)}
               </time>
               <span className="min-w-0 text-muted">
-                {/* One format for a span, as the grid and timeline print it ("11 s", not "10.8 s"). */}
-                <LinkedIds text={e.detail.replace(/(\d+\.\d+) s\b/, (_, n: string) => duration(Number(n)))} onOpen={onOpen} self={claim.id} />
+                {/* One format for a span, as the grid and timeline print it ("11 s", not "10.8 s"), and one figure: the photo
+                    check's span is counted from the same timestamps as the grid's "Answered in" and the timeline. */}
+                <LinkedIds text={e.detail.replace(/(\d+\.\d+) s\b/, (_, n: string) => duration(e.type === "checked" && photosIn !== null ? Math.max(0, Math.round((Date.parse(e.at) - photosIn) / 1000)) : Number(n)))} onOpen={onOpen} self={claim.id} />
                 {e.raw && (
                   <details className="mt-1">
                     <summary className="cursor-pointer text-micro text-faint hover:text-muted">Service&rsquo;s answer</summary>
@@ -836,17 +839,14 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
   );
 }
 
-/** The header's money: what the claim pays, and "Sent, settling" or "Paid" once PayPal has it (lib/payoutWords.ts);
- * nothing for a refused claim. A payout that wasn't sent is said once, on the timeline's PayPal step. */
+/** The header's money: what the claim pays; nothing for a refused claim. Where the money is (Paid, Sent, settling,
+ * Approved) is the verdict badge beside it (lib/payoutWords.ts), so it is said once. */
 function MoneyLine({ claim }: { claim: DrawerClaim }) {
   if (claim.decision !== "paid" && claim.decision !== "held") return null;
-  // The one payout vocabulary: Paid once PayPal confirmed, Sent, settling before.
-  const state = claim.decision === "held" || !claim.payout ? null : claim.payout.status === "SUCCESS" ? MONEY_WORD.paid : MONEY_WORD.settling;
   return (
     // Right-aligned on the header's row; when a phone wraps it, it starts on the left edge under the id, never mid-line.
     <span className="inline-flex items-baseline gap-1.5 text-ui sm:ml-auto">
       <span className="font-mono text-text">{claim.amount}</span>
-      {state && <span className="text-muted">· {state}</span>}
     </span>
   );
 }
