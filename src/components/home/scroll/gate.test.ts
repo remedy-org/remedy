@@ -927,7 +927,7 @@ describe("trackpad swipes", () => {
       const way = BEATS[BEATS.indexOf(from) + 1] - from;
       expect(g.lenis.duration).toBeGreaterThanOrEqual(1.3);
       // 1,862px (check 3 to the paid receipt with no check rests between) takes as long as its calm peak needs.
-      expect(g.lenis.duration).toBeLessThanOrEqual(Math.max(1.6 + 0.7 * Math.max(0, way / 900 - 1), way / (0.82 * CALM_PEAK)) + 1e-9);
+      expect(g.lenis.duration).toBeLessThanOrEqual(Math.max(1.6 + 0.7 * Math.max(0, way / 900 - 1), way / (0.86 * CALM_PEAK)) + 1e-9);
       expect(g.lenis.easing!(1)).toBeCloseTo(1, 6);
     }
   });
@@ -1130,11 +1130,11 @@ describe("trackpad swipes", () => {
       expect(peak, `${from} to ${to}`).toBeLessThan(1100);
       expect(step, `${from} to ${to}`).toBeLessThan(40);
       expect(T).toBeGreaterThanOrEqual(1.3);
-      expect(T).toBeLessThanOrEqual(Math.max(2.4, Math.abs(to - from) / 861 + 0.3));
+      expect(T).toBeLessThanOrEqual(Math.max(2.4, Math.abs(to - from) / 860 + 0.3));
       // Entered at the page's own speed (it has followed the hand), never a jolt; eased out: the last tenth of the time
       // covers under 6% of the way.
       expect((e(1e-4) / 1e-4) * (Math.abs(to - g.lenis.animatedScroll) / T)).toBeLessThan(1100);
-      expect(1 - e(0.9)).toBeLessThan(0.06);
+      expect(1 - e(0.9), `${from} to ${to}`).toBeLessThan(0.06);
       times.push([Math.abs(to - from), T]);
     });
     // Farther takes no less time.

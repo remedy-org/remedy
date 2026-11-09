@@ -2,15 +2,18 @@
 // its shape is unit-tested (landing.test.ts).
 
 /** The least share of a landing's time each of its ease in and ease out takes; the most is half (no cruise between). */
-const EASE_MIN = 0.18;
+const EASE_MIN = 0.14;
 const EASE_MAX = 0.5;
+/** The ease a landing keeps when it crosses slow stretches: they are weighted only as far as leaves it this much, so the
+ * page never speeds up sharply leaving one near the stop. */
+const EASE_SOFT = 0.18;
 
 /**
  * A calm landing's progress over its time t (0 to 1), entered at speed s0 (distance over duration, the page's own speed
  * when it was caught), easing for the share `ease` of its time at each end. Its speed rises on a half cosine from s0 to
  * a steady cruise, holds it, and falls on a half cosine to rest on the stop, so the page never sets off, changes pace or
  * stops with a jolt: from rest its acceleration starts at nothing too. With `ease` at a half it has no cruise and peaks
- * at twice its average speed; at the least, 1.22 times. Entered faster than it can carry onto the stop (over 1 / ease),
+ * at twice its average speed; at the least, 1.16 times. Entered faster than it can carry onto the stop (over 1 / ease),
  * it is entered at that.
  */
 export function calm(s0: number, ease = EASE_MAX) {
@@ -70,8 +73,9 @@ export function warp(from: number, to: number, slow: readonly Slow[] = []) {
 }
 
 /** A landing's top speed, px/s. The owner's Mac trackpad felt the exhibit's landings, up to 5,000 px/s, as "very fast",
- * and then 1,450 as "scrolling way faster than it should be": slow, smooth and calm. */
-export const CALM_PEAK = 1050;
+ * and then 1,450 as "scrolling way faster than it should be": slow, smooth and calm (1,000, so the renderer's frame jitter
+ * never reads over 1,100). */
+export const CALM_PEAK = 1000;
 /** Seconds a landing takes: CALM_MIN for a stop up to a screen away, CALM_PER more for each screen beyond, and longer
  * still when its way is too long to cover at CALM_PEAK easing gently; up to CALM_SLOW more when the way crosses slow
  * stretches, so their transitions play. */
@@ -82,21 +86,21 @@ const CALM_SLOW = 0.3;
 /**
  * A landing from `from` to `to` on a screen `screen` px tall: how long it takes, its way (warp) with the slow stretches
  * weighted no more than its time allows at CALM_PEAK, and its ease (calm). Its time scales with the distance: a beat
- * under a screen away in 1.3 s, two screens in about 2 s, never so short that the page passes CALM_PEAK easing in and out
- * over EASE_MIN of it each; on a slow stretch the page goes slower still, and the rest of the way is never sped up past
- * CALM_PEAK to pay for it. Its ease is as long as CALM_PEAK leaves room for, half the time each way at most. `cap`
+ * under a screen away in 1.3 s, two screens in about 2.1 s, never so short that the page passes CALM_PEAK easing in and
+ * out over EASE_MIN of it each; on a slow stretch the page goes slower still, as far as leaves it EASE_SOFT to ease
+ * over, and the rest of the way is never sped up past CALM_PEAK to pay for it. Its ease is as long as CALM_PEAK leaves room for, half the time each way at most. `cap`
  * shortens it, but never under that floor.
  */
 export function calmLanding(from: number, to: number, screen: number, slow: readonly Slow[] = [], cap = Infinity) {
   const px = Math.abs(to - from);
   const full = warp(from, to, slow);
-  const gentle = CALM_PEAK * (1 - EASE_MIN);
+  const soft = CALM_PEAK * (1 - EASE_SOFT);
   const base = CALM_MIN + (CALM_PER * Math.max(0, px - screen)) / screen;
-  const want = Math.max(base, Math.min(base + CALM_SLOW, full.length / gentle));
-  const duration = Math.max(px / gentle, Math.min(cap, want));
-  // The share of each slow stretch's extra weight this time has room for.
+  const want = full.length > px ? Math.max(base, Math.min(base + CALM_SLOW, full.length / soft)) : base;
+  const duration = Math.max(px / (CALM_PEAK * (1 - EASE_MIN)), Math.min(cap, want));
+  // The share of each slow stretch's extra weight this time has room for, easing over EASE_SOFT of it.
   const extra = full.length - px;
-  const k = extra > 0 ? Math.min(1, Math.max(0, (gentle * duration - px) / extra)) : 1;
+  const k = extra > 0 ? Math.min(1, Math.max(0, (soft * duration - px) / extra)) : 1;
   const way = k >= 1 ? full : warp(from, to, slow.map(([a, b, w]) => [a, b, 1 + (w - 1) * k] as const));
   const ease = Math.min(EASE_MAX, Math.max(EASE_MIN, 1 - way.length / (CALM_PEAK * Math.max(duration, 1e-6))));
   return { duration, way, ease };
