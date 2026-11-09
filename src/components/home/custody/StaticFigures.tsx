@@ -63,7 +63,7 @@ export function StaticFigures() {
             </h2>
           </div>
           <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8 lg:pb-1">
-            From PayPal login to payout, on the <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall.
+            From PayPal login to payout, on the <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> Nursing Pillows recall.
           </p>
         </div>
         {/* 01 beside 02: the tall consent screen, and the code tag centred beside it like a thing laid on the table. */}

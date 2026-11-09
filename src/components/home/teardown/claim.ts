@@ -82,7 +82,8 @@ export const CHECKS: readonly Check[] = [
     label: CHECK_NAMES.code("M4T", "X-VESOLJE"),
     ai: true,
     note: "The model reads the tag.",
-    quote: "The handwritten code reads “M4T”, matching the expected characters M, 4, T in order.",
+    // Inside the exhibit’s own double quotes, so its inner quote is single (‘M4T’).
+    quote: "The handwritten code reads ‘M4T’, matching the expected characters M, 4, T in order.",
   },
   {
     id: "torn",

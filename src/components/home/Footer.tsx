@@ -113,6 +113,10 @@ export function Footer() {
             <p className="mt-3 max-w-[44ch] text-ui text-muted">
               Recall refunds, proven and paid. Remedy gives any US product recall its own claim link and pays owners through PayPal within a minute.
             </p>
+            {/* An owner with a real recall: the demo is not her claim, and this is where hers is (the phone menu's line). */}
+            <p className="mt-3 max-w-[44ch] text-ui text-pretty text-muted">
+              <span className="text-text">Own a recalled product?</span> Claim through the link or QR code on its recall notice.
+            </p>
           </div>
           {/* #footer-nav: where the nav's Menu link goes without JS. */}
           <nav id="footer-nav" aria-label="Footer" className="col-span-12 grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:col-span-7 lg:col-span-5 lg:col-start-8">

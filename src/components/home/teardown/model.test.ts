@@ -167,7 +167,8 @@ describe("Opened Exhibit model", () => {
 
   it("quotes the model verbatim from the stored answer (RM-0442, case k01)", () => {
     const answer = storedVerdicts.find((v) => v.case === "k01-feathers-M4T")!.verdict;
-    const curly = (t: string) => t.replace(/"([^"]*)"/g, "“$1”");
+    // Typeset: the exhibit sets each quote in double quotes, so a quote inside it is single ('M4T' as ‘M4T’).
+    const curly = (t: string) => t.replace(/"([^"]*)"/g, "‘$1’");
     expect(CHECKS[3].quote).toBe(curly(answer.challenge_code.evidence));
     expect(CHECKS[4].quote).toBe(curly(answer.steps[0].evidence));
   });

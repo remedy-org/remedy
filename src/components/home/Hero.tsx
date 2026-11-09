@@ -10,7 +10,8 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
 /**
  * The hero at rest and the Chain of Custody that grows out of it (spec H1, H2): one section, `#how`, the scroll runway.
  * Confidence through restraint: a 56px headline in one colour, its second sentence the subhead, and one line of proof
- * from a real claim under the action; the product carries the attention. The copy is server-rendered and fades in with
+ * from a real claim under the action; the product carries the attention. An owner with a real recall finds the way to
+ * hers in the footer and the phone menu, not here. The copy is server-rendered and fades in with
  * CSS on first paint, so the h1 is the LCP and never waits for JS.
  */
 export function Hero() {
@@ -26,10 +27,7 @@ export function Hero() {
       <p className={clsx("mt-4 text-head-sm font-medium text-balance text-text lg:mt-5", styles.focusIn)} style={line(1)}>
         Proof of destruction, on a live camera.
       </p>
-      {/* A step under the subhead (18px, the second tone) and three lines at most, so the subhead stays the sharpest line. */}
-      <p className={clsx("mt-5 max-w-[40ch] text-body text-pretty text-text-2 sm:text-[1.125rem] sm:leading-[1.55] lg:mt-6", styles.focusIn)} style={line(1)}>
-        The owner photographs the cut-up product with a one-time code, and the refund lands in their PayPal account.
-      </p>
+      {/* No lead under the subhead: How it works, straight below, shows the claim the lead would describe. */}
       <div className={clsx("mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 lg:mt-10", styles.focusIn)} style={line(2)}>
         {/* The owner's path is the screen's one amber action; companies get a quieter link to their section, the nav's
             "For companies" (its sign-in is in the bar). */}
@@ -46,7 +44,7 @@ export function Hero() {
           Run a recall on Remedy
         </Button>
       </div>
-      <div className={clsx("mt-4 flex flex-col gap-1.5", styles.focusIn)} style={line(3)}>
+      <div className={clsx("mt-4", styles.focusIn)} style={line(3)}>
         {/* One proof, from a real claim, as the console's timeline has it: sent at CLAIM.seconds, confirmed at CLAIM.confirmed,
             both in one unit ("15 s", "55 s"). */}
         {/* The claim's ids on a line of their own, so the sentence wraps clear of the receipt (44ch at 1024). */}
@@ -57,9 +55,6 @@ export function Hero() {
             <span className="font-mono whitespace-nowrap">{CLAIM.recall.replace(/^CPSC /, "")}</span>
           </span>
         </p>
-        {/* An owner with a real recall: the demo above is not her claim, and this is where hers is. */}
-        {/* Held to 36ch at 1024, where the receipt sits close; from 1280 one line, as the proof line above it is. */}
-        <p className="max-w-[36ch] text-ui text-pretty text-muted xl:max-w-none">Own a recalled product? Claim through the link on its recall notice.</p>
       </div>
     </>
   );
