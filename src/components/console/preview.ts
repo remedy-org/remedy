@@ -9,7 +9,7 @@ import { summarize } from "@/lib/store/store";
 import type { Claim, Recall } from "@/lib/types";
 import type { ClaimsGridPreviewProps, PreviewRow } from "./ClaimsGridPreview";
 import type { StillClaim } from "./EvidenceStill";
-import { formatDay } from "./format";
+import { formatDay, recallDays, reportNumber } from "./format";
 import { verdictOf } from "./VerdictMark";
 
 // The homepage's console preview, built on the server from the claims every workspace starts with (lib/demo/claims.ts,
@@ -99,7 +99,7 @@ function evidenceOf(claim: Claim, recall: Recall): StillClaim {
       const outcome = r.state as "pass" | "hold" | "reject";
       // The answer that decided it: the first that didn't pass.
       const off = r.parts.find((p) => p.state === outcome) ?? r.parts[0];
-      return { id: off?.id ?? `check_${r.n}`, label: r.name, outcome, rule: off?.text ?? "", evidence: outcome === "pass" ? null : (off?.evidence ?? null) };
+      return { id: off?.id ?? `check_${r.n}`, label: r.title, outcome, rule: off?.text ?? "", evidence: outcome === "pass" ? null : (off?.evidence ?? null) };
     });
   return {
     id: d.id,
@@ -120,8 +120,13 @@ function evidenceOf(claim: Claim, recall: Recall): StillClaim {
 export function reportPreview() {
   const { recall, claims } = previewSeed();
   const now = previewNow();
-  const daysIn = Math.floor((now.getTime() - Date.parse(recall.recallDate)) / 86_400_000);
-  return { recall, report: typeset(buildReport(claims.map(summarize), recall)), generated: formatDay(now.toISOString()), daysIn };
+  return {
+    recall,
+    report: typeset(buildReport(claims.map(summarize), recall)),
+    generated: formatDay(now.toISOString()),
+    daysIn: recallDays(recall.recallDate, now),
+    reportNo: reportNumber(recall.recallDate, now),
+  };
 }
 
 /**

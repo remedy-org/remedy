@@ -8,7 +8,8 @@ import { datasetTagSpot } from "@/lib/demo/dataset";
 import { demoSample } from "@/lib/demo/samples";
 import { PAYPAL_CONFIRMED } from "@/lib/payoutWords";
 import { checkOf, fiveNames, type CheckNumber } from "@/lib/fiveChecks";
-import { allPreChecks, amountOf, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow, type PreCheckState } from "./view";
+import { summarize } from "@/lib/store/store";
+import { allPreChecks, amountOf, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, toRow, type PreCheckRow, type PreCheckState } from "./view";
 
 // Everything the evidence drawer shows for one claim, built on the server so the client never sees a full payer id.
 
@@ -31,6 +32,12 @@ export interface DrawerCheck {
 export interface FiveRow {
   n: CheckNumber;
   name: string;
+  /**
+   * What the row is headed with: its name, or, when only some of a photo check's answers held or failed it, those
+   * answers' names ("X-VESOLJE tag on the cut pillow" over a pillow that is cut in half), so the reviewer sees at once
+   * what is in doubt. The answers that passed say so under it.
+   */
+  title: string;
   state: PreCheckState;
   /** Skipped: it was never run, because an earlier check stopped the claim (else it doesn't apply to this claim). */
   unrun: boolean;
@@ -57,15 +64,23 @@ export function fiveRowsOf(c: Pick<Claim, "code" | "decision" | "photos" | "seed
     const own = under(n);
     if (!own.length) {
       return ran && c.decision !== "pending"
-        ? { n, name: names[n], state: "skipped", unrun: true, note: "An earlier check stopped the claim.", parts: [] }
-        : { n, name: names[n], state: "waiting", unrun: false, note: null, parts: [] };
+        ? { n, name: names[n], title: names[n], state: "skipped", unrun: true, note: "An earlier check stopped the claim.", parts: [] }
+        : { n, name: names[n], title: names[n], state: "waiting", unrun: false, note: null, parts: [] };
     }
     const state = RANK.find((s) => own.some((p) => p.state === s)) ?? "pass";
     // A demo claim after the genuine one: the account check counts once, on the genuine claim, as the owner was told. Any
     // other check not run says so once, in its row's state ("Not run"), with no note repeating it.
     const note = state === "skipped" && n === 3 && c.demo ? "Counted once, on the genuine claim." : null;
-    return { n, name: names[n], state, unrun: false, note, parts: own.filter((p) => p.state !== "skipped") };
+    const kept = own.filter((p) => p.state !== "skipped");
+    return { n, name: names[n], title: titleOf(n, names[n], state, kept), state, unrun: false, note, parts: kept };
   });
+}
+
+/** A photo check's row (4 and 5) that some answers passed and others held or failed: headed by the ones in doubt. */
+function titleOf(n: CheckNumber, name: string, state: PreCheckState, parts: FiveRow["parts"]): string {
+  if (n < 4 || (state !== "hold" && state !== "reject") || !parts.some((p) => p.state === "pass")) return name;
+  const doubt = [...new Set(parts.filter((p) => p.state === state).map((p) => p.label))];
+  return doubt.length ? (doubt.length > 1 ? `${doubt.slice(0, -1).join(", ")} and ${doubt.at(-1)}` : doubt[0]) : name;
 }
 
 /** The five in one line: "4 of 5 checks passed · 1 not run", in the rows' own words. */
@@ -117,6 +132,9 @@ export interface DrawerClaim {
   /** Where the tag is, when Remedy knows it: the photo (0-based) and the spot (0 to 1), for the panel's Zoom to tag. */
   tagSpot: { photo: number; x: number; y: number } | null;
   sentence: string;
+  /** The grid row's line for this claim (view.ts toRow's note), word for word: the panel's headline for a held or
+   * refused claim, so the row and the panel say one reason ("Tag reads K7Q · code is K7P"). */
+  note: string | null;
   amount: string;
   // itemId: PayPal's id for this one payout (older claims have only the batch's).
   payout: { batchId: string; itemId?: string; status: string; updatedAt: string } | null;
@@ -322,8 +340,9 @@ function photoAltsOf(c: Pick<Claim, "verdict" | "reasons" | "photos">, recall: P
   });
 }
 
-/** The claim as the panel shows it. stops: what approve would be stopped for now (approveConflicts' texts). */
-export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?: string[] } = {}): DrawerClaim {
+/** The claim as the panel shows it. stops: what approve would be stopped for now (approveConflicts' texts); copiedFrom:
+ * the earlier claim a blocked repost's photo matches (queue.ts copiedFrom), which the grid's line names. */
+export function toDrawerClaim(c: Claim, recall: Recall, { stops = [], copiedFrom = null }: { stops?: string[]; copiedFrom?: string | null } = {}): DrawerClaim {
   const amount = formatMoney(amountOf(c.payout?.amount, recall));
   const refused = refusedOf(c);
   const pre = preChecksOf(refusedReasons(c, refused).length ? { ...c, reasons: [...c.reasons, ...refusedReasons(c, refused)] } : c);
@@ -353,6 +372,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     tagSpot: datasetTagSpot(c.photos.map((p) => p.key)),
     // A starter claim a person approved sends nothing, ever: the decision is what was recorded, never "nothing sent yet".
     sentence: c.seeded && c.decision === "paid" && !c.payout && c.reasons.some((r) => r.check === "review") ? "Approved on review: your decision is recorded." : decisionSentence(c, recall),
+    note: toRow(summarize(c), recall, undefined, copiedFrom).note,
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,
     // A starter claim's payout has settled; its batch ids are the workspace's own, so the panel shows no PayPal ids for it.

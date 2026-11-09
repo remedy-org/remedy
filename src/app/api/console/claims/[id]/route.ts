@@ -41,11 +41,12 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/
   const blockedRepost = found.claim.decision === "blocked" && found.claim.reasons.some((r) => r.check === "duplicate_photo");
   const rows = reviewable || blockedRepost ? await found.store.listClaims() : [];
   const stops = reviewable ? approveConflicts(found.claim, rows).map((r) => r.text) : [];
-  const view = toDrawerClaim(found.claim, found.recall, { stops });
+  const dup = blockedRepost ? duplicateFor(found.claim, rows) : null;
+  // The panel's headline names the earlier claim as the grid's line does.
+  const view = toDrawerClaim(found.claim, found.recall, { stops, copiedFrom: dup?.id ?? null });
   view.photos = found.claim.photos.map((p, n) => sealedPhotoUrl(found.claim.id, n, p.key, session.payerId));
   // A blocked repost shows the earlier claim's matching photo beside its own: one index read, for these claims only.
   if (blockedRepost) {
-    const dup = duplicateFor(found.claim, rows);
     const key = dup && rows.find((r) => r.id === dup.id)?.photoKeys?.[dup.theirs - 1];
     view.duplicate = dup && { ...dup, src: key ? sealedPhotoUrl(dup.id, dup.theirs - 1, key, session.payerId) : null };
   }
