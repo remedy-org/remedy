@@ -145,6 +145,24 @@ describe("scroll stops", () => {
     expect(results.at({ ...real, size: { width: 1440, height: 800 }, fit: (y, frame) => (y === framed(11940, 64, LINE) && frame?.before === "#companies header" ? 12530 - 800 : y) })).toBe(12530 - 800);
   });
 
+  it("keeps Fraud checks' rule frame off Results' empty top where Results is a screen of its own", () => {
+    const rule = STOPS.find((s) => s.name === "Fraud checks, the rule")!;
+    const tops: Record<string, number> = { "#checks header": 10514, "#checks ol > li:nth-child(1)": 10600, "#checks ol > li:nth-child(3)": 11050 };
+    const frames: unknown[] = [];
+    const real: Page = {
+      ...page,
+      line: (sel, under = LINE) => (sel in tops ? framed(tops[sel], 64, under) : undefined),
+      // Fraud checks ends at 11700, "Try to fool it" at 11520.
+      foot: (sel, f) => (sel === "#checks" ? 11700 - f * 900 : sel === "#checks [data-try-cta]" ? 11520 - f * 900 : 0),
+      fit: (y, frame) => (frames.push(frame), y === undefined ? y : Math.min(frame?.max ?? Infinity, y)),
+    };
+    // 1440x900: at most 0.15 of a screen (135px) of Results under Fraud checks' foot, short of check 3 at the top.
+    expect(rule.at(real)).toBe(11700 - 900 + 135);
+    // 1440x800, where Results is no slide: its heading is what stays below the fold.
+    rule.at({ ...real, size: { width: 1440, height: 800 } });
+    expect(frames.at(-1)).toMatchObject({ before: "#proof header" });
+  });
+
   it("takes the phone sequence's own paging stops where it pins", () => {
     const phone = STOPS.find((s) => s.name === "Chain of Custody, phone")!;
     expect(phone.at({ ...page, beats: (sel) => (sel.includes("data-scroll-stops") ? [700, 1400] : undefined) })).toEqual([700, 1400]);
