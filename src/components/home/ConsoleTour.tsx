@@ -14,6 +14,7 @@ import { durationFigure, LedgerItem } from "@/components/console/Ledger";
 import { TABS, type Tab } from "@/components/console/StatusTabs";
 import { verdictOf, verdictWord } from "@/components/console/VerdictMark";
 import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME, type StudioFilter } from "@/components/insights/InsightsPreviewLazy";
+import { moneyState } from "@/lib/payoutWords";
 import { ConsoleFrame } from "./ConsoleFrame";
 import styles from "./tour.module.css";
 import { ReviewFoot, type ReviewPhase } from "./PayoutsNote";
@@ -181,8 +182,9 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
 /** The claims as the console's Export CSV writes them, built in the browser from the rows on screen. */
 function csvOf(rows: PreviewRow[]) {
   const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  const head = ["Claim", "Filed (UTC)", "Verdict", "Reason", "Payout", "Amount (USD)"];
-  const body = rows.map((r) => [r.id, r.createdAt, verdictWord(verdictOf(r)), r.note ?? "", payoutWord(r) ?? "", r.cents === null ? "" : (r.cents / 100).toFixed(2)]);
+  const head = ["Claim", "Filed (UTC)", "Verdict", "Reason", "Payout", "Refund (USD)", "Paid (USD)"];
+  const usd = (c: number | null) => (c === null ? "" : (c / 100).toFixed(2));
+  const body = rows.map((r) => [r.id, r.createdAt, verdictWord(verdictOf(r)), r.note ?? "", payoutWord(r) ?? "", usd(r.cents), moneyState(r) === "paid" ? usd(r.cents) : ""]);
   return [head, ...body].map((line) => line.map(cell).join(",")).join("\n");
 }
 
