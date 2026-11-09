@@ -7,33 +7,14 @@ import { Section } from "./Section";
 // - genuine claims: 7 in round 2 and 2 held out, 9 claims, 27 tries, all paid;
 // - wrong codes: 4 cases, 12 tries, all refused;
 // - cost: $0.011 a claim.
-// The one fake the photo check passed (c14, an AI-made image with the code drawn on, in all 3 runs) is said in the note.
+// The one fake the photo check passed (c14, an AI-made image with the code drawn on, in all 3 runs) is said once, in
+// body text under the lead, as the reason photos come only from the live camera.
 const WEB = { photos: 16, tries: 48 };
 const FIGURES: { figure: string; text: string }[] = [
   { figure: "9 of 9", text: "genuine claims paid, in all 27 tries" },
   { figure: "4 of 4", text: "wrong codes refused, in all 12 tries" },
   { figure: "1.1¢", text: "to check a claim" },
 ];
-
-/**
- * The footnote mark: a 24px hit area around the small figure (wider still on a touch screen), jumping to the method line
- * at the section's foot. Its name says which figure it sources, so a list of the page's links tells them apart. It sits
- * against the figure, with no space before it.
- */
-function Note({ figure }: { figure: string }) {
-  return (
-    <sup className="align-super text-micro font-normal tracking-normal">
-      {/* Its focus ring hugs the figure with a 1px gap, so it never lands on the word before it. */}
-      <a
-        href="#proof-note"
-        aria-label={`Note 1: the source for ${figure}`}
-        className="relative rounded-[3px] px-px text-faint no-underline transition-colors duration-160 before:absolute before:-inset-x-2 before:-inset-y-2 before:content-[''] hover:text-text-2 focus-visible:outline-offset-1"
-      >
-        1
-      </a>
-    </sup>
-  );
-}
 
 /**
  * Results: the one number that matters is the heading, the zero at the display size (never bigger than the hero's h1)
@@ -59,7 +40,6 @@ export function Proof() {
           </span>
           <span className="max-w-[22ch] text-balance">
             <span className="sr-only">0 </span>of {WEB.photos} stolen web photos paid, across {WEB.tries} tries.
-            <Note figure={`0 of ${WEB.photos} stolen web photos paid`} />
           </span>
         </span>
       }
@@ -70,7 +50,6 @@ export function Proof() {
             <div key={f.text} className="flex items-baseline gap-x-4 border-t border-line py-4 first:border-t-0 first:pt-0 last:pb-0 lg:py-8 lg:first:pt-0 lg:last:pb-0">
               <dt className="w-[5.5ch] shrink-0 text-head-sm font-medium whitespace-nowrap sm:w-[6.5ch] sm:text-title">
                 {f.figure}
-                <Note figure={`${f.figure} ${f.text}`} />
               </dt>
               <dd className="text-body text-pretty text-text-2">{f.text}</dd>
             </div>
@@ -78,12 +57,15 @@ export function Proof() {
         </dl>
       }
       note={
-        <p id="proof-note" className="mt-3 max-w-[80ch] scroll-mt-24 text-[0.75rem]/[1.5] text-pretty text-faint lg:mt-5">
-          ¹ Remedy fraud benchmark, 7 Nov 2026: 36 claims, each run 3 times. The photo check passed one{" "}
-          <span className="whitespace-nowrap">AI-made</span> image of a cut pillow with the code drawn on, in every try; in
-          Remedy a photo comes only from the claim&rsquo;s own live camera, so an image like it would have to be shown to the
-          camera on a screen or a print, which the photo check looks for.
-        </p>
+        <>
+          {/* The one fake that passed, said once in the lead's own voice: it is why the camera is the first check. */}
+          <p className="mt-4 max-w-[60ch] text-body text-pretty text-text-2 lg:mt-0">
+            One fake passed the photo check in every try, a generated image of a cut pillow with the code drawn on, which is
+            why photos only come from the claim&rsquo;s live camera.
+          </p>
+          {/* Where every figure on this slide comes from, once, with no marks to send a reader down to it. */}
+          <p className="mt-3 text-micro text-pretty text-faint">Remedy fraud benchmark, 7 Nov 2026: 36 claims, each run 3 times.</p>
+        </>
       }
     />
   );
