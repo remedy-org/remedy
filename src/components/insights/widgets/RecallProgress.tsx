@@ -33,7 +33,10 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
   const share = total > 0 ? done / total : 0;
   // The pace, so a few days of a recall never read as its whole life against the band (which is years).
   const dayCount = days ? num(rows[2]?.[0]?.[days.key]) : 0;
-  const pace = dayCount > 0 && done > 0 ? `${done.toLocaleString("en-US")} in ${dayCount} ${dayCount === 1 ? "day" : "days"}, ${Math.round(done / dayCount).toLocaleString("en-US")} a day` : null;
+  // Under one a day it keeps one decimal ("0.4 a day"), never a "0 a day" beside a count that isn't zero.
+  const rate = done / dayCount;
+  const perDay = rate < 1 ? rate.toLocaleString("en-US", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) : Math.round(rate).toLocaleString("en-US");
+  const pace = dayCount > 0 && done > 0 ? `${done.toLocaleString("en-US")} in ${dayCount} ${dayCount === 1 ? "day" : "days"}, ${perDay} a day` : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col justify-between gap-4 pb-1">

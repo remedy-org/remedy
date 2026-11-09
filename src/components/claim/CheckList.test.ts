@@ -46,7 +46,7 @@ describe("sixRows", () => {
 
   it("names the checks as the homepage and the console do", () => {
     const names = sixRows([...pre("pass"), ...model("pass")], base).map((r) => r.name);
-    expect(names.slice(0, 5)).toEqual(["taken in Remedy’s camera", "photo not used before", "one claim per PayPal account", "tag shows X-VESOLJE and M4T", "pillow cut in half"]);
+    expect(names.slice(0, 5)).toEqual(["taken in Remedy’s camera", "photo not used before", "one claim per verified PayPal account", "tag shows X-VESOLJE and M4T", "pillow cut in half"]);
   });
 
   it("says why a check that never ran didn't, so the row keeps its line", () => {

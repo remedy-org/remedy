@@ -5,8 +5,8 @@ import { PREVIEW_NOW, previewSeed, typeset } from "@/components/console/preview"
 // The homepage's Insights, built on the server from the same 40 seeded claims as the console preview
 // (components/console/preview.ts): the facts /console/insights would show for a workspace holding only those claims.
 
-// The kind of check that refused a claim, named as the funnel names its stages (Passed account checks, Passed photo check).
-const GATE: Record<string, string> = { "No AI": "Account check", "Model reads": "Photo check", Person: "Review" };
+// Where a claim was refused: before the photo check (the camera session, a reused photo, the account), by it, or on review.
+const GATE: Record<string, string> = { "No AI": "Before the photo check", "Model reads": "Photo check", Person: "Review" };
 
 export function insightsPreview(): InsightsData {
   const { recall, claims } = previewSeed();

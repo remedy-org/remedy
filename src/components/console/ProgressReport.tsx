@@ -222,20 +222,23 @@ export function ProgressReport({
         </p>
       </section>
 
-      {/* Prose: it may break across printed pages, rather than leave one paragraph alone on the last. */}
-      <section className="mt-10 flex flex-col gap-3">
-        <H>How units were verified</H>
-        <p className="max-w-read text-ui text-text">
-          Each owner logged in with PayPal, received a one-time code, and photographed the destroyed product with the code written on it, using a live camera
-          session of 10 minutes with no upload option. Before any photo was examined, Remedy checked the session, refused reused photos and second claims
-          from one account, and required a verified PayPal account. A vision model then described the label, the code and each destruction step, quoting
-          what it saw; a fixed rule paid only when every answer passed, and held any unclear answer for a person.
-        </p>
-      </section>
+      {/* One short paragraph and the footer, kept whole on one printed page with the heading: no two lines, and no
+          footer, left alone on the next page. */}
+      <div className="break-inside-avoid">
+        <section className="mt-10 flex flex-col gap-3">
+          <H>How units were verified</H>
+          <p className="max-w-read text-ui text-text">
+            Each owner logged in with PayPal, received a one-time code, and photographed the destroyed product with the code written on it, using a live camera
+            session of 10 minutes with no upload option. Before any photo was examined, Remedy checked the session, refused reused photos and second claims
+            from one account, and required a verified PayPal account. A vision model then described the label, the code and each destruction step, quoting
+            what it saw; a fixed rule paid only when every answer passed, and held any unclear answer for a person.
+          </p>
+        </section>
 
-      <footer className="mt-12 border-t border-line pt-4 text-micro text-muted">
-        Draft for your review before filing.{home ? "" : " Days are in UTC, as in the console."}
-      </footer>
+        <footer className="mt-12 border-t border-line pt-4 text-micro text-muted">
+          Draft for your review before filing.{home ? "" : " Days are in UTC, as in the console."}
+        </footer>
+      </div>
     </article>
   );
 }

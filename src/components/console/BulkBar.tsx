@@ -55,6 +55,10 @@ export function BulkBar({
 }) {
   const held = rows.filter((r) => r.decision === "held");
   const cents = held.reduce((n, r) => n + (r.cents ?? 0), 0);
+  // One word for the action, as the panel's (reviewLabels): Approve when every held claim is one of the console's own,
+  // which approving sends nothing for, Pay when PayPal pays.
+  const approveOnly = held.length > 0 && held.every((r) => r.seeded);
+  const word = approveOnly ? "Approve" : "Pay";
   // The quick reasons every held claim in the pick can be given (quickReasons.ts).
   const QUICK = sharedQuickReasons(held.map((r) => r.bars ?? []));
   const quickKey = (k: string) => /^[1-9]$/.test(k) && Number(k) <= QUICK.length;
@@ -88,7 +92,7 @@ export function BulkBar({
   };
 
   const busy = progress !== null;
-  const verb = mode === "reject" ? "Rejecting" : "Paying";
+  const verb = mode === "reject" ? "Rejecting" : approveOnly ? "Approving" : "Paying";
 
   return (
     <div
@@ -198,7 +202,7 @@ export function BulkBar({
               <LinkedIds text={failed.map((f) => `${f.id} (${f.error?.error ?? "no answer"})`).join(", ")} onOpen={onOpen} />
             </span>
           ) : mode === "approve" ? (
-            <span className="text-text">{`Pay ${formatCents(cents)} to ${plural(held.length, "owner")} through PayPal?`}</span>
+            <span className="text-text">{approveOnly ? `Approve ${formatCents(cents)} for ${plural(held.length, "owner")}? Nothing is sent through PayPal.` : `Pay ${formatCents(cents)} to ${plural(held.length, "owner")} through PayPal?`}</span>
           ) : mode === "reject" ? (
             <span className="text-text">Reject {plural(held.length, "held claim")}.</span>
           ) : (
@@ -217,7 +221,7 @@ export function BulkBar({
           {mode === "idle" && held.length > 0 && (
             <>
               <Button size="sm" variant="secondary" onClick={() => onMode("approve")}>
-                {`Pay ${held.length}…`}
+                {`${word} ${held.length}…`}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => onMode("reject")}>
                 Reject {held.length}…
@@ -227,7 +231,7 @@ export function BulkBar({
           {mode === "approve" && (
             <>
               <Button size="sm" data-autofocus pending={busy} pendingLabel={verb} onClick={() => run("approve")}>
-                {`Pay ${formatCents(cents)}`}
+                {`${word} ${formatCents(cents)}`}
               </Button>
               <Button size="sm" variant="tertiary" arrow={false} disabled={busy} onClick={() => onMode("idle")}>
                 Cancel
@@ -269,13 +273,13 @@ export function BulkBar({
             </>
           ) : mode === "approve" ? (
             <>
-              <Keys k={["A"]}>{`Pay ${formatCents(cents)}`}</Keys>
+              <Keys k={["A"]}>{`${word} ${formatCents(cents)}`}</Keys>
               <Keys k={["Esc"]}>Cancel</Keys>
             </>
           ) : (
             <>
               <Keys k={["⇧", "↑/↓"]}>Pick more</Keys>
-              {held.length > 0 && <Keys k={["A"]}>Approve</Keys>}
+              {held.length > 0 && <Keys k={["A"]}>{word}</Keys>}
               {held.length > 0 && <Keys k={["R"]}>Reject</Keys>}
               <Keys k={["Esc"]}>Clear</Keys>
             </>

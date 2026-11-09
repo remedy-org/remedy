@@ -43,18 +43,21 @@ export function payoutFailure(claim: Pick<DrawerClaim, "decision" | "events">): 
 const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 
 /**
- * One name for each review action, the same on the panel's buttons, the photo viewer's and the key hints: "Pay $29.99…"
- * (or "Try again: pay…" after a payout that failed on the way to PayPal), "Reject…". blocked: approve's checks would
- * stop the payout now (DrawerClaim.stops), so Reject leads and approve isn't offered as a button. confirmKey: what A
- * does once the confirm is open.
+ * One name for each review action, the same on the panel's buttons, its confirm, the photo viewer's and the key hints.
+ * A claim the console starts with has no PayPal payout behind it, so its word is Approve, as the homepage tour says
+ * ("Approve $29.99…", confirm "Approve $29.99"); any other claim's is Pay ("Pay $29.99…", or "Try again: pay…" after a
+ * payout that failed on the way to PayPal). blocked: approve's checks would stop the payout now (DrawerClaim.stops), so
+ * Reject leads and approve isn't offered as a button. confirmKey: what A does once the confirm is open.
  */
-export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "decision" | "events" | "stops">) {
+export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "decision" | "events" | "stops" | "seeded">) {
   const failure = payoutFailure(claim);
+  const word = claim.seeded ? "Approve" : "Pay";
   return {
     blocked: claim.stops.length > 0,
-    approve: `${failure ? "Try again: pay" : "Pay"} ${claim.amount}…`,
-    approveKey: "Pay",
-    confirmKey: `Pay ${claim.amount}`,
+    word,
+    approve: `${failure ? "Try again: pay" : word} ${claim.amount}…`,
+    approveKey: word,
+    confirmKey: `${word} ${claim.amount}`,
     reject: "Reject…",
   };
 }
@@ -322,12 +325,12 @@ export function ReviewActions({
           </p>
           {dropped && (
             <p role="status" className="text-ui text-text-2">
-              Not paid yet: that was the second click of a double-click. Press Pay once to send it.
+              {claim.seeded ? "Not approved yet: that was the second click of a double-click. Press Approve once to record it." : "Not paid yet: that was the second click of a double-click. Press Pay once to send it."}
             </p>
           )}
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel={claim.seeded ? "Approving" : "Paying through PayPal"} autoFocus className="flex-1 sm:flex-none">
-              {claim.seeded ? "Approve" : "Pay"} {claim.amount}
+              {labels.confirmKey}
             </Button>
             <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>
               Cancel

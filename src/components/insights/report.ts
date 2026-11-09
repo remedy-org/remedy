@@ -36,7 +36,7 @@ export function insightsLedger(claims: LedgerRow[]) {
     remedied: claims.reduce((n, c) => n + c.remedied, 0),
     paidCents,
     median: median(times),
-    timeLabel: field === "timeToSendSec" ? "median photo to payout" : "median photo check",
+    timeLabel: field === "timeToSendSec" ? "median photo to payout sent" : "median photo check",
     timed: times.length,
     timedOne: field === "timeToSendSec" ? "payout" : "claim",
     refused: claims.reduce((n, c) => n + c.refused, 0),
@@ -79,7 +79,7 @@ export function filterClaims<T extends Partial<Claim>>(claims: T[], picks: Filte
 const or = (values: string[]) => values.map(shownAs).join(" or ");
 const STOPPED: Record<string, string> = {
   Filed: "claims still waiting for photos",
-  "Photos sent": "claims stopped at the account checks",
+  "Photos sent": "claims stopped before the photo check",
   "Passed account checks": "claims stopped at the photo check",
   "Passed photo check": "claims held after passing every check",
   Paid: "approved claims",
@@ -90,7 +90,7 @@ const PICK_LABEL: Record<string, (values: string[]) => string> = {
   [DAY]: (v) => `claims filed ${or(v.map((d) => `${Number(d.slice(6))} ${MONTHS[Number(d.slice(4, 6)) - 1] ?? ""}`.trim()))}`,
 };
 
-/** "Rejected by a person on review", "claims stopped at the account checks · Verdict: Held"; a pick this can't name reads as a chart's. */
+/** "Rejected by a person on review", "claims stopped before the photo check · Verdict: Held"; a pick this can't name reads as a chart's. */
 export function filterLabel(picks: FilterPick[]) {
   return picks.map((p) => (p.field ? (PICK_LABEL[p.field] ?? or)(p.values) : "A pick on a chart")).join(" · ");
 }
@@ -257,10 +257,10 @@ const kpi = (text: string, value: { id: string; aggregation?: "sum" | "countd" }
 /** The homepage's day chart's title, in Studio and in the still that stands in for it (InsightsStill.tsx). */
 export const PAID_BY_DAY = "Paid through PayPal, by day";
 
-/** The Refused tile's caption on the homepage: where the refusals were stopped, the photo check or the account checks,
- * short enough for one line beside the other tiles'. */
+/** The Refused tile's caption on the homepage: where the refusals were stopped, at the photo check or before it, short
+ * enough for one line beside the other tiles'. */
 export const refusedSplit = (photo: number, pre: number) =>
-  [photo ? `${photo} at the photo check` : "", pre ? `${pre} at the account checks` : ""].filter(Boolean).join(", ") || "None refused";
+  [photo ? `${photo} at the photo check` : "", pre ? `${pre} before it` : ""].filter(Boolean).join(", ") || "None refused";
 
 /** The homepage's refusal reasons card, in 16px rows: its padding and title (76px with the gap around the card) and
  * each reason with its bar (34px). */
@@ -338,7 +338,7 @@ export function homeKpiCaptions(all: CaptionClaim[], shown: CaptionClaim[] = all
   const field = timeField(all);
   const n = shown.filter((c) => c[field] !== null).length;
   const gate = (g: string) => shown.filter((c) => c.refused && c.refusalGate === g).length;
-  const [photo, pre] = [gate("Photo check"), gate("Account check")];
+  const [photo, pre] = [gate("Photo check"), gate("Before the photo check")];
   const filtered = shown !== all;
   return {
     median:

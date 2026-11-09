@@ -110,7 +110,8 @@ export interface DrawerClaim {
   // The five checks, each with what was recorded under it.
   fiveRows: FiveRow[];
   // What the photo shows, in a few words from the checks (never the model's prose): the photo's accessible name.
-  photoAlt: string | null;
+  /** Each photo's description, in order (photoAltsOf). */
+  photoAlt: (string | null)[];
   sentence: string;
   amount: string;
   // itemId: PayPal's id for this one payout (older claims have only the batch's).
@@ -292,17 +293,27 @@ const willStop = (rows: PreCheckRow[], stops: string[]): PreCheckRow[] =>
     return text && row.state !== "hold" && row.state !== "reject" ? { ...row, state: "hold", detail: `Approve won't pay: ${text.charAt(0).toLowerCase()}${text.slice(1)}. Remedy runs this check again on approve.` } : row;
   });
 
-/** "Claim photo: pillow cut in half, tag reads X-VESOLJE K7Q": the photo in a few words, from what the checks read. */
-function photoAltOf(c: Pick<Claim, "verdict" | "reasons">, recall: Pick<Recall, "spec">): string | null {
+const ORDINAL: Record<string, number> = { first: 0, second: 1, third: 2 };
+
+/** Each photo in a few words, from what the checks read: "Claim photo: pillow cut in half, tag reads X-VESOLJE K7Q".
+ * With more than one photo the cut is said only of the photos the step's evidence names ("The second photo shows two
+ * separated pillow sections"), so a close-up of the tag is never described as the cut pillow. */
+function photoAltsOf(c: Pick<Claim, "verdict" | "reasons" | "photos">, recall: Pick<Recall, "spec">): (string | null)[] {
   const v = c.verdict;
-  if (!v) return null;
+  if (!v) return c.photos.map(() => null);
   const done = v.steps.length > 0 && v.steps.every((s) => s.status === "done");
   const thing = nounOf(recall.spec).toLowerCase();
   // The label as read often carries the code too ("X-VESOLJE K7Q"): said once.
   const code = v.challenge_code.text_seen ?? "";
   const read = [(v.label.text_seen ?? "").replace(code, "").trim(), code].filter(Boolean).join(" ");
-  const parts = [done ? `${thing} ${cutInHalf(recall.spec) ? "cut in half" : "destroyed"}` : null, read ? `tag reads ${read}` : null].filter(Boolean);
-  return parts.length ? `Claim photo: ${parts.join(", ")}` : null;
+  const named = new Set(
+    v.steps.flatMap((s) => [...s.evidence.matchAll(/\b(first|second|third) photo\b|\bphoto (\d)\b/gi)].map((m) => (m[1] ? ORDINAL[m[1].toLowerCase()] : Number(m[2]) - 1))),
+  );
+  return c.photos.map((_, i) => {
+    const cut = done && (c.photos.length === 1 || named.has(i));
+    const parts = [cut ? `${thing} ${cutInHalf(recall.spec) ? "cut in half" : "destroyed"}` : null, read ? `tag reads ${read}` : null].filter(Boolean);
+    return parts.length ? `Claim photo: ${parts.join(", ")}` : null;
+  });
 }
 
 /** The claim as the panel shows it. stops: what approve would be stopped for now (approveConflicts' texts). */
@@ -332,7 +343,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     // What was recorded, not what approve would find now.
     five: fiveLine(fiveRowsOf(c, recall, all, checks)),
     fiveRows: rows,
-    photoAlt: photoAltOf(c, recall),
+    photoAlt: photoAltsOf(c, recall),
     sentence: decisionSentence(c, recall),
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,

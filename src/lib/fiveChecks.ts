@@ -7,7 +7,7 @@
 export const FIVE_CHECKS = [
   { n: 1, short: "Live camera" },
   { n: 2, short: "Never seen before" },
-  { n: 3, short: "One claim per account" },
+  { n: 3, short: "One claim per verified account" },
   { n: 4, short: "Code and label" },
   { n: 5, short: "Really destroyed" },
 ] as const;
@@ -22,7 +22,8 @@ export type CheckNumber = (typeof FIVE_CHECKS)[number]["n"];
 export const CHECK_NAMES = {
   session: "Taken in Remedy’s camera",
   duplicate: "Photo not used before",
-  account: "One claim per PayPal account",
+  // Both halves of the check: a verified PayPal account, and one claim from it (a claim fails it either way).
+  account: "One claim per verified PayPal account",
   code: (code: string, written?: string | null) => (written ? `Tag shows ${written} and ${code}` : `Label and code ${code}`),
   destroyed: (noun: string, cut: boolean) => `${noun} ${cut ? "cut in half" : "destroyed"}`,
 } as const;
@@ -57,7 +58,7 @@ function nameOf(id: string): string {
   if (id === "same_item") return "the same item";
   if (id === "screen") return "a real photo";
   if (/^step_\d+$/.test(id)) return "really destroyed";
-  return "one claim per account";
+  return "one claim per verified account";
 }
 
 type State = "pass" | "hold" | "reject" | "blocked" | "waiting" | "running" | "skipped";
@@ -73,7 +74,7 @@ export function fiveOutcomes(items: { id: string; state: State }[]): { n: CheckN
     const held = named(["hold"]);
     if (held.length) return { n, outcome: "hold", names: held };
     if (!of.length || of.some((i) => i.state === "waiting" || i.state === "running")) return { n, outcome: "open", names: [] };
-    // A check passes only when all of it ran: one claim per account, skipped for a demo sample, isn't a pass.
+    // A check passes only when all of it ran: one claim per verified account, skipped for a demo sample, isn't a pass.
     if (of.some((i) => i.state === "skipped")) return { n, outcome: "skipped", names: [] };
     return { n, outcome: "pass", names: [] };
   });

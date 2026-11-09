@@ -58,8 +58,10 @@ function starters(data: InsightsData): { label: string; how: string }[] {
   const held = data.claims.find((c) => c.decision === "Held");
   const sameItem = data.claims.filter((c) => c.decision === "Held" && c.failedCheck === "same_item").length;
   const list: { label: string; how: string }[] = [];
-  if (refused) list.push({ label: `Why were ${refused} claims refused?`, how: "Count the refusals by reason and chart them by reason." });
-  if (sameItem) list.push({ label: `Why are ${sameItem} claims held?`, how: "Show the held claims where only the same-item check was unclear, and quote what the photo check saw." });
+  // "Why was 1 claim refused?", "Why were 2 claims refused?".
+  const many = (n: number, past: boolean) => (n === 1 ? `${past ? "was" : "is"} 1 claim` : `${past ? "were" : "are"} ${n} claims`);
+  if (refused) list.push({ label: `Why ${many(refused, true)} refused?`, how: "Count the refusals by reason and chart them by reason." });
+  if (sameItem) list.push({ label: `Why ${many(sameItem, false)} held?`, how: "Show the held claims where only the same-item check was unclear, and quote what the photo check saw." });
   // Only a question this recall's data can answer: time to pay once something was paid, else the photo check's own time.
   if (data.claims.some((c) => c.timeToSendSec !== null)) list.push({ label: "Chart time to pay by day", how: "Chart the median seconds from photo to PayPal payout by day filed." });
   else list.push({ label: "Chart claims filed by day", how: "Chart how many claims were filed each day, by decision." });

@@ -60,7 +60,7 @@ describe("console view", () => {
     // Approved with nothing sent: no payout named.
     expect(decisionSentence(sampleClaim({ decision: "paid" }), recall)).toBe("All checks passed: $29.99 approved, nothing sent yet.");
     expect(decisionSentence(sampleClaim({ decision: "blocked", reasons: [reject("payer_verified", "This PayPal account isn't verified")] }), recall)).toBe(
-      "Stopped by the account checks before the photo check: this PayPal account isn't verified.",
+      "Stopped before the photo check: this PayPal account isn't verified.",
     );
     expect(decisionSentence(sampleClaim({ decision: "rejected", reasons: [reject("review", "Rejected on review: PayPal name doesn't match.")] }), recall)).toBe(
       "Rejected on review: PayPal name doesn't match.",

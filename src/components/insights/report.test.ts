@@ -11,7 +11,7 @@ describe("figures", () => {
   });
 
   it("is the median of payouts really sent, and falls back to the photo check's time when none was", () => {
-    expect(insightsLedger([row({ timeToSendSec: 4 }), row({ timeToSendSec: 6 }), row({ timeToSendSec: 90 }), row()])).toMatchObject({ median: 6, timeLabel: "median photo to payout", timed: 3 });
+    expect(insightsLedger([row({ timeToSendSec: 4 }), row({ timeToSendSec: 6 }), row({ timeToSendSec: 90 }), row()])).toMatchObject({ median: 6, timeLabel: "median photo to payout sent", timed: 3 });
     expect(insightsLedger([row({ modelSec: 3 }), row({ modelSec: null })])).toMatchObject({ median: 3, timeLabel: "median photo check", timed: 1 });
     expect(timeField([row()])).toBe("modelSec");
     expect(insightsLedger([])).toMatchObject({ median: null, timed: 0 });
@@ -70,7 +70,7 @@ describe("cross-filter", () => {
 
   it("names the picks in the bar", () => {
     expect(filterLabel([{ field: "claims.refusalReason", values: ["Rejected by a person on review"] }])).toBe("Rejected by a person on review");
-    expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("claims stopped at the account checks · Verdict: Held or Blocked");
+    expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("claims stopped before the photo check · Verdict: Held or Blocked");
     expect(filterLabel([{ field: "calendar::day", values: ["20261107", "20261104"] }])).toBe("claims filed 7 Nov or 4 Nov");
     expect(filterLabel([{ field: "", values: [] }])).toBe("A pick on a chart");
   });
@@ -91,7 +91,7 @@ describe("the homepage's tiles", () => {
   });
   const paid = claim({});
   const photo = claim({ decision: "Rejected" as never, amountPaid: 0, timeToSendSec: null, refused: 1, refusalGate: "Photo check" as never });
-  const pre = claim({ decision: "Blocked" as never, amountPaid: 0, timeToSendSec: null, refused: 1, refusalGate: "Account check" as never });
+  const pre = claim({ decision: "Blocked" as never, amountPaid: 0, timeToSendSec: null, refused: 1, refusalGate: "Before the photo check" as never });
 
   it("says a time under a minute in seconds", () => {
     expect(spokenTime(12)).toBe("12 s");
@@ -100,13 +100,13 @@ describe("the homepage's tiles", () => {
 
   it("counts the captions over the claims a cross-filter leaves", () => {
     const all = [paid, paid, photo, pre];
-    expect(homeKpiCaptions(all)).toEqual({ median: "across 2 payouts", refused: "1 at the photo check, 1 at the account checks" });
+    expect(homeKpiCaptions(all)).toEqual({ median: "across 2 payouts", refused: "1 at the photo check, 1 before it" });
     expect(homeKpiCaptions(all, [paid])).toEqual({ median: "across 1 payout", refused: "None refused among these claims" });
     expect(homeKpiCaptions(all, [photo])).toEqual({ median: "None paid among these claims", refused: "1 at the photo check" });
   });
 
   it("names only the checks that refused", () => {
-    expect(refusedSplit(0, 3)).toBe("3 at the account checks");
+    expect(refusedSplit(0, 3)).toBe("3 before it");
     expect(refusedSplit(0, 0)).toBe("None refused");
   });
 });
