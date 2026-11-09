@@ -65,7 +65,7 @@ import { ClaimFilter, claimFilterPass, DecisionFilter, decisionFilterPass, reaso
 import { formatDate } from "./format";
 import { gridTheme, stillTheme } from "./gridTheme";
 import { verdictOf, verdictWord } from "./VerdictMark";
-import { moneyCents, type MoneyState } from "@/lib/payoutWords";
+import { moneyCents, moneyState, type MoneyState } from "@/lib/payoutWords";
 import "./claims-grid.css";
 
 // Community modules only (no Enterprise, no licence): the Claim and Verdict columns' faceted filters, the quick filter
@@ -112,8 +112,8 @@ const BASE = { queue: 220 + 96, still: 220 + 136 + 96 };
 // The queue has no PayPal account column at a laptop's width: search finds an account, and the evidence panel names
 // it. The homepage's still draws the queue as a laptop's console shows it, so it never has one.
 // On a wide queue (a 1920 screen, nothing open) the verdict would otherwise take 1,100px a reason never uses: the
-// PayPal account and the photo-to-payout time come in from 1600px of grid, each only while the verdict keeps
-// VERDICT_ROOMY, so a verdict and its money stay in one glance.
+// PayPal account comes in from 1400px of grid (a 1920 screen's), only while the verdict keeps VERDICT_ROOMY, so a
+// verdict and its money stay in one glance, and it takes the width the Payout column would leave as a band of dashes.
 const PAYER = 172;
 const OPTIONAL = {
   // The queue's one time column says both times: the answer, and the payout under it where it came later (TimeCell).
@@ -124,7 +124,7 @@ const OPTIONAL = {
 const ORDER = { queue: ["checks", "payoutStatus", "time", "payer"], still: ["payoutStatus", "time"] };
 // Columns only a wide queue shows, and the verdict width they leave.
 const ROOMY_ONLY = new Set(["payer"]);
-const ROOMY_FROM = 1600;
+const ROOMY_FROM = 1400;
 const VERDICT_ROOMY = 460;
 
 function hiddenAt(width: number, still: boolean): Set<string> {
@@ -498,7 +498,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         fileName: `remedy-claims-${new Date().toISOString().slice(0, 10)}.csv`,
         allColumns: true,
         skipPinnedBottom: true,
-        columnKeys: ["createdAt", "filedAt", "code", "decision", "reason", "checks", "time", "toPay", "payer", "payoutStatus", "amount"],
+        columnKeys: ["createdAt", "filedAt", "code", "decision", "reason", "checks", "time", "toPay", "payer", "payoutStatus", "amount", "paid"],
         shouldRowBeSkipped: (p) => Boolean(p.node.data?.group),
         processHeaderCallback: (p) => CSV_HEADERS[p.column.getColId()] ?? p.column.getColDef().headerName ?? "",
         processCellCallback: (p) => csvCell(p.column.getColId(), p.node?.data),
@@ -794,6 +794,7 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       { colId: "code", headerName: "Code", valueGetter: (p) => p.data?.code ?? "", hide: true },
       { colId: "filedAt", headerName: "Filed (UTC)", field: "createdAt", hide: true },
       { colId: "reason", headerName: "Reason", valueGetter: (p) => (p.data ? reasonKey(p.data) : ""), hide: true },
+      { colId: "paid", headerName: "Paid (USD)", valueGetter: (p) => (p.data ? csvCell("paid", p.data) : ""), hide: true },
     ];
     return all.map((c) => ({
       sortable: false,
@@ -802,8 +803,11 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
       suppressHeaderMenuButton: true,
       ...c,
       // In the queue the account and the payout take what a wide grid has past the verdict's 460px, so the money and
-      // whose it is spread out, while the strip and the time keep their width beside the reason.
-      ...(!still && (c.colId === "payer" || c.colId === "payoutStatus") && c.width ? { flex: 1, minWidth: c.width } : {}),
+      // whose it is spread out, while the strip and the time keep their width beside the reason. Beside the account the
+      // payout stops at 240px (its longest word fits in half that), and the account takes the rest.
+      ...(!still && (c.colId === "payer" || c.colId === "payoutStatus") && c.width
+        ? { flex: 1, minWidth: c.width, ...(c.colId === "payoutStatus" && !hidden.has("payer") ? { maxWidth: 240 } : {}) }
+        : {}),
       hide: c.hide || hidden.has(c.colId ?? ""),
     }));
   }, [hidden, still, oldestFirst, keepOrder, stillTips, pointerSettled]);
@@ -1238,7 +1242,9 @@ const CSV_HEADERS: Record<string, string> = {
   toPay: "Photos to payout (s)",
   payer: "PayPal account",
   payoutStatus: "Payout",
-  amount: "Amount (USD)",
+  // The claim's refund, owed or not; what PayPal paid is its own column, so the paid column sums to the ledger's money.
+  amount: "Refund (USD)",
+  paid: "Paid (USD)",
 };
 
 /** A cell as the CSV writes it: plain words and numbers, never the grid's markup. */
@@ -1268,6 +1274,9 @@ function csvCell(colId: string, r: GridRow | undefined): string {
       return payoutWord(r) ?? "";
     case "amount":
       return r.cents === null ? "" : (r.cents / 100).toFixed(2);
+    case "paid":
+      // Only where PayPal confirmed the payout (the one payout vocabulary's Paid).
+      return moneyState(r) === "paid" && r.cents !== null ? (r.cents / 100).toFixed(2) : "";
   }
   return "";
 }
