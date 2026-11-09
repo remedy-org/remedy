@@ -66,13 +66,13 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
       const body = await res.json().catch(() => null);
       if (res.status === 409) return onSent(null, sample.photos);
       if (!res.ok) {
-        setError(body?.error ?? "The photo didn't send. Try again.");
+        setError(body?.error ?? "The photo didn’t send. Try again.");
         setSending(false);
         return;
       }
       onSent(body as ClaimView, sample.photos);
     } catch {
-      setError("No connection. Try again when you're back online.");
+      setError("No connection. Try again when you’re back online.");
       setSending(false);
     }
   }
@@ -101,7 +101,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
           </div>
           {/* Phones: the code this claim was issued, which the result's tag check names (a laptop has the tag beside it). */}
           <p className="text-ui text-pretty text-muted lg:hidden">
-            Your one-time code is <span className="font-mono whitespace-nowrap text-text">{code}</span>. Only a photo taken in this claim&apos;s camera can carry it.
+            Your one-time code is <span className="font-mono whitespace-nowrap text-text">{code}</span>. Only a photo taken in this claim&rsquo;s camera can carry it.
           </p>
           {/* A phone: the picture and its button on the text's own width, the picture no taller than leaves the button on
               the first screen. A laptop: the picture at the camera's size, and the button as wide as it. */}
@@ -113,7 +113,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
               style={{ viewTransitionName: PHOTO_TRANSITION }}
               className="block aspect-[2/3] h-auto w-full rounded-card bg-surface-2 object-cover object-[50%_62%] ring-1 ring-line max-lg:max-h-[44svh]"
             />
-            <figcaption className="text-ui text-muted">A picture file, not a photo from this claim&apos;s camera</figcaption>
+            <figcaption className="text-ui text-muted">A picture file, not a photo from this claim&rsquo;s camera</figcaption>
           </figure>
           <div className="w-full lg:w-[max(16rem,var(--photo-w))]" style={{ ["--photo-w" as string]: photoWidth(ASPECT) }}>
             {/* Busy, not disabled: focus stays on it until the checking screen's heading takes it. */}
@@ -194,13 +194,13 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
         <figure className="flex flex-col gap-3">
           <CodeTag code={code} written={written} />
           <figcaption className="text-ui text-muted">
-            {upload ? "Your one-time code. Only a photo taken in this claim's camera can carry it." : "Your one-time code. This photo's tag is already written. Press the shutter to send it."}
+            {upload ? "Your one-time code. Only a photo taken in this claim’s camera can carry it." : "Your one-time code. This photo’s tag is already written. Press the shutter to send it."}
           </figcaption>
         </figure>
       </div>
       {error && (
         <div className="lg:col-start-2">
-          <Notice title="The photo didn't send">{error}</Notice>
+          <Notice title="The photo didn’t send">{error}</Notice>
         </div>
       )}
     </section>

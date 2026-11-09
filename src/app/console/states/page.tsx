@@ -23,7 +23,7 @@ export default async function StatesPage() {
   if (process.env.NODE_ENV === "production") notFound();
   await requireSession("company", "/console/states");
   return (
-    <main className="flex flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="page flex flex-col gap-12 py-8">
       <h1 className="text-h2 font-medium">Console states</h1>
 
       <State name="Claims · empty (a recall with no claims)">
@@ -54,8 +54,8 @@ export default async function StatesPage() {
 
       <State name="Claims · error">
         <ErrorState
-          title="Remedy couldn't load this page"
-          description="The claim store didn't answer. Nothing was changed and no money moved: claims that arrive meanwhile are held, never lost. Try again in a moment."
+          title="Remedy couldn’t load this page"
+          description="The claim store didn’t answer. Nothing was changed and no money moved: claims that arrive meanwhile are held, never lost. Try again in a moment."
           reference="2817305542"
           action={
             <Button variant="secondary" size="sm">
@@ -74,7 +74,7 @@ export default async function StatesPage() {
         <State name="Drawer · error, and a payout PayPal refused">
           <div className="flex flex-col gap-6">
             <ErrorState title="No claim with that id in this workspace." description="The claim itself is safe: opening it only reads it." />
-            <ErrorState variant="inline" title="PayPal didn't take the payout. The claim is still held and nothing was paid; try again." reference="f2b8c1e4a9d07" />
+            <ErrorState variant="inline" title="PayPal didn’t take the payout. The claim is still held and nothing was paid; try again." reference="f2b8c1e4a9d07" />
           </div>
         </State>
       </div>
@@ -84,7 +84,7 @@ export default async function StatesPage() {
           <CheckList
             label="Import progress"
             steps={[
-              { id: "cpsc", label: "Read CPSC's record", state: "pass", detail: "Recall 26-412, about 1,200,000 units" },
+              { id: "cpsc", label: "Read CPSC’s record", state: "pass", detail: "Recall 26-412, about 1,200,000 units" },
               { id: "draft", label: "Draft the photo checks", state: "running", detail: "Drafting the photo checks from the notice, about 15 seconds" },
               { id: "review", label: "You review and publish", state: "waiting", detail: "Nothing goes live until you publish" },
             ]}
@@ -92,7 +92,7 @@ export default async function StatesPage() {
         </State>
         <State name="Import · errors">
           <div className="flex flex-col gap-4">
-            <ErrorState variant="inline" title="CPSC's recall service didn't answer. Try again in a minute." />
+            <ErrorState variant="inline" title="CPSC’s recall service didn’t answer. Try again in a minute." />
             <p className="text-ui text-text-2">
               <span className="font-mono">27-071</span> is already in your workspace.{" "}
               <Link href="/console/recalls/27-071" className="font-medium text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">

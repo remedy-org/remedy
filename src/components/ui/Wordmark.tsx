@@ -4,7 +4,7 @@ import Link from "next/link";
 import { MARK_STUB, MARK_TAG } from "./markPaths";
 
 export interface WordmarkProps {
-  /** sm for app chrome (body-size type), md for the homepage nav and footer (lead-size type). */
+  /** md (lead-size type) for every page's header and the footer: one header spec, so the logo never moves between pages. sm (body-size type) only inside a picture of the product (the console window on the homepage and /signin). */
   size?: "sm" | "md";
   /** Wrap in a link, usually "/". */
   href?: string;

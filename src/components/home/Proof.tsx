@@ -37,8 +37,9 @@ function Note({ figure }: { figure: string }) {
 
 /**
  * Results: the one number that matters is the heading, the zero at the display size (never bigger than the hero's h1)
- * with what it counts beside it, the method under it; the three supporting counts stand beside them on columns 8 to 12,
- * a list on hairlines, so the frame is one balanced slide, never a lone figure with an empty half. On a tall laptop
+ * with what it counts beside it, the lead and the method's footnote under it; the three supporting counts stand beside
+ * them on columns 8 to 12, a list on hairlines with room to breathe, ending on the footnote's last line, so the frame is
+ * one balanced slide, never a lone figure with an empty half. On a tall laptop
  * screen (1000px and up) it is a screen of its own, its content centred in it (scroll/stops.ts frames the section's top
  * there).
  */
@@ -66,7 +67,7 @@ export function Proof() {
       aside={
         <dl className="flex flex-col">
           {FIGURES.map((f) => (
-            <div key={f.text} className="flex items-baseline gap-x-4 border-t border-line py-4 first:border-t-0 first:pt-0 last:pb-0">
+            <div key={f.text} className="flex items-baseline gap-x-4 border-t border-line py-4 first:border-t-0 first:pt-0 last:pb-0 lg:py-8 lg:first:pt-0 lg:last:pb-0">
               <dt className="w-[5.5ch] shrink-0 text-head-sm font-medium whitespace-nowrap sm:w-[6.5ch] sm:text-title">
                 {f.figure}
                 <Note figure={`${f.figure} ${f.text}`} />
@@ -76,13 +77,14 @@ export function Proof() {
           ))}
         </dl>
       }
-      bodyClassName="mt-10 lg:mt-12"
-    >
-      <p id="proof-note" className="max-w-[80ch] scroll-mt-24 text-[0.75rem]/[1.5] text-pretty text-faint">
-        ¹ Remedy fraud benchmark, 7 Nov 2026: 36 claims, each run 3 times. The photo check passed one AI-made image of a cut
-        pillow with the code drawn on, in every try; in Remedy a photo comes only from the claim&rsquo;s own live camera, so
-        an image like it would have to be shown to the camera on a screen or a print, which the photo check looks for.
-      </p>
-    </Section>
+      note={
+        <p id="proof-note" className="mt-3 max-w-[80ch] scroll-mt-24 text-[0.75rem]/[1.5] text-pretty text-faint lg:mt-5">
+          ¹ Remedy fraud benchmark, 7 Nov 2026: 36 claims, each run 3 times. The photo check passed one{" "}
+          <span className="whitespace-nowrap">AI-made</span> image of a cut pillow with the code drawn on, in every try; in
+          Remedy a photo comes only from the claim&rsquo;s own live camera, so an image like it would have to be shown to the
+          camera on a screen or a print, which the photo check looks for.
+        </p>
+      }
+    />
   );
 }

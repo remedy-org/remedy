@@ -73,7 +73,7 @@ describe("duplicateFor", () => {
     });
     const d = toDrawerClaim(claim, demoRecall(new Date("2026-11-04T12:00:00Z")));
     expect(d.fiveRows.map((r) => [r.name, r.state])).toEqual([
-      ["Taken in Remedy's camera", "pass"],
+      ["Taken in Remedy’s camera", "pass"],
       ["Photo not used before", "pass"],
       ["One claim per PayPal account", "skipped"],
       ["Tag shows X-VESOLJE and K7P", "reject"],

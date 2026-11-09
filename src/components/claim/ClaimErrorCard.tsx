@@ -9,10 +9,10 @@ export function ClaimErrorCard({ recall, id, onRetry }: { recall?: string; id?: 
   return (
     <NotFoundCard
       alert
-      title="This page didn't load"
+      title="This page didn’t load"
       description={
         <>
-          Something on our side didn&apos;t answer, so nothing changed and nothing was paid.{" "}
+          Something on our side didn&rsquo;t answer, so nothing changed and nothing was paid.{" "}
           {id ? (
             <>
               Claim <span className="font-mono whitespace-nowrap">{id}</span> is saved

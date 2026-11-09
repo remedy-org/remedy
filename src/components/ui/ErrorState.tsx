@@ -33,7 +33,11 @@ export function ErrorState({ title, description, action, reference, variant = "b
       <div className="min-w-0 flex-1">
         <p className="text-body font-medium text-text">{title}</p>
         {description && <p className="mt-1 max-w-read text-ui text-muted">{description}</p>}
-        {reference && <p className="mt-2 font-mono text-micro text-faint">Ref {reference}</p>}
+        {reference && (
+          <p className="mt-2 text-micro text-faint">
+            Ref <span className="font-mono">{reference}</span>
+          </p>
+        )}
         {action && <div className="mt-4">{action}</div>}
       </div>
     </div>

@@ -41,12 +41,12 @@ describe("sixRows", () => {
     const pass = sixRows([...pre("pass"), ...model("pass")], base).find((r) => r.key === "destroyed")!;
     expect(pass.because).toBe("Both halves and the cut are in the photo.");
     const fail = sixRows([...pre("pass"), ...model("reject")], { ...base, explained: true }).find((r) => r.key === "destroyed")!;
-    expect(fail.detail).toBe("We couldn't see the pillow cut in half.");
+    expect(fail.detail).toBe("We couldn’t see the pillow cut in half.");
   });
 
   it("names the checks as the homepage and the console do", () => {
     const names = sixRows([...pre("pass"), ...model("pass")], base).map((r) => r.name);
-    expect(names.slice(0, 5)).toEqual(["taken in Remedy's camera", "photo not used before", "one claim per PayPal account", "tag shows X-VESOLJE and M4T", "pillow cut in half"]);
+    expect(names.slice(0, 5)).toEqual(["taken in Remedy’s camera", "photo not used before", "one claim per PayPal account", "tag shows X-VESOLJE and M4T", "pillow cut in half"]);
   });
 
   it("says why a check that never ran didn't, so the row keeps its line", () => {
@@ -56,10 +56,10 @@ describe("sixRows", () => {
       { id: "account", group: "pre", label: "", state: "pass" },
     ];
     const rows = sixRows(blocked, base);
-    expect(rows.find((r) => r.key === "session")!.detail).toBe("This photo came from outside the claim's camera.");
+    expect(rows.find((r) => r.key === "session")!.detail).toBe("This photo came from outside the claim’s camera.");
     const code = rows.find((r) => r.key === "code")!;
     expect(code.unrun).toBe(true);
-    expect(code.detail).toBe("Not run: this photo wasn't taken in this claim's camera.");
+    expect(code.detail).toBe("Not run: this photo wasn’t taken in this claim’s camera.");
   });
 
   it("marks the wrong characters of a code the tag shows", () => {

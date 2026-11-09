@@ -497,7 +497,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           return;
         }
         if (row.decision !== "held") {
-          setHint(`${row.id} isn't held: only held claims can be approved or rejected`, row.id);
+          setHint(`${row.id} isn’t held: only held claims can be approved or rejected`, row.id);
           return;
         }
         setHint(null);
@@ -670,7 +670,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               decisionFilter={filter}
               onDecisionFilter={onDecisionFilter}
               groupBy={groupBy}
-              footnote={tab === "held" && !search ? "That's every claim waiting for a person." : undefined}
+              footnote={tab === "held" && !search ? "That’s every claim waiting for a person." : undefined}
               onShown={setTotals}
               picked={pickedSet}
               onPick={pick}
@@ -910,7 +910,7 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
     <span className="inline-flex items-baseline gap-2">
       <span aria-hidden="true" className={clsx("size-1.5 shrink-0 -translate-y-px self-center rounded-full", state === "live" && !failed ? "bg-pay" : "border border-faint")} />
       {failed ? (
-        <>Couldn&apos;t update · {refresh}</>
+        <>Couldn&rsquo;t update · {refresh}</>
       ) : state === "live" ? (
         <>
           Live · updated <Ago key={at} at={at} />
@@ -936,8 +936,8 @@ const SHORTCUTS: [string[], "/" | "to" | "+" | null, string][] = [
   [["↓", "J"], "/", "Next claim"],
   [["↑", "K"], "/", "Previous claim"],
   [["Enter"], null, "Open the claim"],
-  [["⇧", "J/K"], "+", "Scroll the open claim's evidence"],
-  [["V", "Space"], "/", "The open claim's photos"],
+  [["⇧", "J/K"], "+", "Scroll the open claim’s evidence"],
+  [["V", "Space"], "/", "The open claim’s photos"],
   [["⇧", "↑/↓"], "+", "Pick several claims"],
   [["X"], null, "Pick or drop a claim"],
   [["A"], null, "Approve (press twice), in the panel or the photos"],

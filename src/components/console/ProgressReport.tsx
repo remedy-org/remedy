@@ -165,7 +165,7 @@ export function ProgressReport({
             value={formatCents(report.sentCents)}
             note={`${plural(report.sent, "payout")}${report.sent ? each : ""}${report.settling ? ` · ${formatCount(report.settling)} settling` : report.sent ? " · all settled" : ""}`}
           />
-          <Figure label="Method" value="PayPal" note="Payouts to each owner's verified PayPal account" home={home} />
+          <Figure label="Method" value="PayPal" note="Payouts to each owner’s verified PayPal account" home={home} />
         </div>
       </section>
 

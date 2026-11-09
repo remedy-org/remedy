@@ -14,6 +14,6 @@ export async function api<T>(url: string, init: { method?: string; json?: unknow
     if (res.ok && data !== null) return { ok: true, data: data as T };
     return { ok: false, status: res.status, error: (data as ApiError | null) ?? { error: `Remedy answered ${res.status}. Try again.` } };
   } catch {
-    return { ok: false, status: 0, error: { error: "Remedy didn't answer. Check your connection and try again." } };
+    return { ok: false, status: 0, error: { error: "Remedy didn’t answer. Check your connection and try again." } };
   }
 }

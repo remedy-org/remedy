@@ -307,7 +307,7 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
           </form>
         </div>
         <p className="text-ui text-faint">
-          <span id="console-note">Opens {company}&apos;s console, which has its own login.</span>{" "}
+          <span id="console-note">Opens {company}&rsquo;s console, which has its own login.</span>{" "}
           <span id="start-over-note">Start over clears these four.</span>
         </p>
       </div>

@@ -43,7 +43,7 @@ export function CopyValue({ label }: { label: string }) {
         )}
       </button>
       <span className="sr-only" aria-live="polite">
-        {copied === "yes" ? `The ${label} is copied.` : copied === "no" ? `Couldn't copy. The ${label} is selected: press Control C, or Command C on a Mac.` : ""}
+        {copied === "yes" ? `The ${label} is copied.` : copied === "no" ? `Couldn’t copy. The ${label} is selected: press Control C, or Command C on a Mac.` : ""}
       </span>
     </>
   );

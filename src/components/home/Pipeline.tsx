@@ -13,7 +13,7 @@ import styles from "./home.module.css";
 export const GATES: { title: string; text: string; ai: boolean }[] = [
   {
     title: CHECK_NAMES.session,
-    text: "Photos must arrive inside this claim's 10-minute camera session. An image made anywhere else is refused before the model sees it.",
+    text: "Photos must arrive inside this claim’s 10-minute camera session. An image made anywhere else is refused before the model sees it.",
     ai: false,
   },
   {
@@ -35,7 +35,7 @@ export const GATES: { title: string; text: string; ai: boolean }[] = [
   },
   {
     title: CHECK_NAMES.destroyed("Pillow", true),
-    text: "The model confirms each step the notice asks for, such as “cut fully in half”, and that the photo isn't of a screen or a print.",
+    text: "The model confirms each step the notice asks for, such as “cut fully in half”, and that the photo isn’t of a screen or a print.",
     ai: true,
   },
 ];

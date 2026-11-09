@@ -60,8 +60,11 @@ export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; headin
       <div className="flex flex-col gap-3 lg:hidden">
         <div className="flex min-w-0 flex-col gap-1">
           <p className="text-ui text-muted">{source}</p>
+          {/* Who pays, only where it is true: a company's own recall. The shared demo recall (no owner) is a public CPSC
+              recall, and its seller is never named as a Remedy customer (DESIGN.md). */}
           <p className="text-ui text-muted">
-            Sold by <span className="text-text">{company}</span>, which pays these refunds through Remedy.
+            Sold by <span className="text-text">{company}</span>
+            {recall.owner ? ", which pays these refunds through Remedy." : "."}
           </p>
         </div>
         {image && <RecallPhoto url={image.url} caption={image.caption || undefined} product={recall.product} />}

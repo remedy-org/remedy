@@ -15,7 +15,7 @@ export function ExpiredCard({ code, written, againHref, demo }: { code: string; 
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-3">
           <StepTitle id="expired-title">This code has expired</StepTitle>
-          <p className="text-body text-muted">Codes last 10 minutes, so photos can&apos;t be taken in advance. Get a new one to start again.</p>
+          <p className="text-body text-muted">Codes last 10 minutes, so photos can&rsquo;t be taken in advance. Get a new one to start again.</p>
         </div>
         <Button href={againHref} size="lg" block prefetch={false}>
           {demo ? "Choose a claim" : "Get a new code"}

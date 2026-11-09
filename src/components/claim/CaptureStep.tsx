@@ -267,7 +267,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         return onSent(null);
       }
       if (!res.ok) {
-        setSendError({ status: res.status, message: body?.error ?? "The photos didn't send. Try again." });
+        setSendError({ status: res.status, message: body?.error ?? "The photos didn’t send. Try again." });
         setSending(false);
         return;
       }
@@ -277,7 +277,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
       // Fresh URLs for the checking screen: this step frees its own thumbnails' URLs when it goes away.
       onSent(body as ClaimView, blobs.map((b) => URL.createObjectURL(b)));
     } catch {
-      setSendError({ status: 0, message: "No connection. Your photos are still here: send them again when you're back online." });
+      setSendError({ status: 0, message: "No connection. Your photos are still here: send them again when you’re back online." });
       setSending(false);
     }
   }
@@ -290,8 +290,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const sendLabel = `Send ${n === 1 ? "photo" : `${n} photos`}`;
   // Said before the first shot, not behind (i): one photo is enough, so nobody thinks the three slots must be filled.
   const helpText = n === 0 ? `One photo of the ${framing.thing} and the ${framing.product} is enough.` : "Open a photo to check it or retake it.";
-  const errorTitle = sendError?.status === 401 ? "Your PayPal login has expired" : "The photos didn't send";
-  const errorText = sendError?.status === 401 ? "Log in again to send them. You'll need to retake them afterwards." : sendError?.message;
+  const errorTitle = sendError?.status === 401 ? "Your PayPal login has expired" : "The photos didn’t send";
+  const errorText = sendError?.status === 401 ? "Log in again to send them. You’ll need to retake them afterwards." : sendError?.message;
   const shown = viewing !== null ? shots[viewing] : undefined;
 
   return (
@@ -562,7 +562,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} />
           ) : (
             <Button variant="tertiary" size="sm" onClick={() => setPhoneOpen(true)}>
-              Use your phone&apos;s camera instead
+              Use your phone&rsquo;s camera instead
             </Button>
           )}
         </div>
@@ -581,9 +581,9 @@ const MESSAGES: Record<Exclude<CameraState, "live"> | "expired", { title: string
   starting: { title: "Waiting for the camera", body: "Your browser will ask to use it. Choose Allow." },
   denied: { title: "Camera is off for this site", body: DENIED.other, retry: true },
   nocamera: { title: "No camera found", body: "Photos can only come from a live camera, never a file. Use a phone or a laptop with a camera." },
-  insecure: { title: "The camera needs a secure page", body: "Browsers only open the camera over https. Open this page's https address, or use your phone." },
-  error: { title: "The camera didn't start", body: "Another app may be using it. Close that app, then try again.", retry: true },
-  expired: { title: "Your 10 minutes are up", body: "Codes last 10 minutes, so photos can't be taken in advance. Get a new code to start again." },
+  insecure: { title: "The camera needs a secure page", body: "Browsers only open the camera over https. Open this page’s https address, or use your phone." },
+  error: { title: "The camera didn’t start", body: "Another app may be using it. Close that app, then try again.", retry: true },
+  expired: { title: "Your 10 minutes are up", body: "Codes last 10 minutes, so photos can’t be taken in advance. Get a new code to start again." },
 };
 
 /**

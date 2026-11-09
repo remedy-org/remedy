@@ -29,7 +29,7 @@ export function PhoneHandoff({ qrSvg, url, code, primary, className }: PhoneHand
       () => setCopied("yes"),
       () => setCopied("no"),
     ) ?? setCopied("no");
-  const said = copied === "yes" ? "Link copied" : copied === "no" ? "Couldn't copy. The link is above." : "";
+  const said = copied === "yes" ? "Link copied" : copied === "no" ? "Couldn’t copy. The link is above." : "";
   return (
     // On the page, not in a box of its own: the code on the cream paper the tag is on, so it's the same object, not a
     // second bright slab. Ink on paper reads in any phone camera, in either theme.
@@ -45,7 +45,7 @@ export function PhoneHandoff({ qrSvg, url, code, primary, className }: PhoneHand
           {primary ? "Take the photo on your phone" : "Continue on your phone"}
         </p>
         <p className="text-ui text-muted">
-          Scan it with the phone&apos;s camera and log in with the same PayPal account. Your code stays <span className="font-mono text-text">{code}</span>.
+          Scan it with the phone&rsquo;s camera and log in with the same PayPal account. Your code stays <span className="font-mono text-text">{code}</span>.
         </p>
         {/* The link on one line, its middle elided so it never breaks mid-word: Copy link carries the whole of it. Named for
             what it is, so a screen reader doesn't spell out the address. */}

@@ -13,13 +13,13 @@ export function limitCopy({ kind, limit, until }: Refusal, { now }: { now: Date 
   const retry = retryIn(until, now);
   switch (kind) {
     case "account":
-      return { title: "This PayPal account has started today's claims", description: `Each PayPal account can start ${plural(limit, "claim")} a day. ${nothing}`, retry };
+      return { title: "This PayPal account has started today’s claims", description: `Each PayPal account can start ${plural(limit, "claim")} a day. ${nothing}`, retry };
     case "daily":
-      return { title: "Remedy is at today's limit for new claims", description: nothing, retry };
+      return { title: "Remedy is at today’s limit for new claims", description: nothing, retry };
     case "monthly":
-      return { title: "Remedy is at this month's limit for new claims", description: nothing, retry };
+      return { title: "Remedy is at this month’s limit for new claims", description: nothing, retry };
     case "checks":
-      return { title: "Today's photo checks are used up", description: nothing, retry };
+      return { title: "Today’s photo checks are used up", description: nothing, retry };
   }
 }
 
@@ -43,7 +43,7 @@ export function LimitNotice({ refusal, demo, notice, now = new Date() }: { refus
         {demo
           ? "The company console shows every claim so far."
           : notice
-            ? `Your refund is still owed: ${notice.company}'s recall notice says how to reach them for it.`
+            ? `Your refund is still owed: ${notice.company}’s recall notice says how to reach them for it.`
             : null}
       </Notice>
     </div>
@@ -62,7 +62,7 @@ export function LimitNextStep({ demo, notice }: { demo: boolean; notice?: Recall
   if (!notice) return null;
   return (
     <Button href={notice.url} size="lg" block target="_blank" rel="noopener noreferrer">
-      Read {notice.company}&apos;s recall notice
+      Read {notice.company}&rsquo;s recall notice
     </Button>
   );
 }

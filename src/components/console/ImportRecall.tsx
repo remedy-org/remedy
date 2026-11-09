@@ -29,7 +29,7 @@ function importSteps(at: Step["at"], notice?: CpscSummary): CheckStep[] {
   const read = at === "reading" ? "running" : notice ? "pass" : "waiting";
   const draft = at === "drafting" ? "running" : at === "draft_failed" ? "hold" : "waiting";
   return [
-    { id: "cpsc", label: "Read CPSC's record", state: read, detail: notice ? `Recall ${notice.id}, ${units(notice)}` : "Product, units sold and the remedy" },
+    { id: "cpsc", label: "Read CPSC’s record", state: read, detail: notice ? `Recall ${notice.id}, ${units(notice)}` : "Product, units sold and the remedy" },
     { id: "draft", label: "Draft the photo checks", state: draft, detail: at === "draft_failed" ? "No draft came back" : "From the notice and its photos, about 15 seconds" },
     { id: "review", label: "You review and publish", state: "waiting", detail: "Nothing goes live until you publish" },
   ];
@@ -110,9 +110,9 @@ export function ImportRecall({ example, company }: { example: string; company?: 
             <h2 ref={stage} tabIndex={-1} className="text-body font-medium outline-none">
               Drafting the photo checks
             </h2>
-            <p className="mt-1 text-ui text-muted">From the notice and its photos, Remedy writes what an owner&apos;s photos must show.</p>
+            <p className="mt-1 text-ui text-muted">From the notice and its photos, Remedy writes what an owner&rsquo;s photos must show.</p>
           </div>
-          <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn't finish", running: "Drafting" }} quiet={["draft"]} />
+          <CheckList label="Import progress" steps={importSteps(step.at, step.notice)} words={{ hold: "Didn’t finish", running: "Drafting" }} quiet={["draft"]} />
           {/* The failure in the card's own type, one line and its two ways on: no box inside the box. */}
           {step.at === "draft_failed" && (
             <div className="flex flex-col gap-3">
@@ -188,15 +188,15 @@ export function ImportRecall({ example, company }: { example: string; company?: 
 const INTRO = {
   find: {
     title: "Import a recall from CPSC",
-    lead: "Paste the cpsc.gov link or recall number. Remedy reads CPSC's record, drafts the photo checks from its text and photos, and you edit them before the claim page goes live.",
+    lead: "Paste the cpsc.gov link or recall number. Remedy reads CPSC’s record, drafts the photo checks from its text and photos, and you edit them before the claim page goes live.",
   },
   drafting: {
     title: "Import a recall from CPSC",
-    lead: "Remedy has read CPSC's record and is drafting the photo checks. You review every line before anything goes live.",
+    lead: "Remedy has read CPSC’s record and is drafting the photo checks. You review every line before anything goes live.",
   },
   edit: {
     title: "Review the photo checks",
-    lead: "Edit what an owner's photos must show, set the refund, then publish the claim link. Nothing goes live until you publish.",
+    lead: "Edit what an owner’s photos must show, set the refund, then publish the claim link. Nothing goes live until you publish.",
   },
 };
 
@@ -226,13 +226,13 @@ function Layout({ notice, company, intro, children }: { notice: CpscSummary; com
             recall repairs. Publishing stays possible; the company decides. */}
         {other && (
           <p className="border-l-2 border-hold pl-3 text-ui text-text">
-            CPSC lists a {other} as this recall&apos;s remedy. Remedy pays refunds for destroyed units.
+            CPSC lists a {other} as this recall&rsquo;s remedy. Remedy pays refunds for destroyed units.
           </p>
         )}
         {/* Quiet, not a stop: a company can run a recall CPSC files under its maker or its retailer. */}
         {otherFirm && (
           <p className="text-ui text-muted">
-            CPSC names {otherFirm} for this recall; you&apos;re signed in as {company}. Publish it only if your company runs this recall.
+            CPSC names {otherFirm} for this recall; you&rsquo;re signed in as {company}. Publish it only if your company runs this recall.
           </p>
         )}
         {children}

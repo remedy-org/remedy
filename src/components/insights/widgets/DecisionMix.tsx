@@ -9,12 +9,12 @@ import { shownAs } from "../funnel";
 import { moveBetweenItems } from "./listKeys";
 import { num, useRows } from "./useRows";
 
-// Custom widget 4: what the rule decided, as one 100% bar in the state colours every pill and barcode in Remedy uses.
+// Custom widget 4: what the rule decided, as one 100% bar in the charts' palette (theme.ts): Paid as an area is --pay-fill.
 // A built-in donut takes its colours from palette order, so a decision's colour would depend on the data; this can't.
 
 const ORDER = ["Paid", "Held", "Rejected", "Blocked", "In progress"];
 const FILL: Record<string, string> = {
-  Paid: "bg-pay",
+  Paid: "bg-pay-fill",
   Held: "bg-hold",
   Rejected: "bg-stop",
   Blocked: "bg-[color-mix(in_oklch,var(--stop)_55%,var(--surface))]",

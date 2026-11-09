@@ -57,7 +57,7 @@ export function StaticFigures() {
         <div className="grid-12 gap-y-5 lg:items-end">
           <div className="col-span-12 lg:col-span-7">
             <p className="eyebrow text-muted">How it works</p>
-            {/* tabIndex -1: the nav's How it works focuses it after the jump. */}
+            {/* tabIndex -1: the nav’s How it works focuses it after the jump. */}
             <h2 id="how-title" tabIndex={-1} className="mt-5 text-title-lg font-medium text-balance">
               Paid {CLAIM.seconds} seconds after the photo. <span className="text-muted">One claim, start to finish.</span>
             </h2>
@@ -92,7 +92,9 @@ export function StaticFigures() {
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col leading-tight">
                   <span className="font-mono text-ui font-medium">{CLAIM.id}</span>
-                  <span className="font-mono text-micro text-faint">Code {CLAIM.code}</span>
+                  <span className="text-micro text-faint">
+                    Code <span className="font-mono">{CLAIM.code}</span>
+                  </span>
                 </span>
                 <span className="flex flex-col items-end gap-1">
                   <VerdictMark verdict="paid" />

@@ -70,9 +70,9 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
     <form onSubmit={submit} className="flex flex-col gap-8" noValidate>
       <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
         <div>
-          <h2 className="text-body font-medium">What an owner&apos;s photos must show</h2>
+          <h2 className="text-body font-medium">What an owner&rsquo;s photos must show</h2>
           <p className="mt-1 text-ui text-muted">
-            {drafted ? "Drafted from the notice. " : ""}Remedy checks every claim&apos;s photos against these lines, and money moves only when each one is visibly
+            {drafted ? "Drafted from the notice. " : ""}Remedy checks every claim&rsquo;s photos against these lines, and money moves only when each one is visibly
             confirmed. Ask only for what a photo can show.
           </p>
         </div>

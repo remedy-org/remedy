@@ -3,7 +3,7 @@ import { Button } from "@/components/ui";
 
 /** A link that leads nowhere (or a page that failed): what's missing, where the right link is, and one way on. */
 export function NotFoundCard({
-  title = "We can't find this recall",
+  title = "We can’t find this recall",
   description = "Use the link or QR code on your recall notice.",
   action,
   alert,

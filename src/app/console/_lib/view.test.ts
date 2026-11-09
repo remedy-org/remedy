@@ -114,12 +114,12 @@ describe("console view", () => {
 
   it("says a photo check that never answered in the company's words, not the owner's", () => {
     const model = { check: "model", text: "The photo check didn't answer, so a person will look at your photos instead" };
-    expect(companyReasonText(model, "held")).toBe("The photo check didn't answer (a service error), so this claim needs your review. Nothing has been paid.");
+    expect(companyReasonText(model, "held")).toBe("The photo check didn’t answer (a service error), so this claim needs your review. Nothing has been paid.");
     // The grid's line is short enough to read whole beside the pill; the panel keeps the full sentence.
     expect(companyReasonText(model, "held", true)).toBe("Photo check errored: needs your review");
     expect(companyReasonText({ check: "model", text: "Remedy's daily photo-check limit is reached; a person will review this claim" }, "held", true)).toBe("Daily check limit reached: needs your review");
-    expect(companyReasonText(model, "paid")).toBe("The photo check didn't answer (a service error), so a person at the company reviewed it.");
-    expect(companyReasonText({ check: "same_item", text: "Couldn't tell" }, "held")).toBe("Couldn't tell");
+    expect(companyReasonText(model, "paid")).toBe("The photo check didn’t answer (a service error), so a person at the company reviewed it.");
+    expect(companyReasonText({ check: "same_item", text: "Couldn't tell" }, "held")).toBe("Couldn’t tell");
     const claim = sampleClaim({ decision: "held", reasons: [{ ...model, outcome: "hold" }] });
     expect(decisionSentence(claim, recall)).toBe("The photo check gave no answer, so the rule couldn't decide: a person approves or rejects the $29.99 refund.");
     expect(toDrawerClaim(claim, recall).checks[0].rule).not.toContain("your photos");
@@ -295,7 +295,7 @@ describe("recall import", () => {
   it("makes slugs unique and short", () => {
     expect(slugify("Gourmia Stainless Steel Digital 9 Slice Digital Air Fryer Ovens")).toBe("gourmia-stainless-steel-digital-9-slice-digital");
     expect(slugify("Ekouaer Girls’ Nightgowns")).toBe("ekouaer-girls-nightgowns");
-    expect(shownSpec(DEMO_SPEC).label_must_show[0]).toBe("X-VESOLJE, hand-written on a paper tag tied to the pillow (the product's label)");
+    expect(shownSpec(DEMO_SPEC).label_must_show[0]).toBe("X-VESOLJE, hand-written on a paper tag tied to the pillow (the product’s label)");
     expect(shownSpec(DEMO_SPEC).product).not.toMatch(/demo|stand-in/);
     expect(shownSpec(DEMO_SPEC).note).toBe("");
     expect(uniqueSlug("pillows", [{ slug: "pillows", id: "27-071" }], "27-099")).toBe("pillows-2");

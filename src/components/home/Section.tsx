@@ -15,7 +15,7 @@ export interface SectionProps {
   stack?: boolean;
   /** paper: the page's one light band (paper and ink), used once, for the problem. */
   tone?: "dark" | "paper";
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
   /** Laptop columns for the heading: 7 (with a lead beside it), 9 (no lead, a longer two-tone line) or 12 (each tone
    * on one line). */
@@ -30,6 +30,8 @@ export interface SectionProps {
   reveal?: "focus" | "rise";
   /** With `stack`: what stands beside the heading and its lead on laptops, on columns 8 to 12 (under them on phones). */
   aside?: ReactNode;
+  /** With `stack`: a footnote under the lead on laptops, so the aside beside them ends on its last line; last on phones. */
+  note?: ReactNode;
 }
 
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
@@ -55,6 +57,7 @@ export function Section({
   pageClassName,
   reveal = "focus",
   aside,
+  note,
 }: SectionProps) {
   const headingId = `${id}-title`;
   const enter = reveal === "rise" ? styles.rise : styles.line;
@@ -83,8 +86,14 @@ export function Section({
             )}
           </div>
           {aside && stack && (
-            <div className={clsx(enter, "col-span-12 mt-6 lg:col-span-5 lg:col-start-8 lg:mt-0")} style={line(3)}>
+            <div className={clsx(enter, "col-span-12 mt-6 lg:col-span-5 lg:col-start-8 lg:mt-0", note && "lg:row-span-2 lg:row-start-1")} style={line(3)}>
               {aside}
+            </div>
+          )}
+          {/* Under the lead on laptops (the aside ends on its last line); last on phones, after every mark it sources. */}
+          {note && stack && (
+            <div className={clsx(enter, "col-span-12 max-lg:order-last lg:col-span-7 lg:col-start-1 lg:row-start-2")} style={line(3)}>
+              {note}
             </div>
           )}
           {lead && !stack && (
@@ -96,7 +105,7 @@ export function Section({
             </p>
           )}
         </Reveal>
-        <div className={bodyClassName}>{children}</div>
+        {children != null && <div className={bodyClassName}>{children}</div>}
       </div>
     </section>
   );

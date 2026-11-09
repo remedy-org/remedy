@@ -551,7 +551,7 @@ function deciding(claim: DrawerClaim): { title: string; detail: string | null; e
   if (refused) {
     return {
       title: "Not paid on review",
-      detail: `When it was approved at ${formatClock(refused.at)} UTC, Remedy checked again and didn't send the payout: ${refused.text.charAt(0).toLowerCase()}${refused.text.slice(1)}.`,
+      detail: `When it was approved at ${formatClock(refused.at)} UTC, Remedy checked again and didn’t send the payout: ${refused.text.charAt(0).toLowerCase()}${refused.text.slice(1)}.`,
       evidence: null,
     };
   }
@@ -772,7 +772,7 @@ function Evidence({
                 <LinkedIds text={e.detail.replace(/(\d+\.\d+) s\b/, (_, n: string) => duration(Number(n)))} onOpen={onOpen} self={claim.id} />
                 {e.raw && (
                   <details className="mt-1">
-                    <summary className="cursor-pointer text-micro text-faint hover:text-muted">Service&apos;s answer</summary>
+                    <summary className="cursor-pointer text-micro text-faint hover:text-muted">Service&rsquo;s answer</summary>
                     <span className="mt-1 block font-mono text-micro break-words text-faint">{e.raw}</span>
                   </details>
                 )}
@@ -786,7 +786,7 @@ function Evidence({
 }
 
 // What a part that didn't pass says in a word, after its name: the reason itself is the panel's heading.
-const PART_STATE: Partial<Record<string, string>> = { hold: "couldn't tell", reject: "failed" };
+const PART_STATE: Partial<Record<string, string>> = { hold: "couldn’t tell", reject: "failed" };
 
 /**
  * Under one of the five checks: why it was skipped, or each thing recorded under it, what held or failed first. One part
@@ -894,7 +894,7 @@ function Duplicate({ claim, onOpen, onView }: { claim: DrawerClaim; onOpen?: (id
         {dup.src ? (
           <EvidencePhoto src={dup.src} n={dup.theirs} of={dup.of} tall />
         ) : (
-          <p className="flex aspect-[3/4] items-center justify-center rounded-control border border-dashed border-line-strong px-3 text-center text-ui text-muted">The earlier photo isn&apos;t available</p>
+          <p className="flex aspect-[3/4] items-center justify-center rounded-control border border-dashed border-line-strong px-3 text-center text-ui text-muted">The earlier photo isn&rsquo;t available</p>
         )}
         <p className="text-micro text-muted">
           Earlier claim,{" "}

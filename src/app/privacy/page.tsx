@@ -20,7 +20,7 @@ export default function PrivacyPage() {
         },
         {
           title: "Your photos",
-          body: "You take your photos in the claim page's own camera. Remedy sends them to OpenAI's vision model to describe what they show, and a fixed rule decides your claim. Beyond that, only the company running the recall sees them.",
+          body: "You take your photos in the claim page’s own camera. Remedy sends them to OpenAI’s vision model to describe what they show, and a fixed rule decides your claim. Beyond that, only the company running the recall sees them.",
         },
         {
           title: "What the company sees",
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
           title: "Cookies",
           body: "Remedy sets cookies only to keep you logged in, to secure the PayPal login and to keep your place in a claim. Your theme choice is saved in your browser.",
         },
-        { title: "Payouts", body: "Refunds are sent through PayPal Payouts. PayPal's own privacy statement covers your PayPal account." },
+        { title: "Payouts", body: "Refunds are sent through PayPal Payouts. PayPal’s own privacy statement covers your PayPal account." },
       ]}
     />
   );

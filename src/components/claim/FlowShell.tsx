@@ -32,7 +32,7 @@ export function FlowShell({ children, context }: FlowShellProps) {
           <div className="flex h-16 items-center justify-between gap-4 [@media(max-height:600px)]:h-12">
             <div className="flex min-w-0 items-center gap-4">
               {/* No homepage prefetch: an owner from a recall email never opens it, and on a phone it costs data. */}
-              <Wordmark href="/" prefetch={false} />
+              <Wordmark size="md" href="/" prefetch={false} />
               {context && (
                 <>
                   <span aria-hidden="true" className="h-4 w-px shrink-0 bg-line-2 max-sm:hidden" />

@@ -11,7 +11,7 @@ export function MobileSummary({ data }: { data: InsightsData }) {
   const filed = steps[0].reached || 1;
 
   return (
-    <section aria-label="Summary" className="flex flex-col gap-6 px-4 pb-8 sm:hidden">
+    <section aria-label="Summary" className="page flex flex-col gap-6 pb-8 sm:hidden">
       <InsightsLedger claims={data.claims} unitsSold={data.recall.unitsSold} />
 
       <div>
@@ -25,7 +25,7 @@ export function MobileSummary({ data }: { data: InsightsData }) {
               </div>
               <span aria-hidden="true" className="h-2 rounded-[3px] bg-surface-2">
                 <span
-                  className={clsx("block h-full rounded-[3px]", i === steps.length - 1 ? "bg-pay" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
+                  className={clsx("block h-full rounded-[3px]", i === steps.length - 1 ? "bg-pay-fill" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
                   style={{ width: `${(s.reached / filed) * 100}%` }}
                 />
               </span>

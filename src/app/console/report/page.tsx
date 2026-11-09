@@ -17,11 +17,11 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
 
   if (!recall) {
     return (
-      <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
+      <main className="page flex flex-1 flex-col py-8">
         <EmptyState
           className="my-auto"
           title="No recall to report on"
-          description="The progress report is drafted from a recall's claims. Import a recall first."
+          description="The progress report is drafted from a recall’s claims. Import a recall first."
           action={<Button href="/console/recalls/new">Import a recall</Button>}
         />
       </main>
@@ -39,7 +39,7 @@ export default async function ReportPage({ searchParams }: PageProps<"/console/r
   return (
     // The title and its actions on one row, as the claims page has them (print, and the recall picker), then the sheet
     // at its reading width, centred on the page as a document is. The sheet names the recall and date.
-    <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8 print:p-0">
+    <main className="page flex flex-1 flex-col py-8 print:p-0">
       <style>{page}</style>
       <div className="mx-auto flex w-full max-w-[52rem] flex-col gap-8 print:block print:max-w-none">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 print:hidden">

@@ -123,7 +123,7 @@ export function ConsentChapter({ p }: { p?: Progress }) {
           {/* The offer heads the card, as the claim page's does: no company badge (the seller is in the recall's facts).
               On a phone, where the brief is hidden, the recall is said once above it; a short phone gives it way. */}
           <span className={clsx("text-ui text-muted @min-[720px]:hidden", compact && "@max-[719px]:hidden")}>
-            <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall · <span className="font-mono">{CLAIM.recall}</span>
+            <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall · <span className="font-mono whitespace-nowrap">{CLAIM.recall}</span>
           </span>
           {/* The claim page's headline and the line under it (ConsentCard.tsx): one ink, the line a step down. */}
           <div className="flex flex-col gap-2">
@@ -336,7 +336,8 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
       <span className="hidden @min-[720px]:block">
         <Barcode bars={barsOf(row)} />
       </span>
-      <span className="hidden text-faint @min-[720px]:block">{row.time ?? "—"}</span>
+      {/* Right-aligned on tabular figures, as the console's own column: "11 s" over "14 s" keeps one edge. */}
+      <span className="hidden text-right text-faint tabular-nums @min-[720px]:block">{row.time ?? "—"}</span>
       <span className="flex items-center justify-end gap-3">
         <span className="@min-[720px]:hidden">
           <VerdictMark verdict={row.status} className={EXCEPTION.has(row.status) ? "text-text" : undefined} />
@@ -381,7 +382,7 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             <span>Claim</span>
             <span>Verdict</span>
             <span>Checks</span>
-            <span>Answered in</span>
+            <span className="text-right">Answered in</span>
             <span className="text-right">Amount</span>
           </div>
           {/* As many whole rows as the panel holds, so a tall screen shows more of the queue: a row that would not fit

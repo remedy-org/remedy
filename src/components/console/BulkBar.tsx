@@ -126,7 +126,7 @@ export function BulkBar({
           }}
         >
           <label htmlFor="bulk-reason" className="font-medium text-text">
-            Why {held.length === 1 ? "it's" : "they're"} rejected
+            Why {held.length === 1 ? "it’s" : "they’re"} rejected
           </label>
           <textarea
             id="bulk-reason"

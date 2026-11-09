@@ -16,8 +16,8 @@ export type AuthError = "denied" | "state" | "paypal" | "refused";
 const AUTH_ERRORS: Record<AuthError, { title: string; description: string }> = {
   denied: { title: "The PayPal login was cancelled", description: "Remedy needs it to know which PayPal account to refund. Nothing was shared." },
   state: { title: "That login took too long", description: "The PayPal page was open for more than 10 minutes, or in another tab. Log in again." },
-  paypal: { title: "PayPal didn't answer", description: "Nothing was shared and no claim was started. Try again in a minute." },
-  refused: { title: "PayPal wouldn't share this account", description: "Nothing was shared and no claim was started. Log in with a different PayPal account, such as a personal one." },
+  paypal: { title: "PayPal didn’t answer", description: "Nothing was shared and no claim was started. Try again in a minute." },
+  refused: { title: "PayPal wouldn’t share this account", description: "Nothing was shared and no claim was started. Log in with a different PayPal account, such as a personal one." },
 };
 
 /** The owner's claim for this recall, already under way: the one Continue would lead back to. */
@@ -90,7 +90,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
     return (
       <section aria-labelledby="consent-title" className={`${frame} gap-6`}>
         <ClaimStatus claim={yourClaim} company={company} action={action} />
-        <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : "You log in on PayPal's own page."}</p>
+        <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : "You log in on PayPal’s own page."}</p>
       </section>
     );
   }
@@ -105,7 +105,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <p className="text-body text-pretty text-muted">
           {demo ? (
             <>
-              Send four claims for the <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens>. Remedy pays the genuine one and stops the three that aren&apos;t.
+              Send four claims for the <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens>. Remedy pays the genuine one and stops the three that aren&rsquo;t.
             </>
           ) : (
             how
@@ -119,7 +119,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       {demo && !signedInAs && (
         <div className="flex flex-col gap-3">
           <p id="four-claims" className="text-ui text-muted">
-            The four claims you&apos;ll send
+            The four claims you&rsquo;ll send
           </p>
           <ul aria-labelledby="four-claims" className="grid grid-cols-2 gap-x-4 gap-y-3">
             {DEMO_SAMPLES.map((sample) => (
@@ -134,7 +134,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       )}
 
       {unverified && (
-        <Notice title="This PayPal account isn't verified">PayPal only lets us refund verified accounts. Verify yours with PayPal (a confirmed email and a linked bank or card), then log in again.</Notice>
+        <Notice title="This PayPal account isn’t verified">PayPal only lets us refund verified accounts. Verify yours with PayPal (a confirmed email and a linked bank or card), then log in again.</Notice>
       )}
       {error && <Notice title={error.title}>{error.description}</Notice>}
       {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} notice={notice} />}
@@ -142,7 +142,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       <div className="flex flex-col gap-4">
         {/* Before the button, so the copy buttons come first in reading and Tab order. */}
         {demo && !signedInAs && judgeLogin && <JudgeLoginPanel id={JUDGE_LOGIN_ID} login={judgeLogin} />}
-        {demo && !signedInAs && !judgeLogin && <p className="text-ui text-muted">Log in with a PayPal demo account. Your own PayPal login won&apos;t work here.</p>}
+        {demo && !signedInAs && !judgeLogin && <p className="text-ui text-muted">Log in with a PayPal demo account. Your own PayPal login won&rsquo;t work here.</p>}
         {/* Refused by a limit: nothing starts until it resets, so the button is the notice's next step instead. */}
         {refusal ? (
           <LimitNextStep demo={Boolean(demo)} notice={notice} />
@@ -162,8 +162,8 @@ const CLAIM_STATUS: Record<Decision, (company: string) => string> = {
   held: (company) => `A person at ${company} will check your claim`,
   paid: () => "Your refund was paid",
   pending: () => "Your claim is open",
-  rejected: () => "We couldn't pay your claim",
-  blocked: () => "We couldn't pay your claim",
+  rejected: () => "We couldn’t pay your claim",
+  blocked: () => "We couldn’t pay your claim",
 };
 
 /** A claim already under way: its number, where it stands, and the way back to it. Nothing new starts here. */
@@ -174,7 +174,7 @@ function ClaimStatus({ claim, company, action }: { claim: YourClaim; company: st
     claim.decision === "held"
       ? `They decide by ${claim.decideBy}.`
       : claim.decision === "paid"
-        ? `Paid on ${claim.paidOn}. This account's claim for this recall is done.`
+        ? `Paid on ${claim.paidOn}. This account’s claim for this recall is done.`
         : checking
           ? "Your claim is saved. You can close this page."
           : claim.decision === "pending"

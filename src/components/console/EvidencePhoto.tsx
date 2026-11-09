@@ -59,7 +59,7 @@ export function EvidencePhoto({
       {state === "error" ? (
         <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-ui text-muted">
           <AlertIcon className="text-stop" />
-          Photo didn&apos;t load. {onOpen ? "Open the viewer" : "Open it full size"}, or reload the panel.
+          Photo didn&rsquo;t load. {onOpen ? "Open the viewer" : "Open it full size"}, or reload the panel.
         </span>
       ) : (
         // A private, session-checked route: next/image's optimizer can't fetch it with the company's cookie.

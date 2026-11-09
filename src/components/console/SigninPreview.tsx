@@ -56,7 +56,17 @@ export function SigninPreview({ rows, height }: { rows: PreviewRow[]; height: nu
             ))}
           </div>
         </div>
-        <div className={clsx("px-5 pt-3 transition-opacity duration-500 ease-out", ready ? "opacity-100" : "opacity-0")} style={{ height }}>
+        {/* The queue flush in the window, as the homepage tour draws it: no wrapper border or radius inside the window's
+            own edge (a box in a box), the window's ground under the rows and the header. */}
+        <div
+          className={clsx(
+            "px-5 pt-3 transition-opacity duration-500 ease-out",
+            "[&_.ag-root-wrapper]:rounded-none [&_.ag-root-wrapper]:border-0 [&_.ag-root-wrapper]:[--ag-wrapper-border:none] [&_.ag-root-wrapper]:[--ag-wrapper-border-radius:0]",
+            "[&_.ag-root-wrapper]:[--ag-background-color:var(--bg)] [&_.ag-root-wrapper]:[--ag-data-background-color:var(--bg)] [&_.ag-root-wrapper]:[--ag-chrome-background-color:var(--bg)] [&_.ag-root-wrapper]:[--ag-odd-row-background-color:var(--bg)] [&_.ag-root-wrapper]:[--ag-header-background-color:var(--bg)]",
+            ready ? "opacity-100" : "opacity-0",
+          )}
+          style={{ height }}
+        >
           <ClaimsGrid rows={rows} openId={null} onOpen={noop} onReady={() => setReady(true)} fill keepOrder />
         </div>
       </div>

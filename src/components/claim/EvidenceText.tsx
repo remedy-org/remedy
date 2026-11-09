@@ -57,10 +57,10 @@ export function ModelQuote({ children }: { children: string }) {
 
 // What failed, as a sentence an owner can read aloud.
 const FAILED: Record<string, (cut: boolean) => string> = {
-  session: () => "Not sent from Remedy's camera",
+  session: () => "Not sent from Remedy’s camera",
   duplicate: () => "Photo sent before",
   account: () => "This PayPal account has claimed already",
-  code: () => "The tag doesn't match",
+  code: () => "The tag doesn’t match",
   destroyed: (cut) => (cut ? "Not cut in half" : "Not destroyed"),
 };
 
@@ -83,12 +83,12 @@ const and = (parts: string[]) => (parts.length < 2 ? (parts[0] ?? "") : `${parts
 export function evidenceSummary(six: Pick<SixRow, "key" | "state" | "unrun">[], { decision, cut, unanswered }: { decision: Decision; cut: boolean; unanswered: boolean }): string {
   const checks = six.filter((r) => r.key !== "refund");
   if (decision === "paid") return `All ${checks.length} checks passed`;
-  if (unanswered) return "The photo check didn't answer";
+  if (unanswered) return "The photo check didn’t answer";
   const failed = checks.filter((r) => r.state === "reject" || r.state === "blocked");
   const review = checks.filter((r) => r.state === "hold").map((r) => NAMED[r.key](cut));
   if (failed.length) {
     const what = failed.map((r) => `${FAILED[r.key](cut)}.`).join(" ");
-    return checks.some((r) => r.unrun && (r.key === "code" || r.key === "destroyed")) ? `${what} The photo check didn't run.` : what;
+    return checks.some((r) => r.unrun && (r.key === "code" || r.key === "destroyed")) ? `${what} The photo check didn’t run.` : what;
   }
   if (review.length) {
     const who = and(review);

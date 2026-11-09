@@ -2,7 +2,7 @@ import { Button, EmptyState } from "@/components/ui";
 
 export default function RecallNotFound() {
   return (
-    <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
+    <main className="page flex flex-1 flex-col py-8">
       <EmptyState
         className="my-auto"
         title="No recall with that number in your workspace"

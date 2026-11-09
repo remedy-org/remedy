@@ -235,7 +235,7 @@ export function reasonOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHas
       return c.reason ? companyReasonText(c.reason, "held", true) : recall.autoPay ? "All checks passed; held for a person" : "All checks passed; auto-pay is off";
     case "rejected":
     case "blocked":
-      return c.reason?.text ?? "Refused";
+      return c.reason ? typeset(c.reason.text) : "Refused";
     case "pending":
       return c.photoHashes.length ? "Checking the photos" : "Waiting for photos";
   }
@@ -257,9 +257,16 @@ const modelHoldCause = (text: string, short = false) => {
   return text.replace(/[,;]\s*(?:so )?a person will (?:look at your photos|review this claim)(?: instead)?\.?$/, "");
 };
 
+/** A stored reason keeps the rule's straight apostrophes (the patterns above match them); a company reads it typeset. */
+export const typeset = (text: string) => text.replace(/(?<=\p{L})'(?=\p{L})/gu, "\u2019");
+
 /** A reason as the company reads it: the "model" holds in the reviewer's words, every other reason as written. short:
  * the grid's one line. */
 export function companyReasonText(r: Pick<Reason, "check" | "text">, decision: Decision, short = false): string {
+  return typeset(reasonWords(r, decision, short));
+}
+
+function reasonWords(r: Pick<Reason, "check" | "text">, decision: Decision, short: boolean): string {
   // A proof step the photos showed is the step itself, without the rule's "Done:" before it.
   if (/^step_\d+$/.test(r.check) && r.text.startsWith("Done: ")) return r.text.slice(6, 7).toUpperCase() + r.text.slice(7);
   if (r.check !== "model") return r.text;
@@ -545,6 +552,6 @@ export const shownSpec = <T extends { product: string; label_must_show: string[]
   // The shared recall accepts a plain stand-in pillow (the real one isn't sold any more): said as the product's own rule,
   // so an approved claim's sage pillow never contradicts the three prints above it.
   product: spec.product.replace(/\.?\s*In this demo recall,? a plain ([^.]*?) stand-in pillow of any colour counts when it carries the ([^.]*?) tag\.?$/, ". A plain $1 pillow of any colour also counts when it carries the $2 tag.").replace(/\.?\s*In this demo recall[^.]*\.?$/, "."),
-  label_must_show: spec.label_must_show.map((l) => l.replace(/\(this demo stand-in's label\)/, "(the product's label)")),
+  label_must_show: spec.label_must_show.map((l) => l.replace(/\(this demo stand-in's label\)/, "(the product’s label)")),
   ...(spec.note !== undefined && /\bdemo\b/.test(spec.note) ? { note: "" } : {}),
 });

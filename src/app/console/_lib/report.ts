@@ -43,7 +43,7 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
     // Paid only where PayPal confirmed the payout; a claim the rule or a person approved with nothing paid yet is Approved.
     ["paid", "Paid", confirmed, "Unit destroyed on camera; refund paid through PayPal"],
     ...(stats.remedied > confirmed ? [["paid", "Approved", stats.remedied - confirmed, "Unit destroyed on camera; refund approved, not yet paid through PayPal"] as [Decision, string, number, string]] : []),
-    ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn't run, auto-pay was off, or PayPal refused an approved payout"],
+    ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn’t run, auto-pay was off, or PayPal refused an approved payout"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
     ["pending", "In progress", stats.pending, "Code issued; photos not yet checked"],
