@@ -78,6 +78,10 @@ const PROBLEM_OBJECTS = "#problem [data-card]";
 /** A check's heading and its text, kept together (the block less its 24px padding): never a heading alone at the foot. */
 const GATE_TEXT = "#checks ol > li > div:first-child";
 
+/** Fraud checks' own stop: the heading on the top line, never so high that the Problem sheet shows above the section's
+ * edge, and the heading at least 40px under the nav. */
+const checksStop = (p: Page) => p.fit(p.line("#checks header"), { min: p.line("#checks", 0), max: p.line("#checks header", 40) });
+
 /** Check 3 of the laptop matrix (and of the phone list), and the first. */
 const GATE_3 = "#checks ol > li:nth-child(3)";
 const GATE_1 = "#checks ol > li:nth-child(1)";
@@ -114,16 +118,19 @@ export const STOPS: readonly Stop[] = [
   },
   // Fraud checks: the heading on the top line over the four claims and the checks that need no AI. Never so high that
   // the Problem sheet shows above the section's edge, and the heading at least 40px under the nav.
-  {
-    name: "Fraud checks",
-    at: (p) => p.fit(p.line("#checks header"), { min: p.line("#checks", 0), max: p.line("#checks header", 40) }),
-  },
+  { name: "Fraud checks", at: checksStop },
   // Then check 3 to the rule and "Try to fool it", as the last lanes draw down to the checks the model reads and the
   // genuine claim is paid: check 3's hairline tucked under the nav, so it never reads as a second rule under it. On a
-  // tall screen, as high as check 1's, so Results' heading stays below the fold.
+  // tall screen, as high as check 1's, so Results' heading stays below the fold. On a screen tall enough that Fraud
+  // checks' own stop already shows "Try to fool it" whole (2560x1440), there is none: it could only add Results under it.
   {
     name: "Fraud checks, the rule",
-    at: (p) => p.fit(p.line(GATE_3, -1), { min: p.line(GATE_1, -1), before: "#proof header" }),
+    at: (p) => {
+      const head = checksStop(p);
+      const cta = p.foot("#checks [data-try-cta]", 1);
+      if (head !== undefined && cta !== undefined && head >= cta + 8) return undefined;
+      return p.fit(p.line(GATE_3, -1), { min: p.line(GATE_1, -1), before: "#proof header" });
+    },
   },
   // Results: the heading, the zero and the footnote, For companies kept below the fold rather than cut by it. Never
   // showing the end of Fraud checks above it. On a laptop screen 860px tall and up the section is a screen of its own,
@@ -135,9 +142,10 @@ export const STOPS: readonly Stop[] = [
         ? p.line("#proof", 0)
         : p.fit(p.line("#proof header"), { min: p.past("#checks [data-try-cta]"), before: "#companies header" }),
   },
-  // For companies: the heading on the top line with the whole tour under it, wherever the console frame's foot still
-  // clears the screen's foot from there (a tall screen); else the heading 24px under the nav, its eyebrow tucked under
-  // it, where the frame still clears the foot (a 1440x900 laptop: ConsoleTour sizes the frame for this); else the tour
+  // For companies: the eyebrow on the top line with the whole tour under it, wherever the console frame's foot still
+  // clears the screen's foot from there (a 900px laptop screen and taller: ConsoleTour sizes the window to its rows and
+  // the header is tight enough for this); else the heading 24px under the nav, its eyebrow tucked under it, where the
+  // frame still clears the foot; else the tour
   // whole, its steps under the nav, never above the heading's foot. The heading is read whole with air above it, or is
   // wholly under the nav, never jammed against it. Phones and narrow windows, which get the story instead, stop at its
   // heading.

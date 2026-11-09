@@ -54,11 +54,12 @@
 
 /*
  * The window fits a laptop screen with its steps: at most 680px, and never taller than the viewport less the nav (64),
- * the steps row (measured by ConsoleTour.tsx, --rail-h), the 20px between them and 16px of air above and below, so a
- * visitor who picks a step sees the whole step change. Never below 520px, where a step stops reading.
+ * the steps row (measured by ConsoleTour.tsx, --rail-h), the 16px between them and 16px of air above and below, so a
+ * visitor who picks a step sees the whole step change. Never below 520px, where a step stops reading. ConsoleTour
+ * trims it to the queue's whole rows, and to no more rows than the queue has.
  */
 .stage {
-  --frame-h: min(680px, max(520px, calc(100svh - 64px - var(--rail-h, 56px) - 20px - 32px)));
+  --frame-h: min(680px, max(520px, calc(100svh - 64px - var(--rail-h, 56px) - 16px - 32px)));
   scroll-margin-top: 16px;
 }
 

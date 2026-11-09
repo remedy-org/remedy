@@ -124,6 +124,8 @@ describe("scroll stops", () => {
         };
         return sel in tops ? framed(tops[sel], 64, under) : undefined;
       },
+      // "Try to fool it" ends at 11520, below the foot of Fraud checks' own frame.
+      foot: (sel, f) => (sel === "#checks [data-try-cta]" ? 11520 - f * 900 : 0),
       // Results, framed clean: For companies' heading (12530) kept just under the screen's foot.
       fit: (y, frame) => (y === framed(11940, 64, LINE) && frame?.before === "#companies header" ? 12530 - 900 : y),
     };
@@ -134,6 +136,11 @@ describe("scroll stops", () => {
     // A 900px laptop screen and up: Results is a screen of its own, its top straight under the nav.
     const results = STOPS.find((s) => s.name === "Results")!;
     expect(results.at(real)).toBe(framed(11844, 64, 0));
+    // A screen so tall that Fraud checks' own stop shows "Try to fool it" whole has no stop at the rule: it would only
+    // bring Results up under it.
+    const rule = STOPS.find((s) => s.name === "Fraud checks, the rule")!;
+    expect(rule.at(real)).toBe(framed(11050, 64, -1));
+    expect(rule.at({ ...real, foot: (sel, f) => (sel === "#checks [data-try-cta]" ? 11200 - f * 1440 : 0) })).toBeUndefined();
     // A shorter one: Results keeps For companies below the fold, its heading under the screen's foot.
     expect(results.at({ ...real, size: { width: 1440, height: 800 }, fit: (y, frame) => (y === framed(11940, 64, LINE) && frame?.before === "#companies header" ? 12530 - 800 : y) })).toBe(12530 - 800);
   });
