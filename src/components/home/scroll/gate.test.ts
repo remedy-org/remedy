@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createGate, notchQuiet, type GateLenis } from "./gate";
+import { createGate, notchQuiet, type Course, type GateLenis } from "./gate";
 import type { Slow } from "./landing";
 
 // The gate against a stand-in Lenis: wheel streams in, which events it takes, and where it lands the page.
 const STOPS = [0, 1410, 2144, 2821, 3205];
 
-function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner?: number[], pins?: [number, number][]) {
+function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner?: number[], pins?: [number, number][], fit?: Course["fit"]) {
   const listeners = new Map<string, ((e: unknown) => void)[]>();
   vi.stubGlobal("innerHeight", 900);
   vi.stubGlobal("scrollY", at);
@@ -39,7 +39,7 @@ function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner
     },
     start() {},
   };
-  const gate = createGate(() => ({ stops, slow, up, inner, pins }));
+  const gate = createGate(() => ({ stops, slow, up, inner, pins, fit }));
   gate.attach(lenis as unknown as GateLenis);
   let t = 1000;
   /** Sends deltas `gap` ms apart, after `pause` ms; returns how many px reached Lenis (the events the gate let through). */
@@ -377,6 +377,65 @@ describe("wheel stops", () => {
       vi.restoreAllMocks();
       expect(lenis.landed.at(-1)).toBe(pins.length ? 5000 : 1000);
     }
+  });
+
+  /** A free spin from the top whose hand stops with the page at `at`, bound for `rest`: where it comes to rest. */
+  function spinTo(stops: number[], at: number, rest: number, fit?: Course["fit"]) {
+    const { lenis, send, scroll } = setup(0, stops, [], undefined, undefined, [], fit);
+    send(Array(80).fill(100), 14);
+    lenis.targetScroll = rest;
+    lenis.animatedScroll = at;
+    const now = performance.now() + 1000;
+    vi.spyOn(performance, "now").mockReturnValue(now);
+    scroll();
+    vi.restoreAllMocks();
+    return lenis.landed.at(-1);
+  }
+
+  it("brings a free spin bound just past a stop back onto it when the stop ahead is farther, never leaving it off by a line", () => {
+    // Stops about a window apart, as below the Problem sheet: bound 250px past 2000, 750px short of 3000.
+    expect(spinTo([0, 1000, 2000, 3000], 2150, 2250)).toBe(2000);
+    // Nearer the stop ahead, it goes on to it.
+    expect(spinTo([0, 1000, 2000, 3000], 2150, 2600)).toBe(3000);
+    // Going up, the same (its first landing is on 2000): bound 200px above 1000, 800px short of 0.
+    const { lenis, send, scroll } = setup(3000, [0, 1000, 2000, 3000]);
+    send(Array(80).fill(-100), 14);
+    expect(lenis.landed).toEqual([2000]);
+    lenis.targetScroll = 800;
+    lenis.animatedScroll = 900;
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    scroll();
+    vi.restoreAllMocks();
+    expect(lenis.landed.at(-1)).toBe(1000);
+  });
+
+  it("brings a free spin with no stop near to rest on the nearest clean frame within 120px, so no line is cut", () => {
+    const fit = vi.fn((y: number, r: { min: number; max: number }) => Math.min(r.max, Math.max(r.min, 3760)));
+    // Bound for 3700: 1300px past 2400, 1300px short of 5000.
+    expect(spinTo([0, 1000, 2400, 5000], 3600, 3700, fit)).toBe(3760);
+    expect(fit).toHaveBeenCalledWith(3700, { min: 3580, max: 3820 });
+    // Already clean where it rests: no landing.
+    expect(spinTo([0, 1000, 2400, 5000], 3600, 3700, (y) => y)).toBe(1000);
+  });
+
+  it("takes every quick flick of a notched wheel to a stop within 1.25 windows, however short, rather than now and then run free", () => {
+    // Stops about a window apart, as below the Problem sheet: three notches carry a third of the way.
+    const course = [0, 1000, 2050, 3100];
+    for (const [at, to] of [
+      [1000, 2050],
+      [2050, 3100],
+    ]) {
+      const { lenis, send } = setup(at, course);
+      send([100, 100, 100], 24);
+      expect(lenis.landed).toEqual([to]);
+    }
+    const up = setup(2050, course);
+    up.send([-100, -100, -100], 24);
+    expect(up.lenis.landed).toEqual([1000]);
+    // A trackpad's short flick still runs free.
+    const pad = setup(1000, course);
+    pad.send([99.5, 99.5, 99.5], 24);
+    expect(pad.lenis.landed).toEqual([]);
   });
 
   it("lets a wheel held at speed run free at once, the landing or not, and keeps it free over a short pause", () => {

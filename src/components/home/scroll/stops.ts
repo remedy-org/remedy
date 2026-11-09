@@ -368,7 +368,7 @@ export function resolveStops(list: readonly Stop[] = STOPS, page = readPage()): 
 }
 
 /** The stops (the same going up as going down) and the slow stretches between them, read once when a gesture starts
- * (gate.ts). */
+ * (gate.ts), and the clean frame a free run with no stop near comes to rest on. */
 export function resolveCourse(): Course {
   const page = readPage();
   return {
@@ -376,6 +376,7 @@ export function resolveCourse(): Course {
     slow: readAll(SLOW, page),
     inner: resolveStops(STOPS.filter((s) => s.inner), page),
     pins: pinnedStretches(),
+    fit: (y, range) => page.fit(y, range),
   };
 }
 
