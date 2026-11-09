@@ -36,7 +36,8 @@ const linkClass = "inline-flex min-h-11 items-center text-ui text-muted transiti
 
 /**
  * The closing call to action, as the brand's object: a large paper tag hanging on its string, on the page grid: its copy
- * on column 1 (48px in from the tag's edge), its button on column 8, where every section's second text line starts.
+ * on column 1 (48px in from the tag's edge), its button on the tag's right content edge (48px in from its right side),
+ * level with the copy's last line, so the card reads copy then action and no half of it is left empty.
  * The owner's path is the one amber; companies have their Log in with PayPal a screen above, at the end of For
  * companies, and in the sitemap below.
  */
@@ -52,7 +53,7 @@ function CtaTag() {
               Send four claims, one of them genuine. Remedy pays it through PayPal and stops the three fakes.
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-start gap-3 lg:col-span-5 lg:col-start-8 lg:pr-12">
+          <div className="flex shrink-0 flex-col items-start gap-3 lg:col-span-5 lg:col-start-8 lg:items-end lg:pr-12">
             {/* Below sm the button spans the tag with tighter padding, so the label fits on one line at 375px; at 320px it
                 is wider than the tag and wraps, balanced, its ring kept in view. */}
             <Button
