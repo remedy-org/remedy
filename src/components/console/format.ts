@@ -50,6 +50,10 @@ export const formatDayTime = (iso: string) => dayTimeFmt.format(new Date(iso)).r
 const clockFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23", timeZone: "UTC" });
 export const formatClock = (iso: string) => clockFmt.format(new Date(iso));
 
+/** What a check's answer that didn't pass says in a word, after its name ("X-VESOLJE tag on the cut pillow: couldn’t
+ * tell"): the evidence panel's check rows and the homepage's still of it. */
+export const PART_STATE: Partial<Record<string, string>> = { hold: "couldn’t tell", reject: "failed" };
+
 export const formatCount = (n: number) => n.toLocaleString("en-US");
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${formatCount(n)} ${n === 1 ? one : many}`;

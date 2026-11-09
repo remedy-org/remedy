@@ -14,7 +14,6 @@ import { durationFigure, LedgerItem } from "@/components/console/Ledger";
 import { TABS, type Tab } from "@/components/console/StatusTabs";
 import { verdictOf, verdictWord } from "@/components/console/VerdictMark";
 import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME, type StudioFilter } from "@/components/insights/InsightsPreviewLazy";
-import { homeRowsFor } from "@/components/insights/report";
 import { ConsoleFrame } from "./ConsoleFrame";
 import styles from "./tour.module.css";
 import { ReviewFoot, type ReviewPhase } from "./PayoutsNote";
@@ -55,11 +54,11 @@ const STUDIO_FROM = 1024;
 // How long the page must have been still before a pointer resting on the report hands it the wheel.
 const IDLE = 150;
 const STUDIO_WAIT = 8000;
-// The still's entrance on a pick (its bars, then the day columns and their figures, tour.module.css): Studio cuts in
-// only after it, so the cut never lands on a half-grown chart.
+// The frame's inner scrollers: the queue, Insights (Studio's page, taller than the frame) and the report.
+type Area = "grid" | "insights" | "report";
+// The still's entrance on a pick (its bars, tour.module.css): Studio cuts in only after it, so the cut never lands on a
+// half-grown bar.
 const STILL_ENTRANCE = 1500;
-// Studio's canvas rows are 16px, inside 14px of canvas padding and 6px around each panel (InsightsPreview.tsx): its
-// cards sit on the frame's 20px inset with 12px between them, where the still draws its own (homeRowsFor).
 // The nav's height, and the air the nav jump leaves under it.
 const NAV = 64;
 const AIR = 16;
@@ -266,8 +265,8 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const [claim, setClaim] = useState(openId);
   const [status, setStatus] = useState<Tab>("all");
   const [sortEpoch, setSortEpoch] = useState(0);
-  // Which inner scroller the wheel may move (the grid or the report): only one a visitor has clicked or focused.
-  const [engaged, setEngaged] = useState<"grid" | "report" | null>(null);
+  // Which inner scroller the wheel may move (the grid, Insights or the report): only one a visitor has clicked or focused.
+  const [engaged, setEngaged] = useState<Area | null>(null);
   const [dockOut, setDockOut] = useState(false);
   // The arriving claim is in the queue from the start: it is taken out (out of sight) only once the real grid has taken
   // the still's place while the frame is off screen, so it can arrive when the frame comes into view.
@@ -275,7 +274,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const [live, setLive] = useState(false);
   const [swapped, setSwapped] = useState(false);
   const [studioState, setStudioState] = useState<"off" | "mounted" | "shown" | "failed">("off");
-  const [studioRows, setStudioRows] = useState(36);
   const [studioAtPick, setStudioAtPick] = useState(false);
   // The checks popover opens only for a pointer that has moved over the queue since the arrival (a row sliding under a
   // still cursor is not a hover).
@@ -295,7 +293,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const tablist = useRef<HTMLDivElement>(null);
   const stepBar = useRef<HTMLSpanElement>(null);
   const frame = useRef<HTMLDivElement>(null);
-  const insightsBody = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const timers = useRef<number[]>([]);
   const arriving = useRef<number[]>([]);
@@ -308,6 +305,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   }, [step]);
   const gridGate = useRef<HTMLDivElement>(null);
   const reportEl = useRef<HTMLDivElement>(null);
+  const insightsEl = useRef<HTMLDivElement>(null);
   const now = useRef({ step, swapped, arrival, studioState, engaged });
   useEffect(() => {
     now.current = { step, swapped, arrival, studioState, engaged };
@@ -413,7 +411,8 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   useEffect(() => {
     const grid = gridGate.current;
     const report = reportEl.current;
-    if (!grid || !report) return;
+    const insights = insightsEl.current;
+    if (!grid || !report || !insights) return;
     let scrolledAt = 0;
     let idle = 0;
     let last = { x: -1, y: -1 };
@@ -428,13 +427,14 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       window.clearTimeout(idle);
       idle = window.setTimeout(() => {
         if (now.current.step === 3 && report.matches(":hover")) setEngaged("report");
+        else if (now.current.step === 2 && insights.matches(":hover")) setEngaged("insights");
       }, IDLE);
     };
-    const release = (area: "grid" | "report") => setEngaged((e) => (e === area ? null : e));
-    const on = (el: HTMLElement, area: "grid" | "report") => {
+    const release = (area: Area) => setEngaged((e) => (e === area ? null : e));
+    const on = (el: HTMLElement, area: Area) => {
       const enter = () => {
         if (scrolling()) release(area);
-        else if (area === "report") setEngaged(area);
+        else if (area !== "grid") setEngaged(area);
       };
       const move = (e: PointerEvent) => {
         if (!moved(e)) return;
@@ -453,7 +453,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
         el.removeEventListener("pointerleave", leave);
       };
     };
-    const off = [on(grid, "grid"), on(report, "report")];
+    const off = [on(grid, "grid"), on(report, "report"), on(insights, "insights")];
     // AG Grid scrolls the queue itself from a wheel over its header (the header rides in its sticky top rows), before
     // the page's scroll ever sees the event: a fling that landed on this section with the pointer over the header ran
     // its momentum into the list. Until a visitor has engaged the grid, a wheel over it goes to the page alone, handed
@@ -480,14 +480,12 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
 
   // Real Studio replaces the Insights still at 1024px and up, on intent (hover, focus or pick of tab 03, or of the app
   // bar's Insights), and never on Save-Data: a visitor who only scrolls past never loads it (nor its licence notice in
-  // the console). Its canvas is measured from the frame, so it fills the body with nothing cut off. If it hasn't drawn
-  // in 8s, the still stays for the session.
+  // the console). It is the console's page, scrolling in the frame as the still does. If it hasn't drawn in 8s, the
+  // still stays for the session.
   const studioIntent = () => {
     if (!STUDIO_ON_HOME || !studio || now.current.studioState !== "off") return;
     const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
     if (window.innerWidth < STUDIO_FROM || saveData) return;
-    const h = insightsBody.current?.clientHeight ?? 0;
-    if (h) setStudioRows(homeRowsFor(h));
     void loadInsightsPreview();
     setStudioState("mounted");
     later(studioWait.current, STUDIO_WAIT, () => setStudioState((s) => (s === "mounted" ? "failed" : s)));
@@ -604,7 +602,10 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
     if (next === 3 && reportEl.current) {
       reportEl.current.scrollTop = 0;
       reportEl.current.removeAttribute("data-scrolled");
+      reportEl.current.removeAttribute("data-end");
     }
+    // Insights opens on its ledger, as the console's page does.
+    if (next === 2) insightsEl.current?.querySelectorAll("[data-insights-scroll], [data-still]").forEach((el) => (el.scrollTop = 0));
     if (next === 1) {
       setDockOut(false);
       setClaim(id);
@@ -661,7 +662,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
 
   /** The wheel moves an inner scroller only once a visitor has clicked or focused it (the report: or rests on it; the
    * pointer effect above hands it back). */
-  const gate = (area: "grid" | "report") => ({
+  const gate = (area: Area) => ({
     "data-engaged": engaged === area || undefined,
     onPointerDown: () => setEngaged(area),
     onFocus: () => setEngaged(area),
@@ -853,7 +854,8 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
 
         {/* Insights: the still until Studio has drawn, then real Studio over it, live (hover a bar, pick a reason). */}
         <div
-          ref={insightsBody}
+          ref={insightsEl}
+          {...gate("insights")}
           inert={studioState !== "shown"}
           data-on={state.body === "insights" || undefined}
           data-studio-shown={studioState === "shown" || undefined}
@@ -864,7 +866,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
             <div data-studio data-on={studioState === "shown" || undefined} className={clsx(styles.studio, "absolute inset-0 overflow-hidden bg-bg")}>
               <InsightsPreviewLazy
                 data={studio.data}
-                rows={studioRows}
                 active={step === 2}
                 onDisplayed={() => {
                   // A cut, once the still has finished coming in (STILL_ENTRANCE) if it is the step on screen.
@@ -883,7 +884,11 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
           {...gate("report")}
           // A scroller a keyboard can reach, so its pages scroll with the arrow keys too.
           tabIndex={0}
-          onScroll={(e) => e.currentTarget.toggleAttribute("data-scrolled", e.currentTarget.scrollTop > 0)}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            el.toggleAttribute("data-scrolled", el.scrollTop > 0);
+            el.toggleAttribute("data-end", el.scrollTop + el.clientHeight >= el.scrollHeight - 2);
+          }}
           aria-label="CPSC progress report draft"
           data-on={state.body === "report" || undefined}
           className={clsx(styles.body, styles.reportBody)}

@@ -3,7 +3,7 @@
 import { CrossIcon, Skeleton, SkeletonText } from "@/components/ui";
 import type { ClaimRow } from "@/app/console/_lib/view";
 import { EXCEPTION } from "./cells";
-import { formatTime } from "./format";
+import { formatDayTime } from "./format";
 import { VerdictMark, verdictOf } from "./VerdictMark";
 
 // What the evidence panel shows before its claim has loaded: the header from the grid's row (the id, verdict, amount,
@@ -24,7 +24,7 @@ export function RowAmount({ row }: { row: ClaimRow }) {
 export function RowMeta({ row }: { row: ClaimRow }) {
   return (
     <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-ui text-muted">
-      <span>{formatTime(row.createdAt)}</span>
+      <span>{formatDayTime(row.createdAt)}</span>
       <span>
         PayPal <span className="font-mono">{row.payer}</span>
         {!row.verified && <span className="text-stop"> unverified</span>}

@@ -41,6 +41,7 @@ export function SigninPreview({ rows, height }: { rows: PreviewRow[]; height: nu
           <span className="flex gap-5 text-ui font-medium">
             <span className="text-text">Claims</span>
             <span className="text-muted">Insights</span>
+            <span className="text-muted">New recall</span>
             <span className="text-muted">Report</span>
           </span>
           <span className="ml-auto text-ui text-muted">Recall team</span>

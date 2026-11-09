@@ -15,7 +15,7 @@ import { DurationText, EXCEPTION } from "./cells";
 import { DrawerSkeleton, GhostFooter, RowAmount, RowMeta, RowVerdict } from "./EvidenceShell";
 import { CheckList } from "./CheckList";
 import { EvidencePhoto } from "./EvidencePhoto";
-import { formatClock, formatTime } from "./format";
+import { formatClock, formatDayTime, formatTime, PART_STATE } from "./format";
 import { Keys } from "./Keys";
 import { LinkedIds } from "./LinkedIds";
 import { PhotoViewer } from "./PhotoViewer";
@@ -316,7 +316,7 @@ function EvidenceContent({
             // One line in the 440px panel, so the evidence keeps the height: "Unverified" only when it's true, as in the
             // grid (the pre-checks say verified).
             <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-ui text-muted">
-              <span>{formatTime(claim.createdAt)}</span>
+              <span>{formatDayTime(claim.createdAt)}</span>
               <span>
                 PayPal <span className="sr-only">account ending {claim.payer.slice(-4)}</span>
                 <span aria-hidden="true" className="font-mono">
@@ -754,7 +754,7 @@ function Evidence({
           label={`Checks for ${claim.id}`}
           steps={claim.fiveRows.map((r) => ({
             id: String(r.n),
-            label: r.title,
+            label: r.name,
             state: r.state === "reject" ? (r.n <= 3 ? "blocked" : "reject") : r.state,
             detail: r.state === "waiting" || (r.state === "pass" && !open) ? undefined : fiveDetail(r, d, link),
           }))}
@@ -826,9 +826,6 @@ function Evidence({
   );
 }
 
-// What a part that didn't pass says in a word, after its name: the reason itself is the panel's heading.
-const PART_STATE: Partial<Record<string, string>> = { hold: "couldn’t tell", reject: "failed" };
-const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 // No capital after a colon in these rows: "…: Couldn't confirm: The tag…" reads "…: couldn't confirm: the tag…". A
 // word that is a name or a code (PayPal, X-VESOLJE, H9D) keeps its case: only a plain capitalised word is lowered.
@@ -849,9 +846,8 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
   const named = shown.length > 1;
   // An account check's line says what was checked; a photo-check answer's rule only restates its name.
   const restates = (p: Part) => p.state === "pass" && !isPreCheck(p.id);
-  // The answer the row's title already names (fiveRowsOf's title) isn't named again; under a row in doubt, an answer
-  // that passed says so even beside its quote, so what held or failed is the only thing left uncertain.
-  const titled = (p: Part) => row.title !== row.name && p.label === row.title;
+  // The row keeps its check's own name; what held or failed leads the lines under it (shown sorts it first), and under a
+  // row in doubt an answer that passed says so even beside its quote, so what is in doubt is the only thing uncertain.
   const doubted = row.state === "hold" || row.state === "reject";
   return (
     <span className="flex flex-col gap-1.5">
@@ -860,7 +856,7 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
         <span key={p.id} className="block">
           {led(p) ? (
             <span className="text-text">
-              {titled(p) ? capital(PART_STATE[p.state] ?? "see above") : `${p.label}: ${PART_STATE[p.state] ?? "see above"}`}
+              {`${p.label}: ${PART_STATE[p.state] ?? "see above"}`}
               {PART_STATE[p.state] && <span className="text-muted">, see above</span>}
             </span>
           ) : restates(p) && (named || p.evidence) ? (
@@ -868,8 +864,6 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
               {p.label}
               {(!p.evidence || doubted) && <span className="text-muted"> · passed</span>}
             </span>
-          ) : titled(p) && PART_STATE[p.state] ? (
-            <span className="text-text">{capital(PART_STATE[p.state]!)}</span>
           ) : named && PART_STATE[p.state] ? (
             // Its name and state; the rule's own line would only restate the name ("Couldn't confirm: The tag is on…").
             <span className="text-text">

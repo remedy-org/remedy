@@ -77,12 +77,14 @@
 }
 
 /*
- * The grid and the report scroll inside the frame only once a visitor has clicked or focused them (ConsoleTour.tsx
- * gate()): until then they don't scroll, so a wheel passing over the frame moves the page. Their own scrollbars stay
+ * The grid, Insights and the report scroll inside the frame only once a visitor has clicked or focused them (Insights
+ * and the report: or rested on them; ConsoleTour.tsx gate()): until then they don't scroll, so a wheel passing over the
+ * frame moves the page. Their own scrollbars stay
  * out of the picture.
  */
 .gate:not([data-engaged]) :global(.ag-grid-viewport),
-.reportBody:not([data-engaged]) {
+.reportBody:not([data-engaged]),
+.body:not([data-engaged]) :global([data-insights-scroll]) {
   overflow-y: hidden !important;
 }
 
@@ -287,9 +289,9 @@
 }
 
 /*
- * Insights, in AG Studio as on the still: the page reads as the Claims page does. The three figures are a borderless
- * strip; the panels lie flat on the window's ground in a hairline ring; Studio's own
- * toolbar is not drawn. The still (InsightsStill `flat`) is laid out on the same geometry.
+ * Insights, in AG Studio as on the still: the console's own page (insights.css), its ledger over the canvas and its day
+ * lines under it, every panel a section under a hairline on the window's ground; Studio's own toolbar is not drawn. The
+ * still (InsightsStill) draws the same page.
  */
 .studio {
   opacity: 0;
@@ -297,20 +299,6 @@
 
 .studio[data-on] {
   opacity: 1;
-}
-
-.studio :global(.ag-studio-layout-widget-container) {
-  padding: 8px;
-  background: transparent;
-  box-shadow: 0 0 0 1px var(--line) !important;
-}
-
-/* The figures: no ring, their words on the window's 20px inset, as the Claims page's ledger. */
-.studio :global(.ag-studio-layout-content-container > .ag-studio-layout-widget:nth-child(-n + 3) .ag-studio-layout-widget-container) {
-  padding: 0;
-  margin-left: -8px;
-  box-shadow: none !important;
-  border-radius: 0;
 }
 
 .studio :global(.ag-studio-widget-toolbar) {
@@ -324,33 +312,6 @@
 .studio :global(.ag-studio-layout-widget:focus-within) {
   box-shadow: none !important;
   outline: none !important;
-}
-
-/* A tile's caption wraps (a 1024px screen's Refused tile) rather than ending in an ellipsis. */
-.studio :global(.ag-studio-layout-widget-caption) {
-  white-space: normal;
-  text-overflow: clip;
-  text-wrap: pretty;
-}
-
-/* The figures' captions read as the ledger's words: 14px in --muted, 8px under their figure (never left at the tile's
-   foot), as the still draws them. */
-.studio :global(.ag-studio-layout-content-container > .ag-studio-layout-widget:nth-child(-n + 3) .ag-studio-layout-widget-container) {
-  /* The figure's body as tall as its 28px line (its content is laid over it), the caption's row taking the rest. */
-  grid-template-rows: auto 34px 1fr !important;
-}
-
-.studio :global(.ag-studio-layout-content-container > .ag-studio-layout-widget:nth-child(-n + 3) .ag-studio-layout-widget-footer) {
-  align-self: start;
-  /* 8px under the figure's glyphs: its 34px line box already holds 4px of it. */
-  margin-top: 4px;
-  padding-top: 0;
-}
-
-.studio :global(.ag-studio-layout-content-container > .ag-studio-layout-widget:nth-child(-n + 3) .ag-studio-layout-widget-caption) {
-  font-size: var(--text-ui) !important;
-  line-height: 20px !important;
-  color: var(--muted) !important;
 }
 
 /* Once Studio has drawn over it, the still leaves in the same frame: a cut, never a crossfade, so no figure or label
@@ -370,6 +331,12 @@
 
 .reportBody[data-scrolled] {
   border-top-color: var(--line);
+}
+
+/* The draft runs on under the window's foot: its last 96px fade into the window, as /signin's preview does, so the foot
+   never cuts a line through its letters. At the draft's end the fade goes. */
+.reportBody:not([data-end]) {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 96px), transparent calc(100% - 8px));
 }
 
 .reportBody::-webkit-scrollbar {
@@ -538,18 +505,6 @@
     animation-delay: calc(440ms + var(--i, 0) * 80ms);
   }
 
-  .stage[data-step="2"] [data-still] [data-bar="day"] {
-    transform-origin: bottom;
-    animation: column-grow 600ms var(--ease-out-quart) both;
-    animation-delay: calc(640ms + var(--i, 0) * 80ms);
-  }
-
-  /* A day's dollars come in only once its column stands (120ms, from the end of its growth), never over empty space. */
-  .stage[data-step="2"] [data-still] [data-bar="day"] [data-bar-label] {
-    animation: flow-in 120ms ease-out both;
-    animation-delay: calc(1240ms + var(--i, 0) * 80ms);
-  }
-
   .stage[data-step="2"] .answerLine {
     animation: focus-in var(--dur-reveal) var(--ease-out-expo) both;
     animation-delay: calc(300ms + var(--line, 0) * 80ms);
@@ -614,12 +569,6 @@
 @keyframes bar-grow {
   from {
     transform: scaleX(0);
-  }
-}
-
-@keyframes column-grow {
-  from {
-    transform: scaleY(0);
   }
 }
 

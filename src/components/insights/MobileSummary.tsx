@@ -2,16 +2,19 @@ import clsx from "clsx";
 import type { InsightsData } from "@/app/console/insights/facts";
 import { funnel, KIND_LABEL, shownAs } from "./funnel";
 import { InsightsLedger } from "./InsightsLedger";
+import { PaidLines } from "./PaidLines";
+import { paidDays } from "./report";
 
-// Below 640px a phone gets the figures and the funnel as plain HTML from the same facts; from 640px the report is AG
-// Studio's, its panels stacked below 1024px (InsightsLoader). Server-rendered.
+// Below 640px a phone gets the figures, the funnel and the day lines as plain HTML from the same facts; from 640px the report is AG
+// Studio's, its panels stacked below 1024px (InsightsLoader). Server-rendered. The homepage's phone story draws the same
+// summary in its frame (InsightsStill), with its own `className` for the frame's place of the page's.
 
-export function MobileSummary({ data }: { data: InsightsData }) {
+export function MobileSummary({ data, className = "page flex flex-col gap-6 pb-8 sm:hidden", idPrefix = "summary" }: { data: InsightsData; className?: string; idPrefix?: string }) {
   const steps = funnel(data.claims);
   const filed = steps[0].reached || 1;
 
   return (
-    <section aria-label="Summary" className="page flex flex-col gap-6 pb-8 sm:hidden">
+    <section aria-label="Summary" className={className}>
       <InsightsLedger claims={data.claims} unitsSold={data.recall.unitsSold} />
 
       <div>
@@ -40,6 +43,7 @@ export function MobileSummary({ data }: { data: InsightsData }) {
           ))}
         </ol>
       </div>
+      <PaidLines days={paidDays(data.claims)} className="" id={`${idPrefix}-paid-lines`} />
     </section>
   );
 }

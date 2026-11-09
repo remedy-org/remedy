@@ -1,49 +1,47 @@
 "use client";
 
 import type { AgReportState, AgStudioApi } from "ag-studio";
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { InsightsData } from "@/app/console/insights/facts";
+import { InsightsLedger } from "./InsightsLedger";
+import "./insights.css";
 import type { StudioFilter } from "./InsightsPreviewLazy";
-import { filterClaims, filterLabel, filterPicks, homeInsightsReport, homeKpiCaptions, homeTime, paidByDayChart } from "./report";
+import { PaidLines } from "./PaidLines";
+import { chartsPaidByDay, filterClaims, filterLabel, filterPicks, insightsReport, paidDays, reportRows } from "./report";
 import { buildSources } from "./sources";
 import { colorResolver, fonts, onThemeChange, readTheme } from "./studio-setup";
 import lib from "./studio-lib";
 import { buildTheme } from "./theme";
 import { insightsWidgets, type InsightsRegistry } from "./widgets";
 
-// The homepage's Insights step, in real AG Studio: view mode, six widgets over the recall's seven claims, no panels, no
+// The homepage's Insights step, in real AG Studio: the console's own Insights page (its report state, its widgets, its
+// ledger over the canvas and its day lines under it) over the recall's seven claims, in view mode, no panels, no
 // editing, no analyst (no AI module, no OpenAI call). Loaded at 1024px and up once the tour's frame is near
-// (InsightsPreviewLazy), and live once shown: its charts' tooltips and its cross-filters work as in the console.
-// Laid out on the still's geometry (InsightsStill.tsx): 14px of canvas padding and 6px around each panel put its cards
-// on the frame's 20px inset, 12px apart, with the still's hairline.
+// (InsightsPreviewLazy), and live once shown: its cross-filters work as in the console, and the ledger follows them.
+// Drawn as the console draws it (insights.css), its canvas padding the frame's 20px inset, as the still is.
 
 const LICENSE = process.env.NEXT_PUBLIC_AG_STUDIO_LICENSE;
 if (LICENSE) lib.AgStudioLicenseManager.setLicenseKey(LICENSE);
 
 const PANELS = { view: { left: [], right: [] } };
-// A chart's tooltip names its series as the page does: "Paid through PayPal", not "(sum)", and the cross-filter's part
-// of it in words. The homepage's one cross-filtered series is the day chart's money: "Of these, paid".
+// The console's words for a series, never Studio's "(sum)".
 const LOCALE = {
   aggregationSumFieldName: "${name}",
   aggregationMaxFieldName: "${name}",
-  crossFilterSumFieldName: "Of these, paid",
-  crossFilterMaxFieldName: "Of these, paid",
+  crossFilterSumFieldName: "${name}, in this filter",
+  crossFilterMaxFieldName: "${name}, in this filter",
   aggregationCountdFieldName: "${name} count",
   aggregationCountdBucketName: "${name} count",
+  crossFilterCountdFieldName: "${name} count, in this filter",
 };
 
-/** The tiles' captions, by title, for the claims on the page; a caption already right is left alone. */
-function setCaptions(root: HTMLElement, byTitle: Record<string, string>) {
-  for (const panel of root.querySelectorAll<HTMLElement>(".ag-studio-layout-widget")) {
-    const text = byTitle[panel.querySelector(".ag-studio-layout-widget-title")?.textContent?.trim() ?? ""];
-    const caption = panel.querySelector(".ag-studio-layout-widget-caption");
-    if (text !== undefined && caption && caption.textContent !== text) caption.textContent = text;
-  }
-}
+// Studio's canvas rows are 16px, inside its 20px of padding top and bottom and a pixel of edge each side (measured: a
+// host any shorter leaves Studio's own layout a scroller, which would take the wheel): the host is sized to the report,
+// so the frame scrolls as one and no panel scrolls inside another.
+const ROW = 16;
+const CANVAS_PAD = 42;
 
 const pageOf = (state: AgReportState<InsightsRegistry>) => state.pages.find((p) => p.id === state.selectedPageId);
-// Every widget on the page, read from the state it starts with (a short frame leaves out the refusal reasons).
-const widgetCount = (rows: number, data: InsightsData) => Object.keys(homeInsightsReport(data, rows).pages[0].widgets ?? {}).length;
 
 /** Every widget on the page has drawn its body (not a loading or empty overlay). */
 function displayed(root: HTMLElement, widgets: number) {
@@ -54,13 +52,11 @@ function displayed(root: HTMLElement, widgets: number) {
 
 export default function InsightsPreview({
   data,
-  rows,
   active = true,
   onDisplayed,
   onFilter,
 }: {
   data: InsightsData;
-  rows: number;
   active?: boolean;
   onDisplayed?: () => void;
   /** The page's cross-filter changed: what it shows now, or null for every claim. */
@@ -74,7 +70,7 @@ export default function InsightsPreview({
     const { resolve, done } = colorResolver();
     try {
       return {
-        theme: buildTheme(lib, resolve, fonts()).withParams({ studioCanvasPadding: 14, studioValueWidgetFontSize: 28 }),
+        theme: buildTheme(lib, resolve, fonts()).withParams({ studioCanvasPadding: 20 }),
         labelColor: resolve("var(--pay-fill-text)"),
       };
     } finally {
@@ -88,16 +84,14 @@ export default function InsightsPreview({
     notify.current = onDisplayed;
     filterNotice.current = onFilter;
   }, [onDisplayed, onFilter]);
+  // The claims the page's cross-filter leaves: the ledger and the day lines follow them, as the console's do.
+  const [shown, setShown] = useState<InsightsData["claims"] | null>(null);
+  const height = reportRows(data) * ROW + CANVAS_PAD;
 
   useEffect(() => {
     const root = host.current;
     if (!root) return;
-    const say = homeTime(data.claims);
-    // The median and Refused tiles' captions count the claims the page shows: under a cross-filter, the picked ones (or
-    // nothing, when a pick can't be read here); Studio redraws a tile from its state, so they are set again after it.
-    let byTitle: Record<string, string> = {};
     let label = "";
-    let labelsOn = true;
     const clear = () => {
       const studio = api.current;
       if (!studio) return;
@@ -106,36 +100,19 @@ export default function InsightsPreview({
     };
     const follow = (state: AgReportState<InsightsRegistry>) => {
       const picks = filterPicks(pageOf(state));
-      // Under a cross-filter the day chart's labels go: Studio would print what the filter keeps at each column's foot
-      // ("$0.00" cut by the axis). The columns, dimmed whole with the kept part solid, and their tooltips say it.
-      const labels = !picks.length;
-      if (labels !== labelsOn && api.current) {
-        labelsOn = labels;
-        api.current.setState({
-          ...state,
-          pages: state.pages.map((page) => {
-            const chart = page.widgets?.["paid-by-day"];
-            if (!chart || chart.type !== "column-chart-grouped") return page;
-            return { ...page, widgets: { ...page.widgets, "paid-by-day": { ...chart, format: { ...chart.format, ...paidByDayChart(labelColor, labels).format, title: chart.format?.title } } } };
-          }),
-        });
-        return;
-      }
-      const shown = picks.length ? filterClaims(data.claims, picks) : data.claims;
-      const home = shown ? homeKpiCaptions(data.claims, shown) : { median: "", refused: "" };
-      byTitle = { [say.timeTitle]: home.median, Refused: home.refused };
-      setCaptions(root, byTitle);
+      setShown(picks.length ? filterClaims(data.claims, picks) : null);
       const next = picks.length ? filterLabel(picks) : "";
       if (next === label) return;
       label = next;
       filterNotice.current?.(next ? { label: next, clear } : null);
     };
+    const report = insightsReport(data, false, labelColor);
     const studio = lib.createStudio<InsightsRegistry>(root, {
       theme: initialTheme.current,
       loadThemeGoogleFonts: false,
       data: { ...buildSources(data), buckets: lib.createBuckets<InsightsRegistry>({ overrides: [{ id: "day", format: "d mmm" }] }) },
-      initialState: homeInsightsReport(data, rows, labelColor),
-      widgets: insightsWidgets(lib, { home: true }),
+      initialState: report,
+      widgets: insightsWidgets(lib),
       panels: PANELS,
       localeText: LOCALE,
       mode: "view",
@@ -143,7 +120,7 @@ export default function InsightsPreview({
     });
     api.current = studio;
     let told = false;
-    const widgets = widgetCount(rows, data);
+    const widgets = Object.keys(report.pages[0].widgets ?? {}).length;
     const watch = new MutationObserver(() => {
       if (told || !displayed(root, widgets)) return;
       told = true;
@@ -151,17 +128,14 @@ export default function InsightsPreview({
       notify.current?.();
     });
     watch.observe(root, { childList: true, subtree: true, characterData: true });
-    const tiles = new MutationObserver(() => setCaptions(root, byTitle));
-    tiles.observe(root, { childList: true, subtree: true });
     return () => {
       watch.disconnect();
-      tiles.disconnect();
       filterNotice.current?.(null);
       api.current = null;
       studio.destroy();
     };
     // A theme toggle redraws the page whole: the chart's labels take their colour from the state.
-  }, [data, rows, labelColor]);
+  }, [data, labelColor]);
 
   useEffect(() => {
     if (api.current && theme !== initialTheme.current) api.current.setProperty("theme", theme);
@@ -175,10 +149,17 @@ export default function InsightsPreview({
     if (state.pages.some((p) => p.crossFilter)) studio.setState({ ...state, pages: state.pages.map((p) => ({ ...p, crossFilter: undefined })) });
   }, [active]);
 
+  const claims = shown ?? data.claims;
   return (
-    <div
-      ref={host}
-      className="insights-report h-full w-full [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget]:p-1.5! [&_.ag-studio-layout-widget-container]:shadow-card [&_.ag-studio-layout-widget-title]:font-medium!"
-    />
+    // The tour hands this the wheel once a visitor rests on it, clicks or focuses it (tour.module.css data-insights-scroll).
+    <div data-insights-scroll className="flex h-full w-full flex-col overflow-y-auto pt-5 pb-5">
+      <InsightsLedger claims={claims} unitsSold={data.recall.unitsSold} className="mx-5" />
+      <div
+        ref={host}
+        style={{ height }}
+        className="insights-report w-full shrink-0 [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!"
+      />
+      {!chartsPaidByDay(data) && <PaidLines days={paidDays(claims)} className="mx-5" id="studio-paid-lines" />}
+    </div>
   );
 }

@@ -7,8 +7,10 @@ import { VerdictMark, verdictOf } from "./VerdictMark";
 
 /** What the still draws of a claim: the console panel's DrawerClaim, cut to its photos, checks and verdict (the
  * homepage sends one for every claim in its queue). */
-export type StillClaim = Pick<DrawerClaim, "id" | "decision" | "code" | "payer" | "photos" | "checks" | "sentence" | "amount" | "review" | "summary"> & {
+export type StillClaim = Pick<DrawerClaim, "id" | "decision" | "code" | "payer" | "photos" | "sentence" | "amount" | "review" | "summary"> & {
   payout: { status: string } | null;
+  /** The five checks by their own names; `doubt` names the answers in doubt under one that partly passed. */
+  checks: (DrawerClaim["checks"][number] & { doubt?: string })[];
 };
 
 export interface EvidenceStillProps {
@@ -105,6 +107,7 @@ export function EvidenceStill({ claim, note, fluid, className }: EvidenceStillPr
                       {c.label}
                       <span className="sr-only">: {mark.word}</span>
                     </p>
+                    {c.doubt && <p className="mt-0.5 text-ui text-text">{c.doubt}</p>}
                     {c.evidence ? <Quote text={c.evidence} docked={!fluid} /> : <p className="mt-0.5 text-ui text-muted">{c.rule}</p>}
                   </div>
                 </li>

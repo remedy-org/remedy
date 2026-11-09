@@ -31,7 +31,7 @@ export const GATES: { title: string; text: string; ai: boolean }[] = [
     // The claim page's and How it works' names, word for word (lib/fiveChecks.ts CHECK_NAMES), for RM-0442, the claim
     // the homepage stages.
     title: CHECK_NAMES.code(GENUINE.code, "X-VESOLJE"),
-    text: "The model reads the hand-written code and the product label. K7Q written on a claim issued K7P is a reject.",
+    text: "The model reads the handwritten code and the product label. K7Q written on a claim issued K7P is a reject.",
     ai: true,
   },
   {

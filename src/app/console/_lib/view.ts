@@ -543,8 +543,15 @@ export function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | 
   ];
 }
 
+// The console's one spelling ("handwritten") and a full stop at the product's end, on screen only: the spec the photo
+// check reads stays word for word as written (DEMO_SPEC is the eval's own).
+const handwritten = (text: string) => text.replace(/\b(h)and-written\b/gi, "$1andwritten");
+const sentence = (text: string) => (/[.!?)]$/.test(text.trim()) || !text.trim() ? text : `${text.trimEnd()}.`);
+
 /** A recall's photo checks as the console shows them: a scope note written for the photo check about a demo goes. */
 export const shownSpec = <T extends { product: string; label_must_show: string[]; note?: string }>(spec: T): T => ({
   ...spec,
+  product: sentence(handwritten(spec.product)),
+  label_must_show: spec.label_must_show.map(handwritten),
   ...(spec.note !== undefined && /\bdemo\b/.test(spec.note) ? { note: "" } : {}),
 });

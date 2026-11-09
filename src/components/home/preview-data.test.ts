@@ -5,7 +5,7 @@ vi.mock("server-only", () => ({}));
 const { ARRIVE_ID, PREVIEW_OPEN_ID, previewProps, previewSeed, reportPreview } = await import("@/components/console/preview");
 const { insightsPreview } = await import("@/components/insights/preview");
 const { insightsStill } = await import("@/components/insights/still");
-const { homeInsightsReport } = await import("@/components/insights/report");
+const { insightsReport } = await import("@/components/insights/report");
 
 // The homepage's grid, Insights still, Studio report and CPSC draft all read the demo claims (lib/demo/claims.ts): their
 // numbers must agree. (src/lib/demo/claims.test.ts checks every replica against the dataset itself.)
@@ -78,21 +78,11 @@ describe("homepage console tour data", () => {
     expect(previewProps().rows).toHaveLength(7);
   });
 
-  it("keeps Studio's home report to six widgets, titled, with two value KPIs and the day chart, fitted to its rows", () => {
-    // The tallest frame (680px) gives Studio 37 rows.
-    const state = homeInsightsReport(insightsPreview(), 37);
-    const page = state.pages![0];
-    const widgets = Object.values(page.widgets ?? {}) as { type?: string; format?: { subtitle?: unknown } }[];
-    expect(Object.keys(page.widgets ?? {})).toHaveLength(6);
-    const layout = Object.values(page.widgetLayout ?? {}) as { yTrack: number; ySpan: number }[];
-    expect(Math.max(...layout.map((l) => l.yTrack + l.ySpan))).toBe(37);
-    expect(widgets.every((w) => !w.format?.subtitle)).toBe(true);
-    expect(widgets.filter((w) => w.type === "value")).toHaveLength(2);
-  });
-
-  it("gives the refusal reasons' place to the day chart on a shorter frame, so each day's dollars fit in its column", () => {
-    const widgets = homeInsightsReport(insightsPreview(), 34).pages[0].widgets ?? {};
-    expect(Object.keys(widgets)).not.toContain("refusals");
-    expect(Object.keys(widgets)).toContain("paid-by-day");
+  it("draws the console's Insights page on the homepage, panel for panel, with its titles", () => {
+    const still = insightsStill(insightsPreview());
+    const titles = Object.values(insightsReport(still.insights).pages[0].widgets ?? {}).map((w) => (w as { format?: { title?: { text?: string } } }).format?.title?.text);
+    expect(titles).toEqual(["Recall progress", "Decisions", "Where claims stop", "Why claims were refused"]);
+    expect(still.decisions.reduce((n, d) => n + d.n, 0)).toBe(7);
+    expect(still.days).toEqual([{ day: expect.any(String), dollars: 29.99, payouts: 1 }]);
   });
 });

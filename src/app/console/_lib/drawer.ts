@@ -31,13 +31,8 @@ export interface DrawerCheck {
  */
 export interface FiveRow {
   n: CheckNumber;
+  /** What the row is headed with, always (fiveChecks.ts): what is in doubt under it leads its detail lines. */
   name: string;
-  /**
-   * What the row is headed with: its name, or, when only some of a photo check's answers held or failed it, those
-   * answers' names ("X-VESOLJE tag on the cut pillow" over a pillow that is cut in half), so the reviewer sees at once
-   * what is in doubt. The answers that passed say so under it.
-   */
-  title: string;
   state: PreCheckState;
   /** Skipped: it was never run, because an earlier check stopped the claim (else it doesn't apply to this claim). */
   unrun: boolean;
@@ -64,23 +59,16 @@ export function fiveRowsOf(c: Pick<Claim, "code" | "decision" | "photos" | "seed
     const own = under(n);
     if (!own.length) {
       return ran && c.decision !== "pending"
-        ? { n, name: names[n], title: names[n], state: "skipped", unrun: true, note: "An earlier check stopped the claim.", parts: [] }
-        : { n, name: names[n], title: names[n], state: "waiting", unrun: false, note: null, parts: [] };
+        ? { n, name: names[n], state: "skipped", unrun: true, note: "An earlier check stopped the claim.", parts: [] }
+        : { n, name: names[n], state: "waiting", unrun: false, note: null, parts: [] };
     }
     const state = RANK.find((s) => own.some((p) => p.state === s)) ?? "pass";
     // A demo claim after the genuine one: the account check counts once, on the genuine claim, as the owner was told. Any
     // other check not run says so once, in its row's state ("Not run"), with no note repeating it.
     const note = state === "skipped" && n === 3 && c.demo ? "Counted once, on the genuine claim." : null;
     const kept = own.filter((p) => p.state !== "skipped");
-    return { n, name: names[n], title: titleOf(n, names[n], state, kept), state, unrun: false, note, parts: kept };
+    return { n, name: names[n], state, unrun: false, note, parts: kept };
   });
-}
-
-/** A photo check's row (4 and 5) that some answers passed and others held or failed: headed by the ones in doubt. */
-function titleOf(n: CheckNumber, name: string, state: PreCheckState, parts: FiveRow["parts"]): string {
-  if (n < 4 || (state !== "hold" && state !== "reject") || !parts.some((p) => p.state === "pass")) return name;
-  const doubt = [...new Set(parts.filter((p) => p.state === state).map((p) => p.label))];
-  return doubt.length ? (doubt.length > 1 ? `${doubt.slice(0, -1).join(", ")} and ${doubt.at(-1)}` : doubt[0]) : name;
 }
 
 /** The five in one line: "4 of 5 checks passed · 1 not run", in the rows' own words. */

@@ -6,6 +6,10 @@ import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
 // console's Studio widget (RefusalReasons.tsx) makes each reason a cross-filter button; the homepage's still renders
 // it from the seed with nothing to press.
 
+// Where each reason was caught, in words (the console's gates). The checks before the photo check are the camera
+// session, the reused photo and the account: "account checks" would misname the first two.
+export const GATE_LABEL: Record<string, string> = { "No AI": "before the photo check", "Model reads": "by the photo check", Person: "by a person" };
+
 export interface RefusalItem {
   reason: string;
   gate: string;

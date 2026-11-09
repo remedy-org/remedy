@@ -9,7 +9,7 @@ import { summarize } from "@/lib/store/store";
 import type { Claim, Recall } from "@/lib/types";
 import type { ClaimsGridPreviewProps, PreviewRow } from "./ClaimsGridPreview";
 import type { StillClaim } from "./EvidenceStill";
-import { formatDay, recallDays, reportNumber } from "./format";
+import { formatDay, PART_STATE, recallDays, reportNumber } from "./format";
 import { verdictOf } from "./VerdictMark";
 
 // The homepage's console preview, built on the server from the claims every workspace starts with (lib/demo/claims.ts,
@@ -99,7 +99,11 @@ function evidenceOf(claim: Claim, recall: Recall): StillClaim {
       const outcome = r.state as "pass" | "hold" | "reject";
       // The answer that decided it: the first that didn't pass.
       const off = r.parts.find((p) => p.state === outcome) ?? r.parts[0];
-      return { id: off?.id ?? `check_${r.n}`, label: r.title, outcome, rule: off?.text ?? "", evidence: outcome === "pass" ? null : (off?.evidence ?? null) };
+      // A check that some answers passed names what is in doubt first, as the panel's row does ("X-VESOLJE tag on the
+      // cut pillow: couldn't tell"); the row itself keeps the check's own name.
+      const doubted = [...new Set(r.parts.filter((p) => p.state === outcome).map((p) => p.label))];
+      const doubt = outcome !== "pass" && r.parts.some((p) => p.state === "pass") && doubted.length ? `${doubted.join(", ")}: ${PART_STATE[outcome]}` : undefined;
+      return { id: off?.id ?? `check_${r.n}`, label: r.name, outcome, rule: off?.text ?? "", evidence: outcome === "pass" ? null : (off?.evidence ?? null), doubt };
     });
   return {
     id: d.id,

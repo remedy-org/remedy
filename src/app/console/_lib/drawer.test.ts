@@ -115,10 +115,10 @@ describe("the panel says what the grid row says", () => {
     expect(toDrawerClaim(of("RM-0118"), recall).note).toBe("Tag reads K7Q · code is K7P");
   });
 
-  it("heads a photo check that partly passed with the answer in doubt, and a whole check with its name", () => {
+  it("names a photo check that partly passed by the check, with the answer in doubt under it", () => {
     const rows = toDrawerClaim(of("RM-9629"), recall).fiveRows;
-    expect(rows[4]).toMatchObject({ state: "hold", name: "Pillow cut in half", title: "X-VESOLJE tag on the cut pillow" });
-    expect(rows[3].title).toBe(rows[3].name);
+    expect(rows[4]).toMatchObject({ state: "hold", name: "Pillow cut in half" });
+    expect(rows[4].parts.find((p) => p.label === "X-VESOLJE tag on the cut pillow")?.state).toBe("hold");
     expect(rows[4].parts.find((p) => p.label === "Pillow cut fully in half")?.state).toBe("pass");
   });
 });

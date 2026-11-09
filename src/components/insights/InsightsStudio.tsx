@@ -9,6 +9,7 @@ import type { InsightsData } from "@/app/console/insights/facts";
 import { INSIGHTS_ACTIONS } from "./actions";
 import { buildAnalyst } from "./analyst";
 import { InsightsLedger } from "./InsightsLedger";
+import { PaidLines } from "./PaidLines";
 import "./insights.css";
 import { chartsPaidByDay, CONSOLE_CHART, filterClaims, filterLabel, filterPicks, insightsReport, paidByDayChart, paidDays, PAID_BY_DAY, panelName, reportRows, type FilterPick } from "./report";
 import { buildSources } from "./sources";
@@ -99,10 +100,11 @@ const pageOf = (state: AgReportState<InsightsRegistry>) => state.pages.find((p) 
 
 const plural = (n: number, one: string) => `${n.toLocaleString("en-US")} ${n === 1 ? one : `${one}s`}`;
 
-// Studio's canvas rows are 16px, inside its 32px padding top and bottom: the host is sized to the report, so the page
-// scrolls as one and no panel scrolls inside another.
+// Studio's canvas rows are 16px, inside its 32px padding top and bottom and a pixel of edge each side (measured: at 64
+// Studio's own layout was a 2px scroller that took the wheel): the host is sized to the report, so the page scrolls as
+// one and no panel scrolls inside another.
 const ROW = 16;
-const CANVAS_PAD = 64;
+const CANVAS_PAD = 66;
 
 export default function InsightsStudio({ data, narrow = false }: { data: InsightsData; narrow?: boolean }) {
   const host = useRef<HTMLDivElement>(null);
@@ -322,34 +324,5 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
         pick it again or press Clear filter above the report.
       </p>
     </div>
-  );
-}
-
-const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-
-/** What PayPal paid, a line a day, where a chart of one or two columns would stand nearly empty across the page. */
-function PaidLines({ days }: { days: ReturnType<typeof paidDays> }) {
-  return (
-    <section aria-labelledby="paid-lines" className="page">
-      <div className="flex flex-col gap-3 border-t border-line pt-6">
-        <h2 id="paid-lines" className="text-ui font-medium">
-          {PAID_BY_DAY}
-        </h2>
-        {days.length ? (
-          <ul className="flex max-w-[36rem] flex-col text-ui">
-            {days.map((d) => (
-              <li key={d.day} className="flex items-baseline justify-between gap-6 border-b border-line py-2.5">
-                <span>
-                  {d.day} <span className="text-muted">· {plural(d.payouts, "payout")}</span>
-                </span>
-                <span className="font-mono text-text">{usd.format(d.dollars)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-ui text-muted">Nothing paid through PayPal yet.</p>
-        )}
-      </div>
-    </section>
   );
 }
