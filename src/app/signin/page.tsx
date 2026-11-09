@@ -42,7 +42,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
 
   return (
     // On the homepage's page frame and 12-column grid: the wordmark on the gutter, the form in columns 1 to 4, and from
-    // 1024px the console it opens, flat, from column 6 running off the right edge. Phones get the form alone.
+    // 1024px the console it opens, flat, from column 6 running off the right edge. Phones get the form alone, from the top
+    // (centred, it left a screen of air under the header); from 1024px the form is centred beside the console.
     <div className="flex min-h-dvh flex-col overflow-x-clip">
       <header className="page flex h-16 items-center justify-between gap-4">
         {/* The homepage's lockup: sign-in is on the homepage's frame, so the logo keeps its size from "Log in". */}
@@ -54,7 +55,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <ThemeToggle />
         </div>
       </header>
-      <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none sm:py-16 sm:pb-28 lg:items-start">
+      <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none max-lg:content-start sm:py-16 sm:pb-28 lg:items-start">
         <div className="col-span-12 mx-auto flex w-full max-w-[400px] flex-col lg:col-span-4 lg:mx-0">
           {/* Its cap height trimmed at the top, so the letters' top sits on the preview window's top edge, not 5px under it. */}
           <h1 className="text-h2 font-medium [text-box:trim-start_cap_alphabetic]">Log in to Remedy</h1>

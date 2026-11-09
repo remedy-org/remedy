@@ -62,7 +62,8 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
     // The last stage (Paid) has no drop under it: its row is only its line, so the panel ends on it, never on a slot of
     // empty space over the next section's rule.
     <ol
-      className={clsx("grid min-h-0", flush ? "flex-1" : "h-full pb-1", spread ? "gap-0.5" : "gap-4")}
+      data-funnel
+      className={clsx("grid min-h-0", flush ? "flex-1" : "h-full pb-1", spread ? "gap-0.5" : "gap-4", !spread && !flush && "content-start")}
       style={{ gridTemplateRows: `repeat(${Math.max(steps.length - 1, 0)}, minmax(0, 1fr)) auto` }}
       onClick={onReset}
       onKeyDown={onKeyDown}
@@ -71,10 +72,10 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
         const last = i === steps.length - 1;
         return (
           // The stage's name, its count and its bar on the first line; the drop in the slot under the count and bar, beside
-          // a name's second line ("Passed checks before the photo check"), so no stage's row is taller than its slot.
+          // a name's second line if it wraps (a narrow card), so no stage's row is taller than its slot.
           <li key={s.stage} className="grid grid-cols-[11.5rem_2.5rem_1fr] content-start items-center gap-x-3 gap-y-1">
             <div className="contents">
-              {/* A long stage ("Passed checks before the photo check") wraps to a second line rather than cut. */}
+              {/* A long stage wraps to a second line rather than cut. */}
               <span className="row-span-2 self-start text-ui leading-tight text-pretty text-text">{flush ? s.stage : shownAs(s.stage)}</span>
               <span className={clsx("text-right text-ui leading-tight text-text", figure)}>{s.reached}</span>
               <span className="relative h-3 rounded-[3px] bg-surface-2" aria-hidden="true">

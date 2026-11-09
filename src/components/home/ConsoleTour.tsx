@@ -861,7 +861,12 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
           inert={studioState !== "shown"}
           data-on={state.body === "insights" || undefined}
           data-studio-shown={studioState === "shown" || undefined}
-          className={styles.body}
+          // The page under it (the still's or Studio's) scrolls: at its end the foot's fade goes, as the draft's does.
+          onScrollCapture={(e) => {
+            const el = e.target as HTMLElement;
+            e.currentTarget.toggleAttribute("data-end", el.scrollTop + el.clientHeight >= el.scrollHeight - 2);
+          }}
+          className={clsx(styles.body, styles.insightsBody)}
         >
           {insights}
           {studio && (studioState === "mounted" || studioState === "shown") && (
