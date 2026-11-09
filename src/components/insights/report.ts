@@ -1,5 +1,4 @@
 import type { AgPageState, AgReportState, AgWidgetLayoutState } from "ag-studio";
-import { duration } from "@/app/console/_lib/view";
 import type { InsightsData } from "@/app/console/insights/facts";
 import { median } from "@/app/console/_lib/view";
 import { shownAs } from "./funnel";
@@ -256,7 +255,3 @@ export const insightsReport = (data: InsightsData, narrow = false, labelColor?: 
 
 /** The day chart's and the day lines' title, on the console and on the homepage. */
 export const PAID_BY_DAY = "Paid through PayPal, by day";
-
-/** A time as the homepage says it, in the console's one unit: "12 s" under a minute, else as the ledger prints it
- * ("1 min 5 s"). Never "sec": the console the homepage pictures says "s". */
-export const spokenTime = (sec: number) => duration(sec);

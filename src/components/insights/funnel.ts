@@ -46,14 +46,9 @@ export function reasonSummary(tally: ReadonlyMap<string, number>): string {
   return sorted.map(([reason, n]) => (even ? reason : `${reason} ${n}`)).join(", ");
 }
 
-/**
- * Rows are claims, or groups of claims with a count (as a Studio query returns them). `summarize` words each drop's
- * reasons: by default the commonest (reasonSummary).
- */
-export function funnel(
-  rows: { stage: string; stopReason: string | null; decision?: string | null; count?: number }[],
-  summarize: (tally: ReadonlyMap<string, number>) => string = reasonSummary,
-): FunnelStep[] {
+/** Rows are claims, or groups of claims with a count (as a Studio query returns them); each drop's reasons are worded by
+ * reasonSummary. */
+export function funnel(rows: { stage: string; stopReason: string | null; decision?: string | null; count?: number }[]): FunnelStep[] {
   const weight = (r: { count?: number }) => r.count ?? 1;
   return STAGES.map((stage, i) => {
     const reached = rows.filter((r) => STAGES.indexOf(r.stage as Stage) >= i).reduce((n, r) => n + weight(r), 0);
@@ -71,7 +66,7 @@ export function funnel(
       const tally = tallies.get(kind);
       if (!tally) return [];
       const count = [...tally.values()].reduce((a, b) => a + b, 0);
-      return [{ kind, count, summary: summarize(tally) }];
+      return [{ kind, count, summary: reasonSummary(tally) }];
     });
     return { stage, reached, stopped, groups };
   });
