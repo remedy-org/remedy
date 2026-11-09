@@ -122,9 +122,10 @@ function CheckCell({ i, done, active, onSeek }: { i: number; done: boolean; acti
   );
 }
 
-function Receipt({ stamped, className, style }: { stamped: boolean; className?: string; style?: CSSProperties }) {
+/** The paid claim's receipt. `data-receipt`: the custody pin measures it, to carry the paid claim into the console. */
+export function Receipt({ stamped, className, style }: { stamped: boolean; className?: string; style?: CSSProperties }) {
   return (
-    <div className={clsx(styles.receipt, className)} style={style}>
+    <div data-receipt className={clsx(styles.receipt, className)} style={style}>
       <Paper variant="receipt" perforated padding="md" className="w-full">
         <p className="flex items-baseline justify-between gap-4 text-ui text-ink-muted">
           Refund

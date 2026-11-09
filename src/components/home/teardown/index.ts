@@ -1,1 +1,1 @@
-export { OpenedExhibit, type OpenedExhibitProps } from "./OpenedExhibit";
+export { OpenedExhibit, Receipt, type OpenedExhibitProps } from "./OpenedExhibit";

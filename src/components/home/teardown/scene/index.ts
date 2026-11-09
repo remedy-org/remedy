@@ -151,7 +151,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
 
   await yieldToMain();
   const phone = buildPhone(THREE, photo);
-  scene.add(phone.group, phone.lines, phone.sheet);
+  scene.add(phone.group);
   const prints = buildPrints(THREE, photo, earlier, "#f1ebdd");
   scene.add(prints.group);
 
@@ -171,10 +171,8 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
   let tier: Tier = opts.tier;
   function applyColors(c: Colors) {
     colors = c;
-    // Amber only on the active part's rim (the cut, check 5). The camera's frustum and scan plane are drawn in the
-    // neutral --faint, so a check's one amber is its callout, not a wireframe box.
+    // Amber only on the active part's rim (the cut, check 5): a check's one amber is its callout.
     mats.rim.color.set(c.accent);
-    for (const m of [phone.lineMat, phone.sheetMat]) m.color.set(c.faint);
     if (c.dark) {
       key.intensity = 2.3;
       fill.intensity = 0.32;
@@ -182,7 +180,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
       floorMat.opacity = 0.55;
       mats.stuff.color.set("#d8d1c3");
       mats.stuff.emissive.set("#1f1c17");
-      mats.cloth.sheenColor.set("#a08c7e");
+      mats.cloth.sheenColor.set("#9aa4b1");
     } else {
       // On the pale floor the near-white stuffing needs its own shading to hold its shape: less fill, a darker grade.
       key.intensity = 2.2;
@@ -191,7 +189,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
       floorMat.opacity = 0.3;
       mats.stuff.color.set("#d6cdbd");
       mats.stuff.emissive.set("#0d0b08");
-      mats.cloth.sheenColor.set("#ad9a8c");
+      mats.cloth.sheenColor.set("#a6afbb");
     }
     for (const f of mats.fuzz) f.color.copy(mats.stuff.color);
     // The cream tag on the light theme's cream floor: a darker edge, a stronger contact shadow (in render) and paper a
