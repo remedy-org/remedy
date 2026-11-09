@@ -45,7 +45,7 @@ export interface InsightsRegistry extends AgTypeScriptRegistry {
   )[];
 }
 
-/** PIRG, Too Much to Recall (January 2024): 6-10% of recalled products are ever returned or destroyed. */
+/** PIRG, Too Much to Recall (January 2024), in its words: "Only 6 to 10 percent of recalled products are returned or discarded." */
 export const TYPICAL_RETURN = {
   from: 0.06,
   to: 0.1,

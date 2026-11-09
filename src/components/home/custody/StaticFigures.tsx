@@ -4,10 +4,12 @@ import clsx from "clsx";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { OpenedExhibit } from "@/components/home/teardown";
+import { AmountText } from "@/components/console/cells";
 import { VerdictMark } from "@/components/console/VerdictMark";
-import { Money, NoBreakHyphens } from "@/components/ui";
+import { NoBreakHyphens } from "@/components/ui";
 import { CHAPTERS, CLAIM } from "./claim";
 import { CodeTag, ConsentChapter } from "./chapters";
+import { ScreenBar } from "./frames";
 
 // The Chain of Custody at rest: what the server renders, what reduced motion and no-JS visitors get, and what a
 // full-page screenshot shows. The pinned sequence replaces it after hydration only when the viewport and the visitor's
@@ -63,7 +65,7 @@ export function StaticFigures() {
             </h2>
           </div>
           <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8 lg:pb-1">
-            From PayPal login to payout, on the <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall.
+            From PayPal login to payout, on the <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> Nursing Pillows recall.
           </p>
         </div>
         {/* 01 beside 02: the tall consent screen, and the code tag centred beside it like a thing laid on the table. */}
@@ -81,26 +83,21 @@ export function StaticFigures() {
       <div className="page pb-18 lg:pb-32">
         <div className="grid-12">
           <PaperObject title={CHAPTERS[5].title} text={CHAPTERS[5].text} className="col-span-12 lg:col-span-4">
+            {/* RM-0442's row as the console's queue sets it (cells.tsx): the id and its filing time in mono, the verdict's
+                mark, the amount as the console prints money; under the console window's own bar. */}
             <div className="w-full max-w-[20rem] overflow-hidden rounded-card bg-surface shadow-card">
-              <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
-                <span className="text-ui font-medium">Console</span>
-                <span className="font-mono text-micro text-faint">{CLAIM.recall}</span>
-              </div>
+              <ScreenBar compact />
               <div className="flex items-center gap-3 px-4 py-3">
                 <span className="relative h-6 w-8 shrink-0 overflow-hidden rounded-[4px] border border-line">
                   <Image src={CLAIM.photo} alt="" fill sizes="32px" className="object-cover" style={{ objectPosition: CLAIM.objectPosition }} />
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col leading-tight">
                   <span className="font-mono text-ui font-medium">{CLAIM.id}</span>
-                  <span className="text-micro text-faint">
-                    Code <span className="font-mono">{CLAIM.code}</span>
-                  </span>
+                  <span className="mt-0.5 font-mono text-micro text-faint">{CLAIM.filed}</span>
                 </span>
                 <span className="flex flex-col items-end gap-1">
                   <VerdictMark verdict="paid" />
-                  <span className="font-mono text-ui">
-                    <Money value={CLAIM.amount} size="grid" />
-                  </span>
+                  <AmountText amount={`$${CLAIM.amount.toFixed(2)}`} tone="sent" />
                 </span>
               </div>
             </div>

@@ -191,7 +191,8 @@
     row-gap: 2px;
     align-content: center;
   }
-  .verdict-track.is-mark:not(.is-card) > :last-child {
+  /* The reason only: a paid claim's mark alone in its cell keeps its size. */
+  .verdict-track.is-mark:not(.is-card) > :last-child:not(:first-child) {
     font-size: var(--text-micro);
     line-height: var(--text-micro--line-height);
   }

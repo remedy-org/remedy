@@ -54,11 +54,15 @@ export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; headin
       <Heading id="recall-title" className="sr-only">
         {recall.product}
       </Heading>
-      {/* Below 1024px: the line that proves it's a real recall, and who is recalling it and paying (from an email link, an
+      {/* Below 1024px: the product, then the line that proves it's a real recall, and who is recalling it and paying (from an email link, an
           unknown name and a payment login otherwise read as a phishing page), then CPSC's photo across the column, big
           enough to tell the three pillows apart, with "Enlarge" on it: a tap opens it whole. */}
       <div className="flex flex-col gap-3 lg:hidden">
         <div className="flex min-w-0 flex-col gap-1">
+          {/* The product first, as the laptop's brief says it, so the CPSC line under it has something to be about. */}
+          <p aria-hidden="true" className="text-body font-medium text-balance text-text">
+            {recall.product}
+          </p>
           <p className="text-ui text-muted">{source}</p>
           {/* Who pays, only where it is true: a company's own recall. The shared demo recall (no owner) is a public CPSC
               recall, and its seller is never named as a Remedy customer (DESIGN.md). */}

@@ -9,7 +9,8 @@ import type { Decision, Recall } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
-import { companyName, cutInHalf, money, productNoun, taggedThing } from "./model";
+import { consentLines, PAYPAL_CONSENT } from "./consentCopy";
+import { companyName, productNoun } from "./model";
 import { Notice } from "./Notice";
 
 export type AuthError = "denied" | "state" | "paypal" | "refused";
@@ -56,8 +57,8 @@ export interface ConsentCardProps {
 /** The demo account's login in the card: the phone's bar shows it before it offers the PayPal login. */
 export const JUDGE_LOGIN_ID = "demo-account";
 
-/** What Remedy reads from a PayPal login, said once under every Log in with PayPal (here and on /signin). */
-export const PAYPAL_CONSENT = "Remedy sees your PayPal name, email and account ID, never your password.";
+/** What Remedy reads from a PayPal login (consentCopy.ts), said once under every Log in with PayPal. */
+export { PAYPAL_CONSENT };
 
 /** The primary button's words, shared with the phone's sticky bar. */
 export function consentAction({ signedInAs, demo, unverified, yourClaim }: Pick<ConsentCardProps, "signedInAs" | "demo" | "unverified" | "yourClaim">): string {
@@ -66,9 +67,6 @@ export function consentAction({ signedInAs, demo, unverified, yourClaim }: Pick<
   if (signedInAs) return demo ? "Choose a claim" : "Continue to your code";
   return "Log in with PayPal";
 }
-
-/** "cut pillow" -> "pillow": the thing the owner photographs, in one word. */
-const thingOf = (recall: Recall) => (taggedThing(recall.spec)?.split(" ").pop() ?? productNoun(recall).split(" ").pop() ?? "product").toLowerCase();
 
 /**
  * The consent card: what the owner gets back, in one headline, how in one line, then one action. A
@@ -81,12 +79,8 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   const notice = demo ? undefined : { company, url: recall.url };
   // A cancelled login means nothing once a later one worked.
   const error = authError && !signedInAs ? AUTH_ERRORS[authError] : null;
-  const thing = thingOf(recall);
-  const cut = cutInHalf(recall.spec);
-  // How fast, in the real terms: an auto-paid claim pays the moment its checks pass (seconds after the photo).
-  const how = `${cut ? `Cut the ${thing} in half` : `Destroy the ${thing} as the notice says`}, photograph it with the code we give you, and PayPal pays you ${recall.autoPay ? "in seconds" : `once ${company} approves it`}.`;
-  // What the tap commits to: the code's clock starts on the next screen.
-  const clock = `Your code is good for ${CAPTURE_SESSION_MINUTES} minutes, so ${cut ? `cut the ${thing} first` : `destroy the ${thing} first`}.`;
+  // The offer, how, and the code's clock, as How it works' copy of this screen says them (consentCopy.ts).
+  const { title, how, clock } = consentLines(recall, CAPTURE_SESSION_MINUTES);
   // On the page, not in a box: the offer is the screen's headline, beside the recall it answers.
   const frame = "flex flex-col border-line max-lg:border-t max-lg:pt-8 lg:-ml-8 lg:self-stretch lg:border-l lg:pl-8";
 
@@ -104,7 +98,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       <div className="flex flex-col gap-3">
         {/* The page's one headline: the brief beside it is the recall it answers, a step smaller. */}
         <StepTitle id="consent-title" className="text-pretty">
-          <NoBreakHyphens>{demo ? "Try Remedy on a real recall" : `${money(recall.refund)} back for your ${productNoun(recall)}`}</NoBreakHyphens>
+          <NoBreakHyphens>{demo ? "Try Remedy on a real recall" : title}</NoBreakHyphens>
         </StepTitle>
         <p className="text-body text-pretty text-muted">
           {demo ? (

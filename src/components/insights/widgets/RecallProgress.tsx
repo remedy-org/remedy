@@ -88,7 +88,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
           style={{ background: "repeating-linear-gradient(135deg, var(--faint) 0 1.5px, transparent 1.5px 6px)" }}
         />
         <span>
-          {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}% of recalled products are ever returned or destroyed.
+          {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}% of recalled products are returned or discarded.
         </span>
         <a href={TYPICAL_RETURN.href} target="_blank" rel="noreferrer" className="text-faint underline decoration-line-strong underline-offset-2 hover:text-text">
           {TYPICAL_RETURN.source}

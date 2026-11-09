@@ -22,3 +22,16 @@ describe("the homepage's payout times", () => {
     expect(words).toContain(`confirmed it at ${CLAIM.confirmed} s`);
   });
 });
+
+describe("chapter 01, the consent screen", () => {
+  it("is the claim page's, word for word", async () => {
+    const { CAPTURE_SESSION_MINUTES } = await import("@/lib/ids");
+    const { consentLines } = await import("@/components/claim/consentCopy");
+    const { demoRecall } = await import("@/lib/demo/kikea");
+    const { CONSENT } = await import("./claim");
+    expect(CLAIM.minutes).toBe(CAPTURE_SESSION_MINUTES);
+    expect(CONSENT).toEqual(consentLines(demoRecall(), CAPTURE_SESSION_MINUTES));
+    expect(CONSENT.title).toBe("$29.99 back for your X-VESOLJE Nursing Pillow");
+    expect(CONSENT.clock).toBe("Your code is good for 10 minutes, so cut the pillow first.");
+  });
+});

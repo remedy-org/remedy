@@ -681,7 +681,7 @@ function StaticExhibit({ chain }: { chain: boolean }) {
             <img
               className={styles.onDark}
               src={posterSrc("paid", true, false)}
-              alt="The X-VESOLJE nursing pillow, cut in half, with its paper tag reading X-VESOLJE M4T."
+              alt="The X-VESOLJE Nursing Pillow, cut in half, with its paper tag reading X-VESOLJE M4T."
             />
           </picture>
           <picture>

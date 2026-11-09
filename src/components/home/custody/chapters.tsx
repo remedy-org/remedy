@@ -1,15 +1,18 @@
 "use client";
 
 import clsx from "clsx";
-import Image from "next/image";
 import { motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ComponentType, type ReactNode } from "react";
+import type { CustomCellRendererProps } from "ag-grid-react";
+import type { ClaimRow } from "@/app/console/_lib/view";
+import { AmountCell, ChecksCell, ClaimCell, PayoutCell, TimeCell, VerdictCell } from "@/components/console/cells";
+import "@/components/console/claims-grid.css";
 import { durationFigure, LedgerItem } from "@/components/console/Ledger";
 import { TABS } from "@/components/console/StatusTabs";
-import { VerdictMark } from "@/components/console/VerdictMark";
+import { verdictOf } from "@/components/console/VerdictMark";
+import { PAYPAL_CONSENT } from "@/components/claim/consentCopy";
 import { ClockIcon, DURATION, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
-import { EXHIBIT } from "../teardown/claim";
-import { CLAIM, CODE_AT, CODE_STAGGER, CONSENT_AT, CONSENT_STAGGER, CONSOLE_ROWS, SHOT_AT, WRITE_FOR } from "./claim";
+import { CLAIM, CODE_AT, CODE_STAGGER, CONSENT, SHOT_AT, WRITE_FOR } from "./claim";
 import { ENTER, LEAVE, useGate } from "./gate";
 
 // The five chapters of the Chain of Custody, as presentational copies of the real claim screens. Each one is drawn from
@@ -56,18 +59,17 @@ function Lit({ p, at, delay = 0, className, children }: { p?: Progress; at: numb
 
 /**
  * A list of steps on a hairline, each with a small node that lights in turn (no numerals: the order is the line). `p`
- * lights them at `at`; without it they are all lit. `card`: the list sits on the consent card from 720px, so each node
- * masks the hairline in the card's colour there.
+ * lights them at `at`; without it they are all lit.
  */
-function StepLine({ p, at, stagger = 0, steps, card, className }: { p?: Progress; at: readonly number[]; stagger?: number; steps: readonly string[]; card?: boolean; className?: string }) {
+function StepLine({ p, at, steps, className }: { p?: Progress; at: readonly number[]; steps: readonly string[]; className?: string }) {
   return (
     <ol className={clsx("relative flex flex-col gap-2.5 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-line", className)}>
       {steps.map((s, i) => (
         <li key={s} className="relative grid grid-cols-[1.25rem_minmax(0,1fr)] text-ui">
-          <span className={clsx("mt-1.5 flex size-2 rounded-full bg-bg", card && "@min-[720px]:bg-surface")}>
-            <Lit p={p} at={at[i]} delay={i * stagger} className="block size-2 rounded-full border border-text-2" />
+          <span className="mt-1.5 flex size-2 rounded-full bg-bg">
+            <Lit p={p} at={at[i]} className="block size-2 rounded-full border border-text-2" />
           </span>
-          <Lit p={p} at={at[i]} delay={i * stagger}>
+          <Lit p={p} at={at[i]}>
             {s}
           </Lit>
         </li>
@@ -78,24 +80,43 @@ function StepLine({ p, at, stagger = 0, steps, card, className }: { p?: Progress
 
 /* ------------------------------------------------------------------------------------------------ 01 Consent */
 
-const CONSENT_STEPS = ["Cut it in half, as the notice says", "Write your one-time code on a tag and photograph it here", "Paid to your PayPal, usually within a minute"];
+/** The claim page's (RecallBrief.tsx) line under the product: the CPSC number in mono, the date, the notice's link. */
+function SourceLine({ link = true }: { link?: boolean }) {
+  return (
+    <span className="text-ui text-muted">
+      CPSC <span className="font-mono">{CLAIM.recall.replace(/^CPSC /, "")}</span> · Recalled {CLAIM.recalled}
+      {link && (
+        <>
+          <span className="mx-2">·</span>
+          <span className="text-text underline decoration-line-strong underline-offset-4">cpsc.gov</span>
+        </>
+      )}
+    </span>
+  );
+}
 
-/** `p` lights the steps in turn (the pinned laptop); without it they are all lit. */
+/**
+ * The real claim page (/r/kikea-x-vesolje) as it is: the recall's brief beside the offer on a hairline, no card and no
+ * steps, every word from the page's own copy (claim/consentCopy.ts). `p` brings the brief in once the screen has taken
+ * over the laptop's glass; without it, it is all there.
+ */
 export function ConsentChapter({ p }: { p?: Progress }) {
   const compact = useContext(Compact);
-  // In the pinned sequence the product column comes in with the consent card as the screen takes over the laptop's glass
-  // (0.12, CustodyStage's HANDOFF): the glass spans the window's width from the top, so the clip, growing only down to
-  // the window's foot, never slices this column's words. It comes in time, so a stop there never rests on it half drawn.
+  // In the pinned sequence the product column comes in with the consent column as the screen takes over the laptop's
+  // glass (0.12, CustodyStage's HANDOFF): the glass spans the window's width from the top, so the clip, growing only down
+  // to the window's foot, never slices this column's words. It comes in time, so a stop there never rests on it half drawn.
   const done = useDone();
   const product = useGate(p ?? done, (v) => v >= 0.12);
   return (
     <div className="@container">
-      <div className="grid items-start gap-10 @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] @min-[720px]:gap-12">
+      {/* The claim page's two columns (Exhibit.tsx STEP_GRID) from 720px: the brief, then the offer on a hairline. */}
+      <div className="grid items-start gap-6 @min-[720px]:grid-cols-2 @min-[720px]:gap-16">
         <motion.div className={clsx("hidden flex-col @min-[720px]:flex", compact ? "gap-4" : "gap-6")} style={{ opacity: product }}>
-          <span className="text-ui text-faint">
-            <span className="font-mono">{CLAIM.recall}</span> · Recalled {CLAIM.recalled}
-          </span>
-          <p className="text-h2 font-medium">{CLAIM.product}</p>
+          {/* The brief's small header (RecallBrief.tsx), so the offer beside it is the one headline. */}
+          <div className="flex flex-col gap-1">
+            <p className="text-body font-medium text-balance text-text">{CLAIM.product}</p>
+            <SourceLine />
+          </div>
           {/* The live recall page's own hazard (RecallBrief.tsx): one sentence on a red rule, no box, no icon. */}
           <p className="border-l-2 border-stop pl-4 text-body font-medium text-pretty text-text">Risk of serious injury or death from suffocation. Stop using it now.</p>
           {/* CPSC's photo on its paper plate, as the live page shows it under the hazard; a short screen gives it way. */}
@@ -108,7 +129,7 @@ export function ConsentChapter({ p }: { p?: Progress }) {
               ["Units recalled", CLAIM.units],
               ["Sold by", CLAIM.company],
             ].map(([k, v]) => (
-              <div key={k} className="flex flex-col gap-1 border-b border-line py-3">
+              <div key={k} className="flex flex-col gap-1 py-3">
                 <dt className="text-faint">{k}</dt>
                 <dd className="text-text">{v}</dd>
               </div>
@@ -116,29 +137,36 @@ export function ConsentChapter({ p }: { p?: Progress }) {
           </dl>
         </motion.div>
 
+        {/* On a phone, where the brief is hidden, the recall is said first, as the claim page's phone brief now says it:
+            the product, then the CPSC line; a short phone gives the second way. */}
+        <div className="flex flex-col gap-1 @min-[720px]:hidden">
+          <p className="text-body font-medium text-balance text-text">{CLAIM.product}</p>
+          <span className={clsx(compact && "hidden")}>
+            <SourceLine link={false} />
+          </span>
+        </div>
+
+        {/* The offer as the claim page sets it (ConsentCard.tsx): on the page, not in a box, a hairline from the brief. */}
         <div
           data-dolly-target
           className={clsx(
-            "flex flex-col gap-5 @min-[720px]:rounded-card @min-[720px]:bg-surface @min-[720px]:shadow-card",
-            compact ? "@min-[720px]:gap-5 @min-[720px]:p-6" : "@min-[720px]:gap-6 @min-[720px]:p-8",
+            "flex flex-col border-line @max-[719px]:border-t @max-[719px]:pt-6 @min-[720px]:-ml-8 @min-[720px]:self-stretch @min-[720px]:border-l @min-[720px]:pl-8",
+            compact ? "gap-5" : "gap-7",
           )}
         >
-          {/* The offer heads the card, as the claim page's does: no company badge (the seller is in the recall's facts).
-              On a phone, where the brief is hidden, the recall is said once above it; a short phone gives it way. */}
-          <span className={clsx("text-ui text-muted @min-[720px]:hidden", compact && "@max-[719px]:hidden")}>
-            <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> nursing pillow recall · <span className="font-mono whitespace-nowrap">{CLAIM.recall}</span>
-          </span>
-          {/* The claim page's headline and the line under it (ConsentCard.tsx): one ink, the line a step down. */}
-          <div className="flex flex-col gap-2">
-            <p className="text-title font-medium text-pretty">
-              $29.99 back for your <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> pillow
+          <div className="flex flex-col gap-3">
+            <p className="text-title font-medium text-balance text-text">
+              <NoBreakHyphens>{CONSENT.title}</NoBreakHyphens>
             </p>
-            <p className="text-body text-pretty text-text-2">Cut the pillow in half, photograph it with the code we give you, and PayPal pays you in seconds.</p>
+            <p className="text-body text-pretty text-muted">{CONSENT.how}</p>
           </div>
-          <StepLine p={p} at={CONSENT_AT} stagger={CONSENT_STAGGER} steps={CONSENT_STEPS} card className={clsx("font-medium", compact && "@max-[719px]:hidden")} />
-          {/* The claim page's own button, as it looks there: brass, the screen's one amber. A picture, so it is no control
-              (the whole screen is hidden from screen readers and takes no pointer). */}
-          <span className="btn-primary pointer-events-none flex h-12 items-center justify-center rounded-button-lg text-body font-medium select-none">Log in with PayPal</span>
+          <div className="flex flex-col gap-4">
+            {/* The claim page's own button, as it looks there: brass, the screen's one amber. A picture, so it is no
+                control (the whole screen is hidden from screen readers and takes no pointer). */}
+            <span className="btn-primary pointer-events-none flex h-12 items-center justify-center rounded-button-lg text-body font-medium select-none">Log in with PayPal</span>
+            <p className="-mt-1 text-ui text-pretty text-muted">{CONSENT.clock}</p>
+            <p className={clsx("text-ui text-pretty text-faint", compact && "@max-[719px]:hidden")}>{PAYPAL_CONSENT}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -257,142 +285,65 @@ export function CodeTag({ wipe, short, className }: { wipe?: MotionValue<string>
 
 /* -------------------------------------------------------------------------------------- Handoff: the console */
 
-type Bar = "pass" | "hold" | "reject" | "skip";
-/**
- * The five checks' bars for a row, as the console draws them: paid or approved, every one passed; held at the fifth (the
- * same item in both photos); rejected at the check that stopped it (`fails`); blocked at the pre-check that stopped it,
- * the other two pre-checks run and passed, and the photo check's two never run.
- */
-const barsOf = (row: { status: string; fails?: number }): Bar[] =>
-  [0, 1, 2, 3, 4].map((i) => {
-    if (row.status === "held") return i === 4 ? "hold" : "pass";
-    if (i === row.fails) return "reject";
-    return row.status === "blocked" && i > 2 ? "skip" : "pass";
-  });
+type Cell = CustomCellRendererProps<ClaimRow>;
 
-function Barcode({ bars }: { bars: Bar[] }) {
+// The console queue's columns at a laptop's width, with GridStill's widths (the payout from 708px of window, the photo
+// check's time from 812px), each cell drawn by the console's own renderer (cells.tsx) as /console draws it: ids, filing
+// times, times and money in mono, the reason in the verdict's cell (under its mark in a column this narrow, as the
+// console sets it), a refusal's bar hatched. No reason column of its own and no foot the console lacks.
+const COLUMNS: { id: string; header: string; cell: ComponentType<Cell>; className: string }[] = [
+  { id: "claim", header: "Claim", cell: ClaimCell, className: "w-[220px]" },
+  // A container, as the console's verdict cell is (claims-grid.css): narrower than 26rem, the reason goes under its mark.
+  { id: "verdict", header: "Verdict", cell: VerdictCell, className: "min-w-[144px] flex-1 @container" },
+  { id: "checks", header: "Checks", cell: ChecksCell, className: "w-[136px]" },
+  { id: "time", header: "Answered in", cell: TimeCell, className: "hidden w-[104px] justify-end @min-[812px]:flex" },
+  { id: "payout", header: "Payout", cell: PayoutCell, className: "hidden w-[112px] @min-[708px]:flex" },
+  { id: "amount", header: "Amount", cell: AmountCell, className: "w-[96px] justify-end" },
+];
+// The first and last cells on the window's 16px inset.
+const EDGE = "first:pl-4 last:pr-4";
+// The console's mode (no homepage `stacked`): its own renderers, its own type.
+const cellProps = (row: ClaimRow) => ({ data: row, context: {} }) as unknown as Cell;
+
+function QueueRow({ row }: { row: ClaimRow }) {
   return (
-    <span className="flex items-center">
-      {bars.map((b, i) => (
-        <span
-          key={i}
-          className={clsx(
-            "h-4 w-1.5 rounded-[1.5px]",
-            i === 3 ? "ml-2" : i > 0 && "ml-[3px]",
-            // A pass in ink, as the console draws it: green means money moved, and a check moves none.
-            b === "pass" && "bg-text-2",
-            b === "hold" && "bg-[linear-gradient(var(--hold)_50%,transparent_50%)] ring-1 ring-hold/60 ring-inset",
-            b === "reject" && "bg-stop",
-            b === "skip" && "border border-dashed border-line-strong",
-          )}
-        />
+    <div className="flex h-13 border-b border-line">
+      {COLUMNS.map(({ id, cell: Render, className }) => (
+        <span key={id} className={clsx("flex min-w-0 shrink-0 items-center overflow-hidden px-3 text-ui whitespace-nowrap", EDGE, className)}>
+          <span className={clsx("min-w-0 flex-1", (id === "amount" || id === "time") && "flex justify-end")}>
+            <Render {...cellProps(row)} />
+          </span>
+        </span>
       ))}
-    </span>
-  );
-}
-
-function Thumb({ src }: { src: string }) {
-  return (
-    <span className="relative h-6 w-8 shrink-0 overflow-hidden rounded-[4px] border border-line">
-      <Image src={src} alt="" fill sizes="32px" className="object-cover" style={{ objectPosition: CLAIM.objectPosition }} />
-    </span>
-  );
-}
-
-// The console's columns (ClaimsGrid): Claim, Verdict, Checks, Answered in, Payout, Amount; the payout comes in where the
-// window has room for it, as the console's does.
-const GRID =
-  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[9.5rem_minmax(0,1fr)_4.5rem_5.5rem_4.5rem] @min-[900px]:grid-cols-[9.5rem_minmax(0,1fr)_4.5rem_5.5rem_7rem_4.5rem]";
-
-/** Claim RM-0442 as the recall team's console lists it, paid, at its filing time: its photo check answered in 11 s
- * (its stored answer's 11.29 s, the exhibit's clock: teardown/model.ts elapsed), and its payout PayPal confirmed. The console gives a paid claim no
- * reason: its payout cell says it. */
-const M4T_ROW = {
-  photo: CLAIM.photo,
-  filed: CLAIM.filed,
-  id: CLAIM.id,
-  status: "paid" as const,
-  reason: "",
-  // The console's one time unit: seconds, "11 s".
-  time: `${Math.round(EXHIBIT.answered)} s`,
-  amount: CLAIM.amount,
-};
-
-/** The status tabs' counts over the recall's claims, as the console's tabs count them, and the ledger's remedied, as the
- * console's strip (console/Ledger.tsx) gives it (paid or approved): before RM-0442's row lands (six claims) and after. */
-function tally(rows: readonly { status: string }[]) {
-  const counts: Record<string, number> = { all: rows.length, settling: 0, pending: 0 };
-  for (const r of rows) counts[r.status] = (counts[r.status] ?? 0) + 1;
-  return { counts, remedied: rows.filter((r) => r.status === "paid" || r.status === "approved").length };
-}
-const BEFORE = tally(CONSOLE_ROWS);
-const AFTER = tally([M4T_ROW, ...CONSOLE_ROWS]);
-
-/** The ones a reviewer answers for are in full ink, as the console sets them. */
-const EXCEPTION = new Set<string>(["held", "rejected", "blocked"]);
-
-function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?: boolean }) {
-  const compact = useContext(Compact);
-  return (
-    <div className={clsx(GRID, compact ? "h-12" : "h-14", "border-b border-line text-ui")}>
-      <span className="flex min-w-0 items-center gap-3">
-        <Thumb src={row.photo} />
-        <span className="flex min-w-0 flex-col leading-tight">
-          {/* The tour's convention: the claim id first, when it was filed under it, newest first. */}
-          <span className="font-mono font-medium">{row.id}</span>
-          <span className="truncate font-mono text-micro text-faint">{row.filed}</span>
-        </span>
-      </span>
-      {/* The console's verdict mark in a track as wide as the widest (Approved), so every reason starts on one line. */}
-      <span className="hidden min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-center gap-3 @min-[720px]:grid">
-        <VerdictMark verdict={row.status} className={clsx("justify-self-start", EXCEPTION.has(row.status) && "text-text")} />
-        {/* Two lines rather than an ellipsis: a cut sentence reads unfinished. */}
-        {/* A paid or approved claim has no reason, as in the console. */}
-        <span className={clsx("line-clamp-2 leading-tight", first ? "text-text" : "text-muted")}>{EXCEPTION.has(row.status) ? <NoBreakHyphens>{row.reason}</NoBreakHyphens> : ""}</span>
-      </span>
-      <span className="hidden @min-[720px]:block">
-        <Barcode bars={barsOf(row)} />
-      </span>
-      {/* Right-aligned on tabular figures, as the console's own column: "11 s" over "14 s" keeps one edge. */}
-      <span className="hidden text-right text-faint tabular-nums @min-[720px]:block">{row.time ?? "—"}</span>
-      {/* The payout as the console's column says it: PayPal's word for RM-0442, nothing for a claim with nothing sent. */}
-      <span className="hidden min-w-0 flex-col leading-tight @min-[900px]:flex">
-        {row.status === "paid" ? (
-          <>
-            <span>Paid</span>
-            <span className="truncate text-micro text-muted">PayPal confirmed</span>
-          </>
-        ) : (
-          <span className="text-faint">—</span>
-        )}
-      </span>
-      <span className="flex items-center justify-end gap-3">
-        <span className="@min-[720px]:hidden">
-          <VerdictMark verdict={row.status} className={EXCEPTION.has(row.status) ? "text-text" : undefined} />
-        </span>
-        {/* Plain figures in a table, as the console tour prints them: superscript cents are the hero receipt's alone. */}
-        {row.amount ? (
-          // Schibsted's proportional figures: its tabular ones space the point like mono ("$29 .99").
-          <span>${row.amount.toFixed(2)}</span>
-        ) : (
-          <span className="text-faint">—</span>
-        )}
-      </span>
     </div>
   );
 }
 
-export function ConsoleChapter({ p }: { p: Progress }) {
-  const compact = useContext(Compact);
+/** The status tabs' counts over the recall's claims, as the console's tabs count them, and the ledger's remedied, as the
+ * console's strip (console/Ledger.tsx) gives it (paid or approved): before RM-0442's row lands (six claims) and after. */
+function tally(rows: readonly ClaimRow[]) {
+  const counts: Record<string, number> = { all: rows.length };
+  for (const r of rows) {
+    const v = verdictOf(r);
+    counts[v] = (counts[v] ?? 0) + 1;
+  }
+  return { counts, remedied: (counts.paid ?? 0) + (counts.approved ?? 0) };
+}
+
+/** `rows`: the recall's claims as /console draws them, newest first (Hero.tsx, from the console's preview seed). */
+export function ConsoleChapter({ p, rows }: { p: Progress; rows: ClaimRow[] }) {
+  const arriving = rows.find((r) => r.id === CLAIM.id);
+  const others = rows.filter((r) => r.id !== CLAIM.id);
   // RM-0442's row opens into the table once the console is in (an object moving, 560ms), its words after the space. It
   // waits 200ms, so on a page straight past 0.91 the table has landed first and the paid row is the last thing in.
   const open = useGate(p, (v) => v >= 0.91, { duration: DURATION.object, ease: EASE.outQuart, delay: 0.2 }, { duration: 0.28, ease: EASE.outQuart });
-  const height = useTransform(open, (k) => `${(k * (compact ? 3 : 3.5)).toFixed(3)}rem`);
+  // The console's 52px row.
+  const height = useTransform(open, (k) => `${(k * 3.25).toFixed(3)}rem`);
   const opacity = useTransform(open, [0.5, 1], [0, 1]);
   // The tabs and the ledger count RM-0442 as its row lands (All 6 to 7, Paid 0 to 1, $0.00 to $29.99), never before.
   const [landed, setLanded] = useState(() => open.get() >= 0.5);
   useMotionValueEvent(open, "change", (k) => setLanded(k >= 0.5));
-  const { counts, remedied } = landed ? AFTER : BEFORE;
+  const { counts, remedied } = tally(landed ? rows : others);
   // The console's one neutral flash on a changed row (never amber: the rail's running chapter is this screen's amber).
   const flash = useTransform(p, (v) => `color-mix(in oklch, var(--text) ${(8 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
   // Its window is as tall as the queue (CustodyStage, .screen[data-fit]): a tall screen shows the seven claims whole over
@@ -446,30 +397,29 @@ export function ConsoleChapter({ p }: { p: Progress }) {
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro">/</span>
             </span>
           </div>
-          <div className={clsx(GRID, "hidden h-9 border-b border-line text-micro font-medium text-muted @min-[720px]:grid")}>
-            <span>Claim</span>
-            <span>Verdict</span>
-            <span>Checks</span>
-            <span className="text-right">Answered in</span>
-            <span className="hidden @min-[900px]:block">Payout</span>
-            <span className="text-right">Amount</span>
+          {/* The grid's header as GridStill draws it: 36px and its hairline, the labels in 13px. */}
+          <div className="box-content flex h-9 shrink-0 border-b border-line">
+            {COLUMNS.map((c) => (
+              <span key={c.id} className={clsx("flex shrink-0 items-center px-3 text-[13px] font-medium whitespace-nowrap text-muted", EDGE, c.className)}>
+                {c.header}
+              </span>
+            ))}
           </div>
           {/* As many whole rows as the panel holds, so a tall screen shows more of the queue: a row that would not fit
               wraps out of sight beside the list, never cut through by the panel's foot. */}
-          <div data-console-rows className="flex min-h-0 flex-1 flex-col flex-wrap content-start overflow-hidden *:w-full *:shrink-0">
-            <motion.div className="overflow-hidden" style={{ height }}>
-              <motion.div style={{ opacity, backgroundColor: flash }}>
-                <ConsoleRow row={M4T_ROW} first />
+          {/* .claims-grid: the console's own styles for its cells (the picked-row box stays hidden, as in /console). */}
+          <div data-console-rows className="claims-grid flex min-h-0 flex-1 flex-col flex-wrap content-start overflow-hidden *:w-full *:shrink-0">
+            {arriving && (
+              <motion.div className="overflow-hidden" style={{ height }}>
+                <motion.div style={{ opacity, backgroundColor: flash }}>
+                  <QueueRow row={arriving} />
+                </motion.div>
               </motion.div>
-            </motion.div>
-            {CONSOLE_ROWS.map((r) => (
-              <ConsoleRow key={r.id} row={r} />
+            )}
+            {others.map((r) => (
+              <QueueRow key={r.id} row={r} />
             ))}
           </div>
-          {/* The newest claims of the recall, never totals of their own: the recall's figures are For companies'. */}
-          <p className="flex shrink-0 items-center justify-between gap-4 border-t border-line px-4 py-3 text-micro text-faint">
-            <span>Newest first</span>
-          </p>
         </div>
       </div>
     </div>

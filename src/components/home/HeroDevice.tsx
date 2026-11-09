@@ -127,7 +127,7 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
         onPointerMove={onPointerMove}
         onPointerLeave={onPointerLeave}
         role="img"
-        aria-label={`A Remedy claim on a laptop: the recalled Kikea pillow cut in half with code M4T written on its tag. Five checks pass, then $29.99 is sent to PayPal, ${CLAIM.seconds} seconds after the photo.`}
+        aria-label={`A Remedy claim on a laptop: the recalled X-VESOLJE Nursing Pillow cut in half with code M4T written on its tag. Five checks pass, then $29.99 is sent to PayPal, ${CLAIM.seconds} seconds after the photo.`}
       >
         <div className={styles.view}>
           <Laptop screen={<ClaimScreen phase={shown} />} renderTilt={renderTilt} />

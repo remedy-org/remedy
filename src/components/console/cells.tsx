@@ -89,9 +89,8 @@ function TagThumb({ row }: { row: Pick<ClaimRow, "photos"> }) {
   return <img src={first.thumb} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" className="size-10 shrink-0 rounded-[6px] bg-surface-2 object-cover ring-1 ring-line" />;
 }
 
-/** Thumbnails, the claim id (mono 14/500) and its filing time (mono 12, faint). The homepage's still
- * (context.stacked) sets the second line in the sans, the day and time alone; a phone's (context.compact) shows one tag
- * photo and the time. */
+/** Thumbnails, the claim id (mono 14/500) and its filing time (mono 12, faint), on the homepage's still (context.stacked)
+ * as in the console; a phone's (context.compact) shows one tag photo and the time. */
 export function ClaimCell({ data, context }: Cell) {
   if (!data) return null;
   if (context?.stacked) {
@@ -102,7 +101,7 @@ export function ClaimCell({ data, context }: Cell) {
           <span className="font-mono text-ui font-medium">{data.id}</span>
           {/* When it was filed, as the console's second line ends: the day and time, so the newest-first order reads. The
               code is left to the claim's evidence. */}
-          <span className="mt-1 truncate text-micro whitespace-nowrap text-muted" title={`Filed ${formatTime(data.createdAt)}`}>
+          <span className="mt-0.5 truncate font-mono text-micro whitespace-nowrap text-faint" title={`Filed ${formatTime(data.createdAt)}`}>
             {context.compact ? formatClock(data.createdAt).slice(0, 5) : formatDayTime(data.createdAt)}
           </span>
         </span>
@@ -133,17 +132,18 @@ export function ClaimCell({ data, context }: Cell) {
   );
 }
 
-/** The mark in a fixed track as wide as the widest, then the reason: every reason starts on one x. Under it in the
- * homepage's narrower still (context.stacked), where a truncated sentence beside the mark would say little. */
+/** The mark in a fixed track as wide as the widest, then the reason: every reason starts on one x (under the mark in a
+ * narrow cell, claims-grid.css). On a phone's still (context.stacked and compact) the reason is under it, two lines at
+ * most; the homepage's laptop still draws it as the console does. */
 export function VerdictCell({ data, context }: Cell) {
   if (!data) return null;
-  if (context?.stacked) {
+  if (context?.stacked && context.compact) {
     return (
       <span className="flex h-full min-w-0 flex-col items-start justify-center gap-1">
         <VerdictMark verdict={verdictOf(data)} className={EXCEPTION.has(data.decision) ? "text-text" : undefined} />
         {data.note && data.decision !== "paid" && (
           // A phone has no hover to read a cut reason: it wraps to a second line there instead.
-          <span className={clsx("w-full text-micro leading-tight text-muted", context.compact ? "line-clamp-2 whitespace-normal" : "truncate")} title={data.note}>
+          <span className="line-clamp-2 w-full text-micro leading-tight whitespace-normal text-muted" title={data.note}>
             {data.note}
           </span>
         )}
@@ -261,8 +261,14 @@ function FiveBarcode({ bars }: { bars: CheckBar[] }) {
 export function TimeCell({ data, context }: Cell) {
   if (!data) return null;
   if (!data.timeline || data.modelSec === null) return <span className="text-ui text-faint">—</span>;
-  // The homepage's still sets its figures in the sans, as the page around it does.
-  if (context?.stacked) return <span className="text-ui text-text-2">{duration(data.modelSec)}</span>;
+  // The homepage's still prints it as the console does: the figure in mono, the unit in the sans.
+  if (context?.stacked) {
+    return (
+      <span className="text-ui text-text-2">
+        <DurationText sec={data.modelSec} />
+      </span>
+    );
+  }
   // The payout time under it, faint, only where it says something the answer doesn't: a person approved the claim
   // later, or PayPal took a while. Most claims are paid a second after the answer.
   const later = sent(data) && data.toPay !== null && data.toPay - data.modelSec > 5 ? data.toPay : null;
@@ -340,11 +346,9 @@ type AmountTone = "sent" | "approved" | "owed";
 const TONE_CLASS: Record<AmountTone, string> = { sent: "text-text", approved: "text-text-2", owed: "text-faint" };
 
 /** "$29.99" as a plain tabular figure, so a column of amounts lines up and copies as it reads. Its tone says where the
- * money is: sent through PayPal (full ink), approved (second tone), or only owed once a person approves (muted).
- * `plain`: the homepage's still, as a finance console prints money: the sans, with proportional figures. */
-export function AmountText({ amount, tone, plain }: { amount: string; tone: AmountTone; plain?: boolean }) {
-  // Proportional figures, said outright: the grid's right-aligned cells set tabular ones, which space the stop like mono.
-  if (plain) return <span className={clsx("text-ui whitespace-nowrap [font-variant-numeric:normal]", TONE_CLASS[tone])}>{amount}</span>;
+ * money is: sent through PayPal (full ink), approved (second tone), or only owed once a person approves (muted). The
+ * homepage's still prints it the same way. */
+export function AmountText({ amount, tone }: { amount: string; tone: AmountTone }) {
   return (
     <span className={clsx("font-mono text-ui whitespace-nowrap tabular-nums", TONE_CLASS[tone])}>
       {amount}
@@ -354,12 +358,12 @@ export function AmountText({ amount, tone, plain }: { amount: string; tone: Amou
 
 const toneOf = (r: Pick<ClaimRow, "decision" | "payoutStatus">): AmountTone => (sent(r) ? "sent" : r.decision === "paid" ? "approved" : "owed");
 
-export function AmountCell({ data, context }: Cell) {
+export function AmountCell({ data }: Cell) {
   if (!data) return null;
   if (!data.amount) return <span className="text-faint" aria-label="No amount">—</span>;
   return (
     <span title={data.decision === "held" ? "Owed once a person approves it" : undefined}>
-      <AmountText amount={data.amount} tone={toneOf(data)} plain={context?.stacked} />
+      <AmountText amount={data.amount} tone={toneOf(data)} />
     </span>
   );
 }
