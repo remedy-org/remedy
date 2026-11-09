@@ -7,7 +7,7 @@ export const TOUR = {
   tablist: "A tour of the Remedy console",
   steps: [
     { name: "Claims", sentence: "Every claim lands in one queue and is decided the moment its photos are in: paid, held for a person, rejected or blocked." },
-    { name: "Evidence", sentence: "Any claim opens to its photos and the model’s own words. Pay a held one there, and PayPal sends the refund." },
+    { name: "Evidence", sentence: "Any claim opens to its photos and the model’s own words. Approve or reject a held one there." },
     { name: "Insights", sentence: "Insights shows where claims stop and why, and what PayPal paid out each day." },
     { name: "Report", sentence: "The monthly CPSC progress report drafts itself from the same claims. Review it, then file." },
   ],
@@ -28,15 +28,19 @@ export const TOUR = {
     // the present tense as the vision is), and what a check costs (the benchmark's 1.1¢ a claim, Proof.tsx).
     facts: "Refunds go from your PayPal Business account straight to each owner’s PayPal account through PayPal Payouts, and Remedy never holds the money. Checking a claim costs 1.1¢.",
   },
-  /** Step 02's foot of the evidence (PayoutsNote.tsx): the console panel's own buttons and what they lead to. */
+  /** Step 02's foot of the evidence (PayoutsNote.tsx): the console panel's own buttons and what they lead to. The
+   * recall's claims are the console's own, where approving one sends nothing (ReviewActions.tsx), so the tour says
+   * Approve, as the console does, and Paid only of the claim PayPal paid. */
   payouts: {
-    pay: (amount: string) => `Pay ${amount}…`,
+    pay: (amount: string) => `Approve ${amount}…`,
+    confirm: "Approve",
     reject: "Reject…",
-    paying: "Paying through PayPal…",
+    paying: "Approving…",
     rejectClaim: "Reject claim",
     rejecting: "Rejecting…",
     reason: (text: string) => `The owner reads: “${text.replace(/'/g, "’")}”`,
     sent: (amount: string, id: string) => `Sent ${amount} through PayPal Payouts, reference ${id}.`,
+    approved: (amount: string) => `Approved ${amount}. Nothing was sent through PayPal.`,
     rejected: "Rejected on review. Nothing was sent, and the owner reads why.",
     refused: "Refused by the checks, so nothing was sent.",
   },
@@ -44,13 +48,13 @@ export const TOUR = {
 } as const;
 
 /** Step 02 on a phone, where nothing opens: the held claim, tinted in the queue above, shown open. */
-export const storyEvidence = (id: string) => `The held claim, ${id}, opens to its photos and the model’s own words. Pay it there, and PayPal sends the refund.`;
+export const storyEvidence = (id: string) => `The held claim, ${id}, opens to its photos and the model’s own words. Approve or reject it there.`;
 
 /** The four steps' sentences: step 03 names the recall analyst only when its recorded answer is on screen. */
 export const stepSentences = (analyst: boolean) => TOUR.steps.map((s, i) => s.sentence + (i === 2 && analyst ? TOUR.analystSentence : ""));
 
-/** Step 02's line under the panel's buttons: where paying sends the money, and the payout's reference. */
-export const payoutsLine = (id: string) => `Goes out through PayPal Payouts, reference ${id}.`;
+/** Step 02's line under the panel's buttons: what approving does here, as the console's confirm says it. */
+export const payoutsLine = (id: string) => `Approving ${id} records the decision; nothing is sent through PayPal.`;
 
 export interface TourTotals {
   claims: number;
@@ -65,8 +69,8 @@ export interface TourTotals {
 export function describe(t: TourTotals, open: { id: string; amount: string }, analyst?: { question: string; answer: string } | null) {
   return [
     `The claims queue for the Kikea recall: ${t.claims} claims, ${t.paid} paid, ${t.held} held for a person, ${t.refused} rejected or blocked. Click a claim to open its evidence, search the queue, filter it by status, or sort it by claim, verdict or the photo check’s time.`,
-    `Claim ${open.id}, held: photos 1 and 2, and the model’s answer that it couldn’t tell if both photos show the same item. A person pays or rejects it; paying sends ${open.amount} through PayPal Payouts.`,
-    `Insights: of ${t.claims} claims, ${t.photos} sent photos, ${t.preChecked} passed the pre-checks, ${t.paid} passed the photo check and were paid; ${t.refused} were refused. Payouts by day beside it.` +
+    `Claim ${open.id}, held: photos 1 and 2, and the model’s answer that it couldn’t tell if both photos show the same item. A person approves or rejects it; approving records the ${open.amount} refund and sends nothing through PayPal.`,
+    `Insights: of ${t.claims} claims, ${t.photos} sent photos, ${t.preChecked} passed the pre-checks and ${t.paid} ${t.paid === 1 ? "was" : "were"} paid through PayPal; ${t.refused} were refused. Payouts by day beside it.` +
       (analyst ? ` Recall analyst, asked “${analyst.question}”: ${analyst.answer}` : ""),
     `The CPSC progress report draft for recall 27-071, built from the same ${t.claims} claims: units remedied, claims by outcome, refunds paid and why claims were refused.`,
   ];

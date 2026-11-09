@@ -12,11 +12,11 @@ export const shownAs = (value: string) => value;
  * Why a claim stopped where it did: refused by a check (rejected or blocked, drawn in --stop), held for a person
  * (waiting, drawn in --hold, never counted as refused), or still in progress.
  */
-export type StopKind = "refused" | "held" | "waiting";
-export const STOP_KINDS: StopKind[] = ["refused", "held", "waiting"];
+export type StopKind = "refused" | "held" | "approved" | "waiting";
+export const STOP_KINDS: StopKind[] = ["refused", "held", "approved", "waiting"];
 
 export const kindOf = (decision: string | null | undefined): StopKind =>
-  decision === "Held" ? "held" : decision === "Rejected" || decision === "Blocked" ? "refused" : "waiting";
+  decision === "Held" ? "held" : decision === "Rejected" || decision === "Blocked" ? "refused" : decision === "Paid" ? "approved" : "waiting";
 
 export interface StopGroup {
   kind: StopKind;
@@ -84,4 +84,5 @@ export function funnel(
 }
 
 /** The words each kind of stop is labelled with. */
-export const KIND_LABEL: Record<StopKind, string> = { refused: "refused", held: "held for a person", waiting: "in progress" };
+// A claim approved with nothing sent stops short of Paid as the console's Approved, never "in progress".
+export const KIND_LABEL: Record<StopKind, string> = { refused: "refused", held: "held for a person", approved: "approved", waiting: "in progress" };

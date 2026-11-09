@@ -27,7 +27,7 @@ export { refusalLabel };
 
 const PRE_CHECKS = new Set(["session", "duplicate_photo", "payer", "payer_verified"]);
 
-export type Source = "Starter" | "Demo" | "Owner";
+export type Source = "Demo" | "Owner";
 
 export interface ClaimFact {
   id: string;
@@ -122,10 +122,12 @@ export interface InsightsData {
 const seconds = (from: string | undefined, to: string | undefined) => (from && to ? Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 1000)) : null);
 const at = (c: Claim, type: string) => c.events.find((e) => e.type === type)?.at;
 
-export const sourceOf = (c: Pick<Claim, "seeded" | "demo">): Source => (c.seeded ? "Starter" : c.demo ? "Demo" : "Owner");
+// The claims a console starts with read as the owners' claims they picture: no word for them a company would read.
+export const sourceOf = (c: Pick<Claim, "seeded" | "demo">): Source => (c.demo ? "Demo" : "Owner");
 
 function stageOf(c: Claim): { stage: Stage; stopReason: string | null } {
-  if (c.decision === "paid") return { stage: "Paid", stopReason: null };
+  // Paid only where PayPal paid: an approved claim with nothing sent stops just short, waiting for its payout.
+  if (c.decision === "paid") return c.payout?.status === "SUCCESS" ? { stage: "Paid", stopReason: null } : { stage: "Passed photo check", stopReason: "Nothing sent yet" };
   if (!c.photos.length && c.decision !== "blocked") return { stage: "Filed", stopReason: "No photos yet" };
   const refusedBy = c.reasons.find((r) => r.outcome === "reject");
   if (c.decision === "blocked" || (refusedBy && PRE_CHECKS.has(refusedBy.check))) {
@@ -147,6 +149,7 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
   const refused = c.decision === "rejected" || c.decision === "blocked";
   const refusedBy = c.reasons.find((r) => r.outcome === "reject");
   const photosIn = at(c, "photos_received");
+  const sentPaid = c.decision === "paid" && c.payout?.status === "SUCCESS";
   return {
     id: c.id,
     filedAt: c.createdAt,
@@ -160,10 +163,12 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     payer: `•••• ${c.payerId.slice(-4)}`,
     verified: c.payerVerified,
     amountPaid: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
-    amountSent: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
-    paidOnDay: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : null,
-    // As the queue's payout column: what a paid or held claim pays, and "not sent" on a held one.
-    refund: c.decision !== "paid" && c.decision !== "held" ? "—" : `${dollars.format(cents(amountOf(c.payout?.amount, recall)) / 100)}${c.decision === "held" ? " · not sent" : ""}`,
+    // Sent: only a payout PayPal confirmed, never a claim approved with nothing sent.
+    amountSent: sentPaid ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
+    paidOnDay: sentPaid ? cents(amountOf(c.payout?.amount, recall)) / 100 : null,
+    // As the queue's payout column: what a paid or held claim pays, and "not sent" on a held one or one approved with
+    // nothing sent.
+    refund: c.decision !== "paid" && c.decision !== "held" ? "—" : `${dollars.format(cents(amountOf(c.payout?.amount, recall)) / 100)}${sentPaid || (c.decision === "paid" && c.payout) ? "" : " · not sent"}`,
     remedied: c.decision === "paid" ? 1 : 0,
     refused: refused ? 1 : 0,
     held: c.decision === "held" ? 1 : 0,

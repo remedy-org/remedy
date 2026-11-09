@@ -34,12 +34,15 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const stats = statsOf(claims, recall);
   const refund = cents(recall.refund);
   const paid = claims.filter((c) => c.decision === "paid");
-  // A starter claim's payout has settled with the rest (view.ts toRow).
-  const sent = paid;
+  // Sent: a payout went to PayPal. An approved claim with nothing sent counts as approved, never as money sent.
+  const sent = paid.filter((c) => c.payoutStatus !== null);
+  const confirmed = paid.filter((c) => c.payoutStatus === "SUCCESS").length;
   const sum = (list: ClaimSummary[]) => list.reduce((s, c) => s + cents(amountOf(c.payoutAmount, recall)), 0);
   // One definition per state, in the words the claims grid uses; Held is only a claim waiting for a person.
   const rows: [Decision, string, number, string][] = [
-    ["paid", "Paid", stats.remedied, "Unit destroyed on camera; refund sent through PayPal"],
+    // Paid only where PayPal confirmed the payout; a claim the rule or a person approved with nothing paid yet is Approved.
+    ["paid", "Paid", confirmed, "Unit destroyed on camera; refund paid through PayPal"],
+    ...(stats.remedied > confirmed ? [["paid", "Approved", stats.remedied - confirmed, "Unit destroyed on camera; refund approved, not yet paid through PayPal"] as [Decision, string, number, string]] : []),
     ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn't run, auto-pay was off, or PayPal refused an approved payout"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
@@ -55,7 +58,7 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   }
 
   const paidAmounts = new Set(paid.map((c) => cents(amountOf(c.payoutAmount, recall))));
-  const settled = sent.filter((c) => c.payoutStatus === "SUCCESS" || c.seeded);
+  const settled = sent.filter((c) => c.payoutStatus === "SUCCESS");
   return {
     stats,
     outcomes: rows.map(([decision, label, count, note]) => ({ decision, label, count, share: share(count, stats.total), note })),

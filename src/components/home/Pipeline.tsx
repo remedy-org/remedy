@@ -4,12 +4,13 @@ import clsx from "clsx";
 import Image from "next/image";
 import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { Money } from "@/components/ui";
+import { GENUINE } from "@/lib/demo/claims";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
 import styles from "./home.module.css";
 
 // The checks in the order they run (src/lib/rule.ts): preCheck's three need no model; then the model describes and a
 // fixed rule decides.
-const GATES: { title: string; text: string; ai: boolean }[] = [
+export const GATES: { title: string; text: string; ai: boolean }[] = [
   {
     title: CHECK_NAMES.session,
     text: "Photos must arrive inside this claim's 10-minute camera session. An image made anywhere else is refused before the model sees it.",
@@ -26,9 +27,9 @@ const GATES: { title: string; text: string; ai: boolean }[] = [
     ai: false,
   },
   {
-    // The claim page's and How it works' names, word for word (lib/fiveChecks.ts CHECK_NAMES): the tag's code differs
-    // claim to claim, so it is "the code" here.
-    title: "Tag shows X-VESOLJE and the code",
+    // The claim page's and How it works' names, word for word (lib/fiveChecks.ts CHECK_NAMES), for RM-0442, the claim
+    // the homepage stages.
+    title: CHECK_NAMES.code(GENUINE.code, "X-VESOLJE"),
     text: "The model reads the hand-written code and the product label. K7Q written on a claim issued K7P is a reject.",
     ai: true,
   },

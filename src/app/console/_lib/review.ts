@@ -57,7 +57,7 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
   const amount = formatMoney(recall.refund);
   if (claim.seeded) {
     const starter: StarterDecision = { k: "approve", at: now.toISOString(), by: by.slice(0, 120) };
-    return { ok: true, claim: decideStarter(claim, starter, recall), starter };
+    return { ok: true, claim: decideStarter(claim, starter), starter };
   }
 
   const conflicts = approveConflicts(claim, await store.listClaims());
@@ -105,13 +105,13 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
 }
 
 // Reject with a reason the owner can act on. No money moves.
-export async function rejectClaim({ store, claim: stale, recall, by, reason, now = new Date() }: ReviewInput & { reason: string }): Promise<ReviewResult> {
+export async function rejectClaim({ store, claim: stale, by, reason, now = new Date() }: ReviewInput & { reason: string }): Promise<ReviewResult> {
   const claim = (await store.getClaim(stale.id)) ?? stale;
   if (claim.decision !== "held") return notHeld(store, claim.id);
   const text = reviewReasonText(reason);
   if (claim.seeded) {
     const starter: StarterDecision = { k: "reject", at: now.toISOString(), by: by.slice(0, 120), r: reason };
-    return { ok: true, claim: decideStarter(claim, starter, recall), starter };
+    return { ok: true, claim: decideStarter(claim, starter), starter };
   }
   const rejected = await store.updateClaim(claim.id, (c) =>
     c.decision === "held"

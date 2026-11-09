@@ -40,7 +40,7 @@ export async function loadInsights(session: Session & Viewer, wanted: string | s
   const claims: Claim[] = [];
   const unreadable: string[] = [];
   read.forEach((r, i) => {
-    if (r.status === "fulfilled" && r.value) claims.push(decideStarter(r.value, session.decided?.[r.value.id], recall));
+    if (r.status === "fulfilled" && r.value) claims.push(decideStarter(r.value, session.decided?.[r.value.id]));
     else unreadable.push(index[i].id);
   });
   claims.sort((a, b) => b.createdAt.localeCompare(a.createdAt));

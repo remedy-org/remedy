@@ -256,15 +256,15 @@ export function CodeTag({ wipe, short, className }: { wipe?: MotionValue<string>
 
 type Bar = "pass" | "hold" | "reject" | "skip";
 /**
- * The five checks' bars for a row: paid, every one passed; held at the fifth (the same item in both photos); rejected or
- * blocked at the check that stopped it (`fails`), and a claim blocked before the photo check never ran the rest.
+ * The five checks' bars for a row, as the console draws them: paid or approved, every one passed; held at the fifth (the
+ * same item in both photos); rejected at the check that stopped it (`fails`); blocked at the pre-check that stopped it,
+ * the other two pre-checks run and passed, and the photo check's two never run.
  */
 const barsOf = (row: { status: string; fails?: number }): Bar[] =>
   [0, 1, 2, 3, 4].map((i) => {
     if (row.status === "held") return i === 4 ? "hold" : "pass";
-    if (row.fails === undefined || i < row.fails) return "pass";
     if (i === row.fails) return "reject";
-    return row.status === "blocked" ? "skip" : "pass";
+    return row.status === "blocked" && i > 2 ? "skip" : "pass";
   });
 
 function Barcode({ bars }: { bars: Bar[] }) {
@@ -298,12 +298,12 @@ function Thumb({ src }: { src: string }) {
 
 const GRID = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[11rem_minmax(0,1fr)_6rem_6.5rem_5rem]";
 
-/** Claim RM-0442 as the recall team's console lists it, paid, just filed: its photo check answered at 0:14, the
- * payout sent at 0:15 (the exhibit's clock, teardown/model.ts elapsed). Its line says the payout's time, so the 14 s the
- * photo check took never reads as the receipt's 15 s. */
+/** Claim RM-0442 as the recall team's console lists it, paid, at its filing time: its photo check answered at 0:14,
+ * the payout sent at 0:15 (the exhibit's clock, teardown/model.ts elapsed). Its line says the payout's time, so the 14 s
+ * the photo check took never reads as the receipt's 15 s. */
 const M4T_ROW = {
   photo: CLAIM.photo,
-  filed: "Just now",
+  filed: CLAIM.filed,
   id: CLAIM.id,
   status: "paid" as const,
   reason: `Paid ${CLAIM.seconds} s after the photo`,

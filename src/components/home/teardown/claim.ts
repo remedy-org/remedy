@@ -1,34 +1,36 @@
 // The facts the Opened Exhibit shows, and where each one comes from. Nothing here is invented.
 //
-// - Claim RM-0442: filed through the demo on 7 Nov 2026 with the genuine claim (src/lib/demo/samples.ts: photo c02,
-//   code M4T) on the X-VESOLJE recall (CPSC 27-071). 15 s from the photo to the PayPal payout. The same facts as
-//   src/components/home/custody/claim.ts.
+// - Claim RM-0442 (src/lib/demo/claims.ts, GENUINE): the genuine claim (photo c02, code M4T) on the X-VESOLJE recall
+//   (CPSC 27-071), filed 7 Nov 2026. 15 s from the photo to the PayPal payout. The same facts as
+//   src/components/home/custody/claim.ts and the console.
 // - The photo (public/demo/c02-1.jpg) is generated (benchmark case c02-pillow-cut-lamplight, docs/EVAL.md). It carries
 //   no label (owner rule: no internal labels; the site's one sandbox line is in /terms).
 // - The two quotes are GPT-6.1 Sol's own words on that photo, copied verbatim from the stored run
 //   eval/out/runs/spike2-gpt-6.1-sol-r1.json (case c02-pillow-cut-lamplight): verdict.challenge_code.evidence and the
 //   first sentence of verdict.steps[0].evidence. Only the typography changed (straight quotes set as curly ones).
 
+import { GENUINE } from "@/lib/demo/claims";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
 
 export const EXHIBIT = {
-  id: "RM-0442",
-  code: "M4T",
+  id: GENUINE.id,
+  code: GENUINE.code,
   label: "X-VESOLJE",
   amount: 29.99,
   recall: "CPSC 27-071",
   /** Photo received to payout sent. */
-  seconds: 15,
-  photo: "/demo/c02-1.jpg",
-  /** Photos of earlier claims in the demo workspace (the console's seeded samples), for the fingerprint check. */
-  earlier: ["/demo/c01-1.jpg", "/demo/c03-1.jpg", "/demo/c10-1.jpg"],
+  seconds: GENUINE.toPayout!,
+  photo: `/demo/${GENUINE.photos[0]}`,
+  /** The photos of the recall's three claims before it (RM-9475, RM-2125, RM-0118 in claims.ts), for the fingerprint
+   * check. */
+  earlier: ["/demo/c09-1.jpg", "/demo/c05-1.jpg", "/demo/c11-1.jpg"],
   /**
-   * The real 64-bit dHash of each photo (src/lib/fingerprint.ts, run on public/demo/*.jpg on 7 Nov 2026) and how many
+   * The real 64-bit dHash of each photo (src/lib/fingerprint.ts, run on public/demo/*.jpg on 9 Nov 2026) and how many
    * bits the claim's photo differs from each earlier one. src/lib/rule.ts treats 8 or fewer as the same picture.
    */
   hash: "100c8dc81e2979de",
-  earlierHashes: ["e4a7694b37e6f6ff", "8f3f7c9e13c3e9f9", "b5752b27352fbbc1"],
-  earlierDistance: [33, 33, 34],
+  earlierHashes: ["cec4cc8c8cf87102", "e0fe3a3030709051", "e4a7694b37e6f6ff"],
+  earlierDistance: [26, 38, 33],
   samePhotoBar: 8,
 } as const;
 

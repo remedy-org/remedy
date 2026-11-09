@@ -20,19 +20,21 @@ describe("a company's decisions on starter claims", () => {
   });
 
   it("decides a held starter claim as the company did, and leaves every other claim as it is", () => {
-    const paid = decideStarter(held, approve, recall);
-    expect(paid).toMatchObject({ decision: "paid", payout: { status: "SUCCESS" } });
-    expect(paid.events.map((e) => e.type).slice(-3)).toEqual(["approved", "payout_sent", "payout_updated"]);
-    expect(decideStarter(held, reject, recall)).toMatchObject({ decision: "rejected", reasons: expect.arrayContaining([{ check: "review", outcome: "reject", text: "Rejected on review: The two photos don't show the same pillow" }]) });
+    // Approved with nothing sent through PayPal: it reads Approved, never Paid.
+    const approved = decideStarter(held, approve);
+    expect(approved).toMatchObject({ decision: "paid", payout: null });
+    expect(approved.events.at(-1)?.type).toBe("approved");
+    expect(approved.events.some((e) => e.type === "payout_sent")).toBe(false);
+    expect(decideStarter(held, reject)).toMatchObject({ decision: "rejected", reasons: expect.arrayContaining([{ check: "review", outcome: "reject", text: "Rejected on review: The two photos don't show the same pillow" }]) });
     const real = { ...held, seeded: undefined };
-    expect(decideStarter(real, approve, recall)).toBe(real);
-    expect(decideStarter(held, undefined, recall)).toBe(held);
+    expect(decideStarter(real, approve)).toBe(real);
+    expect(decideStarter(held, undefined)).toBe(held);
   });
 
   it("gives the index row what the decided claim's row says, keeping its version", () => {
     for (const d of [approve, reject]) {
       const fromRow = toRow(decideStarterRow(summarize(held), d, recall), recall);
-      const fromClaim = toRow(summarize(decideStarter(held, d, recall)), recall);
+      const fromClaim = toRow(summarize(decideStarter(held, d)), recall);
       const pick = (r: typeof fromRow) => [r.decision, r.reason, r.payoutStatus, r.amount, r.note, r.bars?.map((b) => b.state).join(), r.timeline?.end];
       expect(pick(fromRow)).toEqual(pick(fromClaim));
       expect(decideStarterRow(summarize(held), d, recall).version).toBe(summarize(held).version);

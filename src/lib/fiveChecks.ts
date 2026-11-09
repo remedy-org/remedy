@@ -27,6 +27,16 @@ export const CHECK_NAMES = {
   destroyed: (noun: string, cut: boolean) => `${noun} ${cut ? "cut in half" : "destroyed"}`,
 } as const;
 
+/** The five names for one claim, in order: the console's hover card and evidence, the homepage and the receipt all read
+ * these, so a check is named word for word the same everywhere (its finer answers sit under it only in the hover card). */
+export const fiveNames = (code: string, written: string | null, noun: string, cut: boolean): string[] => [
+  CHECK_NAMES.session,
+  CHECK_NAMES.duplicate,
+  CHECK_NAMES.account,
+  CHECK_NAMES.code(code, written),
+  CHECK_NAMES.destroyed(noun, cut),
+];
+
 /** Which of the five a recorded check belongs to; null for a hold that comes from the process (the model down, PayPal). */
 export function checkOf(id: string): CheckNumber | null {
   if (id === "session") return 1;

@@ -33,9 +33,8 @@ describe("the grid's evidence cells", () => {
     const row = toRow(summarize(seededPaid), recall);
     expect(row.bars?.map((b) => `${b.id}:${b.state}`)).toEqual([
       "session:pass",
-      // Starter claims share their photos: the fingerprint check never ran, so its slot is drawn as not run (a dash),
-      // in place, so every row's four account slots line up.
-      "duplicate_photo:skipped",
+      // Every demo claim has its own photos, so the fingerprint check ran and passed.
+      "duplicate_photo:pass",
       "payer:pass",
       "payer_verified:pass",
       "label:pass",
@@ -46,8 +45,8 @@ describe("the grid's evidence cells", () => {
       "step_1:pass",
     ]);
     expect(row.note).toBe("All checks passed");
-    // Each group counts what passed of what ran: the seeded claim's fingerprint check wasn't run, so it isn't counted.
-    expect(barsSentence(row.bars!)).toBe("4 of 5 checks passed · 1 not run");
+    // Each group counts what passed of what ran.
+    expect(barsSentence(row.bars!)).toBe("5 of 5 checks passed");
   });
 
   it("show the checks a claim will run as waiting, and a blocked claim's photo checks as not run", () => {
@@ -74,12 +73,13 @@ describe("the grid's evidence cells", () => {
     expect(toRow(old, recall, () => ({ thumb: "t", large: "l" }))).toMatchObject({ bars: null, timeline: null, toPay: null, code: null, photos: [], note: null });
   });
 
-  it("time a starter claim's payout as every other claim's", () => {
+  it("time a starter claim's payout as every other claim's, and read its status as PayPal recorded it", () => {
     const starter = toRow(summarize(seededPaid), recall);
     expect(starter.timeline).toEqual({ answered: 11, decided: 11, sent: 12, settled: 52, end: "paid" });
     expect(starter).toMatchObject({ toPay: 12, modelSec: 11, payoutStatus: "SUCCESS" });
-    // The seed's newest payout, still PENDING in its record, reads as settled with the rest.
-    expect(toRow(summarize({ ...seededPaid, payout: { ...seededPaid.payout!, status: "PENDING" } }), recall).payoutStatus).toBe("SUCCESS");
+    // Paid only where PayPal confirmed: a payout PENDING in its record reads as not yet paid, and none at all as approved.
+    expect(toRow(summarize({ ...seededPaid, payout: { ...seededPaid.payout!, status: "PENDING" } }), recall).payoutStatus).toBe("PENDING");
+    expect(toRow(summarize({ ...seededPaid, payout: null }), recall).payoutStatus).toBeNull();
     const real = toRow(summarize({ ...seededPaid, seeded: undefined, payout: { ...seededPaid.payout!, batchId: "LIVE" } }), recall);
     expect(real).toMatchObject({ toPay: 12, timeline: { sent: 12, settled: 52 } });
   });

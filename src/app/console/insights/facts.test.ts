@@ -10,7 +10,7 @@ import { buildInsights, claimFact, funnel, STAGES } from "./facts";
 const now = new Date("2026-11-07T12:00:00Z");
 const hashes = Object.fromEntries(SEED_PHOTOS.map((p, i) => [p, (i + 1).toString(16).padStart(16, "0")]));
 const recall = demoRecall(new Date("2026-11-04T12:00:00Z"));
-const claims = buildSeedClaims({ recall, now, hashes });
+const claims = buildSeedClaims({ recall, hashes });
 const data = buildInsights(claims, recall, now);
 
 describe("buildInsights", () => {
@@ -27,15 +27,16 @@ describe("buildInsights", () => {
     expect(Object.fromEntries(reasons)).toEqual(Object.fromEntries(report.refusals.map((r) => [r.reason, r.count])));
   });
 
-  it("marks every seeded claim as a sample and never exposes a full payer id", () => {
-    expect(data.claims.every((c) => c.source === "Starter")).toBe(true);
+  it("names no claim a starter or a sample, and never exposes a full payer id", () => {
+    expect(data.claims.every((c) => c.source === "Owner")).toBe(true);
     for (const c of data.claims) expect(c.payer).toMatch(/^•••• .{4}$/);
     expect(JSON.stringify(data)).not.toContain(claims[0].payerId);
   });
 
   it("times a paid claim from its photos to the payout, and leaves the rest blank", () => {
     for (const c of data.claims) {
-      if (c.decision === "Paid") expect(c.timeToPaySec).toBeGreaterThan(0);
+      // Only a claim PayPal paid has a payout to time; one approved with nothing sent has none.
+      if (c.payoutStatus === "SUCCESS") expect(c.timeToPaySec).toBeGreaterThan(0);
       else expect(c.timeToPaySec).toBeNull();
     }
   });
@@ -57,7 +58,7 @@ describe("funnel", () => {
       expect(f[i].reached).toBeLessThanOrEqual(f[i - 1].reached);
       expect(f[i - 1].reached - f[i].reached).toBe(f[i - 1].stopped);
     }
-    expect(f.at(-1)!.reached).toBe(data.claims.filter((c) => c.decision === "Paid").length);
+    expect(f.at(-1)!.reached).toBe(data.claims.filter((c) => c.payoutStatus === "SUCCESS").length);
   });
 
   it("names the reasons claims stopped at a stage, commonest first, with counts when they differ", () => {

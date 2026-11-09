@@ -7,7 +7,7 @@ import { KIND_LABEL, shownAs, type FunnelStep, type StopKind } from "../funnel";
 // reasons are never passed off as the top one. The console's Studio widget (CheckFunnel.tsx) feeds it Studio's rows and
 // makes each drop a cross-filter button; the homepage's still renders it from the seed with nothing to press.
 
-const TONE: Record<StopKind, string> = { refused: "text-stop", held: "text-hold", waiting: "text-faint" };
+const TONE: Record<StopKind, string> = { refused: "text-stop", held: "text-hold", approved: "text-faint", waiting: "text-faint" };
 
 export interface CheckFunnelViewProps {
   steps: FunnelStep[];
@@ -124,6 +124,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
   const stopped = [
     [out("refused"), KIND_LABEL.refused],
     [out("held"), KIND_LABEL.held],
+    [out("approved"), KIND_LABEL.approved],
     [out("waiting"), KIND_LABEL.waiting],
   ].filter(([n]) => n) as [number, string][];
   return (

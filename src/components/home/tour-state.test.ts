@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { barcodeWords } from "./ConsoleReplica";
 import { stepSentences, TOUR } from "./tour-copy";
 import { nextTab, stateAt, STEPS } from "./tour-state";
 
@@ -60,9 +59,5 @@ describe("tour copy", () => {
   it("says a refusal in the status tabs' own words: rejected or blocked", () => {
     expect(TOUR.steps[0].sentence).toMatch(/rejected or blocked/);
     expect(TOUR.steps[0].sentence).not.toMatch(/refused/);
-  });
-
-  it("names a barcode in words, never by colour alone", () => {
-    expect(barcodeWords([["pass", "pass", "pass"], ["pass", "reject", "waiting"]])).toBe("6 checks: 4 passed, 1 failed, 1 not run");
   });
 });

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ClaimSummary } from "@/lib/store";
 import { ClaimId, type Claim, type Reason, type Recall } from "@/lib/types";
-import { formatMoney, reviewReasonText } from "./view";
+import { reviewReasonText } from "./view";
 
 // A company's decisions on the shared recall's starter claims. The claims sit in every workspace, so a decision is kept
 // for the company in its own browser (a cookie the server reads): every tab, the ledger, Insights and the report agree,
@@ -38,10 +38,10 @@ export function parseDecisions(raw: string | undefined, payerId: string): Starte
 export const encodeDecisions = (payerId: string, d: StarterDecisions) => Buffer.from(JSON.stringify({ p: payerId, d }), "utf8").toString("base64url");
 
 const approvedText = (by: string) => `Approved on review by ${by}`;
-const plusSeconds = (iso: string, s: number) => new Date(Date.parse(iso) + s * 1000).toISOString();
 
-/** A held starter claim as this company decided it: approved and paid, or rejected with its reason. Anything else as is. */
-export function decideStarter(c: Claim, d: StarterDecision | undefined, recall: Pick<Recall, "refund">): Claim {
+/** A held starter claim as this company decided it: approved (nothing is sent through PayPal, so it reads Approved, never
+ * Paid), or rejected with its reason. Anything else as is. */
+export function decideStarter(c: Claim, d: StarterDecision | undefined): Claim {
   if (!d || !c.seeded || c.decision !== "held") return c;
   if (d.k === "reject") {
     const text = reviewReasonText(d.r ?? "");
@@ -52,18 +52,12 @@ export function decideStarter(c: Claim, d: StarterDecision | undefined, recall: 
       events: [...c.events, { at: d.at, type: "rejected", detail: `${text} (by ${d.by})` }],
     };
   }
-  const sent = plusSeconds(d.at, 1);
   return {
     ...c,
     decision: "paid",
     reasons: [...c.reasons, { check: "review", outcome: "pass", text: approvedText(d.by) }],
-    payout: { batchId: `SEED${c.id.slice(3)}`, status: "SUCCESS", updatedAt: sent, amount: recall.refund },
-    events: [
-      ...c.events,
-      { at: d.at, type: "approved", detail: approvedText(d.by) },
-      { at: sent, type: "payout_sent", detail: `Payout of ${formatMoney(recall.refund)} sent through PayPal` },
-      { at: sent, type: "payout_updated", detail: "PayPal: SUCCESS" },
-    ],
+    payout: null,
+    events: [...c.events, { at: d.at, type: "approved", detail: approvedText(d.by) }],
   };
 }
 
@@ -74,8 +68,7 @@ export function decideStarterRow(r: ClaimSummary, d: StarterDecision | undefined
   const review: Reason = d.k === "approve" ? { check: "review", outcome: "pass", text: approvedText(d.by) } : { check: "review", outcome: "reject", text: reviewReasonText(d.r ?? "") };
   const checks = [...(r.checks ?? []), { check: review.check, outcome: review.outcome }];
   if (d.k === "reject") return { ...r, decision: "rejected", reason: review, checks };
-  const sent = plusSeconds(d.at, 1);
-  return { ...r, decision: "paid", reason: review, checks, payoutStatus: "SUCCESS", payoutAmount: recall.refund, times: { ...r.times, sent, settled: sent } };
+  return { ...r, decision: "paid", reason: review, checks, payoutStatus: null, payoutAmount: recall.refund };
 }
 
 /** Every row as this company decided it. */
