@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { TYPICAL_RETURN } from "./defs";
+import { HATCH, TYPICAL_RETURN } from "./defs";
 
 // The CPSC report's ruler ends at 12% too (ProgressReport.tsx): the end is labelled on both, so they read as one scale.
 const SCALE = 0.12;
@@ -22,7 +22,8 @@ export function RecallProgressView({ done, total, dayCount, dated }: { done: num
   const pace = dayCount > 0 && done > 0 ? `${done.toLocaleString("en-US")} in ${dayCount} ${dayCount === 1 ? "day" : "days"}, ${perDay} a day` : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col justify-between gap-4 pb-1">
+    // The band's hatch (defs.ts HATCH) in the muted ink: its 1px whole-pixel strokes read as the old 1.5px faint ones did.
+    <div className="flex h-full min-h-0 flex-col justify-between gap-4 pb-1 [--hatch:var(--muted)]">
       <p className="sr-only">
         {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}{pace ? `: ${pace}` : ""}. Over a whole recall, which takes years, recalls typically reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
       </p>
@@ -40,10 +41,11 @@ export function RecallProgressView({ done, total, dayCount, dated }: { done: num
             style={{
               left: at(TYPICAL_RETURN.from),
               width: `calc(${at(TYPICAL_RETURN.to)} - ${at(TYPICAL_RETURN.from)})`,
-              background: "repeating-linear-gradient(135deg, var(--faint) 0 1.5px, transparent 1.5px 6px)",
               boxShadow: "inset 0 0 0 1px var(--line-2)",
             }}
-          />
+          >
+            <span className="absolute inset-0 rounded-[2px]" style={HATCH} />
+          </div>
           <div className="absolute inset-y-0 left-0 rounded-full bg-pay" style={{ width: `max(3px, ${at(share)})` }} />
         </div>
         <div className="absolute top-0 bottom-6 w-px bg-pay" style={{ left: `max(1px, ${at(share)})` }}>
@@ -68,7 +70,7 @@ export function RecallProgressView({ done, total, dayCount, dated }: { done: num
         <span
           aria-hidden="true"
           className="inline-block h-2.5 w-4 rounded-[2px]"
-          style={{ background: "repeating-linear-gradient(135deg, var(--faint) 0 1.5px, transparent 1.5px 6px)" }}
+          style={HATCH}
         />
         <span>
           {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}% of recalled products are returned or discarded.

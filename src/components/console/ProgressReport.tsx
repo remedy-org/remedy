@@ -2,7 +2,7 @@ import clsx from "clsx";
 import type { CSSProperties, ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
 import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
-import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
+import { HATCH, TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
 import { firmOf } from "./firm";
 import { formatCount, formatDate, formatPeriod, keepHyphens, plural } from "./format";
@@ -29,6 +29,7 @@ export function ProgressReport({
   generated,
   daysIn,
   reportNo,
+  shared = false,
   home = false,
 }: {
   recall: Recall;
@@ -38,6 +39,8 @@ export function ProgressReport({
   daysIn?: number;
   /** Which monthly progress report this is in CPSC's sequence (format.ts reportNumber). */
   reportNo?: number;
+  /** The workspace is on the shared recall (WorkspaceNote): the sheet says whose run its claims are from, in print too. */
+  shared?: boolean;
   /**
    * The homepage's sheet, inside the console tour's frame: sized by its own width, sans figures, and the marks its phone
    * peek (ReportPeek.tsx) cuts on. Its shares are the console's, word for word.
@@ -71,6 +74,7 @@ export function ProgressReport({
         <p data-peek-hide className="text-ui text-muted">
           {recall.title}
         </p>
+        {shared && <p className="text-ui text-muted">Claims from Remedy&rsquo;s own run of public CPSC recall {recall.id}.</p>}
         <dl
           data-peek-hide
           className={clsx(
@@ -112,7 +116,7 @@ export function ProgressReport({
         <div data-peek-row className="grid gap-6 sm:grid-cols-3">
           <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={cpscUnits(recall, s.unitsSold)} home={home} />
           <Figure label="Units remedied" value={formatCount(s.remedied)} note="Destroyed on camera" home={home} />
-          <Figure label="Correction rate" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} home={home} />
+          <Figure label="Share remedied" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} home={home} />
         </div>
         {s.unitsSold > 0 && <ReturnRuler remedied={s.remedied} sold={s.unitsSold} daysIn={daysIn} />}
       </section>
@@ -176,27 +180,31 @@ export function ProgressReport({
           <tbody>
             {(
               [
-                ["Units corrected by refund", formatCount(s.remedied), "Destroyed on camera and approved"],
+                ["Units corrected by refund", formatCount(report.correctedByRefund), "Destroyed on camera; refund sent through PayPal"],
+                // Remedied but not yet corrected: the refund is approved and PayPal hasn't sent it.
+                report.approvedUnsent ? ["Destroyed on camera, refund approved, not yet sent", formatCount(report.approvedUnsent), "Counted as corrected once PayPal sends the refund"] : null,
                 ["Units corrected by repair or replacement", "0", "The remedy is a refund"],
                 [
                   "Units remaining at consumer level",
-                  s.unitsSold ? formatCount(Math.max(0, s.unitsSold - s.remedied)) : "Not given",
+                  s.unitsSold ? formatCount(Math.max(0, s.unitsSold - report.correctedByRefund)) : "Not given",
                   s.unitsSold
-                    ? `${formatCount(s.unitsSold)} sold less ${formatCount(s.remedied)} corrected: every unit sold counts as with a consumer until it is corrected`
+                    ? `${formatCount(s.unitsSold)} sold less ${formatCount(report.correctedByRefund)} corrected: every unit sold counts as with a consumer until it is corrected`
                     : "Units sold less units corrected, once CPSC gives units sold",
                 ],
                 ["Claims in progress or held", formatCount(s.pending + s.held), "Not yet counted as corrected"],
-              ] as const
-            ).map(([k, v, note]) => (
-              <tr key={k}>
-                <td className={`${td} text-text`}>
-                  {k}
-                  <span className="mt-1 block text-muted sm:hidden">{note}</span>
-                </td>
-                <td className={`${td} w-24 text-right`}>{/\d/.test(v) ? n(v) : v}</td>
-                <td className={`${td} hidden text-muted sm:table-cell`}>{note}</td>
-              </tr>
-            ))}
+              ] satisfies ([string, string, string] | null)[]
+            )
+              .filter((r) => r !== null)
+              .map(([k, v, note]) => (
+                <tr key={k}>
+                  <td className={`${td} text-text`}>
+                    {k}
+                    <span className="mt-1 block text-muted sm:hidden">{note}</span>
+                  </td>
+                  <td className={`${td} w-24 text-right`}>{/\d/.test(v) ? n(v) : v}</td>
+                  <td className={`${td} hidden text-muted sm:table-cell`}>{note}</td>
+                </tr>
+              ))}
           </tbody>
         </table>
         <p className="max-w-read text-ui text-muted">
@@ -276,7 +284,7 @@ function ReturnRuler({ remedied, sold, daysIn }: { remedied: number; sold: numbe
           style={{
             left: on(TYPICAL_RETURN.from),
             width: `calc(${on(TYPICAL_RETURN.to)} - ${on(TYPICAL_RETURN.from)})`,
-            background: "repeating-linear-gradient(135deg, var(--hatch) 0 1px, transparent 1px 5px)",
+            ...HATCH,
           }}
         />
         <span aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-pay in-data-[theme=light]:bg-pay-ink" style={{ width: `max(3px, ${on(share)})` }} />

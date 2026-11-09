@@ -19,13 +19,11 @@ export interface CheckFunnelViewProps {
   onKeyDown?: (e: KeyboardEvent<HTMLElement>) => void;
   /** Phones: each stage's name and count over its bar, the drops under it (as the console's MobileSummary). */
   compact?: boolean;
-  /** Spread the stages over the card's height (the console's canvas); off, they sit 16px apart from the top. */
-  spread?: boolean;
   /** The homepage: on the card's own content edge (no inset), figures in the sans face. */
   flush?: boolean;
 }
 
-export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset, onKeyDown, compact, spread = true, flush = false }: CheckFunnelViewProps) {
+export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset, onKeyDown, compact, flush = false }: CheckFunnelViewProps) {
   const filed = steps[0]?.reached || 1;
   const figure = flush ? "tabular-nums" : "font-mono tabular-nums";
   if (compact) {
@@ -38,10 +36,13 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
               <span className={clsx("text-right", figure)}>{s.reached}</span>
             </div>
             <span aria-hidden="true" className="h-2 rounded-[3px] bg-surface-2">
-              <span
-                className={clsx("block h-full rounded-[3px]", i === steps.length - 1 ? "bg-pay" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
-                style={{ width: `${(s.reached / filed) * 100}%` }}
-              />
+              {/* A stage no claim reached draws no bar, not a sliver. */}
+              {s.reached > 0 && (
+                <span
+                  className={clsx("block h-full rounded-[3px]", i === steps.length - 1 ? "bg-pay" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
+                  style={{ width: `${(s.reached / filed) * 100}%` }}
+                />
+              )}
             </span>
             {i < steps.length - 1 &&
               s.groups.map((g) => (
@@ -59,11 +60,13 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
   const list = (
     // Every stage one row of the same height, its bar on the row's top line and its drop in the slot under it, so the
     // bars keep one pitch whether a stage has a drop or not (a drop of two kinds used to push its row 50px further down).
-    // The last stage (Paid) has no drop under it: its row is only its line, so the panel ends on it, never on a slot of
-    // empty space over the next section's rule.
+    // The list takes its own height from the top of the card, never the card's: its rows are as tall as the tallest stage
+    // with its drop (equal fr rows in a list of no set height), so a tall card never stretches the stages apart. The last
+    // stage (Paid) has no drop under it: its row is only its line, so the panel ends on it, never on a slot of empty space
+    // over the next section's rule.
     <ol
       data-funnel
-      className={clsx("grid min-h-0", flush ? "flex-1" : "h-full pb-1", spread ? "gap-0.5" : "gap-4", !spread && !flush && "content-start")}
+      className={clsx("grid min-h-0 content-start", flush ? "flex-1 gap-0.5" : "pb-1")}
       style={{ gridTemplateRows: `repeat(${Math.max(steps.length - 1, 0)}, minmax(0, 1fr)) auto` }}
       onClick={onReset}
       onKeyDown={onKeyDown}
@@ -73,17 +76,20 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
         return (
           // The stage's name, its count and its bar on the first line; the drop in the slot under the count and bar, beside
           // a name's second line if it wraps (a narrow card), so no stage's row is taller than its slot.
-          <li key={s.stage} className="grid grid-cols-[11.5rem_2.5rem_1fr] content-start items-center gap-x-3 gap-y-1">
+          <li key={s.stage} className={clsx("grid grid-cols-[11.5rem_2.5rem_1fr] content-start items-center gap-x-3", flush ? "gap-y-1" : "grid-rows-[20px_auto] gap-y-0.5")}>
             <div className="contents">
               {/* A long stage wraps to a second line rather than cut. */}
               <span className="row-span-2 self-start text-ui leading-tight text-pretty text-text">{flush ? s.stage : shownAs(s.stage)}</span>
               <span className={clsx("text-right text-ui leading-tight text-text", figure)}>{s.reached}</span>
               <span className="relative h-3 rounded-[3px] bg-surface-2" aria-hidden="true">
-                <span
-                  data-bar="funnel"
-                  className={clsx("absolute inset-y-0 left-0 rounded-[3px]", last ? "bg-pay-fill" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
-                  style={{ width: `max(2px, ${(s.reached / filed) * 100}%)`, "--i": i } as CSSProperties}
-                />
+                {/* A stage no claim reached draws no bar, not a sliver (Paid under a Held pick reads 0 on an empty track). */}
+                {s.reached > 0 && (
+                  <span
+                    data-bar="funnel"
+                    className={clsx("absolute inset-y-0 left-0 rounded-[3px]", last ? "bg-pay-fill" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
+                    style={{ width: `max(2px, ${(s.reached / filed) * 100}%)`, "--i": i } as CSSProperties}
+                  />
+                )}
               </span>
             </div>
             {/* A stage where no claim stopped says nothing: the next bar's length already shows it. */}
@@ -101,8 +107,9 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
                   : {})}
                 className={clsx(
                   "group col-span-2 col-start-2 -ml-3 flex min-h-6 items-center gap-2 rounded-control py-0.5 text-left text-micro transition-colors",
-                  // 8px of air inside the picked line's ring on the homepage's flush card, so its words never touch it.
-                  flush ? "pr-2 pl-3" : "px-2",
+                  // 8px of air inside the picked line's ring on the homepage's flush card, so its words never touch it. In the
+                  // console, whole-pixel lines, so every stage's row is the same whole height and the bars keep one pitch.
+                  flush ? "pr-2 pl-3" : "px-2 leading-4",
                   onToggle && "disabled:cursor-default enabled:hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-0",
                   selected.has(s.stage) ? "bg-surface-2 ring-1 ring-text-2 ring-inset" : "",
                 )}

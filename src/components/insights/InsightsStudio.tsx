@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import type { AgReportState, AgStudioApi } from "ag-studio";
+import type { AgAiHarness, AgReportState, AgStudioApi } from "ag-studio";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui";
@@ -89,6 +89,33 @@ function namePanels(root: HTMLElement) {
   }
 }
 
+// An answer that failed offers one quiet "Try again" under its line, on the conversation's last message only; it sends
+// the reader's last question again.
+function offerRetry(root: HTMLElement, retry: () => void) {
+  const messages = root.querySelectorAll<HTMLElement>(".ag-studio-ai-output-message, .ag-studio-ai-user-message, .ag-studio-ai-input-message");
+  const last = messages[messages.length - 1];
+  const errors = root.querySelectorAll<HTMLElement>(".ag-studio-ai-output-message-error");
+  const live = [...errors].find((e) => last?.contains(e)) ?? null;
+  for (const b of root.querySelectorAll<HTMLElement>("[data-retry]")) if (b.parentElement !== live) b.remove();
+  if (!live || live.querySelector("[data-retry]")) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.retry = "";
+  button.className = "insights-retry";
+  button.textContent = "Try again";
+  button.addEventListener("click", retry);
+  live.append(button);
+}
+
+// The reader's last question in the conversation whose answer failed, sent again through Studio's own session.
+function resend(harness: AgAiHarness | null) {
+  const sessions = (harness?.threads ?? []).map((t) => harness?.getSession?.(t.threadId)).filter((s) => s !== undefined);
+  const session = sessions.find((s) => s.status === "error");
+  const question = session?.messages.findLast((m) => m.role === "user");
+  const text = question?.parts.map((p) => (p.type === "text" ? p.text : "")).join("").trim();
+  if (session && text) session.sendMessage(text);
+}
+
 const samePicks = (a: FilterPick[], b: FilterPick[]) => JSON.stringify(a) === JSON.stringify(b);
 const findActions = () => document.getElementById(INSIGHTS_ACTIONS);
 const noActions = () => null;
@@ -137,6 +164,8 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
 
   useEffect(() => {
     if (!host.current) return;
+    const analyst = buildAnalyst(lib, data);
+    let harness: AgAiHarness | null = null;
     const studio = lib.createStudio<InsightsRegistry>(
       host.current,
       {
@@ -148,7 +177,8 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
         widgets: insightsWidgets(lib),
         panels: PANELS,
         localeText: LOCALE,
-        ai: buildAnalyst(lib, data),
+        // Kept, so an answer that failed can be asked again (offerRetry).
+        ai: (params) => (harness = typeof analyst === "function" ? analyst(params) : analyst),
         aiToolDisplay: toolDisplay,
         mode: "edit",
         onStateUpdated: ({ state }) => {
@@ -163,8 +193,12 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
     );
     api.current = studio;
     const root = host.current;
+    const retry = () => resend(harness);
     namePanels(root);
-    const panels = new MutationObserver(() => namePanels(root));
+    const panels = new MutationObserver(() => {
+      namePanels(root);
+      offerRetry(root, retry);
+    });
     panels.observe(root, { childList: true, subtree: true });
     return () => {
       panels.disconnect();

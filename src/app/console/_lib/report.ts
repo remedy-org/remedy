@@ -28,6 +28,10 @@ export interface Report {
   // Of that, what PayPal has confirmed, and how many payouts are still settling.
   settledCents: number;
   settling: number;
+  // CPSC's units corrected by refund: units whose refund PayPal sent (Paid, or Sent, settling). A unit destroyed on
+  // camera whose refund is approved and not yet sent is remedied, not yet corrected.
+  correctedByRefund: number;
+  approvedUnsent: number;
   demo: number;
 }
 
@@ -75,6 +79,8 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
     sent: sent.length,
     settledCents: sum(settled),
     settling: sent.length - settled.length,
+    correctedByRefund: money.paid + money.settling,
+    approvedUnsent: money.approved,
     demo: claims.filter((c) => c.demo).length,
   };
 }
