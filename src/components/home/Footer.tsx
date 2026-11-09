@@ -98,9 +98,14 @@ function CtaTag() {
 
 export function Footer() {
   return (
-    <footer>
+    // On a laptop screen the footer is tall enough, the room above the tag, that the page's last frame starts in air,
+    // never on a line or the console cut by the nav: 1000px tall and up, the screen less 317px, so the frame starts
+    // between For companies' console and its sign-in row (that row's top 96px down; the console's foot showed under the
+    // nav at 1920x1080); 800 to 999px, less 152px, so it starts under the sign-in row (its foot 8px under the nav; its
+    // text showed cut at 1440x900).
+    <footer className="flex flex-col lg:[@media(min-height:800px)_and_(max-height:999.98px)]:min-h-[calc(100svh-152px)] lg:[@media(min-height:1000px)]:min-h-[calc(100svh-317px)]">
       {/* The tag hangs on the grid, columns 1 to 12, so its copy and its button sit on the page's two text lines. */}
-      <div className="page grid-12">
+      <div className="page grid-12 mt-auto">
         <div className="col-span-12">
           <CtaTag />
         </div>
