@@ -483,9 +483,9 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   }, []);
 
   // Real Studio replaces the Insights still at 1024px and up, on intent (hover, focus or pick of tab 03, or of the app
-  // bar's Insights), and never on Save-Data: a visitor who only scrolls past never loads it (nor its licence notice in
-  // the console). It is the console's page, scrolling in the frame as the still does. If it hasn't drawn in 8s, the
-  // still stays for the session.
+  // bar's Insights), and never on Save-Data: a visitor who only scrolls past never loads it. Without a valid key
+  // (STUDIO_ON_HOME) it never loads at all and the still is the step. It is the console's page, scrolling in the frame as
+  // the still does. If it hasn't drawn in 8s, the still stays for the session.
   const studioIntent = () => {
     if (!STUDIO_ON_HOME || !studio || now.current.studioState !== "off") return;
     const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;

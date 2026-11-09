@@ -3,6 +3,7 @@
 import type { AgReportState, AgStudioApi } from "ag-studio";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { InsightsData } from "@/app/console/insights/facts";
+import { studioLicence } from "@/lib/agStudioLicence";
 import { InsightsLedger } from "./InsightsLedger";
 import "./insights.css";
 import type { StudioFilter } from "./InsightsPreviewLazy";
@@ -20,7 +21,8 @@ import { insightsWidgets, type InsightsRegistry } from "./widgets";
 // (InsightsPreviewLazy), and live once shown: its cross-filters work as in the console, and the ledger follows them.
 // Drawn as the console draws it (insights.css), its canvas padding the frame's 20px inset, as the still is.
 
-const LICENSE = process.env.NEXT_PUBLIC_AG_STUDIO_LICENSE;
+// Loaded only under a valid, unexpired key (STUDIO_ON_HOME); without one the tour keeps the still.
+const LICENSE = studioLicence();
 if (LICENSE) lib.AgStudioLicenseManager.setLicenseKey(LICENSE);
 
 const PANELS = { view: { left: [], right: [] } };
