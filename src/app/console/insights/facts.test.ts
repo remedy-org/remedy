@@ -65,14 +65,14 @@ describe("funnel", () => {
     const rows = [
       { stage: "Passed checks before the photo check" as const, stopReason: "Photo of a screen or a print", decision: "Rejected" },
       { stage: "Passed checks before the photo check" as const, stopReason: "Photo of a screen or a print", decision: "Rejected" },
-      { stage: "Passed checks before the photo check" as const, stopReason: "Code missing or wrong", decision: "Rejected" },
+      { stage: "Passed checks before the photo check" as const, stopReason: "Wrong or missing code on the tag", decision: "Rejected" },
       { stage: "Paid" as const, stopReason: null, decision: "Paid" },
     ];
     expect(funnel(rows)[2]).toEqual({
       stage: "Passed checks before the photo check",
       reached: 4,
       stopped: 3,
-      groups: [{ kind: "refused", count: 3, summary: "Photo of a screen or a print 2, Code missing or wrong 1" }],
+      groups: [{ kind: "refused", count: 3, summary: "Photo of a screen or a print 2, Wrong or missing code on the tag 1" }],
     });
   });
 

@@ -122,9 +122,9 @@ export function ProgressReport({
         </dl>
       </header>
 
-      {/* The phone story's closed preview ends here (ReportPeek.tsx): the draft's head, then its units remedied. */}
+      {/* The phone story's closed preview ends here (ReportPeek.tsx): the draft's head, then its progress. */}
       <section data-peek-end className="mt-8 flex flex-col gap-4 break-inside-avoid">
-        <H>Units remedied</H>
+        <H>Progress</H>
         <div data-peek-row className="grid gap-6 sm:grid-cols-3">
           <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={cpscUnits(recall, s.unitsSold)} home={home} />
           <Figure label={home ? "Remedied" : "Units remedied"} value={formatCount(s.remedied)} note="Destroyed on camera" home={home} />

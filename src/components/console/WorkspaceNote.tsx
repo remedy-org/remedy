@@ -13,7 +13,7 @@ export function WorkspaceNote({ recall, recalls, company }: { recall: Recall; re
   if (recall.owner !== null || recalls.some((r) => r.owner !== null) || !firm || (company && sameFirm(firm, company))) return null;
   return (
     <p className="text-ui text-muted">
-      Your workspace opens on Remedy&rsquo;s own run of public CPSC recall <span className="font-mono">{recall.id}</span>, {keepHyphens(recall.product)}, so you can see a running
+      Your console opens on Remedy&rsquo;s own run of public CPSC recall <span className="font-mono">{recall.id}</span>, {keepHyphens(recall.product)}, so you can see a running
       queue.{" "}
       <Link href="/console/recalls/new" className="whitespace-nowrap text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
         Import your own recall <span aria-hidden="true">→</span>
