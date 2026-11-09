@@ -317,12 +317,15 @@ const M4T_ROW = {
   amount: CLAIM.amount,
 };
 
-const ROWS = [M4T_ROW, ...CONSOLE_ROWS];
-/** The status tabs' counts over the recall's seven claims, as the console's tabs count them. */
-const COUNTS: Record<string, number> = { all: ROWS.length, settling: 0, pending: 0 };
-for (const r of ROWS) COUNTS[r.status] = (COUNTS[r.status] ?? 0) + 1;
-/** The ledger's figures, as the console's strip (console/Ledger.tsx) gives them: paid or approved is remedied. */
-const REMEDIED = ROWS.filter((r) => r.status === "paid" || r.status === "approved").length;
+/** The status tabs' counts over the recall's claims, as the console's tabs count them, and the ledger's remedied, as the
+ * console's strip (console/Ledger.tsx) gives it (paid or approved): before RM-0442's row lands (six claims) and after. */
+function tally(rows: readonly { status: string }[]) {
+  const counts: Record<string, number> = { all: rows.length, settling: 0, pending: 0 };
+  for (const r of rows) counts[r.status] = (counts[r.status] ?? 0) + 1;
+  return { counts, remedied: rows.filter((r) => r.status === "paid" || r.status === "approved").length };
+}
+const BEFORE = tally(CONSOLE_ROWS);
+const AFTER = tally([M4T_ROW, ...CONSOLE_ROWS]);
 
 /** The ones a reviewer answers for are in full ink, as the console sets them. */
 const EXCEPTION = new Set<string>(["held", "rejected", "blocked"]);
@@ -385,6 +388,10 @@ export function ConsoleChapter({ p }: { p: Progress }) {
   const open = useGate(p, (v) => v >= 0.91, { duration: DURATION.object, ease: EASE.outQuart, delay: 0.2 }, { duration: 0.28, ease: EASE.outQuart });
   const height = useTransform(open, (k) => `${(k * (compact ? 3 : 3.5)).toFixed(3)}rem`);
   const opacity = useTransform(open, [0.5, 1], [0, 1]);
+  // The tabs and the ledger count RM-0442 as its row lands (All 6 to 7, Paid 0 to 1, $0.00 to $29.99), never before.
+  const [landed, setLanded] = useState(() => open.get() >= 0.5);
+  useMotionValueEvent(open, "change", (k) => setLanded(k >= 0.5));
+  const { counts, remedied } = landed ? AFTER : BEFORE;
   // The console's one neutral flash on a changed row (never amber: the rail's running chapter is this screen's amber).
   const flash = useTransform(p, (v) => `color-mix(in oklch, var(--text) ${(8 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
   // Its window is as tall as the queue (CustodyStage, .screen[data-fit]): a tall screen shows the seven claims whole over
@@ -400,14 +407,19 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             <LedgerItem
               value={
                 <>
-                  {REMEDIED}
+                  {remedied}
                   <span className="text-ui font-normal text-muted"> of {CLAIM.units.replace(/^About /, "")}</span>
                 </>
               }
               label="remedied"
             />
-            <LedgerItem value={`$${CLAIM.amount.toFixed(2)}`} label="paid through PayPal" />
-            <LedgerItem className="hidden @min-[640px]:flex" value={durationFigure(CLAIM.seconds)} label="median photo to payout sent · 1 payout" />
+            <LedgerItem value={`$${(landed ? CLAIM.amount : 0).toFixed(2)}`} label="paid through PayPal" />
+            {/* The console shows no median before a payout: it comes in with the row. */}
+            <LedgerItem
+              className={clsx("hidden transition-opacity duration-300 @min-[640px]:flex", !landed && "opacity-0")}
+              value={durationFigure(CLAIM.seconds)}
+              label="median photo to payout sent · 1 payout"
+            />
           </dl>
           <div className="flex items-center gap-4 border-b border-line px-4">
             {/* The console's own status tabs, in its words, with their counts in mono. */}
@@ -422,7 +434,7 @@ export function ConsoleChapter({ p }: { p: Progress }) {
                 >
                   {t.label}
                   <span className={clsx("inline-block min-w-[2ch] font-mono text-micro font-normal tabular-nums", i === 0 ? "text-muted" : "text-faint")}>
-                    {COUNTS[t.id] ?? 0}
+                    {counts[t.id] ?? 0}
                   </span>
                 </span>
               ))}
