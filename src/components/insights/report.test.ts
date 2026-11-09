@@ -70,7 +70,7 @@ describe("cross-filter", () => {
 
   it("names the picks in the bar", () => {
     expect(filterLabel([{ field: "claims.refusalReason", values: ["Rejected by a person on review"] }])).toBe("Rejected by a person on review");
-    expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("claims stopped at the account checks · Verdict: Held or Blocked");
+    expect(filterLabel([{ field: "claims.stage", values: ["Photos sent"] }, { field: "claims.decision", values: ["Held", "Blocked"] }])).toBe("claims stopped before the photo check · Verdict: Held or Blocked");
     expect(filterLabel([{ field: "calendar::day", values: ["20261107", "20261104"] }])).toBe("claims filed 7 Nov or 4 Nov");
     expect(filterLabel([{ field: "", values: [] }])).toBe("A pick on a chart");
   });

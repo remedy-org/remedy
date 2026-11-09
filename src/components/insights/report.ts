@@ -79,7 +79,7 @@ export function filterClaims<T extends Partial<Claim>>(claims: T[], picks: Filte
 const or = (values: string[]) => values.map(shownAs).join(" or ");
 const STOPPED: Record<string, string> = {
   Filed: "claims still waiting for photos",
-  "Photos sent": "claims stopped at the account checks",
+  "Photos sent": "claims stopped before the photo check",
   "Passed account checks": "claims stopped at the photo check",
   "Passed photo check": "claims held after passing every check",
   Paid: "approved claims",
@@ -90,7 +90,7 @@ const PICK_LABEL: Record<string, (values: string[]) => string> = {
   [DAY]: (v) => `claims filed ${or(v.map((d) => `${Number(d.slice(6))} ${MONTHS[Number(d.slice(4, 6)) - 1] ?? ""}`.trim()))}`,
 };
 
-/** "Rejected by a person on review", "claims stopped at the account checks · Verdict: Held"; a pick this can't name reads as a chart's. */
+/** "Rejected by a person on review", "claims stopped before the photo check · Verdict: Held"; a pick this can't name reads as a chart's. */
 export function filterLabel(picks: FilterPick[]) {
   return picks.map((p) => (p.field ? (PICK_LABEL[p.field] ?? or)(p.values) : "A pick on a chart")).join(" · ");
 }
