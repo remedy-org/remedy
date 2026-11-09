@@ -36,7 +36,7 @@ export function HeroPhone() {
           </Paper>
           <div className="flex items-center gap-3 px-1">
             <span className="relative size-12 shrink-0 overflow-hidden rounded-control border border-line">
-              <Image src={CLAIM.photo} alt="" fill sizes="48px" className="object-cover" style={{ objectPosition: CLAIM.objectPosition }} />
+              <Image src={CLAIM.photo} alt="" width={48} height={48} className="size-full object-cover" style={{ objectPosition: CLAIM.objectPosition }} />
             </span>
             <span className="text-ui text-text-2">All 5 checks passed</span>
           </div>
