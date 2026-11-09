@@ -60,14 +60,15 @@ export function frameAt(k: number, card: Box, win: Box): Box | null {
  * The card's look at k, each 0 to 1. `receipt`: the receipt's own paper and words, gone as it folds. `paper`: the card's
  * ground, the receipt's paper turning to the console's surface. `row`: RM-0442's row, in once the card is all but
  * folded. `lift`: the card's ground, edge and shadow, settling flat into the queue as it lands. `ground`: the card's
- * ground coming up under the receipt's perforated edge, so its first frame is the receipt exactly.
+ * ground coming up under the receipt's perforated edge, so its first frame is the receipt exactly. The receipt's words
+ * dim with its paper and the row's come in as they go, so the card is never an empty box for more than a frame.
  */
 export function lookAt(k: number) {
   return {
-    receipt: 1 - ramp(k, 0.04, 0.18),
-    ground: ramp(k, 0, 0.06),
-    paper: 1 - ramp(k, 0.06, 0.26),
-    row: ramp(k, 0.2, 0.34),
+    receipt: 1 - ramp(k, 0.03, 0.15),
+    ground: ramp(k, 0, 0.03),
+    paper: 1 - ramp(k, 0.03, 0.15),
+    row: ramp(k, 0.15, 0.27),
     lift: 1 - ramp(k, 0.82, 1),
   };
 }

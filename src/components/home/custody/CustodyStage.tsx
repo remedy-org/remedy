@@ -228,6 +228,14 @@ function paintArrival(refs: Record<"stage" | "card" | "ghost", RefObject<HTMLDiv
     rc.style.transform = `translate(${(box.w - r0.w).toFixed(1)}px, ${((box.h - r0.h) / 2).toFixed(1)}px)`;
     rc.style.clipPath = `inset(${(crop - m).toFixed(1)}px ${-m}px ${(crop - m).toFixed(1)}px ${-m}px)`;
     rc.style.opacity = look.receipt.toFixed(3);
+    // Once the card's ground is up under it (the receipt's own paper, to the shade), the receipt gives up its paper and
+    // shadow to the card: its words dim on the card's one ground as it turns to the console's surface, never a lighter
+    // receipt-shaped patch on a darker card.
+    const folding = look.ground >= 1;
+    const paper = rc.querySelector<HTMLElement>(".bg-paper");
+    const lifted = rc.querySelector<HTMLElement>(".paper-lifted");
+    if (paper) paper.style.background = folding ? "transparent" : "";
+    if (lifted) lifted.style.filter = folding ? "none" : "";
     // "inherit", never "visible": a visible child would show through the card once it is hidden.
     rc.style.visibility = look.receipt > 0 ? "inherit" : "hidden";
   }
