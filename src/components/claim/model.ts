@@ -379,9 +379,6 @@ export function coverCrop(vw: number, vh: number, bw: number, bh: number): { sx:
   return { sx: 0, sy: Math.round((vh - sh) / 2), sw: vw, sh };
 }
 
-/** The demo recall accepts a stand-in product (CPSC's pillow has no label), which the code step says once, plainly. */
-export const acceptsStandIn = (spec: Pick<CheckSpec, "product">) => /\bstand-in\b/i.test(spec.product);
-
 /** A refusal's headline, from the check that decided it: specific where it can be, the general sentence otherwise. */
 export function refusalHeadline(claim: Pick<Claim, "decision" | "reasons" | "photos">, spec: Pick<CheckSpec, "proof_steps">): string {
   const check = decidingReasons(claim)[0]?.check ?? "";
