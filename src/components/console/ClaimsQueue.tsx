@@ -808,6 +808,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               onBack={goBack}
               picking={picked.length > 1}
               onReturn={() => open && grid.current?.focusRow(open)}
+              onSaved={refresh}
             />
             </Suspense>
             ) : (
@@ -831,6 +832,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           nextHeld={nextHeld}
           back={back}
           onBack={goBack}
+          onSaved={refresh}
         />
         </Suspense>
       )}

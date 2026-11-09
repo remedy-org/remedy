@@ -55,6 +55,9 @@ export interface EvidenceProps {
   picking?: boolean;
   // Puts the keyboard back on the claim's row (after the photo viewer closes), so ↓ and ↑ walk on from there.
   onReturn?: () => void;
+  // A decision (or a refused approve) changed the claim: the queue reads its rows again. In place, never a page
+  // refresh, which would remount the queue and lose what this visit did (the receipt, the session's line, the pick).
+  onSaved?: () => void;
 }
 
 // Claims this page view already loaded, by id and version: walking back up the queue costs nothing.
@@ -110,7 +113,7 @@ function useClaim(id: string, version: number | null | undefined, filedAt: strin
 }
 
 /** Laptops: an aside beside the grid. No backdrop, the grid stays live; Esc closes it (ClaimsQueue returns focus). */
-export function EvidencePanel({ claimId, row, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack, picking, onReturn }: EvidenceProps) {
+export function EvidencePanel({ claimId, row, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack, picking, onReturn, onSaved }: EvidenceProps) {
   if (!claimId) return null;
   return (
     <aside
@@ -133,6 +136,7 @@ export function EvidencePanel({ claimId, row, viewPhotos, version, filedAt, onCl
         onBack={onBack}
         picking={picking}
         onReturn={onReturn}
+        onSaved={onSaved}
         variant="panel"
       />
     </aside>
@@ -140,7 +144,7 @@ export function EvidencePanel({ claimId, row, viewPhotos, version, filedAt, onCl
 }
 
 /** Phones and tablets: a full-screen modal dialog (a sheet from the right on tablets). */
-export function EvidenceDrawer({ claimId, row, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack }: EvidenceProps) {
+export function EvidenceDrawer({ claimId, row, viewPhotos, version, filedAt, onClose, intent, onOpen, onDecided, nextHeld, back, onBack, onSaved }: EvidenceProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -176,6 +180,7 @@ export function EvidenceDrawer({ claimId, row, viewPhotos, version, filedAt, onC
           nextHeld={nextHeld}
           back={back}
           onBack={onBack}
+          onSaved={onSaved}
           variant="sheet"
         />
       )}
@@ -198,9 +203,11 @@ function EvidenceContent({
   onBack,
   picking,
   onReturn,
+  onSaved,
   variant,
 }: Omit<EvidenceProps, "claimId"> & { id: string; variant: "panel" | "sheet" }) {
   const router = useRouter();
+  const reread = () => (onSaved ? onSaved() : router.refresh());
   const { claim, stale, load, retry, replace } = useClaim(id, version, filedAt);
   // The decision this view just saved: said in the footer, which then offers the next held claim.
   const [saved, setSaved] = useState<{ id: string; decision: DrawerClaim["decision"]; at: string } | null>(null);
@@ -211,7 +218,7 @@ function EvidenceContent({
     replace(c);
     setSaved({ id: c.id, decision: c.decision, at: new Date().toISOString() });
     onDecided?.(c.id, c.decision, { amount: c.amount });
-    router.refresh();
+    reread();
   };
   const heading = useRef<HTMLHeadingElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -369,7 +376,7 @@ function EvidenceContent({
           {/* One set of actions at a time: while claims are picked, the bar under the grid acts and these step back. */}
           {picking && <p className="mb-3 text-ui text-muted">Picked claims use the bar under the list.</p>}
           <div inert={picking || undefined} className={clsx("transition-opacity duration-160", picking && "opacity-40")}>
-          <ReviewActions key={claim.id} claim={claim} onDone={done} onFailed={() => router.refresh()} intent={act} onMode={onMode} onBusy={setBusy} onOpen={onOpen} />
+          <ReviewActions key={claim.id} claim={claim} onDone={done} onFailed={reread} intent={act} onMode={onMode} onBusy={setBusy} onOpen={onOpen} />
           </div>
         </footer>
       )}
