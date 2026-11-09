@@ -35,6 +35,8 @@ export function RefusalReasonsView({ items, selected = new Set(), onToggle, onRe
   // Each bar is its share of all the refusals (3 of 9 draws a third), so reasons with one claim each never all read full:
   // the homepage in one muted red, the console in the funnel's muted ink (the title already says these were refused).
   const max = Math.max(1, total);
+  // Every reason with the same count: bars of one length compare nothing, so the list is the reasons and their counts.
+  const bars = items.some((i) => i.count !== items[0].count);
   const Item = onToggle ? "button" : "div";
   const figure = flush ? "tabular-nums" : "font-mono tabular-nums";
 
@@ -66,13 +68,15 @@ export function RefusalReasonsView({ items, selected = new Set(), onToggle, onRe
               )}
               <span className={clsx("text-right text-ui text-text", (compact || caughtBy) && "self-start", figure)}>{i.count}</span>
               {caughtBy?.[i.gate] && <span className="col-span-2 -mt-1 text-micro text-muted">Caught {caughtBy[i.gate]}</span>}
-              <span aria-hidden="true" className="col-span-2 h-1.5 rounded-full bg-surface-2">
-                <span
-                  data-bar="refusal"
-                  className={clsx("block h-full rounded-full", flush ? "bg-[color-mix(in_oklch,var(--stop)_55%,var(--surface))]" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
-                  style={{ width: `${(i.count / max) * 100}%`, "--i": n } as CSSProperties}
-                />
-              </span>
+              {bars && (
+                <span aria-hidden="true" className="col-span-2 h-1.5 rounded-full bg-surface-2">
+                  <span
+                    data-bar="refusal"
+                    className={clsx("block h-full rounded-full", flush ? "bg-[color-mix(in_oklch,var(--stop)_55%,var(--surface))]" : "bg-[color-mix(in_oklch,var(--text)_26%,var(--surface))]")}
+                    style={{ width: `${(i.count / max) * 100}%`, "--i": n } as CSSProperties}
+                  />
+                </span>
+              )}
             </Item>
           </li>
         ))}

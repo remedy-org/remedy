@@ -36,12 +36,12 @@ function Layer({ p, i, compact, fill, children }: { p: Progress; i: number; comp
   const y = useTransform(opacity, (o) => (i === 0 ? 0 : 8 * (1 - o)));
   const visibility = useTransform(opacity, (o) => (o > 0 ? "visible" : "hidden"));
   return (
-    // A claim screen sits in the middle of the frame at every size (one rule: top-aligned, a laptop screen left its lower
-    // half empty, a tall one its upper); the console fills it.
+    // A claim screen starts under the bar, as the claim page does under its header (centred, it left a 170px band of
+    // ground over the consent screen at 1440x900); the console fills it.
     <motion.div
       data-layer={i}
       // The console's queue starts 24px under its bar, as the tour's does under its ledger, never a well of empty ground.
-      className={clsx("absolute inset-0 flex justify-center px-8", compact || fill ? "pt-6 pb-4" : "pt-12 pb-8", fill ? "items-start" : "items-center")}
+      className={clsx("absolute inset-0 flex items-start justify-center px-8", compact || fill ? "pt-6 pb-4" : "pt-12 pb-8")}
       style={{ opacity, y, visibility }}
     >
       <div className={clsx("w-full max-w-[66rem]", fill && "h-full")}>{children}</div>

@@ -373,8 +373,12 @@
   list-style: none;
 }
 
+/* The row's cells are one height (the tallest name's, "One claim per verified PayPal account" on two lines), each
+   name at the top and its No AI or Photo check on one line across the foot, so the rail is never ragged. */
 .cell {
   position: relative;
+  display: flex;
+  flex-direction: column;
   padding-top: 12px;
 }
 
@@ -400,6 +404,7 @@
 }
 
 .cellBody {
+  flex: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
