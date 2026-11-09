@@ -94,7 +94,7 @@ function CheckCell({ i, done, active, onSeek }: { i: number; done: boolean; acti
   const body = (
     <>
       <span className="min-w-0">
-        <span className={clsx("block truncate text-ui font-medium", done || active ? "text-text" : "text-muted")}>{c.label}</span>
+        <span className={clsx("block text-balance text-ui font-medium", done || active ? "text-text" : "text-muted")}>{c.label}</span>
         <span className="block text-micro text-faint">{c.ai ? "The model reads" : "No AI"}</span>
       </span>
       <span className={clsx("text-pay transition-opacity duration-160", done ? "opacity-100" : "opacity-0")}>
