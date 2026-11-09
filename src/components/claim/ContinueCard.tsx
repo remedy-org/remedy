@@ -8,6 +8,7 @@ import { useCountdown } from "./useCountdown";
 export interface ContinueCardProps {
   id: string;
   product: string;
+  /** Not shown: the demo recall's seller is never named as a Remedy customer (DESIGN.md), and this screen has no recall owner to tell. */
   company: string;
   loginHref: string;
   /** The code's camera session, while it is still the next step: the time left shows beside the title. */
@@ -23,14 +24,14 @@ export interface ContinueCardProps {
  * account's: a Remedy screen first, so the PayPal login that follows never looks like it came from nowhere. Nothing
  * about the claim's owner is shown; only the code's time left.
  */
-export function ContinueCard({ id, product, company, loginHref, expiresAt, startNow, signedInAs }: ContinueCardProps) {
+export function ContinueCard({ id, product, loginHref, expiresAt, startNow, signedInAs }: ContinueCardProps) {
   const account = "PayPal account";
   // Frozen at zero when there is no session to count down: nothing shows then.
   const left = useCountdown(expiresAt ?? new Date(0).toISOString(), startNow, !expiresAt);
   const ended = Boolean(expiresAt) && left <= 0;
   // Only a live code carries over; with none (a claim already sent, or decided) there is nothing to say about one.
   const live = Boolean(expiresAt) && !ended;
-  const carry = live ? " Your code and its 10 minutes carry over." : ended ? " Its code’s 10 minutes are up, so you can get a new code there." : "";
+  const carry = live ? " Your code and the time left on it carry over." : ended ? " Its code’s 10 minutes are up, so you can get a new code there." : "";
   // A link's id is only echoed back when it has a claim number's shape.
   const claim = /^RM-\d{4,}$/.test(id) ? <span className="font-mono whitespace-nowrap">{id}</span> : null;
   return (
@@ -55,7 +56,7 @@ export function ContinueCard({ id, product, company, loginHref, expiresAt, start
           </p>
         ) : (
           <p className="text-body text-pretty text-muted">
-            Your refund for the <NoBreakHyphens>{product}</NoBreakHyphens>, from {company} through Remedy. Log in with the same {account} you started it with.{carry}
+            Your refund for the <NoBreakHyphens>{product}</NoBreakHyphens>. Log in with the same {account} you started it with.{carry}
           </p>
         )}
       </div>

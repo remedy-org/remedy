@@ -19,9 +19,10 @@ export interface CodeTagProps {
  * in both themes, like the real thing.
  */
 export function CodeTag({ code, written, foot, expired, className }: CodeTagProps) {
-  const spoken = `${expired ? "Expired code" : "Your code"}: ${code.split("").join(" ")}`;
+  // "Tag: X-VESOLJE, your code M 4 T": the code a letter at a time, as it is written.
+  const spoken = `Tag: ${written ? `${written}, ` : ""}${expired ? "expired code" : "your code"} ${code.split("").join(" ")}`;
   return (
-    <figure className={clsx("relative w-full max-w-[22.5rem]", className)} aria-label={written ? `The tag reads ${written}, then ${spoken}` : spoken}>
+    <figure className={clsx("relative w-full max-w-[22.5rem]", className)} aria-label={spoken}>
       {/* An expired tag stays paper: only its ink fades and the code is struck through, as a used tag would be. */}
       <Paper variant="tag" hole padding="lg">
         {written && (

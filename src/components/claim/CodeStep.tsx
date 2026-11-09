@@ -1,5 +1,6 @@
 import clsx from "clsx";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
 import { CodeTag } from "./CodeTag";
@@ -13,7 +14,7 @@ import { mmss, useCountdown } from "./useCountdown";
 
 // One name for the one action, in the step and in the phone's pinned bar.
 const OPEN = "Open the camera";
-const LOW = "Under a minute left.";
+const LOW = "Under a minute left: open the camera now.";
 
 export interface CodeStepProps {
   claimId: string;
@@ -40,12 +41,12 @@ const readTaken = (claimId: string) => {
   }
 };
 
-/** The countdown beside the title, said as words with the digits in mono ("9:57 left"): bright under a minute, "Ended" at zero. */
+/** The countdown beside the title, said as words with the digits in mono ("9:57 left"): red under a minute, "Ended" at zero. */
 export function TimerPill({ left, className }: { left: number; className?: string }) {
   const low = left > 0 && left < 60_000;
   return (
-    <span className={clsx("inline-flex shrink-0 items-center whitespace-nowrap text-ui", low ? "font-medium text-text" : "text-muted", className)}>
-      <span role="timer" aria-live="off" aria-label={left > 0 ? `${mmss(left)} left on the camera session` : "The camera session has ended"} className={clsx(left > 0 && left < 10_000 && styles.urgent)}>
+    <span className={clsx("inline-flex shrink-0 items-center whitespace-nowrap text-ui", low ? "font-medium text-stop" : "text-muted", className)}>
+      <span role="timer" aria-live="off" aria-label={left > 0 ? `${mmss(left)} left to take the photo` : "The camera session has ended"} className={clsx(left > 0 && left < 10_000 && styles.urgent)}>
         {left > 0 ? (
           <>
             <span className="font-mono">{mmss(left)}</span> left
@@ -75,6 +76,8 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
   const cut = cutInHalf(spec);
   const thing = taggedThing(spec)?.replace(/^(cut|destroyed) /, "") ?? "product";
   const handoff = qrSvg && phoneUrl;
+  // A touch phone's pinned bar carries "Under a minute left" while it is up; the step says it whenever the bar isn't.
+  const [barShown, setBarShown] = useState(false);
   // Expiry is a change of step, not a footnote: the heading says so and takes focus, once.
   const wasEnded = useRef(ended);
   useEffect(() => {
@@ -87,7 +90,17 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
     <>
       <section aria-labelledby="code-title" className={clsx(STEP_GRID, "lg:grid-rows-[auto_1fr] lg:gap-y-6 [@media(max-height:600px)]:gap-5")}>
         <div className="flex items-start justify-between gap-4 lg:col-start-2">
-          <StepTitle id="code-title">{ended ? "This code has expired" : "Write this code on any piece of paper"}</StepTitle>
+          <StepTitle id="code-title">
+            {ended ? (
+              "This code has expired"
+            ) : written ? (
+              <>
+                Write <span className="font-mono whitespace-nowrap">{written}</span> and <span className="font-mono whitespace-nowrap">{code}</span> on a piece of paper
+              </>
+            ) : (
+              "Write this code on any piece of paper"
+            )}
+          </StepTitle>
           {!ended && <TimerPill left={left} className="mt-2" />}
         </div>
 
@@ -100,14 +113,14 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
 
         <div className="flex flex-col gap-6 lg:col-start-2">
           {ended ? (
-            <p role="alert" className="text-body text-muted">
-              Codes last 10 minutes, so photos can&rsquo;t be taken in advance. Get a new one to start again.
+            <p role="alert" className="text-body text-pretty text-muted">
+              Your refund is still waiting. Get a new code, write it on a fresh piece of paper, and take the photo within 10 minutes.
             </p>
           ) : (
             <p className="text-body text-pretty text-text">
               {written ? (
                 <>
-                  Photograph the tag with <span className="font-mono whitespace-nowrap">{written}</span> and <span className="font-mono whitespace-nowrap">{code}</span>, and the {thing} {cut ? "cut in half" : "destroyed"}.
+                  Photograph this paper tag with <span className="font-mono whitespace-nowrap">{written}</span> and <span className="font-mono whitespace-nowrap">{code}</span> beside the {thing} {cut ? "cut in half" : "destroyed"}.
                 </>
               ) : (
                 <>
@@ -121,9 +134,9 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
               Photos are only kept until you send them. Open the camera to take them again.
             </Notice>
           )}
-          {/* Said once: a touch phone's pinned bar carries it, so there it is only read out. */}
+          {/* Said once on screen: while a touch phone's pinned bar is up it carries the line, so here it is only read out. */}
           {low && (
-            <p role="status" className="text-ui font-medium text-text max-sm:pointer-coarse:sr-only">
+            <p role="status" className={clsx("text-ui font-medium text-text", barShown && "max-sm:pointer-coarse:sr-only")}>
               {LOW}
             </p>
           )}
@@ -142,10 +155,17 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
                   </Button>
                 </div>
               )}
-              <div className={clsx(handoff && "sm:pointer-fine:hidden")}>
+              <div className={clsx("flex flex-col gap-3", handoff && "sm:pointer-fine:hidden")}>
                 <Button key="live" id="code-cta" size="lg" block onClick={onContinue}>
                   {OPEN}
                 </Button>
+                {/* What leaves the phone, said before the camera asks for it. */}
+                <p className="text-ui text-pretty text-muted">
+                  Only the photos you send leave your phone. They&rsquo;re used to check this claim. You can retake any photo before sending.{" "}
+                  <Link href="/privacy" className="text-link text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
+                    Privacy
+                  </Link>
+                </p>
               </div>
             </>
           )}
@@ -156,7 +176,7 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
       {ended ? (
         <MobileCta key="ended" target="code-cta" href={newClaimHref} label="Get a new code" />
       ) : (
-        <MobileCta key="live" target="code-cta" onClick={onContinue} label={OPEN} note={low ? LOW : undefined} />
+        <MobileCta key="live" target="code-cta" onClick={onContinue} label={OPEN} note={low ? LOW : undefined} onShow={setBarShown} />
       )}
     </>
   );
