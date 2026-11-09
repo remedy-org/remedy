@@ -40,6 +40,18 @@
     transition: stroke-dashoffset 600ms var(--ease-out-quart) var(--draw-at, 0ms);
   }
 
+  /* The pin a string hangs from is set as its string starts to draw, in the same move: never a lone dot before it. */
+  .enter[data-enter="armed"] .pin {
+    opacity: 0;
+    scale: 0.6;
+  }
+
+  .enter[data-enter="play"] .pin {
+    transition:
+      opacity 160ms var(--ease-snap) var(--draw-at, 0ms),
+      scale 240ms var(--ease-out-quart) var(--draw-at, 0ms);
+  }
+
   /* 3. Ink, Fraud checks: each claim's line draws down its lane, row by row at one steady pace, to the check that
      stops it, and its outcome prints as the line arrives. Pipeline.tsx arms each lane on its own (data-go on every
      cell of the lane; --go-at staggers lanes that come into view together). */

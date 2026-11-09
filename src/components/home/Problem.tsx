@@ -5,7 +5,7 @@ import { Tinos } from "next/font/google";
 import { useCallback, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type Ref } from "react";
 import { SkipLink } from "@/components/ui";
 import s from "./problem.module.css";
-import { clamp, dash, inOutQuart, outExpo, outQuart, PAYOFF_LEAD, PAYOFF_REST, piecewise, REST, seg, T } from "./problemTimeline";
+import { clamp, dash, inOutQuart, outExpo, outQuart, PAYOFF_LEAD, PAYOFF_REST, piecewise, REST, seg, T, type Range } from "./problemTimeline";
 
 /*
  * The Problem section: one aged evidence sheet on the dark desk. On a laptop (at least 1024 x 700, motion allowed) it rises out
@@ -135,7 +135,7 @@ function loopPaths({ pts, stacked, cutU, back }: Geo) {
   const tan = unit(ac, cb);
   const k = Math.PI / 3;
   const sd: Pt = [tan[0] * Math.cos(k) - tan[1] * Math.sin(k), tan[0] * Math.sin(k) + tan[1] * Math.cos(k)];
-  const half = stacked ? 22 : 32;
+  const half = stacked ? 22 : 24;
   const slash = `M${f1(mid[0] - sd[0] * half)},${f1(mid[1] - sd[1] * half)} L${f1(mid[0] + sd[0] * half)},${f1(mid[1] + sd[1] * half)}`;
   const hs = stacked ? 1.15 : 1;
   const heads: Record<Head, string> = {
@@ -265,6 +265,11 @@ export function Problem() {
   const geoNow = useRef<Geo | null>(null);
   const written = useRef(new Map<string, string>());
   const tNow = useRef<number>(REST);
+  // The strings are ink (DESIGN.md, Motion 3): each span draws in time, 600ms on --ease-out-quart, once t passes the
+  // middle of its stretch, and goes in 180ms if t passes back, so a reader who stops never rests on a string half drawn.
+  const inks = useRef(new Map<string, { to: number; from: number; at: number }>());
+  const inkFrame = useRef(0);
+  const again = useRef<(t: number) => void>(() => {});
   // Stacked, each card, the ring and the payoff follow their own place on the screen rather than the shared timeline
   // (null: use the timeline): c1 to c4 as each card's top comes up from 92% to 78%, the ring while card 1 is
   // mid-screen, and the payoff as it comes up past 92%.
@@ -358,10 +363,28 @@ export function Problem() {
       const g = geoNow.current;
       const svgEl = svg.current;
       if (!g || !svgEl) return;
-      const d1 = outQuart(seg(t, T.span1));
-      const d2 = outQuart(seg(t, T.span2));
-      const d3 = outQuart(seg(t, T.span3));
-      const dr = outQuart(seg(t, T.ret));
+      const now = performance.now();
+      let inking = false;
+      const ink = (name: string, [a, b]: Range) => {
+        const on = t >= (a + b) / 2 ? 1 : 0;
+        let st = inks.current.get(name);
+        if (!st) inks.current.set(name, (st = { to: on, from: on, at: -Infinity }));
+        const at = (x: { to: number; from: number; at: number }) => (x.at === -Infinity ? x.to : x.from + (x.to - x.from) * outQuart(clamp((now - x.at) / (x.to ? 600 : 180))));
+        if (on !== st.to) {
+          st.from = at(st);
+          st.to = on;
+          st.at = now;
+        }
+        const v = at(st);
+        if (v !== st.to) inking = true;
+        return v;
+      };
+      const d1 = ink("span1", T.span1);
+      const d2 = ink("span2", T.span2);
+      const d3 = ink("span3", T.span3);
+      const dr = ink("ret", T.ret);
+      cancelAnimationFrame(inkFrame.current);
+      if (inking) inkFrame.current = requestAnimationFrame(() => again.current(tNow.current));
       // The snap is fast (--ease-out-expo over 5vh); the loose ends then fall slowly.
       const k = outExpo(seg(t, T.snip));
       const fall = outQuart(seg(t, T.droop));
@@ -415,6 +438,19 @@ export function Problem() {
       const turn = (deg: number, p: Pt) => `rotate(${deg.toFixed(2)} ${f1(p[0])} ${f1(p[1])})`;
       svgEl.querySelector("[data-cut=a]")?.setAttribute("transform", turn(sa * droop, p3));
       svgEl.querySelector("[data-cut=b]")?.setAttribute("transform", turn(-sa * droop, p4));
+      // The slash follows the gap as the ends fall: centred between the two cut ends, so it always crosses the string's
+      // line at the cut, never hangs above it as a stray mark.
+      if (sl) {
+        const { mid } = loopPaths(g);
+        const spin = (pt: Pt, c: Pt, deg: number): Pt => {
+          const r = (deg * Math.PI) / 180;
+          const [x, y] = [pt[0] - c[0], pt[1] - c[1]];
+          return [c[0] + x * Math.cos(r) - y * Math.sin(r), c[1] + x * Math.sin(r) + y * Math.cos(r)];
+        };
+        const ea = spin(mid, p3, sa * droop);
+        const eb = spin(mid, p4, -sa * droop);
+        sl.setAttribute("transform", `translate(${f1((ea[0] + eb[0]) / 2 - mid[0])} ${f1((ea[1] + eb[1]) / 2 - mid[1])})`);
+      }
     },
     [mode],
   );
@@ -474,6 +510,13 @@ export function Problem() {
     geoNow.current = geo;
     render(tNow.current);
   }, [geo, render]);
+
+  // A string drawing in time redraws itself each frame until it lands (render's ink()); none is left running.
+  useLayoutEffect(() => {
+    again.current = render;
+    const frame = inkFrame;
+    return () => cancelAnimationFrame(frame.current);
+  }, [render]);
 
   useLayoutEffect(() => {
     const el = root.current;

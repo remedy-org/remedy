@@ -960,11 +960,12 @@
   }
 
   /* On the board the payoff prints just under the cut, centred on it, in the gap between cards 4 and 3; its lead at
-     nearly the headline's size, on one line. */
+     nearly the headline's size, on one line. 12px lower than the cut's own line, for the slash, which follows the cut
+     ends as they fall (Problem.tsx), to clear its words. */
   .payoff {
     position: absolute;
     left: var(--cut-x, 50%);
-    top: calc(var(--cut-y, 67%) + 6%);
+    top: calc(var(--cut-y, 67%) + 6% + 12px);
     width: 34cqw;
     max-width: none;
     margin: 0;

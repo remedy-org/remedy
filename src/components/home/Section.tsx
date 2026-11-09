@@ -28,6 +28,8 @@ export interface SectionProps {
   pageClassName?: string;
   /** How the heading enters: focus-in or a plain rise, both a fade and 8px up over 360ms (never a blur). */
   reveal?: "focus" | "rise";
+  /** With `stack`: what stands beside the heading and its lead on laptops, on columns 8 to 12 (under them on phones). */
+  aside?: ReactNode;
 }
 
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
@@ -52,6 +54,7 @@ export function Section({
   padClassName = "py-18 lg:py-24",
   pageClassName,
   reveal = "focus",
+  aside,
 }: SectionProps) {
   const headingId = `${id}-title`;
   const enter = reveal === "rise" ? styles.rise : styles.line;
@@ -79,6 +82,11 @@ export function Section({
               </p>
             )}
           </div>
+          {aside && stack && (
+            <div className={clsx(enter, "col-span-12 mt-6 lg:col-span-5 lg:col-start-8 lg:mt-0")} style={line(3)}>
+              {aside}
+            </div>
+          )}
           {lead && !stack && (
             <p
               className={clsx(enter, "col-span-12 max-w-[60ch] text-body text-pretty lg:col-span-5 lg:col-start-8 lg:pb-1", paper ? "text-ink-muted" : "text-text-2")}

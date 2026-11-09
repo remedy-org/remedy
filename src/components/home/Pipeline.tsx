@@ -26,12 +26,14 @@ const GATES: { title: string; text: string; ai: boolean }[] = [
     ai: false,
   },
   {
-    title: "Tag shows the label and the code",
+    // The claim page's and How it works' names, word for word (lib/fiveChecks.ts CHECK_NAMES): the tag's code differs
+    // claim to claim, so it is "the code" here.
+    title: "Tag shows X-VESOLJE and the code",
     text: "The model reads the hand-written code and the product label. K7Q written on a claim issued K7P is a reject.",
     ai: true,
   },
   {
-    title: "Destroyed as the notice says",
+    title: CHECK_NAMES.destroyed("Pillow", true),
     text: "The model confirms each step the notice asks for, such as “cut fully in half”, and that the photo isn't of a screen or a print.",
     ai: true,
   },
@@ -141,7 +143,9 @@ export function Pipeline() {
         <ul className={LANES} aria-label="The four claims">
           {SAMPLES.map((s) => (
             <li key={s.name} className="relative flex flex-col items-start justify-end pb-6">
-              <span className="mb-3 max-w-[16ch] text-ui text-pretty text-text-2">{s.name}</span>
+              {/* On one top line: each on one line where its column has room (1280px up); narrower, each in a box two
+                  lines tall, balanced, its first line on the same top as the others'. */}
+              <span className="mb-3 block min-h-[2lh] w-full text-ui text-balance text-text-2 xl:min-h-0 xl:whitespace-nowrap">{s.name}</span>
               <Image src={s.photo} alt="" width={48} height={48} className="size-12 rounded-control object-cover shadow-ring" />
               <span aria-hidden="true" className={clsx(LINE, "bottom-0 h-6")} />
             </li>

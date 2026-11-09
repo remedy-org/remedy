@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightIcon, Button, Paper, Wordmark } from "@/components/ui";
+import { Button, Paper, Wordmark } from "@/components/ui";
 import styles from "./home.module.css";
 import { Enter } from "./Reveal";
 
@@ -34,22 +34,24 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 const linkClass = "inline-flex min-h-11 items-center text-ui text-muted transition-colors duration-160 hover:text-text";
 
 /**
- * The closing call to action, as the brand's object: a large paper tag hanging on its string. As in the hero, the
- * owner's path is the amber action and companies get their sign-in, a quieter link, under it.
+ * The closing call to action, as the brand's object: a large paper tag hanging on its string, on the page grid: its copy
+ * on column 1 (48px in from the tag's edge), its button on column 8, where every section's second text line starts.
+ * The owner's path is the one amber; companies have their Log in with PayPal a screen above, at the end of For
+ * companies, and in the sitemap below.
  */
 function CtaTag() {
   return (
     <Enter className="relative pt-14" threshold={0.3}>
       <Paper variant="tag" hole padding="none">
-        <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
-          <div>
+        <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-10 lg:grid lg:grid-cols-12 lg:items-end lg:gap-x-(--col-gap) lg:px-0">
+          <div className="lg:col-span-7 lg:pl-12">
             <p className="eyebrow text-ink-muted">Try it</p>
             <h2 className="mt-4 text-title-lg font-medium text-balance">See a refund land in a minute.</h2>
             <p className="mt-3 max-w-[40ch] text-body text-pretty text-ink-muted">
               Run four claims, one of them genuine. Remedy pays it through PayPal and stops the three fakes.
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-start gap-3">
+          <div className="flex shrink-0 flex-col items-start gap-3 lg:col-span-5 lg:col-start-8 lg:pr-12">
             {/* Below sm the button spans the tag with tighter padding, so the label fits on one line at 375px; at 320px it
                 is wider than the tag and wraps, balanced, its ring kept in view. */}
             <Button
@@ -60,24 +62,17 @@ function CtaTag() {
             >
               Try a claim
             </Button>
-            <Link
-              href="/signin"
-              className="group inline-flex min-h-11 items-center gap-2 rounded-control text-ui text-ink underline-offset-4 decoration-paper-line hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            >
-              <span>
-                <span className="text-ink-muted">Running a recall?</span> Log in with PayPal
-              </span>
-              <ArrowRightIcon className="shrink-0 transition-transform duration-160 ease-snap group-hover:translate-x-[3px]" />
-            </Link>
           </div>
         </div>
       </Paper>
-      {/* The string hangs from a brass pin at the top of the tag's padding and runs down over the paper into the tag's
-          hole (19px below the tag's top edge, so the padding above plus 19px), so the tag hangs from something, as the
-          code tag in How it works does. Drawn in on enter. */}
+      {/* The string hangs from a pin at the top of the tag's padding and runs down over the paper to the top rim of the
+          tag's hole (19px below the tag's top edge, so the padding above plus 19px), where it goes through: it ends at the
+          rim, so the hole reads as a dark hole, never a dial with a hand in it. The tag hangs from something, as the code
+          tag in How it works does. Pin and string come in together on enter, in one ink move. The pin is graphite with a brass
+          cast, so the button stays the frame's one amber. */}
       <span
         aria-hidden="true"
-        className="absolute top-0 left-[calc(50%-16px)] z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_0_0_1px_var(--accent-edge),0_2px_3px_-1px_oklch(0_0_0/0.4)]"
+        className={`${styles.pin} absolute top-0 left-[calc(50%-16px)] z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[color-mix(in_oklch,var(--accent-edge)_40%,var(--text-2))] shadow-[0_0_0_1px_oklch(0_0_0/0.35),0_2px_3px_-1px_oklch(0_0_0/0.4)]`}
       />
       <svg
         aria-hidden="true"
@@ -89,7 +84,7 @@ function CtaTag() {
         <path
           className={styles.draw}
           pathLength={1}
-          d="M32 0C34 40 70 58 62 96c-4 18-14 30-14 40"
+          d="M32 0C34 40 70 58 62 96c-4 16-12 22-13.5 30"
           stroke="var(--muted)"
           strokeWidth="1.5"
           strokeLinecap="round"
@@ -103,9 +98,9 @@ function CtaTag() {
 export function Footer() {
   return (
     <footer>
-      {/* The tag hangs on the grid: columns 2 to 11 on laptops. */}
+      {/* The tag hangs on the grid, columns 1 to 12, so its copy and its button sit on the page's two text lines. */}
       <div className="page grid-12">
-        <div className="col-span-12 lg:col-span-10 lg:col-start-2">
+        <div className="col-span-12">
           <CtaTag />
         </div>
       </div>
