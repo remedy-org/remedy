@@ -4,6 +4,8 @@ import type { ComponentType } from "react";
 import { isPreCheck, type ClaimRow } from "@/app/console/_lib/view";
 import { AmountCell, ChecksCell, ClaimCell, PayoutCell, TimeCell, VerdictCell } from "./cells";
 import { verdictOf, type Verdict } from "./VerdictMark";
+// The cells' own styles (the verdict's track), before the grid that also brings them has loaded.
+import "./claims-grid.css";
 
 /*
  * The claims grid's read-only still in plain DOM: the same cells (cells.tsx), columns, widths and theme as ClaimsGrid's
@@ -25,7 +27,8 @@ interface Column {
 
 const COLUMNS: Column[] = [
   { id: "createdAt", header: "Claim", cell: ClaimCell, className: "w-[220px]" },
-  { id: "decision", header: "Verdict", cell: VerdictCell, className: "min-w-[144px] flex-1" },
+  // A container, as the grid's verdict cell is (claims-grid.css): narrower than 26rem, the reason goes under its mark.
+  { id: "decision", header: "Verdict", cell: VerdictCell, className: "min-w-[144px] flex-1 @container" },
   { id: "checks", header: "Checks", cell: ChecksCell, className: "w-[136px]" },
   { id: "time", header: "Answered in", cell: TimeCell, className: "hidden w-[104px] justify-end @min-[812px]:flex" },
   { id: "payoutStatus", header: "Payout", cell: PayoutCell, className: "hidden w-[112px] @min-[708px]:flex" },
