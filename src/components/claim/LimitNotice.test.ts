@@ -8,10 +8,16 @@ const tomorrow = new Date("2026-11-08T00:00:00.000Z");
 describe("limitCopy", () => {
   it("tells an owner which limit, that nothing was started or paid, and when to come back", () => {
     expect(limitCopy({ kind: "account", limit: 5, until: tomorrow }, { now })).toEqual({
-      title: "This PayPal account has started today’s claims",
-      description: "Each PayPal account can start 5 claims a day. Nothing was started and nothing was paid.",
+      title: "This PayPal account has reached today’s claim limit",
+      description: "Nothing was started and nothing was paid.",
       retry: "in about 6 hours",
     });
+  });
+
+  it("says Remedy's own limits stop new claims, never the refund owed", () => {
+    for (const kind of ["daily", "monthly"] as const) {
+      expect(limitCopy({ kind, limit: 60, until: tomorrow }, { now }).description).toBe("We can’t start new claims right now. Your refund is still owed.");
+    }
   });
 
   it("names Remedy's own limits plainly, with no internal words", () => {
