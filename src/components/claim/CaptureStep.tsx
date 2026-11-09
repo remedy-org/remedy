@@ -52,11 +52,11 @@ export interface CaptureStepProps {
   /** Starts over with a fresh code once this session has ended. */
   newClaimHref: string;
   loginHref: string;
-  /** What the photo needs, the instruction bar's one line: "Tag with M4T, and the pillow cut in half." */
+  /** What the photo needs, the instruction bar's one line: "Photograph your paper tag with X-VESOLJE M4T beside the pillow cut in half." */
   reminder: string;
   /** The label hand-written on the tag beside the code, for the tag shown beside the camera on a laptop. */
   written?: string | null;
-  /** What the photo frames, in the code step's words: the "tag" (or "label") and the "cut pillow" (or "destroyed product"). */
+  /** What the photo frames, in the code step's words: the "paper tag" (or "label") and the "cut pillow" (or "destroyed product"). */
   framing?: { thing: string; product: string };
   /**
    * The pre-checks' answer; null when the photos had already arrived (another tab). photoUrls: object URLs of the photos
@@ -99,6 +99,14 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   // The photo open full size, to check it before sending, or retake it.
   const [viewing, setViewing] = useState<number | null>(null);
   const viewerRef = useRef<HTMLDialogElement>(null);
+  // "Back to your code" with photos not yet sent: asked first, since going back drops them.
+  const leaveRef = useRef<HTMLDialogElement>(null);
+  const shutterRef = useRef<HTMLButtonElement>(null);
+  const trayRef = useRef<HTMLUListElement>(null);
+  // A retake hands focus to the shutter once the slot is gone, so it never drops to the page.
+  const refocus = useRef(false);
+  // What the live region last said: a photo taken, or the one a retake removed.
+  const [removed, setRemoved] = useState<number | null>(null);
   const coarse = useSyncExternalStore(subscribeCoarse, () => window.matchMedia("(pointer: coarse)").matches, () => false);
   const platform = useSyncExternalStore(noop, platformOf, () => "other" as const);
   const left = useCountdown(expiresAt, startNow, Boolean(preview));
@@ -216,7 +224,9 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", QUALITY));
     if (!blob) return;
     setShots((s) => [...s, { url: URL.createObjectURL(blob), blob, w: canvas.width, h: canvas.height }]);
-    // The flash: white at 50%, 40ms in and 200ms out (flow.module.css).
+    setRemoved(null);
+    // The flash: white at 50%, 40ms in and 200ms out (flow.module.css). Motion: a reduced-motion setting skips it.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     setFlash(true);
     setTimeout(() => setFlash(false), 40);
   }
@@ -244,7 +254,24 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
       if (gone?.blob) URL.revokeObjectURL(gone.url);
       return s.filter((_, j) => j !== i);
     });
+    setRemoved(i + 1);
   }
+
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    const shutter = shutterRef.current;
+    if (shutter && !shutter.disabled) shutter.focus();
+    else trayRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+  }, [shots]);
+
+  const back = () => {
+    if (shots.length > 0) {
+      leaveRef.current?.showModal();
+      // showModal() focuses Leave, the first control: the safe choice, Keep taking photos, takes it instead.
+      leaveRef.current?.querySelector<HTMLButtonElement>("[data-stay]")?.focus();
+    } else onBack();
+  };
 
   async function send() {
     const blobs = shots.map((s) => s.blob).filter((b): b is Blob => b !== null);
@@ -288,21 +315,52 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const n = shots.length;
   const showPhone = !coarse && (phoneOpen || (!expired && (camera === "denied" || camera === "nocamera" || camera === "insecure")));
   const sendLabel = `Send ${n === 1 ? "photo" : `${n} photos`}`;
+  const timerLabel = `${mmss(left)} left to take the photo`;
   // Said before the first shot, not behind (i): one photo is enough, so nobody thinks the three slots must be filled.
   const helpText = n === 0 ? `One photo of the ${framing.thing} and the ${framing.product} is enough.` : "Open a photo to check it or retake it.";
   const errorTitle = sendError?.status === 401 ? "Your PayPal login has expired" : "The photos didn’t send";
   const errorText = sendError?.status === 401 ? "Log in again to send them. You’ll need to retake them afterwards." : sendError?.message;
   const shown = viewing !== null ? shots[viewing] : undefined;
+  const said = sending
+    ? "Sending your photos…"
+    : removed !== null
+      ? `Photo ${removed} removed. You can take ${MAX_PHOTOS - n} more.`
+      : n === 0
+        ? ""
+        : n < MAX_PHOTOS
+          ? `Photo ${n} taken. You can take ${MAX_PHOTOS - n} more.`
+          : "Three photos taken. Send them, or open one to retake it.";
 
   return (
     // From 1024px the step grid: the camera in the left column (where the photo stays through the checks and the result),
     // the instruction, the tag and the phone's QR on the right. A phone's camera is the whole screen.
     <section aria-label={expired ? `Code ${code} has expired` : reminder} className="grid w-full max-w-[40rem] items-start gap-5 lg:max-w-none lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:gap-y-6">
+      {/* A laptop's right column: what to photograph, said once, beside the tag it should show. First in the page's order
+          (the frame is placed in the left column), so Tab from the title goes on to the photos, the shutter and Send. */}
+      <div className="hidden flex-col gap-6 lg:col-start-2 lg:row-start-1 lg:flex">
+        {failed && n === 0 && !expired ? (
+          <p className="text-body text-pretty text-muted">
+            <ReminderText>{reminder}</ReminderText>
+          </p>
+        ) : (
+          <h1 id="capture-title-wide" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+            {expired ? (
+              <>
+                Code <span className="font-mono">{code}</span> has expired
+              </>
+            ) : (
+              <ReminderText>{reminder}</ReminderText>
+            )}
+          </h1>
+        )}
+        <CodeTag code={code} written={written} expired={expired} />
+        {!expired && !failed && <p className="text-ui text-muted">{`${helpText}${n === 0 && !coarse ? " Space takes a photo." : ""}`}</p>}
+      </div>
       {/* The camera is dark in both themes, like a camera's. Full bleed on a phone, a 4:3 frame on a laptop. */}
-      <div data-theme="dark" data-camera="" className={clsx(CAMERA_FRAME, "lg:row-span-2")}>
+      <div data-theme="dark" data-camera="" className={clsx(CAMERA_FRAME, "lg:col-start-1 lg:row-span-2 lg:row-start-1")}>
         <CameraTopBar
           back={
-            <button type="button" onClick={onBack} className={CAMERA_BACK}>
+            <button type="button" onClick={back} className={CAMERA_BACK}>
               <ArrowLeftIcon className="shrink-0" /> Back to your code
             </button>
           }
@@ -316,7 +374,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                 <span aria-hidden="true" className="text-[oklch(0.74_0.005_80)]">
                   {" · "}
                 </span>
-                <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`} className={clsx(left < 10_000 && styles.urgent)}>
+                <span role="timer" aria-live="off" aria-label={timerLabel} className={clsx(left < 10_000 && styles.urgent)}>
                   <span className="font-mono">{mmss(left)}</span> left
                 </span>
               </>
@@ -329,7 +387,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           {preview?.still && live && (
             // Dev previews only: a still in place of the feed.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview.still} alt="" className="absolute inset-0 size-full object-cover" />
+            <img src={preview.still} alt="" className="absolute inset-0 size-full object-cover object-[50%_72%]" />
           )}
           {live ? (
             <Cutout>
@@ -337,7 +395,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               {n < MAX_PHOTOS && <GlassChip className="absolute top-2 left-2">{n === 0 ? "Photo 1" : `Next: photo ${n + 1}`}</GlassChip>}
               {/* From 1024px the camera's bar steps aside: the time left is here, opposite the photo's number. */}
               <GlassChip className={clsx("absolute top-2 right-2 max-lg:hidden", left < 60_000 && "font-medium", left < 10_000 && styles.urgent)}>
-                <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`}>
+                <span role="timer" aria-live="off" aria-label={timerLabel}>
                   <span className="font-mono">{mmss(left)}</span> left
                 </span>
               </GlassChip>
@@ -347,6 +405,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             <FrameMessage
               camera={expired || camera === "live" ? "expired" : camera}
               platform={platform}
+              device={coarse ? "your phone" : "this computer"}
+              left={left}
               handoff={coarse && failed && !expired ? <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} /> : undefined}
               collapsed={failed && n === 0 && !expired}
               onBack={failed && n === 0 && !expired ? onBack : undefined}
@@ -359,7 +419,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
           {/* The time left stays in its corner while the camera won't open, as it does over the feed. */}
           {!live && !expired && (
             <GlassChip className={clsx("absolute top-2 right-2 z-10 max-lg:hidden", left < 60_000 && "font-medium")}>
-              <span role="timer" aria-live="off" aria-label={`${mmss(left)} left on the camera session`}>
+              <span role="timer" aria-live="off" aria-label={timerLabel}>
                 <span className="font-mono">{mmss(left)}</span> left
               </span>
             </GlassChip>
@@ -380,13 +440,13 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             no photo to describe: its message in the frame is the heading then. */}
         <InstructionBar className={clsx("max-sm:gap-1 max-sm:pr-1", failed && n === 0 && !expired ? "hidden" : !sendError && "lg:hidden")}>
           <div className="flex flex-col gap-1">
-            <h1 id="capture-title" tabIndex={-1} className={clsx("text-ui font-medium text-balance text-[oklch(0.96_0.006_85)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4", sendError && "sr-only")}>
+            <h1 id="capture-title" tabIndex={-1} className={clsx("text-ui font-medium text-balance text-[oklch(0.96_0.006_85)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4", sendError && "sr-only lg:hidden")}>
               {expired ? (
                 <>
                   Code <span className="font-mono">{code}</span> has expired
                 </>
               ) : (
-                <EvidenceText>{reminder}</EvidenceText>
+                <ReminderText>{reminder}</ReminderText>
               )}
             </h1>
             {/* A failed send says so here, on the first screen, where the Send button is. */}
@@ -426,7 +486,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             left={
               expired ? null : (
                 // A laptop's frame is 448px wide: three 44px slots leave the shutter its own column.
-                <ul className="flex gap-2.5 lg:gap-2" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
+                <ul ref={trayRef} className="flex gap-2.5 lg:gap-2" aria-label={`${n} of ${MAX_PHOTOS} photos taken`}>
                   {Array.from({ length: MAX_PHOTOS }, (_, i) => (
                     <li key={i} className="relative size-12 shrink-0 sm:size-14 lg:size-11">
                       {shots[i] ? (
@@ -460,6 +520,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               ) : failed ? null : (
                 <>
                   <button
+                    ref={shutterRef}
                     type="button"
                     onClick={capture}
                     disabled={!live || sending || n >= MAX_PHOTOS}
@@ -483,16 +544,28 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               n > 0 &&
               !expired && (
                 // Busy, not disabled, while the photos go: focus stays here until the checking screen's heading takes it.
-                <Button onClick={send} aria-busy={sending || undefined} data-pending={sending ? "" : undefined} aria-label={sendError ? `Send ${n === 1 ? "the photo" : `the ${n} photos`} again` : sendLabel} className={clsx("max-sm:px-3", styles.rise)}>
-                  <span className="sm:hidden">{sendError ? "Retry" : "Send"}</span>
-                  <span className="max-sm:hidden">{sendError ? "Send again" : sendLabel}</span>
+                <Button onClick={send} aria-busy={sending || undefined} data-pending={sending ? "" : undefined} aria-label={sending || sendError ? undefined : sendLabel} className={clsx("max-sm:px-3", styles.rise)}>
+                  {/* "Sending…" at every size: "Sending 2 photos…" and its arc would run into the shutter in a laptop's frame. */}
+                  {sending ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span aria-hidden="true" className={clsx("size-3.5 shrink-0 rounded-full border-2 border-current border-r-transparent", styles.turn)} />
+                      Sending…
+                    </span>
+                  ) : sendError ? (
+                    "Send again"
+                  ) : (
+                    <>
+                      <span className="sm:hidden">Send</span>
+                      <span className="max-sm:hidden">{sendLabel}</span>
+                    </>
+                  )}
                 </Button>
               )
             }
           />
         )}
         <p className="sr-only" aria-live="polite">
-          {n === 0 ? "" : n < MAX_PHOTOS ? `Photo ${n} taken. You can take ${MAX_PHOTOS - n} more.` : "Three photos taken. Send them, or open one to retake it."}
+          {said}
         </p>
 
         {/* A photo full size: check the label, the cut and the code are sharp, then keep it or retake it. */}
@@ -520,6 +593,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                   disabled={sending}
                   onClick={() => {
                     remove(viewing);
+                    refocus.current = true;
                     viewerRef.current?.close();
                   }}
                 >
@@ -532,32 +606,46 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             </div>
           )}
         </dialog>
-      </div>
 
-      {/* A laptop's right column: what to photograph, said once, beside the tag it should show. */}
-      <div className="hidden flex-col gap-6 lg:col-start-2 lg:flex">
-        {failed && n === 0 && !expired ? (
-          <p className="text-body text-pretty text-muted">
-            <EvidenceText>{reminder}</EvidenceText>
-          </p>
-        ) : (
-          <h1 id="capture-title-wide" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
-            {expired ? (
-              <>
-                Code <span className="font-mono">{code}</span> has expired
-              </>
-            ) : (
-              <EvidenceText>{reminder}</EvidenceText>
-            )}
-          </h1>
-        )}
-        <CodeTag code={code} written={written} expired={expired} />
-        {!expired && !failed && <p className="text-ui text-muted">{`${helpText}${n === 0 && !coarse ? " Space takes a photo." : ""}`}</p>}
+        {/* Back with photos not yet sent: they live only in this tab, so going back drops them. Said before it happens. */}
+        <dialog
+          ref={leaveRef}
+          aria-labelledby="leave-title"
+          aria-describedby="leave-text"
+          onClick={(e) => e.target === leaveRef.current && leaveRef.current?.close()}
+          className="fixed inset-0 m-auto w-[min(calc(100%-2rem),26rem)] max-w-none rounded-card bg-surface p-0 text-text shadow-float backdrop:bg-[oklch(0_0_0/0.7)]"
+        >
+          <div className="flex flex-col gap-4 p-5">
+            <div className="flex flex-col gap-1">
+              <p id="leave-title" className="text-body font-medium text-text">
+                Leave the camera?
+              </p>
+              <p id="leave-text" className="text-ui text-pretty text-[oklch(0.74_0.005_80)]">
+                {n === 1 ? "Your photo isn’t sent yet and will be lost." : `Your ${n} photos aren’t sent yet and will be lost.`}
+              </p>
+            </div>
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => {
+                  leaveRef.current?.close();
+                  onBack();
+                }}
+              >
+                Leave
+              </Button>
+              <Button size="lg" data-stay="" onClick={() => leaveRef.current?.close()}>
+                Keep taking photos
+              </Button>
+            </div>
+          </div>
+        </dialog>
       </div>
 
       {/* Laptops only: on a phone this already is the phone. */}
       {!coarse && !expired && (
-        <div id="phone-handoff" tabIndex={-1} aria-label={showPhone ? "Take the photo on your phone" : undefined} className="rounded-control outline-none focus:outline-2 focus:outline-offset-4 focus:outline-focus max-sm:hidden lg:col-start-2">
+        <div id="phone-handoff" tabIndex={-1} aria-label={showPhone ? "Take the photo on your phone" : undefined} className="rounded-control outline-none focus:outline-2 focus:outline-offset-4 focus:outline-focus max-sm:hidden lg:col-start-2 lg:row-start-2">
           {showPhone ? (
             <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} />
           ) : (
@@ -568,6 +656,19 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         </div>
       )}
     </section>
+  );
+}
+
+/** The reminder with its code in mono, and a hyphenated label (X-VESOLJE) never broken at its hyphen. */
+function ReminderText({ children }: { children: string }) {
+  return children.split(/(\S+-\S+)/).map((part, i) =>
+    i % 2 ? (
+      <span key={i} className="whitespace-nowrap">
+        <EvidenceText>{part}</EvidenceText>
+      </span>
+    ) : (
+      <EvidenceText key={i}>{part}</EvidenceText>
+    ),
   );
 }
 
@@ -583,7 +684,7 @@ const MESSAGES: Record<Exclude<CameraState, "live"> | "expired", { title: string
   nocamera: { title: "No camera found", body: "Photos can only come from a live camera, never a file. Use a phone or a laptop with a camera." },
   insecure: { title: "The camera needs a secure page", body: "Browsers only open the camera over https. Open this page’s https address, or use your phone." },
   error: { title: "The camera didn’t start", body: "Another app may be using it. Close that app, then try again.", retry: true },
-  expired: { title: "Your 10 minutes are up", body: "Codes last 10 minutes, so photos can’t be taken in advance. Get a new code to start again." },
+  expired: { title: "Your 10 minutes are up", body: "Your refund is still waiting. Get a new code, write it on a fresh piece of paper, and take the photo within 10 minutes." },
 };
 
 /**
@@ -593,6 +694,8 @@ const MESSAGES: Record<Exclude<CameraState, "live"> | "expired", { title: string
 function FrameMessage({
   camera,
   platform,
+  device,
+  left,
   handoff,
   collapsed,
   onBack,
@@ -600,6 +703,10 @@ function FrameMessage({
 }: {
   camera: Exclude<CameraState, "live"> | "expired";
   platform: Platform;
+  /** "your phone" or "this computer": where the photos are taken, and stay until they're sent. */
+  device: string;
+  /** The code's time left: a camera to fix in the settings, or another app to close, runs it down meanwhile. */
+  left: number;
   /** A phone: this claim's QR and link, for another phone, behind "Use another phone". */
   handoff?: ReactNode;
   /** A laptop's frame has given up its 4:3 box: the message sets the height. */
@@ -623,7 +730,16 @@ function FrameMessage({
           {m.title}
         </h1>
       )}
-      <p className="max-w-[30rem] text-ui text-pretty text-muted">{camera === "denied" ? DENIED[platform] : m.body}</p>
+      <p className="max-w-[30rem] text-ui text-pretty text-muted">{camera === "denied" ? DENIED[platform] : camera === "starting" ? `${m.body} Only the photos you send leave ${device}.` : m.body}</p>
+      {m.retry && (
+        <p className="text-ui text-muted">
+          Your code&rsquo;s timer keeps running:{" "}
+          <span role="timer" aria-live="off">
+            <span className="font-mono">{mmss(left)}</span> left
+          </span>
+          .
+        </p>
+      )}
       {(m.retry || handoff || onBack) && (
         <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-3">
           {m.retry && <Button onClick={onRetry}>Try again</Button>}

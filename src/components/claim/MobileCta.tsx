@@ -19,7 +19,8 @@ export interface CtaFirst {
  * mounts, so a step that swaps its button for another keys its bar to match. `note`: a line the bar carries above the
  * button, such as time running out, which the step then doesn't repeat. `first`: until all of that element has been on
  * screen above the bar, the bar's quiet button brings it into view instead of acting. The bar's side padding is the
- * page's gutter, so its button lines up with the step's own.
+ * page's gutter, so its button lines up with the step's own. `onShow`: told each time the bar comes up or goes, so the step
+ * can say the note itself whenever the bar is down.
  */
 export function MobileCta({
   target,
@@ -27,12 +28,18 @@ export function MobileCta({
   disabled,
   note,
   first,
+  onShow,
   ...to
-}: { target: string; label: string; disabled?: boolean; note?: ReactNode; first?: CtaFirst } & ({ href: string; onClick?: never } | { onClick(): void; href?: never })) {
+}: { target: string; label: string; disabled?: boolean; note?: ReactNode; first?: CtaFirst; onShow?(shown: boolean): void } & ({ href: string; onClick?: never } | { onClick(): void; href?: never })) {
   const [show, setShow] = useState(false);
   const [seen, setSeen] = useState(!first);
   const bar = useRef<HTMLDivElement>(null);
   const hasNote = Boolean(note);
+  const onShowRef = useRef(onShow);
+  useEffect(() => {
+    onShowRef.current = onShow;
+  });
+  useEffect(() => onShowRef.current?.(show), [show]);
   useEffect(() => {
     const el = document.getElementById(target);
     if (!el) return;

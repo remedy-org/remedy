@@ -37,7 +37,7 @@ export function JudgeLoginPanel({
       id={id}
       tabIndex={id ? -1 : undefined}
       aria-label={title}
-      className={clsx("flex scroll-mt-24 flex-col gap-2 text-ui outline-none focus:outline-2 focus:outline-offset-4 focus:outline-focus", className)}
+      className={clsx("flex scroll-mt-24 flex-col gap-2 text-ui outline-hidden focus:outline-2 focus:outline-solid focus:outline-offset-4 focus:outline-focus", className)}
     >
       <Heading className={quietTitle ? "sr-only" : "font-medium text-text"}>{title}</Heading>
       {why && <p className="text-muted">{why}</p>}

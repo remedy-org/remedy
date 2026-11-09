@@ -11,6 +11,7 @@ import { inFourOrder } from "./fourOrder";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
 import { consentLines, PAYPAL_CONSENT } from "./consentCopy";
+import { FocusTitle } from "./FocusTitle";
 import { companyName, productNoun } from "./model";
 import { Notice } from "./Notice";
 
@@ -57,6 +58,9 @@ export interface ConsentCardProps {
 
 /** The demo account's login in the card: the phone's bar shows it before it offers the PayPal login. */
 export const JUDGE_LOGIN_ID = "demo-account";
+
+/** A refused PayPal login's notice, focused on arrival. */
+const NOTICE_ID = "consent-notice";
 
 /** What Remedy reads from a PayPal login (consentCopy.ts), said once under every Log in with PayPal. */
 export { PAYPAL_CONSENT };
@@ -147,15 +151,22 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         </div>
       )}
 
-      {unverified && (
-        <Notice title="This PayPal account isn’t verified">PayPal only lets us refund verified accounts. Verify yours with PayPal (a confirmed email and a linked bank or card), then log in again.</Notice>
+      {/* Back from PayPal with a refusal: focus lands on it, as on a limit notice, so a screen reader reads it (an alert
+          already on the page at load is not announced). A limit notice focuses itself. */}
+      {(unverified || error) && (
+        <div id={NOTICE_ID} tabIndex={-1} className="flex flex-col gap-7 rounded-control outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-focus">
+          {!refusal && <FocusTitle id={NOTICE_ID} />}
+          {unverified && (
+            <Notice title="This PayPal account isn’t verified">PayPal only lets us refund verified accounts. Verify yours with PayPal (a confirmed email and a linked bank or card), then log in again.</Notice>
+          )}
+          {error && <Notice title={error.title}>{error.description}</Notice>}
+        </div>
       )}
-      {error && <Notice title={error.title}>{error.description}</Notice>}
       {refusal && <LimitNotice refusal={refusal} demo={Boolean(demo)} notice={notice} />}
 
       <div className="flex flex-col gap-4">
         {/* Before the button, so the copy buttons come first in reading and Tab order. */}
-        {demo && !signedInAs && judgeLogin && <JudgeLoginPanel id={JUDGE_LOGIN_ID} login={judgeLogin} />}
+        {demo && !signedInAs && judgeLogin && <JudgeLoginPanel id={JUDGE_LOGIN_ID} login={judgeLogin} heading="h2" />}
         {demo && !signedInAs && !judgeLogin && <p className="text-ui text-muted">Log in with a PayPal demo account. Your own PayPal login won&rsquo;t work here.</p>}
         {/* Refused by a limit: nothing starts until it resets, so the button is the notice's next step instead. */}
         {refusal ? (
@@ -190,7 +201,7 @@ function ClaimStatus({ claim, company, action }: { claim: YourClaim; company: st
       : claim.decision === "paid"
         ? `Paid on ${claim.paidOn}. This account’s claim for this recall is done.`
         : checking
-          ? "Your claim is saved. You can close this page."
+          ? "Your claim is saved. You can close this page, then open the claim link on your recall notice again to see the result. If it’s paid, PayPal emails you too."
           : claim.decision === "pending"
             ? "Your code is still running. Pick up where you left off."
             : "Each PayPal account can claim once per recall.";

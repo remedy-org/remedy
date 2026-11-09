@@ -28,8 +28,8 @@ export function consentLines(recall: Recall, minutes: number) {
     title: `${money(recall.refund)} back for your ${productNoun(recall)}`,
     // How fast, in the one wording the site uses for it (the footer, the metadata): an auto-paid claim is sent the moment
     // its checks pass and PayPal confirms it within the minute (RM-0442: sent at 15 s, confirmed at 55 s).
-    how: `${cut ? `Cut the ${thing} in half` : `Destroy the ${thing} as the notice says`}, photograph it with the code we give you, and PayPal pays you ${recall.autoPay ? "within a minute" : `once ${company} approves it`}.`,
-    // What the tap commits to: the code's clock starts on the next screen.
-    clock: `Your code is good for ${minutes} minutes, so ${cut ? `cut the ${thing} first` : `destroy the ${thing} first`}.`,
+    how: `${cut ? `Cut the ${thing} in half` : `Destroy the ${thing} as the notice says`}, photograph it with the code we give you, and your refund lands in your PayPal ${recall.autoPay ? "within a minute" : `once ${company} approves it`}.`,
+    // What the tap commits to: the code's clock starts on the next screen, so the cutting and the marker come first.
+    clock: `Your code is good for ${minutes} minutes, so ${cut ? `cut the ${thing}` : `destroy the ${thing}`} and have paper and a marker ready first.`,
   };
 }

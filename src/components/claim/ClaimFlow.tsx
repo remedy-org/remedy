@@ -55,11 +55,15 @@ export function ClaimFlow(props: ClaimFlowProps) {
   // The checking screen's photos: the ones just sent (local object URLs, or the sample's public files).
   const [photoUrls, setPhotoUrls] = useState<string[] | undefined>(preview?.photoUrls ?? (initial.photos > 0 && sample ? sample.photos : undefined));
   const demo = Boolean(sample);
-  // One word for the thing the code goes on, everywhere: a hand-written label is the paper tag itself.
-  const tag = handWrittenLabel(props.spec) !== null;
+  // One name for the thing the code goes on, everywhere: a hand-written label is written on the paper tag with the code,
+  // so it is "your paper tag" (never the product's own sewn-in tag), and the line names both things written on it.
+  const written = handWrittenLabel(props.spec);
+  const done = cutInHalf(props.spec) ? "cut in half" : "destroyed";
   // What the photo needs, in one line under the frame.
-  const reminder = `${tag ? "Tag" : "Label"} with ${code}, and the ${(tag && taggedThing(props.spec)?.replace(/^cut /, "")) || "product"} ${cutInHalf(props.spec) ? "cut in half" : "destroyed"}.`;
-  const framing = { thing: tag ? "tag" : "label", product: (tag && taggedThing(props.spec)) || `${cutInHalf(props.spec) ? "cut" : "destroyed"} product` };
+  const reminder = written
+    ? `Photograph your paper tag with ${written} ${code} beside the ${taggedThing(props.spec)?.replace(/^(cut|destroyed) /, "") || "product"} ${done}.`
+    : `Photograph the code ${code} beside the label, and the product ${done}.`;
+  const framing = { thing: written ? "paper tag" : "label", product: (written && taggedThing(props.spec)) || `${cutInHalf(props.spec) ? "cut" : "destroyed"} product` };
 
   // On arrival too: the first step loads by a full navigation (a form post, a redirect), which leaves focus on the body.
   useEffect(() => {
@@ -115,7 +119,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
       )}
       {phase === "capture" &&
         (sample ? (
-          <DemoCaptureStep claimId={claimId} code={code} sample={sample} onSent={sent} backHref={props.newClaimHref} written={handWrittenLabel(props.spec)} preview={preview && { sending: preview.sending }} />
+          <DemoCaptureStep claimId={claimId} code={code} sample={sample} onSent={sent} backHref={props.newClaimHref} written={written} preview={preview && { sending: preview.sending }} />
         ) : (
           <CaptureStep
             claimId={claimId}
@@ -128,7 +132,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
             newClaimHref={props.newClaimHref}
             loginHref={props.loginHref}
             reminder={reminder}
-            written={handWrittenLabel(props.spec)}
+            written={written}
             framing={framing}
             onSent={sent}
             onBack={() => go("code")}
