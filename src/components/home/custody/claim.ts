@@ -2,7 +2,7 @@ import type { Verdict } from "@/components/console/VerdictMark";
 import { GENUINE } from "@/lib/demo/claims";
 
 // The one claim the homepage stages, start to finish: RM-0442 (src/lib/demo/claims.ts, GENUINE), the genuine claim (photo
-// c02, code M4T) on the X-VESOLJE recall (CPSC 27-071), 15 s from photos received to the PayPal payout. Its photo is
+// c02, code M4T) on the X-VESOLJE recall (CPSC 27-071), sent to PayPal 15 s after its photos arrived and confirmed by PayPal at 55 s. Its photo is
 // generated (benchmark case c02-pillow-cut-lamplight, docs/EVAL.md), and it carries no label (owner rule: no internal
 // labels; the site's one sandbox line is in /terms). These are presentational copies of the claim screens: nothing here
 // imports src/components/claim/*.
@@ -12,6 +12,8 @@ export const CLAIM = {
   amount: 29.99,
   /** Photos received to payout sent, claim RM-0442 (7 Nov 2026). */
   seconds: GENUINE.toPayout!,
+  /** Photos received to PayPal confirming the payout (SUCCESS), as the console's timeline has it (claim.test.ts). */
+  confirmed: 55,
   /** When it was filed, as the console lists it (UTC). */
   filed: "7 Nov 15:08",
   photo: `/demo/${GENUINE.photos[0]}`,
@@ -52,7 +54,7 @@ export const CHAPTERS = [
   {
     n: "05",
     title: "Paid",
-    text: "Every check passed, so the rule paid $29.99 to the owner’s PayPal account, 15 seconds after the photo.",
+    text: "Every check passed, so the rule sent $29.99 to the owner’s PayPal account 15 seconds after the photo, and PayPal confirmed it at 55 s.",
   },
   {
     n: "06",

@@ -59,7 +59,7 @@ export function StaticFigures() {
             <p className="eyebrow text-muted">How it works</p>
             {/* tabIndex -1: the nav’s How it works focuses it after the jump. */}
             <h2 id="how-title" tabIndex={-1} className="mt-5 text-title-lg font-medium text-balance">
-              Paid {CLAIM.seconds} seconds after the photo. <span className="text-muted">One claim, start to finish.</span>
+              Sent to PayPal {CLAIM.seconds} seconds after the photo. <span className="text-muted">One claim, start to finish.</span>
             </h2>
           </div>
           <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8 lg:pb-1">

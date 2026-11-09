@@ -47,10 +47,14 @@ export function Hero() {
         </Button>
       </div>
       <div className={clsx("mt-4 flex flex-col gap-1.5", styles.focusIn)} style={line(3)}>
-        {/* One proof, from a real claim: RM-0442's photo to payout (CLAIM.seconds). */}
-        <p className="text-ui text-pretty text-text-2">
-          Paid {CLAIM.seconds} seconds after the photo on claim <span className="font-mono whitespace-nowrap">{CLAIM.id}</span> · CPSC{" "}
-          <span className="font-mono whitespace-nowrap">{CLAIM.recall.replace(/^CPSC /, "")}</span>
+        {/* One proof, from a real claim, as the console's timeline has it: sent at CLAIM.seconds, confirmed at CLAIM.confirmed. */}
+        {/* The claim's ids on a line of their own, so the sentence wraps clear of the receipt (44ch at 1024). */}
+        <p className="max-w-[44ch] text-ui text-pretty text-text-2 xl:max-w-none">
+          Sent to the owner&rsquo;s PayPal {CLAIM.seconds} seconds after the photo, confirmed at {CLAIM.confirmed}&nbsp;s
+          <span className="block">
+            Claim <span className="font-mono whitespace-nowrap">{CLAIM.id}</span> · CPSC{" "}
+            <span className="font-mono whitespace-nowrap">{CLAIM.recall.replace(/^CPSC /, "")}</span>
+          </span>
         </p>
         {/* An owner with a real recall: the demo above is not her claim, and this is where hers is. */}
         {/* Held to 36ch at 1024, where the receipt sits close; from 1280 one line, as the proof line above it is. */}

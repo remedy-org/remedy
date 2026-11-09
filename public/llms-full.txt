@@ -1,6 +1,6 @@
 # Remedy: the full story
 
-> Remedy turns proof of destruction into a payment trigger. A recalled product is cut apart in front of a live camera, code checks the evidence, and the refund lands in the owner's verified PayPal account: 15 seconds from photo to payout on claim RM-0442. Settlement tools verify the person. Remedy verifies the product is destroyed.
+> Remedy turns proof of destruction into a payment trigger. A recalled product is cut apart in front of a live camera, code checks the evidence, and the refund lands in the owner's verified PayPal account: on claim RM-0442 it was sent to PayPal 15 seconds after the photo, and PayPal confirmed it at 55 seconds. Settlement tools verify the person. Remedy verifies the product is destroyed.
 
 Short version: https://remedy-recalls.vercel.app/llms.txt
 
@@ -27,7 +27,7 @@ The demo runs on a real recall: Kikea Store X-VESOLJE nursing pillows, CPSC 27-0
 1. **Log in with PayPal.** The owner opens the claim link or scans the QR code. Log in with PayPal returns a verified payer ID and a verified flag. That identity is the whole account: no sign-up, no form, no email.
 2. **Get a one-time code.** Remedy opens a 10-minute camera session and issues a code: letter, digit, letter, drawn from an alphabet with no look-alike characters (no O, 0, Q, I, 1, L, 8, B, 5, S, 2 or Z), and never spelling a word. The owner writes it on a tag on the unit.
 3. **Cut it on a live camera.** There is no upload button. The camera is a laptop webcam or a phone, handed off by QR code. Up to three photos: the label, the cut, the code.
-4. **Get paid.** Remedy runs the five checks, a fixed rule decides, and a passing claim is paid by PayPal Payouts to the exact PayPal ID that logged in. Claim RM-0442 went from photo to PayPal payout in 15 seconds. A passing claim is usually paid within a minute.
+4. **Get paid.** Remedy runs the five checks, a fixed rule decides, and a passing claim is paid by PayPal Payouts to the exact PayPal ID that logged in. Claim RM-0442's payout was sent to PayPal 15 seconds after the photo, and PayPal confirmed it at 55 seconds. A passing claim is usually paid within a minute.
 
 Only one thing moves money: a recalled product, physically destroyed, seen on camera.
 

@@ -1,7 +1,7 @@
 // The facts the Opened Exhibit shows, and where each one comes from. Nothing here is invented.
 //
 // - Claim RM-0442 (src/lib/demo/claims.ts, GENUINE): the genuine claim (photo c02, code M4T) on the X-VESOLJE recall
-//   (CPSC 27-071), filed 7 Nov 2026. 15 s from the photo to the PayPal payout. The same facts as
+//   (CPSC 27-071), filed 7 Nov 2026. Sent to PayPal 15 s after the photo, confirmed by PayPal at 55 s. The same facts as
 //   src/components/home/custody/claim.ts and the console.
 // - The photo (public/demo/c02-1.jpg) is generated (benchmark case c02-pillow-cut-lamplight, docs/EVAL.md). It carries
 //   no label (owner rule: no internal labels; the site's one sandbox line is in /terms).
@@ -20,6 +20,11 @@ export const EXHIBIT = {
   recall: "CPSC 27-071",
   /** Photo received to payout sent. */
   seconds: GENUINE.toPayout!,
+  /** Photo received to PayPal confirming the payout, as the console's timeline has it. */
+  confirmed: 55,
+  /** Photo received to the three pre-checks done, and to the model's answer (the stored run's 14.366 s). */
+  prechecked: 0.3,
+  answered: 14.366,
   photo: `/demo/${GENUINE.photos[0]}`,
   /** The photos of the recall's three claims before it (RM-9475, RM-2125, RM-0118 in claims.ts), for the fingerprint
    * check. */
@@ -90,14 +95,16 @@ export const CHECKS: readonly Check[] = [
 
 /**
  * The receipt's lines, all from the claim above: label, value, and whether the value is data (set in mono). The claim id
- * is the receipt's header, so it is not a row.
+ * is the receipt's header, so it is not a row, and the five checks are the check row's under it, so they are not one
+ * either: the receipt keeps six rows, its height as it was before PayPal's confirmation had a row of its own.
  */
 export const RECEIPT_ROWS: readonly [string, string, boolean][] = [
   ["Recall", EXHIBIT.recall, true],
   ["Code", EXHIBIT.code, true],
-  ["Checks", "All 5 passed", false],
   ["Decision", "Approved by the rule", false],
-  // The time in the sans, as the console sets "15 s": in mono its space read as two.
-  ["Photo to payout", `${EXHIBIT.seconds} s`, false],
+  // The times in the sans, as the console sets "15 s": in mono its space read as two. Sent, then PayPal's confirmation,
+  // the two steps the console's timeline gives the claim.
+  ["Sent to PayPal", `${EXHIBIT.seconds} s after the photo`, false],
+  ["PayPal confirmed", `${EXHIBIT.confirmed} s after the photo`, false],
   ["Paid to", "Verified PayPal account", false],
 ];

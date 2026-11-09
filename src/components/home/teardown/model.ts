@@ -68,17 +68,33 @@ function fpOpen(p: number) {
 export const tickAt = (id: CheckId) => lerp(RANGES[id][0], RANGES[id][1], Math.min(0.82, DEPART[id] - 0.04));
 
 /**
- * Seconds since the photo, as claim RM-0442 ran: the three pre-checks take under a second, the model reads the photo
- * until about 0:14, and the payout is sent at 0:15.
+ * Seconds since the photo, as claim RM-0442 ran (its timeline in the console): the three pre-checks are done by
+ * EXHIBIT.prechecked (0.3 s), a tenth of a second each as their ticks land; the model reads the photo from there until
+ * it answers at EXHIBIT.answered (14.4 s), as check 5 ticks; and the payout is sent at EXHIBIT.seconds (15 s), early in
+ * the payout beat. So the clock moves from the first check on, never parked at 0:00 while checks pass.
  */
+const clockPoints = (): readonly (readonly [number, number])[] => [
+  [RANGES.live[0] + (RANGES.live[1] - RANGES.live[0]) * 0.55, 0], // the photo is taken mid-scan
+  [tickAt("live"), EXHIBIT.prechecked / 3],
+  [tickAt("fp"), (2 * EXHIBIT.prechecked) / 3],
+  [tickAt("acct"), EXHIBIT.prechecked],
+  [tickAt("torn"), EXHIBIT.answered],
+  [RANGES.paid[0] + 0.25 * (RANGES.paid[1] - RANGES.paid[0]), EXHIBIT.seconds],
+];
+
 export function elapsed(p: number) {
-  if (p < RANGES.live[0] + (RANGES.live[1] - RANGES.live[0]) * 0.55) return null; // the photo is taken mid-scan
-  if (p < RANGES.code[0]) return Math.min(1, 1 * inv(RANGES.fp[0], RANGES.acct[1], p));
-  if (p < RANGES.paid[0]) return lerp(1, 14, inv(RANGES.code[0], RANGES.torn[1], p));
-  return lerp(14, EXHIBIT.seconds, inv(RANGES.paid[0], RANGES.paid[0] + 0.25 * (RANGES.paid[1] - RANGES.paid[0]), p));
+  const CLOCK = clockPoints();
+  if (p < CLOCK[0][0]) return null;
+  for (let i = 1; i < CLOCK.length; i++) if (p < CLOCK[i][0]) return lerp(CLOCK[i - 1][1], CLOCK[i][1], inv(CLOCK[i - 1][0], CLOCK[i][0], p));
+  return EXHIBIT.seconds;
 }
 
-export const clock = (s: number | null) => (s === null ? "—" : `0:${String(Math.floor(s)).padStart(2, "0")}`);
+/** The time since the photo to the tenth, "0:00.2", so the pre-checks' fractions of a second show as they pass. */
+export function clock(s: number | null) {
+  if (s === null) return "—";
+  const tenths = Math.floor(s * 10 + 1e-6);
+  return `0:${String(Math.floor(tenths / 10)).padStart(2, "0")}.${tenths % 10}`;
+}
 
 /** A camera shot: orbit angles (degrees, az 0 looks from the front), what it aims at, and how much it must hold. */
 export interface Shot {

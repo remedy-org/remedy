@@ -109,19 +109,19 @@ export const CARD_BELOW = 576;
 const VERDICT_MIN = { queue: 260, still: 144 };
 const VERDICT_WANT = { queue: 320, still: 144 };
 const BASE = { queue: 220 + 96, still: 220 + 136 + 96 };
-// The still's PayPal column: "•••• 78AV" and "Unverified" side by side, never cut mid-word. The queue has no PayPal
-// account column: search finds an account, and the evidence panel names it.
+// The queue has no PayPal account column at a laptop's width: search finds an account, and the evidence panel names
+// it. The homepage's still draws the queue as a laptop's console shows it, so it never has one.
 // On a wide queue (a 1920 screen, nothing open) the verdict would otherwise take 1,100px a reason never uses: the
 // PayPal account and the photo-to-payout time come in from 1600px of grid, each only while the verdict keeps
 // VERDICT_ROOMY, so a verdict and its money stay in one glance.
-const PAYER = { queue: 172, still: 172 };
+const PAYER = 172;
 const OPTIONAL = {
   // The queue's one time column says both times: the answer, and the payout under it where it came later (TimeCell).
-  queue: { checks: 112, payoutStatus: 120, time: 124, payer: PAYER.queue } as Record<string, number>,
+  queue: { checks: 112, payoutStatus: 120, time: 124, payer: PAYER } as Record<string, number>,
   // "Answered in" whole on its 12px padding, right-aligned over its values: 104px.
-  still: { time: 104, payoutStatus: 112, payer: PAYER.still } as Record<string, number>,
+  still: { time: 104, payoutStatus: 112 } as Record<string, number>,
 };
-const ORDER = { queue: ["checks", "payoutStatus", "time", "payer"], still: ["payoutStatus", "time", "payer"] };
+const ORDER = { queue: ["checks", "payoutStatus", "time", "payer"], still: ["payoutStatus", "time"] };
 // Columns only a wide queue shows, and the verdict width they leave.
 const ROOMY_ONLY = new Set(["payer"]);
 const ROOMY_FROM = 1600;
@@ -138,6 +138,7 @@ function hiddenAt(width: number, still: boolean): Set<string> {
     if (fits && (still || !hidden.size)) room -= OPTIONAL[mode][id];
     else hidden.add(id);
   }
+  if (still) hidden.add("payer");
   // Photo to payout is the time column's second line (TimeCell), never a column of its own.
   return hidden.add("toPay");
 }
@@ -749,10 +750,10 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         headerName: "PayPal",
         field: "payer",
         cellRenderer: PayerCell,
-        width: PAYER.still,
+        width: PAYER,
         // A gap before it, so a right-aligned time beside it never sits against the account.
-        cellClass: still ? undefined : "!pl-6",
-        headerClass: still ? undefined : "!pl-6",
+        cellClass: "!pl-6",
+        headerClass: "!pl-6",
         getQuickFilterText: () => "",
       },
       {
