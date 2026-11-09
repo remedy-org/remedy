@@ -40,10 +40,9 @@ export function HeaderMeta({ claim }: { claim: Pick<DrawerClaim, "createdAt" | "
       <span>{formatDayTime(claim.createdAt)}</span>
       <span>
         PayPal <span className="sr-only">account ending {claim.payer.slice(-4)}</span>
-        {/* The bullets set as one tight group before the last four, never four wide mono cells. */}
-        <span aria-hidden="true" className="font-mono">
-          <span className="tracking-[-0.12em]">{claim.payer.slice(0, -5)}</span>
-          {claim.payer.slice(-5)}
+        {/* The bullets set as one tight group, a sans space, then the last four: never four wide mono cells and a mono gap. */}
+        <span aria-hidden="true">
+          <span className="pr-[0.2em] font-mono tracking-[-0.2em]">{claim.payer.slice(0, -5)}</span> <span className="font-mono">{claim.payer.slice(-4)}</span>
         </span>
         {!claim.verified && <span className="text-stop"> unverified</span>}
       </span>

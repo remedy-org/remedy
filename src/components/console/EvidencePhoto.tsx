@@ -50,6 +50,9 @@ export function EvidencePhoto({
   const frame = clsx(
     "relative block w-full overflow-hidden rounded-control border border-line bg-surface-2",
     tall ? "aspect-[3/4]" : "aspect-[4/3]",
+    // The panel's photo (shown whole) stops at 260px tall, so a laptop's first view of the panel holds the Timeline under
+    // it too (1440x900: RM-0442's 0 s to +55 s sat under the key line). The viewer has it at full size.
+    onOpen && !tall && "max-h-[260px]",
     // A short window: the photo stays within 45% of its height, so it is seen whole beside the panel's header and footer.
     "[@media(max-height:600px)]:max-h-[45vh]",
     state === "loading" && "animate-[skeleton-pulse_1.6s_ease-in-out_infinite]",

@@ -210,6 +210,7 @@ function Toolbar({ search, onSearch, onExport, input }: { search: string; onSear
             }
           }}
           aria-label="Search claims by id, code, PayPal account or reason"
+          title="Search claims by id, code, PayPal account or reason (/)"
           placeholder={TOUR.toolbar.search}
           spellCheck={false}
           autoComplete="off"
