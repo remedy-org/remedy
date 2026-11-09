@@ -219,23 +219,9 @@
   box-shadow: -20px 0 40px -28px oklch(0.2 0.01 70 / 0.22);
 }
 
-/* The panel's head lines up with the status row it sits beside: one 44px row over the same hairline. */
+/* The panel's head: the console's own two lines (EvidenceParts.tsx), at least the status row's height beside it. */
 .dock aside > :first-child {
   min-height: 45px;
-  padding-block: 0;
-}
-
-/* The rule's sentence would say the held check's reason a third time: the check and the model's own words say it. */
-.dock [data-rule] {
-  display: none;
-}
-
-.dock [data-rule] + * {
-  margin-top: 0;
-}
-
-.dock [data-quote-key] {
-  display: none;
 }
 
 /* The photos speak for themselves in the panel: their "Photo 1 of 2" captions are for screen readers only. */
@@ -254,25 +240,10 @@
   }
 }
 
-/* The dock at a laptop's window height: the model's answer gives way to its one deciding sentence, whole
-   (EvidenceStill.tsx), so the checks that passed and the payout path stay in view under it. */
+/* The dock at a laptop's window height: the photos give up some height, so the checks start in view under them. */
 @container (max-height: 470px) {
-  .dock [data-quote-full] {
-    display: none;
-  }
-
-  .dock [data-quote-key] {
-    display: inline;
-  }
-
   .dock figure > :first-child {
     aspect-ratio: 2 / 1;
-  }
-}
-
-@container (max-height: 400px) {
-  .dock [data-passed] {
-    display: none;
   }
 }
 

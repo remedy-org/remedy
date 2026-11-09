@@ -5,7 +5,8 @@ import type { StillClaim } from "@/components/console/EvidenceStill";
 import { quickReasons } from "@/components/console/quickReasons";
 import { CheckIcon } from "@/components/ui";
 import styles from "./tour.module.css";
-import { payoutsLine, TOUR } from "./tour-copy";
+import { heldNote } from "@/components/console/EvidenceParts";
+import { TOUR } from "./tour-copy";
 
 const BUTTON = "inline-flex h-9 items-center rounded-button px-3.5 text-ui font-medium whitespace-nowrap select-none";
 
@@ -14,14 +15,14 @@ const BUTTON = "inline-flex h-9 items-center rounded-button px-3.5 text-ui font-
  * and Reject as the quiet button, then one muted line on what approving does. A picture of the console, never a control:
  * the buttons are drawn spans, hidden from screen readers, who read the line.
  */
-export function PayoutsNote({ id }: { id: string }) {
+export function PayoutsNote({ claim }: { claim: StillClaim }) {
   return (
     <div className={styles.review}>
       <div aria-hidden="true" className="flex gap-2">
         <span className={`btn-primary ${BUTTON}`}>{TOUR.payouts.pay}</span>
         <span className={`btn-quiet ${BUTTON}`}>{TOUR.payouts.reject}</span>
       </div>
-      <p className="mt-2 text-ui text-muted">{payoutsLine(id)}</p>
+      <p className="mt-2 text-ui text-muted">{heldNote(claim.drawer)}</p>
     </div>
   );
 }
@@ -99,7 +100,8 @@ export function ReviewFoot({ claim, phase, onPhase }: { claim: StillClaim; phase
           </button>
         )}
       </div>
-      {phase === "idle" && <p className="mt-2 text-ui text-muted">{payoutsLine(claim.id)}</p>}
+      {/* The console's own line for a held claim it starts with (EvidenceParts.tsx heldNote), word for word. */}
+      {phase === "idle" && <p className="mt-2 text-ui text-muted">{heldNote({ decision: "held", seeded: claim.drawer.seeded })}</p>}
     </div>
   );
 }

@@ -21,9 +21,10 @@ import { verdictOf } from "./VerdictMark";
 // The "now" for the report's date and Insights' days: the dataset's own (dataset.ts datasetNow), the day after its newest
 // claim, so the homepage's dates move with the console's.
 export const previewNow = () => datasetNow();
-// The held claim whose evidence the tour's Evidence step opens, as How it works' console shows it: the model couldn't
-// tell if both photos show the same item. Its recorded answers are read on the homepage word for word, so it is one whose
-// answers name only what the photos show. Every claim with photos opens on a click.
+// The held claim whose evidence the tour's Held claim step opens, as How it works' console shows it: one photo, shot from
+// standing height, whose tag's handwriting is too small and blurred for the model to read the code. Its recorded answers
+// are read on the homepage word for word, so it is one whose answers name only what the photo shows. Every claim with
+// photos opens on a click.
 export const PREVIEW_OPEN_ID = "RM-9629";
 // The claim the homepage's tour shows arriving: RM-0442, the genuine claim the hero and How it works stage, the newest
 // claim and the one PayPal paid (a test checks both). The arrival replays how it came in; it never adds a claim.
@@ -117,6 +118,7 @@ function evidenceOf(claim: Claim, recall: Recall): StillClaim {
     summary: d.summary,
     photos: claim.photos.map((p) => image(p.key, 384)),
     checks,
+    drawer: d,
   };
 }
 

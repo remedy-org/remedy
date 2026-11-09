@@ -54,8 +54,6 @@ export const storyEvidence = (id: string) => `The held claim, ${id}, opens to it
 /** The four steps' sentences: step 03 names the recall analyst only when its recorded answer is on screen. */
 export const stepSentences = (analyst: boolean) => TOUR.steps.map((s, i) => s.sentence + (i === 2 && analyst ? TOUR.analystSentence : ""));
 
-/** Step 02's line under the panel's buttons: what approving does here, as the console's confirm says it. */
-export const payoutsLine = (id: string) => `Approve or reject ${id} to record your decision; the queue, ledger and report read it.`;
 
 export interface TourTotals {
   claims: number;
@@ -70,7 +68,7 @@ export interface TourTotals {
 export function describe(t: TourTotals, open: { id: string; amount: string }, analyst?: { question: string; answer: string } | null) {
   return [
     `The claims queue for the Kikea recall: ${t.claims} claims, ${t.paid} paid, ${t.held} held for a person, ${t.refused} rejected or blocked. Click a claim to open its evidence, search the queue, filter it by status, or sort it by claim, verdict or the photo check’s time.`,
-    `Claim ${open.id}, held: photos 1 and 2, and the model’s answer that it couldn’t tell if both photos show the same item. A person approves or rejects it, and Remedy records the decision.`,
+    `Claim ${open.id}, held: one photo, and the model’s answer that the handwriting on its tag is too small and blurred to read the code. A person approves or rejects it, and Remedy records the decision.`,
     `Insights: of ${t.claims} claims, ${t.photos} sent photos, ${t.preChecked} passed the pre-checks and ${t.paid} ${t.paid === 1 ? "was" : "were"} paid through PayPal; ${t.refused} were refused. Payouts by day under it.` +
       (analyst ? ` Recall analyst, asked “${analyst.question}”: ${analyst.answer}` : ""),
     `The CPSC progress report draft for recall 27-071, built from the same ${t.claims} claims: units remedied, claims by outcome, refunds paid and why claims were refused.`,

@@ -7,21 +7,19 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObjec
 import { Button, CrossIcon, ErrorState, Skeleton } from "@/components/ui";
 import type { ApiError } from "@/app/console/_lib/api";
 // The model's words set as the owner's pages set them: curly quotes, codes in mono.
-import { ModelQuote } from "@/components/claim/EvidenceText";
 import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
-import { duration, isPreCheck, typeset as typesetText, type ClaimRow } from "@/app/console/_lib/view";
+import { duration, typeset as typesetText, type ClaimRow } from "@/app/console/_lib/view";
 import { api } from "./api";
-import { DurationText, EXCEPTION } from "./cells";
+import { DurationText } from "./cells";
+import { ClaimVerdict, Deciding, deciding, FiveChecks, HeaderMeta, heldNote, lowerAfterColons, MoneyLine, payoutFailure } from "./EvidenceParts";
 import { DrawerSkeleton, GhostFooter, RowAmount, RowMeta, RowVerdict } from "./EvidenceShell";
-import { CheckList } from "./CheckList";
 import { EvidencePhoto } from "./EvidencePhoto";
-import { formatClock, formatDayTime, formatTime, PART_STATE } from "./format";
+import { formatClock, formatTime } from "./format";
 import { Keys } from "./Keys";
 import { LinkedIds } from "./LinkedIds";
 import { PhotoViewer } from "./PhotoViewer";
 import { quickReasons } from "./quickReasons";
-import { payoutFailure, ReviewActions, reviewLabels, type ReviewIntent } from "./ReviewActions";
-import { VerdictMark, verdictOf } from "./VerdictMark";
+import { ReviewActions, reviewLabels, type ReviewIntent } from "./ReviewActions";
 
 export { DrawerSkeleton };
 
@@ -298,10 +296,7 @@ function EvidenceContent({
             {/* In the grid's verdict track, so walking the queue never moves it. Before the claim loads, the grid row's. */}
             <span className="inline-flex w-[6.5rem]">
               {claim ? (
-                <VerdictMark
-                  verdict={verdictOf({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null })}
-                  className={EXCEPTION.has(claim.decision) ? "text-text" : undefined}
-                />
+                <ClaimVerdict claim={claim} />
               ) : row?.id === id ? (
                 <RowVerdict row={row} />
               ) : (
@@ -313,21 +308,7 @@ function EvidenceContent({
           {!claim && row?.id === id ? (
             <RowMeta row={row} />
           ) : claim ? (
-            // One line in the 440px panel, so the evidence keeps the height: "Unverified" only when it's true, as in the
-            // grid (the pre-checks say verified).
-            <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-ui text-muted">
-              <span>{formatDayTime(claim.createdAt)}</span>
-              <span>
-                PayPal <span className="sr-only">account ending {claim.payer.slice(-4)}</span>
-                <span aria-hidden="true" className="font-mono">
-                  {claim.payer}
-                </span>
-                {!claim.verified && <span className="text-stop"> unverified</span>}
-              </span>
-              <span>
-                Code <span className="font-mono text-text">{claim.code}</span>
-              </span>
-            </p>
+            <HeaderMeta claim={claim} />
           ) : (
             <Skeleton className="mt-2 h-4 w-64 max-w-full" />
           )}
@@ -501,8 +482,7 @@ function moneySteps(claim: DrawerClaim): Step[] {
     {
       label: "Sent",
       at: at((e) => e.type === "payout_sent"),
-      // A claim the console starts with has no payout behind it: approving it records the decision (ReviewActions).
-      note: claim.decision !== "held" ? undefined : claim.seeded ? "Held: approve or reject it to record your decision." : "Held: nothing is sent until a person at the company approves.",
+      note: heldNote(claim) ?? undefined,
     },
     { label: MONEY_WORD.paid, at: at((e) => e.type === "payout_updated" && (e.detail === PAYPAL_CONFIRMED || e.detail.endsWith("SUCCESS"))) },
   ];
@@ -545,81 +525,6 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
       </ol>
       {note && <p className={clsx("mt-2 text-micro", steps.some((s) => s.failed) ? "text-muted" : "text-faint")}>{note}</p>}
     </div>
-  );
-}
-
-/** What decided a held or refused claim, in its own words: the reason, what it means, and the photo check's own words.
- * Null for any other claim. */
-function decider(claim: DrawerClaim): { title: string; detail: string | null; evidence: string | null } | null {
-  if (claim.decision !== "held" && claim.decision !== "rejected" && claim.decision !== "blocked") return null;
-  // The newest thing that stopped the money leads: PayPal not taking the payout, or the checks run again on approve.
-  const failure = payoutFailure(claim);
-  const refused = claim.refused;
-  if (failure && (!refused || failure.at > refused.at)) {
-    return { title: failure.what, detail: `At ${formatClock(failure.at)} UTC. ${failure.next}`, evidence: null };
-  }
-  if (refused) {
-    return {
-      title: "Not paid on review",
-      detail: `When it was approved at ${formatClock(refused.at)} UTC, Remedy checked again and didn’t send the payout: ${refused.text.charAt(0).toLowerCase()}${refused.text.slice(1)}.`,
-      evidence: null,
-    };
-  }
-  // A person rejected it: their reason, as the owner reads it, and who and when.
-  if (claim.rejected) {
-    return {
-      title: "Rejected on review",
-      detail: `${claim.rejected.by ?? "A person at the company"} rejected it at ${formatClock(claim.rejected.at)} UTC. The owner reads:`,
-      evidence: claim.rejected.reason,
-    };
-  }
-  // The rule refused it and the owner asked a person to look: their ask leads, then the check that refused it.
-  if (claim.decision === "held" && claim.appealedAt) {
-    const refused = claim.checks.find((c) => c.outcome === "reject");
-    return {
-      title: "The owner asked for a review",
-      detail: `The rule refused it${refused ? ` on ${refused.label}: ${refused.rule.charAt(0).toLowerCase()}${refused.rule.slice(1).replace(/[.\s]+$/, "")}` : ""}. Nothing has been paid.`,
-      evidence: refused?.evidence ?? null,
-    };
-  }
-  const pre = claim.preChecks.find((p) => p.state === "reject" || p.state === "hold");
-  const check = claim.checks.find((c) => c.outcome !== "pass");
-  return { title: check?.rule ?? pre?.detail ?? claim.sentence, detail: null, evidence: check?.evidence ?? null };
-}
-
-/**
- * The panel's headline is the grid row's reason, word for word, in every state ("Tag reads K7Q · code is K7P"), so the
- * row and the panel never say one refusal two ways. What the row's line leaves out stays under it: a payout failure, a
- * review or an owner's ask says its own heading first in the detail; a check's full sentence is the check list's.
- * `rule` is the decider's own heading, which the check list's "see above" matches.
- */
-function deciding(claim: DrawerClaim): { title: string; detail: string | null; evidence: string | null; rule: string } | null {
-  const d = decider(claim);
-  if (!d) return null;
-  if (!claim.note || claim.note === d.title) return { ...d, rule: d.title };
-  const own = d.detail !== null && !claim.note.startsWith(d.title);
-  return { title: claim.note, detail: own ? `${d.title.replace(/[.\s]+$/, "")}. ${d.detail}` : d.detail, evidence: d.evidence, rule: d.title };
-}
-
-/** Held or refused: the reason as the panel's first heading, the photo check's own words under it, then the count.
- * Claim ids it names open in the panel. */
-function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: string) => void }) {
-  const d = deciding(claim);
-  if (!d) return null;
-  return (
-    <section aria-labelledby="deciding-title" className="flex flex-col gap-1.5">
-      <h3 id="deciding-title" className="text-ui font-medium text-text">
-        {/* Typeset, with no capital after a colon ("Not done: the pillow is cut fully in half…"). */}
-        <LinkedIds text={lowerAfterColons(typesetText(d.title))} onOpen={onOpen} self={claim.id} />
-      </h3>
-      {d.detail && (
-        <p className="text-ui text-muted">
-          <LinkedIds text={typesetText(d.detail)} onOpen={onOpen} self={claim.id} />
-        </p>
-      )}
-      {d.evidence && <q className="block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted"><ModelQuote>{d.evidence}</ModelQuote></q>}
-      {claim.five && <p className="mt-1 text-micro text-muted">{claim.five}</p>}
-    </section>
   );
 }
 
@@ -678,7 +583,6 @@ function Evidence({
   // The passed rows' details, open or folded, per claim: ↑/↓ to the next claim folds them again.
   const [unfolded, setUnfolded] = useState<{ id: string; open: boolean }>({ id: claim.id, open: false });
   const open = unfolded.id === claim.id && unfolded.open;
-  const link = (text: string) => <LinkedIds text={text} onOpen={onOpen} self={claim.id} />;
   return (
     // Paragraphs wrap with no word left alone on a last line ("it.").
     <div className={clsx("flex flex-col gap-7 py-5 [&_p]:text-pretty [&_q]:text-pretty", pad)}>
@@ -749,16 +653,7 @@ function Evidence({
       {/* The five checks the owner's result and the homepage name, in their order and states; what each one recorded
           (an account check, the photo check's answers and its quoted words) under it. */}
       <Section title="Checks" aside={waiting ? undefined : claim.five}>
-        <CheckList
-          glyphs
-          label={`Checks for ${claim.id}`}
-          steps={claim.fiveRows.map((r) => ({
-            id: String(r.n),
-            label: r.name,
-            state: r.state === "reject" ? (r.n <= 3 ? "blocked" : "reject") : r.state,
-            detail: r.state === "waiting" || (r.state === "pass" && !open) ? undefined : fiveDetail(r, d, link),
-          }))}
-        />
+        <FiveChecks claim={claim} open={open} onOpen={onOpen} />
         <PassedToggle name="Checks" count={claim.fiveRows.filter((r) => r.state === "pass" && r.parts.length > 0).length} open={open} onToggle={() => setUnfolded({ id: claim.id, open: !open })} />
       </Section>
 
@@ -827,79 +722,6 @@ function Evidence({
 }
 
 
-// No capital after a colon in these rows: "…: Couldn't confirm: The tag…" reads "…: couldn't confirm: the tag…". A
-// word that is a name or a code (PayPal, X-VESOLJE, H9D) keeps its case: only a plain capitalised word is lowered.
-const lowerAfterColons = (text: string) => text.replace(/(:\s+)([A-Z])(?=[a-z’']*\b)(?![a-z’']*[A-Z0-9-])/g, (_, c: string, l: string) => c + l.toLowerCase());
-
-/**
- * Under one of the five checks: why it was skipped, or each thing recorded under it, what held or failed first. One part
- * says its line alone; several name themselves. A photo-check answer that passed is its name and the model's own words,
- * never its rule restated ("Pillow cut fully in half: The pillow is cut fully in half"). The answer the panel already
- * leads with keeps its line here, as its name and state ("Same item: couldn't tell, see above"), without the quote.
- * Undefined when there is nothing more to say.
- */
-function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<typeof deciding>, link: (text: string) => ReactNode): ReactNode {
-  type Part = DrawerClaim["fiveRows"][number]["parts"][number];
-  const led = (p: Part) => Boolean(decided && p.text === decided.rule && (p.evidence ?? null) === decided.evidence);
-  const shown = row.parts.filter((p) => p.text || p.evidence).sort((a, b) => Number(a.state === "pass") - Number(b.state === "pass"));
-  if (!row.note && !shown.length) return undefined;
-  const named = shown.length > 1;
-  // An account check's line says what was checked; a photo-check answer's rule only restates its name.
-  const restates = (p: Part) => p.state === "pass" && !isPreCheck(p.id);
-  // The row keeps its check's own name; what held or failed leads the lines under it (shown sorts it first), and under a
-  // row in doubt an answer that passed says so even beside its quote, so what is in doubt is the only thing uncertain.
-  const doubted = row.state === "hold" || row.state === "reject";
-  return (
-    <span className="flex flex-col gap-1.5">
-      {row.note && <span>{lowerAfterColons(row.note)}</span>}
-      {shown.map((p) => (
-        <span key={p.id} className="block">
-          {led(p) ? (
-            <span className="text-text">
-              {`${p.label}: ${PART_STATE[p.state] ?? "see above"}`}
-              {PART_STATE[p.state] && <span className="text-muted">, see above</span>}
-            </span>
-          ) : restates(p) && (named || p.evidence) ? (
-            <span className="text-text-2">
-              {p.label}
-              {(!p.evidence || doubted) && <span className="text-muted"> · passed</span>}
-            </span>
-          ) : named && PART_STATE[p.state] ? (
-            // Its name and state; the rule's own line would only restate the name ("Couldn't confirm: The tag is on…").
-            <span className="text-text">
-              {p.label}: {PART_STATE[p.state]}
-            </span>
-          ) : (
-            <>
-              {named && <span className={p.state === "pass" ? "text-text-2" : "text-text"}>{p.label}: </span>}
-              {link(lowerAfterColons(p.text))}
-            </>
-          )}
-          {p.evidence && !led(p) && (
-            <q className="mt-1.5 block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted">
-              <ModelQuote>{p.evidence}</ModelQuote>
-            </q>
-          )}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-/** The header's money: what the claim pays; nothing for a refused claim. Where the money is (Paid, Sent, settling,
- * Approved) is the verdict badge beside it (lib/payoutWords.ts), so it is said once. */
-function MoneyLine({ claim }: { claim: DrawerClaim }) {
-  if (claim.decision !== "paid" && claim.decision !== "held") return null;
-  return (
-    // Right-aligned on the header's row; when a phone wraps it, it starts on the left edge under the id, never mid-line.
-    <span className="inline-flex items-baseline gap-1.5 text-ui sm:ml-auto">
-      <span className="font-mono text-text">{claim.amount}</span>
-    </span>
-  );
-}
-
-/** PayPal's payout status in the console's words (lib/payoutWords.ts, as the section's heading says it), never its raw
- * enum. */
 function payoutStatusWord(status: string): string {
   switch (status.toUpperCase()) {
     case "SUCCESS":
