@@ -77,3 +77,34 @@ export function warp(from: number, to: number, slow: readonly Slow[] = []) {
     },
   };
 }
+
+/** A trackpad landing's top speed, px/s. The owner's Mac trackpad felt the exhibit's landings, up to 5,000 px/s, as
+ * "very fast"; a calm glide from rest peaks at 1.5 times its average speed, so a landing takes at least 1.5 times its
+ * way over this. */
+export const CALM_PEAK = 1450;
+/** Seconds a trackpad landing takes: CALM_MIN for a stop under a screen away, CALM_PER more a screen beyond that, CALM_MAX
+ * at two screens; up to CALM_SLOW more when the way crosses slow stretches, so their transitions play. */
+const CALM_MIN = 0.95;
+const CALM_PER = 0.65;
+const CALM_MAX = 1.6;
+const CALM_SLOW = 0.3;
+
+/**
+ * A trackpad landing from `from` to `to` on a screen `screen` px tall: how long it takes, and its way (warp) with the
+ * slow stretches weighted no more than its time allows at CALM_PEAK. Its time scales with the distance and never lets the
+ * calm curve from rest pass CALM_PEAK anywhere: on a slow stretch the page goes slower still, and the rest of the way is
+ * never sped up past CALM_PEAK to pay for it (an exhibit landing over two checks at 3x peaked at 5,000 px/s). `cap`
+ * shortens it, but never under that floor.
+ */
+export function calmLanding(from: number, to: number, screen: number, slow: readonly Slow[] = [], cap = Infinity) {
+  const px = Math.abs(to - from);
+  const full = warp(from, to, slow);
+  const base = Math.min(CALM_MAX, Math.max(CALM_MIN, CALM_MIN + (CALM_PER * (px - screen)) / screen));
+  const want = Math.max(base, Math.min(base + CALM_SLOW, (1.5 * full.length) / CALM_PEAK));
+  const duration = Math.max((1.5 * px) / CALM_PEAK, Math.min(cap, want));
+  // The share of each slow stretch's extra weight this time has room for.
+  const extra = full.length - px;
+  const k = extra > 0 ? Math.min(1, Math.max(0, ((CALM_PEAK * duration) / 1.5 - px) / extra)) : 1;
+  const way = k >= 1 ? full : warp(from, to, slow.map(([a, b, w]) => [a, b, 1 + (w - 1) * k] as const));
+  return { duration, way };
+}

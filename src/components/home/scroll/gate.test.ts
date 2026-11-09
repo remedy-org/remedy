@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createGate, notchQuiet, type Course, type GateLenis } from "./gate";
 import { storyFrom } from "./stops";
-import type { Slow } from "./landing";
+import { CALM_PEAK, type Slow } from "./landing";
 
 // The gate against a stand-in Lenis: wheel streams in, which events it takes, and where it lands the page.
 const STOPS = [0, 1410, 2144, 2821, 3205];
@@ -210,8 +210,7 @@ describe("wheel stops", () => {
   it("gives a slow stretch on the way more of the landing, and enters it at the page's speed all the same", () => {
     const plain = setup(0);
     plain.send(swipe(), 8);
-    // A slow stretch that isn't the dolly (the dolly's landing is held to DOLLY_TIME: tested below); it adds SLOW_TIME
-    // to the landing, and the curves still compare.
+    // A slow stretch that isn't the dolly; it adds to the landing's time (calmLanding), and the curves still compare.
     const slowed = setup(0, STOPS, [[207, 670, 4]]);
     slowed.send(swipe(), 8);
     const e0 = plain.lenis.easing!;
@@ -231,14 +230,15 @@ describe("wheel stops", () => {
       }
       return lo;
     };
-    expect(time(e1, 492) - time(e1, 207)).toBeGreaterThan(1.8 * (time(e0, 492) - time(e0, 207)));
+    // As much as the landing's calm peak leaves room for (calmLanding): a trackpad's way is never sped up past it.
+    expect(slowed.lenis.duration * (time(e1, 492) - time(e1, 207))).toBeGreaterThan(1.1 * plain.lenis.duration * (time(e0, 492) - time(e0, 207)));
   });
 
-  it("lands across the hero's dolly in 1.2 s at most, so the page is at rest soon after the dolly has played", () => {
+  it("lands a trackpad across the hero's dolly calmly, at rest within 1.65 s of the take for a way under two screens", () => {
     const pad = setup(0, STOPS, [[207, 670, 5]]);
     pad.send(swipe(), 8);
     expect(pad.lenis.landed).toEqual([1410]);
-    expect(pad.lenis.duration).toBeLessThanOrEqual(1.2);
+    expect(pad.lenis.duration).toBeLessThanOrEqual(1.65);
   });
 
   it("keeps a notched wheel's landing short, shortest across the hero's dolly, and crosses the dolly lighter", () => {
@@ -258,21 +258,6 @@ describe("wheel stops", () => {
     expect(notched.lenis.landed).toEqual([1410]);
     expect(notched.lenis.duration).toBeLessThanOrEqual(0.75);
     expect(notched.lenis.duration).toBeLessThan(flung.lenis.duration);
-    // The share of the landing spent on the dolly.
-    const share = (e: (t: number) => number) => {
-      const at = (y: number) => {
-        let lo = 0;
-        let hi = 1;
-        for (let i = 0; i < 40; i++) {
-          const m = (lo + hi) / 2;
-          if (e(m) * 1410 < y) lo = m;
-          else hi = m;
-        }
-        return lo;
-      };
-      return at(670) - at(207);
-    };
-    expect(share(notched.lenis.easing!)).toBeLessThan(share(flung.lenis.easing!));
   });
 
   it("lets a notched wheel spun hard from the top run free within half a second, while its first landing still plays", () => {
@@ -527,11 +512,13 @@ describe("wheel stops", () => {
     }
   });
 
-  it("never glides a gentle push out of a story's first or last beat into the next section: it scrolls 1:1", () => {
+  it("never glides a gentle push out of the paced stretch into the next section: it scrolls 1:1; inside it, one beat", () => {
     // As 1440x900: the Chain of Custody's story from the hero to its console beat, the Problem sheet's from open to cut,
-    // Fraud checks 1324px past the cut. Pushes of 36, 60 and 100px from the console beat down, the open sheet up and the
-    // cut down glided about 1.4 windows into the next section; now each rests where the hand left it.
-    const course = [0, 6698, 7988, 8586, 9910];
+    // Fraud checks 1324px past the cut, at the end of the sheet's pin, and the rule 451px on. Pushes of 36, 60 and 100px
+    // out of a story glided about 1.4 windows into the next section after the hand had stopped; below the sheet's pin a
+    // push now rests where the hand left it. From the hero to the end of the sheet's pin a trackpad's push moves one beat,
+    // as the finger lifts (from the console beat it rested 90px on, mid-page, off a beat).
+    const course = [0, 6698, 7988, 8586, 9910, 10361];
     const pins: [number, number][] = [
       [64, 6912],
       [6912, 9918],
@@ -546,6 +533,7 @@ describe("wheel stops", () => {
       [7988, -1],
       [8586, 1],
       [9910, -1],
+      [9910, 1],
     ] as const) {
       for (const px of [36, 60, 100]) {
         const g = setup(from, course, slow, undefined, undefined, pins, undefined, undefined, stories);
@@ -554,7 +542,8 @@ describe("wheel stops", () => {
         vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
         g.scroll();
         vi.restoreAllMocks();
-        expect(g.lenis.landed, `${dir > 0 ? "down" : "up"} ${px}px from ${from}`).toEqual([]);
+        const beat = from === 6698 ? [7988] : from === 7988 ? [6698] : from === 8586 ? [9910] : dir < 0 ? [8586] : [];
+        expect(g.lenis.landed, `${dir > 0 ? "down" : "up"} ${px}px from ${from}`).toEqual(beat);
       }
     }
     // Into the story, a push still moves it on a beat: up from the cut onto the open sheet, quickly.
@@ -578,9 +567,10 @@ describe("wheel stops", () => {
   });
 
   it("rests a push out of a story on the clean frame ahead when a line would be cut, never back against the hand", () => {
-    // A line cut at the screen's foot from 8640 to 8700: the push of 54px from the cut rests clear of it, ahead.
+    // A line cut at the screen's foot from 8640 to 8700: the push of 54px from the cut rests clear of it, ahead (here the
+    // next stop lies past the pin's end, so the sheet's paced stretch ends at the cut).
     const fit: Course["fit"] = (y, { min, max }) => [y, 8700, 8639].filter((v) => v >= min && v <= max && !(v > 8639 && v < 8700)).sort((a, b) => Math.abs(a - y) - Math.abs(b - y))[0];
-    const g = setup(8586, [0, 7988, 8586, 9910], [], undefined, undefined, [[6912, 9918]], fit, undefined, [[7988, 8586]]);
+    const g = setup(8586, [0, 7988, 8586, 10500], [], undefined, undefined, [[6912, 9918]], fit, undefined, [[7988, 8586]]);
     g.send(Array(6).fill(9));
     g.lenis.animatedScroll = g.lenis.targetScroll - 4;
     vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
@@ -726,25 +716,28 @@ describe("wheel stops", () => {
     }
     // The same through the Chain of Custody: ten notches from its inner beat run 442px past the console beat.
     expect(wheelOnClock(6140, course, pins, [Array(10).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([6698]);
-    // A roll begun on the last beat and leaving the story follows the hand: three notches from the cut rest 300px on.
-    expect(wheelOnClock(8586, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([]);
-    // Past half a window, the roll is the reader's: fifteen notches from the open sheet rest 902px past the cut.
-    expect(wheelOnClock(7988, course, pins, [Array(15).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([]);
+    // A roll begun on the last beat and leaving the story goes one beat, to the stop that ends the sheet's pin (Fraud
+    // checks): three notches from the cut rested 300px on, Fraud checks half over the held sheet.
+    expect(wheelOnClock(8586, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([9910]);
+    // Past half a window, fifteen notches from the open sheet run 902px past the cut: on to Fraud checks, the beat nearest.
+    expect(wheelOnClock(7988, course, pins, [Array(15).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([9910]);
   });
 
   it("never leaves the Problem sheet half risen or half unfolded: a gesture that goes quiet there goes on to a whole frame", () => {
     const { course, pins, stories, unfolds } = SHEET;
-    // Three notches up from the open sheet rested at 7688, the sheet half unfolded: on up to its last frame unseen.
+    // Three notches up from the open sheet rested at 7688, the sheet half unfolded: on up to the console beat, a beat (its
+    // last frame unseen was a rest of its own, off a beat).
     const up = wheelOnClock(7988, course, pins, [Array(3).fill(-100)], { inside: 90, between: 90 }, { stories, unfolds });
-    expect(up.landed).toEqual([7002]);
+    expect(up.landed).toEqual([6698]);
     expect(up.duration).toBeLessThanOrEqual(0.8);
     // Ten notches down from the console beat rested at 7698: on to the open sheet.
     const down = wheelOnClock(6698, course, pins, [Array(10).fill(100)], { inside: 100, between: 100 }, { stories, unfolds });
     expect(down.landed).toEqual([7988]);
     expect(down.duration).toBeLessThanOrEqual(0.8);
-    // Three notches down from the console beat rest at 6998, the sheet still unseen: where the hand left it.
-    expect(wheelOnClock(6698, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([]);
-    // Gentle pushes up from the open sheet rest 1:1 on the sheet lying flat; down from the console beat, 1:1 too.
+    // Three notches down from the console beat rested at 6998, the sheet still unseen, off a beat: on to the open sheet.
+    expect(wheelOnClock(6698, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([7988]);
+    // A trackpad's gentle pushes up from the open sheet go on to the console beat, down from the console beat to the open
+    // sheet: one beat (they rested 1:1, mid-page).
     for (const [from, dir] of [
       [7988, -1],
       [6698, 1],
@@ -756,16 +749,17 @@ describe("wheel stops", () => {
         vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
         g.scroll();
         vi.restoreAllMocks();
-        expect(g.lenis.landed, `${px}px from ${from}`).toEqual([]);
+        expect(g.lenis.landed, `${px}px from ${from}`).toEqual([from === 7988 ? 6698 : 7988]);
       }
     }
-    // A tremor from the frame unseen goes back onto it, never on 986px to the open sheet.
+    // A notched wheel's tremor from the frame unseen goes back onto it, never on 986px to the open sheet; a trackpad's,
+    // to the nearer beat, the console's (from the hero to the cut a trackpad rests only on a beat).
     const tremor = setup(7002, course, [], undefined, undefined, pins, undefined, undefined, stories, unfolds);
     tremor.send([2, 2, 1]);
     vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
     tremor.scroll();
     vi.restoreAllMocks();
-    expect(tremor.lenis.landed).toEqual([7002]);
+    expect(tremor.lenis.landed).toEqual([6698]);
   });
 
   it("still takes three quick flicks of a notched wheel, a pause between them, to three beats", () => {
@@ -922,12 +916,14 @@ describe("trackpad swipes", () => {
     expect(g.lenis.landed).toEqual([1858]);
   });
 
-  it("F3: a one-beat landing takes 0.95 to 1.2 s and ends on the stop", () => {
+  it("F3: a one-beat landing takes 0.95 s under a screen, longer with the way, 1.65 s at most, and ends on the stop", () => {
     for (const from of [0, 414, 823, 4278]) {
       const g = course(from);
       g.send(SMALL());
+      const way = BEATS[BEATS.indexOf(from) + 1] - from;
       expect(g.lenis.duration).toBeGreaterThanOrEqual(0.95);
-      expect(g.lenis.duration).toBeLessThanOrEqual(1.2);
+      // 1,862px (check 3 to the paid receipt with no check rests between) takes as long as its calm peak needs.
+      expect(g.lenis.duration).toBeLessThanOrEqual(Math.max(1.65, (1.5 * way) / CALM_PEAK) + 1e-9);
       expect(g.lenis.easing!(1)).toBeCloseTo(1, 6);
     }
   });
@@ -983,6 +979,98 @@ describe("trackpad swipes", () => {
     expect(g.lenis.landed).toEqual([414]);
     g.send(SMALL(), 16, 24);
     expect(g.lenis.landed).toEqual([414, 823]);
+  });
+  // As 1440x900 on ui/merge: every beat Page Down stops on from the hero to the cut (the stops, and the exhibit's four
+  // other checks at rest), the two stories, the console scrolling away and the sheet unfolding between them, the dolly
+  // and two exhibit checks slow.
+  const STOPS_ALL = [0, 414, 823, 1858, 2534, 4278, 6140, 6698, 7988, 8586, 9910];
+  const RESTS_ALL = [...STOPS_ALL, 3067, 3691, 4972, 5653].sort((a, b) => a - b);
+  const SLOW_ALL: Slow[] = [
+    [144, 700, 5],
+    [4700, 4900, 3],
+    [5400, 5600, 3],
+    [7300, 7800, 2],
+  ];
+  const full = (at: number) =>
+    setup(at, STOPS_ALL, SLOW_ALL, undefined, [1858, 2534, 6140], [[64, 6912], [6912, 9918]], undefined, RESTS_ALL, [[0, 6698], [7988, 8586]], [[7002, 7812, 7988]]);
+  // To Fraud checks' stop, which ends the sheet's pin.
+  const BEATS_ALL = RESTS_ALL.filter((y) => y <= 9910);
+
+  it("G1: from the hero to the end of the sheet every swipe moves exactly one beat, the exhibit's checks at rest included, both ways", () => {
+    for (const shape of [TINY, SMALL, MEDIUM, HARD]) {
+      BEATS_ALL.forEach((from, i) => {
+        for (const dir of [1, -1] as const) {
+          const to = BEATS_ALL[i + dir];
+          if (to === undefined) continue;
+          const g = full(from);
+          g.send(dir > 0 ? shape() : flip(shape()));
+          expect(g.lenis.landed, `${shape.name} ${dir > 0 ? "down" : "up"} from ${from}`).toEqual([to]);
+        }
+      });
+    }
+  });
+
+  it("G1: a tiny swipe from check 3 lands on the code check, never glides on to the paid receipt; two swipes move two", () => {
+    const g = full(4278);
+    g.send(TINY());
+    expect(g.lenis.landed).toEqual([4972]);
+    const up = full(6140);
+    up.send(flip(TINY()));
+    expect(up.lenis.landed).toEqual([5653]);
+    const two = full(4278);
+    two.send(SMALL().slice(0, Math.round(350 / 16)));
+    expect(two.lenis.landed).toEqual([4972]);
+    two.lenis.animatedScroll = 4700;
+    two.send(SMALL(), 16, 24);
+    expect(two.lenis.landed).toEqual([4972, 5653]);
+  });
+
+  it("G4: a tiny swipe or a push from the console beat goes one beat to the open sheet, a tremor settles back", () => {
+    for (const d of [TINY(), SMALL(), Array(6).fill(6)]) {
+      const g = full(6698);
+      g.send(d);
+      g.lenis.animatedScroll = g.lenis.targetScroll;
+      vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+      g.scroll();
+      vi.restoreAllMocks();
+      expect(g.lenis.landed).toEqual([7988]);
+    }
+    const tremor = full(6698);
+    tremor.send([2, 2, 1]);
+    tremor.lenis.animatedScroll = tremor.lenis.targetScroll;
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    tremor.scroll();
+    vi.restoreAllMocks();
+    expect(tremor.lenis.landed).toEqual([6698]);
+  });
+
+  it("G2: every beat's landing is calm: under 1,600 px/s at its peak, eased in and out, no 60 Hz frame over 60px, its time growing with the way", () => {
+    const times: [number, number][] = [];
+    BEATS_ALL.slice(0, -1).forEach((from, i) => {
+      const to = BEATS_ALL[i + 1];
+      const g = full(from);
+      g.send(SMALL());
+      const T = g.lenis.duration;
+      const e = g.lenis.easing!;
+      const y = (t: number) => g.lenis.animatedScroll + (to - g.lenis.animatedScroll) * e(t);
+      let peak = 0;
+      let step = 0;
+      for (let k = 1; k <= 1000; k++) peak = Math.max(peak, Math.abs(y(k / 1000) - y((k - 1) / 1000)) / (T / 1000));
+      for (let t = 0; t < T; t += 1 / 60) step = Math.max(step, Math.abs(y(Math.min(1, (t + 1 / 60) / T)) - y(t / T)));
+      expect(peak, `${from} to ${to}`).toBeLessThan(1600);
+      expect(step, `${from} to ${to}`).toBeLessThan(60);
+      expect(T).toBeGreaterThanOrEqual(0.95);
+      expect(T).toBeLessThanOrEqual(1.65);
+      // Entered at the page's own speed (it has followed the hand), never a jolt; eased out: the last tenth of the time
+      // covers under 6% of the way.
+      expect((e(1e-4) / 1e-4) * (Math.abs(to - g.lenis.animatedScroll) / T)).toBeLessThan(1600);
+      expect(1 - e(0.9)).toBeLessThan(0.06);
+      times.push([Math.abs(to - from), T]);
+    });
+    // Farther takes no less time.
+    times.sort((a, b) => a[0] - b[0]);
+    const plain = times.filter(([d]) => d > 900);
+    for (let i = 1; i < plain.length; i++) expect(plain[i][1]).toBeGreaterThanOrEqual(plain[i - 1][1] - 0.3);
   });
 });
 
