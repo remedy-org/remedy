@@ -3,9 +3,10 @@
 import { motion, useMotionValue, useMotionValueEvent, useScroll, useTransform, type MotionValue } from "motion/react";
 import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import type { ClaimRow } from "@/app/console/_lib/view";
+import { formatDayTime } from "@/components/console/format";
 import { EASE } from "@/components/ui";
 import { HeroDevice, useMedia } from "../HeroDevice";
-import { CHAPTERS } from "./claim";
+import { CHAPTERS, CLAIM } from "./claim";
 import { CustodyStage } from "./CustodyStage";
 import { HeroPhone } from "./HeroPhone";
 import { PhoneRunway } from "./PhoneRunway";
@@ -134,6 +135,12 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
   };
 }
 
+/** RM-0442's filing day and time from the console's rows (they move to the visit's day), or its time of day alone. */
+const filedOf = (rows: ClaimRow[]) => {
+  const row = rows.find((r) => r.id === CLAIM.id);
+  return row ? formatDayTime(row.createdAt) : CLAIM.filed;
+};
+
 /** `consoleRows`: chapter 06's queue, drawn on the server from the claims /console reads (Hero.tsx). */
 export function HeroRunway({ copy, consoleRows }: { copy: ReactNode; consoleRows: ClaimRow[] }) {
   const wide = useMedia("(min-width: 1024px) and (min-height: 700px)");
@@ -178,7 +185,8 @@ export function HeroRunway({ copy, consoleRows }: { copy: ReactNode; consoleRows
       </div>
       {mode === "static" && (
         <div id="how" tabIndex={-1} className="outline-none">
-          <StaticFigures />
+          {/* Chapter 06's row gives RM-0442's filing day and time as the pinned queue does, from the same rows. */}
+          <StaticFigures filed={filedOf(consoleRows)} />
         </div>
       )}
       {mode === "phone" && (

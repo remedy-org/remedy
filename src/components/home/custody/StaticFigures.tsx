@@ -52,7 +52,8 @@ function PaperObject({ title, text, children, className }: { title: string; text
   );
 }
 
-export function StaticFigures() {
+/** `filed`: RM-0442's filing day and time as the console lists it today (HeroRunway, from the console's rows). */
+export function StaticFigures({ filed }: { filed: string }) {
   return (
     <>
       <div className="page pt-18 lg:pt-24">
@@ -93,7 +94,7 @@ export function StaticFigures() {
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col leading-tight">
                   <span className="font-mono text-ui font-medium">{CLAIM.id}</span>
-                  <span className="mt-0.5 font-mono text-micro text-faint">{CLAIM.filed}</span>
+                  <span className="mt-0.5 font-mono text-micro text-faint">{filed}</span>
                 </span>
                 <span className="flex flex-col items-end gap-1">
                   <VerdictMark verdict="paid" />
