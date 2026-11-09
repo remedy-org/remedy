@@ -402,10 +402,12 @@ export function storyStretches(page = readPage()): [number, number][] {
   return out;
 }
 
-/** The Problem sheet's last frame unseen, on its timeline: its eyebrow still under the screen's foot and the console above
- * it whole under the nav (both from about t 11); and its first lying flat, card 3 about to land (a push of 100px up from
- * the open sheet rests past it, 1:1). */
+/** The Problem sheet's last frame unseen, on its timeline (its eyebrow comes up at the screen's foot from about t 11), and
+ * no more than UNSEEN px past the Chain of Custody's pin, where its stage starts to scroll away: the chapter list's first
+ * line sits about 110px under the nav at the console beat, and at 1920x1080 t 10 put it under the nav. Then the sheet's
+ * first frame lying flat, card 3 about to land (a push of 100px up from the open sheet rests past it, 1:1). */
 const SHEET_HIDDEN = 10;
+const UNSEEN = 96;
 const SHEET_FLAT = T.card3[0];
 
 /**
@@ -415,8 +417,9 @@ const SHEET_FLAT = T.card3[0];
  * cut under the nav (1440x900: 7586, 7688); a gesture that goes quiet in it now settles on a going up, on c going down.
  */
 export function unfoldStretches(page = readPage()): [number, number, number][] {
-  const [a, b, c] = [SHEET_HIDDEN, SHEET_FLAT, SHEET_OPEN].map((t) => page.sheet(t));
-  return a === undefined || b === undefined || c === undefined ? [] : [[Math.round(a), Math.round(b), Math.round(c)]];
+  const [pin, hidden, b, c] = [0, SHEET_HIDDEN, SHEET_FLAT, SHEET_OPEN].map((t) => page.sheet(t));
+  if (pin === undefined || hidden === undefined || b === undefined || c === undefined) return [];
+  return [[Math.round(Math.min(hidden, pin + UNSEEN)), Math.round(b), Math.round(c)]];
 }
 
 const warned = new Set<string>();
