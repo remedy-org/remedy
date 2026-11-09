@@ -19,6 +19,14 @@ const VARS = {
  */
 export function judgeLogin(account: keyof typeof VARS): JudgeLogin | null {
   if (!isSandboxBuild()) return null;
-  const [email, password] = VARS[account].map((name) => process.env[name]?.trim());
+  const [email, password] = VARS[account].map((name) => unquote(process.env[name]));
   return email && password ? { email, password } : null;
+}
+
+/** A value trimmed, and unwrapped from one pair of matching quotes: an env saved as 'sb-…@personal.example.com' showed
+ * its quotes on /try, and Copy carried them into PayPal's login. */
+function unquote(value: string | undefined) {
+  const v = value?.trim();
+  const q = v?.[0];
+  return v && v.length > 1 && (q === "'" || q === '"') && v.endsWith(q) ? v.slice(1, -1).trim() : v;
 }

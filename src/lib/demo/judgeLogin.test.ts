@@ -18,6 +18,18 @@ describe("judgeLogin", () => {
     expect(judgeLogin("business")).toEqual({ email: "judge.company@example.test", password: "sandbox-test-only" });
   });
 
+  it("drops one pair of quotes saved around a value", () => {
+    set({
+      ...LOGINS,
+      PAYPAL_API_BASE: "https://api-m.sandbox.paypal.com",
+      SANDBOX_PERSONAL_EMAIL: "'sb-owner@personal.example.com'",
+      SANDBOX_PERSONAL_PASSWORD: ' "pa\'ss" ',
+    });
+    expect(judgeLogin("personal")).toEqual({ email: "sb-owner@personal.example.com", password: "pa'ss" });
+    set({ SANDBOX_PERSONAL_EMAIL: "'", SANDBOX_PERSONAL_PASSWORD: "it's" });
+    expect(judgeLogin("personal")).toEqual({ email: "'", password: "it's" });
+  });
+
   it("is null in a live build, even with the values set", () => {
     set({ ...LOGINS, PAYPAL_API_BASE: "https://api-m.paypal.com" });
     expect(judgeLogin("personal")).toBeNull();
