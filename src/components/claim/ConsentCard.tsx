@@ -54,6 +54,8 @@ export interface ConsentCardProps {
   /** /try?claim=<name> (the homepage's "Try to fool it"): the claim it pointed at, ringed among the four with its line,
    * and the one the picker opens on after the login. */
   sample?: string | null;
+  /** /try?claim=<a fake>: the headline and its line name the attempt the link was for, in place of the plain /try's. */
+  heading?: { title: string; lede: string } | null;
 }
 
 /** The demo account's login in the card: the phone's bar shows it before it offers the PayPal login. */
@@ -77,7 +79,7 @@ export function consentAction({ signedInAs, demo, unverified, yourClaim }: Pick<
  * The consent card: what the owner gets back, in one headline, how in one line, then one action. A
  * returning owner sees only their claim and the way back to it.
  */
-export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin, sample }: ConsentCardProps) {
+export function ConsentCard({ recall, href, signedInAs, demo, authError, unverified, refusal, yourClaim, judgeLogin, sample, heading }: ConsentCardProps) {
   const company = companyName(recall);
   const action = consentAction({ signedInAs, demo, unverified, yourClaim });
   // Refused by a limit, a real owner's way on is the company's recall notice.
@@ -101,15 +103,18 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   return (
     <section aria-labelledby="consent-title" className={`${frame} gap-7`}>
       <div className="flex flex-col gap-3">
-        {/* The page's one headline: the brief beside it is the recall it answers, a step smaller. */}
-        <StepTitle id="consent-title" className="text-pretty">
-          <NoBreakHyphens>{demo ? "Try Remedy on a real recall" : title}</NoBreakHyphens>
+        {/* The page's one headline: the brief beside it is the recall it answers, a step smaller. An attempt's title is
+            balanced, so its last line never ends on a short tail ("the web"). */}
+        <StepTitle id="consent-title" className={demo && heading ? "text-balance" : "text-pretty"}>
+          <NoBreakHyphens>{demo ? (heading?.title ?? "Try Remedy on a real recall") : title}</NoBreakHyphens>
         </StepTitle>
         {/* A first-time owner from a recall notice has never heard of Remedy: one neutral line says what it is, so the
             page never reads as a stranger borrowing the recall. Only on the plain logged-out offer, not under a notice. */}
         {!demo && !signedInAs && !error && !refusal && !unverified && <p className="text-ui text-pretty text-muted">{about}</p>}
         <p className="text-body text-pretty text-muted">
-          {demo ? (
+          {demo && heading ? (
+            heading.lede
+          ) : demo ? (
             <>
               Send four claims for the <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens>. Remedy pays the genuine one and stops the three that aren&rsquo;t.
             </>

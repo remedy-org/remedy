@@ -1,6 +1,6 @@
 import "server-only";
 import { claimPath, findOpenClaim } from "@/app/api/claims/_lib/pipeline";
-import { askedSample, getAppStore, sampleLinkName } from "@/lib/demo";
+import { askedSample, getAppStore, sampleLinkName, type DemoSampleId } from "@/lib/demo";
 import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
@@ -13,6 +13,12 @@ import { businessDaysAfter, day, maskPayer } from "./model";
 import { RecallBrief } from "./RecallBrief";
 
 const AUTH_ERRORS = new Set<AuthError>(["denied", "state", "paypal", "refused"]);
+
+/** /try?claim=web-photo (the homepage's "Try to fool it"): the page says the attempt it was opened for. The web photo
+ * is stopped by the first check, Taken in Remedy's camera, one of the three that run before any AI. */
+const ATTEMPTS: Partial<Record<DemoSampleId, { title: string; lede: string }>> = {
+  "ai-no-session": { title: "Try to fool it: send a photo from the web", lede: "Remedy refuses it at the first check, before any AI sees the photo." },
+};
 
 /** Step 1: what was recalled and why, and the consent to log in with PayPal. Real and demo share it. */
 export async function RecallScreen({ recall, demo, query }: { recall: Recall; demo: boolean; query: Record<string, string | string[] | undefined> }) {
@@ -44,6 +50,7 @@ export async function RecallScreen({ recall, demo, query }: { recall: Recall; de
       refusal={parseRefusal(query, now) ?? refused}
       judgeLogin={demo ? judgeLogin("personal") : null}
       sample={sample}
+      heading={sample ? ATTEMPTS[sample] : null}
     />
   );
 }
