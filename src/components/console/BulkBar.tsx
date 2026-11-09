@@ -202,7 +202,7 @@ export function BulkBar({
               <LinkedIds text={failed.map((f) => `${f.id} (${f.error?.error ?? "no answer"})`).join(", ")} onOpen={onOpen} />
             </span>
           ) : mode === "approve" ? (
-            <span className="text-text">{approveOnly ? `Approve ${formatCents(cents)} for ${plural(held.length, "owner")}? Your queue, ledger and report record them as Approved; no PayPal payout goes out for them.` : `Pay ${formatCents(cents)} to ${plural(held.length, "owner")} through PayPal?`}</span>
+            <span className="text-text">{approveOnly ? `Approve ${plural(held.length, "held claim")}? Remedy records your decision, and the queue, ledger and report read Approved.` : `Pay ${formatCents(cents)} to ${plural(held.length, "owner")} through PayPal?`}</span>
           ) : mode === "reject" ? (
             <span className="text-text">Reject {plural(held.length, "held claim")}.</span>
           ) : (
@@ -231,7 +231,7 @@ export function BulkBar({
           {mode === "approve" && (
             <>
               <Button size="sm" data-autofocus pending={busy} pendingLabel={verb} onClick={() => run("approve")}>
-                {`${word} ${formatCents(cents)}`}
+                {approveOnly ? word : `${word} ${formatCents(cents)}`}
               </Button>
               <Button size="sm" variant="tertiary" arrow={false} disabled={busy} onClick={() => onMode("idle")}>
                 Cancel
@@ -273,7 +273,7 @@ export function BulkBar({
             </>
           ) : mode === "approve" ? (
             <>
-              <Keys k={["A"]}>{`${word} ${formatCents(cents)}`}</Keys>
+              <Keys k={["A"]}>{approveOnly ? word : `${word} ${formatCents(cents)}`}</Keys>
               <Keys k={["Esc"]}>Cancel</Keys>
             </>
           ) : (

@@ -69,6 +69,14 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   box-shadow: inset 1px 0 0 var(--line);
 }
 
+/* One inset down the sheet: its title, the intro, the questions and the question box's edge all start 16px in. */
+.insights-report .ag-studio-ai-panel .ag-studio-panel-header {
+  padding-inline: 16px;
+}
+.insights-report .ag-studio-ai-assistant-controls {
+  padding: 8px 16px 16px;
+}
+
 /* The analyst's starting questions: quiet text rows on hairlines, under the intro, never outlined pills; a row lifts to
    the text colour on hover. */
 .insights-report .ag-studio-ai-prompt-starters {
@@ -332,7 +340,7 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
 
 /*
  * The analyst's rail in the console's own type: its title and "Start over" are words, with no stock glyphs beside them
- * (the double chevron and the speech bubble); the page header's "Close the analyst" closes it, and so does a click on
+ * (the double chevron and the speech bubble); the sheet's "Close" closes it, and so does a click on
  * its title.
  */
 .insights-report .ag-studio-ai-panel .ag-studio-panel-chevron,

@@ -52,10 +52,12 @@ export interface SeedInput {
   hashes: Record<string, string>;
   // Claim ids already used by real claims: a demo claim with one of them is left out, never written over the real one.
   taken?: ReadonlySet<string>;
+  // Milliseconds every time moves forward (dataset.ts datasetShift: whole days, so times of day stay).
+  shift?: number;
 }
 
 // Pure: builds the demo claims from DEMO_CLAIMS.
-export function buildSeedClaims({ recall, hashes, taken = new Set() }: SeedInput): Claim[] {
+export function buildSeedClaims({ recall, hashes, taken = new Set(), shift = 0 }: SeedInput): Claim[] {
   const rand = prng(27071);
   const int = (n: number) => Math.floor(rand() * n);
   const pick = (chars: string, n: number) => Array.from({ length: n }, () => chars[int(chars.length)]).join("");
@@ -76,7 +78,7 @@ export function buildSeedClaims({ recall, hashes, taken = new Set() }: SeedInput
   const claims: Claim[] = [];
   // Oldest first, so the repost can point back at the claim it copied.
   for (const d of [...DEMO_CLAIMS].reverse()) {
-    const t = Date.parse(d.filed);
+    const t = Date.parse(d.filed) + shift;
     const session = { id: `cs_${pick("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", 22)}`, expiresAt: at(t + 15_000 + CAPTURE_SESSION_MINUTES * 60_000) };
     const claim: Claim = {
       id: d.id,

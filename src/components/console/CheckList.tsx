@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { useEffect, useState, type ReactNode } from "react";
 import { BlockIcon, CheckIcon, CrossIcon, HoldIcon, type CheckState, type CheckStep } from "@/components/ui";
+import { VerdictGlyph, type Verdict } from "./VerdictMark";
 
 // The console's check rows: the icon says the result, and a word appears only where a check didn't pass.
 const word: Partial<Record<CheckState, string>> = {
@@ -14,8 +15,19 @@ const word: Partial<Record<CheckState, string>> = {
   skipped: "Not run",
 };
 
-function Marker({ state, quiet }: { state: CheckState; quiet?: boolean }) {
+// A check's result as the grid's verdict glyph (VerdictMark), 14px on the first line's height: passed is the ring and
+// check, held the pause, failed the cross, blocked the strike, not run or waiting the dashed ring.
+const GLYPH: Partial<Record<CheckState, Verdict>> = { pass: "approved", hold: "held", reject: "rejected", blocked: "blocked", skipped: "pending", waiting: "pending" };
+
+function Marker({ state, quiet, glyph }: { state: CheckState; quiet?: boolean; glyph?: boolean }) {
   const ring = "flex size-6 shrink-0 items-center justify-center rounded-full";
+  if (glyph && GLYPH[state]) {
+    return (
+      <span className="flex h-5 shrink-0 items-center">
+        <VerdictGlyph verdict={GLYPH[state]!} />
+      </span>
+    );
+  }
   // A step that didn't finish (an import's draft), not a check that failed: a neutral cross, no colour.
   if (quiet && (state === "reject" || state === "hold")) {
     return (
@@ -71,6 +83,7 @@ export function CheckList({
   label,
   words,
   quiet,
+  glyphs,
   className,
 }: {
   steps: CheckStep[];
@@ -78,13 +91,15 @@ export function CheckList({
   words?: Partial<Record<CheckState, string>>;
   // Step ids drawn without colour when they didn't finish (quiet markers).
   quiet?: string[];
+  // The verdict glyphs (14px, VerdictMark) in place of the tinted badges: the claim panel's checks, as the grid marks them.
+  glyphs?: boolean;
   className?: string;
 }) {
   return (
     <ol aria-label={label} className={clsx("flex flex-col", className)}>
       {steps.map((s) => (
-        <li key={s.id} className="flex gap-3 border-b border-line py-3 last:border-b-0">
-          <Marker state={s.state} quiet={quiet?.includes(s.id)} />
+        <li key={s.id} className={clsx("flex border-b border-line py-3 last:border-b-0", glyphs ? "gap-2.5" : "gap-3")}>
+          <Marker state={s.state} quiet={quiet?.includes(s.id)} glyph={glyphs} />
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-3">
               <span className={clsx("text-ui font-medium", s.state === "waiting" ? "text-faint" : "text-text")}>{s.label}</span>

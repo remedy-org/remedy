@@ -1,6 +1,6 @@
 import "server-only";
 import { buildInsights, type InsightsData } from "@/app/console/insights/facts";
-import { PREVIEW_NOW, previewSeed, typeset } from "@/components/console/preview";
+import { previewNow, previewSeed, typeset } from "@/components/console/preview";
 
 // The homepage's Insights, built on the server from the same 40 seeded claims as the console preview
 // (components/console/preview.ts): the facts /console/insights would show for a workspace holding only those claims.
@@ -10,7 +10,7 @@ const GATE: Record<string, string> = { "No AI": "Before the photo check", "Model
 
 export function insightsPreview(): InsightsData {
   const { recall, claims } = previewSeed();
-  const data = typeset(buildInsights([...claims].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), recall, PREVIEW_NOW));
+  const data = typeset(buildInsights([...claims].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), recall, previewNow()));
   return {
     ...data,
     claims: data.claims.map((c) => ({ ...c, refusalGate: (c.refusalGate && (GATE[c.refusalGate] ?? c.refusalGate)) as typeof c.refusalGate })),

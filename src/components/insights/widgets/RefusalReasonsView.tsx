@@ -32,10 +32,9 @@ export function RefusalReasonsView({ items, selected = new Set(), onToggle, onRe
     return <p className="flex h-full items-center justify-center text-ui text-muted">No claim was refused.</p>;
   }
   const total = items.reduce((n, i) => n + i.count, 0);
-  // The homepage scales each bar to all the refusals (3 of 9 draws a third), in one muted red: the count says the rest.
-  // The console scales to the commonest reason, which its cross-filter picks between, in the funnel's muted ink: the
-  // title already says these were refused.
-  const max = flush ? Math.max(1, total) : Math.max(1, ...items.map((i) => i.count));
+  // Each bar is its share of all the refusals (3 of 9 draws a third), so reasons with one claim each never all read full:
+  // the homepage in one muted red, the console in the funnel's muted ink (the title already says these were refused).
+  const max = Math.max(1, total);
   const Item = onToggle ? "button" : "div";
   const figure = flush ? "tabular-nums" : "font-mono tabular-nums";
 

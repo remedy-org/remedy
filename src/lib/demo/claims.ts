@@ -12,7 +12,9 @@
 //   never issues.
 // - Paid is a claim PayPal paid: RM-0442, the genuine claim, 15 s from its photo to its PayPal payout. No claim sits
 //   approved with nothing sent: every other one the model saw is held or rejected by its answer.
-// - Times are fixed (UTC), so the console, the homepage and the report give every claim the same filing time.
+// - Times are written against DATASET_NOW (UTC). The dataset moves them forward by whole days to the request's day
+//   (dataset.ts datasetShift), so the newest claim is always yesterday's and every time of day stays: the console, the
+//   homepage and the report give every claim the same filing time.
 
 export type DemoOutcome = "paid" | "approved" | "held" | "rejected" | "blocked";
 
@@ -56,6 +58,11 @@ export const DEMO_CLAIMS: readonly DemoClaim[] = [
   // A picture of the cut floral pillow from outside the claim's camera, with someone else's code (H6N) on its tag.
   { id: "RM-9545", outcome: "blocked", block: "session", photos: ["web-1.jpg"], code: "T7C", filed: "2026-11-05T19:42:10Z", shoot: 302 },
 ];
+
+/** Where the paper tag sits in a held claim's photo, as a share of the photo's width and height: the console's Zoom to
+ * tag opens the photo viewer there. RM-9629's photo, shot from standing height, is the one whose tag is too small to read
+ * at a glance. */
+export const TAG_SPOTS: Readonly<Record<string, { x: number; y: number }>> = { "k10-1.jpg": { x: 0.78, y: 0.54 } };
 
 /** The claim the homepage stages start to finish. */
 export const GENUINE = DEMO_CLAIMS.find((c) => c.id === "RM-0442")!;

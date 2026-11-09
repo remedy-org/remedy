@@ -28,6 +28,8 @@ const LOCALE = {
   aggregationMaxFieldName: "${name}",
   crossFilterSumFieldName: "Of these, paid",
   crossFilterMaxFieldName: "Of these, paid",
+  aggregationCountdFieldName: "${name} count",
+  aggregationCountdBucketName: "${name} count",
 };
 
 /** The tiles' captions, by title, for the claims on the page; a caption already right is left alone. */

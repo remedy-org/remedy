@@ -9,7 +9,7 @@ import type { ApiError } from "@/app/console/_lib/api";
 // The model's words set as the owner's pages set them: curly quotes, codes in mono.
 import { ModelQuote } from "@/components/claim/EvidenceText";
 import type { DrawerClaim, ReviewedClaim } from "@/app/console/_lib/drawer";
-import { duration, isPreCheck, type ClaimRow } from "@/app/console/_lib/view";
+import { duration, isPreCheck, typeset as typesetText, type ClaimRow } from "@/app/console/_lib/view";
 import { api } from "./api";
 import { DurationText, EXCEPTION } from "./cells";
 import { DrawerSkeleton, GhostFooter, RowAmount, RowMeta, RowVerdict } from "./EvidenceShell";
@@ -46,7 +46,8 @@ export interface EvidenceProps {
   // Opens another claim of the queue (the claim a repost copied, the next held claim).
   onOpen?: (id: string) => void;
   // A person approved or rejected this claim (ClaimsQueue works out the next held one). claim: what was decided.
-  onDecided?: (id: string, decision: DrawerClaim["decision"], claim?: { amount?: string } | null) => void;
+  // sent: a payout went to PayPal (the console's own claims send none: approving one records the decision).
+  onDecided?: (id: string, decision: DrawerClaim["decision"], claim?: { amount?: string; sent?: boolean } | null) => void;
   // After a decision: the next held claim in the list, null when none is left, undefined before.
   nextHeld?: string | null;
   // The claim this one was opened from through a link in its evidence: the header offers the way back.
@@ -218,7 +219,7 @@ function EvidenceContent({
     seen.clear();
     replace(c);
     setSaved({ id: c.id, decision: c.decision, at: new Date().toISOString() });
-    onDecided?.(c.id, c.decision, { amount: c.amount });
+    onDecided?.(c.id, c.decision, { amount: c.amount, sent: Boolean(c.payout) });
     reread();
   };
   const heading = useRef<HTMLHeadingElement>(null);
@@ -387,7 +388,8 @@ function EvidenceContent({
             <span className="font-medium text-text">
               {justSaved.decision === "paid" ? "Approved" : "Rejected"} at <span className="font-mono">{formatClock(justSaved.at)}</span> UTC.
             </span>{" "}
-            {justSaved.decision !== "paid" ? "The owner sees your reason on their claim page." : `${claim.amount} sent through PayPal.`}
+            {/* Sent only where a payout went to PayPal: approving one of the console's own claims records the decision. */}
+            {justSaved.decision !== "paid" ? "The owner sees your reason on their claim page." : claim.payout ? `${claim.amount} sent through PayPal.` : null}
             {nextHeld === null && " No held claims are left in this list."}
           </p>
           {nextHeld && onOpen && (
@@ -446,6 +448,8 @@ const OUTCOME: Partial<Record<DrawerClaim["decision"], string>> = {
   rejected: "Rejected. No money moves.",
   blocked: "Blocked before the photo check. No money moves.",
 };
+// A held claim the console starts with: approving it records the decision and sends nothing (ReviewActions).
+const HELD_RECORDS = "Held for your review. Approve or reject it to record your decision.";
 
 function Section({ title, children, aside }: { title: ReactNode; children: ReactNode; aside?: ReactNode }) {
   return (
@@ -494,7 +498,12 @@ function moneySteps(claim: DrawerClaim): Step[] {
   }
   return [
     ...steps,
-    { label: "Sent", at: at((e) => e.type === "payout_sent"), note: claim.decision === "held" ? "Held: nothing is sent until a person at the company approves." : undefined },
+    {
+      label: "Sent",
+      at: at((e) => e.type === "payout_sent"),
+      // A claim the console starts with has no payout behind it: approving it records the decision (ReviewActions).
+      note: claim.decision !== "held" ? undefined : claim.seeded ? "Held: approve or reject it to record your decision." : "Held: nothing is sent until a person at the company approves.",
+    },
     { label: MONEY_WORD.paid, at: at((e) => e.type === "payout_updated" && (e.detail === PAYPAL_CONFIRMED || e.detail.endsWith("SUCCESS"))) },
   ];
 }
@@ -508,7 +517,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
   const note = steps.find((s) => s.note)?.note;
   return (
     <div className="@container">
-      <ol className="flex flex-col gap-2 @[26rem]:grid @[26rem]:gap-0" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label={`Timeline for ${claim.id}`}>
+      <ol className="flex flex-col gap-2 @[26rem]:grid @[26rem]:gap-0" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(max-content, 1fr))` }} aria-label={`Timeline for ${claim.id}`}>
         {steps.map((s, i) => {
           const done = s.at !== null;
           const next = steps[i + 1];
@@ -525,7 +534,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
                 />
                 {next && <span className={clsx("absolute inset-x-0 left-2.5 hidden h-px @[26rem]:block", done && next.at && !s.failed ? "bg-muted/70" : "bg-line-strong/40")} />}
               </span>
-              <span className={clsx("min-w-0 flex-1 text-micro @[26rem]:flex-none @[26rem]:leading-tight", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
+              <span className={clsx("min-w-0 flex-1 text-micro @[26rem]:flex-none @[26rem]:leading-tight @[26rem]:whitespace-nowrap", s.failed ? "text-stop" : done ? "text-text" : "text-faint")}>{s.label}</span>
               {/* The figures in mono, the unit in the sans after a thin space, as the grid prints a span. */}
               <span className="text-micro text-muted">
                 {!done ? <span className="text-faint">{s.value ?? "—"}</span> : s.failed ? <span className="font-mono">{formatClock(s.at!)}</span> : <DurationText sec={i === 0 ? 0 : plus!} plus={i > 0} />}
@@ -586,11 +595,12 @@ function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: string)
   return (
     <section aria-labelledby="deciding-title" className="flex flex-col gap-1.5">
       <h3 id="deciding-title" className="text-ui font-medium text-text">
-        <LinkedIds text={d.title} onOpen={onOpen} self={claim.id} />
+        {/* Typeset, with no capital after a colon ("Not done: the pillow is cut fully in half…"). */}
+        <LinkedIds text={lowerAfterColons(typesetText(d.title))} onOpen={onOpen} self={claim.id} />
       </h3>
       {d.detail && (
         <p className="text-ui text-muted">
-          <LinkedIds text={d.detail} onOpen={onOpen} self={claim.id} />
+          <LinkedIds text={typesetText(d.detail)} onOpen={onOpen} self={claim.id} />
         </p>
       )}
       {d.evidence && <q className="block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted"><ModelQuote>{d.evidence}</ModelQuote></q>}
@@ -642,7 +652,7 @@ function Evidence({
   // Before any photo arrives every check is waiting: one line says when they run, the rows are their names alone.
   const waiting = claim.preChecks.every((p) => p.state === "waiting");
   // The photo viewer, open on a photo (0-based); keyed by claim, so ↑/↓ to another claim closes it.
-  const [viewing, setViewing] = useState<{ id: string; n: number } | null>(null);
+  const [viewing, setViewing] = useState<{ id: string; n: number; zoom?: { x: number; y: number } } | null>(null);
   const viewer = viewing?.id === claim.id ? viewing.n : null;
   // V or Space from the queue opens the viewer at the first photo (a count that changes on each press).
   const [seenView, setSeenView] = useState(viewPhotos);
@@ -666,7 +676,12 @@ function Evidence({
             {claim.photos.length ? "Photos" : "No photos yet"}
           </h3>
           {/* A person deciding a held claim reads the tag against this: one glance, beside the photos. */}
-          {claim.review && claim.photos.length > 0 && <TagCode code={claim.code} />}
+          {claim.review && claim.photos.length > 0 && (
+            <TagCode
+              code={claim.code}
+              onZoom={claim.tagSpot ? () => setViewing({ id: claim.id, n: claim.tagSpot!.photo, zoom: { x: claim.tagSpot!.x, y: claim.tagSpot!.y } }) : undefined}
+            />
+          )}
         </div>
         {claim.duplicate ? (
           <Duplicate claim={claim} onOpen={onOpen} onView={(n) => setViewing({ id: claim.id, n })} />
@@ -696,8 +711,9 @@ function Evidence({
             claimId={claim.id}
             photos={claim.photos}
             start={viewer}
+            zoomAt={viewing?.zoom}
             code={claim.code}
-            question={d && { title: d.title, detail: d.detail }}
+            question={d && { title: lowerAfterColons(typesetText(d.title)), detail: d.detail && typesetText(d.detail) }}
             labels={claim.review ? reviewLabels(claim) : undefined}
             onOpen={onOpen}
             onReview={onReview}
@@ -719,6 +735,7 @@ function Evidence({
           (an account check, the photo check's answers and its quoted words) under it. */}
       <Section title="Checks" aside={waiting ? undefined : claim.five}>
         <CheckList
+          glyphs
           label={`Checks for ${claim.id}`}
           steps={claim.fiveRows.map((r) => ({
             id: String(r.n),
@@ -732,7 +749,7 @@ function Evidence({
 
       <Section title="Decision">
         {/* What decided a held or refused claim leads the panel; here, only what the rule did with it. */}
-        <p className="text-ui text-text-2">{d ? OUTCOME[claim.decision] ?? claim.sentence : claim.sentence}</p>
+        <p className="text-ui text-text-2">{d ? (claim.seeded && claim.decision === "held" ? HELD_RECORDS : OUTCOME[claim.decision]) ?? claim.sentence : claim.sentence}</p>
         {claim.review?.note && <p className="text-ui text-muted">{claim.review.note}</p>}
       </Section>
 
@@ -773,7 +790,12 @@ function Evidence({
               <span className="min-w-0 text-muted">
                 {/* One format for a span, as the grid and timeline print it ("11 s", not "10.8 s"), and one figure: the photo
                     check's span is counted from the same timestamps as the grid's "Answered in" and the timeline. */}
-                <LinkedIds text={e.detail.replace(/(\d+\.\d+) s\b/, (_, n: string) => duration(e.type === "checked" && photosIn !== null ? Math.max(0, Math.round((Date.parse(e.at) - photosIn) / 1000)) : Number(n)))} onOpen={onOpen} self={claim.id} />
+                {/* Typeset, with no capital after a colon ("Held for a person: couldn’t read the label clearly"). */}
+                <LinkedIds
+                  text={lowerAfterColons(typesetText(e.detail)).replace(/(\d+\.\d+) s\b/, (_, n: string) => duration(e.type === "checked" && photosIn !== null ? Math.max(0, Math.round((Date.parse(e.at) - photosIn) / 1000)) : Number(n)))}
+                  onOpen={onOpen}
+                  self={claim.id}
+                />
                 {e.raw && (
                   <details className="mt-1">
                     <summary className="cursor-pointer text-micro text-faint hover:text-muted">Service&rsquo;s answer</summary>
@@ -792,6 +814,10 @@ function Evidence({
 // What a part that didn't pass says in a word, after its name: the reason itself is the panel's heading.
 const PART_STATE: Partial<Record<string, string>> = { hold: "couldn’t tell", reject: "failed" };
 
+// No capital after a colon in these rows: "…: Couldn't confirm: The tag…" reads "…: couldn't confirm: the tag…". A
+// word that is a name or a code (PayPal, X-VESOLJE, H9D) keeps its case: only a plain capitalised word is lowered.
+const lowerAfterColons = (text: string) => text.replace(/(:\s+)([A-Z])(?=[a-z’']*\b)(?![a-z’']*[A-Z0-9-])/g, (_, c: string, l: string) => c + l.toLowerCase());
+
 /**
  * Under one of the five checks: why it was skipped, or each thing recorded under it, what held or failed first. One part
  * says its line alone; several name themselves. A photo-check answer that passed is its name and the model's own words,
@@ -809,7 +835,7 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
   const restates = (p: Part) => p.state === "pass" && !isPreCheck(p.id);
   return (
     <span className="flex flex-col gap-1.5">
-      {row.note && <span>{row.note}</span>}
+      {row.note && <span>{lowerAfterColons(row.note)}</span>}
       {shown.map((p) => (
         <span key={p.id} className="block">
           {led(p) ? (
@@ -822,10 +848,15 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
               {p.label}
               {!p.evidence && <span className="text-muted"> · passed</span>}
             </span>
+          ) : named && PART_STATE[p.state] ? (
+            // Its name and state; the rule's own line would only restate the name ("Couldn't confirm: The tag is on…").
+            <span className="text-text">
+              {p.label}: {PART_STATE[p.state]}
+            </span>
           ) : (
             <>
               {named && <span className={p.state === "pass" ? "text-text-2" : "text-text"}>{p.label}: </span>}
-              {link(p.text)}
+              {link(lowerAfterColons(p.text))}
             </>
           )}
           {p.evidence && !led(p) && (
@@ -870,11 +901,21 @@ function payoutStatusWord(status: string): string {
   }
 }
 
-/** "Tag must read K7P": the code the owner wrote, in mono at a size that reads against the photo's tag. */
-function TagCode({ code }: { code: string }) {
+/** "Tag must read K7P": the code the owner wrote, in mono at a size that reads against the photo's tag; where Remedy
+ * knows where the tag is, Zoom to tag opens the photo viewer zoomed on it. */
+function TagCode({ code, onZoom }: { code: string; onZoom?: () => void }) {
   return (
     <p className="flex shrink-0 items-baseline gap-2 text-ui text-muted">
       Tag must read <span className="font-mono text-body font-medium tracking-wide text-text">{code}</span>
+      {onZoom && (
+        <button
+          type="button"
+          onClick={onZoom}
+          className="ml-1 cursor-zoom-in text-text underline decoration-line-strong underline-offset-4 hover:decoration-text"
+        >
+          Zoom to tag
+        </button>
+      )}
     </p>
   );
 }
