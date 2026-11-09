@@ -32,7 +32,7 @@ export function demoDataset(): { recall: Recall; claims: Claim[] } {
 /** The dataset's claim with this id, or null. */
 export const datasetClaim = (id: string): Claim | null => (IDS.has(id) ? (demoDataset().claims.find((c) => c.id === id) ?? null) : null);
 
-/** A dataset photo's file in public/demo, from its store key (seed/c02-1.jpg), or null for any other key. */
+/** A dataset photo's file in public/demo, from its store key (seed/k01-1.jpg), or null for any other key. */
 export const datasetPhotoFile = (key: string): string | null => {
   if (!key.startsWith(SEED_PHOTO_PREFIX)) return null;
   const name = key.slice(SEED_PHOTO_PREFIX.length);

@@ -54,7 +54,7 @@ export const storyEvidence = (id: string) => `The held claim, ${id}, opens to it
 export const stepSentences = (analyst: boolean) => TOUR.steps.map((s, i) => s.sentence + (i === 2 && analyst ? TOUR.analystSentence : ""));
 
 /** Step 02's line under the panel's buttons: what approving does here, as the console's confirm says it. */
-export const payoutsLine = (id: string) => `Approving ${id} records the decision; nothing is sent through PayPal.`;
+export const payoutsLine = (id: string) => `Approving ${id} records it as Approved in your queue, ledger and report; no PayPal payout goes out for it.`;
 
 export interface TourTotals {
   claims: number;

@@ -32,7 +32,7 @@ export type ReviewPhase = "idle" | "confirm" | "paying" | "paid" | "reject" | "r
 /**
  * The tour's foot of the evidence, as the console panel's review works (ReviewActions.tsx), played in the browser alone:
  * no request is made. A held claim: Approve $29.99… asks "Approve $29.99 for •••• DSFD?", as the console does for its
- * own claims (nothing is sent through PayPal), and reads "Approving…" for a moment before it lands; Reject… shows the reason the owner would read, and rejecting it refuses the claim.
+ * own claims (it is recorded as Approved; no PayPal payout goes out), and reads "Approving…" for a moment before it lands; Reject… shows the reason the owner would read, and rejecting it refuses the claim.
  * A claim decided before: what happened to the money, in one line.
  */
 export function ReviewFoot({ claim, phase, onPhase }: { claim: StillClaim; phase: ReviewPhase; onPhase: (p: ReviewPhase) => void }) {
@@ -55,7 +55,7 @@ export function ReviewFoot({ claim, phase, onPhase }: { claim: StillClaim; phase
     <div className={styles.review}>
       {phase === "confirm" && (
         <p className="mb-2 text-ui text-text">
-          Approve <span className="font-mono">{claim.amount}</span> for <span className="font-mono">{claim.payer}</span>? Nothing is sent through PayPal.
+          Approve <span className="font-mono">{claim.amount}</span> for <span className="font-mono">{claim.payer}</span>? Your queue, ledger and report record it as Approved; no PayPal payout goes out for it.
         </p>
       )}
       {phase === "reject" && reason && <p className="mb-2 text-ui text-muted">{TOUR.payouts.reason(reason)}</p>}

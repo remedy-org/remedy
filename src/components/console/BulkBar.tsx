@@ -202,7 +202,7 @@ export function BulkBar({
               <LinkedIds text={failed.map((f) => `${f.id} (${f.error?.error ?? "no answer"})`).join(", ")} onOpen={onOpen} />
             </span>
           ) : mode === "approve" ? (
-            <span className="text-text">{approveOnly ? `Approve ${formatCents(cents)} for ${plural(held.length, "owner")}? Nothing is sent through PayPal.` : `Pay ${formatCents(cents)} to ${plural(held.length, "owner")} through PayPal?`}</span>
+            <span className="text-text">{approveOnly ? `Approve ${formatCents(cents)} for ${plural(held.length, "owner")}? Your queue, ledger and report record them as Approved; no PayPal payout goes out for them.` : `Pay ${formatCents(cents)} to ${plural(held.length, "owner")} through PayPal?`}</span>
           ) : mode === "reject" ? (
             <span className="text-text">Reject {plural(held.length, "held claim")}.</span>
           ) : (

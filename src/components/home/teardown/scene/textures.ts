@@ -52,9 +52,55 @@ async function tileNoise(n: number, cells: number, seed: number) {
   return out;
 }
 
+// The recalled feather print's colours, sampled off the RM-0442 photo (public/demo/k01-1.jpg).
+const FEATHERS = ["#e8b13a", "#47b3c9", "#d9568a", "#9a6cc0", "#e7883f", "#7cb862", "#3f7fc8", "#efe2c4", "#c84a4a"];
+
 /**
- * Brushed cotton, plain navy like the photo (no print): colour with faint large mottling, and a normal map of fine,
- * irregular fibre noise with a slight grain along the weft. No regular ribs. Built in slices (see yieldToMain).
+ * The recalled feather print on one tile (8 cm of fabric): staggered rows of small feathers, each a leaf shape with a
+ * pale quill, leaning the same way as on the CPSC photo. Drawn wrapped, so the tile repeats without a seam.
+ */
+function drawFeathers(g: CanvasRenderingContext2D, n: number, seed: number) {
+  const r = rng(seed);
+  const cols = 3;
+  const rows = 4;
+  const len = n * 0.21;
+  const wid = len * 0.34;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cx = ((col + (row % 2) * 0.5 + (r() - 0.5) * 0.12) / cols) * n;
+      const cy = ((row + (r() - 0.5) * 0.12) / rows) * n;
+      const colour = FEATHERS[Math.floor(r() * FEATHERS.length)];
+      const tilt = -0.45 + (r() - 0.5) * 0.15;
+      for (const dx of [-n, 0, n])
+        for (const dy of [-n, 0, n]) {
+          const x = cx + dx;
+          const y = cy + dy;
+          if (x < -len || x > n + len || y < -len || y > n + len) continue;
+          g.save();
+          g.translate(x, y);
+          g.rotate(tilt);
+          g.fillStyle = colour;
+          g.beginPath();
+          g.moveTo(0, -len / 2);
+          g.quadraticCurveTo(wid, -len * 0.1, 0, len / 2);
+          g.quadraticCurveTo(-wid, -len * 0.1, 0, -len / 2);
+          g.fill();
+          g.strokeStyle = "rgba(255,248,232,0.75)";
+          g.lineWidth = n / 340;
+          g.beginPath();
+          g.moveTo(0, -len * 0.42);
+          g.lineTo(0, len * 0.62);
+          g.stroke();
+          g.restore();
+        }
+    }
+  }
+}
+
+/**
+ * Brushed cotton in the recalled feather print (dark brown, small multicoloured feathers): colour with faint large
+ * mottling under the print, and a normal map of fine, irregular fibre noise with a slight grain along the weft. No
+ * regular ribs. Built in slices (see yieldToMain).
  */
 export async function fabricTextures(THREE: Three, base: [number, number, number]) {
   const n = 512;
@@ -81,6 +127,7 @@ export async function fabricTextures(THREE: Three, base: [number, number, number
     }
   }
   col.g.putImageData(img, 0, 0);
+  drawFeathers(col.g, n, 27071);
   await yieldToMain();
   const nrm = canvas(n, n);
   const nimg = nrm.g.createImageData(n, n);
