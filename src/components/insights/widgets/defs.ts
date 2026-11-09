@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { AgDefaultWidgetDefinition, AgTypeScriptRegistry, AgTypeScriptWidgetDefinition, AgWidgetDataFormat, AgWidgetFieldReference } from "ag-studio";
 
 // The five custom widget types, as Studio's registry sees them.
@@ -46,6 +47,23 @@ export interface InsightsRegistry extends AgTypeScriptRegistry {
 }
 
 /** PIRG, Too Much to Recall (January 2024), in its words: "Only 6 to 10 percent of recalled products are returned or discarded." */
+// The "typical over a whole recall" band's hatch, one for Insights and the report, on screen and in print: a 6px tile with
+// a 1px diagonal drawn on whole pixels (crispEdges), its ends carried into the next tile, so every stroke is the same
+// width at any zoom, where a diagonal gradient's fractional stops shimmer. Its colour is --hatch (else --faint), painted
+// through the tile as a mask, so it follows the theme and prints with the element's print-color-adjust.
+const HATCH_TILE = `url("data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' shape-rendering='crispEdges'><path d='M0 6L6 0M-1 1L1 -1M5 7L7 5' stroke='black'/></svg>",
+)}")`;
+export const HATCH: CSSProperties = {
+  backgroundColor: "var(--hatch, var(--faint))",
+  maskImage: HATCH_TILE,
+  maskSize: "6px 6px",
+  maskRepeat: "repeat",
+  WebkitMaskImage: HATCH_TILE,
+  WebkitMaskSize: "6px 6px",
+  WebkitMaskRepeat: "repeat",
+};
+
 export const TYPICAL_RETURN = {
   from: 0.06,
   to: 0.1,

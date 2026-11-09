@@ -2,7 +2,7 @@ import clsx from "clsx";
 import type { CSSProperties, ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
 import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
-import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
+import { HATCH, TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
 import { firmOf } from "./firm";
 import { formatCount, formatDate, formatPeriod, keepHyphens, plural } from "./format";
@@ -284,7 +284,7 @@ function ReturnRuler({ remedied, sold, daysIn }: { remedied: number; sold: numbe
           style={{
             left: on(TYPICAL_RETURN.from),
             width: `calc(${on(TYPICAL_RETURN.to)} - ${on(TYPICAL_RETURN.from)})`,
-            background: "repeating-linear-gradient(135deg, var(--hatch) 0 1px, transparent 1px 5px)",
+            ...HATCH,
           }}
         />
         <span aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-pay in-data-[theme=light]:bg-pay-ink" style={{ width: `max(3px, ${on(share)})` }} />
