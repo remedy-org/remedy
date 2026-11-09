@@ -4,7 +4,7 @@
 
 - **Live:** https://remedy-recalls.vercel.app
 - **Judges' demo:** https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try (a PayPal sandbox login is on the page)
-- **Company console:** https://remedy-recalls.vercel.app/signin (open **Use the demo account** for the sandbox business login)
+- **Company console:** https://remedy-recalls.vercel.app/signin (open **Use the demo account** for the sandbox business login, or log in with the try page's sandbox account)
 
 <!-- Demo video: add the YouTube link here before submitting. -->
 
@@ -36,7 +36,7 @@ The real claim flow, with your own live camera and a fresh one-time code, is at 
 
 ### Company side (about 30 seconds)
 
-4. Press **See them as Kikea Store sees them**, or open **[/signin](https://remedy-recalls.vercel.app/signin)**. Open **Use the demo account** and log in with PayPal as the company.
+4. Press **See them as Kikea Store sees them**, or open **[/signin](https://remedy-recalls.vercel.app/signin)**. Open **Use the demo account** and log in with PayPal as the company. If it isn't shown, the try page's sandbox account works too.
 5. **Claims:** the queue in AG Grid, with your four claims beside the recall's demo claims. Open any row for the evidence: the photos, every model answer with the text it quoted, the pre-checks and the rule's decision. Held claims can be approved or rejected, one at a time or in bulk.
 6. **Insights:** the AG Studio report on the recall, and the **Recall analyst**. Ask it about a claim, a chart or why claims were refused.
 7. **New recall:** paste any CPSC recall number or cpsc.gov link. The model drafts the photo checks from the notice for the company to edit and publish.
