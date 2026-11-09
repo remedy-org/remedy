@@ -11,7 +11,7 @@ export function MobileSummary({ data }: { data: InsightsData }) {
   const filed = steps[0].reached || 1;
 
   return (
-    <section aria-label="Summary" className="flex flex-col gap-6 px-4 pb-8 sm:hidden">
+    <section aria-label="Summary" className="page flex flex-col gap-6 pb-8 sm:hidden">
       <InsightsLedger claims={data.claims} unitsSold={data.recall.unitsSold} />
 
       <div>
