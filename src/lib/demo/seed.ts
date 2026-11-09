@@ -129,7 +129,8 @@ export function buildSeedClaims({ recall, hashes, taken = new Set() }: SeedInput
     claim.events.push({ at: at(checkedAt), type: "checked", detail: `Photo check answered in ${sample.seconds.toFixed(1)} s` });
     const first = (o: Reason["outcome"]) => reasons.find((r) => r.outcome === o)?.text ?? "";
     const said = d.outcome === "approved" ? "Every check passed; refund approved, nothing sent yet" : outcome === "pass" ? "Every check passed" : outcome === "hold" ? `Held for a person: ${first("hold")}` : `Rejected: ${first("reject")}`;
-    claim.events.push({ at: at(checkedAt + 50), type: "decided", detail: said });
+    // The rule decides on the answer at once: the same instant, so the timeline's Decision never reads a second after the answer.
+    claim.events.push({ at: at(checkedAt), type: "decided", detail: said });
 
     if (d.outcome === "paid") {
       // Paid: PayPal took the payout d.toPayout seconds after the photos and confirmed it.
