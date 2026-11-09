@@ -48,6 +48,9 @@ function Layer({ p, i, compact, fill, children }: { p: Progress; i: number; comp
   );
 }
 
+/** ms after chapter 06 has gone that its window takes the stage's full height again: its console's cut out is over. */
+const UNFIT_AFTER = 260;
+
 /** The rail items come in one after another, this far apart (seconds). */
 const RAIL_STAGGER = 0.05;
 
@@ -215,6 +218,24 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
     return () => ro.disconnect();
   }, [chapter, compact, stage, p]);
 
+  // The fitted window (data-fit) comes with chapter 06 and goes only once its console has cut out (LEAVE, 180ms), so
+  // going back up the console never shows in the full-height window for a frame. Written straight to the element, as
+  // the clip is, so React never puts it back.
+  useEffect(() => {
+    const el = screen.current;
+    if (!el) return;
+    const set = (on: boolean) => {
+      el.toggleAttribute("data-fit", on);
+      applyClip(el, stage.current, p.get());
+    };
+    if (chapter === 5) {
+      set(true);
+      return;
+    }
+    const t = window.setTimeout(() => set(false), UNFIT_AFTER);
+    return () => window.clearTimeout(t);
+  }, [chapter, stage, p]);
+
   // As p passes 0.12, in time, the laptop's own screen dissolves straight into the consent screen: the layer and its
   // content come in together (200ms and 240ms), so the screen never shows a frame of bare ground between the two UIs.
   // Back, both leave in 160ms. Opacity and pointer events as well as visibility: a chapter
@@ -239,7 +260,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
 
   return (
     <>
-      <motion.div ref={screen} className={styles.screen} style={screenStyle} data-fit={chapter === 5 || undefined} aria-hidden="true">
+      <motion.div ref={screen} className={styles.screen} style={screenStyle} aria-hidden="true">
         {/* The window's edge: a definite hairline with its soft shadow, so its corners never float alone. */}
         <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-card ring-1 ring-line")} style={{ opacity: frame }} />
         <div className={styles.screenInner} data-screen-inner>
