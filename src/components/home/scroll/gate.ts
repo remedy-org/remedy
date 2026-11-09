@@ -320,8 +320,8 @@ export function createGate(read: () => Course) {
     }
     const on = back !== undefined && Math.abs(back - origin) <= 1 && (rest - origin) * dir >= NUDGE;
     const to = ahead !== undefined && (on || back === undefined || Math.abs(ahead - rest) <= Math.abs(back - rest)) ? ahead : back;
-    if (to === undefined || Math.abs(to - at) <= 1) return;
-    land(l, to, to > at ? 1 : -1, performance.now());
+    // Landed on even where the page is on it already: Lenis would ease on past it to where the gesture was bound.
+    if (to !== undefined) land(l, to, to >= at ? 1 : -1, performance.now());
   }
 
   /** The wheel has been quiet for QUIET ms with no landing under way: a free run, or a gesture the page took as the

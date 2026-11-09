@@ -497,6 +497,8 @@ describe("wheel stops", () => {
     expect(nudgeTo(1900, gentle, pins)).toBe(2600);
     // A finished beat that is no stop (an exhibit check at its hold) is as good a rest.
     expect(nudgeTo(1000, gentle, pins, [0, 1000, 1700, 2600, 4000])).toBe(1700);
+    // Bound 3px past a beat the page is easing over: back onto it, not left 3px off.
+    expect(nudgeTo(1000, [...Array(40).fill(20), 3], pins, [0, 1000, 1800, 2600, 4000])).toBe(1800);
     // Outside a pinned story slow scrolling stays the reader's.
     expect(nudgeTo(2700, gentle, pins)).toBeUndefined();
     expect(nudgeTo(1000, gentle, [])).toBeUndefined();
