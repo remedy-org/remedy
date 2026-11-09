@@ -71,6 +71,9 @@ const WIDE = "(min-width: 1280px)";
 // grouping and export step aside for the cards' sort. From 640px the grid has its columns and headers, 200% zoom on a
 // laptop included.
 const ROOMY = "(min-width: 640px)";
+// From 1440px the eight tabs, grouping, export and an open search share one row; below it an empty search folds to its
+// icon, as it does beside the docked panel, so the toolbar never wraps the search onto a row of its own.
+const BROAD = "(min-width: 1440px)";
 function useMedia(query: string) {
   return useSyncExternalStore(
     (on) => {
@@ -134,6 +137,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   const fill = useMedia(FILL);
   const roomy = useMedia(ROOMY);
+  const broad = useMedia(BROAD);
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "all");
   // The Verdict column's filter: the tab's, or what the column's menu picked.
   const [filter, setFilter] = useState<DecisionModel | null>(() => tabFilter(isTab(initialTab) ? initialTab : "all"));
@@ -211,7 +215,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const found = useMemo(() => (tab === "all" ? searched : searched.filter((r) => r.decision === tab)), [searched, tab]);
   const filtered = filter !== null && tabOf(filter) === "all";
   const openRow = rows.find((r) => r.id === open) ?? null;
-  const compact = ((wide && open !== null) || !roomy) && !search && !searchOpen;
+  const compact = ((wide && open !== null) || !roomy || !broad) && !search && !searchOpen;
   // A search with nothing in this tab: where its matches are instead, so an empty tab is never a dead end.
   const elsewhere = tab !== "all" && search ? TABS.filter((t) => t.id !== "all" && t.id !== tab && counts[t.id] > 0) : [];
 
