@@ -1,13 +1,14 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import type { ReactNode } from "react";
 import { ClaimErrorCard } from "@/components/claim/ClaimErrorCard";
-import { metadata as site } from "@/app/layout";
 import { ClaimFlow, type ClaimFlowProps } from "@/components/claim/ClaimFlow";
 import { ContinueCard } from "@/components/claim/ContinueCard";
 import { ExpiredCard } from "@/components/claim/ExpiredCard";
 import { FlowShell, recallContext } from "@/components/claim/FlowShell";
+import { inFourOrder } from "@/components/claim/fourOrder";
 import { ClaimFrame, STEP_GRID } from "@/components/claim/Exhibit";
 import { RecallBrief } from "@/components/claim/RecallBrief";
 import { checkRows, maskEmail, toView } from "@/components/claim/model";
@@ -25,15 +26,16 @@ import * as fx from "./fixtures";
 // /dev/claim?s=<state>: every step and result of the owner's claim flow with fixtures, for screenshots and review.
 // Dev only: a 404 in production.
 
-const SHOTS = ["/demo/k01-1.jpg", "/demo/k11-1.jpg"];
+// Both shots of this claim's own tag (M4T): k11's photo carries another claim's code (J4R).
+const SHOTS = ["/demo/k01-1.jpg", "/demo/k01-1.jpg"];
 // The owner's PayPal login on the receipt, masked as ClaimScreen masks it.
 const ACCOUNT = maskEmail("dan.okafor@example.com");
 
 type Render = () => ReactNode | Promise<ReactNode>;
 
 async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "preview">, claim: Claim = fx.open) {
-  // The site's own origin (the layout's metadataBase), as the live claim page builds its phone link.
-  const phoneUrl = new URL(`/r/${fx.recall.slug}/claim/${claim.id}`, site.metadataBase ?? undefined).href;
+  // This server's own address, so the QR opens on a phone on the same network as the dev machine.
+  const phoneUrl = new URL(`/r/${fx.recall.slug}/claim/${claim.id}`, `http://${(await headers()).get("host") ?? "localhost"}`).href;
   return (
     <FlowShell context={recallContext(fx.recall)}>
       <ClaimFlow
@@ -133,7 +135,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   picker: {
     group: "Demo",
     note: "Sample picker, first visit (repost locked)",
-    render: () => picker({ selected: "genuine", runs: [], roundDone: false, options: DEMO_SAMPLES.map((sample) => ({ sample, locked: locked(sample) })) }),
+    render: () => picker({ selected: "genuine", runs: [], roundDone: false, options: inFourOrder(DEMO_SAMPLES).map((sample) => ({ sample, locked: locked(sample) })) }),
   },
   "picker-runs": {
     group: "Demo",
@@ -143,7 +145,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
         selected: "ai-no-session",
         runs: [run("RM-5307", "wrong-code", "rejected"), run("RM-0442", "genuine", "paid")],
         roundDone: false,
-        options: DEMO_SAMPLES.map((sample) => ({ sample })),
+        options: inFourOrder(DEMO_SAMPLES).map((sample) => ({ sample })),
       }),
   },
   "picker-locked-runs": {
@@ -154,7 +156,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
         selected: "genuine",
         runs: [run("RM-5309", "ai-no-session", "blocked"), run("RM-5307", "wrong-code", "rejected")],
         roundDone: false,
-        options: DEMO_SAMPLES.map((sample) => ({ sample, locked: locked(sample) })),
+        options: inFourOrder(DEMO_SAMPLES).map((sample) => ({ sample, locked: locked(sample) })),
       }),
   },
   "picker-unexpected": {
@@ -165,7 +167,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
         selected: "wrong-code",
         runs: [run("RM-0442", "genuine", "held")],
         roundDone: false,
-        options: DEMO_SAMPLES.map((sample) => ({ sample })),
+        options: inFourOrder(DEMO_SAMPLES).map((sample) => ({ sample })),
       }),
   },
   "picker-done": {
@@ -176,13 +178,13 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
         selected: "genuine",
         runs: [run("RM-5310", "reposted", "blocked"), run("RM-5309", "ai-no-session", "blocked"), run("RM-5307", "wrong-code", "rejected"), run("RM-0442", "genuine", "paid")],
         roundDone: true,
-        options: DEMO_SAMPLES.map((sample) => ({ sample })),
+        options: inFourOrder(DEMO_SAMPLES).map((sample) => ({ sample })),
       }),
   },
   "picker-limit": {
     group: "Demo",
     note: "Sample claim refused: today's photo checks used up",
-    render: () => picker({ selected: "genuine", runs: [], roundDone: false, options: DEMO_SAMPLES.map((sample) => ({ sample })), refusal: { kind: "checks", limit: 100, until: nextUtcDay(new Date()) } }),
+    render: () => picker({ selected: "genuine", runs: [], roundDone: false, options: inFourOrder(DEMO_SAMPLES).map((sample) => ({ sample })), refusal: { kind: "checks", limit: 100, until: nextUtcDay(new Date()) } }),
   },
   handoff: { group: "Code", note: "Phone from the QR, logged out: time left", render: () => handoff() },
   "handoff-other": { group: "Code", note: "Phone from the QR, another PayPal account", render: () => handoff("Priya Raman") },
@@ -211,7 +213,7 @@ const STATES: Record<string, { group: string; note: string; render: Render }> = 
   "camera-send-error": {
     group: "Camera",
     note: "Upload failed",
-    render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/k01-1.jpg", shots: SHOTS.slice(0, 1), sendError: "No connection. Your photos are still here: send them again when you're back online." } } }),
+    render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/k01-1.jpg", shots: SHOTS.slice(0, 1), sendError: "No connection. Your photo is still here: send it again when you’re back online." } } }),
   },
   "camera-phone": { group: "Camera", note: "Continue on a phone (QR)", render: () => flow({ preview: { phase: "capture", capture: { camera: "live", still: "/demo/k01-1.jpg", showPhone: true } } }) },
   "camera-denied": { group: "Camera", note: "Permission denied", render: () => flow({ preview: { phase: "capture", capture: { camera: "denied" } } }) },

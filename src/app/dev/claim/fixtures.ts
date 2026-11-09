@@ -8,7 +8,9 @@ import { Verdict, type Claim, type Reason, type Recall } from "@/lib/types";
 // Dev-only fixtures for /dev/claim: every step and result of the claim flow without PayPal, a camera or the model.
 // Model answers are real stored ones from the eval (src/lib/demo/verdicts.json), decided by the app's own rule. Decided
 // fixtures keep the codes written in their photos. The numbers are the homepage's for the genuine claim: RM-0442, the
-// photo check's answer at 11 s, sent to PayPal at 15 s, confirmed by PayPal at 55 s (DESIGN.md).
+// photo check's answer at 11 s, sent to PayPal at 15 s, confirmed by PayPal at 55 s (DESIGN.md). A fixture that is one of
+// the homepage's claims (src/lib/demo/claims.ts) carries its id (RM-0118, RM-9545, RM-9629); the others have ids of their
+// own that appear nowhere there, so no screenshot shows one claim number on two different claims.
 
 export const NOW = Date.parse("2026-11-07T14:32:00.000Z");
 const at = (s: number) => new Date(NOW + s * 1000).toISOString();
@@ -84,6 +86,7 @@ checkingModel.events.push(
 // A repost: stopped by the duplicate-photo check alone.
 export const blockedDuplicate = (() => {
   const claim = base("M4T", {
+    id: "RM-6650",
     photos: photosOf(["k01-1.jpg"]),
     decision: "blocked",
     reasons: [{ check: "duplicate_photo", outcome: "reject", text: "Photo 1 was already used in another claim" }],
@@ -97,7 +100,8 @@ export const blockedDuplicate = (() => {
 const wrongCode = stored("k02");
 export const demoWrongCode = (() => {
   const { outcome, reasons } = decide(wrongCode.verdict, { spec: recall.spec, code: wrongCode.code, photos: 1 });
-  const claim = base(wrongCode.code, { demo: true, photos: photosOf(wrongCode.photos), verdict: wrongCode.verdict, reasons, decision: outcome === "reject" ? "rejected" : "held" });
+  // The dev picker's wrong-code run (page.tsx): RM-5307.
+  const claim = base(wrongCode.code, { id: "RM-5307", demo: true, photos: photosOf(wrongCode.photos), verdict: wrongCode.verdict, reasons, decision: outcome === "reject" ? "rejected" : "held" });
   claim.events.push(
     { at: at(0), type: "photos_received", detail: "1 photo from the demo" },
     { at: at(0.3), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
@@ -112,15 +116,16 @@ export const roundAfter = (ids: string[]) => ({
   runs: ids.map((sample) => ({ sample, decision: ({ genuine: "paid", "wrong-code": "rejected", "ai-no-session": "blocked", reposted: "blocked" } as const)[sample as "genuine"] })),
 });
 
-export const held = decided("k10");
+// RM-9629 on the homepage: the puzzle print shot from standing height, its tag (H9D) too small to read.
+export const held = decided("k10", undefined, { id: "RM-9629" });
 
 const model: Reason = { check: "model", outcome: "hold", text: "The photo check didn't answer, so a person will look at your photos instead" };
-export const heldModel = { claim: base("M4T", { photos: photosOf(["k01-1.jpg"]), decision: "held", reasons: [model] }), photoUrls: ["/demo/k01-1.jpg"] };
+export const heldModel = { claim: base("M4T", { id: "RM-3184", photos: photosOf(["k01-1.jpg"]), decision: "held", reasons: [model] }), photoUrls: ["/demo/k01-1.jpg"] };
 const limit: Reason = { check: "model", outcome: "hold", text: LIMIT_HOLD };
-export const heldLimit = { claim: base("M4T", { photos: photosOf(["k01-1.jpg"]), decision: "held", reasons: [limit] }), photoUrls: ["/demo/k01-1.jpg"] };
+export const heldLimit = { claim: base("M4T", { id: "RM-7206", photos: photosOf(["k01-1.jpg"]), decision: "held", reasons: [limit] }), photoUrls: ["/demo/k01-1.jpg"] };
 
 export const heldPayout = (() => {
-  const d = decided("k01");
+  const d = decided("k01", undefined, { id: "RM-5812" });
   d.claim.decision = "held";
   d.claim.reasons = [...d.claim.reasons, { check: "payout", outcome: "hold", text: "PayPal didn't accept the payout, so a person will send it" }];
   return d;
@@ -128,21 +133,23 @@ export const heldPayout = (() => {
 
 // The wrong code as an owner's claim (not the demo's): k02's photo, the tag reading K7Q on claim K7P, a code from the
 // issued alphabet (src/lib/codes.ts). A confident read, so the way on is a new claim.
-export const rejected = decided("k02");
+export const rejected = decided("k02", undefined, { id: "RM-0118" });
 // A refusal the owner may contest, then contested (src/lib/appeal.ts): k06, refused only as a photo of a screen, is the
 // one stored case with an issued code that a person may be asked to look at. (c09's claim code K7Q is outside the
 // alphabet, so that claim could never exist.)
 export const reviewAsked = (() => {
-  const d = decided("k06");
+  const d = decided("k06", undefined, { id: "RM-4467" });
   d.claim.decision = "held";
   d.claim.reasons = [...d.claim.reasons, appealReason()];
   d.claim.events.push({ at: at(4 * 60), type: "review_requested", detail: "The owner asked a person to look at the photos" });
   return d;
 })();
-export const rejectedScreen = decided("k06");
+export const rejectedScreen = decided("k06", undefined, { id: "RM-8031" });
 
+// RM-9545 on the homepage: the web photo, issued T7C (the H6N on its tag is someone else's code).
 export const blocked = {
-  claim: base("H6W", {
+  claim: base("T7C", {
+    id: "RM-9545",
     photos: photosOf(["web-1.jpg"]),
     decision: "blocked",
     reasons: [{ check: "session", outcome: "reject", text: "This photo wasn't taken in this claim's camera session" }],
