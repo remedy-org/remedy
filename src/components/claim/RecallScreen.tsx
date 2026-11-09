@@ -1,6 +1,6 @@
 import "server-only";
 import { claimPath, findOpenClaim } from "@/app/api/claims/_lib/pipeline";
-import { demoSample, getAppStore } from "@/lib/demo";
+import { askedSample, getAppStore, sampleLinkName } from "@/lib/demo";
 import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { claimRefusal, limits, parseRefusal } from "@/lib/limits";
 import { getSession, loginPath } from "@/lib/session";
@@ -17,9 +17,9 @@ const AUTH_ERRORS = new Set<AuthError>(["denied", "state", "paypal", "refused"])
 /** Step 1: what was recalled and why, and the consent to log in with PayPal. Real and demo share it. */
 export async function RecallScreen({ recall, demo, query }: { recall: Recall; demo: boolean; query: Record<string, string | string[] | undefined> }) {
   const session = await getSession("owner");
-  // /try?sample=<id> (the homepage's "Try to fool it"): the picker opens on that claim once PayPal returns.
-  const sample = demo && typeof query.sample === "string" && demoSample(query.sample) ? query.sample : null;
-  const next = demo ? `/r/${recall.slug}/try/samples${sample ? `?sample=${sample}` : ""}` : `/api/claims/start?recall=${recall.slug}`;
+  // /try?claim=<name> (the homepage's "Try to fool it"; ?sample=<id> too): the picker opens on that claim once PayPal returns.
+  const sample = demo ? askedSample(query) : null;
+  const next = demo ? `/r/${recall.slug}/try/samples${sample ? `?claim=${sampleLinkName(sample)}` : ""}` : `/api/claims/start?recall=${recall.slug}`;
   const unverified = !demo && (query.account === "unverified" || (session !== null && !session.verified));
   const authError = typeof query.auth_error === "string" && AUTH_ERRORS.has(query.auth_error as AuthError) ? (query.auth_error as AuthError) : null;
   // Back from the recall notice with a claim already paid, held, being checked or holding a live code: the same one

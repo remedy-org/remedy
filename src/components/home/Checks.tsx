@@ -14,7 +14,7 @@ export function Checks() {
       <PipelineList />
       <div className="mt-10 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-8 lg:mt-6">
         {/* Starts on a fake: the web photo is picked once the visitor is logged in. */}
-        <Button href="/r/kikea-x-vesolje/try?sample=ai-no-session" variant="tertiary" size="lg" data-try-cta="">
+        <Button href="/r/kikea-x-vesolje/try?claim=web-photo" variant="tertiary" size="lg" data-try-cta="">
           Try to fool it
         </Button>
       </div>

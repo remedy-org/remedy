@@ -50,7 +50,7 @@ export interface ConsentCardProps {
   yourClaim?: YourClaim | null;
   /** /try: the demo account's PayPal login, shown just before the login button. */
   judgeLogin?: JudgeLogin | null;
-  /** /try?sample=<id> (the homepage's "Try to fool it"): the claim it pointed at, ringed among the four with its line,
+  /** /try?claim=<name> (the homepage's "Try to fool it"): the claim it pointed at, ringed among the four with its line,
    * and the one the picker opens on after the login. */
   sample?: string | null;
 }
@@ -114,7 +114,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
 
       {/* /try: the four claims about to be sent, so the page reads as the product, not a login form. A preview under its
           own label, not a menu: no hover on the photos, the names in the second tone. They are picked after the login.
-          Come from "Try to fool it" (?sample=), the claim it named is ringed, its name in full ink, and its line opens
+          Come from "Try to fool it" (?claim=), the claim it named is ringed, its name in full ink, and its line opens
           under the four: the picker opens on it once PayPal returns. */}
       {demo && !signedInAs && (
         <div className="flex flex-col gap-3">
