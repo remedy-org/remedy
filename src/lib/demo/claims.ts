@@ -62,7 +62,10 @@ export const DEMO_CLAIMS: readonly DemoClaim[] = [
 /** Where the paper tag sits in a held claim's photo, as a share of the photo's width and height: the console's Zoom to
  * tag opens the photo viewer there. RM-9629's photo, shot from standing height, is the one whose tag is too small to read
  * at a glance. */
-export const TAG_SPOTS: Readonly<Record<string, { x: number; y: number }>> = { "k10-1.jpg": { x: 0.78, y: 0.54 } };
+export const TAG_SPOTS: Readonly<Record<string, { x: number; y: number; enlarged?: string }>> = {
+  // enlarged: the tag cut from the photo's full-size original at 4x (scripts/demo-assets.ts), what Zoom to tag shows.
+  "k10-1.jpg": { x: 0.78, y: 0.54, enlarged: "/demo/k10-tag.jpg" },
+};
 
 /** The claim the homepage stages start to finish. */
 export const GENUINE = DEMO_CLAIMS.find((c) => c.id === "RM-0442")!;

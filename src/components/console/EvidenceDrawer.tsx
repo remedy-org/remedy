@@ -726,6 +726,7 @@ function Evidence({
             photos={claim.photos}
             start={viewer}
             zoomAt={viewing?.zoom}
+            tag={viewing?.zoom && claim.tagSpot?.enlarged ? { photo: claim.tagSpot.photo, src: claim.tagSpot.enlarged } : null}
             code={claim.code}
             question={d && { title: lowerAfterColons(typesetText(d.title)), detail: d.detail && typesetText(d.detail) }}
             labels={claim.review ? reviewLabels(claim) : undefined}

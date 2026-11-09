@@ -53,8 +53,9 @@ export const datasetPhotoFile = (key: string): string | null => {
   return SEED_PHOTOS.includes(name) ? name : null;
 };
 
-/** Where the tag is in a dataset claim's photos (TAG_SPOTS): the photo's index and the spot, or null. */
-export function datasetTagSpot(keys: readonly string[]): { photo: number; x: number; y: number } | null {
+/** Where the tag is in a dataset claim's photos (TAG_SPOTS): the photo's index and the spot, and its enlarged cut where
+ * there is one, or null. */
+export function datasetTagSpot(keys: readonly string[]): { photo: number; x: number; y: number; enlarged?: string } | null {
   for (const [i, key] of keys.entries()) {
     const spot = TAG_SPOTS[datasetPhotoFile(key) ?? ""];
     if (spot) return { photo: i, ...spot };

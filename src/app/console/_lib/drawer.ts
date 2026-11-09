@@ -129,8 +129,9 @@ export interface DrawerClaim {
   // What the photo shows, in a few words from the checks (never the model's prose): the photo's accessible name.
   /** Each photo's description, in order (photoAltsOf). */
   photoAlt: (string | null)[];
-  /** Where the tag is, when Remedy knows it: the photo (0-based) and the spot (0 to 1), for the panel's Zoom to tag. */
-  tagSpot: { photo: number; x: number; y: number } | null;
+  /** Where the tag is, when Remedy knows it: the photo (0-based) and the spot (0 to 1), for the panel's Zoom to tag; and
+   * the tag cut from the photo's full-size original at 4x (a public file), which Zoom to tag shows when there is one. */
+  tagSpot: { photo: number; x: number; y: number; enlarged?: string } | null;
   sentence: string;
   /** The grid row's line for this claim (view.ts toRow's note), word for word: the panel's headline for a held or
    * refused claim, so the row and the panel say one reason ("Tag reads K7Q · code is K7P"). */
