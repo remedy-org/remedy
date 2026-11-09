@@ -317,6 +317,7 @@ npm run dev             # open http://127.0.0.1:3000 (use 127.0.0.1, not localho
 | `OPENAI_API_KEY` | Photo checks, recall-check drafts and the Recall analyst (required) |
 | `VISION_MODEL`, `VISION_EFFORT` | Optional. Default `gpt-6.1-sol` and `high` (`low`, `medium`, `high`, `xhigh`) |
 | `ANALYST_MODEL` | Optional. The Recall analyst's model; default `gpt-5.4-mini` |
+| `NEXT_PUBLIC_AG_STUDIO_LICENSE` | Optional, read at build time. Insights and the Recall analyst run on AG Studio when it holds a valid key; without one, Insights shows the same panels built in plain React and the analyst is off |
 | `APP_URL` | Public base URL, for login returns, webhooks and claim links. Default `http://127.0.0.1:3000` |
 | `SESSION_SECRET` | Signs session cookies, at least 32 characters (`openssl rand -base64 32`). Optional locally, required in production |
 | `BLOB_READ_WRITE_TOKEN` | Optional. A Vercel Blob store; without it data lives in `data/` |
