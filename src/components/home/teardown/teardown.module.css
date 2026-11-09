@@ -92,7 +92,8 @@
   initial-value: 0px;
 }
 .stage:not(.small) .canvas,
-.stage:not(.small) .posters {
+.stage:not(.small) .posters,
+.stage:not(.small) .scan {
   mask-image:
     linear-gradient(
       to bottom,
@@ -130,6 +131,30 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Check 1's scan line over the photo on the phone's screen (scan.ts): white in both themes, as it lies on the photo, a
+   crisp 1.5px line on a faint halo with its glow trailing above it. OpenedExhibit.tsx writes its geometry and opacity
+   each frame while the phone is up. */
+.scan {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.scanLine {
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.scanHalo {
+  stroke: #fff;
+  stroke-width: 5;
+  stroke-opacity: 0.22;
 }
 
 .leaders {

@@ -32,6 +32,9 @@ export type Tier = 1 | 2;
 export interface Frame {
   /** The active part's anchor for the leader line, in CSS px of the canvas, or null. */
   anchor: { x: number; y: number } | null;
+  /** Check 1's photo on the phone's screen: its four corners in CSS px of the canvas (top left, top right, bottom right,
+   * bottom left) and the scan's strength (0 to 1), for the stage's scan line (scan.ts); null while the phone is down. */
+  photo: { quad: [number, number][]; strength: number } | null;
 }
 
 export interface Exhibit {
@@ -263,7 +266,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     right.group.updateMatrixWorld(true);
     tag.poseTwine(drapeLocal.map((v, i) => right.group.localToWorld(drape[i].copy(v))));
 
-    phone.pose(s.live, s.scan);
+    phone.pose(s.live);
     prints.pose(s.fp, s.hash);
 
     frame(s.shot, rect);
@@ -279,7 +282,15 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     else if (s.active === 1) anchor = project(prints.corner(new THREE.Vector3()));
     else if (s.active === 3) anchor = beside(cardBox(), project(tag.codePoint(new THREE.Vector3())));
     else if (s.active === 4) anchor = project(right.rimTop(new THREE.Vector3()));
-    return { anchor };
+    const ph = phone.photo();
+    const photo = ph && {
+      quad: ph.corners.map((v): [number, number] => {
+        const q = project(v);
+        return [q.x, q.y];
+      }),
+      strength: ph.strength,
+    };
+    return { anchor, photo };
   }
 
   const box = new THREE.Box3();

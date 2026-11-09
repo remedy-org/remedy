@@ -6,7 +6,8 @@ import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, 
 import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
 import { CHECKS, CONFIRMED_ROW, EXHIBIT, RECEIPT_ROWS } from "./claim";
 import { BEATS, RANGES, RECEIPT_FADE, TOTAL_VH, clock, holdOf, stateAt, tickAt, type BeatId, type ExhibitState, type Shot } from "./model";
-import type { Colors, Exhibit, Rect, Tier } from "./scene";
+import { scanAt, scanGeometry } from "./scan";
+import type { Colors, Exhibit, Frame, Rect, Tier } from "./scene";
 import { createFrameWatch, stageLayers } from "./watch";
 import styles from "./teardown.module.css";
 
@@ -327,6 +328,12 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
   const dot = useRef<SVGCircleElement>(null);
   const receipt = useRef<HTMLDivElement>(null);
   const posters = useRef<HTMLDivElement>(null);
+  const scanSvg = useRef<SVGSVGElement>(null);
+  const scanGlow = useRef<SVGPolygonElement>(null);
+  const scanLine = useRef<SVGLineElement>(null);
+  const scanHalo = useRef<SVGLineElement>(null);
+  const scanGrad = useRef<SVGLinearGradientElement>(null);
+  const gradId = `scan${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   /** The still the posters show, and on which posters element (a fallback mounts a new one). */
   const shown = useRef<{ el: HTMLDivElement | null; at: number }>({ el: null, at: -1 });
   const [s, setS] = useState<ExhibitState>(() => stateAt(p.get()));
@@ -362,6 +369,53 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
     [capture],
   );
 
+  // One frame per change of p (scroll), theme or size; nothing at all while idle or off-screen, but check 1's scan line.
+  const raf = useRef(0);
+  const visible = useRef(true);
+
+  // Check 1's scan line (scan.ts): over the photo on the phone's screen, on its corners as the scene last drew them, and
+  // on a clock while the phone is up, so a reader resting on the live check sees it sweep, and one scrolling through
+  // it too. Only the line's few attributes are written each frame; the scene draws only when p changes.
+  const photo = useRef<Frame["photo"]>(null);
+  const scanFrom = useRef(0);
+  const scanRaf = useRef(0);
+  const paintScan = useCallback((now: number) => {
+    const svg = scanSvg.current;
+    const ph = photo.current;
+    if (!svg) return;
+    const at = ph && scanAt(now - scanFrom.current);
+    if (!ph || !at) {
+      svg.style.opacity = "0";
+      return;
+    }
+    const g = scanGeometry(ph.quad, at.s);
+    const [[x1, y1], [x2, y2]] = g.line;
+    for (const l of [scanLine.current, scanHalo.current]) {
+      l?.setAttribute("x1", x1.toFixed(2));
+      l?.setAttribute("y1", y1.toFixed(2));
+      l?.setAttribute("x2", x2.toFixed(2));
+      l?.setAttribute("y2", y2.toFixed(2));
+    }
+    scanGlow.current?.setAttribute("points", g.glow.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" "));
+    const gr = scanGrad.current;
+    if (gr) {
+      gr.setAttribute("x1", g.from[0].toFixed(2));
+      gr.setAttribute("y1", g.from[1].toFixed(2));
+      gr.setAttribute("x2", g.to[0].toFixed(2));
+      gr.setAttribute("y2", g.to[1].toFixed(2));
+    }
+    svg.style.opacity = (ph.strength * at.alpha).toFixed(3);
+  }, []);
+  const runScan = useCallback(() => {
+    if (scanRaf.current) return;
+    const tick = (now: number) => {
+      scanRaf.current = 0;
+      paintScan(now);
+      if (photo.current && visible.current) scanRaf.current = requestAnimationFrame(tick);
+    };
+    scanRaf.current = requestAnimationFrame(tick);
+  }, [paintScan]);
+
   // Draw one frame for the current p: the scene, then the continuous DOM (leader, callout, receipt, poster fades).
   const draw = useCallback(() => {
     const el = root.current;
@@ -385,9 +439,16 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
               y1: (r.bottom - stage.top) / stage.height,
             }
           : { x0: 0.05, y0: 0.2, x1: 0.65, y1: 0.8 });
-      anchor = ex.render(st, rect).anchor;
+      const f = ex.render(st, rect);
+      anchor = f.anchor;
       watchFrames(ex);
-    }
+      // The first sweep starts at the photo's top as the phone comes up.
+      if (f.photo && !photo.current) scanFrom.current = performance.now();
+      photo.current = capture ? null : f.photo;
+    } else photo.current = null;
+    // In the same frame as the scene, so the line never trails the phone by a frame while the camera moves.
+    paintScan(performance.now());
+    if (photo.current) runScan();
     // Check 3 has an object of its own, the owner's PayPal account as Remedy reads it: its leader runs from there.
     const acct = st.beat === "acct" && st.callout > 0;
     if (account.current) {
@@ -454,11 +515,8 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
         shown.current = { el: posters.current, at: on };
       }
     }
-  }, [p, live, watchFrames]);
+  }, [p, live, watchFrames, capture, paintScan, runScan]);
 
-  // One frame per change of p (scroll), theme or size; nothing at all while idle or off-screen.
-  const raf = useRef(0);
-  const visible = useRef(true);
   const schedule = useCallback(() => {
     if (raf.current || !visible.current) return;
     raf.current = requestAnimationFrame(() => {
@@ -471,7 +529,8 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
     () => () => {
       cancelAnimationFrame(raf.current);
       cancelAnimationFrame(probe.current);
-      raf.current = probe.current = 0;
+      cancelAnimationFrame(scanRaf.current);
+      raf.current = probe.current = scanRaf.current = 0;
     },
     [],
   );
@@ -643,6 +702,20 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
       <div className={styles.pool} aria-hidden="true" />
       {!small && postersEl}
       {layers.canvas && <canvas ref={canvas} className={clsx(styles.canvas, layers.canvasOn && styles.canvasOn)} aria-hidden="true" />}
+      {/* Check 1's scan line over the phone's photo: a glow trailing above a crisp white line (scan.ts). */}
+      {layers.canvasOn && (
+        <svg ref={scanSvg} className={styles.scan} aria-hidden="true" data-scan>
+          <defs>
+            <linearGradient ref={scanGrad} id={gradId} gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="#fff" stopOpacity="0" />
+              <stop offset="1" stopColor="#fff" stopOpacity="0.32" />
+            </linearGradient>
+          </defs>
+          <polygon ref={scanGlow} fill={`url(#${gradId})`} />
+          <line ref={scanHalo} className={styles.scanHalo} />
+          <line ref={scanLine} className={styles.scanLine} />
+        </svg>
+      )}
       <svg className={styles.leaders} aria-hidden="true">
         <path ref={leader} pathLength={1} />
         <circle ref={dot} r={2.5} />

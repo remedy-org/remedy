@@ -214,11 +214,14 @@ export function buildTag(THREE: Three): Tag {
 }
 
 // ---- Check 1: the phone's live camera. Held off the evidence's front right, its screen toward the viewer: the claim
-// page's camera with the photo it has just taken in a 3:4 frame, and a scan line sweeping down that photo alone, as the
-// phone's own app checks its capture.
+// page's camera with the photo it has just taken in a 3:4 frame. The scan line sweeping down that photo alone, as the
+// phone's own app checks its capture, is the stage's (scan.ts): this gives it the photo's corners.
 export interface Phone {
   group: T.Group;
-  pose(open: number, scan: number): void;
+  pose(open: number): void;
+  /** The photo's four corners in world space (top left, top right, bottom right, bottom left, as the viewer sees the
+   * screen) and how strongly the scan should show over it (0 to 1, up once the phone has all but arrived), or null. */
+  photo(): { corners: T.Vector3[]; strength: number } | null;
   lens(out: T.Vector3): T.Vector3;
   /** The body's four face corners, in world space, for the leader's anchor (the group's box is far wider, tilted). */
   face(): T.Vector3[];
@@ -232,8 +235,6 @@ const PHONE_SLIDE = 0.08;
 /** The screen's canvas, px: its width, and the photo's frame on it (3:4, as the claim page's camera crops it). */
 const SCREEN_PX = 440;
 const SHOT = { x: 16, y: 132, w: 408, h: 544 } as const;
-/** The scan's glow above its line, as a share of the photo's height. */
-const TRAIL = 0.22;
 
 export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   const group = new THREE.Group();
@@ -315,39 +316,14 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   screen.rotation.y = Math.PI;
   group.add(screen);
 
-  // The scan: a white line across the photo's width with a soft glow above it, travelling from the photo's top edge to
-  // its foot. Its quad is cut to the photo's frame every pose (the glow never spills above the photo), so the line
-  // reads as the phone's own app working on its capture, not a beam in the room.
-  const glow = document.createElement("canvas");
-  glow.width = 4;
-  glow.height = 128;
-  const gg = glow.getContext("2d");
-  if (gg) {
-    const grd = gg.createLinearGradient(0, 0, 0, 120);
-    grd.addColorStop(0, "rgba(255,255,255,0)");
-    grd.addColorStop(1, "rgba(255,255,255,.3)");
-    gg.fillStyle = grd;
-    gg.fillRect(0, 0, 4, 120);
-    gg.fillStyle = "rgba(255,255,255,.95)";
-    gg.fillRect(0, 120, 4, 8);
-  }
-  const glowTex = new THREE.CanvasTexture(glow);
-  glowTex.colorSpace = THREE.SRGBColorSpace;
-  const scanMat = new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, depthWrite: false, toneMapped: false });
-  const scanGeo = new THREE.PlaneGeometry(1, 1);
-  const scanLine = new THREE.Mesh(scanGeo, scanMat);
-  scanLine.position.z = -0.0046;
-  scanLine.rotation.y = Math.PI;
-  scanLine.renderOrder = 6;
-  group.add(scanLine);
-  // The photo's frame in the screen's own metres (y up, centred on the screen).
+  // The photo's frame in the screen's own metres (y up, centred on the screen): check 1's scan line (scan.ts) is drawn
+  // over it in the DOM, on its four projected corners, so it stays a crisp line clipped to the photo.
   const px = sw / cvs.width;
   const frame = {
     w: SHOT.w * px,
     top: sh / 2 - SHOT.y * px,
     h: SHOT.h * px,
   };
-  const linePx = 8 / 128;
 
   const lensMat = new THREE.MeshPhysicalMaterial({
     color: "#0b0b0c",
@@ -381,9 +357,17 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     [-1, 1],
   ].map(([sx, sy]) => new THREE.Vector3((sx * bw) / 2, (sy * bh) / 2, 0));
 
-  const pos = scanGeo.attributes.position as T.BufferAttribute;
-  const uv = scanGeo.attributes.uv as T.BufferAttribute;
-  function pose(open: number, scan: number) {
+  // The photo's corners on the screen's face, just off it toward the viewer. The screen is turned to face -z, so the
+  // viewer's left is the group's +x.
+  const z = -0.0046;
+  const photoLocal = [
+    [1, frame.top],
+    [-1, frame.top],
+    [-1, frame.top - frame.h],
+    [1, frame.top - frame.h],
+  ].map(([sx, y]) => new THREE.Vector3((sx * frame.w) / 2, y, z));
+  let strength = 0;
+  function pose(open: number) {
     // The phone opens like the other parts: it grows in and slides along its own view axis toward the evidence,
     // fading up over the first 40% of its opening, so it never pops in whole.
     group.visible = open > 0.01;
@@ -391,39 +375,19 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     group.position.copy(rest).addScaledVector(az, -PHONE_SLIDE * (1 - open));
     const fade = smooth(Math.min(1, open / 0.4));
     for (const m of [bodyMat, screenMat, lensMat]) m.opacity = fade;
-    // The line's foot runs from the photo's top edge (scan 0) to its foot (scan 1); the glow above it is cut at the
-    // photo's top. Off before and after the sweep: at rest the screen shows the photo in its frame, still.
-    const s = Math.max(0, Math.min(1, scan));
-    const on = open > 0.5 && s > 0 && s < 1;
-    scanLine.visible = on;
-    if (!on) return;
-    const foot = frame.top - s * frame.h;
-    const full = TRAIL * frame.h;
-    const head = Math.min(frame.top, foot + full);
-    const vTop = (head - foot) / full;
-    // PlaneGeometry(1, 1)'s vertices: top-left, top-right, bottom-left, bottom-right.
-    const x = frame.w / 2;
-    pos.setXYZ(0, -x, head, 0);
-    pos.setXYZ(1, x, head, 0);
-    pos.setXYZ(2, -x, foot, 0);
-    pos.setXYZ(3, x, foot, 0);
-    // The texture's line sits in its last rows (v 0 up to linePx; v 1 is the glow's clear top): the foot keeps the
-    // line whole however short the glow is cut.
-    const v1 = Math.max(vTop, linePx);
-    uv.setXY(0, 0, v1);
-    uv.setXY(1, 1, v1);
-    uv.setXY(2, 0, 0);
-    uv.setXY(3, 1, 0);
-    pos.needsUpdate = true;
-    uv.needsUpdate = true;
-    scanGeo.computeBoundingSphere();
-    // It brightens in and out over the sweep's first and last tenth, never popping on at the photo's edge.
-    scanMat.opacity = fade * smooth(Math.min(1, s / 0.1, (1 - s) / 0.1));
+    // The scan only once the phone has all but arrived (it is whole and opaque from 40% open), and gone again as it
+    // closes, never over a phone still growing in.
+    strength = smooth(Math.max(0, Math.min(1, (open - 0.5) / 0.35)));
   }
   return {
     group,
     pose,
     lens,
+    photo: () => {
+      if (!group.visible || strength <= 0) return null;
+      group.updateMatrixWorld(true);
+      return { corners: photoLocal.map((v) => group.localToWorld(v.clone())), strength };
+    },
     face: () => {
       group.updateMatrixWorld(true);
       return faceLocal.map((v) => group.localToWorld(v.clone()));
