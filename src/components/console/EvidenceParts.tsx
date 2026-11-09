@@ -223,7 +223,8 @@ export function MoneyLine({ claim }: { claim: DrawerClaim }) {
   return (
     // Right-aligned on the header's row; when a phone wraps it, it starts on the left edge under the id, never mid-line.
     <span className="inline-flex items-baseline gap-1.5 text-ui sm:ml-auto">
-      <span className="font-mono text-text">{claim.amount}</span>
+      {/* Approved with nothing sent: the second tone, as the grid's Amount prints it. */}
+      <span className={claim.decision === "paid" && !claim.payout ? "font-mono text-text-2" : "font-mono text-text"}>{claim.amount}</span>
     </span>
   );
 }

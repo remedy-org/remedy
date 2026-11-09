@@ -89,6 +89,9 @@ export function BulkBar({
     const bad = results.filter((r) => !r.ok);
     setFailed(bad);
     onDone(results, decision);
+    // The confirm's button went with the run: after a failure focus goes to the bar's retry (the decision's button
+    // again, for the claims left), else its status line, never the page.
+    if (bad.length) requestAnimationFrame(() => (bar.current?.querySelector<HTMLElement>(`[data-retry="${decision}"]`) ?? bar.current?.querySelector<HTMLElement>("[role=status]"))?.focus());
   };
 
   const busy = progress !== null;
@@ -191,7 +194,7 @@ export function BulkBar({
       )}
 
       <div className={clsx("flex min-h-12 flex-wrap items-center gap-x-4 gap-y-2 py-2 pl-4", mode === "idle" ? "pr-2" : "pr-4")}>
-        <p role="status" className="min-w-0 flex-1 basis-48 text-muted">
+        <p role="status" tabIndex={-1} className="min-w-0 flex-1 basis-48 text-muted outline-none">
           {busy ? (
             <span className="text-text">
               {verb} {Math.min(progress! + 1, held.length)} of {held.length}…
@@ -220,10 +223,10 @@ export function BulkBar({
         <div className={clsx("flex shrink-0 items-center", mode === "idle" ? "gap-2" : "gap-4")}>
           {mode === "idle" && held.length > 0 && (
             <>
-              <Button size="sm" variant="secondary" onClick={() => onMode("approve")}>
+              <Button size="sm" variant="secondary" data-retry="approve" onClick={() => onMode("approve")}>
                 {`${word} ${held.length}…`}
               </Button>
-              <Button size="sm" variant="secondary" onClick={() => onMode("reject")}>
+              <Button size="sm" variant="secondary" data-retry="reject" onClick={() => onMode("reject")}>
                 Reject {held.length}…
               </Button>
             </>

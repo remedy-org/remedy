@@ -389,12 +389,12 @@ function EvidenceContent({
         >
           {busy && claim?.review ? (
             <span>Saving · keys you press now go to the next claim</span>
-          ) : mode === "approve" && labels && !labels.blocked ? (
+          ) : mode === "approve" && claim?.review && labels && !labels.blocked ? (
             <>
               <Keys k={["A"]}>{labels.confirmKey}</Keys>
               <Keys k={["Esc"]}>Cancel</Keys>
             </>
-          ) : mode === "reject" ? (
+          ) : mode === "reject" && claim?.review ? (
             <>
               {quickCount > 0 && <Keys k={[quickCount > 1 ? `1–${quickCount}` : "1"]}>Quick reason</Keys>}
               <Keys k={["⌘↵"]}>Reject</Keys>
@@ -469,6 +469,9 @@ function moneySteps(claim: DrawerClaim): Step[] {
       : [{ label: "Decision", at: ruled ?? review?.at ?? null }]),
   ];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
+  // Approved with nothing sent (the console's own claims, whose approve records the decision): it reads Approved, with no
+  // payout steps to wait on.
+  if (claim.decision === "paid" && !claim.payout) return steps;
   const failure = payoutFailure(claim);
   if (failure) {
     return [
