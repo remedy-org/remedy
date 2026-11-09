@@ -11,7 +11,8 @@ import { landing as glide, landingTime, warp, type Slow } from "./landing";
 // stops always catch. Going up, the page stops on the same finished beats as going down (stops.ts). Slow scrolling never
 // meets a stop, and a short flick that would not have carried halfway to the next stop runs free, unless it would come
 // to rest inside a pinned story; any gesture that goes quiet with the page bound for a transition half played inside one
-// settles on its nearest finished beat (nudge). Only the wheel is gated: keys, anchor links,
+// settles on its nearest finished beat (nudge); a wheel rolled on slowly, a notch at a time, settles once, from where the
+// roll began. Only the wheel is gated: keys, anchor links,
 // the scrollbar, find-in-page, focus moves, touch and screen readers scroll natively and cancel a landing at once.
 
 /** The input rate is measured over this many ms. */
@@ -23,6 +24,16 @@ const QUIET = 140;
 const TAIL_GAP = 400;
 /** The same for a notched wheel, which has no momentum tail to wait out (notchQuiet): 60 to 80 ms. */
 const NOTCH_QUIET: readonly [min: number, max: number] = [60, 80];
+/**
+ * ms the wheel must be quiet before a gesture the page took as the reader's own settles on a beat (nudge): QUIET for a
+ * trackpad; sooner after a notched wheel's quick flick (its notches under ROLL_NOTCH ms apart), so a second flick 150 ms
+ * on heads on from the first one's landing; later after a lone notch, or a roll of notches each ROLL_NOTCH to 150 ms
+ * apart, so a slow roll is one move of the hand that settles once, where it stopped (each of its notches is a gesture of
+ * its own: notchQuiet).
+ */
+const FLICK_QUIET = 100;
+const ROLL_QUIET = 190;
+const ROLL_NOTCH = 50;
 
 /**
  * ms without a notch that end a notched wheel's gesture: half as long again as its usual gap between notches (the
@@ -329,12 +340,19 @@ export function createGate(read: () => Course) {
     if (to !== undefined) land(l, to, to >= at ? 1 : -1, performance.now());
   }
 
-  /** The wheel has been quiet for QUIET ms with no landing under way: a free run, or a gesture the page took as the
-   * reader's own, comes to rest on a whole frame. */
+  /** Whether this notched gesture is a quick flick: its notches under ROLL_NOTCH ms apart (a lone notch is not one). */
+  const flicked = () => gaps.length > 0 && [...gaps].sort((x, y) => x - y)[gaps.length >> 1] < ROLL_NOTCH;
+  /** ms of quiet before a gesture the page took as the reader's own settles (FLICK_QUIET, ROLL_QUIET). */
+  const nudgeQuiet = () => (!notched ? QUIET : flicked() ? FLICK_QUIET : ROLL_QUIET);
+
+  /** The wheel has been quiet with no landing under way: a free run (after QUIET ms), or a gesture the page took as the
+   * reader's own (nudgeQuiet), comes to rest on a whole frame. */
   function quieted(l: GateLenis) {
-    if (landing || performance.now() - lastWall <= QUIET) return;
-    if (free) settle(l);
-    else if (loose) nudge(l);
+    if (landing) return;
+    const idle = performance.now() - lastWall;
+    if (free) {
+      if (idle > QUIET) settle(l);
+    } else if (loose && idle > nudgeQuiet()) nudge(l);
   }
 
   /** The page takes this event as the reader's own scroll. */
@@ -390,6 +408,11 @@ export function createGate(read: () => Course) {
       const tail = !notch && hold && dir === hold.dir && gap < TAIL_GAP && slowing && a <= 1.5 * lastA;
       // A spin running free that only paused for less than QUIET (a hand turning the wheel on, a busy frame) runs on.
       const spinning = free && dir === lastDir && gap <= QUIET;
+      // A wheel rolled on a notch at a time, 80 to 150 ms apart, the page taking each notch as the reader's own and no
+      // beat settled on yet: each notch is a gesture of its own, but the roll is one move of the hand, so it settles from
+      // where the roll began (nudge) on the beat nearest where the hand stopped, never on the beat past where its last
+      // notch began (a 10-notch roll from the open sheet glided 1.3 windows on to Fraud checks after the hand stopped).
+      const rolling = notch && notched && !flicked() && loose && !landing && !free && dir === lastDir;
       if (!tail) {
         hold = null;
         samples = [];
@@ -410,7 +433,7 @@ export function createGate(read: () => Course) {
         hold.rising = 0;
       }
       ({ stops, up: upStops = stops, slow = [], inner: innerStops = [], rests = stops, pins = [], fit } = read());
-      origin = l.animatedScroll;
+      if (!rolling) origin = l.animatedScroll;
     }
     if (dir !== lastDir) {
       samples = [];
@@ -421,11 +444,11 @@ export function createGate(read: () => Course) {
     lastA = a;
     lastDir = dir;
     lastWall = performance.now();
-    // Lenis may have stopped moving the page before the wheel has been quiet long enough to tell (a tiny nudge).
-    clearTimeout(quietTimer);
-    quietTimer = setTimeout(() => lenis && quieted(lenis), QUIET + 20);
     if (notch && gap <= quiet && gaps.push(gap) > 8) gaps.shift();
     if (!notch) notched = false;
+    // Lenis may have stopped moving the page before the wheel has been quiet long enough to tell (a tiny nudge).
+    clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => lenis && quieted(lenis), Math.max(QUIET, nudgeQuiet()) + 20);
     samples.push({ t: now, a });
     while (samples[0].t < now - 500) samples.shift();
     total += a;
