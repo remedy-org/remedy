@@ -156,8 +156,9 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
             aria-pressed={on}
             onClick={() => onChange(t.id)}
             className={clsx(
-              "relative inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-3 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px]",
-              on ? "text-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted hover:text-text",
+              // Eight tabs and the toolbar share the frame's row: tighter below 1280px, so the search stays inside it at 1024.
+              "relative inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-2 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px] xl:px-3",
+              on ? "text-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0 xl:after:inset-x-3" : "text-muted hover:text-text",
             )}
           >
             {t.label}
@@ -191,7 +192,7 @@ function Toolbar({ search, onSearch, onExport, input }: { search: string; onSear
       >
         {TOUR.toolbar.export}
       </button>
-      <span className="relative flex h-9 w-52 items-center xl:w-60">
+      <span className="relative flex h-9 w-36 items-center xl:w-60">
         <input
           ref={input}
           type="search"
