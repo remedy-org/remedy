@@ -21,20 +21,16 @@ const FIGURES: { figure: string; text: string }[] = [
  * with what it counts beside it, its top on the cap height of their first line; the lead under it, and the one fake's
  * sentence under that, on columns 1 to 7. The three supporting counts stand beside them on columns 8 to 12 on laptops,
  * a list on hairlines (each figure with its words), with the benchmark's footnote under them, the figures it sources,
- * ending on the fake's sentence's last line; on phones they follow the lead. On a tall laptop screen the section is a
- * slide: its top under the nav (the frame before it, Fraud checks' rule, never shows its eyebrow at the foot), the
- * statement and its counts one block in the slide's upper middle, so neither half of the slide and no band between the
- * copy and the counts reads empty.
+ * ending on the fake's sentence's last line; on phones they follow the lead. On a laptop it starts 64px inside its
+ * top, about 160px under "Try to fool it" as one section starts under another (a screen of its own, its block
+ * centred, it left 310 to 390px of air above it and 375 to 470 below), and ends 104px inside its foot, so at its stop on
+ * a 900px laptop screen the screen's foot falls above For companies' console, never through its bar.
  */
 export function Proof() {
   return (
     <Section
       id="proof"
-      // On a laptop screen 860px tall and up the section is a slide of its own (scroll/stops.ts frames its top under the
-      // nav), its block a little above the slide's middle.
-      className="lg:[@media(min-height:860px)]:flex lg:[@media(min-height:860px)]:min-h-[calc(100svh-4rem)] lg:[@media(min-height:860px)]:flex-col"
-      padClassName="py-18 lg:py-24"
-      pageClassName="w-full lg:[@media(min-height:860px)]:flex lg:[@media(min-height:860px)]:flex-1 lg:[@media(min-height:860px)]:flex-col lg:[@media(min-height:860px)]:justify-center lg:[@media(min-height:860px)]:pb-[calc(6rem+9svh)]"
+      padClassName="py-18 lg:pt-16 lg:pb-26"
       exhibit="Results"
       headingSpan={7}
       stack
