@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import type { KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import { MONEY_WORD } from "@/lib/payoutWords";
 import type { Verdict } from "./VerdictMark";
 
@@ -31,14 +31,50 @@ export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; 
     onChange(next.id);
     document.getElementById(`tab-${next.id}`)?.focus();
   };
+  // Whenever the eight tabs don't fit their box (a phone, a narrow window, beside the open claim) the strip scrolls in
+  // its own box, never the page: data-over adds an end spacer (a flex scroller drops its end padding) so the last tab
+  // clears the faded edge, and data-more fades the right edge while there is more to scroll to.
+  const strip = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = strip.current;
+    if (!el) return;
+    const measure = () => {
+      const tabs = el.querySelectorAll<HTMLElement>("[role=tab]");
+      const last = tabs[tabs.length - 1];
+      if (!last) return;
+      const end = last.getBoundingClientRect().right - el.getBoundingClientRect().left + el.scrollLeft + parseFloat(getComputedStyle(el).paddingRight);
+      const over = end > el.clientWidth + 0.5;
+      el.toggleAttribute("data-over", over);
+      el.toggleAttribute("data-more", over && el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    el.querySelectorAll("[role=tab]").forEach((t) => ro.observe(t));
+    el.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener("scroll", measure);
+    };
+  }, []);
+  // A tab chosen by its number key, out of the strip's view, scrolls into it (clear of the faded edge).
+  useEffect(() => {
+    const el = strip.current;
+    const t = el?.querySelector<HTMLElement>(`#tab-${value}`);
+    if (!el || !t || !el.hasAttribute("data-over")) return;
+    const r = t.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    if (r.right > box.right - 32) el.scrollLeft += r.right - box.right + 32;
+    else if (r.left < box.left + 4) el.scrollLeft -= box.left + 4 - r.left;
+  }, [value]);
   return (
-    // On a phone the strip scrolls: an end spacer (a flex scroller drops its end padding) lets the last tab clear the
-    // faded right edge, and the fade shows there is more to scroll. A scroller clips what overflows it, so it carries 4px
-    // of padding (taken back by margins) for each tab's focus ring: 2px offset, 2px wide.
+    // A scroller clips what overflows it, so it carries 4px of padding (taken back by margins) for each tab's focus ring:
+    // 2px offset, 2px wide. From 640px it takes the toolbar's room left over (basis 0), so it never wraps the controls.
     <div
+      ref={strip}
       role="tablist"
       aria-label="Filter claims by decision"
-      className="-mx-4 -my-1 flex overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:shrink-0 after:w-8 after:shrink-0 after:content-[''] max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] sm:-mx-1 sm:px-1 sm:after:hidden"
+      className="-mx-4 -my-1 flex min-w-0 overflow-x-auto px-4 py-1 [scrollbar-width:none] after:hidden after:w-8 after:shrink-0 after:content-[''] data-more:[mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)] data-over:after:block sm:-mx-1 sm:grow sm:basis-0 sm:px-1"
     >
       {TABS.map((t, i) => {
         const active = t.id === value;

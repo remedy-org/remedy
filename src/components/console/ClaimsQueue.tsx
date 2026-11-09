@@ -558,8 +558,9 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           reach. */}
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {/* One row while it fits: the search narrows first, and only a narrow queue wraps the controls to a second line. */}
-          <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-line">
+          {/* One row from 640px, beside the open claim too: the tab strip gives way (it scrolls in its own box), so grouping,
+              export and search keep their place. Only a phone puts its sort and search on a second line. */}
+          <div className="mt-1 flex items-end gap-x-4 gap-y-2 border-b border-line max-sm:flex-wrap">
             <StatusTabs value={tab} counts={counts} onChange={changeTab} controls="claims-panel" />
             <div className="mb-1.5 ml-auto flex shrink-0 items-center gap-3 max-sm:hidden">
               <GroupControl value={groupBy} onChange={setGroupBy} />
