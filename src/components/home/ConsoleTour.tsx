@@ -834,14 +834,15 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
             <p inert aria-hidden="true" className={clsx(styles.foot, "text-ui text-muted")}>
               {found.length ? TOUR.toolbar.live : TOUR.toolbar.none}
             </p>
-            {/* The evidence docks as the console's panel: flush to the window's right edge from the status row to the
-                foot, over the grid's right-hand columns (the money ones it repeats), so the grid keeps its width and its
-                columns as the claim opens. */}
+            {/* The evidence docks as the console's panel: flush to the window's right edge from under the app bar to the
+                foot, over the grid's right-hand columns (the money ones it repeats) and the empty right of the ledger's
+                row (from 1280px, where the ledger's figures end well left of it; below, from under the status row), so the
+                grid keeps its width and its columns as the claim opens, and the held check is in the panel's first view. */}
             {dock && evidence && (
               <div
                 data-out={dockOut || undefined}
                 style={dockW ? { width: dockW } : undefined}
-                className={clsx(styles.dock, "absolute top-0 right-0 bottom-0 z-10 w-[400px] max-xl:top-[45px] max-xl:w-[380px]")}
+                className={clsx(styles.dock, "absolute top-0 right-0 bottom-0 z-10 w-[400px] max-xl:top-[45px] max-xl:w-[380px] xl:-top-14")}
               >
                 <EvidenceStill
                   claim={evidence}
