@@ -124,12 +124,15 @@ export const reportRows = (data: InsightsData, narrow = false) => {
   return narrow ? r.progress + r.decisions + r.funnel + r.refusals + r.paid : r.progress + r.funnel + r.paid;
 };
 
+/** The console's day chart: 72px columns, wide enough for a day's dollars inside them ("$1,109.63"). */
+export const CONSOLE_CHART = { column: 72 };
+
 /** Studio's own column chart (AG Charts) of the dollars PayPal sent, by the day the claim was filed: each day's sum on
  * its column in the page's background colour (labelColor), the day under it, no value axis. Hovering a column gives the
  * claims remedied that day. The console's Insights and the homepage's draw the same chart. Under a cross-filter the
  * day's whole column dims and what the filter keeps is drawn solid over it; the homepage turns the labels off then
  * (`labels` false), since Studio prints the kept amount at the column's foot, "$0.00" cut in half on the axis. */
-export function paidByDayChart(labelColor?: string, labels = true) {
+export function paidByDayChart(labelColor?: string, labels = true, { column }: { column?: number } = {}) {
   return {
     type: "column-chart-grouped" as const,
     // paidOnDay is empty where nothing was sent, so a day with no payout draws no column and prints no "$0.00".
@@ -142,6 +145,9 @@ export function paidByDayChart(labelColor?: string, labels = true) {
             series: {
               // Studio formats the label from the field (a label formatter here is never called).
               label: { enabled: labels, fontSize: 12, ...(labelColor && { color: labelColor }) },
+              // The console's full-width chart: each day's column at a fixed width, centred in its day, so a few days
+              // never draw as wide slabs across the page.
+              ...(column && { width: column }),
             },
           },
         },
@@ -166,6 +172,7 @@ const overview = (data: InsightsData, narrow: boolean, labelColor?: string): AgP
         dataMapping: {
           remedied: [sum("claims.remedied")],
           sold: [{ id: "recall.unitsSold", aggregation: "max" }],
+          days: [{ id: "recall.daysIn", aggregation: "max" }],
         },
         format: titled("Recall progress"),
       },
@@ -193,7 +200,7 @@ const overview = (data: InsightsData, narrow: boolean, labelColor?: string): AgP
         },
         format: titled("Why claims were refused"),
       },
-      "paid-by-day": paidByDayChart(labelColor),
+      "paid-by-day": paidByDayChart(labelColor, true, CONSOLE_CHART),
     } as AgPageState<InsightsRegistry>["widgets"],
     widgetLayout: narrow
       ? {

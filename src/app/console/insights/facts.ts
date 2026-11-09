@@ -106,6 +106,8 @@ export interface InsightsRecall {
   unitsSold: number;
   refund: number;
   autoPay: boolean;
+  /** Days since the recall was announced, at least 1: the pace beside the share remedied. */
+  daysIn: number;
 }
 
 export interface InsightsData {
@@ -231,6 +233,7 @@ export function buildInsights(claims: Claim[], recall: Recall, now: Date): Insig
       unitsSold: recall.unitsSold,
       refund: cents(recall.refund) / 100,
       autoPay: recall.autoPay,
+      daysIn: Math.max(1, Math.ceil((now.getTime() - Date.parse(recall.recallDate)) / 86_400_000)),
     },
     claims: claims.map((c) => claimFact(c, recall)),
     checks: claims.flatMap(checkFacts),

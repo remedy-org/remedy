@@ -40,10 +40,10 @@ export function RefusalReasonsView({ items, selected = new Set(), onToggle, onRe
   const figure = flush ? "tabular-nums" : "font-mono tabular-nums";
 
   return (
-    <div className={clsx("flex min-h-0 flex-col gap-2", flush ? "" : "h-full pb-1")} onClick={onReset}>
+    <div className={clsx("flex min-h-0 flex-col gap-2", flush ? "" : "h-full pr-2 pb-1")} onClick={onReset}>
       {/* The list starts with the reasons: the title says what they are. In the console each reason's hover tint reaches
           8px past the column, so its words start on the panel title's edge. */}
-      <ul className={clsx("flex min-h-0 flex-col", flush ? "gap-1" : "-mx-2 flex-1 overflow-y-auto")} onKeyDown={onKeyDown}>
+      <ul className={clsx("flex min-h-0 flex-col", flush ? "gap-1" : "-ml-2 flex-1 overflow-y-auto")} onKeyDown={onKeyDown}>
         {items.map((i, n) => (
           <li key={i.reason}>
             <Item

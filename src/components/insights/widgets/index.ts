@@ -54,6 +54,7 @@ export const insightsWidgets =
         dataMapping: {
           remedied: { type: "field", supportedRoles: ["numeric"], requires: { cardinality: "one" }, required: true, aiDescription: "Units remedied: sum of claims.remedied." },
           sold: { type: "field", supportedRoles: ["numeric"], requires: { cardinality: "one" }, required: true, aiDescription: "Units sold: max of recall.unitsSold." },
+          days: { type: "field", supportedRoles: ["numeric"], requires: { cardinality: "one" }, aiDescription: "Days since the recall: max of recall.daysIn, for the pace." },
         },
         formatShape,
         form: (params: AgWidgetFormParams<RecallProgressDef>) =>
@@ -68,7 +69,7 @@ export const insightsWidgets =
           label: "Recall progress",
           description: "A ruler of units remedied against units sold, with the 6-10% share recalls typically reach (PIRG) as a hatched band.",
           usage: "Use for how far the recall has got. Not for counts over time.",
-          configuration: "Map remedied to sum(claims.remedied) and sold to max(recall.unitsSold).",
+          configuration: "Map remedied to sum(claims.remedied), sold to max(recall.unitsSold) and days to max(recall.daysIn).",
         },
       },
       {

@@ -25,8 +25,23 @@
    ring waits for the keyboard (InsightsStudio marks html[data-modality]), is a 1px line on the section's own edge, and
    never moves the content inside. */
 html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-container {
+  position: relative;
   outline: 1px solid var(--line-strong);
   outline-offset: 0;
+}
+
+/* The panel the keyboard is on says how to go into it, in a keycap at its top right, as the console's keys read. */
+html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:has(> .ag-studio-layout-widget-focus-container:focus-visible) .ag-studio-layout-widget-container::after {
+  content: "Enter to explore";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in oklch, var(--line-strong) 60%, transparent);
+  border-radius: 4px;
+  color: var(--muted);
+  font: 400 12px/18px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  pointer-events: none;
 }
 
 .insights-report .ag-studio-layout-widget.ag-studio-layout-widget-focus .ag-studio-layout-widget-container {
@@ -92,12 +107,16 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   font: 400 14px/1.55 var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* The reader's own question: a line on a 2px rule, as the model's quoted words are, not a chat bubble. */
+/* The reader's own question: a plain bubble on the surface step, no rule inside it (the rule is the model's quotes). */
+.insights-report .ag-studio-ai-input-message,
 .insights-report .ag-studio-ai-input-message-content {
-  border-radius: 0;
-  background: none;
-  box-shadow: inset 2px 0 0 var(--line-strong);
-  padding: 2px 0 2px 12px;
+  border: 0;
+  box-shadow: none;
+}
+.insights-report .ag-studio-ai-input-message-content {
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 8px 12px;
   color: var(--text);
 }
 
@@ -123,7 +142,26 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   width: min(400px, calc(100vw - 32px));
   height: auto;
   background: var(--bg);
-  box-shadow: var(--float-shadow);
+  /* It lies over the page: one soft shadow toward it, so what is under its edge reads as covered, not cut mid-word. */
+  box-shadow: -1px 0 0 var(--line-2), -24px 0 48px oklch(0 0 0 / 0.45);
+}
+[data-theme="light"] .insights-report .ag-studio-root-panel-container-right {
+  box-shadow: -1px 0 0 var(--line), -24px 0 48px oklch(0 0 0 / 0.14);
+}
+
+/* Before the first question, the intro and the starting questions sit at the top of the rail, not at its foot under an
+   empty column. */
+.insights-report .ag-studio-ai-assistant-panel:not(:has(.ag-studio-ai-message-container > *)) .ag-studio-ai-scroll-container {
+  flex: 0 0 auto;
+}
+.insights-report .ag-studio-ai-assistant-panel:not(:has(.ag-studio-ai-message-container > *)) .ag-studio-ai-scroll-content {
+  justify-content: flex-start;
+}
+.insights-report .ag-studio-ai-assistant-panel:not(:has(.ag-studio-ai-message-container > *)) .ag-studio-ai-message-container {
+  margin-top: 0;
+}
+.insights-report .ag-studio-ai-assistant-panel:not(:has(.ag-studio-ai-message-container > *)) .ag-studio-ai-assistant-controls {
+  margin-top: auto;
 }
 
 .insights-report .ag-studio-root-panel-container-right > * {

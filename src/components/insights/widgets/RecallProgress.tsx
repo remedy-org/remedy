@@ -24,22 +24,27 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
   const { dataMapping, widgetApi } = params;
   const remedied = dataMapping.remedied?.[0];
   const sold = dataMapping.sold?.[0];
-  const rows = useRows(widgetApi, () => (remedied && sold ? [{ fields: [remedied] }, { fields: [sold] }] : null), [params]);
+  const days = dataMapping.days?.[0];
+  const rows = useRows(widgetApi, () => (remedied && sold ? [{ fields: [remedied] }, { fields: [sold] }, ...(days ? [{ fields: [days] }] : [])] : null), [params]);
   if (!rows || !remedied || !sold) return null;
 
   const done = num(rows[0][0]?.[remedied.key]);
   const total = num(rows[1][0]?.[sold.key]);
   const share = total > 0 ? done / total : 0;
+  // The pace, so a few days of a recall never read as its whole life against the band (which is years).
+  const dayCount = days ? num(rows[2]?.[0]?.[days.key]) : 0;
+  const pace = dayCount > 0 && done > 0 ? `${done.toLocaleString("en-US")} in ${dayCount} ${dayCount === 1 ? "day" : "days"}, ${Math.round(done / dayCount).toLocaleString("en-US")} a day` : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col justify-between gap-4 pb-1">
       <p className="sr-only">
-        {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}. Recalls typically reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
+        {done.toLocaleString("en-US")} of {total.toLocaleString("en-US")} units remedied, {pct(share)}{pace ? `: ${pace}` : ""}. Over a whole recall, which takes years, recalls typically reach {TYPICAL_RETURN.from * 100} to {TYPICAL_RETURN.to * 100}%.
       </p>
       {/* The units themselves are the ledger's first figure, right above: the panel gives the share they make. */}
-      <p aria-hidden="true" className="flex items-baseline gap-2">
+      <p aria-hidden="true" className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="text-head-sm leading-none font-medium">{pct(share)}</span>
         <span className="text-ui text-muted">of units sold remedied so far</span>
+        {pace && <span className="text-ui text-text-2">· {pace}</span>}
       </p>
 
       <div aria-hidden="true" className="relative pt-5 pb-6">
@@ -59,7 +64,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
           <span className="absolute -top-1 left-2 text-micro whitespace-nowrap text-pay">Remedy so far</span>
         </div>
         <div className="absolute top-0 -translate-x-1/2 text-center" style={{ left: `calc((${at(TYPICAL_RETURN.from)} + ${at(TYPICAL_RETURN.to)}) / 2)` }}>
-          <span className="text-micro whitespace-nowrap text-muted">Typical recall</span>
+          <span className="text-micro whitespace-nowrap text-muted">{days ? "Typical over a whole recall (years)" : "Typical recall"}</span>
         </div>
         {TICKS.map((t) => (
           <div
@@ -68,7 +73,7 @@ export function RecallProgress(params: AgWidgetParams<RecallProgressDef>) {
             style={{ left: at(t) }}
           >
             <span className="h-1.5 w-px bg-line-strong" />
-            <span className="font-mono text-micro text-faint tabular-nums">{t === 0 ? "0" : pct(t)}</span>
+            <span className="text-micro text-faint tabular-nums">{pct(t)}</span>
           </div>
         ))}
       </div>

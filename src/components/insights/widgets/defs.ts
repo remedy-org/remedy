@@ -4,7 +4,8 @@ import type { AgDefaultWidgetDefinition, AgTypeScriptRegistry, AgTypeScriptWidge
 
 export interface RecallProgressDef {
   type: "recall-progress";
-  dataMapping: { remedied: AgWidgetFieldReference[]; sold: AgWidgetFieldReference[] };
+  // days: the recall's days so far, for the pace beside the share (the homepage's still leaves it out).
+  dataMapping: { remedied: AgWidgetFieldReference[]; sold: AgWidgetFieldReference[]; days?: AgWidgetFieldReference[] };
   format?: AgWidgetDataFormat<Record<string, never>>;
 }
 

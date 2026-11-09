@@ -45,14 +45,16 @@ export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 pb-1" onClick={() => widgetApi.resetCrossFilter()}>
+    // An 8px gutter on the right, so a pick ring and the shares inside it never meet the panel's edge.
+    <div className="flex h-full min-h-0 flex-col gap-3 pr-2 pb-1" onClick={() => widgetApi.resetCrossFilter()}>
       <div aria-hidden="true" className="flex h-3 gap-0.5 overflow-hidden rounded-[3px]">
         {items.map((i) => (
           <span key={i.label} className={clsx("h-full min-w-[3px]", FILL[i.label] ?? "bg-faint", selected.size > 0 && !selected.has(i.label) && "opacity-30")} style={{ flexGrow: i.n }} />
         ))}
       </div>
-      {/* Each row's hover tint reaches 8px past the bar, so the marks and words start on the bar's own left edge. */}
-      <ul className="-mx-2 flex min-h-0 flex-col" onKeyDown={moveBetweenItems}>
+      {/* Each row's hover tint reaches 8px past the bar on the left, so the marks and words start on the bar's own edge; on the
+          right it ends on the panel's edge, its figures 8px inside the pick ring, never cut by the panel. */}
+      <ul className="-ml-2 flex min-h-0 flex-col" onKeyDown={moveBetweenItems}>
         {items.map((i) => (
           <li key={i.label}>
             <button
@@ -67,7 +69,7 @@ export function DecisionMix(params: AgWidgetParams<DecisionMixDef>) {
               )}
             >
               <span className="flex items-center gap-2 text-ui text-text">
-                <VerdictGlyph verdict={i.label === "Paid" && shownAs(i.label) !== "Paid" ? "approved" : (GLYPH[i.label] ?? "pending")} />
+                <VerdictGlyph verdict={GLYPH[i.label] ?? "pending"} />
                 {shownAs(i.label)}
               </span>
               <span className="font-mono text-ui text-text tabular-nums">{i.n}</span>

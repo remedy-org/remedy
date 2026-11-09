@@ -1,4 +1,4 @@
-import type { AgAiHarnessSetup, AgAiPromptStarter, AgStudioApi } from "ag-studio";
+import type { AgAiHarnessSetup, AgAiPromptStarter, AgLlmAdapter, AgStudioApi } from "ag-studio";
 import type { Dossier, InsightsData } from "@/app/console/insights/facts";
 import { openaiAdapter } from "./openai-adapter";
 import type { StudioLib } from "./studio-lib";
@@ -98,8 +98,23 @@ export interface NoteData {
   href: string;
 }
 
+// A request that never reached Remedy (offline, a dropped connection) fails as the browser's own "Failed to fetch": the
+// rail says what happened in words instead. Anything Remedy's proxy answered keeps its own message.
+export const UNREACHABLE = "The analyst couldn't be reached. Check your connection and try again.";
+const NETWORK = /failed to fetch|networkerror|load failed|fetch failed|network connection/i;
+export const plainError = (e: unknown): unknown =>
+  e instanceof Error && e.name !== "AbortError" && (e instanceof TypeError || NETWORK.test(e.message)) ? new Error(UNREACHABLE) : e;
+const plainErrors = (adapter: AgLlmAdapter): AgLlmAdapter => ({
+  executeTurn: (request, options) => {
+    const turn = adapter.executeTurn(request, options);
+    const complete = turn.complete.catch((e: unknown) => Promise.reject(plainError(e)));
+    void complete.catch(() => {});
+    return { ...turn, complete };
+  },
+});
+
 export function buildAnalyst({ createAiHarness, directLlmRunner }: StudioLib, data: InsightsData): AgAiHarnessSetup {
-  const adapter = openaiAdapter({ endpoint: ENDPOINT, model: "analyst" });
+  const adapter = plainErrors(openaiAdapter({ endpoint: ENDPOINT, model: "analyst" }));
   const ids = Object.keys(data.dossiers);
   const find = (id: string) => data.dossiers[id.trim().toUpperCase()];
 

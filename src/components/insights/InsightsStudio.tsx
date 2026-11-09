@@ -10,7 +10,7 @@ import { INSIGHTS_ACTIONS } from "./actions";
 import { buildAnalyst } from "./analyst";
 import { InsightsLedger } from "./InsightsLedger";
 import "./insights.css";
-import { filterClaims, filterLabel, filterPicks, insightsReport, paidByDayChart, PAID_BY_DAY, panelName, reportRows, type FilterPick } from "./report";
+import { CONSOLE_CHART, filterClaims, filterLabel, filterPicks, insightsReport, paidByDayChart, PAID_BY_DAY, panelName, reportRows, type FilterPick } from "./report";
 import { buildSources } from "./sources";
 import { colorResolver, fonts, onThemeChange, readTheme } from "./studio-setup";
 import lib from "./studio-lib";
@@ -30,6 +30,12 @@ if (LICENSE) lib.AgStudioLicenseManager.setLicenseKey(LICENSE);
 // Studio's own words for the analyst's panel, in the console's voice. Its thread picker is hidden (insights.css); the
 // button beside it reads "Start over".
 const LOCALE = {
+  // A chart's tooltip names its series as the page does ("Paid through PayPal"), never Studio's "(sum)", and a
+  // cross-filter's part of it in words.
+  aggregationSumFieldName: "${name}",
+  aggregationMaxFieldName: "${name}",
+  crossFilterSumFieldName: "${name}, in this filter",
+  crossFilterMaxFieldName: "${name}, in this filter",
   panelTitleAi: "Recall analyst",
   aiMessageInputPlaceholder: "Ask about this recall's claims…",
   aiNewChat: "This conversation",
@@ -77,6 +83,12 @@ function namePanels(root: HTMLElement) {
 }
 
 const samePicks = (a: FilterPick[], b: FilterPick[]) => JSON.stringify(a) === JSON.stringify(b);
+const findActions = () => document.getElementById(INSIGHTS_ACTIONS);
+const noActions = () => null;
+const nextFrame = (changed: () => void) => {
+  const id = requestAnimationFrame(changed);
+  return () => cancelAnimationFrame(id);
+};
 const pageOf = (state: AgReportState<InsightsRegistry>) => state.pages.find((p) => p.id === state.selectedPageId);
 
 const plural = (n: number, one: string) => `${n.toLocaleString("en-US")} ${n === 1 ? one : `${one}s`}`;
@@ -109,8 +121,10 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
   const initialLabel = useRef(labelColor);
   const [askOpen, setAskOpen] = useState(false);
   const askButton = useRef<HTMLButtonElement>(null);
-  // Rendered in the browser only (InsightsLoader), after the page header that holds the slot.
-  const [actions] = useState(() => document.getElementById(INSIGHTS_ACTIONS));
+  // The page header's slot for the button, read as an external store: a render can run before a client-side navigation
+  // has committed the new page's header (a cached Insights chunk renders at once), and React reads the store again once
+  // the page is committed (and on the next frame), so the button always finds its slot.
+  const actions = useSyncExternalStore(nextFrame, findActions, noActions);
   const height = reportRows(data, narrow) * ROW + CANVAS_PAD;
 
   useEffect(() => {
@@ -170,17 +184,26 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
     const studio = api.current;
     if (!studio || theme === initialTheme.current) return;
     studio.setProperty("theme", theme);
-    // The day chart's labels follow the page's background into the new theme.
+  }, [theme]);
+
+  // The day chart's labels follow the page's background into a new theme, and step aside under a pick: the dimmed
+  // columns and the solid part the pick keeps say it, where Studio would print the kept amount at each column's foot.
+  const labelled = picks.length === 0;
+  const chartFormat = useRef({ labelColor, labelled });
+  useEffect(() => {
+    const studio = api.current;
+    if (!studio || (chartFormat.current.labelColor === labelColor && chartFormat.current.labelled === labelled)) return;
+    chartFormat.current = { labelColor, labelled };
     const state = studio.getState();
     studio.setState({
       ...state,
       pages: state.pages.map((page) => {
         const chart = page.widgets?.["paid-by-day"];
         if (!chart || chart.type !== "column-chart-grouped") return page;
-        return { ...page, widgets: { ...page.widgets, "paid-by-day": { ...chart, format: { ...chart.format, ...paidByDayChart(labelColor).format, title: chart.format?.title } } } };
+        return { ...page, widgets: { ...page.widgets, "paid-by-day": { ...chart, format: { ...chart.format, ...paidByDayChart(labelColor, labelled, CONSOLE_CHART).format, title: chart.format?.title } } } };
       }),
     });
-  }, [theme, labelColor]);
+  }, [labelColor, labelled]);
 
   const toggleAsk = () => {
     const studio = api.current;
@@ -214,7 +237,9 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
   // insights-report (insights.css) takes Studio's editor chrome off the read-only panels.
   const filtered = picks.length > 0;
   return (
-    <div className="flex w-full flex-col">
+    // While the analyst's sheet is open, the page gives it its width (from 1024px), so the panels reflow beside it
+    // rather than lie half under it.
+    <div className={clsx("flex w-full flex-col transition-[padding] duration-160", askOpen && "lg:pr-[400px]")}>
       {actions &&
         !askOpen &&
         createPortal(
