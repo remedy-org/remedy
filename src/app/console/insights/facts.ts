@@ -3,7 +3,7 @@ import { amountOf, cents, reasonOf, refusalLabel, typeset } from "@/app/console/
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
 import { summarize } from "@/lib/store/store";
-import type { Claim, Decision, Recall } from "@/lib/types";
+import type { Claim, Recall } from "@/lib/types";
 import type { Stage } from "@/components/insights/funnel";
 import { verdictOf, verdictWord, type Verdict } from "@/components/console/VerdictMark";
 
@@ -11,14 +11,6 @@ export { funnel, STAGES } from "@/components/insights/funnel";
 
 // The Insights page's data, built on the server from the claim files. Pure, so every number is unit-tested. The
 // client turns these rows into AG Studio data sources; the agent's tools read the dossiers.
-
-export const DECISION_LABEL: Record<Decision, string> = {
-  paid: "Paid",
-  held: "Held",
-  rejected: "Rejected",
-  blocked: "Blocked",
-  pending: "In progress",
-};
 
 // The order every chart, the funnel and the agent list verdicts in, which is also the chart palette's order. An approved
 // claim is Paid, Sent, settling or Approved (lib/payoutWords.ts), as the queue's tabs and the CPSC report count it.
