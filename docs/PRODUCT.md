@@ -14,7 +14,7 @@ Remedy is its own website built on PayPal's public APIs. Companies running a rec
 | Language | TypeScript, strict, for all new code. The `.mjs` spike scripts stay as the record of the experiments. |
 | Storage | Vercel Blob: private photos, one JSON file per claim, one index file. No database. |
 | Vision | GPT-6.1 Sol at high effort describes; a fixed rule in code decides. |
-| Photos | Real claims use the live camera only (laptop webcam or phone). Judges get a labelled "Try with sample photos" demo. |
+| Photos | Real claims use the live camera (laptop webcam or phone): the page has no upload, and a photo counts only if it arrives inside the claim's 10-minute camera session, carrying its key. Judges get a labelled "Try with sample photos" demo. |
 | Company sign-in | Log in with PayPal (business account). A new company's workspace starts with the Kikea demo recall. |
 | Screens | Laptop first everywhere, and fully usable on a phone. |
 | Repo | Private until the freeze (Tue 10 Nov 23:59 IST), then public with its history. |
