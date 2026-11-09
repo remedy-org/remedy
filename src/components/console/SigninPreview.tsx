@@ -43,7 +43,7 @@ export function SigninPreview({ rows, height }: { rows: PreviewRow[]; height: nu
             <span className="text-muted">Insights</span>
             <span className="text-muted">Report</span>
           </span>
-          <span className="ml-auto text-ui text-muted">Kikea Store</span>
+          <span className="ml-auto text-ui text-muted">Recall team</span>
         </div>
         <div className="px-5 pt-5">
           <p className="text-head-sm font-medium">X-VESOLJE Nursing Pillows</p>

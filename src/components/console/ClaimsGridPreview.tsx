@@ -208,7 +208,7 @@ function FramedPreview({ rows, openId, height, ledger, counts, panelClassName, o
           <span className="text-faint">Insights</span>
           <span className="text-faint">Report</span>
         </span>
-        <span className="ml-auto text-ui whitespace-nowrap text-muted">Kikea Store</span>
+        <span className="ml-auto text-ui whitespace-nowrap text-muted">Recall team</span>
       </div>
 
       <div className="px-4 pt-4 sm:px-5">

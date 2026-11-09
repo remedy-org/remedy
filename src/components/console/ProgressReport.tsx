@@ -94,7 +94,7 @@ export function ProgressReport({
         >
           {[
             ["Recall date", formatDate(recall.recallDate)],
-            ["Remedy", "Refund for destroyed units"],
+            ["Remedy offered", "Refund for destroyed units"],
             ["Refund per unit", formatMoney(recall.refund)],
             // The period the report covers: from the recall's date to the day it was drawn up, as CPSC's monthly report reads.
             ["Reporting period", `${formatPeriod(formatDate(recall.recallDate), generated)}${daysIn ? `, ${plural(daysIn, "day")} in` : ""}`],

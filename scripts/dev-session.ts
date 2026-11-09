@@ -16,7 +16,7 @@ const { positionals, values } = parseArgs({
 });
 
 const role = Role.parse(positionals[0] ?? "company");
-const fake = role === "company" ? { payer: "DEVCOMPANY01", name: "Kikea Store", email: "recalls@kikea.test" } : { payer: "DEVOWNER0001", name: "Pat Doe", email: "pat@owner.test" };
+const fake = role === "company" ? { payer: "DEVCOMPANY01", name: "Recall team", email: "recalls@company.test" } : { payer: "DEVOWNER0001", name: "Pat Doe", email: "pat@owner.test" };
 
 process.stdout.write(
   mintSession({
