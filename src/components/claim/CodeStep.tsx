@@ -1,5 +1,4 @@
 import clsx from "clsx";
-import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui";
 import type { CheckSpec } from "@/lib/types";
@@ -159,12 +158,12 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
                 <Button key="live" id="code-cta" size="lg" block onClick={onContinue}>
                   {OPEN}
                 </Button>
-                {/* What leaves the phone, said before the camera asks for it. */}
+                {/* What leaves the phone, said before the camera asks for it. Privacy opens beside the claim: its clock is running. */}
                 <p className="text-ui text-pretty text-muted">
                   Only the photos you send leave your phone. They&rsquo;re used to check this claim. You can retake any photo before sending.{" "}
-                  <Link href="/privacy" className="text-link text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
-                    Privacy
-                  </Link>
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-link text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
+                    Privacy<span className="sr-only"> (opens in a new tab)</span>
+                  </a>
                 </p>
               </div>
             </>

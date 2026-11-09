@@ -643,7 +643,6 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         </dialog>
       </div>
 
-
       {/* Laptops only: on a phone this already is the phone. */}
       {!coarse && !expired && (
         <div id="phone-handoff" tabIndex={-1} aria-label={showPhone ? "Take the photo on your phone" : undefined} className="rounded-control outline-none focus:outline-2 focus:outline-offset-4 focus:outline-focus max-sm:hidden lg:col-start-2 lg:row-start-2">
