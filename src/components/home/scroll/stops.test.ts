@@ -81,6 +81,19 @@ describe("scroll stops", () => {
     expect(custody).toHaveLength(6); // 01, 02, the exhibit's live photo, check 3 and paid receipt, the console
   });
 
+  it("stops on How it works between the hero and chapter 01: the dolly landed, before the hand-over, never a beat skimmed", () => {
+    const names = STOPS.map((s) => s.name);
+    expect(names.slice(0, 3)).toEqual(["Hero", "How it works", "Chain of Custody 1"]);
+    const how = STOPS[1].at(page) as number;
+    const dolly = SLOW.find((s) => s.name === "The dolly")!.at(page)!;
+    // Inside the dolly's slow stretch, past where the laptop arrives (p 0.11) and short of the hand-over (p 0.12).
+    expect(how).toBeGreaterThan(dolly[0]);
+    expect(how).toBeLessThan(dolly[1]);
+    expect(how).toBeGreaterThan(MERGE);
+    expect((STOPS[2].at(page) as number) - how).toBeGreaterThan(MERGE);
+    expect(STOPS[1].inner).toBeUndefined();
+  });
+
   it("goes up on the same finished beats as down, as Page Up does: no stop is one way, the sheet's included", () => {
     expect(STOPS.filter((s) => "down" in s).map((s) => s.name)).toEqual([]);
     const story = STOPS.filter((s) => s.name.startsWith("Chain of Custody ")).map((s) => s.name);

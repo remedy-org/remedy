@@ -87,6 +87,10 @@ const checksStop = (p: Page) => p.fit(p.line("#checks header"), { min: p.line("#
 const SHEET_OPEN = ANCHOR_AT - 0.4;
 const SHEET_CUT = REST + 2;
 
+/** How it works' beat on the Chain of Custody's timeline: the dolly arrived (DOLLY ends at 0.12, its tilt by 0.11), just
+ * short of the hand-over to chapter 01's screen. */
+const HOW_AT = HANDOFF[0] - 0.004;
+
 /** Check 3's stop in the Chain of Custody's (PAGE_STOPS after the page top: 01, 02, the live photo, check 3). */
 const CHECK_3 = 3;
 
@@ -101,6 +105,10 @@ const GATE_1 = "#checks ol > li:nth-child(1)";
 export const STOPS: readonly Stop[] = [
   // The hero at rest, its laptop's checks ticked and the payout landed.
   { name: "Hero", at: (p) => p.top("[aria-labelledby='hero-title']") },
+  // How it works: the dolly landed, the laptop's screen on the custody window under the rail's How it works and its
+  // chapter list, a beat before the screen hands over to chapter 01 (HANDOFF). A small swipe from the hero rests here,
+  // one beat, where it used to run on through the dolly and glide on to chapter 01 by itself once the hand had stopped.
+  { name: "How it works", at: (p) => p.beat(scrollAt(HOW_AT)) },
   // The Chain of Custody: the stops Space and Page Down use in the pin (CustodyStage), so the keys and the wheel stop on
   // the same beats: 01 and 02 with every line lit, the exhibit's live photo and five checks at their holds, the paid
   // receipt, then the console. Its first stop is the runway's top, the page top.
