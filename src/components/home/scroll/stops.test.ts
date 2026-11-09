@@ -117,12 +117,15 @@ describe("scroll stops", () => {
         const tops: Record<string, number> = {
           "#checks header": 10514,
           "#checks ol > li:nth-child(3)": 11050,
+          "#proof": 11844,
           "#proof header": 11940,
           "#companies header": 12530,
           "#companies [data-tour]": 12687,
         };
         return sel in tops ? framed(tops[sel], 64, under) : undefined;
       },
+      // "Try to fool it" ends at 11520, below the foot of Fraud checks' own frame.
+      foot: (sel, f) => (sel === "#checks [data-try-cta]" ? 11520 - f * 900 : 0),
       // Results, framed clean: For companies' heading (12530) kept just under the screen's foot.
       fit: (y, frame) => (y === framed(11940, 64, LINE) && frame?.before === "#companies header" ? 12530 - 900 : y),
     };
@@ -130,8 +133,16 @@ describe("scroll stops", () => {
     // Every stop but the phone sequence's, which this laid-out laptop page doesn't have.
     expect(ys).toHaveLength(STOPS.length - 1);
     expect([...ys].sort((a, b) => a - b)).toEqual(ys);
-    // Results keeps For companies below the fold: its heading sits under the screen's foot.
-    expect(STOPS.find((s) => s.name === "Results")!.at(real)).toBe(12530 - 900);
+    // A 900px laptop screen and up: Results is a screen of its own, its top straight under the nav.
+    const results = STOPS.find((s) => s.name === "Results")!;
+    expect(results.at(real)).toBe(framed(11844, 64, 0));
+    // A screen so tall that Fraud checks' own stop shows "Try to fool it" whole has no stop at the rule: it would only
+    // bring Results up under it.
+    const rule = STOPS.find((s) => s.name === "Fraud checks, the rule")!;
+    expect(rule.at(real)).toBe(framed(11050, 64, -1));
+    expect(rule.at({ ...real, foot: (sel, f) => (sel === "#checks [data-try-cta]" ? 11200 - f * 1440 : 0) })).toBeUndefined();
+    // A shorter one: Results keeps For companies below the fold, its heading under the screen's foot.
+    expect(results.at({ ...real, size: { width: 1440, height: 800 }, fit: (y, frame) => (y === framed(11940, 64, LINE) && frame?.before === "#companies header" ? 12530 - 800 : y) })).toBe(12530 - 800);
   });
 
   it("takes the phone sequence's own paging stops where it pins", () => {

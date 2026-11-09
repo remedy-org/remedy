@@ -240,7 +240,7 @@ describe("wheel stops", () => {
     expect(pad.lenis.duration).toBeLessThanOrEqual(1.2);
   });
 
-  it("keeps a notched wheel's landing short, the hero's dolly excepted, and crosses the dolly lighter", () => {
+  it("keeps a notched wheel's landing short, shortest across the hero's dolly, and crosses the dolly lighter", () => {
     const wheel = setup(2144);
     wheel.send(power(), 8);
     expect(wheel.lenis.landed).toEqual([2821]);
@@ -248,13 +248,15 @@ describe("wheel stops", () => {
     const pad = setup(2144);
     pad.send(swipe(), 8);
     expect(pad.lenis.duration).toBeGreaterThan(wheel.lenis.duration);
-    // Across the dolly: no cap, and a lighter weight than a trackpad's.
+    // Across the dolly: 0.9 s, shorter than a trackpad's, so a wheel spun hard from the top never feels the page resist,
+    // and a lighter weight than a trackpad's.
     const notched = setup(0, STOPS, [[207, 670, 5]]);
     notched.send(power(), 8);
     const flung = setup(0, STOPS, [[207, 670, 5]]);
     flung.send(swipe(), 8);
     expect(notched.lenis.landed).toEqual([1410]);
-    expect(notched.lenis.duration).toBeGreaterThan(1.1);
+    expect(notched.lenis.duration).toBeLessThanOrEqual(0.9);
+    expect(notched.lenis.duration).toBeLessThan(flung.lenis.duration);
     // The share of the landing spent on the dolly.
     const share = (e: (t: number) => number) => {
       const at = (y: number) => {
@@ -270,6 +272,14 @@ describe("wheel stops", () => {
       return at(670) - at(207);
     };
     expect(share(notched.lenis.easing!)).toBeLessThan(share(flung.lenis.easing!));
+  });
+
+  it("lets a notched wheel spun hard from the top run free within half a second, while its first landing still plays", () => {
+    const { lenis, send } = setup(0);
+    // 100px notches 14 ms apart: the first 0.42 s is taken to 01 and held; by 0.56 s the spin goes with the wheel.
+    send(Array(30).fill(100), 14);
+    expect(lenis.landed).toEqual([1410]);
+    expect(send(Array(10).fill(100), 14)).toBeGreaterThanOrEqual(500);
   });
 
   it("hands a wheel spun on hard after its landing back to the reader, rather than holding the page", () => {

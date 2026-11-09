@@ -54,6 +54,10 @@ const ESCAPE = 1;
 /** ms of input held at FAST or more, not slowing (a wheel spun on, never a trackpad's decaying tail), after which the
  * gesture runs free at once, landing or not; when it ends, the page comes to rest on the nearest stop ahead (SETTLE). */
 const SPIN = 600;
+/** The same for a notched wheel, sooner: a power scroller spinning hard from the top met a page that held for 0.6 s while
+ * the dolly played, and felt it resist. A notched wheel has no momentum tail to mistake for a spin; under 450 ms a
+ * power fling of merged events (a trackpad's, whole px) would read as one. */
+const NOTCH_SPIN = 450;
 /** How far past where a free run would stop the nearest stop may be, in windows, for the run to come to rest on it. */
 const SETTLE = 0.6;
 /** Input a held fling keeps putting in past the stop it was taken to, in windows, that carries it on past a story's
@@ -61,13 +65,16 @@ const SETTLE = 0.6;
 const SKIM = 2;
 /** A wheel's notches (|deltaY| this big or more, whole px): no momentum to play out, so its landings stay short. */
 const NOTCH = 50;
-/** Seconds a notched wheel's landing takes at most (the hero's dolly excepted), so the page never drives on long after
- * the hand has stopped. */
+/** Seconds a notched wheel's landing takes at most, so the page never drives on long after the hand has stopped; across
+ * the hero's dolly, less still: a wheel spun hard from the top meets the dolly first, and a longer landing there read
+ * as the page resisting the hand. */
 const NOTCH_TIME = 1.1;
+const NOTCH_DOLLY_TIME = 0.9;
 /** The slow stretch's weight that marks the hero's dolly (stops.ts SLOW), and the weight a notched wheel crosses it at. */
 const DOLLY_WEIGHT = 5;
 const NOTCH_DOLLY = 3.5;
-/** Seconds a landing across the dolly takes at most: the dolly plays, and the page is at rest about a second after. */
+/** Seconds a trackpad's landing across the dolly takes at most: the dolly plays, and the page is at rest about a second
+ * after. */
 const DOLLY_TIME = 1.2;
 /** A stop closer than this many windows to where the gesture began is where the reader already is: it goes on past. */
 const NEAR = 0.15;
@@ -204,11 +211,12 @@ export function createGate(read: () => Course) {
   function land(l: GateLenis, to: number, dir: Dir, now: number) {
     // The landing curve runs along the way with its slow stretches weighted, so each pinned transition on it gets its
     // share of the time; it enters at the page's own speed. A notched wheel's landing is short (NOTCH_TIME): it has no
-    // momentum, so a longer one drives on alone after the hand has stopped; across the dolly it is slowed less instead.
+    // momentum, so a longer one drives on alone after the hand has stopped; across the dolly it is slowed less and shorter
+    // still (NOTCH_DOLLY_TIME).
     const from = l.animatedScroll;
     const dolly = slow.some(([a, b, k]) => k >= DOLLY_WEIGHT && Math.max(a, b) > Math.min(from, to) && Math.min(a, b) < Math.max(from, to));
     const way = warp(from, to, notched ? slow.map(([a, b, k]) => [a, b, k >= DOLLY_WEIGHT ? NOTCH_DOLLY : k] as const) : slow);
-    const duration = Math.min(dolly ? DOLLY_TIME : notched ? NOTCH_TIME : Infinity, landingTime(way.length / innerHeight));
+    const duration = Math.min(dolly ? (notched ? NOTCH_DOLLY_TIME : DOLLY_TIME) : notched ? NOTCH_TIME : Infinity, landingTime(way.length / innerHeight));
     const v = Math.max(0, pageSpeed(l, dir));
     const curve = glide(way.length < 1 ? 0 : (v * duration * way.entry) / way.length);
     landing = { to, dir };
@@ -327,7 +335,7 @@ export function createGate(read: () => Course) {
     if (yielded) return true;
     // A wheel held at FAST, not slowing, for SPIN ms is a spin across the page, not a fling to the next beat: it runs
     // free from here, landing or not, and comes to rest on a stop when it ends (settle).
-    if (!free && fast && fastRun >= SPIN && steady(now)) {
+    if (!free && fast && fastRun >= (notched ? NOTCH_SPIN : SPIN) && steady(now)) {
       free = true;
       hold = null;
       landing = null;

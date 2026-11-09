@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { frame as motionFrame, motion, useMotionValueEvent, useTransform } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { BEATS as EXHIBIT_BEATS, holdOf } from "../teardown/model";
 import { CHAPTERS, CONSENT_AT, SHOT_AT } from "./claim";
 import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, type Progress } from "./chapters";
@@ -47,6 +47,9 @@ function Layer({ p, i, compact, fill, children }: { p: Progress; i: number; comp
     </motion.div>
   );
 }
+
+/** ms after chapter 06 has gone that its window takes the stage's full height again: its console's cut out is over. */
+const UNFIT_AFTER = 260;
 
 /** The rail items come in one after another, this far apart (seconds). */
 const RAIL_STAGGER = 0.05;
@@ -185,6 +188,53 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
     ro.observe(st);
     return () => ro.disconnect();
   }, [stage, p]);
+
+  // Chapter 06's window is as tall as its queue, never a half-empty table on a tall screen (custody.module.css
+  // .screen[data-fit]): its bar, the layer's padding, the queue's tabs, header and foot, and every claim's row at full
+  // height (RM-0442's opens into place as the chapter plays). Read from the layout, so the compact rows and the fonts
+  // count; the clip follows the window.
+  useLayoutEffect(() => {
+    const el = screen.current;
+    const st = stage.current;
+    const inner = el?.querySelector<HTMLElement>("[data-screen-inner]");
+    const layer = el?.querySelector<HTMLElement>('[data-layer="5"]');
+    const queue = layer?.querySelector<HTMLElement>("[data-console-queue]");
+    const rows = queue?.querySelector<HTMLElement>("[data-console-rows]");
+    const bar = inner?.firstElementChild as HTMLElement | null | undefined;
+    if (!el || !layer || !queue || !rows || !bar) return;
+    const fit = () => {
+      const h = (e: Element | undefined) => e?.getBoundingClientRect().height ?? 0;
+      const row = h(rows.children[1]);
+      const fixed = [...queue.children].reduce((sum, c) => (c === rows ? sum : sum + h(c)), 0);
+      const pad = parseFloat(getComputedStyle(layer).paddingTop) + parseFloat(getComputedStyle(layer).paddingBottom);
+      // A pixel over, so subpixel rounding never wraps the last row out of sight.
+      el.style.setProperty("--fit-h", `${Math.ceil(h(bar) + pad + fixed + rows.children.length * row) + 1}px`);
+      applyClip(el, st, p.get());
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(bar);
+    ro.observe(queue);
+    return () => ro.disconnect();
+  }, [chapter, compact, stage, p]);
+
+  // The fitted window (data-fit) comes with chapter 06 and goes only once its console has cut out (LEAVE, 180ms), so
+  // going back up the console never shows in the full-height window for a frame. Written straight to the element, as
+  // the clip is, so React never puts it back.
+  useEffect(() => {
+    const el = screen.current;
+    if (!el) return;
+    const set = (on: boolean) => {
+      el.toggleAttribute("data-fit", on);
+      applyClip(el, stage.current, p.get());
+    };
+    if (chapter === 5) {
+      set(true);
+      return;
+    }
+    const t = window.setTimeout(() => set(false), UNFIT_AFTER);
+    return () => window.clearTimeout(t);
+  }, [chapter, stage, p]);
 
   // As p passes 0.12, in time, the laptop's own screen dissolves straight into the consent screen: the layer and its
   // content come in together (200ms and 240ms), so the screen never shows a frame of bare ground between the two UIs.

@@ -39,16 +39,16 @@ function Note({ figure }: { figure: string }) {
  * Results: the one number that matters is the heading, the zero at the display size (never bigger than the hero's h1)
  * with what it counts beside it, the lead and the method's footnote under it; the three supporting counts stand beside
  * them on columns 8 to 12, a list on hairlines with room to breathe, ending on the footnote's last line, so the frame is
- * one balanced slide, never a lone figure with an empty half. On a tall laptop
- * screen (1000px and up) it is a screen of its own, its content centred in it (scroll/stops.ts frames the section's top
- * there).
+ * one balanced slide, never a lone figure with an empty half. On a laptop screen 860px tall and up it is a screen of its
+ * own (scroll/stops.ts frames the section's top under the nav), so For companies never shows at its foot, with its
+ * content 18% of the screen down, where a centred block left a tall screen's frame half paper above and below.
  */
 export function Proof() {
   return (
     <Section
       id="proof"
-      className="lg:[@media(min-height:1000px)]:flex lg:[@media(min-height:1000px)]:min-h-[calc(100svh-4rem)] lg:[@media(min-height:1000px)]:items-center"
-      pageClassName="w-full"
+      className="lg:[@media(min-height:860px)]:min-h-[calc(100svh-4rem)]"
+      padClassName="py-18 lg:py-24 lg:[@media(min-height:860px)]:pt-[calc(18svh-4rem)]"
       exhibit="Results"
       headingSpan={7}
       stack
