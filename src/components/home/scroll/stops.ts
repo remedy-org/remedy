@@ -82,6 +82,11 @@ const GATE_TEXT = "#checks ol > li > div:first-child";
  * edge, and the heading at least 40px under the nav. */
 const checksStop = (p: Page) => p.fit(p.line("#checks header"), { min: p.line("#checks", 0), max: p.line("#checks header", 40) });
 
+/** The Problem sheet's two beats on its timeline (problemTimeline.ts): open, a hair before card 4 lands, so a whole pixel
+ * of rounding never shows it beginning; and cut, the payoff printed and the lamp down. */
+const SHEET_OPEN = ANCHOR_AT - 0.4;
+const SHEET_CUT = REST + 2;
+
 /** Check 3's stop in the Chain of Custody's (PAGE_STOPS after the page top: 01, 02, the live photo, check 3). */
 const CHECK_3 = 3;
 
@@ -117,11 +122,11 @@ export const STOPS: readonly Stop[] = [
   // payoff has printed (Problem.tsx).
   {
     name: "Problem, the sheet open",
-    at: (p) => p.sheet(ANCHOR_AT - 0.4) ?? p.fit(p.line("#problem .eyebrow"), { min: p.line("#problem", 0), max: p.line("#problem .eyebrow", 16) }),
+    at: (p) => p.sheet(SHEET_OPEN) ?? p.fit(p.line("#problem .eyebrow"), { min: p.line("#problem", 0), max: p.line("#problem .eyebrow", 16) }),
   },
   {
     name: "Problem, the loop cut",
-    at: (p) => p.sheet(REST + 2) ?? p.fit(p.foot("#problem article", 0.78), { min: p.foot("#problem article", 0.8), max: p.foot("#problem article", 0.45) }),
+    at: (p) => p.sheet(SHEET_CUT) ?? p.fit(p.foot("#problem article", 0.78), { min: p.foot("#problem article", 0.8), max: p.foot("#problem article", 0.45) }),
   },
   // Fraud checks: the heading on the top line over the four claims and the checks that need no AI. Never so high that
   // the Problem sheet shows above the section's edge, and the heading at least 40px under the nav.
@@ -360,14 +365,41 @@ export function readPage(): Page {
 
 /** The pinned stretches as laid out now, [from, to] in scrollY: the Chain of Custody (the laptop's runway or the phone's)
  * and the Problem sheet, from where its top comes up into the screen and its first cards start to land
- * (problemTimeline.ts). Their stops are paced for the keys, however far apart (keys.ts), and the wheel never leaves the
- * page at rest inside one (gate.ts). */
+ * (problemTimeline.ts). Their stops are paced for the keys, however far apart (keys.ts), and a fling inside one always
+ * lands on its next beat (gate.ts); a gesture that goes quiet settles on a beat only inside their stories (storyStretches). */
 export function pinnedStretches(): [number, number][] {
   const els = [visible("section[data-runway]"), visible("div[data-runway][data-scroll-stops]"), document.getElementById("problem")];
   return els.flatMap((el, i) => {
     const pin = pinned(el ?? null);
     return pin ? [[i === 2 ? pin.top - innerHeight : pin.top, pin.top + pin.travel] as [number, number]] : [];
   });
+}
+
+/** Where a story pinned from `top` starts for the wheel: the page top when its runway starts within MERGE of it. */
+export const storyFrom = (top: number) => (top < MERGE ? 0 : top);
+
+/**
+ * The pinned stories as the wheel reads them (gate.ts Course stories): each from its first finished beat to its last. Only
+ * there is a frame between two beats a transition half played, which a gentle push settles on a beat. The stretches
+ * either side scroll 1:1, as a section does: the Chain of Custody's console scrolling away as the Problem sheet comes up
+ * and unfolds, and the held sheet with Fraud checks sliding over it. A gentle push from the console, the open sheet or
+ * the cut glided about 1.4 windows on into the next section. The Chain of Custody's story starts at the page top, the
+ * hero, which its runway's own top (the nav's height down) merges with: a 36px push from the hero rested 36px into the
+ * dolly.
+ */
+export function storyStretches(page = readPage()): [number, number][] {
+  const out: [number, number][] = [];
+  const runway = pinned(visible("section[data-runway]") ?? null);
+  const last = page.beat(PAGE_STOPS[PAGE_STOPS.length - 1]);
+  if (runway && last !== undefined) out.push([storyFrom(runway.top), last]);
+  const phoneEl = visible("div[data-runway][data-scroll-stops]");
+  const phone = phoneEl && pinned(phoneEl);
+  const beats = page.beats("div[data-runway][data-scroll-stops]");
+  if (phone && beats?.length) out.push([phone.top, Math.max(...beats)]);
+  const open = page.sheet(SHEET_OPEN);
+  const cut = page.sheet(SHEET_CUT);
+  if (open !== undefined && cut !== undefined) out.push([open, cut]);
+  return out;
 }
 
 const warned = new Set<string>();
@@ -404,6 +436,7 @@ export function resolveCourse(): Course {
     inner: resolveStops(STOPS.filter((s) => s.inner), page),
     rests: resolveStops([...STOPS, ...RESTS], page),
     pins: pinnedStretches(),
+    stories: storyStretches(page),
     fit: (y, range) => page.fit(y, range),
   };
 }

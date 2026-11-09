@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createGate, notchQuiet, type Course, type GateLenis } from "./gate";
+import { storyFrom } from "./stops";
 import type { Slow } from "./landing";
 
 // The gate against a stand-in Lenis: wheel streams in, which events it takes, and where it lands the page.
 const STOPS = [0, 1410, 2144, 2821, 3205];
 
-function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner?: number[], pins?: [number, number][], fit?: Course["fit"], rests?: number[]) {
+function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner?: number[], pins?: [number, number][], fit?: Course["fit"], rests?: number[], stories?: [number, number][]) {
   const listeners = new Map<string, ((e: unknown) => void)[]>();
   vi.stubGlobal("innerHeight", 900);
   vi.stubGlobal("scrollY", at);
@@ -39,7 +40,7 @@ function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner
     },
     start() {},
   };
-  const gate = createGate(() => ({ stops, slow, up, inner, pins, fit, rests }));
+  const gate = createGate(() => ({ stops, slow, up, inner, pins, fit, rests, stories }));
   gate.attach(lenis as unknown as GateLenis);
   let t = 1000;
   /** Sends deltas `gap` ms apart, after `pause` ms; returns how many px reached Lenis (the events the gate let through). */
@@ -526,40 +527,91 @@ describe("wheel stops", () => {
     }
   });
 
-  it("settles a gentle push from a story's last beat on the next story's first within 0.8 s, however far it is", () => {
-    // As 1920x1080: the Chain of Custody's console beat, its runway's end, then the Problem sheet coming up from the
-    // screen's foot (pinned from there) and open 1549px on, a slow stretch on the way (the sheet opening). A push of 36px
-    // glided on to the open sheet for 1.7 s after the hand stopped.
-    const course = [0, 8037, 9586, 10303, 11838];
+  it("never glides a gentle push out of a story's first or last beat into the next section: it scrolls 1:1", () => {
+    // As 1440x900: the Chain of Custody's story from the hero to its console beat, the Problem sheet's from open to cut,
+    // Fraud checks 1324px past the cut. Pushes of 36, 60 and 100px from the console beat down, the open sheet up and the
+    // cut down glided about 1.4 windows into the next section; now each rests where the hand left it.
+    const course = [0, 6698, 7988, 8586, 9910];
     const pins: [number, number][] = [
-      [64, 8294],
-      [8294, 10764],
+      [64, 6912],
+      [6912, 9918],
     ];
-    const slow: Slow[] = [[8900, 9500, 2]];
-    for (const d of [[12, 12, 12], Array(16).fill(18)]) {
-      const g = setup(8037, course, slow, undefined, undefined, pins);
-      g.send(d);
-      g.lenis.animatedScroll = g.lenis.targetScroll - 4;
-      vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
-      g.scroll();
-      vi.restoreAllMocks();
-      expect(g.lenis.landed).toEqual([9586]); // still a beat on, in the hand's direction
-      expect(g.lenis.duration).toBeLessThanOrEqual(0.8);
+    const stories: [number, number][] = [
+      [0, 6698],
+      [7988, 8586],
+    ];
+    const slow: Slow[] = [[7400, 7900, 2]];
+    for (const [from, dir] of [
+      [6698, 1],
+      [7988, -1],
+      [8586, 1],
+      [9910, -1],
+    ] as const) {
+      for (const px of [36, 60, 100]) {
+        const g = setup(from, course, slow, undefined, undefined, pins, undefined, undefined, stories);
+        g.send(Array(6).fill((dir * px) / 6));
+        g.lenis.animatedScroll = g.lenis.targetScroll - 4 * dir;
+        vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+        g.scroll();
+        vi.restoreAllMocks();
+        expect(g.lenis.landed, `${dir > 0 ? "down" : "up"} ${px}px from ${from}`).toEqual([]);
+      }
     }
-    // A trackpad's gentle push up from the cut onto the open sheet, the same.
-    const up = setup(10303, course, slow, undefined, undefined, pins);
+    // Into the story, a push still moves it on a beat: up from the cut onto the open sheet, quickly.
+    const up = setup(8586, course, slow, undefined, undefined, pins, undefined, undefined, stories);
     up.send([-12, -12, -12]);
     up.lenis.animatedScroll = up.lenis.targetScroll + 4;
     vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
     up.scroll();
     vi.restoreAllMocks();
-    expect(up.lenis.landed).toEqual([9586]);
-    expect(up.lenis.duration).toBeLessThanOrEqual(0.8);
-    // A fling is no nudge: its landing keeps its own length.
-    const flung = setup(8037, course, slow, undefined, undefined, pins);
-    flung.send(swipe(), 8);
-    expect(flung.lenis.landed).toEqual([9586]);
-    expect(flung.lenis.duration).toBeGreaterThan(1);
+    expect(up.lenis.landed).toEqual([7988]);
+    expect(up.lenis.duration).toBeLessThanOrEqual(0.65);
+    // A fling is no nudge: any one, however short, still lands on the next section's stop, as before.
+    const flung = setup(8586, course, slow, undefined, undefined, pins, undefined, undefined, stories);
+    flung.send([100, 100, 100], 16);
+    expect(flung.lenis.landed).toEqual([9910]);
+  });
+
+  it("rests a push out of a story on the clean frame ahead when a line would be cut, never back against the hand", () => {
+    // A line cut at the screen's foot from 8640 to 8700: the push of 54px from the cut rests clear of it, ahead.
+    const fit: Course["fit"] = (y, { min, max }) => [y, 8700, 8639].filter((v) => v >= min && v <= max && !(v > 8639 && v < 8700)).sort((a, b) => Math.abs(a - y) - Math.abs(b - y))[0];
+    const g = setup(8586, [0, 7988, 8586, 9910], [], undefined, undefined, [[6912, 9918]], fit, undefined, [[7988, 8586]]);
+    g.send(Array(6).fill(9));
+    g.lenis.animatedScroll = g.lenis.targetScroll - 4;
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    g.scroll();
+    vi.restoreAllMocks();
+    expect(g.lenis.landed).toEqual([8700]);
+    expect(g.lenis.duration).toBeLessThanOrEqual(0.8);
+  });
+
+  it("takes a 36px push from the hero on to chapter 01, the story starting at the page top", () => {
+    // The runway's own top is the nav's height down; its story starts at the hero (stops.ts storyFrom).
+    const g = setup(0, [0, 823, 1858], [[100, 700, 5]], undefined, undefined, [[64, 6912]], undefined, undefined, [[storyFrom(64), 6698]]);
+    g.send([2, 3, 5, 7, 7, 5, 3, 2, 1, 1]);
+    g.lenis.animatedScroll = g.lenis.targetScroll - 4;
+    vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
+    g.scroll();
+    vi.restoreAllMocks();
+    expect(g.lenis.landed).toEqual([823]);
+    expect(g.lenis.duration).toBeLessThanOrEqual(0.65);
+  });
+
+  it("skims a notched power spin past a story's inner beats, three notches a beat, never past a section stop", () => {
+    const beats = [0, 823, 1858, 2534, 4278, 6140, 6698];
+    const inner = [1858, 2534, 6140];
+    const spin = setup(823, beats, [], undefined, inner, [[0, 6698]]);
+    spin.send(Array(10).fill(100), 27);
+    expect(spin.lenis.landed).toEqual([1858, 2534, 4278]);
+    // A quick flick of four notches stops on the inner beat.
+    const flick = setup(823, beats, [], undefined, inner, [[0, 6698]]);
+    flick.send(Array(4).fill(100), 24);
+    expect(flick.lenis.landed).toEqual([1858]);
+    // Its landing scales with the way: under a window, about 0.6 s.
+    const near = setup(1858, beats, [], undefined, inner, [[0, 6698]]);
+    near.send(Array(4).fill(100), 24);
+    expect(near.lenis.landed).toEqual([2534]);
+    expect(near.lenis.duration).toBeLessThanOrEqual(0.65);
   });
 
   /**

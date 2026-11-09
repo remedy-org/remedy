@@ -34,6 +34,10 @@ const NOTCH_QUIET: readonly [min: number, max: number] = [60, 80];
 const FLICK_QUIET = 100;
 const ROLL_QUIET = 190;
 const ROLL_NOTCH = 50;
+/** A roll's quiet once its pace is known: this many times its last gap between notches, ROLL_MIN ms at least, so a roll
+ * of notches 90 ms apart settles 125 ms after its last (it waited 190, and the page was at rest a second after the hand). */
+const ROLL_PACE = 1.4;
+const ROLL_MIN = 110;
 
 /**
  * ms without a notch that end a notched wheel's gesture: half as long again as its usual gap between notches (the
@@ -89,6 +93,10 @@ const NOTCH_REACH = 1.25;
 /** Input a held fling keeps putting in past the stop it was taken to, in windows, that carries it on past a story's
  * inner beat (a hard fling skims; a flick stops on each beat). Section stops always catch. */
 const SKIM = 2;
+/** The same for a notched wheel's spin, in px: three notches past the take. A power scroller's 10-notch spins at 37 a
+ * second stopped on every beat, seven spins from the hero to the Problem sheet; a quick flick of up to five notches still
+ * stops on each. */
+const NOTCH_SKIM = 300;
 /** A wheel's notches (|deltaY| this big or more, whole px): no momentum to play out, so its landings stay short. */
 const NOTCH = 50;
 /** Seconds a notched wheel's landing takes at most, so the page stays under the hand and never drives on long after it
@@ -96,11 +104,22 @@ const NOTCH = 50;
  * landing there read as the page resisting the hand. */
 const NOTCH_TIME = 0.9;
 const NOTCH_DOLLY_TIME = 0.75;
+/** Under NOTCH_TIME, a notched wheel's landing takes this long plus NOTCH_PER for each window of the way: a beat under a
+ * window away in about 0.6 s, so the page is at rest within 0.8 s of the hand (every landing took 0.9 s, however close). */
+const NOTCH_BASE = 0.45;
+const NOTCH_PER = 0.2;
 /** Seconds a landing a gesture the page took as the reader's own settles with (nudge: a gentle push, a slow roll of
  * notches) takes at most, slow stretches and the dolly included. A push of 36px is a small move of the hand: leaving the
  * Chain of Custody's console beat or the Problem sheet's cut, the beat ahead is 1.4 windows on, and it glided 1.3 to 1.5
  * windows on for 1.7 s after the hand had stopped. */
 const NUDGE_TIME = 0.8;
+/** Under NUDGE_TIME, a nudge's landing takes this long plus NUDGE_PER for each window left to go: the wheel is quiet for
+ * 140 ms before it settles, so a beat under a window away is at rest within 0.8 s of the hand (it took 0.95 s). */
+const NUDGE_BASE = 0.35;
+const NUDGE_PER = 0.25;
+/** Seconds a landing taken on from one still under way takes at most (a swipe laid on the last one's glide, a skim): the
+ * page is already moving, and three quick trackpad swipes were at rest 1 to 1.7 s after the last. */
+const CHAIN_TIME = 0.8;
 /** The slow stretch's weight that marks the hero's dolly (stops.ts SLOW), and the weight a notched wheel crosses it at. */
 const DOLLY_WEIGHT = 5;
 const NOTCH_DOLLY = 3.5;
@@ -174,7 +193,12 @@ export type Course = {
   /** Every finished beat a gesture the page took no stop for may settle on inside a pin: the stops and more (stops.ts
    * RESTS). The stops when it is missing. */
   rests?: number[];
+  /** The pinned stretches, whose beats a fling always lands on, however far apart (stops.ts pinnedStretches). */
   pins?: readonly (readonly [number, number])[];
+  /** The stories inside them, each from its first finished beat to its last (stops.ts storyStretches): only between two
+   * of their beats is a frame a transition half played, which a gesture that goes quiet settles on a beat. Outside them
+   * the page scrolls 1:1. The pins when missing. */
+  stories?: readonly (readonly [number, number])[];
   fit?: (y: number, range: { min: number; max: number }) => number | undefined;
 };
 
@@ -189,6 +213,7 @@ export function createGate(read: () => Course) {
   let innerStops: number[] = [];
   let rests: number[] = [];
   let pins: readonly (readonly [number, number])[] = [];
+  let stories: readonly (readonly [number, number])[] = [];
   let slow: readonly Slow[] = [];
   let fit: Course["fit"];
   let hold: Hold | null = null;
@@ -217,6 +242,8 @@ export function createGate(read: () => Course) {
   let lastWall = 0;
   /** This notched gesture's gaps between notches, ms. */
   let gaps: number[] = [];
+  /** ms before this roll's last notch, while the wheel is rolled a notch at a time (rolling); 0 otherwise. */
+  let rollGap = 0;
   /** The page's own speed, px/ms, from Lenis's last two frames. */
   let speed = 0;
   let prev: { t: number; y: number } | null = null;
@@ -231,7 +258,7 @@ export function createGate(read: () => Course) {
   /** Whether two positions lie in the same pinned story, whose beats a fling always lands on, however far apart. */
   const story = (a: number, b: number) => pins.some(([p, q]) => Math.min(a, b) >= p - 1 && Math.max(a, b) <= q + 1);
   /** Whether a page at rest at `y` would hold a pinned story's transition half played: anywhere inside one but its ends. */
-  const scrubbed = (y: number) => pins.some(([p, q]) => y > p + 1 && y < q - 1);
+  const scrubbed = (y: number) => stories.some(([p, q]) => y > p + 1 && y < q - 1);
 
   /**
    * The next stop past `from` in the direction of travel that the page at `at` has not yet passed, or will not reach
@@ -262,19 +289,19 @@ export function createGate(read: () => Course) {
 
   function land(l: GateLenis, to: number, dir: Dir, now: number, cap = Infinity) {
     // The landing curve runs along the way with its slow stretches weighted, so each pinned transition on it gets its
-    // share of the time; it enters at the page's own speed. A notched wheel's landing is short (NOTCH_TIME): it has no
-    // momentum, so a longer one drives on alone after the hand has stopped; across the dolly it is slowed less and shorter
-    // still (NOTCH_DOLLY_TIME). Each other slow stretch on the way adds SLOW_TIME (NOTCH_SLOW_TIME). `cap` holds the whole
-    // landing to that many seconds (NUDGE_TIME).
+    // share of the time; it enters at the page's own speed. A notched wheel's landing is short, and shorter the nearer
+    // its stop (NOTCH_BASE, NOTCH_TIME): it has no momentum, so a longer one drives on alone after the hand has stopped;
+    // across the dolly it is slowed less and shorter still (NOTCH_DOLLY_TIME). Each other slow stretch on the way adds
+    // SLOW_TIME (NOTCH_SLOW_TIME). One taken on from a landing under way takes CHAIN_TIME at most. `cap` holds the whole
+    // landing to that many seconds (nudgeTime).
     const from = l.animatedScroll;
     const on = slow.filter(([a, b]) => Math.max(a, b) > Math.min(from, to) && Math.min(a, b) < Math.max(from, to));
     const dolly = on.some(([, , k]) => k >= DOLLY_WEIGHT);
     const way = warp(from, to, notched ? slow.map(([a, b, k]) => [a, b, k >= DOLLY_WEIGHT ? NOTCH_DOLLY : k] as const) : slow);
-    const duration = Math.min(
-      cap,
-      Math.min(dolly ? (notched ? NOTCH_DOLLY_TIME : DOLLY_TIME) : notched ? NOTCH_TIME : Infinity, landingTime(way.length / innerHeight)) +
-        (notched ? NOTCH_SLOW_TIME : SLOW_TIME) * on.filter(([, , k]) => k < DOLLY_WEIGHT).length,
-    );
+    const base = notched
+      ? Math.min(dolly ? NOTCH_DOLLY_TIME : NOTCH_TIME, NOTCH_BASE + (NOTCH_PER * Math.abs(to - from)) / innerHeight)
+      : Math.min(dolly ? DOLLY_TIME : Infinity, landingTime(way.length / innerHeight));
+    const duration = Math.min(landing ? CHAIN_TIME : Infinity, cap, base + (notched ? NOTCH_SLOW_TIME : SLOW_TIME) * on.filter(([, , k]) => k < DOLLY_WEIGHT).length);
     const v = Math.max(0, pageSpeed(l, dir));
     const curve = glide(way.length < 1 ? 0 : (v * duration * way.entry) / way.length);
     landing = { to, dir };
@@ -323,8 +350,10 @@ export function createGate(read: () => Course) {
    * when the page is bound for anywhere else in one it settles on the nearest beat (RESTS), measured from where it would
    * have come to rest. A push of TREMOR px or more lands on the beat ahead of where the gesture began, in its direction,
    * nearest where it would rest, so a gentle nudge or one notch moves the story on a beat and never lands against the
-   * hand (a 36px push from the hero sprang back to 0). It lands within NUDGE_TIME, however far that beat. Outside the
-   * pinned stories slow scrolling stays the reader's.
+   * hand (a 36px push from the hero sprang back to 0). It lands within NUDGE_TIME, however far that beat, sooner when it
+   * is near (NUDGE_BASE). Outside the pinned stories slow scrolling stays the reader's: a push there, or out of a story's
+   * first or last beat, scrolls 1:1 and rests where it stops, on the clean frame nearest ahead (within CLEAN) when a line
+   * would be cut at the nav or the screen's foot.
    */
   function nudge(l: GateLenis) {
     loose = false;
@@ -332,7 +361,13 @@ export function createGate(read: () => Course) {
     const dir = lastDir;
     const rest = l.targetScroll;
     const at = l.animatedScroll;
-    if (!scrubbed(rest) || rests.some((s) => Math.abs(s - rest) <= 1)) return;
+    if (rests.some((s) => Math.abs(s - rest) <= 1)) return;
+    if (!scrubbed(rest)) {
+      if ((rest - origin) * dir < TREMOR) return;
+      const clean = fit?.(rest, dir > 0 ? { min: rest, max: rest + CLEAN } : { min: rest - CLEAN, max: rest });
+      if (clean !== undefined && Math.abs(clean - rest) > 1) land(l, clean, dir, performance.now(), nudgeTime(clean - at));
+      return;
+    }
     let back: number | undefined;
     let ahead: number | undefined;
     for (const s of rests) {
@@ -348,13 +383,16 @@ export function createGate(read: () => Course) {
     }
     if (to === undefined) to = ahead !== undefined && (back === undefined || Math.abs(ahead - rest) <= Math.abs(back - rest)) ? ahead : back;
     // Landed on even where the page is on it already: Lenis would ease on past it to where the gesture was bound.
-    if (to !== undefined) land(l, to, to >= at ? 1 : -1, performance.now(), NUDGE_TIME);
+    if (to !== undefined) land(l, to, to >= at ? 1 : -1, performance.now(), nudgeTime(to - at));
   }
+
+  /** Seconds a nudge's landing takes `px` from the page: NUDGE_BASE and NUDGE_PER a window, NUDGE_TIME at most. */
+  const nudgeTime = (px: number) => Math.min(NUDGE_TIME, NUDGE_BASE + (NUDGE_PER * Math.abs(px)) / innerHeight);
 
   /** Whether this notched gesture is a quick flick: its notches under ROLL_NOTCH ms apart (a lone notch is not one). */
   const flicked = () => gaps.length > 0 && [...gaps].sort((x, y) => x - y)[gaps.length >> 1] < ROLL_NOTCH;
   /** ms of quiet before a gesture the page took as the reader's own settles (FLICK_QUIET, ROLL_QUIET). */
-  const nudgeQuiet = () => (!notched ? QUIET : flicked() ? FLICK_QUIET : ROLL_QUIET);
+  const nudgeQuiet = () => (!notched ? QUIET : flicked() ? FLICK_QUIET : rollGap ? Math.min(ROLL_QUIET, Math.max(ROLL_MIN, ROLL_PACE * rollGap)) : ROLL_QUIET);
 
   /** The wheel has been quiet with no landing under way: a free run (after QUIET ms), or a gesture the page took as the
    * reader's own (nudgeQuiet), comes to rest on a whole frame. */
@@ -424,6 +462,7 @@ export function createGate(read: () => Course) {
       // where the roll began (nudge) on the beat nearest where the hand stopped, never on the beat past where its last
       // notch began (a 10-notch roll from the open sheet glided 1.3 windows on to Fraud checks after the hand stopped).
       const rolling = notch && notched && !flicked() && loose && !landing && !free && dir === lastDir;
+      rollGap = rolling ? gap : 0;
       if (!tail) {
         hold = null;
         samples = [];
@@ -443,7 +482,7 @@ export function createGate(read: () => Course) {
         hold.low = Infinity;
         hold.rising = 0;
       }
-      ({ stops, up: upStops = stops, slow = [], inner: innerStops = [], rests = stops, pins = [], fit } = read());
+      ({ stops, up: upStops = stops, slow = [], inner: innerStops = [], rests = stops, pins = [], stories = pins, fit } = read());
       if (!rolling) origin = l.animatedScroll;
     }
     if (dir !== lastDir) {
@@ -512,7 +551,7 @@ export function createGate(read: () => Course) {
         land(l, next, dir, now);
       }
       // A hard fling's momentum, still pouring in well past the take, carries it on past a story's inner beat.
-      else if (hold && innerStops.includes(landing.to) && total - takenAt >= SKIM * innerHeight) {
+      else if (hold && innerStops.includes(landing.to) && total - takenAt >= (notched ? NOTCH_SKIM : SKIM * innerHeight)) {
         const on = ahead(landing.to, landing.to, dir);
         if (on !== undefined) land(l, on, dir, now);
       }
