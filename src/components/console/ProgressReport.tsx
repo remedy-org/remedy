@@ -280,14 +280,14 @@ function ReturnRuler({ remedied, sold, daysIn }: { remedied: number; sold: numbe
       </div>
       <p aria-hidden="true" className="relative h-4 text-micro text-muted">
         <span className="absolute left-0">0%</span>
-        {/* Under the band, from its start; on a phone ending at its end, so it never runs into the scale's last figure. */}
+        {/* Under the band, from its start; below 768px ending at its end, so it never runs into the scale's last figure. */}
         <span
-          className="absolute whitespace-nowrap max-sm:right-[calc(100%-var(--to))] sm:left-(--from)"
+          className="absolute whitespace-nowrap max-md:right-[calc(100%-var(--to))] md:left-(--from)"
           style={{ "--from": on(TYPICAL_RETURN.from), "--to": on(TYPICAL_RETURN.to) } as CSSProperties}
         >
-          <span className="sm:hidden">Whole recall, </span>
-          <span className="max-sm:hidden">Typical over a whole recall, </span>
-          {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}%<span className="max-sm:hidden"> ({TYPICAL_RETURN.source.replace(/^PIRG, .*?, /, "PIRG, ")})</span>
+          <span className="md:hidden">Whole recall, </span>
+          <span className="max-md:hidden">Typical over a whole recall, </span>
+          {TYPICAL_RETURN.from * 100}–{TYPICAL_RETURN.to * 100}%<span className="max-md:hidden"> ({TYPICAL_RETURN.source.replace(/^PIRG, .*?, /, "PIRG, ")})</span>
         </span>
         <span className="absolute right-0">{RULER * 100}%</span>
       </p>
