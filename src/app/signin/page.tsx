@@ -99,7 +99,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
 
           {/* An owner's way in is the recall's own page, with its notice and PayPal login: never the demo. */}
           <p className="mt-6 border-t border-line pt-5 text-ui text-muted">
-            Own a recalled product? Use the claim link on the recall notice, or{" "}
+            Own a recalled product? Use the link or QR code on its recall notice, or{" "}
             <Link href="/r/kikea-x-vesolje" className="text-link text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
               file an <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> claim
             </Link>

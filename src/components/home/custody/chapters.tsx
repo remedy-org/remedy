@@ -98,9 +98,10 @@ function SourceLine({ link = true }: { link?: boolean }) {
 /**
  * The real claim page (/r/kikea-x-vesolje) as it is: the recall's brief beside the offer on a hairline, no card and no
  * steps, every word from the page's own copy (claim/consentCopy.ts). `p` brings the brief in once the screen has taken
- * over the laptop's glass; without it, it is all there.
+ * over the laptop's glass; without it, it is all there. `about`: the line under the headline at every width (the static
+ * figure, which has no frame to fit; the phone's frame leaves it out below 720px).
  */
-export function ConsentChapter({ p }: { p?: Progress }) {
+export function ConsentChapter({ p, about = false }: { p?: Progress; about?: boolean }) {
   const compact = useContext(Compact);
   // In the pinned sequence the product column comes in with the consent column as the screen takes over the laptop's
   // glass (0.12, CustodyStage's HANDOFF): the glass spans the window's width from the top, so the clip, growing only down
@@ -159,8 +160,8 @@ export function ConsentChapter({ p }: { p?: Progress }) {
               <NoBreakHyphens>{CONSENT.title}</NoBreakHyphens>
             </p>
             {/* What Remedy is, under the headline as on the page; the phone's frame leaves it out, so its button and the
-                consent line stay inside the frame. */}
-            <p className="text-ui text-pretty text-muted @max-[719px]:hidden">{CONSENT.about}</p>
+                consent line stay inside the frame. The static figure keeps it (`about`). */}
+            <p className={clsx("text-ui text-pretty text-muted", !about && "@max-[719px]:hidden")}>{CONSENT.about}</p>
             <p className="text-body text-pretty text-muted">{CONSENT.how}</p>
           </div>
           <div className="flex flex-col gap-4">

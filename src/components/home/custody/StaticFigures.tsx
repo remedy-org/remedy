@@ -72,7 +72,7 @@ export function StaticFigures({ filed }: { filed: string }) {
         {/* 01 beside 02: the tall consent screen, and the code tag centred beside it like a thing laid on the table. */}
         <div className="mt-12 grid gap-x-[var(--col-gap)] gap-y-12 lg:mt-16 lg:grid-cols-2">
           <Screen i={0}>
-            <ConsentChapter />
+            <ConsentChapter about />
           </Screen>
           <PaperObject title={CHAPTERS[1].title} text={CHAPTERS[1].text} className="lg:self-center">
             <CodeTag className="max-w-[17rem]" />

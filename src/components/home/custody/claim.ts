@@ -41,8 +41,9 @@ export const CHAPTERS = [
   {
     n: "01",
     title: "Log in with PayPal",
-    // What Remedy sees, in the login screen's own sentence (consentCopy.ts PAYPAL_CONSENT).
-    text: `The owner opens the recall’s claim link and logs in with PayPal. The screen tells them: “${PAYPAL_CONSENT}”`,
+    // How an owner arrives, as the site says it (the link on the recall notice), then what Remedy sees, in the login
+    // screen's own sentence (consentCopy.ts PAYPAL_CONSENT).
+    text: `The owner opens the link on the recall notice and logs in with PayPal. The screen tells them: “${PAYPAL_CONSENT}”`,
   },
   {
     n: "02",
