@@ -1,13 +1,15 @@
-// The evidence: the Kikea X-VESOLJE nursing pillow, a plain navy U, cut in half at the front with stuffing at the cut
-// faces, as in the RM-0442 photo (public/demo/c02-1.jpg). Built from code at load; posed every frame from the cut.
+// The evidence: the Kikea X-VESOLJE nursing pillow in its recalled feather print (dark brown, small multicoloured
+// feathers), cut in half at the front with stuffing at the cut faces, as in the RM-0442 photo (public/demo/k01-1.jpg).
+// Built from code at load; posed every frame from the cut.
 import type * as T from "three";
 import { fbm3, noise3, rng } from "./noise";
 import { blotTexture, fabricTextures } from "./textures";
 
 type Three = typeof T;
 
-// Dimensions in metres, measured off c02-1.jpg (wave3/ref/JOB.md): a C more than a U, 0.56 wide, the tube 0.18 wide
-// (0.31 of the width) and 0.12 high, each half sweeping 2.6 rad so the two ends nearly meet at the back.
+// Dimensions in metres, measured off the earlier RM-0442 photo (wave3/ref/JOB.md), which the feather-print pillow matches:
+// a C more than a U, 0.56 wide, the tube 0.18 wide (0.31 of the width) and 0.12 high, each half sweeping 2.6 rad so the
+// two ends nearly meet at the back.
 export const R = 0.19;
 export const RW = 0.088;
 export const RH = 0.06;
@@ -72,8 +74,8 @@ function fuzzMaterial(THREE: Three, level: number) {
 }
 
 export async function pillowMaterials(THREE: Three): Promise<PillowMaterials> {
-  // Navy sampled off the photo's lit side, then graded for a neutral studio light.
-  const tex = await fabricTextures(THREE, [27, 33, 56]);
+  // The print's dark brown, sampled off the photo's lit side, then graded for a neutral studio light.
+  const tex = await fabricTextures(THREE, [52, 37, 34]);
   tex.map.repeat.set(1, 1);
   const cloth = new THREE.MeshPhysicalMaterial({
     map: tex.map,
@@ -82,7 +84,7 @@ export async function pillowMaterials(THREE: Three): Promise<PillowMaterials> {
     roughness: 0.92,
     sheen: 0.75,
     sheenRoughness: 0.55,
-    sheenColor: new THREE.Color("#6d7a9e"),
+    sheenColor: new THREE.Color("#9e8a7c"),
     envMapIntensity: 0.5,
     side: THREE.DoubleSide,
   });
@@ -375,11 +377,11 @@ export function buildHalf(THREE: Three, dir: 1 | -1, seed: number, mats: PillowM
     }
   });
 
-  // Strands: loose fibres off the clumps (off-white) and frayed threads off the torn fabric (navy), one draw call.
+  // Strands: loose fibres off the clumps (off-white) and frayed threads off the torn fabric (brown), one draw call.
   const sp: number[] = [];
   const sc: number[] = [];
   const white = [0.92, 0.9, 0.86];
-  const navy = [0.14, 0.17, 0.27];
+  const brown = [0.24, 0.17, 0.15];
   const strand = (x: number, y: number, z: number, nx: number, ny: number, nz: number, len: number, c: number[], segs = 3) => {
     let px = x;
     let py = y;
@@ -420,7 +422,7 @@ export function buildHalf(THREE: Three, dir: 1 | -1, seed: number, mats: PillowM
   fibres.renderOrder = 4;
   stuffing.add(fibres);
 
-  // Frayed navy threads off the torn edge (in the half's frame, so they follow the fabric).
+  // Frayed brown threads off the torn edge (in the half's frame, so they follow the fabric).
   const tp: number[] = [];
   const tc: number[] = [];
   for (let j = 0; j < M; j += 1) {
@@ -436,7 +438,7 @@ export function buildHalf(THREE: Three, dir: 1 | -1, seed: number, mats: PillowM
       const qy = py + (r() - 0.6) * len * 0.6;
       const qz = pz + (r() - 0.5) * len * 0.5;
       tp.push(px, py, pz, qx, qy, qz);
-      tc.push(...navy, ...navy);
+      tc.push(...brown, ...brown);
       px = qx;
       py = qy;
       pz = qz;

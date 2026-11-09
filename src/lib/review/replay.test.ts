@@ -34,20 +34,19 @@ describe("replay guard", () => {
 
 describe("replayed photo check", () => {
   it("replays the eval's answer for the demo samples' photos, picked by the claim's code", () => {
-    expect(recordedAnswer([photo("c02-1.jpg")], "M4T")?.case).toBe("c02-pillow-cut-lamplight");
-    // c11 is c01's photo under another code.
-    expect(recordedAnswer([photo("c11-1.jpg")], "K7P")?.case).toBe("c11-wrong-code-K7P");
-    expect(recordedAnswer([photo("c01-1.jpg")], "K7Q")?.case).toBe("c01-pillow-cut-daylight");
-    expect(recordedAnswer([photo("c03-1.jpg"), photo("c03-2.jpg")], "R8D")?.case).toBe("c03-pillow-two-photos");
-    expect(recordedAnswer([photo("c03-2.jpg"), photo("c03-1.jpg")], "R8D")).toBeNull();
+    expect(recordedAnswer([photo("k01-1.jpg")], "M4T")?.case).toBe("k01-feathers-M4T");
+    // The wrong-code photo's tag reads K7Q; the claim's code is K7P.
+    expect(recordedAnswer([photo("k02-1.jpg")], "K7P")?.case).toBe("k02-floral-K7Q");
+    expect(recordedAnswer([photo("k10-1.jpg")], "H9D")?.case).toBe("k10-puzzle-far-dim-H9D");
+    expect(recordedAnswer([photo("k01-1.jpg"), photo("k02-1.jpg")], "M4T")).toBeNull();
     expect(recordedAnswer([Buffer.from("a live camera frame")], "M4T")).toBeNull();
   });
 
   it("decides the demo samples as the eval did: genuine paid, wrong code rejected on the code", async () => {
-    const genuine = await replayVision({ images: [photo("c02-1.jpg")], spec: DEMO_SPEC, code: "M4T" }, 0);
+    const genuine = await replayVision({ images: [photo("k01-1.jpg")], spec: DEMO_SPEC, code: "M4T" }, 0);
     expect(decide(genuine.verdict, { spec: DEMO_SPEC, code: "M4T", photos: 1 }).outcome).toBe("pass");
     expect(genuine.model).toMatch(/recorded answer/);
-    const wrong = await replayVision({ images: [photo("c11-1.jpg")], spec: DEMO_SPEC, code: "K7P" }, 0);
+    const wrong = await replayVision({ images: [photo("k02-1.jpg")], spec: DEMO_SPEC, code: "K7P" }, 0);
     const { outcome, reasons } = decide(wrong.verdict, { spec: DEMO_SPEC, code: "K7P", photos: 1 });
     expect(outcome).toBe("reject");
     expect(reasons.filter((r) => r.outcome === "reject").map((r) => r.check)).toEqual(["code"]);

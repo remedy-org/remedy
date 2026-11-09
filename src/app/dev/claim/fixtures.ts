@@ -7,7 +7,7 @@ import { Verdict, type Claim, type Reason, type Recall } from "@/lib/types";
 
 // Dev-only fixtures for /dev/claim: every step and result of the claim flow without PayPal, a camera or the model.
 // Model answers are real stored ones from the eval (src/lib/demo/verdicts.json), decided by the app's own rule. Decided
-// fixtures keep the eval's codes (K7Q, R8D), which are written in their photos, though Remedy no longer issues Q or 8.
+// fixtures keep the codes written in their photos.
 
 export const NOW = Date.parse("2026-11-07T14:32:00.000Z");
 const at = (s: number) => new Date(NOW + s * 1000).toISOString();
@@ -60,7 +60,7 @@ function decided(prefix: string, model?: string, over: Partial<Claim> = {}) {
 export const open = base("M4T");
 
 export const paid = (() => {
-  const d = decided("c01");
+  const d = decided("k01");
   d.claim.payout = { batchId: "5UXD2E8A7NQ6G", status: "PENDING", updatedAt: at(19) };
   d.claim.events.push(
     { at: at(19), type: "payout_sent", detail: "Payout of $29.99 sent through PayPal" },
@@ -80,49 +80,27 @@ checkingModel.events.push(
 // A repost: stopped by the duplicate-photo check alone.
 export const blockedDuplicate = (() => {
   const claim = base("M4T", {
-    photos: photosOf(["c02-1.jpg"]),
+    photos: photosOf(["k01-1.jpg"]),
     decision: "blocked",
     reasons: [{ check: "duplicate_photo", outcome: "reject", text: "Photo 1 was already used in another claim" }],
   });
   claim.events.push({ at: at(0), type: "photos_received", detail: "1 photo from the live camera" }, { at: at(0.3), type: "blocked", detail: "Blocked before the photo check" });
-  return { claim, photoUrls: ["/demo/c02-1.jpg"] };
+  return { claim, photoUrls: ["/demo/k01-1.jpg"] };
 })();
 
-// The wrong-code sample as the live demo decided it: GPT-6.1 Sol's own answer on demo claim RM-5514 (7 Nov 2026, photo
-// c11-1.jpg, claim code K7P), decided here by the app's rule.
-const wrongCodeVerdict = Verdict.parse({
-  label: {
-    text_seen: "X-VESOLJE",
-    matches_recalled_product: "yes",
-    evidence: 'The plain grey pillow carries a paper tag tied to it with cord. The tag visibly reads "X-VESOLJE" in handwritten lettering, meeting the demo stand-in requirement.',
-  },
-  steps: [
-    {
-      step: "The pillow is cut fully in half, so it can no longer be used",
-      status: "done",
-      evidence: "Two separate pillow halves are visible, with gaps between them at both ends. The cut ends are open, with exposed stuffing spilling onto the floor.",
-    },
-    { step: "The X-VESOLJE tag is on the cut pillow", status: "done", evidence: 'The paper tag reading "X-VESOLJE" is tied by cord around the left cut half.' },
-  ],
-  challenge_code: {
-    text_seen: "K7Q",
-    matches: "no",
-    evidence: 'The handwritten code reads "K7Q". Compared character by character with "K7P", the first two characters match, but the final character is "Q", not "P".',
-  },
-  same_item_in_all_photos: "yes",
-  looks_like_photo_of_screen_or_print: "no",
-  summary: "The single photo shows the qualifying tagged stand-in pillow cut into two halves. Both proof steps are visibly completed, but the one-time code does not match, so the submission does not satisfy all requirements.",
-});
+// The wrong-code sample as the demo decides it: GPT-6.1 Sol's stored answer on its photo (k02-1.jpg, the tag reads K7Q,
+// claim code K7P), decided here by the app's rule.
+const wrongCode = stored("k02");
 export const demoWrongCode = (() => {
-  const { outcome, reasons } = decide(wrongCodeVerdict, { spec: recall.spec, code: "K7P", photos: 1 });
-  const claim = base("K7P", { demo: true, photos: photosOf(["c11-1.jpg"]), verdict: wrongCodeVerdict, reasons, decision: outcome === "reject" ? "rejected" : "held" });
+  const { outcome, reasons } = decide(wrongCode.verdict, { spec: recall.spec, code: wrongCode.code, photos: 1 });
+  const claim = base(wrongCode.code, { demo: true, photos: photosOf(wrongCode.photos), verdict: wrongCode.verdict, reasons, decision: outcome === "reject" ? "rejected" : "held" });
   claim.events.push(
     { at: at(0), type: "photos_received", detail: "1 photo from the demo" },
     { at: at(0.3), type: "prechecked", detail: "Live session, new photos, no other paid or open claim from this account" },
-    { at: at(10.3), type: "checked", detail: "Photo check answered in 10.3 s (gpt-6.1-sol)" },
-    { at: at(10.4), type: "decided", detail: "Rejected by the rule" },
+    { at: at(8.7), type: "checked", detail: "Photo check answered in 8.7 s (gpt-6.1-sol)" },
+    { at: at(8.8), type: "decided", detail: "Rejected by the rule" },
   );
-  return { claim, photoUrls: ["/demo/c11-1.jpg"] };
+  return { claim, photoUrls: wrongCode.photos.map((p) => `/demo/${p}`) };
 })();
 
 /** One demo round, as the index rows give it: which samples ran, and what each got. */
@@ -130,15 +108,15 @@ export const roundAfter = (ids: string[]) => ({
   runs: ids.map((sample) => ({ sample, decision: ({ genuine: "paid", "wrong-code": "rejected", "ai-no-session": "blocked", reposted: "blocked" } as const)[sample as "genuine"] })),
 });
 
-export const held = decided("c03", "gpt-6.1-terra");
+export const held = decided("k10");
 
 const model: Reason = { check: "model", outcome: "hold", text: "The photo check didn't answer, so a person will look at your photos instead" };
-export const heldModel = { claim: base("M4T", { photos: photosOf(["c02-1.jpg"]), decision: "held", reasons: [model] }), photoUrls: ["/demo/c02-1.jpg"] };
+export const heldModel = { claim: base("M4T", { photos: photosOf(["k01-1.jpg"]), decision: "held", reasons: [model] }), photoUrls: ["/demo/k01-1.jpg"] };
 const limit: Reason = { check: "model", outcome: "hold", text: LIMIT_HOLD };
-export const heldLimit = { claim: base("M4T", { photos: photosOf(["c02-1.jpg"]), decision: "held", reasons: [limit] }), photoUrls: ["/demo/c02-1.jpg"] };
+export const heldLimit = { claim: base("M4T", { photos: photosOf(["k01-1.jpg"]), decision: "held", reasons: [limit] }), photoUrls: ["/demo/k01-1.jpg"] };
 
 export const heldPayout = (() => {
-  const d = decided("c01");
+  const d = decided("k01");
   d.claim.decision = "held";
   d.claim.reasons = [...d.claim.reasons, { check: "payout", outcome: "hold", text: "PayPal didn't accept the payout, so a person will send it" }];
   return d;
@@ -153,26 +131,26 @@ export const reviewAsked = (() => {
   d.claim.events.push({ at: at(4 * 60), type: "review_requested", detail: "The owner asked a person to look at the photos" });
   return d;
 })();
-export const rejectedScreen = decided("c10");
+export const rejectedScreen = decided("k06");
 
 export const blocked = {
   claim: base("H6W", {
-    photos: photosOf(["c08-1.jpg"]),
+    photos: photosOf(["web-1.jpg"]),
     decision: "blocked",
     reasons: [{ check: "session", outcome: "reject", text: "This photo wasn't taken in this claim's camera session" }],
   }),
-  photoUrls: ["/demo/c08-1.jpg"],
+  photoUrls: ["/demo/web-1.jpg"],
 };
 blocked.claim.events.push({ at: at(0), type: "photos_received", detail: "1 photo sent from outside the session" }, { at: at(0.2), type: "blocked", detail: "Blocked before the photo check" });
 
 export const blockedAccount = {
   claim: base("T6K", {
-    photos: photosOf(["c02-1.jpg"]),
+    photos: photosOf(["k01-1.jpg"]),
     decision: "blocked",
     reasons: [
       { check: "duplicate_photo", outcome: "reject", text: "Photo 1 was already used in another claim" },
       { check: "payer", outcome: "reject", text: "This PayPal account already has a claim for this recall (RM-0412)" },
     ],
   }),
-  photoUrls: ["/demo/c02-1.jpg"],
+  photoUrls: ["/demo/k01-1.jpg"],
 };

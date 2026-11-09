@@ -543,15 +543,8 @@ export function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | 
   ];
 }
 
-/**
- * A recall's photo checks as the console shows them. The shared recall's spec is written for the pillow its claims
- * photograph (and the model reads it that way); on screen its label is the product's label and its scope note goes.
- */
+/** A recall's photo checks as the console shows them: a scope note written for the photo check about a demo goes. */
 export const shownSpec = <T extends { product: string; label_must_show: string[]; note?: string }>(spec: T): T => ({
   ...spec,
-  // The shared recall accepts a plain stand-in pillow (the real one isn't sold any more): said as the product's own rule,
-  // so an approved claim's sage pillow never contradicts the three prints above it.
-  product: spec.product.replace(/\.?\s*In this demo recall,? a plain ([^.]*?) stand-in pillow of any colour counts when it carries the ([^.]*?) tag\.?$/, ". A plain $1 pillow of any colour also counts when it carries the $2 tag.").replace(/\.?\s*In this demo recall[^.]*\.?$/, "."),
-  label_must_show: spec.label_must_show.map((l) => l.replace(/\(this demo stand-in's label\)/, "(the product’s label)")),
   ...(spec.note !== undefined && /\bdemo\b/.test(spec.note) ? { note: "" } : {}),
 });

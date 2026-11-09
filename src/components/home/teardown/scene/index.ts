@@ -182,7 +182,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
       floorMat.opacity = 0.55;
       mats.stuff.color.set("#d8d1c3");
       mats.stuff.emissive.set("#1f1c17");
-      mats.cloth.sheenColor.set("#6f7ca2");
+      mats.cloth.sheenColor.set("#a08c7e");
     } else {
       // On the pale floor the near-white stuffing needs its own shading to hold its shape: less fill, a darker grade.
       key.intensity = 2.2;
@@ -191,7 +191,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
       floorMat.opacity = 0.3;
       mats.stuff.color.set("#d6cdbd");
       mats.stuff.emissive.set("#0d0b08");
-      mats.cloth.sheenColor.set("#7e8aae");
+      mats.cloth.sheenColor.set("#ad9a8c");
     }
     for (const f of mats.fuzz) f.color.copy(mats.stuff.color);
     // The cream tag on the light theme's cream floor: a darker edge, a stronger contact shadow (in render) and paper a

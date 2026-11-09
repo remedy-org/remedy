@@ -34,8 +34,8 @@ describe("uncertainRead", () => {
     expect(canAskForReview(c09)).toBe(true);
   });
 
-  it("never on a confident rejection: the wrong-code sample (c11) and a photo of a screen (c10)", () => {
-    for (const prefix of ["c11", "c10"]) {
+  it("never on a confident rejection: the wrong-code sample (k02) and a photo of a screen (k06)", () => {
+    for (const prefix of ["k02", "k06"]) {
       const c = evalClaim(prefix);
       expect(c.decision).toBe("rejected");
       expect(uncertainRead(c)).toBe(false);
@@ -43,7 +43,7 @@ describe("uncertainRead", () => {
   });
 
   it("never on a claim that isn't rejected by the rule's model checks", () => {
-    expect(canAskForReview(evalClaim("c02"))).toBe(false);
+    expect(canAskForReview(evalClaim("k01"))).toBe(false);
     const hedged = evalClaim("c09");
     expect(canAskForReview({ ...hedged, decision: "blocked" })).toBe(false);
     // A hard rule, even beside an unsure read.
@@ -53,7 +53,7 @@ describe("uncertainRead", () => {
   });
 
   it("counts an unclear label or code, and a code the model said matches but read otherwise", () => {
-    const base = evalClaim("c11");
+    const base = evalClaim("k02");
     const step: Reason = { check: "step_1", outcome: "reject", text: "Not done: cut in half" };
     const unclearLabel = { ...base, reasons: [{ check: "label", outcome: "hold", text: "Couldn't read the label clearly" } as Reason, step] };
     expect(uncertainRead(unclearLabel)).toBe(true);

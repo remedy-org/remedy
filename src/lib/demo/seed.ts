@@ -7,9 +7,8 @@ import storedVerdicts from "./verdicts.json";
 // The demo recall's claims (claims.ts, DEMO_CLAIMS), built as full claims, in memory (dataset.ts): nothing writes them to a
 // store. Every model answer is a real stored one from the eval (verdicts.json, from eval/out/runs); the decision and
 // reasons come from the app's own rule. They are marked seeded: true and use generated payer ids. Only RM-0442 carries a PayPal
-// payout (the genuine claim, paid 15 s after its photo); the other approved claim has none sent.
-// A decided claim keeps its eval case's code (K7Q or R8D), from before the issued alphabet dropped Q and 8
-// (src/lib/codes.ts): the code is hand-written in the photos, so a new one would change the decision.
+// payout (the genuine claim, paid 15 s after its photo). Each claim's code is the one hand-written on its photo's tag
+// (but for the wrong-code claim, whose tag reads K7Q), and one Remedy can issue (src/lib/codes.ts).
 
 export const SEED_PHOTO_PREFIX = "seed/";
 

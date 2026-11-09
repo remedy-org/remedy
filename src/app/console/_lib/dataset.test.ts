@@ -36,7 +36,7 @@ describe("the console's store", () => {
     expect(await store.getRecall("27-071")).toEqual(demoDataset().recall);
     expect((await store.listClaims()).map((r) => r.id)).toEqual(ids);
     for (const id of ids) expect((await store.getClaim(id))?.id).toBe(id);
-    const photo = await store.getPhoto("seed/c02-1.jpg");
+    const photo = await store.getPhoto("seed/k01-1.jpg");
     expect(photo?.subarray(0, 2)).toEqual(Buffer.from([0xff, 0xd8]));
     // A key outside the dataset's photos never reaches public/: it goes to the store, which refuses a path.
     expect(await store.getPhoto("seed/not-a-demo-photo.jpg")).toBeNull();

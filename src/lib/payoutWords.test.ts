@@ -14,6 +14,7 @@ const { insightsStill } = await import("@/components/insights/still");
 const { previewProps } = await import("@/components/console/preview");
 const { verdictOf, verdictWord } = await import("@/components/console/VerdictMark");
 const { TABS } = await import("@/components/console/StatusTabs");
+const { decideStarter } = await import("@/app/console/_lib/starter");
 
 // One payout vocabulary on every surface: Paid (PayPal confirmed), Sent, settling (sent, not confirmed), Approved (the
 // rule or a person approved, nothing sent). The totals are computed from the dataset (lib/demo/claims.ts) and every
@@ -52,18 +53,18 @@ describe("the payout vocabulary", () => {
     [MONEY_WORD.approved]: DEMO_CLAIMS.filter((d) => d.outcome === "approved").length,
   };
 
-  it("counts the dataset as Paid 1, Sent, settling 0, Approved 1", () => {
-    expect(expected).toEqual({ Paid: 1, "Sent, settling": 0, Approved: 1 });
-    expect(moneyCounts(claims.map((c) => ({ decision: c.decision, payoutStatus: c.payout?.status ?? null })))).toEqual({ paid: 1, settling: 0, approved: 1 });
+  it("counts the dataset as Paid 1, Sent, settling 0, Approved 0", () => {
+    expect(expected).toEqual({ Paid: 1, "Sent, settling": 0, Approved: 0 });
+    expect(moneyCounts(claims.map((c) => ({ decision: c.decision, payoutStatus: c.payout?.status ?? null })))).toEqual({ paid: 1, settling: 0, approved: 0 });
   });
 
   it("gives every console surface the dataset's numbers", () => {
     const s = surfaces(claims);
     for (const surface of [s.tabs, s.rows, s.csv, s.report, s.insights]) expect(surface).toEqual(expected);
     // Paid money is only what PayPal confirmed; the footer's states add up to everything approved.
-    expect(s.footer).toEqual({ paid: 2999, settling: 0, approved: 2999 });
+    expect(s.footer).toEqual({ paid: 2999, settling: 0, approved: 0 });
     expect(s.ledger.paidCents).toBe(s.footer.paid);
-    expect(s.ledger.remedied).toBe(1 + 0 + 1);
+    expect(s.ledger.remedied).toBe(1 + 0 + 0);
     expect(s.remedied).toBe(s.ledger.remedied);
     expect(s.funnelPaid).toBe(expected.Paid);
   });
@@ -74,9 +75,10 @@ describe("the payout vocabulary", () => {
     }
   });
 
-  it("says Sent, settling everywhere for a payout PayPal hasn't confirmed", () => {
-    // RM-0442's payout as it was before PayPal confirmed it.
-    const sent = claims.map((c) => (c.payout ? { ...c, payout: { ...c.payout, status: "PENDING" } } : c));
+  it("says Sent, settling for a payout PayPal hasn't confirmed, and Approved for one a person approved with nothing sent", () => {
+    // RM-0442's payout as it was before PayPal confirmed it, and the held RM-9629 approved by a person (starter.ts).
+    const approved = (c: Claim) => decideStarter(c, { k: "approve", at: "2026-11-08T10:00:00.000Z", by: "Kikea Store" });
+    const sent = claims.map((c) => (c.payout ? { ...c, payout: { ...c.payout, status: "PENDING" } } : approved(c)));
     const s = surfaces(sent);
     const settling = { Paid: 0, "Sent, settling": 1, Approved: 1 };
     for (const surface of [s.tabs, s.rows, s.csv, s.report, s.insights]) expect(surface).toEqual(settling);

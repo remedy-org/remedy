@@ -40,7 +40,7 @@ const LEAD = "Remedy turns any CPSC recall into a live refund program, paid thro
 
 export default async function OpengraphImage() {
   const [photo, semibold, medium, regular, mono] = await Promise.all([
-    readFile(join(process.cwd(), "public/demo/c02-1.jpg")),
+    readFile(join(process.cwd(), "public/demo/k01-1.jpg")),
     googleFont("Schibsted+Grotesk", 600, "Remedy"),
     googleFont("Schibsted+Grotesk", 500, HEAD + TAIL),
     googleFont("Schibsted+Grotesk", 400, LEAD),

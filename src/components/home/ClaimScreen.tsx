@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { CheckIcon, NoBreakHyphens } from "@/components/ui";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
 
-// What the laptop in the hero shows: claim RM-0442, the judges' genuine demo claim (DEMO_SAMPLES "genuine": photo c02,
+// What the laptop in the hero shows: claim RM-0442, the judges' genuine demo claim (DEMO_SAMPLES "genuine": photo k01,
 // code M4T) on the Kikea X-VESOLJE recall, mid-check. Sizes are in em so the screen scales with the device.
 
 // The five checks in the order Fraud checks lists them (Checks.tsx): three without AI, then the model's two. Named as the
@@ -60,7 +60,7 @@ export function ClaimScreen({ phase }: { phase: number }) {
         <div className="flex min-w-0 flex-1 flex-col px-[1.6em] pt-[1.5em]">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[0.5em] bg-surface-2">
             <Image
-              src="/demo/c02-1.jpg"
+              src="/demo/k01-1.jpg"
               alt=""
               fill
               loading="eager"
@@ -74,7 +74,7 @@ export function ClaimScreen({ phase }: { phase: number }) {
             <Corner className="bottom-[1em] right-[1em] border-b border-r" />
             {/* The marked code region: a 1.5px box on the tag's code, labelled on it. In --text, not amber: the hero's CTA
                 is the viewport's one amber. */}
-            <span className="absolute top-[53%] left-[69%] h-[25%] w-[24.5%] rounded-[0.35em] border-[1.5px] border-text/70" aria-hidden="true">
+            <span className="absolute top-[56%] left-[68.5%] h-[21%] w-[19.5%] rounded-[0.35em] border-[1.5px] border-text/70" aria-hidden="true">
               <span className="absolute bottom-full left-[-1.5px] mb-[0.4em] rounded-[0.4em] bg-bg/80 px-[0.7em] py-[0.3em] font-mono text-[1.1em] font-medium whitespace-nowrap text-text">
                 M4T
               </span>

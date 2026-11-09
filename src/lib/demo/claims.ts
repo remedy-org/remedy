@@ -7,8 +7,11 @@
 //   which names the claim it copied. There are fewer claims than the old seed's 40 because there are only this many
 //   distinct photos: a queue of the same three pillows reads as made up.
 // - Every model answer is a stored one from the eval (verdicts.json, by case and run); the app's own rule decides.
-// - Paid is a claim PayPal paid: RM-0442, the genuine claim, 15 s from its photo to its PayPal payout. Approved is a
-//   claim the rule passed with nothing sent yet.
+// - Every photo shows the recalled pillow in one of its three prints, cut and tagged as the spec asks (DEMO_SPEC). Each
+//   code is the claim's own and one Remedy can issue (src/lib/codes.ts); the wrong-code claim's tag reads K7Q, which it
+//   never issues.
+// - Paid is a claim PayPal paid: RM-0442, the genuine claim, 15 s from its photo to its PayPal payout. No claim sits
+//   approved with nothing sent: every other one the model saw is held or rejected by its answer.
 // - Times are fixed (UTC), so the console, the homepage and the report give every claim the same filing time.
 
 export type DemoOutcome = "paid" | "approved" | "held" | "rejected" | "blocked";
@@ -34,20 +37,23 @@ export interface DemoClaim {
   toPayout?: number;
 }
 
-const SOL = (n: 1 | 2 | 3) => `eval/out/runs/spike2-gpt-6.1-sol-r${n}.json`;
-const TERRA = (n: 1 | 2 | 3) => `eval/out/runs/spike2-gpt-6.1-terra-r${n}.json`;
+// The app's model (gpt-6.1-sol, high) on each photo, against DEMO_SPEC (eval/specs/kikea-tagged.json): run 1 of three.
+const RUN = (set: "kikea" | "kikea-held2") => `eval/out/runs/${set}-gpt-6.1-sol-r1.json`;
 
 /** Newest first, as the console's queue opens. */
 export const DEMO_CLAIMS: readonly DemoClaim[] = [
-  // The genuine claim the homepage stages (DEMO_SAMPLES "genuine": photo c02, code M4T), paid 15 s after its photo.
-  { id: "RM-0442", outcome: "paid", photos: ["c02-1.jpg"], code: "M4T", filed: "2026-11-07T15:08:12Z", shoot: 164, answer: { case: "c02-pillow-cut-lamplight", source: SOL(1) }, toPayout: 15 },
-  { id: "RM-9475", outcome: "blocked", block: "unverified", photos: ["c09-1.jpg"], code: "J4R", filed: "2026-11-07T10:26:44Z", shoot: 211 },
-  // The repost: RM-6276's photo, sent again from another account.
-  { id: "RM-2125", outcome: "blocked", block: "duplicate", copies: "RM-6276", photos: ["c05-1.jpg"], code: "W3F", filed: "2026-11-06T22:51:27Z", shoot: 96 },
-  { id: "RM-0118", outcome: "rejected", photos: ["c11-1.jpg"], code: "K7P", filed: "2026-11-06T17:39:02Z", shoot: 187, answer: { case: "c11-wrong-code-K7P", source: SOL(1) } },
-  { id: "RM-9629", outcome: "held", photos: ["c03-1.jpg", "c03-2.jpg"], code: "R8D", filed: "2026-11-06T13:05:48Z", shoot: 243, answer: { case: "c03-pillow-two-photos", source: TERRA(3) } },
-  { id: "RM-6276", outcome: "approved", photos: ["c05-1.jpg"], code: "K7Q", filed: "2026-11-06T08:17:31Z", shoot: 138, answer: { case: "c05-pillow-code-scrawled", source: SOL(1) } },
-  // A picture of a cut pillow from outside the claim's camera, with someone else's code (H6N) on its tag.
+  // The genuine claim the homepage stages (DEMO_SAMPLES "genuine": the feather print, code M4T), paid 15 s after its photo.
+  { id: "RM-0442", outcome: "paid", photos: ["k01-1.jpg"], code: "M4T", filed: "2026-11-07T15:08:12Z", shoot: 164, answer: { case: "k01-feathers-M4T", source: RUN("kikea") }, toPayout: 15 },
+  { id: "RM-9475", outcome: "blocked", block: "unverified", photos: ["k11-1.jpg"], code: "J4R", filed: "2026-11-07T10:26:44Z", shoot: 211 },
+  // The repost: RM-6276's photo, the same file, sent again from another account.
+  { id: "RM-2125", outcome: "blocked", block: "duplicate", copies: "RM-6276", photos: ["k04-1.jpg"], code: "W3F", filed: "2026-11-06T22:51:27Z", shoot: 96 },
+  // The tag reads K7Q: a near miss of this claim's K7P that was never issued to anyone (Remedy never issues a Q).
+  { id: "RM-0118", outcome: "rejected", photos: ["k02-1.jpg"], code: "K7P", filed: "2026-11-06T17:39:02Z", shoot: 187, answer: { case: "k02-floral-K7Q", source: RUN("kikea") } },
+  // Shot from standing height in a dim room: the tag's writing is too small to read, so a person looks.
+  { id: "RM-9629", outcome: "held", photos: ["k10-1.jpg"], code: "H9D", filed: "2026-11-06T13:05:48Z", shoot: 243, answer: { case: "k10-puzzle-far-dim-H9D", source: RUN("kikea-held2") } },
+  // Cut most of the way across, the halves still joined by a strip of fabric: not cut fully in half.
+  { id: "RM-6276", outcome: "rejected", photos: ["k04-1.jpg"], code: "F3X", filed: "2026-11-06T08:17:31Z", shoot: 138, answer: { case: "k04-puzzle-joined-F3X", source: RUN("kikea") } },
+  // A picture of the cut floral pillow from outside the claim's camera, with someone else's code (H6N) on its tag.
   { id: "RM-9545", outcome: "blocked", block: "session", photos: ["web-1.jpg"], code: "T7C", filed: "2026-11-05T19:42:10Z", shoot: 302 },
 ];
 

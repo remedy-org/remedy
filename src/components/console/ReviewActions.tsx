@@ -315,13 +315,13 @@ export function ReviewActions({
       {mode === "approve" && !labels.blocked && (
         <>
           {/* One line, so the evidence above keeps its height. */}
-          {/* A claim the console starts with has no PayPal payout behind it: approve records the decision and sends
-              nothing, so it says Approve, never Pay. */}
+          {/* A claim the console starts with has no PayPal payout behind it: approve records the team's decision (the
+              queue, ledger and report read Approved) and sends nothing, so it says Approve, never Pay, and says both. */}
           <p className="text-ui text-muted">
             <span className="font-medium text-text">
               {claim.seeded ? "Approve" : "Pay"} <span className="font-mono">{claim.amount}</span> {claim.seeded ? "for" : "to"} <span className="font-mono">{claim.payer}</span>?
             </span>{" "}
-            {claim.seeded ? "Nothing is sent through PayPal." : "Through PayPal Payouts."}
+            {claim.seeded ? "Your queue, ledger and report record it as Approved; no PayPal payout goes out for it." : "Through PayPal Payouts."}
           </p>
           {dropped && (
             <p role="status" className="text-ui text-text-2">
