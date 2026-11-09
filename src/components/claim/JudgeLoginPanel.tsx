@@ -3,6 +3,18 @@ import type { ReactNode } from "react";
 import type { JudgeLogin } from "@/lib/demo/judgeLogin";
 import { CopyValue } from "./CopyValue";
 
+// An email with a break allowed after its @: the <wbr> adds no text, so Copy still reads the whole address.
+function atBreak(email: string) {
+  const at = email.lastIndexOf("@");
+  if (at <= 0) return email;
+  return (
+    <>
+      {email.slice(0, at)}@<wbr />
+      {email.slice(at + 1)}
+    </>
+  );
+}
+
 /**
  * The demo account's PayPal login, in the open: neutral (information, never the amber of the action), the email and
  * password as two plain rows of mono text, each on one line with a copy button, after one line of how-to. Rendered on
@@ -45,11 +57,11 @@ export function JudgeLoginPanel({
       <p className="text-muted">Use these when PayPal asks you to log in.</p>
       <dl className="flex flex-col border-b border-line">
         {rows.map((r) => (
-          // The whole value always shows: on a narrow screen the address wraps, mid-address if it must.
+          // The whole value always shows: on a narrow screen the address wraps after its @, mid-word only if it must.
           <div key={r.label} data-copy className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-line py-2">
             <dt className="text-faint capitalize">{r.label}</dt>
-            <dd data-copy-value className="col-start-1 font-mono break-all text-text select-all">
-              {r.value}
+            <dd data-copy-value className="col-start-1 font-mono [overflow-wrap:anywhere] text-text select-all">
+              {r.label === "email" ? atBreak(r.value) : r.value}
             </dd>
             <dd className="col-start-2 row-span-2 row-start-1">
               <CopyValue label={r.label} />

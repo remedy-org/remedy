@@ -5,7 +5,7 @@
 ## The problem
 
 - Only 6–10% of recalled products are ever returned or destroyed ([PIRG, 2024](https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf)).
-- Refunds still run on email: in our count of the [CPSC recalls API](https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2026-10-01&RecallDateEnd=2026-11-05), 1 Oct to 5 Nov 2026, 20 of 36 refund recalls told owners to email a photo, some to @gmail.com inboxes.
+- Refunds still run on email: in our count of the [CPSC recalls API](https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2026-10-01&RecallDateEnd=2026-11-05), 1 Oct to 5 Nov 2026, 20 of the 27 refund recalls that required a photo told owners to email it, some to @gmail.com inboxes.
 - The CPSC names "artificially generated images… purporting to demonstrate product destruction" as a threat, and warns that fraud controls can "reduce recall participation" ([RFI CPSC-2026-0067](https://public-inspection.federalregister.gov/2026-07328.pdf)). Remedy answers both: easy for honest owners, no payout for a photo that isn't tied to a live claim.
 
 ## Try it now

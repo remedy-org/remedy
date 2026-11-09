@@ -15,9 +15,9 @@ export function LegalPage({ title, updated, sections }: { title: string; updated
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="page flex h-16 items-center justify-between gap-4">
-        <Wordmark size="md" href="/" />
+        <Wordmark size="md" href="/" prefetch={false} />
         <div className="flex items-center gap-2 sm:gap-5">
-          <Link href="/" className="inline-flex min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text">
+          <Link href="/" prefetch={false} className="inline-flex min-h-11 items-center rounded-control text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text">
             <span aria-hidden="true">&larr;&nbsp;</span>Back to Remedy
           </Link>
           <ThemeToggle />
