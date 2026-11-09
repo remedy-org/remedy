@@ -92,8 +92,11 @@ export function ProgressReport({
           className={clsx(
             "mt-2 grid gap-x-6 gap-y-3 text-ui",
             // The homepage's sheet sizes by its own width (a frame, a tablet column, a phone), never by the window's.
-            // Three columns from a tablet's width, each a pair: who and which report, when, and what the remedy is.
-            home ? "grid-cols-[repeat(2,minmax(0,1fr))] @min-[40rem]:grid-cols-[repeat(3,minmax(0,1fr))]" : "grid-cols-2 sm:grid-cols-3",
+            // In pairs: who and which report, when and over what period, the remedy and its amount. Two to a row on a
+            // phone; from a tablet's width three columns of two, filled down each column.
+            home
+              ? "grid-cols-[repeat(2,minmax(0,1fr))] @min-[40rem]:grid-flow-col @min-[40rem]:grid-cols-[repeat(3,minmax(0,1fr))] @min-[40rem]:grid-rows-2"
+              : "grid-cols-2 sm:grid-flow-col sm:grid-cols-3 sm:grid-rows-2",
           )}
         >
           {(
@@ -101,11 +104,11 @@ export function ProgressReport({
               // The header CPSC's monthly progress report opens with, from the notice and the claims alone: the recalling
               // firm as CPSC's notice names it, and the report's place in the monthly sequence. No contact is guessed.
               firm ? ["Recalling firm", firm] : null,
-              ["Recall date", formatDate(recall.recallDate)],
-              ["Remedy offered", "Refund for destroyed units"],
               reportNo ? ["Progress report", `Monthly, no. ${reportNo}`] : null,
+              ["Recall date", formatDate(recall.recallDate)],
               // The period the figures cover: from the recall's date to the day it was drawn up, counted inclusive.
               ["Reporting period", `${formatPeriod(formatDate(recall.recallDate), generated)}${daysIn ? `, ${plural(daysIn, "day")} in` : ""}`],
+              ["Remedy offered", "Refund for destroyed units"],
               ["Refund per unit", formatMoney(recall.refund)],
             ] satisfies ([string, string] | null)[]
           )
