@@ -68,31 +68,41 @@ function fpOpen(p: number) {
 export const tickAt = (id: CheckId) => lerp(RANGES[id][0], RANGES[id][1], Math.min(0.82, DEPART[id] - 0.04));
 
 /**
- * Seconds since the photo, as claim RM-0442 ran (its timeline in the console): the three pre-checks are done by
- * EXHIBIT.prechecked (0.3 s), a tenth of a second each as their ticks land; the model reads the photo from there until
- * it answers at EXHIBIT.answered (11.3 s), as check 5 ticks; and the payout is sent at EXHIBIT.seconds (15 s), early in
- * the payout beat. So the clock moves from the first check on, never parked at 0:00 while checks pass.
+ * Claim RM-0442's one timeline, as the console gives it (claim.ts EXHIBIT; custody/claim.test.ts holds it to the
+ * dataset's events), placed on the pin. The three pre-checks are done by EXHIBIT.prechecked (0.3 s), a tenth of a
+ * second each as their ticks land; the model reads the photo from there until it answers at EXHIBIT.answered (11.3 s),
+ * as check 5 ticks, and the rule approves it at that instant. The payout is sent at EXHIBIT.seconds (15 s) as the paid
+ * beat opens, and PayPal confirms it at EXHIBIT.confirmed (55 s): only then does the payout read Paid, and the receipt
+ * print its confirmation and take the PAID stamp. So the clock moves from the first check on, never parked at 0:00
+ * while checks pass, and never shows Paid beside a payout still on its way.
  */
+/** Where in the paid beat the payout is sent (the receipt starts to feed out) and where PayPal confirms it. */
+export const SENT_AT = 0.04;
+export const CONFIRMED_AT = 0.48;
 const clockPoints = (): readonly (readonly [number, number])[] => [
   [RANGES.live[0] + (RANGES.live[1] - RANGES.live[0]) * 0.55, 0], // the photo is taken mid-scan
   [tickAt("live"), EXHIBIT.prechecked / 3],
   [tickAt("fp"), (2 * EXHIBIT.prechecked) / 3],
   [tickAt("acct"), EXHIBIT.prechecked],
   [tickAt("torn"), EXHIBIT.answered],
-  [RANGES.paid[0] + 0.25 * (RANGES.paid[1] - RANGES.paid[0]), EXHIBIT.seconds],
+  // Held at the answer while the camera stays on the cut, so check 5's stop reads the console's answer time.
+  [lerp(RANGES.torn[0], RANGES.torn[1], DEPART.torn), EXHIBIT.answered],
+  [lerp(RANGES.paid[0], RANGES.paid[1], SENT_AT), EXHIBIT.seconds],
+  [lerp(RANGES.paid[0], RANGES.paid[1], CONFIRMED_AT), EXHIBIT.confirmed],
 ];
 
 export function elapsed(p: number) {
   const CLOCK = clockPoints();
   if (p < CLOCK[0][0]) return null;
   for (let i = 1; i < CLOCK.length; i++) if (p < CLOCK[i][0]) return lerp(CLOCK[i - 1][1], CLOCK[i][1], inv(CLOCK[i - 1][0], CLOCK[i][0], p));
-  return EXHIBIT.seconds;
+  return EXHIBIT.confirmed;
 }
 
-/** The time since the photo to the tenth, "0:00.2", so the pre-checks' fractions of a second show as they pass. */
+/** The time since the photo to the nearest tenth, "0:00.2", so the pre-checks' fractions of a second show as they pass
+ * and the answer reads 0:11.3, as the console's "answered in 11.3 s". */
 export function clock(s: number | null) {
   if (s === null) return "—";
-  const tenths = Math.floor(s * 10 + 1e-6);
+  const tenths = Math.round(s * 10);
   return `0:${String(Math.floor(tenths / 10)).padStart(2, "0")}.${tenths % 10}`;
 }
 
@@ -256,10 +266,12 @@ export interface ExhibitState {
   done: number;
   seconds: number | null;
   decision: Decision;
-  /** The receipt's slide (0 to 1) and whether its stamp has landed. */
+  /** The receipt's slide (0 to 1). */
   receipt: number;
-  stamped: boolean;
+  /** The payout sent (15 s), and PayPal's confirmation (55 s): the payout reads Paid, and the receipt prints its
+   * confirmation row and takes the PAID stamp, only from then. */
   sent: boolean;
+  stamped: boolean;
   shot: Shot;
 }
 
@@ -267,8 +279,9 @@ const CHECK_IDS = CHECKS.map((c) => c.id);
 
 /** The receipt is opaque by a third of its slide, and check 5's words under it leave as fast: a short handover. */
 export const RECEIPT_FADE = 3;
-/** The receipt's slide in the paid beat: in from 2% of it, landing at 24%, as the camera arrives on the paid shot. */
-const receiptAt = (p: number) => (p < RANGES.paid[0] ? 0 : easeOut(inv(0.02, 0.24, local("paid", p))));
+/** The receipt's slide in the paid beat: in as the payout is sent (SENT_AT), landing 22% later, as the camera arrives on
+ * the paid shot. */
+const receiptAt = (p: number) => (p < RANGES.paid[0] ? 0 : easeOut(inv(SENT_AT, SENT_AT + 0.22, local("paid", p))));
 
 /**
  * Whether the side callout is up (1) or down (0): a state, not a fade, so the stage animates it in time and a reader
@@ -320,7 +333,8 @@ export function stateAt(pIn: number): ExhibitState {
   const chars = p < RANGES.code[0] ? 0 : p > RANGES.code[1] ? 3 : [0.4, 0.47, 0.54].filter((t) => codeT >= t).length;
   const charNow = p >= RANGES.code[0] && p <= RANGES.code[1] && codeT < 0.58 ? chars - 1 : -1;
   const paidT = local("paid", p);
-  const ruled = p >= RANGES.paid[0] + 0.12 * (RANGES.paid[1] - RANGES.paid[0]);
+  // The rule decides on the model's answer at once (the console's Decision and Photo check share a time).
+  const ruled = p >= tickAt("torn");
   return {
     p,
     beat,
@@ -348,8 +362,8 @@ export function stateAt(pIn: number): ExhibitState {
     seconds: elapsed(p),
     decision: ruled ? "pay" : elapsed(p) === null ? "waiting" : "checking",
     receipt: receiptAt(p),
-    stamped: p >= RANGES.paid[0] && paidT >= 0.3,
-    sent: p >= lerp(RANGES.paid[0], RANGES.paid[1], 0.25),
+    sent: p >= lerp(RANGES.paid[0], RANGES.paid[1], SENT_AT),
+    stamped: p >= lerp(RANGES.paid[0], RANGES.paid[1], CONFIRMED_AT),
     shot: shotAt(p),
   };
 }

@@ -16,6 +16,10 @@ describe("the homepage's payout times", () => {
     expect([EXHIBIT.seconds, EXHIBIT.confirmed]).toEqual([CLAIM.seconds, CLAIM.confirmed]);
   });
 
+  it("give the Opened Exhibit's answer and approval at the console's times", () => {
+    expect([EXHIBIT.answered, EXHIBIT.answered]).toEqual([since("checked"), since("decided")]);
+  });
+
   it("never call the 15 s a payout landing", () => {
     const words = [...CHAPTERS.map((c) => c.text), ...RECEIPT_ROWS.map(([k, v]) => `${k} ${v}`)].join(" ");
     expect(words).not.toMatch(/paid[^.]*15 seconds|photo to payout/i);

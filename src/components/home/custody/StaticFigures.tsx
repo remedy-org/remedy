@@ -60,13 +60,13 @@ export function StaticFigures({ filed }: { filed: string }) {
         <div className="grid-12 gap-y-5 lg:items-end">
           <div className="col-span-12 lg:col-span-7">
             <p className="eyebrow text-muted">How it works</p>
-            {/* tabIndex -1: the nav’s How it works focuses it after the jump. */}
+            {/* tabIndex -1: the nav’s How it works focuses it after the jump. One sentence in one ink (DESIGN.md). */}
             <h2 id="how-title" tabIndex={-1} className="mt-5 text-title-lg font-medium text-balance">
-              Sent to PayPal {CLAIM.seconds} seconds after the photo. <span className="text-muted">One claim, start to finish.</span>
+              Sent to PayPal {CLAIM.seconds} seconds after the photo.
             </h2>
           </div>
           <p className="col-span-12 max-w-[60ch] text-body text-pretty text-text-2 lg:col-span-5 lg:col-start-8 lg:pb-1">
-            From PayPal login to payout, on the <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> Nursing Pillows recall.
+            One claim, start to finish: from PayPal login to payout, on the <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> Nursing Pillows recall.
           </p>
         </div>
         {/* 01 beside 02: the tall consent screen, and the code tag centred beside it like a thing laid on the table. */}

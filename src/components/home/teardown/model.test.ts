@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import storedVerdicts from "@/lib/demo/verdicts.json";
 import { CHECKS, EXHIBIT } from "./claim";
-import { ARRIVE, BEATS, DEPART, RANGES, RECEIPT_FADE, SHOTS, TOTAL_VH, clock, holdOf, shotAt, stateAt } from "./model";
+import { ARRIVE, BEATS, CONFIRMED_AT, DEPART, RANGES, RECEIPT_FADE, SENT_AT, SHOTS, TOTAL_VH, clock, holdOf, shotAt, stateAt, tickAt } from "./model";
 
 describe("Opened Exhibit model", () => {
   it("lays the beats end to end over p 0..1, about 70vh a beat", () => {
@@ -27,7 +27,7 @@ describe("Opened Exhibit model", () => {
     expect(z.sent).toBe(true);
     expect(z.stamped).toBe(true);
     expect(z.receipt).toBe(1);
-    expect(clock(z.seconds)).toBe(`0:${EXHIBIT.seconds}.0`);
+    expect(clock(z.seconds)).toBe(`0:${EXHIBIT.confirmed}.0`);
   });
 
   it("shows each check at its hold finished: it and the checks before it passed, the camera still on it", () => {
@@ -37,8 +37,25 @@ describe("Opened Exhibit model", () => {
       expect(s.done).toBe(i + 1);
       expect(s.leaderFade).toBe(1);
       expect(s.callout).toBeGreaterThan(0.95);
-      expect(s.decision).toBe("checking");
+      // The rule approves on the model's answer, as check 5 ticks.
+      expect(s.decision).toBe(i < CHECKS.length - 1 ? "checking" : "pay");
     });
+  });
+
+  it("runs RM-0442's one timeline: approved at the answer, sent at 15 s, Paid and stamped only at PayPal's 55 s", () => {
+    const [a, z] = RANGES.paid;
+    const at = (t: number) => stateAt(a + t * (z - a));
+    expect(stateAt(tickAt("torn") - 1e-6).decision).toBe("checking");
+    const answered = stateAt(holdOf("torn"));
+    expect([clock(answered.seconds), answered.decision, answered.sent, answered.receipt]).toEqual(["0:11.3", "pay", false, 0]);
+    expect(stateAt(a - 1e-6).sent).toBe(false);
+    expect([clock(at(SENT_AT).seconds), at(SENT_AT).sent, at(SENT_AT).stamped]).toEqual([`0:${EXHIBIT.seconds}.0`, true, false]);
+    // No receipt before the payout is sent: it says "Sent to PayPal 15 s after the photo".
+    for (let t = 0; t < SENT_AT; t += 0.005) expect(at(t).receipt).toBe(0);
+    for (let t = SENT_AT; t < CONFIRMED_AT; t += 0.005) expect(at(t).stamped).toBe(false);
+    expect([clock(at(CONFIRMED_AT).seconds), at(CONFIRMED_AT).stamped]).toEqual([`0:${EXHIBIT.confirmed}.0`, true]);
+    // The paid stop rests confirmed, the receipt landed.
+    expect(stateAt(holdOf("paid"))).toMatchObject({ stamped: true, receipt: 1 });
   });
 
   it("never leaves the side column blank between checks: the outgoing callout holds until the next cuts in", () => {
@@ -71,7 +88,7 @@ describe("Opened Exhibit model", () => {
         expect(s.sent).toBe(true);
       }
     }
-    expect(stateAt(a + 0.24 * (z - a)).receipt).toBeCloseTo(1, 5);
+    expect(stateAt(a + (SENT_AT + 0.22) * (z - a)).receipt).toBeCloseTo(1, 5);
   });
 
   it("draws a check's leader only as the camera arrives on its part, and fades it as the camera leaves", () => {
@@ -150,13 +167,13 @@ describe("Opened Exhibit model", () => {
     expect(at[0]).not.toBe("0:00.0");
   });
 
-  it("never runs the clock backwards, and stays inside 0:00 to 0:15", () => {
+  it("never runs the clock backwards, and stays inside 0:00 to PayPal's confirmation", () => {
     let last = -1;
     for (let p = 0; p <= 1; p += 0.002) {
       const s = stateAt(p).seconds;
       if (s === null) continue;
       expect(s).toBeGreaterThanOrEqual(last);
-      expect(s).toBeLessThanOrEqual(EXHIBIT.seconds);
+      expect(s).toBeLessThanOrEqual(EXHIBIT.confirmed);
       last = s;
     }
   });
