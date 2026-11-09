@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { useScroll, type MotionValue } from "motion/react";
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
-import { CHECKS, EXHIBIT, RECEIPT_ROWS } from "./claim";
+import { CHECKS, CONFIRMED_ROW, EXHIBIT, RECEIPT_ROWS } from "./claim";
 import { BEATS, RANGES, RECEIPT_FADE, TOTAL_VH, clock, holdOf, stateAt, tickAt, type BeatId, type ExhibitState, type Shot } from "./model";
 import type { Colors, Exhibit, Rect, Tier } from "./scene";
 import { createFrameWatch, stageLayers } from "./watch";
@@ -59,6 +59,15 @@ const noop = () => () => {};
 /** The beats that get a pre-rendered still, in order (posters/<theme>-<beat>-<d|m>.webp). */
 const POSTER_BEATS: BeatId[] = ["intro", "live", "fp", "acct", "code", "torn", "paid"];
 const posterSrc = (beat: BeatId, dark: boolean, small: boolean) => `/teardown/${dark ? "dark" : "light"}-${beat}-${small ? "m" : "d"}.webp`;
+
+/** How far the dissolve into poster k (from poster k - 1) has got at p, 0 to 1: centred on beat k's start, 3% of a
+ * beat wide, and never begun before the beat before's hold has been left. */
+function dissolve(k: number, p: number) {
+  const [a, z] = RANGES[POSTER_BEATS[k]];
+  const half = ((z - a) * 0.03) / 2;
+  const from = Math.max(a - half, holdOf(POSTER_BEATS[k - 1]) + 0.0005);
+  return Math.min(1, Math.max(0, (p - from) / (a + half - from)));
+}
 
 /** Resolves any CSS colour (oklch, color-mix, var-free) to #rrggbb through a 1px canvas. */
 function resolveColor(css: string, fallback: string) {
@@ -131,8 +140,13 @@ function Receipt({ stamped, className, style }: { stamped: boolean; className?: 
           <Money value={EXHIBIT.amount} size="amount" />
         </p>
         <dl className="mt-5 border-t border-dashed border-paper-line">
-          {RECEIPT_ROWS.map(([k, v, data]) => (
-            <div key={k} className="flex items-baseline justify-between gap-4 border-b border-dashed border-paper-line py-1.5 text-ui">
+          {RECEIPT_ROWS.map(([k, v, data], i) => (
+            // PayPal's confirmation prints with the stamp; until then its line is blank paper (the receipt's height held).
+            <div
+              key={k}
+              className={clsx("flex items-baseline justify-between gap-4 border-b border-dashed border-paper-line py-1.5 text-ui", i === CONFIRMED_ROW && styles.printed)}
+              data-on={i !== CONFIRMED_ROW || stamped || undefined}
+            >
               <dt className="text-ink-muted">{k}</dt>
               <dd className={clsx("text-ink", data && "font-mono")}>{v}</dd>
             </div>
@@ -180,7 +194,7 @@ function Header({ compact, chapter }: { compact?: boolean; chapter?: string }) {
   );
 }
 
-function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done" | "active" | "sent"> }) {
+function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done" | "active" | "sent" | "stamped"> }) {
   const items: [string, React.ReactNode][] = [
     [
       "Since the photo",
@@ -201,11 +215,14 @@ function Readouts({ s }: { s: Pick<ExhibitState, "seconds" | "decision" | "done"
     ],
     [
       "Payout",
-      // The amount is the receipt's, which lands with it: here only the state.
-      s.sent ? (
+      // The amount is the receipt's, which lands with it: here only the state, in the console's words. Paid (the one
+      // green) only once PayPal confirms it, with the receipt's stamp; Sent before that.
+      s.stamped ? (
         <span key="p" className="text-pay">
-          Sent
+          Paid
         </span>
+      ) : s.sent ? (
+        "Sent"
       ) : (
         "Waiting"
       ),
@@ -425,14 +442,12 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
     });
     // Posters: a short dissolve (3% of a beat) centred on each beat's start, where the callout, readouts and check row
     // change, so the still and the callout always describe the same check, and a scroll that stops there never lands
-    // on two stills half-drawn for long.
+    // on two stills half-drawn for long. Never begun at a stop: the intro's rests 0.002 before the live photo's start,
+    // inside the half-width, so a dissolve starts only past the beat before's hold (a couple of pixels' margin), and the
+    // next still is exactly 0 there (no faint double exposure).
     if (posters.current && (!live || !scene.current)) {
       posters.current.querySelectorAll<HTMLElement>("[data-poster]").forEach((img, k) => {
-        const [a, z] = RANGES[POSTER_BEATS[k]];
-        const w = (z - a) * 0.03;
-        const fadeIn = k === 0 ? 1 : Math.min(1, Math.max(0, (st.p - (a - w / 2)) / w));
-        const fadeOut = k === POSTER_BEATS.length - 1 ? 1 : 1 - Math.min(1, Math.max(0, (st.p - (z - w / 2)) / w));
-        img.style.opacity = String(Math.min(fadeIn, fadeOut));
+        img.style.opacity = String(Math.min(k === 0 ? 1 : dissolve(k, st.p), k === POSTER_BEATS.length - 1 ? 1 : 1 - dissolve(k + 1, st.p)));
       });
     }
   }, [p, live, watchFrames]);

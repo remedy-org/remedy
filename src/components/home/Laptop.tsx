@@ -22,7 +22,7 @@ export function Laptop({ screen, renderTilt }: { screen: ReactNode; renderTilt: 
             <div className={styles.tag} style={{ left: "calc(50% + 34em)", top: "113em" }}>
               <span className="font-mono">CPSC 27-071</span>
               <hr />
-              Kikea X-VESOLJE
+              X-VESOLJE Nursing Pillows
               <br />
               19,596 units
             </div>

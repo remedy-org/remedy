@@ -291,11 +291,13 @@ type Cell = CustomCellRendererProps<ClaimRow>;
 // check's time from 812px), each cell drawn by the console's own renderer (cells.tsx) as /console draws it: ids, filing
 // times, times and money in mono, the reason in the verdict's cell (under its mark in a column this narrow, as the
 // console sets it), a refusal's bar hatched. No reason column of its own and no foot the console lacks.
+// The claim and checks columns at what their cells need (the photo, id and filing time; the console's 112px checks), so
+// the verdict's reason has room for its longest line whole at 1440 ("Photo already used in another claim · RM-6276").
 const COLUMNS: { id: string; header: string; cell: ComponentType<Cell>; className: string }[] = [
-  { id: "claim", header: "Claim", cell: ClaimCell, className: "w-[220px]" },
+  { id: "claim", header: "Claim", cell: ClaimCell, className: "w-[184px]" },
   // A container, as the console's verdict cell is (claims-grid.css): narrower than 26rem, the reason goes under its mark.
   { id: "verdict", header: "Verdict", cell: VerdictCell, className: "min-w-[144px] flex-1 @container" },
-  { id: "checks", header: "Checks", cell: ChecksCell, className: "w-[136px]" },
+  { id: "checks", header: "Checks", cell: ChecksCell, className: "w-[112px]" },
   { id: "time", header: "Answered in", cell: TimeCell, className: "hidden w-[104px] justify-end @min-[812px]:flex" },
   { id: "payout", header: "Payout", cell: PayoutCell, className: "hidden w-[112px] @min-[708px]:flex" },
   { id: "amount", header: "Amount", cell: AmountCell, className: "w-[96px] justify-end" },

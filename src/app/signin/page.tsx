@@ -5,7 +5,7 @@ import { PAYPAL_CONSENT } from "@/components/claim/ConsentCard";
 import { JudgeLoginPanel } from "@/components/claim/JudgeLoginPanel";
 import { previewProps } from "@/components/console/preview";
 import { SigninPreview } from "@/components/console/SigninPreview";
-import { Button, CheckIcon, ErrorState, ThemeToggle, Wordmark } from "@/components/ui";
+import { Button, CheckIcon, ErrorState, NoBreakHyphens, ThemeToggle, Wordmark } from "@/components/ui";
 import { judgeLogin } from "@/lib/demo/judgeLogin";
 import { DEFAULT_NEXT, getSession, safeNext } from "@/lib/session";
 
@@ -56,7 +56,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
       </header>
       <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none sm:py-16 sm:pb-28 lg:items-start">
         <div className="col-span-12 mx-auto flex w-full max-w-[400px] flex-col lg:col-span-4 lg:mx-0">
-          <h1 className="text-h2 font-medium">Log in to Remedy</h1>
+          {/* Its cap height trimmed at the top, so the letters' top sits on the preview window's top edge, not 5px under it. */}
+          <h1 className="text-h2 font-medium [text-box:trim-start_cap_alphabetic]">Log in to Remedy</h1>
           <p className="mt-2 text-ui text-muted">Review recall claims and pay refunds through PayPal.</p>
 
           {error && <ErrorState variant="inline" className="mt-6" title={error.title} description={error.description} />}
@@ -99,7 +100,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <p className="mt-6 border-t border-line pt-5 text-ui text-muted">
             Own a recalled product? Use the claim link on the recall notice, or{" "}
             <Link href="/r/kikea-x-vesolje" className="text-link text-text underline decoration-line-2 underline-offset-4 hover:decoration-text">
-              file a claim
+              file an <NoBreakHyphens>X-VESOLJE</NoBreakHyphens> claim
             </Link>
             .
           </p>

@@ -23,7 +23,7 @@ export function HeroPhone() {
               </div>
               <dl className="mt-4 text-ui">
                 {[
-                  ["Sent to", "Your PayPal account"],
+                  ["Paid to", "Verified PayPal account"],
                   ["Recall", CLAIM.recall],
                 ].map(([k, v], i) => (
                   <div key={k} className="flex justify-between gap-4 border-t border-dashed border-paper-line py-2">

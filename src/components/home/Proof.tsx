@@ -18,20 +18,23 @@ const FIGURES: { figure: string; text: string }[] = [
 
 /**
  * Results: the one number that matters is the heading, the zero at the display size (never bigger than the hero's h1)
- * with what it counts beside it, the lead and the method's footnote under it; the three supporting counts stand beside
- * them on columns 8 to 12, a list on hairlines with room to breathe, ending on the footnote's last line, so the frame is
- * one balanced slide, never a lone figure with an empty half. On a laptop screen 860px tall and up it is a screen of its
- * own (scroll/stops.ts frames the section's top under the nav), so For companies never shows at its foot: the block sits
- * a little above the screen's middle, the counts' rows opened up to hold it, so the slide is composed rather than its
- * top 40% used over 500px of empty paper (1920x1080).
+ * with what it counts beside it, the lead and the one fake's sentence under it on columns 1 to 7; the three supporting
+ * counts along the foot, one per four columns on a hairline (a list on hairlines on phones), with the benchmark's
+ * footnote under them, the figures it sources. On a tall laptop screen the section is a slide: the statement at its top
+ * (the section's own 96px under the nav, so the frame before it, Fraud checks' rule, never shows its eyebrow at the
+ * foot) and the counts on its foot, so the slide is composed from top to foot, never a block in the middle of a third
+ * of empty screen, and it ends 48px under the counts' footnote, For companies' 96px after it.
  */
 export function Proof() {
   return (
     <Section
       id="proof"
-      className="lg:[@media(min-height:860px)]:flex lg:[@media(min-height:860px)]:min-h-[calc(100svh-4rem)] lg:[@media(min-height:860px)]:flex-col lg:[@media(min-height:860px)]:justify-center"
-      padClassName="py-18 lg:py-24 lg:[@media(min-height:860px)]:pt-16 lg:[@media(min-height:860px)]:pb-28"
-      pageClassName="w-full"
+      // On a laptop screen 860px tall and up the section is a slide of its own (scroll/stops.ts frames its top under the
+      // nav): the statement at its top, the counts pushed to its foot.
+      className="lg:[@media(min-height:860px)]:flex lg:[@media(min-height:860px)]:min-h-[calc(100svh-4rem)] lg:[@media(min-height:860px)]:flex-col"
+      padClassName="py-18 lg:py-24 lg:[@media(min-height:860px)]:pb-12"
+      pageClassName="w-full lg:[@media(min-height:860px)]:flex lg:[@media(min-height:860px)]:flex-1 lg:[@media(min-height:860px)]:flex-col"
+      bodyClassName="mt-10 lg:mt-16 lg:[@media(min-height:860px)]:mt-auto lg:[@media(min-height:860px)]:pt-16"
       exhibit="Results"
       headingSpan={7}
       stack
@@ -46,32 +49,29 @@ export function Proof() {
         </span>
       }
       lead="We put Remedy up against real owner photos, official recall photos, photos of screens, wrong codes and AI-made fakes. It reads the code on every tag character by character, so one wrong letter refuses the claim."
-      aside={
-        <dl className="flex flex-col">
-          {FIGURES.map((f) => (
-            <div
-              key={f.text}
-              className="flex items-baseline gap-x-4 border-t border-line py-4 first:border-t-0 first:pt-0 last:pb-0 lg:py-8 lg:first:pt-0 lg:last:pb-0 lg:[@media(min-height:860px)]:py-11"
-            >
-              <dt className="w-[5.5ch] shrink-0 text-head-sm font-medium whitespace-nowrap sm:w-[6.5ch] sm:text-title">
-                {f.figure}
-              </dt>
-              <dd className="text-body text-pretty text-text-2">{f.text}</dd>
-            </div>
-          ))}
-        </dl>
-      }
       note={
-        <>
-          {/* The one fake that passed, said once in the lead's own voice: it is why the camera is the first check. */}
-          <p className="mt-4 max-w-[60ch] text-body text-pretty text-text-2 lg:mt-0">
-            One fake passed the photo check in every try, a generated image of a cut pillow with the code drawn on, which is
-            why photos only come from the claim&rsquo;s live camera.
-          </p>
-          {/* Where every figure on this slide comes from, once, with no marks to send a reader down to it. */}
-          <p className="mt-3 text-micro text-pretty text-faint">Remedy fraud benchmark, 7 Nov 2026: 36 claims, each run 3 times.</p>
-        </>
+        // The one fake that passed, said once in the lead's own voice: it is why the camera is the first check.
+        <p className="max-w-[60ch] text-body text-pretty text-text-2">
+          One fake passed the photo check in every try, a generated image of a cut pillow with the code drawn on, which is
+          why photos only come from the claim&rsquo;s live camera.
+        </p>
       }
-    />
+    >
+      <dl className="grid grid-cols-1 lg:grid-cols-12 lg:gap-x-(--col-gap)">
+        {FIGURES.map((f) => (
+          <div
+            key={f.text}
+            className="flex items-baseline gap-x-4 border-t border-line py-4 lg:col-span-4 lg:flex-col lg:gap-y-2 lg:pt-6 lg:pb-0"
+          >
+            <dt className="w-[5.5ch] shrink-0 text-head-sm font-medium whitespace-nowrap sm:w-[6.5ch] sm:text-title lg:w-auto lg:text-title-lg">
+              {f.figure}
+            </dt>
+            <dd className="text-body text-pretty text-text-2">{f.text}</dd>
+          </div>
+        ))}
+      </dl>
+      {/* Where every figure on this slide comes from, once, under the counts, with no marks to send a reader down to it. */}
+      <p className="mt-4 text-micro text-pretty text-faint lg:mt-6">Remedy fraud benchmark, 7 Nov 2026: 36 claims, each run 3 times.</p>
+    </Section>
   );
 }

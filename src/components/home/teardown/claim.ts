@@ -23,7 +23,8 @@ export const EXHIBIT = {
   seconds: GENUINE.toPayout!,
   /** Photo received to PayPal confirming the payout, as the console's timeline has it. */
   confirmed: 55,
-  /** Photo received to the three pre-checks done, and to the model's answer (the stored run's 11.29 s). */
+  /** Photo received to the three pre-checks done, and to the model's answer (the stored run's 11.29 s), when the rule
+   * approves it: the console's Photo check and Decision. */
   prechecked: 0.3,
   answered: 11.29,
   photo: `/demo/${GENUINE.photos[0]}`,
@@ -98,15 +99,18 @@ export const CHECKS: readonly Check[] = [
 /**
  * The receipt's lines, all from the claim above: label, value, and whether the value is data (set in mono). The claim id
  * is the receipt's header, so it is not a row, and the five checks are the check row's under it, so they are not one
- * either: the receipt keeps six rows, its height as it was before PayPal's confirmation had a row of its own.
+ * either. Sent, then PayPal's confirmation, the two steps the console's timeline gives the claim: the confirmation is
+ * the last line, printed only when PayPal confirms (55 s), with the PAID stamp under it; until then its line is blank
+ * paper, so the receipt never changes height.
  */
 export const RECEIPT_ROWS: readonly [string, string, boolean][] = [
   ["Recall", EXHIBIT.recall, true],
   ["Code", EXHIBIT.code, true],
   ["Decision", "Approved by the rule", false],
-  // The times in the sans, as the console sets "15 s": in mono its space read as two. Sent, then PayPal's confirmation,
-  // the two steps the console's timeline gives the claim.
+  ["Paid to", "Verified PayPal account", false],
+  // The times in the sans, as the console sets "15 s": in mono its space read as two.
   ["Sent to PayPal", `${EXHIBIT.seconds} s after the photo`, false],
   ["PayPal confirmed", `${EXHIBIT.confirmed} s after the photo`, false],
-  ["Paid to", "Verified PayPal account", false],
 ];
+/** The row printed only once PayPal confirms the payout. */
+export const CONFIRMED_ROW = RECEIPT_ROWS.length - 1;

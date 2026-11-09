@@ -46,6 +46,8 @@ export const GATES: { title: string; text: string; ai: boolean }[] = [
 // is past every gate, to the payout. The repost carries the genuine claim's own photo: that is the point.
 interface Sample {
   name: string;
+  /** The claim's name where its outcome prints, so a lane whose head is under the nav still says whose line it is. */
+  short: string;
   photo: string;
   stop: number;
   paid?: boolean;
@@ -55,19 +57,26 @@ interface Sample {
 // Each refusal in the console's own words (console/_lib/view.ts refusalLine, from the rule's reason), so a claim reads
 // the same here, in the console's queue and in How it works' copy of it.
 const SAMPLES: Sample[] = [
-  { name: "A photo from the web", photo: "/demo/web-1.jpg", stop: 0, reason: refusalLine({ check: "session", text: "This photo wasn't taken in this claim's camera session" }) },
-  { name: "A photo used before", photo: "/demo/k01-1.jpg", stop: 1, reason: refusalLine({ check: "duplicate_photo", text: "Photo 1 was already used in another claim" }) },
-  { name: "Wrong code on the tag", photo: "/demo/k02-1.jpg", stop: 3, reason: refusalLine({ check: "code", text: "Written code reads K7Q; this claim's code is K7P" }) },
-  { name: "A genuine claim", photo: "/demo/k01-1.jpg", stop: 5, paid: true, reason: <><Money value={29.99} /> to the owner&rsquo;s PayPal</> },
+  { name: "A photo from the web", short: "Web photo", photo: "/demo/web-1.jpg", stop: 0, reason: refusalLine({ check: "session", text: "This photo wasn't taken in this claim's camera session" }) },
+  { name: "A photo used before", short: "Used before", photo: "/demo/k01-1.jpg", stop: 1, reason: refusalLine({ check: "duplicate_photo", text: "Photo 1 was already used in another claim" }) },
+  { name: "Wrong code on the tag", short: "Wrong code", photo: "/demo/k02-1.jpg", stop: 3, reason: refusalLine({ check: "code", text: "Written code reads K7Q; this claim's code is K7P" }) },
+  { name: "A genuine claim", short: "Genuine claim", photo: "/demo/k01-1.jpg", stop: 5, paid: true, reason: <><Money value={29.99} /> to the owner&rsquo;s PayPal</> },
 ];
 
 const RULE = <>Any &ldquo;no&rdquo; refuses the claim. Any &ldquo;unclear&rdquo; holds it for a person.</>;
 
-/** A claim's outcome where its line ends: Refused (or Paid) in its state colour, then why, in one plain line. */
-function Outcome({ sample }: { sample: Sample }) {
+/**
+ * A claim's outcome where its line ends: Refused (or Paid) in its state colour, then why, in one plain line. In the
+ * matrix it is named ("Web photo: refused"): at the rule's stop the lanes' heads are under the nav.
+ */
+function Outcome({ sample, named }: { sample: Sample; named?: boolean }) {
+  const word = sample.paid ? "Paid" : "Refused";
   return (
     <>
-      <span className={clsx("block font-medium", sample.paid ? "text-pay" : "text-stop")}>{sample.paid ? "Paid" : "Refused"}</span>
+      <span className="block font-medium">
+        {named && <span className="text-text">{sample.short}: </span>}
+        <span className={sample.paid ? "text-pay" : "text-stop"}>{named ? word.toLowerCase() : word}</span>
+      </span>
       <span className="mt-0.5 block text-muted">{sample.reason}</span>
     </>
   );
@@ -77,6 +86,15 @@ function Outcome({ sample }: { sample: Sample }) {
 // least 300ms after the lane before, over DRAW_FOR in all; its outcome prints as the line arrives.
 const LANE_GAP = 300;
 const DRAW_FOR = 720;
+/**
+ * On a glide (a fling or Page Down landing on Fraud checks, the page moving faster than GLIDE px/ms with the matrix in
+ * view: measured 1.6 to 2 as the matrix comes in, where one wheel notch eases at 1 at most), every lane still waiting
+ * plays at once, FAST_GAP apart and at FAST_INK of its pace, so the ink is finished by the time the glide lands (it
+ * comes into view about 630ms before at 1440x900), never still drawing after it.
+ */
+const GLIDE = 1.2;
+const FAST_GAP = 50;
+const FAST_INK = 0.4;
 const vars = (v: Record<string, string | number>) => v as CSSProperties;
 
 // On the page grid: the checks in columns 1 to 5, the four claims' lanes in 6 to 12, so each lane has room for its
@@ -102,15 +120,16 @@ function useLanes(ref: RefObject<HTMLDivElement | null>) {
     const cells = (lane: string) => root.querySelectorAll<HTMLElement>(`[data-lane="${lane}"]`);
     root.querySelectorAll<HTMLElement>("[data-lane]").forEach((el) => (el.dataset.go = "armed"));
     let next = 0;
-    const play = (stop: HTMLElement) => {
+    const play = (stop: HTMLElement, fast = false) => {
       io.unobserve(stop);
       const lane = stop.dataset.stop!;
       if (cells(lane)[0]?.dataset.go === "play") return;
       // Lanes that come into view together still draw one after another.
       const now = performance.now();
-      next = Math.max(now, next + LANE_GAP);
+      next = Math.max(now, next + (fast ? FAST_GAP : LANE_GAP));
       cells(lane).forEach((el) => {
         el.style.setProperty("--go-at", `${Math.round(next - now)}ms`);
+        if (fast) el.style.setProperty("--ink", String(FAST_INK));
         el.dataset.go = "play";
       });
     };
@@ -126,11 +145,18 @@ function useLanes(ref: RefObject<HTMLDivElement | null>) {
     let rest = 0;
     const settle = () => {
       const r = root.getBoundingClientRect();
-      if (r.top < window.innerHeight / 2 && r.bottom > window.innerHeight / 2) stops.forEach(play);
+      if (r.top < window.innerHeight / 2 && r.bottom > window.innerHeight / 2) stops.forEach((s) => play(s));
     };
+    // A glide over the matrix: the lanes still waiting play now, fast, so they have finished when it lands.
+    let last = { y: window.scrollY, t: performance.now() };
     const onScroll = () => {
       window.clearTimeout(rest);
       rest = window.setTimeout(settle, 160);
+      const now = { y: window.scrollY, t: performance.now() };
+      const speed = Math.abs(now.y - last.y) / Math.max(1, now.t - last.t);
+      last = now;
+      const r = root.getBoundingClientRect();
+      if (speed > GLIDE && r.top < window.innerHeight && r.bottom > 0) stops.forEach((s) => play(s, true));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
@@ -141,6 +167,7 @@ function useLanes(ref: RefObject<HTMLDivElement | null>) {
       root.querySelectorAll<HTMLElement>("[data-lane]").forEach((el) => {
         delete el.dataset.go;
         el.style.removeProperty("--go-at");
+        el.style.removeProperty("--ink");
       });
     };
   }, [ref]);
@@ -218,8 +245,7 @@ export function Pipeline() {
                           <span aria-hidden="true" className={clsx(styles.trail, LINE, "top-0 h-7")} />
                           <span aria-hidden="true" className={clsx(styles.outcome, "absolute top-7 left-[1.125rem] h-px w-3.5", s.paid ? "bg-pay" : "bg-stop")} />
                           <p className={clsx(styles.outcome, "pt-11 pr-2 pb-6 text-ui text-pretty")}>
-                            <span className="sr-only">{s.name}: </span>
-                            <Outcome sample={s} />
+                            <Outcome sample={s} named />
                           </p>
                         </>
                       )}

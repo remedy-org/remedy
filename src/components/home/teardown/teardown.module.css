@@ -294,6 +294,27 @@
   max-width: 21rem;
 }
 
+/* PayPal's confirmation, printed with the stamp: blank paper until then (its line and hairline held, so the receipt
+   never changes height), then fed in from the top as a printer lays a line. */
+.printed {
+  clip-path: inset(0 0 100% 0);
+  opacity: 0;
+  transition:
+    clip-path 240ms var(--ease-out-quart),
+    opacity 120ms linear;
+}
+
+.printed[data-on] {
+  clip-path: inset(0 0 0 0);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .printed {
+    transition: none;
+  }
+}
+
 .stampSlot {
   display: inline-flex;
   min-height: 32px;
@@ -480,8 +501,8 @@ button.cellBody:hover .label {
   mask-image: linear-gradient(to bottom, transparent 22%, #000 33%);
 }
 
-/* Compact, at 80% from the bottom right, with only the two rows the readouts don't already say (checks, photo to
-   payout), so it sits in the still's lower right corner and both halves of the evidence stay in view above it. */
+/* Compact, at 80% from the bottom right, with only the two rows the readouts don't already say (sent, then PayPal's
+   confirmation), so it sits in the still's lower right corner and both halves of the evidence stay in view above it. */
 .small .receipt {
   max-width: 15rem;
   margin-left: auto;
@@ -489,7 +510,7 @@ button.cellBody:hover .label {
   transform-origin: 100% 100%;
 }
 
-.small .receipt dl > :not(:nth-child(4), :nth-child(7)) {
+.small .receipt dl > :not(:nth-child(5), :nth-child(6)) {
   display: none;
 }
 

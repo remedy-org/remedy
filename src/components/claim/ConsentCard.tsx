@@ -7,6 +7,7 @@ import type { Refusal } from "@/lib/limits";
 import { CAPTURE_SESSION_MINUTES } from "@/lib/ids";
 import type { Decision, Recall } from "@/lib/types";
 import { StepTitle } from "./Exhibit";
+import { inFourOrder } from "./fourOrder";
 import { JudgeLoginPanel } from "./JudgeLoginPanel";
 import { LimitNextStep, LimitNotice } from "./LimitNotice";
 import { consentLines, PAYPAL_CONSENT } from "./consentCopy";
@@ -121,7 +122,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
             The four claims you&rsquo;ll send
           </p>
           <ul aria-labelledby="four-claims" className="grid grid-cols-2 gap-x-4 gap-y-3">
-            {DEMO_SAMPLES.map((s) => {
+            {inFourOrder(DEMO_SAMPLES).map((s) => {
               const asked = s.id === sample;
               return (
                 <li key={s.id} aria-current={asked || undefined} className="flex min-w-0 items-center gap-3">
