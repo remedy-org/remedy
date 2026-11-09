@@ -2,7 +2,7 @@ import { moneyCounts } from "@/lib/payoutWords";
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
 import { cutInHalf, handWrittenLabel, nounOf } from "@/components/claim/model";
-import { CHECK_NAMES, fiveNames, fiveOutcomes } from "@/lib/fiveChecks";
+import { CHECK_NAMES, checkOf, fiveNames, fiveOutcomes, type CheckNumber } from "@/lib/fiveChecks";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
@@ -30,6 +30,8 @@ export interface CheckBar {
   id: string;
   label: string;
   state: BarState;
+  /** Which of the five it counts under, from the recall's steps (fiveChecks.ts checkOf: the tag's step is check 4's). */
+  n?: CheckNumber | null;
 }
 
 /** Seconds after the photos arrived that each later money step happened, and where the claim stands. */
@@ -136,6 +138,8 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
   });
   const answered = c.checks.filter((r) => !PRE_IDS.has(r.check) && r.check !== "review" && r.check !== APPEAL_CHECK);
   const steps = recall.spec.proof_steps;
+  // Each bar carries the check it counts under, so the strip and its hover card group by the recall's own steps.
+  const numbered = (bars: CheckBar[]) => bars.map((b) => ({ ...b, n: checkOf(b.id, steps) }));
   if (answered.length) {
     const bars: CheckBar[] = answered.map((r) => ({ id: r.check, label: checkLabel(r.check, code, steps), state: r.outcome }));
     // "Same item" is only asked of two or more photos. A one-photo claim keeps its place in the strip as a skipped
@@ -144,21 +148,20 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
       const at = bars.findIndex((b) => b.id === "code") + 1 || bars.findIndex((b) => b.id === "label") + 1;
       bars.splice(at, 0, { id: "same_item", label: checkLabel("same_item", code, steps), state: "skipped" });
     }
-    return [...pre, ...bars];
+    return numbered([...pre, ...bars]);
   }
   const expected = ["label", "code", "same_item", "screen", ...steps.map((_, i) => `step_${i + 1}`)];
   const state: BarState = c.decision === "blocked" ? "skipped" : "waiting";
-  return [...pre, ...expected.map((id) => ({ id, label: checkLabel(id, code, steps), state }))];
-
+  return numbered([...pre, ...expected.map((id) => ({ id, label: checkLabel(id, code, steps), state }))]);
 }
 
 /** The five checks a row's recorded answers fall under, each as its worst answer ("Same item" isn't asked of one photo,
  * so it never keeps "Really destroyed" from passing). The strip draws one bar for each. */
-export const fiveOf = (bars: Pick<CheckBar, "id" | "state">[]) => fiveOutcomes(bars.filter((b) => !(b.id === "same_item" && b.state === "skipped")));
+export const fiveOf = (bars: Pick<CheckBar, "id" | "state" | "n">[]) => fiveOutcomes(bars.filter((b) => !(b.id === "same_item" && b.state === "skipped")));
 
 /** The strip as a sentence, in the evidence panel's words: "3 of 5 checks passed · 1 held · 1 not run". The hover card,
  * screen readers and the CSV say it, so the console counts five checks everywhere. */
-export function barsSentence(bars: Pick<CheckBar, "id" | "state">[]): string {
+export function barsSentence(bars: Pick<CheckBar, "id" | "state" | "n">[]): string {
   const five = fiveOf(bars);
   const n = (o: string) => five.filter((x) => x.outcome === o).length;
   const rest = ([["fail", "failed"], ["hold", "held"], ["skipped", "not run"], ["open", "waiting"]] as const).filter(([o]) => n(o)).map(([o, w]) => `${n(o)} ${w}`);

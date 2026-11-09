@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { barsSentence, duration, fiveOf, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
-import { checkOf, FIVE_CHECKS, type Outcome } from "@/lib/fiveChecks";
+import { FIVE_CHECKS, numberOf, type Outcome } from "@/lib/fiveChecks";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
 import { VerdictMark, verdictOf, verdictWord } from "./VerdictMark";
@@ -523,7 +523,7 @@ function ChecksCard({ row, bars }: { row: GridRow; bars: CheckBar[] }) {
   const five = fiveOf(bars);
   const checks = FIVE_CHECKS.map((c) => {
     const title = row.checkNames?.[c.n - 1] ?? c.short;
-    const of = shown.filter((b) => checkOf(b.id) === c.n);
+    const of = shown.filter((b) => numberOf(b) === c.n);
     return { n: c.n, title, state: FIVE_BAR[five[c.n - 1].outcome], listed: of.length > 0, answers: of.filter((b) => b.label !== title) };
   }).filter((c) => c.listed);
   return (
