@@ -11,7 +11,8 @@ import { durationFigure, LedgerItem } from "@/components/console/Ledger";
 import { TABS } from "@/components/console/StatusTabs";
 import { verdictOf } from "@/components/console/VerdictMark";
 import { PAYPAL_CONSENT } from "@/components/claim/consentCopy";
-import { ClockIcon, DURATION, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
+import { ClockIcon, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
+import { LAND } from "./arrival";
 import { CLAIM, CODE_AT, CODE_STAGGER, CONSENT, SHOT_AT, WRITE_FOR } from "./claim";
 import { ENTER, LEAVE, useGate } from "./gate";
 
@@ -312,7 +313,8 @@ const EDGE = "first:pl-4 last:pr-4";
 // The console's mode (no homepage `stacked`): its own renderers, its own type.
 const cellProps = (row: ClaimRow) => ({ data: row, context: {} }) as unknown as Cell;
 
-function QueueRow({ row }: { row: ClaimRow }) {
+/** One claim's row in the console queue. Exported for chapter 06's arrival, whose card carries RM-0442's row in. */
+export function QueueRow({ row }: { row: ClaimRow }) {
   return (
     <div className="flex h-13 border-b border-line">
       {COLUMNS.map(({ id, cell: Render, className }) => (
@@ -341,18 +343,15 @@ function tally(rows: readonly ClaimRow[]) {
 export function ConsoleChapter({ p, rows }: { p: Progress; rows: ClaimRow[] }) {
   const arriving = rows.find((r) => r.id === CLAIM.id);
   const others = rows.filter((r) => r.id !== CLAIM.id);
-  // RM-0442's row opens into the table once the console is in (an object moving, 560ms), its words after the space. It
-  // waits 200ms, so on a page straight past 0.91 the table has landed first and the paid row is the last thing in.
-  const open = useGate(p, (v) => v >= 0.91, { duration: DURATION.object, ease: EASE.outQuart, delay: 0.2 }, { duration: 0.28, ease: EASE.outQuart });
-  // The console's 52px row.
-  const height = useTransform(open, (k) => `${(k * 3.25).toFixed(3)}rem`);
-  const opacity = useTransform(open, [0.5, 1], [0, 1]);
+  // RM-0442's slot is open from the start, so the card carrying it in (arrival.ts, CustodyStage) glides to a place that
+  // never moves; its own row shows once the card lands there (LAND), the card's last frame and its first the same.
+  const opacity = useTransform(p, (v) => (v >= LAND ? 1 : 0));
   // The tabs and the ledger count RM-0442 as its row lands (All 6 to 7, Paid 0 to 1, $0.00 to $29.99), never before.
-  const [landed, setLanded] = useState(() => open.get() >= 0.5);
-  useMotionValueEvent(open, "change", (k) => setLanded(k >= 0.5));
+  const [landed, setLanded] = useState(() => p.get() >= LAND);
+  useMotionValueEvent(p, "change", (v) => setLanded(v >= LAND));
   const { counts, remedied } = tally(landed ? rows : others);
   // The console's one neutral flash on a changed row (never amber: the rail's running chapter is this screen's amber).
-  const flash = useTransform(p, (v) => `color-mix(in oklch, var(--text) ${(8 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
+  const flash = useTransform(p, (v) => `color-mix(in oklch, var(--text) ${(8 * (1 - ramp(v, LAND, 1))).toFixed(2)}%, transparent)`);
   // Its window is as tall as the queue (CustodyStage, .screen[data-fit]): a tall screen shows the seven claims whole over
   // their foot, never a well of empty rows; a short one keeps as many whole rows as the window holds.
   return (
@@ -417,10 +416,8 @@ export function ConsoleChapter({ p, rows }: { p: Progress; rows: ClaimRow[] }) {
           {/* .claims-grid: the console's own styles for its cells (the picked-row box stays hidden, as in /console). */}
           <div data-console-rows className="claims-grid flex min-h-0 flex-1 flex-col flex-wrap content-start overflow-hidden *:w-full *:shrink-0">
             {arriving && (
-              <motion.div className="overflow-hidden" style={{ height }}>
-                <motion.div style={{ opacity, backgroundColor: flash }}>
-                  <QueueRow row={arriving} />
-                </motion.div>
+              <motion.div data-arriving style={{ opacity, backgroundColor: flash }}>
+                <QueueRow row={arriving} />
               </motion.div>
             )}
             {others.map((r) => (
