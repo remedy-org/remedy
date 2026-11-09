@@ -9,7 +9,7 @@ import { STARTS, clamp01 } from "./timeline";
 
 /** The arrival's stretch of the timeline: from the console's cut (chapter 06's start) to the row landing. The console
  * stop (0.96, CustodyStage PAGE_STOPS) rests after it, on the finished queue. */
-export const ARRIVAL = [STARTS[5], 0.948] as const;
+export const ARRIVAL = [STARTS[5], 0.955] as const;
 
 /** Where the console's content (bar, ledger, tabs, the other claims) comes in, in time: once the window is whole. */
 export const CONSOLE_IN = ARRIVAL[0] + 0.8 * (ARRIVAL[1] - ARRIVAL[0]);
@@ -37,15 +37,21 @@ const mix = (a: Box, b: Box, t: number): Box => ({ x: a.x + (b.x - a.x) * t, y: 
 export const FOLD = [0, 0.35] as const;
 export const GLIDE = [0.35, 0.8] as const;
 
+/** How much of its widening, from the receipt's width to the row's, the card does as it folds; the rest as it glides,
+ * so its leading edge travels at an even, calm pace through both (all of it in the fold moved that edge about 7px per
+ * pixel of scroll). */
+export const FOLD_WIDEN = 0.4;
+
 /**
- * The card's box at k, in stage px: the receipt's box r0 at 0; folded by FOLD's end into a card the row's size, its
- * right edge and middle held where the receipt's were, so the receipt never moves while it folds, but never past the
- * console window's columns `win` (so on a narrow laptop it never folds out over the rail's words); at the slot r1 by
- * GLIDE's end, and held there.
+ * The card's box at k, in stage px: the receipt's box r0 at 0; folded by FOLD's end to the row's height and part way to
+ * its width, its right edge and middle held where the receipt's were, so the receipt never moves while it folds, but
+ * never past the console window's columns `win` (so on a narrow laptop it never folds out over the rail's words); at
+ * the slot r1 by GLIDE's end, and held there.
  */
 export function cardAt(k: number, r0: Box, r1: Box, win: Box): Box {
-  const x = Math.min(Math.max(r0.x + r0.w - r1.w, win.x), win.x + win.w - r1.w);
-  const folded: Box = { x, y: r0.y + r0.h / 2 - r1.h / 2, w: r1.w, h: r1.h };
+  const w = r0.w + FOLD_WIDEN * Math.max(0, r1.w - r0.w);
+  const x = Math.min(Math.max(r0.x + r0.w - w, win.x), win.x + win.w - w);
+  const folded: Box = { x, y: r0.y + r0.h / 2 - r1.h / 2, w, h: r1.h };
   return mix(mix(r0, folded, inOut(ramp(k, ...FOLD))), r1, inOut(ramp(k, ...GLIDE)));
 }
 

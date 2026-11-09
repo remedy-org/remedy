@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ARRIVAL, CONSOLE_IN, LAND, arrivalAt, cardAt, frameAt, lookAt, type Box } from "./arrival";
+import { ARRIVAL, CONSOLE_IN, FOLD_WIDEN, LAND, arrivalAt, cardAt, frameAt, lookAt, type Box } from "./arrival";
 import { PAGE_STOPS } from "./CustodyStage";
 import { scrollAt } from "./pace";
 import { STARTS } from "./timeline";
@@ -24,9 +24,9 @@ describe("chapter 06's arrival", () => {
     expect(cardAt(1, receipt, slot, win)).toEqual(slot);
   });
 
-  it("folds in place: the receipt's right edge and middle held, the card the row's size", () => {
+  it("folds in place: the receipt's right edge and middle held, the card the row's height and part way to its width", () => {
     const f = cardAt(0.35, receipt, slot, win);
-    expect(f.w).toBeCloseTo(slot.w);
+    expect(f.w).toBeCloseTo(receipt.w + FOLD_WIDEN * (slot.w - receipt.w));
     expect(f.h).toBeCloseTo(slot.h);
     expect(f.x + f.w).toBeCloseTo(receipt.x + receipt.w);
     expect(f.y + f.h / 2).toBeCloseTo(receipt.y + receipt.h / 2);
@@ -43,6 +43,14 @@ describe("chapter 06's arrival", () => {
       const b = cardAt(k + 0.01, receipt, slot, win);
       expect(Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.w - b.w) + Math.abs(a.h - b.h)).toBeLessThan(120);
     }
+  });
+
+  it("moves the card's leading (left) edge at an even pace through the fold and the glide: its peak under 1.7x its mean", () => {
+    // Widened all in the fold, the edge peaked at over 3x its mean speed across the move.
+    const xs = [...Array(81).keys()].map((i) => cardAt(i / 100, receipt, slot, win).x);
+    const steps = xs.slice(1).map((x, i) => Math.abs(x - xs[i]));
+    const mean = steps.reduce((a, b) => a + b, 0) / steps.length;
+    expect(Math.max(...steps)).toBeLessThan(1.7 * mean);
   });
 
   it("draws the window's frame out from the card once it has folded, whole by the glide's end", () => {
