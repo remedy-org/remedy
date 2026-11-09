@@ -47,14 +47,15 @@ export interface ReceiptProps {
   /** The CPSC recall number. */
   recallId: string;
   claimId: string;
-  /** The PayPal login the owner knows, masked; without one, the payer ID's tail. */
+  /** The PayPal login the owner knows, masked; without one, "Your PayPal account". */
   account?: string | null;
-  payerTail: string;
   /** PayPal's payout batch id: the reference PayPal itself shows. */
   payoutId?: string;
   sentAt?: string;
   /** Seconds from the photos arriving to the payout leaving. */
   took: number | null;
+  /** Seconds from the photos arriving to PayPal confirming the payout, once it has. */
+  confirmed?: number | null;
   /** Prints now: a claim decided under a minute ago. A reload, or a later visit, shows it at rest. */
   arrive: boolean;
   /** Arriving: how long to wait before printing (the passed checks fold first). */
@@ -64,16 +65,24 @@ export interface ReceiptProps {
 }
 
 /**
- * The paid receipt, the flow's one physical moment: cream paper torn from a roll, the amount at full size with the PAID
- * stamp beside it, then PayPal's live status, who it went to, the claim, the PayPal payout id and when it left. It
- * prints out of the refund row's slot, and the stamp lands once it is out.
+ * The paid receipt, the flow's one physical moment: cream paper torn from a roll, its claim id in the header as the
+ * homepage's receipt has it, the amount at full size with the PAID stamp beside it, then PayPal's live status, who it
+ * went to, the recall, the PayPal payout id and when it left. It prints out of the refund row's slot, and the stamp
+ * lands once it is out.
  */
-export function Receipt({ amount, recallId, claimId, account, payerTail, payoutId, sentAt, took, arrive, delay = 0, foot }: ReceiptProps) {
+export function Receipt({ amount, recallId, claimId, account, payoutId, sentAt, took, confirmed, arrive, delay = 0, foot }: ReceiptProps) {
   return (
-    // The slot is drawn: a dark lip a little wider than the paper, which feeds down out of it, so the paper's edge while
-    // it prints reads as the slot it comes from, never as a clipping.
+    // The slot is drawn while it prints: a dark lip a little wider than the paper, which feeds down out of it, so the
+    // paper's edge reads as the slot it comes from, never as a clipping. Once the paper is out, the lip fades (300ms),
+    // so the receipt at rest is paper alone; reduced motion never draws it.
     <div id="receipt" className="relative scroll-mt-24">
-      <span aria-hidden="true" className="absolute -inset-x-2 -top-px z-10 h-[3px] rounded-full bg-text/75" />
+      {arrive && (
+        <span
+          aria-hidden="true"
+          className="absolute -inset-x-2 -top-px z-10 h-[3px] rounded-full bg-text/75 opacity-0 transition-opacity duration-300 ease-snap starting:opacity-100 motion-reduce:hidden"
+          style={{ transitionDelay: `${FEED_MS + delay}ms` }}
+        />
+      )}
       <div className={clsx(arrive && styles.feed)} style={{ ["--feed-ms" as string]: `${FEED_MS}ms`, ["--feed-delay" as string]: `${delay}ms` }}>
       <div>
         <Paper
@@ -88,30 +97,17 @@ export function Receipt({ amount, recallId, claimId, account, payerTail, payoutI
           <div className="flex flex-col px-6 pt-8 pb-6 sm:px-7">
             <div className="flex items-baseline justify-between gap-4 text-ui text-ink-muted">
               <span>Refund receipt</span>
-              <span className="whitespace-nowrap">
-                CPSC <span className="font-mono">{recallId}</span>
-              </span>
+              <span className="font-mono whitespace-nowrap text-ink">{claimId}</span>
             </div>
             <div className="mt-3 flex items-center justify-between gap-4">
               <Money value={Number(amount.value)} currency={amount.currency} size="amount" className="text-ink" />
               <PaidStamp arrive={arrive} delay={delay} />
             </div>
             <dl className="mt-5 border-t border-dashed border-paper-line text-ui">
-              <PayoutRow />
-              <Row label="To">
-                {account ? (
-                  <Masked text={account} />
-                ) : (
-                  <>
-                    <span className="sr-only">PayPal account ending {payerTail}</span>
-                    <span aria-hidden="true" className="font-mono">
-                      ••••{payerTail}
-                    </span>
-                  </>
-                )}
-              </Row>
-              <Row label="Claim" mono>
-                {claimId}
+              <PayoutRow confirmed={confirmed} />
+              <Row label="To">{account ? <Masked text={account} /> : "Your PayPal account"}</Row>
+              <Row label="Recall">
+                CPSC <span className="font-mono">{recallId}</span>
               </Row>
               {payoutId && (
                 <Row label="PayPal payout" mono>
@@ -147,9 +143,9 @@ function Row({ label, mono, children }: { label: string; mono?: boolean; childre
   );
 }
 
-/** "p••@owner.test": Schibsted's bullets sit wide apart, so the mask's run of them is set in mono, as the console's is. */
+/** "p••@o••••.com": Schibsted's bullets sit wide apart, so the mask's run of them is set in mono, as the console's is. */
 function Masked({ text }: { text: string }) {
-  // Read out as "d, hidden, @owner.test" rather than a run of bullets.
+  // Read out as "p, hidden, @o, hidden, .com" rather than a run of bullets.
   const spoken = text.replace(/•+/g, ", hidden, ");
   return (
     <>

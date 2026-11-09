@@ -168,6 +168,7 @@ describe("the tag's words", () => {
     expect(taggedThing({ proof_steps: ["Cut it in half"] })).toBeNull();
   });
   it("masks a login email so its owner recognises it", () => {
-    expect(maskEmail("pat@owner.test")).toBe("p••@owner.test");
+    expect(maskEmail("pat@owner.example.com")).toBe("p••@o••••.com");
+    expect(maskEmail("dan.okafor@outlook.com")).toBe("d••@o••••.com");
   });
 });

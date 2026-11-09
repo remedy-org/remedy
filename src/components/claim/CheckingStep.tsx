@@ -9,17 +9,17 @@ import { CheckList, outcomeWord, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
 import { ClaimLayout, OutcomeHead } from "./Exhibit";
 import styles from "./flow.module.css";
-import { cutInHalf, handWrittenLabel, isDecided, money, nounOf, type ClaimView } from "./model";
+import { cutInHalf, handWrittenLabel, isDecided, nounOf, photoAlt, type ClaimView } from "./model";
 import { RefundRow } from "./Receipt";
 import { PAID_TITLE } from "./ReceiptLive";
 import { settleClaim } from "./settle";
 
-// Each row resolves on its own beat, one after another, in reduced motion too: there it is a plain swap. The camera's
-// pre-checks are quick; the photo check's answers, and the refund after them, get a beat each to be read. Short enough
-// that the receipt prints within about a second of the payout it shows.
+// Each row resolves on its own beat, one after another. The camera's pre-checks are quick; the photo check's answers,
+// and the refund after them, get a beat each to be read. Short enough that the receipt prints within about a second of
+// the payout it shows. Under reduced motion every known row lands at once.
 const PRE_MS = 300;
 const STEP_MS = 400;
-// Only a wait this long earns "you can close this page".
+// Up to this long, the wait says how long it usually takes; past it, that the claim is saved and how to come back.
 const SAVED_S = 10;
 // If the result can't be had in place, the finished list stays up this long before the page reloads as the result.
 const HOLD_MS = 1200;
@@ -89,13 +89,20 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
   const all = sixRows(view.rows, { code: view.code, noun: nounOf(spec), cut: cutInHalf(spec), decided, held: view.decision === "held", demo: view.demo, photos: Math.max(view.photos, photoUrls?.length ?? 0), written: handWrittenLabel(spec), steps: spec.proof_steps });
   const known = sending ? 0 : firstWaiting(all);
   const [shown, setShown] = useState(preview && !preview.animate ? known : 0);
+  // The rows that came in together (the upload's answer, or a poll's): where this reveal started, for the status line.
+  const [batch, setBatch] = useState({ from: 0, to: known });
+  if (known !== batch.to) setBatch({ from: Math.min(shown, known), to: known });
   const done = decided && shown >= all.length;
   // Once a check has failed, nothing after it is pending: every later row (and the refund, not sent) lands with it.
   const failAt = decided ? all.findIndex((r) => r.state === "reject" || r.state === "blocked") : -1;
 
   useEffect(() => {
     if (shown >= known) return;
-    const t = setTimeout(() => setShown((s) => (failAt >= 0 && s >= failAt ? all.length : s + 1)), shown < 3 ? PRE_MS : STEP_MS);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const t = setTimeout(
+      () => setShown((s) => (reduced ? (failAt >= 0 && failAt < known ? all.length : known) : failAt >= 0 && s >= failAt ? all.length : s + 1)),
+      reduced ? 0 : shown < 3 ? PRE_MS : STEP_MS,
+    );
     return () => clearTimeout(t);
   }, [shown, known, failAt, all.length]);
 
@@ -203,28 +210,38 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
           ? `A person at ${company.replace(/ /g, "\u00a0")} will check this claim`
           : "We couldn’t pay this claim"
       : `Checking your ${count > 1 ? "photos" : "photo"}`;
-  // Said only when the wait is long enough that someone might want to leave; never once the claim is decided.
+  // How long it usually takes, then, once the wait is long enough that someone might want to leave, how to come back
+  // for the result; never once the claim is decided.
   const lead =
-    decided || elapsed === null || elapsed <= SAVED_S
+    decided || elapsed === null
       ? ""
-      : elapsed > SLOW_S
-        ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn’t answer."
-        : "Your claim is saved. You can close this page.";
+      : elapsed <= SAVED_S
+        ? "This usually takes under a minute."
+        : elapsed > SLOW_S
+          ? "Taking longer than usual. Your claim is saved, and a person checks it if the photo check doesn’t answer."
+          : "Your claim is saved. You can close this page, then open the claim link on your recall notice again to see the result. If it’s paid, PayPal emails you too.";
 
-  // One line for a screen reader, rewritten as each row lands (role="status", so it waits its turn): the check, its
-  // outcome and its reason. The list itself stays quiet. Checks are named, never numbered: nothing on screen numbers them.
-  const last = shown > 0 ? all[Math.min(shown, all.length) - 1] : null;
+  // One line for a screen reader (role="status", so it waits its turn), written once a reveal has caught up, never per
+  // row as a batch lands: a row that resolved alone after a poll's wait is said with its reason; a batch of passes as a
+  // count; the decided claim once, as "All 5 checks passed." or "Stopped: …". The result's headline, which takes focus
+  // next, says the outcome, so this line never repeats it. Checks are named, never numbered.
   const checks = checksCount;
-  const amount = money(refund);
-  const spoken = outcome
-    ? view.decision === "paid"
-      ? `All ${checks} checks passed. ${amount} refund sent to your PayPal.`
-      : view.decision === "held"
-        ? `A person will check this claim. ${amount} not sent yet.`
-        : `Not paid. ${amount} not sent.`
-    : last && last.key !== "refund"
-      ? `${last.name[0].toUpperCase()}${last.name.slice(1)}: ${outcomeWord(last).toLowerCase()}. ${last.because ?? last.detail ?? ""}`.trim()
-      : "";
+  const caught = shown >= known;
+  const stopper = failAt >= 0 ? all[failAt] : null;
+  const last = shown > 0 ? all[Math.min(shown, all.length) - 1] : null;
+  const spoken = !caught
+    ? ""
+    : decided
+      ? stopper
+        ? `Stopped: ${stopper.name[0].toUpperCase()}${stopper.name.slice(1)}.`
+        : view.decision === "paid"
+          ? `All ${checks} checks passed.`
+          : ""
+      : known - batch.from === 1 && last && last.key !== "refund"
+        ? `${last.name[0].toUpperCase()}${last.name.slice(1)}: ${outcomeWord(last).toLowerCase()}. ${last.because ?? last.detail ?? ""}`.trim()
+        : shown > 0
+          ? `${shown} of ${checks} checks passed.`
+          : "";
   const refundRow = rows.find((r) => r.key === "refund");
 
   // Tall laptops: the photo on the left, where the camera held it; the headline, the checks ticking under it and the
@@ -237,6 +254,7 @@ export function CheckingStep({ slug, claimId, view: initial, spec, refund, start
         <OutcomeHead
           id="checking-title"
           thumb={srcs[0]}
+          thumbAlt={photoAlt(view.id)}
           small
           title={
             <span key={title} className={clsx("block", styles.swap)}>

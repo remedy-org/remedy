@@ -30,7 +30,8 @@ function evidenceOf(check: string, v: NonNullable<Claim["verdict"]>): string {
 /**
  * A rejection that rests on an uncertain read: every reject is one of the model's checks (never a pre-check or a
  * person), and the model couldn't read the label or the code clearly, contradicted itself on the code (said it
- * matches but read other text), or hedged in its own words on a check that rejected.
+ * matches but read other text), hedged in its own words on a check that rejected, or refused only because the photo
+ * looked like one of a screen or a print (a real pillow in dim light can read as one; a person can tell).
  */
 export function uncertainRead(c: Pick<Claim, "decision" | "reasons" | "verdict">): boolean {
   const v = c.verdict;
@@ -40,7 +41,8 @@ export function uncertainRead(c: Pick<Claim, "decision" | "reasons" | "verdict">
   const unclearRead = c.reasons.some((r) => (r.check === "label" || r.check === "code") && r.outcome === "hold");
   const contradicted = rejects.some((r) => r.check === "code") && v.challenge_code.matches === "yes";
   const hedged = rejects.some((r) => HEDGE.test(evidenceOf(r.check, v)));
-  return unclearRead || contradicted || hedged;
+  const screenOnly = rejects.every((r) => r.check === "screen");
+  return unclearRead || contradicted || hedged || screenOnly;
 }
 
 /**

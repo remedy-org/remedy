@@ -200,7 +200,7 @@ const ADVICE: Record<string, string> = {
   code: "Write the code exactly as shown, large and in marker, and keep it in focus. A new claim gives you a new code.",
   label: "Make sure the label is in the photo, in focus and readable, then start a new claim.",
   step: "Finish that step, then photograph it on a new claim.",
-  screen: "Photograph the product itself, not a screen or a printout.",
+  screen: "If this was the real pillow, try again in brighter light, with your paper tag and both halves filling the frame.",
   same_item: "Keep the same item in every photo.",
 };
 
@@ -280,13 +280,30 @@ export function secondsBetween(events: Claim["events"], from: string, to: string
   return Math.max(0, Math.round((Date.parse(b.at) - Date.parse(a.at)) / 1000));
 }
 
+/**
+ * One alt for a claim's photo at every size (the laptop's photo, the phone's thumbnail): "Your photo for claim RM-0442,
+ * tag reads X-VESOLJE M4T", the tag's words once the photo check has read them. `n` numbers one of several photos.
+ */
+export function photoAlt(claimId: string, read?: { label?: string | null; code?: string | null }, n?: number): string {
+  const label = read?.label?.replace(/\s+/g, " ").trim() ?? "";
+  const code = read?.code?.trim() ?? "";
+  const tag = [label, code && !label.includes(code) ? code : ""].filter(Boolean).join(" ");
+  return `Your photo${n ? ` ${n}` : ""} for claim ${claimId}${tag ? `, tag reads ${tag}` : ""}`;
+}
+
 /** "••••PUJ3Q": enough to recognise your own account, not enough to copy it. */
 export const maskPayer = (payerId: string) => `••••${payerId.slice(-5)}`;
 
-/** "p••@owner.test": the PayPal login's email, enough for its owner to recognise, not enough to copy. */
+/**
+ * "p••@o••••.com": the PayPal login's email, enough for its owner to recognise (the first letter of each part and the
+ * domain's ending), not enough to copy or to guess the provider.
+ */
 export function maskEmail(email: string): string {
   const at = email.lastIndexOf("@");
-  return at < 1 ? `${email[0] ?? ""}••` : `${email[0]}••${email.slice(at)}`;
+  if (at < 1) return `${email[0] ?? ""}••`;
+  const domain = email.slice(at + 1);
+  const dot = domain.lastIndexOf(".");
+  return `${email[0]}••@${domain[0] ?? ""}••••${dot > 0 ? domain.slice(dot) : ""}`;
 }
 
 /** The calendar day a time falls on in a zone (undefined: the device's), as "2026-11-08". */

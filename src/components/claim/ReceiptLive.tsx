@@ -140,19 +140,27 @@ export function PaidStamp({ arrive, delay = 0 }: { arrive: boolean; delay?: numb
 
 /**
  * The receipt's PayPal row: PayPal's own word for the payout, in ink (the PAID stamp is the receipt's one green). On its
- * way, then Received, on one line, so the receipt and what's under it never move as it lands; only a payout PayPal
- * stopped gets a second line, saying what happens next.
+ * way says how long PayPal usually takes on a second line; Received says when PayPal confirmed it ("55 seconds after
+ * your photo", from the stored payout's time), or, when it lands while the page is open and that time isn't stored yet,
+ * where the money is, so the receipt keeps its height as it lands. A payout PayPal stopped says what happens next.
  */
-export function PayoutRow() {
+export function PayoutRow({ confirmed }: { confirmed?: number | null }) {
   const { status, changed } = useContext(PayoutContext);
   const words = payoutWords(status);
+  const when = words.tone === "pay" && !changed && confirmed != null ? `${confirmed} ${confirmed === 1 ? "second" : "seconds"} after your photo` : null;
+  const note = words.label === "On its way" ? "Usually in your PayPal within a minute." : words.note;
   return (
     <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 border-b border-dashed border-paper-line py-2.5">
       <dt className="text-ink-muted">Status</dt>
       <dd key={words.label} className={clsx("text-right font-medium text-ink", changed && styles.swap)}>
         {words.label}
+        {when && <span className="font-normal text-ink-muted"> · {when}</span>}
       </dd>
-      {words.tone !== "pay" && words.note && <dd className="col-span-2 mt-0.5 text-pretty text-ink-muted">{words.note}</dd>}
+      {!when && note && (
+        <dd key={note} className={clsx("col-span-2 mt-0.5 text-pretty text-ink-muted", (words.tone === "pay" || words.label === "On its way") && "text-right", changed && styles.swap)}>
+          {note}
+        </dd>
+      )}
     </div>
   );
 }

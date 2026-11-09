@@ -34,12 +34,21 @@ describe("uncertainRead", () => {
     expect(canAskForReview(c09)).toBe(true);
   });
 
-  it("never on a confident rejection: the wrong-code sample (k02) and a photo of a screen (k06)", () => {
-    for (const prefix of ["k02", "k06"]) {
-      const c = evalClaim(prefix);
-      expect(c.decision).toBe("rejected");
-      expect(uncertainRead(c)).toBe(false);
-    }
+  it("never on a confident rejection: the wrong-code sample (k02)", () => {
+    const c = evalClaim("k02");
+    expect(c.decision).toBe("rejected");
+    expect(uncertainRead(c)).toBe(false);
+  });
+
+  it("offers a review where the only refusal is a photo of a screen or a print (k06), never on the demo", () => {
+    const k06 = evalClaim("k06");
+    expect(k06.decision).toBe("rejected");
+    expect(uncertainRead(k06)).toBe(true);
+    expect(canAskForReview(k06)).toBe(true);
+    expect(canAskForReview({ ...k06, demo: true })).toBe(false);
+    // Beside another of the model's refusals, a screen is no longer the only doubt.
+    const cut: Reason = { check: "step_1", outcome: "reject", text: "Not done: cut in half" };
+    expect(uncertainRead({ ...k06, reasons: [...k06.reasons, cut] })).toBe(false);
   });
 
   it("never on a claim that isn't rejected by the rule's model checks", () => {
