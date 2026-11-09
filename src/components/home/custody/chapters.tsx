@@ -336,7 +336,8 @@ function ConsoleRow({ row, first }: { row: (typeof CONSOLE_ROWS)[number]; first?
       <span className="hidden @min-[720px]:block">
         <Barcode bars={barsOf(row)} />
       </span>
-      <span className="hidden text-faint @min-[720px]:block">{row.time ?? "—"}</span>
+      {/* Right-aligned on tabular figures, as the console's own column: "11 s" over "14 s" keeps one edge. */}
+      <span className="hidden text-right text-faint tabular-nums @min-[720px]:block">{row.time ?? "—"}</span>
       <span className="flex items-center justify-end gap-3">
         <span className="@min-[720px]:hidden">
           <VerdictMark verdict={row.status} className={EXCEPTION.has(row.status) ? "text-text" : undefined} />
@@ -381,7 +382,7 @@ export function ConsoleChapter({ p }: { p: Progress }) {
             <span>Claim</span>
             <span>Verdict</span>
             <span>Checks</span>
-            <span>Answered in</span>
+            <span className="text-right">Answered in</span>
             <span className="text-right">Amount</span>
           </div>
           {/* The rows run on past the panel's foot, cut by it as a list is, so a tall screen shows more of the queue. */}

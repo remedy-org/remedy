@@ -67,7 +67,7 @@ Six steps: 56 / 40 / 22 / 17 / 14 / 12 (plus 28, the 40 step's phone floor and t
 | `title`, `h2` | 28 / 1.1 / -0.02em, 500 | Claim-flow and console screen titles |
 | `h1` | 40 / 1.06 / -0.028em | App page titles |
 
-**Figures:** never put `tabular-nums` on Schibsted text: its `tnum` also makes the point and comma tabular ("$29 .99", "19 , 596"). Tabular figures live only on mono (`code, kbd, samp, pre, .font-mono` get `tabular-nums slashed-zero` in base). Digits that must line up go in mono (`Money size="grid"`, timers); everything else keeps Schibsted's proportional figures.
+**Figures:** never put `tabular-nums` on Schibsted text: its `tnum` also makes the point and comma tabular ("$29 .99", "19 , 596"). The one exception is a column of whole numbers with no point or comma, where `tnum` touches only digits: the Chain of Custody console's Answered in ("11 s" over "14 s", right-aligned as the console's own column), and the ledgers' whole parts, split from their cents. Tabular figures live only on mono (`code, kbd, samp, pre, .font-mono` get `tabular-nums slashed-zero` in base). Digits that must line up go in mono (`Money size="grid"`, timers); everything else keeps Schibsted's proportional figures.
 
 **Money** (`<Money value={29.99} size="numeral|amount|inline|grid" />`): the whole part, then the cents de-emphasised, as Mercury does.
 - `numeral` (display) and `amount`: cents at 55%, raised to the cap height (`vertical-align: .62em`), tight to the whole.
