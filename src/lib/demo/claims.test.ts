@@ -153,7 +153,11 @@ describe("the console over a store seeded before the demo claims", () => {
     const older = { ...summarize(stored[1]), id: "RM-7581" };
     const rows = [...stored.map(summarize), older];
     expect(listedClaims(rows, recall, viewer).map((r) => r.id)).toEqual(DEMO_CLAIMS.map((d) => d.id));
-    const before = rows.filter((r) => r.id !== GENUINE.id);
-    expect(listedClaims(before, recall, viewer).map((r) => r.id)).toContain("RM-7581");
+    // A real claim holding RM-0442's id: the rest of the dataset still marks the store as seeded with it.
+    const real = rows.filter((r) => r.id !== GENUINE.id);
+    expect(listedClaims(real, recall, viewer).map((r) => r.id)).not.toContain("RM-7581");
+    // An earlier seed (codes of its own on most ids): left as it is.
+    const earlier = [...stored.map((c) => ({ ...summarize(c), code: c.id === "RM-9629" ? c.code : "K7Q" })), older];
+    expect(listedClaims(earlier, recall, viewer).map((r) => r.id)).toContain("RM-7581");
   });
 });

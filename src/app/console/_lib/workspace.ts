@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from "node:util";
 import { cookies } from "next/headers";
 import { recoverStale, STALE_AFTER_MS } from "@/app/api/claims/_lib/pipeline";
 import { getAppStore } from "@/lib/demo";
-import { DEMO_CLAIMS, GENUINE } from "@/lib/demo/claims";
+import { DEMO_CLAIMS } from "@/lib/demo/claims";
 import { CAPTURE_SESSION_MINUTES } from "@/lib/ids";
 import { abandonedDemo } from "@/lib/limits";
 import { isTerminal, refreshPayouts } from "@/lib/paypal/status";
@@ -81,12 +81,14 @@ export const listedClaims = <R extends ClaimSummary>(rows: R[], recall: Recall, 
     .map((r) => (viewer.decided?.[r.id] ? (decideStarterRow(r, viewer.decided[r.id], recall) as R) : r));
 };
 
-// A store seeded with the demo claims (lib/demo/claims.ts: a seeded RM-0442 is the sign) may still hold the seeded
-// claims of an earlier seed, which the store can't delete: they are left out, so the console lists the one dataset the
-// homepage shows.
-const DEMO_IDS = new Set(DEMO_CLAIMS.map((d) => d.id));
-const olderSeed = (rows: Pick<ClaimSummary, "id" | "seeded">[]) =>
-  rows.some((r) => r.seeded && r.id === GENUINE.id) ? (r: Pick<ClaimSummary, "id" | "seeded">) => Boolean(r.seeded) && !DEMO_IDS.has(r.id) : () => false;
+// A store seeded with the demo claims (lib/demo/claims.ts) may still hold the seeded claims of an earlier seed, which the
+// store can't delete: they are left out, so the console lists the one dataset the homepage shows. The sign the dataset
+// is seeded: all its claims are there as seeded claims with their own codes, but for one a real claim may hold the id
+// of (RM-0442, filed through the demo); an earlier seed shares only a couple of id and code pairs with it.
+const DEMO_CODE = new Map(DEMO_CLAIMS.map((d) => [d.id, d.code]));
+type SeedRow = Pick<ClaimSummary, "id" | "seeded" | "code">;
+const olderSeed = (rows: SeedRow[]) =>
+  rows.filter((r) => r.seeded && DEMO_CODE.get(r.id) === r.code).length >= DEMO_CLAIMS.length - 1 ? (r: SeedRow) => Boolean(r.seeded) && !DEMO_CODE.has(r.id) : () => false;
 
 // When this instance last read a claim whose row looks out of date. A payout that stays unsettled is asked about at
 // most once a minute per instance, not on every load: each ask reads the claim file.
