@@ -170,10 +170,13 @@ const QUICK = 900;
 /**
  * The finger has lifted and the momentum begun: LIFT_RUN events in a row, each no larger than the one before (macOS
  * synthesises momentum as a smooth decay, a delta a frame; a finger's own input jitters), and the pace under LIFT of the
- * gesture's peak. Deltas, not deltas over time: an event's timestamp jitters by a few ms, which broke the run.
+ * gesture's peak. A delta a frame (frames), not a delta over its ms: an event's timestamp jitters by a few ms, which
+ * broke the run; and a busy page merges a frame's events into the next, which a delta alone reads as a rise.
  */
 const LIFT_RUN = 6;
 const LIFT = 0.75;
+/** ms of a 60 Hz frame, the longest a trackpad's events are apart when the page keeps up. */
+const FRAME = 17;
 /** A momentum tail still to come is about this many times its last delta (it decays by 0.94 to 0.96 a frame). */
 const TAIL_FRAMES = 18;
 /** A fresh swipe on a landing's momentum: once that momentum has fallen under FELL of its top, RISE_RUN events in a row
@@ -313,6 +316,15 @@ export function createGate(read: () => Course) {
   let followed = 0;
   let peakPace = 0;
   let deltas: number[] = [];
+  /** This trackpad swipe's last few gaps between events, ms, for its frame (frames). */
+  let cadence: number[] = [];
+  /** An event's delta a frame: over as many frames as its gap spans, a frame being the swipe's usual gap (their median)
+   * and never more than a 60 Hz frame (a page merging every pair of events would make the merged gap its usual one), so a
+   * merged event of two frames reads as one frame's worth, at 60 or 120 events a second alike. */
+  function frames(a: number, gap: number) {
+    const usual = Math.min(FRAME, cadence.length ? [...cadence].sort((x, y) => x - y)[cadence.length >> 1] : FRAME);
+    return a / Math.max(1, Math.round(gap / usual));
+  }
   /** The page's own speed, px/ms, from Lenis's last two frames. */
   let speed = 0;
   let prev: { t: number; y: number } | null = null;
@@ -608,6 +620,7 @@ export function createGate(read: () => Course) {
         followed = 0;
         peakPace = 0;
         deltas = [];
+        cadence = [];
       } else if (hold) {
         hold.paced = now + PACE;
         hold.low = Infinity;
@@ -633,7 +646,8 @@ export function createGate(read: () => Course) {
     samples.push({ t: now, a });
     while (samples[0].t < now - 500) samples.shift();
     total += a;
-    if (deltas.push(a) > 12) deltas.shift();
+    if (deltas.push(frames(a, gap)) > 12) deltas.shift();
+    if (gap < QUIET && cadence.push(gap) > 9) cadence.shift();
     const pace = sum(now - PACE, now);
     peakPace = Math.max(peakPace, pace);
     const fast = rate(now) >= FAST;

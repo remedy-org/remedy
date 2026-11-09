@@ -972,5 +972,17 @@ describe("trackpad swipes", () => {
       at = to;
     }
   });
+
+  it("F2: a busy page merging the momentum's events in pairs still reads the lift, and the second swipe still moves on", () => {
+    const g = course(0);
+    const d = SMALL();
+    // The finger phase as sent, then the momentum two frames an event, 32 ms apart, until the second swipe at 350 ms.
+    g.send(d.slice(0, 6));
+    let t = 6 * 16;
+    for (let i = 6; t < 350 - 32; i += 2, t += 32) g.send([d[i] + d[i + 1]], 32);
+    expect(g.lenis.landed).toEqual([414]);
+    g.send(SMALL(), 16, 24);
+    expect(g.lenis.landed).toEqual([414, 823]);
+  });
 });
 
