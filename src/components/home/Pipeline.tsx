@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import Image from "next/image";
 import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { refusalLine } from "@/app/console/_lib/view";
 import { Money } from "@/components/ui";
 import { GENUINE } from "@/lib/demo/claims";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
@@ -41,7 +42,7 @@ export const GATES: { title: string; text: string; ai: boolean }[] = [
 ];
 
 // The four claims on /try (src/lib/demo/samples.ts), named as an owner would meet them, and the check that stops each
-// (its decidedBy: session, duplicate_photo, code) with the reason rule.ts gives, in plain words. stop is a gate index; 5
+// (its decidedBy: session, duplicate_photo, code) with the reason rule.ts gives, as the console words it. stop is a gate index; 5
 // is past every gate, to the payout. The repost carries the genuine claim's own photo: that is the point.
 interface Sample {
   name: string;
@@ -51,10 +52,12 @@ interface Sample {
   reason: ReactNode;
 }
 
+// Each refusal in the console's own words (console/_lib/view.ts refusalLine, from the rule's reason), so a claim reads
+// the same here, in the console's queue and in How it works' copy of it.
 const SAMPLES: Sample[] = [
-  { name: "A photo from the web", photo: "/demo/web-1.jpg", stop: 0, reason: "Not taken in this claim\u2019s camera" },
-  { name: "A photo used before", photo: "/demo/k01-1.jpg", stop: 1, reason: "Same photo as an earlier claim" },
-  { name: "Wrong code on the tag", photo: "/demo/k02-1.jpg", stop: 3, reason: <>The tag reads <span className="font-mono">K7Q</span>; the code is <span className="font-mono">K7P</span></> },
+  { name: "A photo from the web", photo: "/demo/web-1.jpg", stop: 0, reason: refusalLine({ check: "session", text: "This photo wasn't taken in this claim's camera session" }) },
+  { name: "A photo used before", photo: "/demo/k01-1.jpg", stop: 1, reason: refusalLine({ check: "duplicate_photo", text: "Photo 1 was already used in another claim" }) },
+  { name: "Wrong code on the tag", photo: "/demo/k02-1.jpg", stop: 3, reason: refusalLine({ check: "code", text: "Written code reads K7Q; this claim's code is K7P" }) },
   { name: "A genuine claim", photo: "/demo/k01-1.jpg", stop: 5, paid: true, reason: <><Money value={29.99} /> to the owner&rsquo;s PayPal</> },
 ];
 
@@ -237,9 +240,10 @@ export function PipelineList() {
   const stoppedAt = (row: number) => SAMPLES.filter((s) => s.stop === row);
   const rows = (row: number) =>
     stoppedAt(row).length > 0 && (
-      <ul className="mt-4 flex flex-col gap-3">
+      // Flat on the page, on hairlines (DESIGN.md: no boxes on the page): each claim a row under the check's text.
+      <ul className="mt-4 flex flex-col">
         {stoppedAt(row).map((s) => (
-          <li key={s.name} className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 rounded-card bg-surface p-3 text-ui shadow-card">
+          <li key={s.name} className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 border-t border-line py-3 text-ui last:pb-0">
             <Image src={s.photo} alt="" width={40} height={40} className="size-10 rounded-control object-cover" />
             <span className="min-w-0">
               <span className="block text-text-2">{s.name}</span>
