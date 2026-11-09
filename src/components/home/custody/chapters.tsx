@@ -395,7 +395,7 @@ export function ConsoleChapter({ p, rows }: { p: Progress; rows: ClaimRow[] }) {
             </span>
             {/* The console's search, as it sits at rest: its placeholder and the / that focuses it. */}
             <span className="ml-auto hidden h-8 w-52 shrink-0 items-center justify-between rounded-control border border-line bg-surface px-3 text-ui text-faint @min-[960px]:flex">
-              Search claims, codes…
+              Search claims
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-[4px] border border-line-strong/60 font-mono text-micro">/</span>
             </span>
           </div>

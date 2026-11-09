@@ -11,7 +11,11 @@ const model = (over: Record<string, "pass" | "reject" | "hold"> = {}) =>
 
 describe("the five checks", () => {
   it("groups every recorded check under the homepage's five, and leaves process holds out", () => {
-    expect(["session", "duplicate_photo", "payer", "payer_verified", "label", "code", "step_2", "same_item", "screen"].map(checkOf)).toEqual([1, 2, 3, 3, 4, 4, 5, 5, 5]);
+    expect(["session", "duplicate_photo", "payer", "payer_verified", "label", "code", "step_2", "same_item", "screen"].map((id) => checkOf(id))).toEqual([1, 2, 3, 3, 4, 4, 5, 5, 5]);
+    // The tag's own step is check 4's; the cut stays check 5's.
+    const steps = ["The pillow is cut fully in half, so it can no longer be used", "The X-VESOLJE tag is on the cut pillow"];
+    expect(["step_1", "step_2"].map((id) => checkOf(id, steps))).toEqual([5, 4]);
+    expect(fiveSummary([...pre(), ...model(), { id: "step_2", state: "hold" }], { steps })).toBe("1 of 5 held: the tag · 4 passed");
     expect(checkOf("model")).toBeNull();
     expect(checkOf("payout")).toBeNull();
   });

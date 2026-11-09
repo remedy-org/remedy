@@ -38,23 +38,39 @@ export const fiveNames = (code: string, written: string | null, noun: string, cu
   CHECK_NAMES.destroyed(noun, cut),
 ];
 
-/** Which of the five a recorded check belongs to; null for a hold that comes from the process (the model down, PayPal). */
-export function checkOf(id: string): CheckNumber | null {
+/**
+ * The proof step that is about the tag ("The X-VESOLJE tag is on the cut pillow"), by its recorded id ("step_2"), or
+ * null when the notice asks for none. The tag is check 4's ("Tag shows X-VESOLJE and H9D"): its answer counts there, so
+ * a tag too blurred to read holds check 4 once, never "Pillow cut in half" a second time.
+ */
+export function tagStep(steps: readonly string[]): string | null {
+  const i = steps.findIndex((s) => /\btag\b/i.test(s));
+  return i < 0 ? null : `step_${i + 1}`;
+}
+
+/** Which of the five a recorded check belongs to; null for a hold that comes from the process (the model down, PayPal).
+ * `steps` are the recall's proof steps, so the tag's step counts under check 4 (tagStep). */
+export function checkOf(id: string, steps: readonly string[] = []): CheckNumber | null {
   if (id === "session") return 1;
   if (id === "duplicate_photo") return 2;
   if (id === "account" || id === "payer" || id === "payer_verified" || id === "state") return 3;
-  if (id === "label" || id === "code") return 4;
+  if (id === "label" || id === "code" || id === tagStep(steps)) return 4;
   if (/^step_\d+$/.test(id) || id === "same_item" || id === "screen") return 5;
   return null;
 }
 
+/** The check an answer counts under: its own number when it carries one (a console bar, numbered where the recall's steps
+ * are known), else checkOf. */
+export const numberOf = (i: { id: string; n?: CheckNumber | null }, steps: readonly string[] = []) => (i.n !== undefined ? i.n : checkOf(i.id, steps));
+
 /** A recorded check's name in a sentence: "failed: the code". */
-function nameOf(id: string): string {
+function nameOf(id: string, steps: readonly string[]): string {
   if (id === "session") return "the live camera";
   // Named by what went wrong: it only ever fails, and "failed: photo not seen before" reads as its opposite.
   if (id === "duplicate_photo") return "the photo was used before";
   if (id === "label") return "the label";
   if (id === "code") return "the code";
+  if (id === tagStep(steps)) return "the tag";
   if (id === "same_item") return "the same item";
   if (id === "screen") return "a real photo";
   if (/^step_\d+$/.test(id)) return "really destroyed";
@@ -64,11 +80,12 @@ function nameOf(id: string): string {
 type State = "pass" | "hold" | "reject" | "blocked" | "waiting" | "running" | "skipped";
 export type Outcome = "pass" | "skipped" | "hold" | "fail" | "open";
 
-/** Each of the five checks' outcome from its recorded answers: the worst of them; open when none was recorded. */
-export function fiveOutcomes(items: { id: string; state: State }[]): { n: CheckNumber; outcome: Outcome; names: string[] }[] {
+/** Each of the five checks' outcome from its recorded answers: the worst of them; open when none was recorded. An answer
+ * that carries its check's number (a console bar, numbered where the recall is known) is counted there. */
+export function fiveOutcomes(items: { id: string; state: State; n?: CheckNumber | null }[], steps: readonly string[] = []): { n: CheckNumber; outcome: Outcome; names: string[] }[] {
   return FIVE_CHECKS.map(({ n }) => {
-    const of = items.filter((i) => checkOf(i.id) === n);
-    const named = (states: State[]) => [...new Set(of.filter((i) => states.includes(i.state)).map((i) => nameOf(i.id)))];
+    const of = items.filter((i) => numberOf(i, steps) === n);
+    const named = (states: State[]) => [...new Set(of.filter((i) => states.includes(i.state)).map((i) => nameOf(i.id, steps)))];
     const failed = named(["reject", "blocked"]);
     if (failed.length) return { n, outcome: "fail", names: failed };
     const held = named(["hold"]);
@@ -85,8 +102,8 @@ export function fiveOutcomes(items: { id: string; state: State }[]): { n: CheckN
  * passed · 1 not run", "1 of 5 failed: the live camera · 1 passed · 3 not run". `open` names a check with nothing
  * recorded yet, `skipped` one that was skipped; the same word counts once.
  */
-export function fiveSummary(items: { id: string; state: State }[], { open = "not run", skipped = "not run" }: { open?: string; skipped?: string } = {}): string {
-  const outcomes = fiveOutcomes(items);
+export function fiveSummary(items: { id: string; state: State }[], { open = "not run", skipped = "not run", steps = [] }: { open?: string; skipped?: string; steps?: readonly string[] } = {}): string {
+  const outcomes = fiveOutcomes(items, steps);
   const count = (o: Outcome) => outcomes.filter((x) => x.outcome === o);
   const total = FIVE_CHECKS.length;
   const passed = count("pass").length;

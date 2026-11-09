@@ -130,7 +130,7 @@ describe("every replica reads the demo claims", () => {
     for (const row of CONSOLE_ROWS) {
       const c = stored.find((x) => x.id === row.id)!;
       const items = [...toDrawerClaim(c, recall).fiveRows.flatMap((r) => r.parts.map((p) => ({ id: p.id, state: p.state })))];
-      const failed = fiveOutcomes(items).flatMap((o, i) => (o.outcome === "fail" ? [i] : []));
+      const failed = fiveOutcomes(items, recall.spec.proof_steps).flatMap((o, i) => (o.outcome === "fail" ? [i] : []));
       expect(failed, row.id).toEqual(row.fails === undefined ? [] : [row.fails]);
     }
   });

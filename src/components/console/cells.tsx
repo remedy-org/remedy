@@ -4,7 +4,8 @@ import clsx from "clsx";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
 import { barsSentence, duration, fiveOf, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
-import { checkOf, FIVE_CHECKS, type Outcome } from "@/lib/fiveChecks";
+import { FIVE_CHECKS, numberOf, type Outcome } from "@/lib/fiveChecks";
+import { EXCEPTION } from "./EvidenceParts";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
 import { VerdictMark, verdictOf, verdictWord } from "./VerdictMark";
@@ -166,8 +167,8 @@ export function VerdictCell({ data, context }: Cell) {
   );
 }
 
-/** The decisions a reviewer acts on or answers for: their word is in full ink, the rest in the second. */
-export const EXCEPTION = new Set<ClaimRow["decision"]>(["held", "rejected", "blocked"]);
+// The decisions a reviewer acts on or answers for (EvidenceParts.tsx, shared with the panel's header).
+export { EXCEPTION };
 
 // A word only where a check didn't simply pass; a pass is its filled bar alone.
 const BAR_WORD: Record<BarState, string> = { pass: "", hold: "Held", reject: "Failed", waiting: "Waiting", skipped: "Not run" };
@@ -523,7 +524,7 @@ function ChecksCard({ row, bars }: { row: GridRow; bars: CheckBar[] }) {
   const five = fiveOf(bars);
   const checks = FIVE_CHECKS.map((c) => {
     const title = row.checkNames?.[c.n - 1] ?? c.short;
-    const of = shown.filter((b) => checkOf(b.id) === c.n);
+    const of = shown.filter((b) => numberOf(b) === c.n);
     return { n: c.n, title, state: FIVE_BAR[five[c.n - 1].outcome], listed: of.length > 0, answers: of.filter((b) => b.label !== title) };
   }).filter((c) => c.listed);
   return (

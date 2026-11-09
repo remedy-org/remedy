@@ -608,7 +608,9 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                       if (open) grid.current?.focusRow(open);
                       else grid.current?.focusFirst();
                     }}
-                    placeholder="Search claims, codes…"
+                    // Short enough to stay whole beside the toolbar at 1440; what it searches is the tooltip and the label.
+                    placeholder="Search claims"
+                    title="Search claims by id, code, PayPal account or reason (/)"
                     className="h-9 w-full rounded-control border border-line bg-surface pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0 [&::-webkit-search-cancel-button]:appearance-none"
                   />
                 </label>

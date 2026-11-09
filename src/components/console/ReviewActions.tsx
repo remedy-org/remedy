@@ -9,6 +9,7 @@ import { api } from "./api";
 import { formatClock } from "./format";
 import { idsIn, LinkedIds } from "./LinkedIds";
 import { quickReasons } from "./quickReasons";
+import { payoutFailure } from "./EvidenceParts";
 
 type Mode = "idle" | "approve" | "reject";
 
@@ -31,14 +32,8 @@ const typingIn = (t: EventTarget | null) => t instanceof HTMLElement && (t.isCon
 const NETWORK: PayoutFailureWords = { kind: "network", what: "Remedy couldn’t reach PayPal (a network error)", next: "Nothing was sent, so it’s safe to try again." };
 const REFUSED: PayoutFailureWords = { kind: "paypal", what: "PayPal didn’t take the payout", next: "Nothing was sent." };
 
-/** A held claim whose last payout attempt failed: when, what happened in words (drawer.ts), and the raw answer for
- * support. The panel keeps saying so (and offers to try again) until a payout goes through; the history keeps it after. */
-export function payoutFailure(claim: Pick<DrawerClaim, "decision" | "events">): PayoutFailure | null {
-  if (claim.decision !== "held") return null;
-  const last = [...claim.events].reverse().find((e) => e.type === "payout_failed" || e.type === "payout_sent");
-  if (last?.type !== "payout_failed") return null;
-  return { at: last.at, ...(last.failure ?? REFUSED), raw: last.raw ?? "" };
-}
+// What a held claim's failed payout says: EvidenceParts.tsx, which the homepage's still shares.
+export { payoutFailure };
 
 const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 

@@ -102,7 +102,7 @@ describe("history", () => {
 });
 
 const { demoDataset } = await import("@/lib/demo/dataset");
-const { toRow } = await import("./view");
+const { barsSentence, toRow } = await import("./view");
 
 describe("the panel says what the grid row says", () => {
   const { recall, claims } = demoDataset(Date.parse("2026-11-09T09:00:00Z"));
@@ -115,10 +115,36 @@ describe("the panel says what the grid row says", () => {
     expect(toDrawerClaim(of("RM-0118"), recall).note).toBe("Tag reads K7Q · code is K7P");
   });
 
-  it("names a photo check that partly passed by the check, with the answer in doubt under it", () => {
-    const rows = toDrawerClaim(of("RM-9629"), recall).fiveRows;
-    expect(rows[4]).toMatchObject({ state: "hold", name: "Pillow cut in half" });
-    expect(rows[4].parts.find((p) => p.label === "X-VESOLJE tag on the cut pillow")?.state).toBe("hold");
-    expect(rows[4].parts.find((p) => p.label === "Pillow cut fully in half")?.state).toBe("pass");
+  it("files the tag on the cut pillow under the tag's check, so a blurred tag holds check 4 once and the cut passes", () => {
+    const d = toDrawerClaim(of("RM-9629"), recall);
+    expect(d.fiveRows[3]).toMatchObject({ state: "hold", name: "Tag shows X-VESOLJE and H9D" });
+    expect(d.fiveRows[3].parts.map((p) => [p.label, p.state])).toEqual([
+      ["Label", "hold"],
+      ["Code H9D", "hold"],
+      ["X-VESOLJE tag on the cut pillow", "hold"],
+    ]);
+    expect(d.fiveRows[4]).toMatchObject({ state: "pass", name: "Pillow cut in half" });
+    expect(d.fiveRows[4].parts.map((p) => [p.label, p.state])).toEqual([
+      ["Real photo", "pass"],
+      ["Pillow cut fully in half", "pass"],
+    ]);
+    expect(d.five).toBe("4 of 5 checks passed · 1 held");
+  });
+
+  it("keeps a pillow not cut fully a check 5 failure, and a wrong code a check 4 failure", () => {
+    expect(toDrawerClaim(of("RM-6276"), recall).fiveRows.map((r) => r.state)).toEqual(["pass", "pass", "pass", "pass", "reject"]);
+    expect(toDrawerClaim(of("RM-0118"), recall).fiveRows.map((r) => r.state)).toEqual(["pass", "pass", "pass", "reject", "pass"]);
+  });
+
+  it("never shows a check held or failed while every answer under it passed, in the panel, the strip or its count", () => {
+    for (const c of claims) {
+      const d = toDrawerClaim(c, recall);
+      for (const r of d.fiveRows) {
+        if (r.state === "hold" || r.state === "reject") expect(r.parts.some((p) => p.state === r.state), `${c.id} check ${r.n}`).toBe(true);
+      }
+      // The queue's strip and hover card count the same five as the panel.
+      const bars = toRow(summarize(c), recall).bars;
+      if (bars) expect(barsSentence(bars), c.id).toBe(d.five);
+    }
   });
 });

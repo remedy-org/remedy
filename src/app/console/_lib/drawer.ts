@@ -26,8 +26,9 @@ export interface DrawerCheck {
 
 /**
  * One of the five checks, as the owner's result and the homepage name it, with what was recorded under it: the account
- * checks' rows (check 3 holds "Verified PayPal account" too) and the photo check's answers (the label and the code under
- * check 4, each proof step, the same item and a real photo under check 5).
+ * checks' rows (check 3 holds "Verified PayPal account" too) and the photo check's answers (the label, the code and the
+ * tag's own step under check 4, the other proof steps, the same item and a real photo under check 5: fiveChecks.ts
+ * checkOf).
  */
 export interface FiveRow {
   n: CheckNumber;
@@ -53,7 +54,7 @@ export function fiveRowsOf(c: Pick<Claim, "code" | "decision" | "photos" | "seed
     ...checks.map((r) => ({ id: r.id, label: r.label, state: r.outcome as PreCheckState, text: r.rule, evidence: r.evidence })),
   ];
   // The photo check that never answered stands for both of its checks.
-  const under = (n: CheckNumber) => parts.filter((p) => (p.id === "model" ? n === 4 || n === 5 : checkOf(p.id) === n));
+  const under = (n: CheckNumber) => parts.filter((p) => (p.id === "model" ? n === 4 || n === 5 : checkOf(p.id, recall.spec.proof_steps) === n));
   const ran = c.photos.length > 0 || c.decision === "blocked";
   return ([1, 2, 3, 4, 5] as const).map((n) => {
     const own = under(n);
