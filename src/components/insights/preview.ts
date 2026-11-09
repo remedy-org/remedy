@@ -5,16 +5,9 @@ import { previewNow, previewSeed, typeset } from "@/components/console/preview";
 // The homepage's Insights, built on the server from the same 40 seeded claims as the console preview
 // (components/console/preview.ts): the facts /console/insights would show for a workspace holding only those claims.
 
-// Where a claim was refused: before the photo check (the camera session, a reused photo, the account), by it, or on review.
-const GATE: Record<string, string> = { "No AI": "Before the photo check", "Model reads": "Photo check", Person: "Review" };
-
 export function insightsPreview(): InsightsData {
   const { recall, claims } = previewSeed();
-  const data = typeset(buildInsights([...claims].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), recall, previewNow()));
-  return {
-    ...data,
-    claims: data.claims.map((c) => ({ ...c, refusalGate: (c.refusalGate && (GATE[c.refusalGate] ?? c.refusalGate)) as typeof c.refusalGate })),
-  };
+  return typeset(buildInsights([...claims].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), recall, previewNow()));
 }
 
 /** The facts Studio needs on the homepage, without the dossiers (the analyst's reading, which the homepage never runs). */

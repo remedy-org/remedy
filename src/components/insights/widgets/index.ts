@@ -1,10 +1,10 @@
 import type { AgBaseWidgetDefinition, AgDefaultRegistry, AgFormatShapeParams, AgWidgetData, AgWidgetDataFormat, AgWidgetsConfig, AgWidgetFormParams } from "ag-studio";
-import { CheckFunnel, HomeCheckFunnel } from "./CheckFunnel";
+import { CheckFunnel } from "./CheckFunnel";
 import { DecisionMix } from "./DecisionMix";
 import type { CheckFunnelDef, DecisionMixDef, InsightsRegistry, MedianTimeDef, RecallProgressDef, RefusalReasonsDef } from "./defs";
-import { HomeMedianTime, MedianTime } from "./MedianTime";
+import { MedianTime } from "./MedianTime";
 import { RecallProgress } from "./RecallProgress";
-import { HomeRefusalReasons, RefusalReasons } from "./RefusalReasons";
+import { RefusalReasons } from "./RefusalReasons";
 import { glyphMarkup, type Verdict } from "@/components/console/VerdictMark";
 import { shownAs } from "../funnel";
 import { reactComp } from "../reactComp";
@@ -40,10 +40,9 @@ const titles = <T extends AgWidgetData<unknown, AgWidgetDataFormat<unknown>>>(pa
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params.createDefaults({ dataMappingItems: items as any, supportsCrossHighlight: false });
 
-/** home: the homepage's Insights step: its funnel names every reason with its count (funnel.ts reasonList), and both
- * lists sit on their panel's own edge. */
+/** The console's widgets; the homepage's Insights step registers the same ones. */
 export const insightsWidgets =
-  ({ createWidgets }: StudioLib, { home = false }: { home?: boolean } = {}) =>
+  ({ createWidgets }: StudioLib) =>
   (defaults: AgWidgetsConfig<AgDefaultRegistry>): AgWidgetsConfig<InsightsRegistry> => {
   const config = createWidgets<InsightsRegistry>({
     additionalTypes: [
@@ -73,7 +72,7 @@ export const insightsWidgets =
       },
       {
         id: "check-funnel",
-        label: "Check funnel",
+        label: "Where claims stop",
         dataMapping: {
           stage: { type: "field", supportedRoles: ["category"], requires: { cardinality: "many" }, required: true, aiDescription: "The claim's furthest stage: claims.stage." },
           reason: { type: "field", supportedRoles: ["category"], requires: { cardinality: "many" }, required: true, aiDescription: "Why it stopped: claims.stopReason." },
@@ -93,12 +92,12 @@ export const insightsWidgets =
             { key: "decision", label: "Decision" },
             { key: "count", label: "Claims" },
           ]),
-        comp: reactComp(home ? HomeCheckFunnel : CheckFunnel),
+        comp: reactComp(CheckFunnel),
         defaultSize: { width: 560, height: 300 },
         minSize: { width: 420, height: 240 },
         featureConfig: { crossFilter: { supportsHighlight: true } },
         ai: {
-          label: "Check funnel",
+          label: "Where claims stop",
           description:
             "Claims at each stage from filed to paid. Each drop is split into claims refused there and claims held for a person (waiting, not refused), with their reasons and counts. Clicking a drop filters the page to those claims.",
           usage: "Use to show where claims fall out of the process.",
@@ -107,7 +106,7 @@ export const insightsWidgets =
       },
       {
         id: "refusal-reasons",
-        label: "Refusal reasons",
+        label: "Why claims were refused",
         dataMapping: {
           reason: { type: "field", supportedRoles: ["category"], requires: { cardinality: "many" }, required: true, aiDescription: "claims.refusalReason." },
           gate: { type: "field", supportedRoles: ["category"], requires: { cardinality: "many" }, required: true, aiDescription: "claims.refusalGate: No AI, Model reads or Person." },
@@ -120,12 +119,12 @@ export const insightsWidgets =
             { key: "gate", label: "Check kind" },
             { key: "count", label: "Claims" },
           ]),
-        comp: reactComp(home ? HomeRefusalReasons : RefusalReasons),
+        comp: reactComp(RefusalReasons),
         defaultSize: { width: 420, height: 300 },
         minSize: { width: 320, height: 200 },
         featureConfig: { crossFilter: { supportsHighlight: true } },
         ai: {
-          label: "Refusal reasons",
+          label: "Why claims were refused",
           description: "Refused claims by reason, each tagged with the kind of check that caught it (NO AI, MODEL READS, PERSON), in red bars.",
           usage: "Use for why claims were refused.",
           configuration: "Map reason to claims.refusalReason, gate to claims.refusalGate, count to countd(claims.id).",
@@ -174,7 +173,7 @@ export const insightsWidgets =
             { key: "per", label: "Per" },
             { key: "seconds", label: "Seconds" },
           ]),
-        comp: reactComp(home ? HomeMedianTime : MedianTime),
+        comp: reactComp(MedianTime),
         defaultSize: { width: 280, height: 120 },
         minSize: { width: 200, height: 100 },
         ai: {

@@ -51,7 +51,7 @@ export function Companies() {
           openId={PREVIEW_OPEN_ID}
           arriveId={ARRIVE_ID}
           descriptions={descriptions}
-          insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail /> : undefined} flat />}
+          insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail /> : undefined} />}
           report={sheet}
           studio={STUDIO_ON_HOME ? { data: insightsPreviewForStudio() } : null}
         />
@@ -62,7 +62,7 @@ export function Companies() {
           sentences={sentences}
           evidence={evidence}
           insights={
-            <InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" flat />
+            <InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" />
           }
           report={sheet}
         />

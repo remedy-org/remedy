@@ -1,4 +1,4 @@
-// The check funnel's arithmetic, shared by the server's facts and the Check funnel widget. Pure.
+// The funnel's arithmetic, shared by the server's facts and the Where claims stop widget. Pure.
 
 /** How far a claim got, in order. Every claim reaches "Filed"; it stops at the last stage it passed. */
 export const STAGES = ["Filed", "Photos sent", "Passed checks before the photo check", "Passed photo check", "Paid"] as const;
@@ -46,15 +46,9 @@ export function reasonSummary(tally: ReadonlyMap<string, number>): string {
   return sorted.map(([reason, n]) => (even ? reason : `${reason} ${n}`)).join(", ");
 }
 
-/** Every reason with its count, commonest first: "Photo already used in another claim (2), PayPal account not verified (1)". */
-export function reasonList(tally: ReadonlyMap<string, number>): string {
-  const sorted = [...tally].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  return sorted.length === 1 ? sorted[0][0] : sorted.map(([r, n]) => `${r} (${n})`).join(", ");
-}
-
 /**
  * Rows are claims, or groups of claims with a count (as a Studio query returns them). `summarize` words each drop's
- * reasons: by default the commonest (reasonSummary); the homepage names every one (reasonList).
+ * reasons: by default the commonest (reasonSummary).
  */
 export function funnel(
   rows: { stage: string; stopReason: string | null; decision?: string | null; count?: number }[],

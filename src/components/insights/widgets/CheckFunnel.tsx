@@ -2,7 +2,7 @@
 
 import type { AgWidgetParams } from "ag-studio";
 import type { MouseEvent } from "react";
-import { funnel, reasonList, reasonSummary } from "../funnel";
+import { funnel } from "../funnel";
 import { CheckFunnelView } from "./CheckFunnelView";
 import type { CheckFunnelDef } from "./defs";
 import { moveBetweenItems } from "./listKeys";
@@ -12,7 +12,7 @@ import { num, useRows } from "./useRows";
 // to the claims that stopped there.
 
 // `params` is kept whole (not destructured with a rest), so its identity, which useRows re-runs on, is Studio's own.
-export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef> & { list?: boolean; flush?: boolean }) {
+export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef>) {
   const { dataMapping, widgetApi } = params;
   const stage = dataMapping.stage?.[0];
   const reason = dataMapping.reason?.[0];
@@ -28,7 +28,6 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef> & { list?: bo
       decision: decision ? ((r[decision.key] as string | null) ?? null) : "Rejected",
       count: num(r[count.key]),
     })),
-    params.list ? reasonList : reasonSummary,
   );
   const selected = new Set(widgetApi.getCrossFilterSelections()?.flatMap((s) => (s.type === "value" ? s.values.map(String) : [])) ?? []);
 
@@ -37,12 +36,6 @@ export function CheckFunnel(params: AgWidgetParams<CheckFunnelDef> & { list?: bo
     widgetApi.toggleCrossFilter({ type: "value", field: stage, value, group: 0, reset: !(e.metaKey || e.ctrlKey) });
   };
 
-  return <CheckFunnelView steps={steps} selected={selected} onToggle={toggle} onReset={() => widgetApi.resetCrossFilter()} onKeyDown={moveBetweenItems} flush={params.flush} />;
+  return <CheckFunnelView steps={steps} selected={selected} onToggle={toggle} onReset={() => widgetApi.resetCrossFilter()} onKeyDown={moveBetweenItems} />;
 }
 
-/** The homepage's funnel: every reason named with its count, not only the commonest, on the panel title's edge. */
-export const HomeCheckFunnel = (params: AgWidgetParams<CheckFunnelDef>) => (
-  <div className="h-full px-2 pb-2">
-    <CheckFunnel {...params} list flush />
-  </div>
-);

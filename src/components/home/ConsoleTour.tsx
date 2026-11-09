@@ -14,7 +14,6 @@ import { durationFigure, LedgerItem } from "@/components/console/Ledger";
 import { TABS, type Tab } from "@/components/console/StatusTabs";
 import { verdictOf, verdictWord } from "@/components/console/VerdictMark";
 import { InsightsPreviewLazy, loadInsightsPreview, STUDIO_ON_HOME, type StudioFilter } from "@/components/insights/InsightsPreviewLazy";
-import { homeRowsFor } from "@/components/insights/report";
 import { ConsoleFrame } from "./ConsoleFrame";
 import styles from "./tour.module.css";
 import { ReviewFoot, type ReviewPhase } from "./PayoutsNote";
@@ -55,11 +54,9 @@ const STUDIO_FROM = 1024;
 // How long the page must have been still before a pointer resting on the report hands it the wheel.
 const IDLE = 150;
 const STUDIO_WAIT = 8000;
-// The still's entrance on a pick (its bars, then the day columns and their figures, tour.module.css): Studio cuts in
-// only after it, so the cut never lands on a half-grown chart.
+// The still's entrance on a pick (its bars, tour.module.css): Studio cuts in only after it, so the cut never lands on a
+// half-grown bar.
 const STILL_ENTRANCE = 1500;
-// Studio's canvas rows are 16px, inside 14px of canvas padding and 6px around each panel (InsightsPreview.tsx): its
-// cards sit on the frame's 20px inset with 12px between them, where the still draws its own (homeRowsFor).
 // The nav's height, and the air the nav jump leaves under it.
 const NAV = 64;
 const AIR = 16;
@@ -275,7 +272,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const [live, setLive] = useState(false);
   const [swapped, setSwapped] = useState(false);
   const [studioState, setStudioState] = useState<"off" | "mounted" | "shown" | "failed">("off");
-  const [studioRows, setStudioRows] = useState(36);
   const [studioAtPick, setStudioAtPick] = useState(false);
   // The checks popover opens only for a pointer that has moved over the queue since the arrival (a row sliding under a
   // still cursor is not a hover).
@@ -295,7 +291,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const tablist = useRef<HTMLDivElement>(null);
   const stepBar = useRef<HTMLSpanElement>(null);
   const frame = useRef<HTMLDivElement>(null);
-  const insightsBody = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const timers = useRef<number[]>([]);
   const arriving = useRef<number[]>([]);
@@ -480,14 +475,12 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
 
   // Real Studio replaces the Insights still at 1024px and up, on intent (hover, focus or pick of tab 03, or of the app
   // bar's Insights), and never on Save-Data: a visitor who only scrolls past never loads it (nor its licence notice in
-  // the console). Its canvas is measured from the frame, so it fills the body with nothing cut off. If it hasn't drawn
-  // in 8s, the still stays for the session.
+  // the console). It is the console's page, scrolling in the frame as the still does. If it hasn't drawn in 8s, the
+  // still stays for the session.
   const studioIntent = () => {
     if (!STUDIO_ON_HOME || !studio || now.current.studioState !== "off") return;
     const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
     if (window.innerWidth < STUDIO_FROM || saveData) return;
-    const h = insightsBody.current?.clientHeight ?? 0;
-    if (h) setStudioRows(homeRowsFor(h));
     void loadInsightsPreview();
     setStudioState("mounted");
     later(studioWait.current, STUDIO_WAIT, () => setStudioState((s) => (s === "mounted" ? "failed" : s)));
@@ -853,7 +846,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
 
         {/* Insights: the still until Studio has drawn, then real Studio over it, live (hover a bar, pick a reason). */}
         <div
-          ref={insightsBody}
           inert={studioState !== "shown"}
           data-on={state.body === "insights" || undefined}
           data-studio-shown={studioState === "shown" || undefined}
@@ -864,7 +856,6 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
             <div data-studio data-on={studioState === "shown" || undefined} className={clsx(styles.studio, "absolute inset-0 overflow-hidden bg-bg")}>
               <InsightsPreviewLazy
                 data={studio.data}
-                rows={studioRows}
                 active={step === 2}
                 onDisplayed={() => {
                   // A cut, once the still has finished coming in (STILL_ENTRANCE) if it is the step on screen.
