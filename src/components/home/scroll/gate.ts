@@ -355,7 +355,7 @@ export function createGate(read: () => Course) {
     const span = beatSpan();
     return !!span && Math.min(a, b) >= span[0] - 1 && Math.max(a, b) <= span[1] + 1;
   };
-  /** Whether a trackpad gesture resting at `y` would leave the page off a beat: strictly inside that stretch. */
+  /** Whether a gesture resting at `y` would leave the page off a beat: strictly inside that stretch. */
   const offBeat = (y: number) => paced(y - 2, y + 2);
   /** Whether this trackpad swipe's finger has lifted: its momentum decays (LIFT_RUN, LIFT). */
   function lifted(now: number) {
@@ -468,9 +468,9 @@ export function createGate(read: () => Course) {
    * pinned stories slow scrolling stays the reader's: a push there, or out of a story's first or last beat, scrolls 1:1
    * and rests where it stops, on the clean frame nearest ahead (within CLEAN) when a line would be cut at the nav or the
    * screen's foot; but never inside a stretch that is a transition half played all the way across (unfolds: the Problem
-   * sheet rising and unfolding), where it goes on to the finished frame ahead in its direction. A trackpad's gesture is
-   * paced from the hero to the cut, the stretch between the two stories included: it settles there as inside a story (a
-   * tiny swipe from the console beat rested 90px on, mid-page).
+   * sheet rising and unfolding), where it goes on to the finished frame ahead in its direction. A gesture is paced from
+   * the hero to the end of the sheet's pin, the stretch between the two stories included: it settles there as inside a
+   * story (a tiny swipe from the console beat rested 90px on, one notch 100px, mid-page).
    */
   function nudge(l: GateLenis) {
     loose = false;
@@ -488,8 +488,9 @@ export function createGate(read: () => Course) {
         return;
       }
     }
-    // A trackpad gesture between the hero and the cut settles on a beat wherever it went quiet (below, as inside a story).
-    const beaten = !notched && offBeat(rest);
+    // A gesture between the hero and the end of the sheet's pin, a trackpad's or a notch's, settles on a beat wherever it
+    // went quiet (below, as inside a story): one notch from the console beat rested 100px on, mid-page.
+    const beaten = offBeat(rest);
     const unfold = beaten ? undefined : unfolding(rest);
     if (unfold) {
       const [a, , c] = unfold;

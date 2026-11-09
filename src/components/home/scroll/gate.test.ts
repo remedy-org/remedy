@@ -716,24 +716,26 @@ describe("wheel stops", () => {
     }
     // The same through the Chain of Custody: ten notches from its inner beat run 442px past the console beat.
     expect(wheelOnClock(6140, course, pins, [Array(10).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([6698]);
-    // A roll begun on the last beat and leaving the story follows the hand: three notches from the cut rest 300px on.
-    expect(wheelOnClock(8586, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([]);
-    // Past half a window, the roll is the reader's: fifteen notches from the open sheet rest 902px past the cut.
-    expect(wheelOnClock(7988, course, pins, [Array(15).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([]);
+    // A roll begun on the last beat and leaving the story goes one beat, to the stop that ends the sheet's pin (Fraud
+    // checks): three notches from the cut rested 300px on, Fraud checks half over the held sheet.
+    expect(wheelOnClock(8586, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([9910]);
+    // Past half a window, fifteen notches from the open sheet run 902px past the cut: on to Fraud checks, the beat nearest.
+    expect(wheelOnClock(7988, course, pins, [Array(15).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([9910]);
   });
 
   it("never leaves the Problem sheet half risen or half unfolded: a gesture that goes quiet there goes on to a whole frame", () => {
     const { course, pins, stories, unfolds } = SHEET;
-    // Three notches up from the open sheet rested at 7688, the sheet half unfolded: on up to its last frame unseen.
+    // Three notches up from the open sheet rested at 7688, the sheet half unfolded: on up to the console beat, a beat (its
+    // last frame unseen was a rest of its own, off a beat).
     const up = wheelOnClock(7988, course, pins, [Array(3).fill(-100)], { inside: 90, between: 90 }, { stories, unfolds });
-    expect(up.landed).toEqual([7002]);
+    expect(up.landed).toEqual([6698]);
     expect(up.duration).toBeLessThanOrEqual(0.8);
     // Ten notches down from the console beat rested at 7698: on to the open sheet.
     const down = wheelOnClock(6698, course, pins, [Array(10).fill(100)], { inside: 100, between: 100 }, { stories, unfolds });
     expect(down.landed).toEqual([7988]);
     expect(down.duration).toBeLessThanOrEqual(0.8);
-    // Three notches down from the console beat rest at 6998, the sheet still unseen: where the hand left it.
-    expect(wheelOnClock(6698, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([]);
+    // Three notches down from the console beat rested at 6998, the sheet still unseen, off a beat: on to the open sheet.
+    expect(wheelOnClock(6698, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([7988]);
     // A trackpad's gentle pushes up from the open sheet go on to the console beat, down from the console beat to the open
     // sheet: one beat (they rested 1:1, mid-page).
     for (const [from, dir] of [
