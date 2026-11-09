@@ -3,8 +3,7 @@ import { z } from "zod";
 import { company, fail, isResponse } from "@/app/console/_lib/api";
 import { openPhoto } from "@/app/console/_lib/photoToken";
 import { isPhotoWidth, resizedPhoto } from "@/app/console/_lib/photos";
-import { loadClaimFor } from "@/app/console/_lib/workspace";
-import { getAppStore } from "@/lib/demo";
+import { getConsoleStore, loadClaimFor } from "@/app/console/_lib/workspace";
 import { ClaimId } from "@/lib/types";
 
 const Index = z.coerce.number().int().min(0).max(9);
@@ -45,7 +44,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/
       headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=86400, immutable", "X-Content-Type-Options": "nosniff" },
     });
   }
-  const jpeg = await (await getAppStore()).getPhoto(key);
+  const jpeg = await (await getConsoleStore()).getPhoto(key);
   if (!jpeg) return fail(404, "The photo is missing from storage.");
   return new Response(new Uint8Array(jpeg), {
     headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff" },

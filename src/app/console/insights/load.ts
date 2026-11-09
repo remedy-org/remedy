@@ -1,8 +1,8 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { decideStarter } from "@/app/console/_lib/starter";
-import { canSee, listedClaims, pickRecall, type Viewer } from "@/app/console/_lib/workspace";
-import { getAppStore } from "@/lib/demo";
+import { canSee, getConsoleStore, listedClaims, pickRecall, type Viewer } from "@/app/console/_lib/workspace";
+import { datasetClaim } from "@/lib/demo/dataset";
 import type { Session } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
 
@@ -11,7 +11,7 @@ import type { Claim, Recall } from "@/lib/types";
 // whose index row is written before its file is never cached as unreadable.
 const claimAt = unstable_cache(
   async (id: string, version: number) => {
-    const claim = await (await getAppStore()).getClaim(id);
+    const claim = await (await getConsoleStore()).getClaim(id);
     if (!claim) throw new Error(`claim ${id} (version ${version}) not readable yet`);
     return claim;
   },
@@ -29,14 +29,14 @@ export interface InsightsLoad {
 // Read only: the recalls this company may see and one recall's claims, straight from the store. Unlike the claims
 // page it never asks PayPal for payout updates, so opening Insights writes nothing and calls nobody.
 export async function loadInsights(session: Session & Viewer, wanted: string | string[] | undefined): Promise<InsightsLoad> {
-  const store = await getAppStore();
+  const store = await getConsoleStore();
   const rows = (await store.listRecalls()).filter((r) => canSee(r, session));
   const recalls = (await Promise.all(rows.map((r) => store.getRecall(r.id).catch(() => null)))).filter((r): r is Recall => r !== null);
   const recall = pickRecall(recalls, wanted);
   if (!recall) return { recall: null, recalls, claims: [], unreadable: [] };
 
   const index = listedClaims(await store.listClaims(), recall, session);
-  const read = await Promise.allSettled(index.map((r) => (r.version === undefined ? store.getClaim(r.id) : claimAt(r.id, r.version))));
+  const read = await Promise.allSettled(index.map((r) => (r.version === undefined ? store.getClaim(r.id) : (datasetClaim(r.id) ?? claimAt(r.id, r.version)))));
   const claims: Claim[] = [];
   const unreadable: string[] = [];
   read.forEach((r, i) => {

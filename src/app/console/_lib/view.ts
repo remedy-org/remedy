@@ -1,3 +1,4 @@
+import { moneyCounts } from "@/lib/payoutWords";
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
 import { cutInHalf, handWrittenLabel, nounOf } from "@/components/claim/model";
@@ -201,16 +202,17 @@ function noteOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes" | "c
   return reasonOf(c, recall);
 }
 
-/** "Code missing or wrong · reads K7O, expected K7Q": a refusal in the company's words, short enough for the grid. */
+/** "Tag reads K7Q · code is K7P": a refusal in the company's words, short enough for the grid that the character that
+ * decided it is never cut (the claim page's wording). Other refusals lead with their category ("Code missing or wrong"). */
 export function refusalLine(r: Pick<Reason, "check" | "text">, copiedFrom?: string | null): string {
   const lead = refusalLabel(r.check);
   if (lead === "Other") return r.text;
   const id = r.text.match(/\bRM-\d{4}\b/)?.[0] ?? copiedFrom ?? null;
   if (r.check === "code") {
     const read = r.text.match(/reads (\S+?);? this claim's code is (\S+)/);
-    if (read) return `${lead} · reads ${read[1]}, expected ${read[2]}`;
+    if (read) return `Tag reads ${read[1]} · code is ${read[2]}`;
     const none = r.text.match(/^No code written.*code is (\S+)/);
-    if (none) return `${lead} · none written, expected ${none[1]}`;
+    if (none) return `No code on the tag · code is ${none[1]}`;
   }
   return id && (r.check === "payer" || r.check === "duplicate_photo") ? `${lead} · ${id}` : lead;
 }
@@ -421,15 +423,13 @@ export interface Stats {
   remedied: number;
   unitsSold: number;
   paidCents: number;
-  // Paid claims whose payout PayPal hasn't confirmed yet.
+  // Approved claims whose payout was sent and PayPal hasn't confirmed yet (Sent, settling, lib/payoutWords.ts).
   settling: number;
   held: number;
   rejected: number;
   blocked: number;
   pending: number;
 }
-
-const SETTLED = new Set(["SUCCESS"]);
 
 export function statsOf(claims: Pick<ClaimSummary, "decision" | "payoutStatus" | "payoutAmount">[], recall: Pick<Recall, "refund" | "unitsSold">): Stats {
   const count = (d: Decision) => claims.filter((c) => c.decision === d).length;
@@ -439,7 +439,7 @@ export function statsOf(claims: Pick<ClaimSummary, "decision" | "payoutStatus" |
     remedied: paid.length,
     unitsSold: recall.unitsSold,
     paidCents: paid.reduce((sum, c) => sum + cents(amountOf(c.payoutAmount, recall)), 0),
-    settling: paid.filter((c) => !SETTLED.has(c.payoutStatus ?? "")).length,
+    settling: moneyCounts(paid).settling,
     held: count("held"),
     rejected: count("rejected"),
     blocked: count("blocked"),

@@ -11,7 +11,7 @@ import lib from "./studio-lib";
 import { buildTheme } from "./theme";
 import { insightsWidgets, type InsightsRegistry } from "./widgets";
 
-// The homepage's Insights step, in real AG Studio: view mode, six widgets over the recall's 40 claims, no panels, no
+// The homepage's Insights step, in real AG Studio: view mode, six widgets over the recall's seven claims, no panels, no
 // editing, no analyst (no AI module, no OpenAI call). Loaded at 1024px and up once the tour's frame is near
 // (InsightsPreviewLazy), and live once shown: its charts' tooltips and its cross-filters work as in the console.
 // Laid out on the still's geometry (InsightsStill.tsx): 14px of canvas padding and 6px around each panel put its cards

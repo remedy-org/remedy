@@ -1,4 +1,5 @@
 import type { ClaimSummary } from "@/lib/store";
+import { MONEY_WORD, moneyCounts } from "@/lib/payoutWords";
 import type { Decision, Recall } from "@/lib/types";
 import { amountOf, cents, refusalLabel, statsOf, type Stats } from "./view";
 
@@ -6,6 +7,8 @@ import { amountOf, cents, refusalLabel, statsOf, type Stats } from "./view";
 
 export interface OutcomeRow {
   decision: Decision;
+  // The row's verdict (lib/payoutWords.ts): a paid decision is Paid, Sent, settling or Approved.
+  verdict: Decision | "settling" | "approved";
   label: string;
   count: number;
   share: string;
@@ -36,13 +39,16 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const paid = claims.filter((c) => c.decision === "paid");
   // Sent: a payout went to PayPal. An approved claim with nothing sent counts as approved, never as money sent.
   const sent = paid.filter((c) => c.payoutStatus !== null);
-  const confirmed = paid.filter((c) => c.payoutStatus === "SUCCESS").length;
+  const money = moneyCounts(claims);
   const sum = (list: ClaimSummary[]) => list.reduce((s, c) => s + cents(amountOf(c.payoutAmount, recall)), 0);
   // One definition per state, in the words the claims grid uses; Held is only a claim waiting for a person.
-  const rows: [Decision, string, number, string][] = [
-    // Paid only where PayPal confirmed the payout; a claim the rule or a person approved with nothing paid yet is Approved.
-    ["paid", "Paid", confirmed, "Unit destroyed on camera; refund paid through PayPal"],
-    ...(stats.remedied > confirmed ? [["paid", "Approved", stats.remedied - confirmed, "Unit destroyed on camera; refund approved, not yet paid through PayPal"] as [Decision, string, number, string]] : []),
+  type Row = [OutcomeRow["verdict"], string, number, string];
+  const rows: Row[] = [
+    // The one payout vocabulary (lib/payoutWords.ts): Paid only where PayPal confirmed the payout, Sent, settling while it
+    // hasn't, Approved where the rule or a person approved and nothing was sent.
+    ["paid", MONEY_WORD.paid, money.paid, "Unit destroyed on camera; refund paid through PayPal"],
+    ...(money.settling ? [["settling", MONEY_WORD.settling, money.settling, "Unit destroyed on camera; refund sent through PayPal, not yet confirmed"] as Row] : []),
+    ...(money.approved ? [["approved", MONEY_WORD.approved, money.approved, "Unit destroyed on camera; refund approved, nothing sent through PayPal yet"] as Row] : []),
     ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn’t run, auto-pay was off, or PayPal refused an approved payout"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
@@ -61,7 +67,7 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const settled = sent.filter((c) => c.payoutStatus === "SUCCESS");
   return {
     stats,
-    outcomes: rows.map(([decision, label, count, note]) => ({ decision, label, count, share: share(count, stats.total), note })),
+    outcomes: rows.map(([verdict, label, count, note]) => ({ decision: verdict === "settling" || verdict === "approved" ? "paid" : verdict, verdict, label, count, share: share(count, stats.total), note })),
     refusals: [...tally].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason)),
     refundCents: refund,
     paidEachCents: paidAmounts.size === 1 ? [...paidAmounts][0] : null,

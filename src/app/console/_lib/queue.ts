@@ -1,12 +1,11 @@
 import "server-only";
 import { duplicateOfRow } from "@/app/api/claims/_lib/pipeline";
-import { getAppStore } from "@/lib/demo";
 import type { Session } from "@/lib/session";
 import type { ClaimSummary } from "@/lib/store";
 import type { Recall } from "@/lib/types";
 import { sealedPhotoUrl } from "./photoToken";
 import { toRow, type ClaimRow } from "./view";
-import { canSee, listedClaims, type Viewer } from "./workspace";
+import { canSee, getConsoleStore, listedClaims, type Viewer } from "./workspace";
 
 /** The grid's rows for one company: each photo's URLs carry a sealed ticket, so thumbnails never open a claim file. */
 export function gridRows(claims: ClaimSummary[], recall: Recall, session: Pick<Session, "payerId">, now = Date.now()): ClaimRow[] {
@@ -45,7 +44,7 @@ export interface Queue {
  * changes its row when the webhook (or the next full page load) saves it.
  */
 export async function loadQueue(session: Viewer, wanted: string | null): Promise<Queue | null> {
-  const store = await getAppStore();
+  const store = await getConsoleStore();
   let listed = await store.listRecalls();
   if (wanted && !listed.some((r) => r.id === wanted)) listed = await store.listRecalls({ fresh: true });
   const visible = listed.filter((r) => canSee(r, session));

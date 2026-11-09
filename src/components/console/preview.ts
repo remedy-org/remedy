@@ -2,24 +2,25 @@ import "server-only";
 import { toDrawerClaim } from "@/app/console/_lib/drawer";
 import { buildReport } from "@/app/console/_lib/report";
 import { ledgerOf, toRow } from "@/app/console/_lib/view";
-import { demoRecall } from "@/lib/demo/kikea";
 import { DEMO_CLAIMS, GENUINE } from "@/lib/demo/claims";
-import { buildSeedClaims, SEED_PHOTO_PREFIX, SEED_PHOTOS } from "@/lib/demo/seed";
+import { DATASET_NOW, demoDataset } from "@/lib/demo/dataset";
+import { SEED_PHOTO_PREFIX } from "@/lib/demo/seed";
 import { summarize } from "@/lib/store/store";
 import type { Claim, Recall } from "@/lib/types";
 import type { ClaimsGridPreviewProps, PreviewRow } from "./ClaimsGridPreview";
 import type { StillClaim } from "./EvidenceStill";
 import { formatDay } from "./format";
+import { verdictOf } from "./VerdictMark";
 
 // The homepage's console preview, built on the server from the claims every workspace starts with (lib/demo/claims.ts,
-// built by lib/demo/seed.ts): real stored model answers, the app's own rule. No store, no network: buildSeedClaims is
-// pure. Photos are the seed's public photos, through Next's image optimizer. The grid, the Insights still and the report
+// built by lib/demo/dataset.ts, the same claims the console reads): real stored model answers, the app's own rule. No
+// store, no network: the dataset is pure. Photos are the seed's public photos, through Next's image optimizer. The grid, the Insights still and the report
 // draft all read these claims, drawn exactly as the console draws them: Paid only where PayPal paid, Approved where the
 // rule passed and nothing was sent.
 
 // A fixed "now" for the report's date and Insights' days: the day after the newest claim (7 Nov 2026), three days after
 // the recall's date (5 Nov 2026).
-export const PREVIEW_NOW = new Date("2026-11-08T09:00:00.000Z");
+export const PREVIEW_NOW = DATASET_NOW;
 // The held claim whose evidence the tour's Evidence step opens, as How it works' console shows it: the model couldn't
 // tell if both photos show the same item. Its recorded answers are read on the homepage word for word, so it is one whose
 // answers name only what the photos show. Every claim with photos opens on a click.
@@ -34,17 +35,8 @@ export const STILL_ROWS = DEMO_CLAIMS.length;
 const image = (key: string, w: 96 | 256 | 384) => `/_next/image?url=${encodeURIComponent(publicPhoto(key))}&w=${w}&q=75`;
 const publicPhoto = (key: string) => `/demo/${key.slice(SEED_PHOTO_PREFIX.length)}`;
 
-let cached: { recall: Recall; claims: Claim[] } | null = null;
-
-/** The demo claims and the demo recall, as the console stores them. Pure, built once per server process. */
-export function previewSeed() {
-  if (cached) return cached;
-  const recall = demoRecall(new Date(PREVIEW_NOW.getTime() - 3 * 86_400_000));
-  // The hashes only feed the duplicate-photo check: one per photo, so only the repost matches.
-  const hashes = Object.fromEntries(SEED_PHOTOS.map((name, i) => [name, (i + 1).toString(16).padStart(16, "0")]));
-  cached = { recall, claims: buildSeedClaims({ recall, hashes }) };
-  return cached;
-}
+/** The demo claims and the demo recall, exactly as the console reads them (dataset.ts). Pure. */
+export const previewSeed = (): { recall: Recall; claims: Claim[] } => demoDataset();
 
 /** The grid's rows, ledger and counts for a picture of the console. `asConsole` draws the claims exactly as /console
  * does (verdicts, reasons and check names in its words); otherwise the homepage's live drawing and its shorter lines. */
@@ -62,8 +54,9 @@ export function previewProps(height = 560, { asConsole = false } = {}): ClaimsGr
       return claim ? { ...row, evidence: evidenceOf(claim, recall) } : row;
     }),
   );
-  const counts = { all: all.length, paid: 0, held: 0, rejected: 0, blocked: 0, pending: 0 };
-  for (const r of all) counts[r.decision]++;
+  // By verdict, as the console's tabs count (lib/payoutWords.ts).
+  const counts = { all: all.length, paid: 0, settling: 0, approved: 0, held: 0, rejected: 0, blocked: 0, pending: 0 };
+  for (const r of all) counts[verdictOf(r)]++;
   return { rows, openId: PREVIEW_OPEN_ID, height, ledger: ledgerOf(all, recall), counts };
 }
 
@@ -123,7 +116,7 @@ function evidenceOf(claim: Claim, recall: Recall): StillClaim {
   };
 }
 
-/** The CPSC progress-report draft over the same 40 claims, as /console/report builds it for a live workspace. */
+/** The CPSC progress-report draft over the same claims, as /console/report builds it for a live workspace. */
 export function reportPreview() {
   const { recall, claims } = previewSeed();
   const daysIn = Math.floor((PREVIEW_NOW.getTime() - Date.parse(recall.recallDate)) / 86_400_000);

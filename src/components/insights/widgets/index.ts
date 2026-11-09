@@ -6,7 +6,6 @@ import { HomeMedianTime, MedianTime } from "./MedianTime";
 import { RecallProgress } from "./RecallProgress";
 import { HomeRefusalReasons, RefusalReasons } from "./RefusalReasons";
 import { glyphMarkup, type Verdict } from "@/components/console/VerdictMark";
-import type { Decision } from "@/lib/types";
 import { shownAs } from "../funnel";
 import { reactComp } from "../reactComp";
 import type { StudioLib } from "../studio-lib";
@@ -192,7 +191,7 @@ export const insightsWidgets =
 };
 
 // The grid's claim ids (sources.ts gives that field a claimOf context: the recall) are mono links to the claim in the
-// queue, as every claim id in the console is; its decisions read as the console's pill does ("Approved").
+// queue, as every claim id in the console is; its verdicts read as the console's mark does ("Paid", "Approved").
 const claimLinks = <T extends AgBaseWidgetDefinition>(def: T): T => ({
   ...def,
   options: {
@@ -214,14 +213,13 @@ const claimLinks = <T extends AgBaseWidgetDefinition>(def: T): T => ({
   },
 });
 
-const DECISION_OF: Record<string, Decision> = { Paid: "paid", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
+const VERDICT_OF: Record<string, Verdict> = { Paid: "paid", "Sent, settling": "settling", Approved: "approved", Held: "held", Rejected: "rejected", Blocked: "blocked", "In progress": "pending" };
 
 /** A decision as the console's grid draws it (VerdictMark: its glyph, then the word), as DOM for Studio's grid. */
 function pillElement(value: string): HTMLElement | string {
-  const decision = DECISION_OF[value];
-  if (!decision) return shownAs(value);
+  const verdict = VERDICT_OF[value];
+  if (!verdict) return shownAs(value);
   const word = shownAs(value);
-  const verdict: Verdict = decision === "paid" && word !== "Paid" ? "approved" : decision;
   const mark = document.createElement("span");
   mark.className = "inline-flex items-center gap-2 whitespace-nowrap text-text-2";
   mark.innerHTML = glyphMarkup(verdict);

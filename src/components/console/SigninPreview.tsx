@@ -47,10 +47,11 @@ export function SigninPreview({ rows, height }: { rows: PreviewRow[]; height: nu
         </div>
         <div className="px-5 pt-5">
           <p className="text-head-sm font-medium">X-VESOLJE Nursing Pillows</p>
-          {/* The tabs by name alone: their counts are the live console's to give. */}
-          <div className="mt-3 flex border-b border-line">
+          {/* The tabs by name alone: their counts are the live console's to give. Each on one line; a narrow window clips
+              the last behind a fade, as the console's own strip does on a phone. */}
+          <div className="mt-3 flex overflow-hidden border-b border-line [mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)]">
             {TABS.map((t, i) => (
-              <span key={t.id} className={clsx("relative inline-flex min-h-11 items-center px-3 text-ui font-medium first:pl-0", i === 0 ? "text-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted")}>
+              <span key={t.id} className={clsx("relative inline-flex min-h-11 shrink-0 items-center px-3 text-ui font-medium whitespace-nowrap first:pl-0", i === 0 ? "text-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted")}>
                 {t.label}
               </span>
             ))}

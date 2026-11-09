@@ -3,6 +3,7 @@ import type { CustomCellRendererProps } from "ag-grid-react";
 import type { ComponentType } from "react";
 import { isPreCheck, type ClaimRow } from "@/app/console/_lib/view";
 import { AmountCell, ChecksCell, ClaimCell, PayerCell, PayoutCell, TimeCell, VerdictCell } from "./cells";
+import { verdictOf, type Verdict } from "./VerdictMark";
 
 /*
  * The claims grid's read-only still in plain DOM: the same cells (cells.tsx), columns, widths and theme as ClaimsGrid's
@@ -63,7 +64,7 @@ export function GridStill({
   rows: ClaimRow[];
   openId?: string | null;
   /** Only the claims with this decision, as the live grid's status filter shows them. */
-  filter?: ClaimRow["decision"] | null;
+  filter?: Verdict | null;
   phone?: boolean;
   /** Flush in a console window (the homepage tour): no border or radius, the window's own ground, the header a quiet
    * label row over a hairline, and the first and last cells on the window's 20px inset (16px on a phone), as the tour
@@ -72,7 +73,7 @@ export function GridStill({
   className?: string;
 }) {
   const columns = phone ? PHONE : COLUMNS;
-  const shown = filter ? rows.filter((r) => r.decision === filter) : rows;
+  const shown = filter ? rows.filter((r) => verdictOf(r) === filter) : rows;
   const slots = slotsOf(rows);
   // Flush, the row's first and last cells sit on the window's inset.
   const edge = flush && (phone ? "first:pl-4 last:pr-4" : "first:pl-5 last:pr-5");

@@ -149,18 +149,25 @@ describe("the five checks", () => {
   });
 });
 
-describe("the console over a store seeded before the demo claims", () => {
-  it("lists only the demo claims once they are seeded, and leaves a store without them as it is", async () => {
+describe("the console over any store", () => {
+  it("lists the seven claims from memory, no earlier seed's claims, and only this browser's demo runs", async () => {
     const { listedClaims } = await import("@/app/console/_lib/workspace");
-    const viewer = { payerId: "COMPANY00001", decided: {} };
-    const older = { ...summarize(stored[1]), id: "RM-7581" };
-    const rows = [...stored.map(summarize), older];
-    expect(listedClaims(rows, recall, viewer).map((r) => r.id)).toEqual(DEMO_CLAIMS.map((d) => d.id));
-    // A real claim holding RM-0442's id: the rest of the dataset still marks the store as seeded with it.
-    const real = rows.filter((r) => r.id !== GENUINE.id);
-    expect(listedClaims(real, recall, viewer).map((r) => r.id)).not.toContain("RM-7581");
-    // An earlier seed (codes of its own on most ids): left as it is.
-    const earlier = [...stored.map((c) => ({ ...summarize(c), code: c.id === "RM-9629" ? c.code : "K7Q" })), older];
-    expect(listedClaims(earlier, recall, viewer).map((r) => r.id)).toContain("RM-7581");
+    const { withDatasetRows } = await import("@/app/console/_lib/dataset");
+    const { demoDataset } = await import("./dataset");
+    const round = "dr_0123456789abcdef0123456789abcdef";
+    const viewer = { payerId: "COMPANY00001", decided: {}, round };
+    const demoRecall_ = demoDataset().recall;
+    // A store an earlier seed wrote: 40 claims, repeated photos and codes, M4T paid again and again.
+    const earlier = Array.from({ length: 40 }, (_, i) => ({ ...summarize(stored[i % stored.length]), id: `RM-${String(7000 + i)}`, code: "M4T" }));
+    // Demo runs: one of this browser's round, one of another's, one from before rounds, all from one sandbox account.
+    const run = (id: string, demoRound?: string) => ({ ...summarize(stored[0]), id, seeded: undefined, demo: true, payerId: "SANDBOX00001", createdAt: "2026-11-08T10:00:00.000Z", ...(demoRound ? { demoRound } : {}) });
+    // A stored claim under one of the dataset's ids gives way to the dataset's.
+    const clash = { ...summarize(stored[0]), seeded: undefined, payerId: "COMPANY00001", code: "ZZZ" };
+    const rows = withDatasetRows([...earlier, ...stored.map(summarize), clash, run("RM-8001", round), run("RM-8002", "dr_ffffffffffffffffffffffffffffffff"), run("RM-8003")]);
+    const listed = listedClaims(rows, demoRecall_, viewer);
+    expect(listed.map((r) => r.id)).toEqual(["RM-8001", ...DEMO_CLAIMS.map((d) => d.id)]);
+    expect(listed.find((r) => r.id === GENUINE.id)?.code).toBe(GENUINE.code);
+    // Another browser on the same sandbox account: the seven claims alone.
+    expect(listedClaims(rows, demoRecall_, { ...viewer, round: null }).map((r) => r.id)).toEqual(DEMO_CLAIMS.map((d) => d.id));
   });
 });

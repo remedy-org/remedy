@@ -14,6 +14,7 @@ import { summarize } from "@/lib/store/store";
 import type { Session } from "@/lib/session";
 import type { Claim, Decision, Recall, Verdict } from "@/lib/types";
 import type { PipelineDeps } from "./api/claims/_lib/pipeline";
+import { DEMO_CLAIMS } from "@/lib/demo/claims";
 
 // The Vercel Blob plan caps reads at 10,000 a month (docs/PRODUCT.md, "Blob budget"). These pin how many store reads
 // each hot action costs, a write's own reads included (countingStore), so a change that reads every claim again
@@ -24,6 +25,10 @@ let app: Store;
 vi.mock("@/lib/demo", async (original) => ({ ...(await original<typeof import("@/lib/demo")>()), getAppStore: async () => app }));
 const owner: Session = { role: "owner", payerId: "47KT8H23PUJ3Q", verified: true, name: null, email: null, iat: 0 };
 const company: Session = { role: "company", payerId: "COMPANY00001", verified: true, name: null, email: null, iat: 0 };
+// This browser's demo round: the console lists the demo claims it made (and the dataset's seven), no other browser's.
+const ROUND = "dr_0123456789abcdef0123456789abcdef";
+const viewer = { ...company, round: ROUND };
+const withRound = (url: string) => new NextRequest(url, { headers: { cookie: `remedy_demo_round=${ROUND}` } });
 vi.mock("@/lib/session", async (original) => {
   const session = (role: string) => (role === "owner" ? owner : company);
   return {
@@ -55,6 +60,7 @@ vi.mock("next/cache", () => ({
 }));
 
 const { loadClaimFor, loadClaims, loadWorkspace, pickRecall } = await import("./console/_lib/workspace");
+const { withDatasetRows } = await import("./console/_lib/dataset");
 const { GET: pollStatus } = await import("./api/claims/[id]/status/route");
 const { GET: pollClaim } = await import("./api/claims/[id]/route");
 const { GET: getPhoto } = await import("./api/claims/[id]/photos/[n]/route");
@@ -107,7 +113,7 @@ afterEach(async () => {
 
 const DECISIONS: Decision[] = ["paid", "held", "rejected", "blocked", "pending"];
 
-// n claims on the demo recall that the company may see: seeded samples, demo claims and its own. Exactly one has a
+// n claims on the demo recall: an earlier seed's claims (never listed), this browser's demo claims and the company's own. Exactly one has a
 // payout PayPal hasn't settled. The pending ones are still waiting for their photos.
 function claimsFor(n: number): Claim[] {
   return Array.from({ length: n }, (_, i) => {
@@ -121,7 +127,7 @@ function claimsFor(n: number): Claim[] {
       reasons: decision === "rejected" || decision === "blocked" ? [{ check: "code", outcome: "reject", text: "Written code reads K7O" }] : [],
       payout: paid ? { batchId: i === 0 ? "LIVEBATCH1" : `SEED${i}`, status: i === 0 ? "PENDING" : "SUCCESS", updatedAt: "2026-11-07T10:00:00.000Z" } : null,
       createdAt: new Date(Date.parse("2026-11-07T10:00:00.000Z") + i * 60_000).toISOString(),
-      ...(i % 3 === 1 ? { seeded: true } : i % 3 === 2 ? { demo: true } : {}),
+      ...(i % 3 === 1 ? { seeded: true } : i % 3 === 2 ? { demo: true, demoRound: ROUND } : {}),
     });
   });
 }
@@ -139,22 +145,25 @@ describe.each([50, 200])("the console with %i claims", (n) => {
 
   it("renders the grid from index.json: at most 4 reads cold, 1 warm", async () => {
     const claims = await seed(n);
-    const { recalls } = await loadWorkspace(company);
+    const { store, recalls } = await loadWorkspace(viewer);
     const recall = pickRecall(recalls, undefined)!;
-    const rows = await loadClaims(app, recall, company, now);
+    const rows = await loadClaims(store, recall, viewer, now);
 
     // recalls.json, the demo recall, index.json, and the one unsettled payout's claim.
     expect(counter.counts.reads).toBeLessThanOrEqual(4);
     expect(counter.counts.calls.getClaim).toBe(1);
     expect(counter.counts.writes).toBe(0);
-    // Judges' demo starts left before a photo was sent are left out (abandonedDemo); everything else is listed.
-    const listed = claims.map(summarize).filter((r) => !abandonedDemo(r, new Date(now)));
+    // Judges' demo starts left before a photo was sent are left out (abandonedDemo), and an earlier seed's claims; the
+    // dataset's seven are listed from memory, with everything else.
+    const listed = withDatasetRows(claims.map(summarize)).filter((r) => !abandonedDemo(r, new Date(now)));
     expect(listed.length).toBeLessThan(n);
-    expect(rows).toEqual(listed.reverse());
+    expect(rows).toEqual(listed);
+    expect(rows.filter((r) => r.seeded).map((r) => r.id).sort()).toEqual(DEMO_CLAIMS.map((d) => d.id).sort());
 
     // router.refresh() after a drawer action, within the minute: the recalls are cached, the payout just checked.
     counter.reset();
-    await loadClaims(app, (await loadWorkspace(company)).recalls[0], company, now + 5_000);
+    const warm = await loadWorkspace(viewer);
+    await loadClaims(warm.store, warm.recalls[0], viewer, now + 5_000);
     expect(counter.counts.reads).toBe(1);
   });
 });
@@ -230,7 +239,7 @@ describe("index rows that disagree with their claim", () => {
 describe("the evidence drawer", () => {
   it("reads one claim and its recall, fresh", async () => {
     await seed(50);
-    expect(await loadClaimFor(company, "RM-0002", { fresh: true })).not.toBeNull();
+    expect(await loadClaimFor(company, "RM-0004", { fresh: true })).not.toBeNull();
     expect(counter.counts.calls).toEqual({ getClaim: 1, getRecall: 1 });
   });
 });
@@ -240,13 +249,13 @@ describe("the claims grid (P4)", () => {
 
   it("polls index.json alone: 3 reads cold, 1 warm, whatever the number of claims", async () => {
     const claims = await seed(200);
-    const res = await pollQueue(new NextRequest("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
-    expect((await res.json()).rows).toHaveLength(claims.filter((c) => !abandonedDemo(summarize(c), new Date())).length);
+    const res = await pollQueue(withRound("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
+    expect((await res.json()).rows).toHaveLength(withDatasetRows(claims.map(summarize)).filter((r) => !abandonedDemo(r, new Date())).length);
     expect(counter.counts.reads).toBeLessThanOrEqual(3);
     expect(counter.counts.calls.getClaim).toBeUndefined();
 
     counter.reset();
-    await pollQueue(new NextRequest("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
+    await pollQueue(withRound("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
     expect(counter.counts.calls).toEqual({ listClaims: 1 });
   });
 
@@ -279,17 +288,17 @@ describe("the claims grid (P4)", () => {
 
   it("opens the evidence panel at a row's version: the claim once, its recall from the cache", async () => {
     const claims = await seed(50);
-    const open = (id = "RM-0002") => openEvidence(new NextRequest(`http://127.0.0.1:3000/api/console/claims/${id}?v=1`), params({ id }));
+    const open = (id = "RM-0001") => openEvidence(withRound(`http://127.0.0.1:3000/api/console/claims/${id}?v=1`), params({ id }));
     const first = await (await open()).json();
-    expect(first.photos[0]).toMatch(/^\/api\/console\/claims\/RM-0002\/photos\/0\?t=[\w-]+$/);
+    expect(first.photos[0]).toMatch(/^\/api\/console\/claims\/RM-0001\/photos\/0\?t=[\w-]+$/);
     expect(counter.counts.calls).toEqual({ getClaim: 1, getRecall: 1 });
 
     counter.reset();
-    expect((await (await open()).json()).id).toBe("RM-0002");
+    expect((await (await open()).json()).id).toBe("RM-0001");
     expect(counter.counts.reads).toBe(0);
 
     // Walking 10 rows with ↓: 1 read for each new claim, then none on the way back up.
-    const ids = ["RM-0003", "RM-0004", "RM-0005", "RM-0006", "RM-0008", "RM-0009", "RM-0010", "RM-0011", "RM-0012", "RM-0013"];
+    const ids = ["RM-0003", "RM-0004", "RM-0006", "RM-0007", "RM-0009", "RM-0010", "RM-0012", "RM-0013", "RM-0015", "RM-0016"];
     // A held claim a person can pay reads index.json too, each time: what approve's checks would stop now.
     const held = claims.filter((c) => ids.includes(c.id) && c.decision === "held" && !c.seeded).length;
     expect(held).toBeGreaterThan(0);
@@ -308,9 +317,9 @@ describe("the claims grid (P4)", () => {
     expect(PENDING_LIVE_MS).toBe(CAPTURE_SESSION_MINUTES * 60_000 + STALE_AFTER_MS);
     await inner.putClaim(sampleClaim({ id: "RM-0901", payerId: company.payerId, photos: [], createdAt: "2026-11-06T22:49:00.000Z" }));
     await inner.putClaim(sampleClaim({ id: "RM-0902", payerId: company.payerId, decision: "paid", payout: { batchId: "LIVE0902", status: "UNCLAIMED", updatedAt: "2026-11-07T10:00:00.000Z" } }));
-    const res = await pollQueue(new NextRequest("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
+    const res = await pollQueue(withRound("http://127.0.0.1:3000/api/console/claims?recall=27-071"));
     const { rows } = await res.json();
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(2 + DEMO_CLAIMS.length);
     expect(isLive(rows, Date.parse("2026-11-07T10:05:00.000Z"))).toBe(false);
   });
 });

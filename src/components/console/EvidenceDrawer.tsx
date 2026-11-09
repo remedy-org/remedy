@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { MONEY_WORD } from "@/lib/payoutWords";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Button, CrossIcon, ErrorState, Skeleton } from "@/components/ui";
@@ -488,13 +489,13 @@ function moneySteps(claim: DrawerClaim): Step[] {
     return [
       ...steps,
       { label: "Not sent", at: failure.at, failed: true, note: `${failure.what} at ${formatClock(failure.at)} UTC: nothing was paid, and the claim is still held.` },
-      { label: "Settled", at: null },
+      { label: MONEY_WORD.paid, at: null },
     ];
   }
   return [
     ...steps,
     { label: "Sent", at: at((e) => e.type === "payout_sent"), note: claim.decision === "held" ? "Held: nothing is sent until a person at the company approves." : undefined },
-    { label: "Settled", at: at((e) => e.type === "payout_updated" && e.detail.endsWith("SUCCESS")) },
+    { label: MONEY_WORD.paid, at: at((e) => e.type === "payout_updated" && e.detail.endsWith("SUCCESS")) },
   ];
 }
 
@@ -519,7 +520,7 @@ function MoneyTimeline({ claim }: { claim: DrawerClaim }) {
                 <span
                   className={clsx(
                     "relative z-10 size-2.5 shrink-0 rounded-full",
-                    s.failed ? "border-2 border-stop bg-surface" : done ? (s.label === "Sent" || s.label === "Settled" ? "bg-pay" : "bg-text") : "border border-line-strong bg-surface",
+                    s.failed ? "border-2 border-stop bg-surface" : done ? (s.label === "Sent" || s.label === MONEY_WORD.paid ? "bg-pay" : "bg-text") : "border border-line-strong bg-surface",
                   )}
                 />
                 {next && <span className={clsx("absolute inset-x-0 left-2.5 hidden h-px @[26rem]:block", done && next.at && !s.failed ? "bg-muted/70" : "bg-line-strong/40")} />}
@@ -707,7 +708,7 @@ function Evidence({
         )}
       </section>
 
-      <Section title="Timeline" aside={claim.payout ? (claim.payout.status === "SUCCESS" ? "Sent through PayPal" : "Settling at PayPal") : undefined}>
+      <Section title="Timeline" aside={claim.payout ? (claim.payout.status === "SUCCESS" ? "Paid through PayPal" : MONEY_WORD.settling) : undefined}>
         <MoneyTimeline claim={claim} />
       </Section>
 
@@ -735,7 +736,7 @@ function Evidence({
 
       {claim.payout && !claim.seeded && (
         // The payout as PayPal knows it, on hairlines: what support asks for, and nothing else.
-        <Section title="PayPal" aside={claim.payout.status === "SUCCESS" ? "Settled" : "Settling"}>
+        <Section title="PayPal" aside={claim.payout.status === "SUCCESS" ? MONEY_WORD.paid : MONEY_WORD.settling}>
           <dl className="grid grid-cols-[7rem_minmax(0,1fr)] text-ui">
             {(
               [
@@ -835,12 +836,12 @@ function fiveDetail(row: DrawerClaim["fiveRows"][number], decided: ReturnType<ty
   );
 }
 
-/** The header's money: what the claim pays, and "Settling" or "Received" once PayPal has it; nothing for a refused claim.
- * A payout that wasn't sent is said once, on the timeline's PayPal step. */
+/** The header's money: what the claim pays, and "Sent, settling" or "Paid" once PayPal has it (lib/payoutWords.ts);
+ * nothing for a refused claim. A payout that wasn't sent is said once, on the timeline's PayPal step. */
 function MoneyLine({ claim }: { claim: DrawerClaim }) {
   if (claim.decision !== "paid" && claim.decision !== "held") return null;
-  // The receipt's own word once PayPal has settled it, so the owner and the company say the same thing.
-  const state = claim.decision === "held" || !claim.payout ? null : claim.payout.status === "SUCCESS" ? "Received" : "Settling";
+  // The one payout vocabulary: Paid once PayPal confirmed, Sent, settling before.
+  const state = claim.decision === "held" || !claim.payout ? null : claim.payout.status === "SUCCESS" ? MONEY_WORD.paid : MONEY_WORD.settling;
   return (
     // Right-aligned on the header's row; when a phone wraps it, it starts on the left edge under the id, never mid-line.
     <span className="inline-flex items-baseline gap-1.5 text-ui sm:ml-auto">
@@ -850,15 +851,16 @@ function MoneyLine({ claim }: { claim: DrawerClaim }) {
   );
 }
 
-/** PayPal's payout status in the console's words ("Settled", as the section's heading says it), never its raw enum. */
+/** PayPal's payout status in the console's words (lib/payoutWords.ts, as the section's heading says it), never its raw
+ * enum. */
 function payoutStatusWord(status: string): string {
   switch (status.toUpperCase()) {
     case "SUCCESS":
-      return "Settled";
+      return MONEY_WORD.paid;
     case "PENDING":
     case "PROCESSING":
     case "NEW":
-      return "Settling";
+      return MONEY_WORD.settling;
     case "UNCLAIMED":
       return "Unclaimed";
     case "ONHOLD":

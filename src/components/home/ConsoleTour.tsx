@@ -23,7 +23,7 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
 /*
  * The homepage's "For companies" tour (DESIGN.md, Screens §6), laptops only (1024px and up; phones get the stacked
  * story in ConsoleStory.tsx). Four tabs over one fixed console frame, a real view on each step:
- *   01 the claims queue, the real AG Grid on the recall's 40 claims, where the newest paid claim arrives at the top on
+ *   01 the claims queue, the real AG Grid on the recall's seven claims, where the newest paid claim arrives at the top on
  *      entering view however a visitor gets there (a row insert, its checks filling, then its verdict and payout). The
  *      real grid takes the still's place as soon as it has drawn, so a visitor may search it, filter it by status, sort
  *      it, hover its checks, export it as CSV, and click any claim with photos to open its evidence (step 02);
@@ -76,7 +76,7 @@ const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefe
 type Arrival = "before" | "interim" | "checked" | "final";
 
 export interface ConsoleTourProps {
-  /** The grid's rows, all 40 (the open claim's carries its evidence), memo-stable: the grid is driven through its API. */
+  /** The grid's rows, all seven (the open claim's carries its evidence), memo-stable: the grid is driven through its API. */
   rows: PreviewRow[];
   /** The rows the server-drawn still shows until the grid has drawn: the first of `rows`. */
   stillRows: number;
@@ -141,8 +141,8 @@ function Roll({ value }: { value: string }) {
   );
 }
 
-/** The status tabs as the console has them, in its words (Approved holds every claim the rule or a person approved; its
- * rows say Paid once PayPal has settled, as here): each filters the live grid (AG Grid's own filter, so the rows
+/** The status tabs as the console has them, in its words (lib/payoutWords.ts: Paid once PayPal confirmed, Sent, settling
+ * before that, Approved with nothing sent): each filters the live grid (AG Grid's own filter, so the rows
  * animate), their counts following the arriving claim, a visitor's decision and the search. */
 function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>; value: Tab; onChange: (t: Tab) => void }) {
   return (
@@ -156,8 +156,9 @@ function StatusFilter({ counts, value, onChange }: { counts: Record<Tab, number>
             aria-pressed={on}
             onClick={() => onChange(t.id)}
             className={clsx(
-              "relative inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-3 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px]",
-              on ? "text-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted hover:text-text",
+              // Eight tabs and the toolbar share the frame's row: tighter below 1280px, so the search stays inside it at 1024.
+              "relative inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-2 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 focus-visible:outline-2 focus-visible:outline-offset-[-4px] xl:px-3",
+              on ? "text-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0 xl:after:inset-x-3" : "text-muted hover:text-text",
             )}
           >
             {t.label}
@@ -191,7 +192,7 @@ function Toolbar({ search, onSearch, onExport, input }: { search: string; onSear
       >
         {TOUR.toolbar.export}
       </button>
-      <span className="relative flex h-9 w-52 items-center xl:w-60">
+      <span className="relative flex h-9 w-36 items-center xl:w-60">
         <input
           ref={input}
           type="search"
@@ -665,7 +666,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   };
 
   const state = stateAt(step, "final", { openId: claim });
-  // The rows with a visitor's decisions on them: a held claim paid reads Paid (Sent, Settled), one rejected Rejected.
+  // The rows with a visitor's decisions on them: a held claim approved reads Approved (nothing sent), one rejected Rejected.
   const decided = useMemo(() => rows.map((r) => decide(r, review[r.id])), [rows, review]);
   const shownRows = useRef(decided);
   useEffect(() => {
@@ -680,7 +681,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
   const counts = useMemo(() => {
     const c = Object.fromEntries(TABS.map((t) => [t.id, 0])) as Record<Tab, number>;
     c.all = found.length;
-    for (const r of found) c[r.decision]++;
+    for (const r of found) c[verdictOf(r)]++;
     return c;
   }, [found]);
 

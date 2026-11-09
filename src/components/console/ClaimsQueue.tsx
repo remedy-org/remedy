@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { CheckIcon, CrossIcon } from "@/components/ui";
 import { duration, formatCents, ledgerOf, searchKey, searchText, type ClaimRow } from "@/app/console/_lib/view";
+import { MONEY_WORD } from "@/lib/payoutWords";
 import type { Recall } from "@/lib/types";
 import { BulkBar, type BulkMode, type BulkResult } from "./BulkBar";
 import { ClaimsGrid, type ClaimsGridHandle, type GridTotals, type GroupBy, type SortOrder } from "./ClaimsGrid";
@@ -15,6 +16,7 @@ import { formatCount, plural } from "./format";
 import { Ledger } from "./Ledger";
 import type { ReviewIntent } from "./ReviewActions";
 import { StatusTabs, TABS, type Tab } from "./StatusTabs";
+import { verdictOf } from "./VerdictMark";
 import { useQueuePoll, type PollState } from "./useQueuePoll";
 
 // The evidence views load on the first open, not with the page: the queue's first load stays small. The queue fetches
@@ -31,8 +33,16 @@ export const PANEL_W = "w-[clamp(440px,34vw,680px)]";
 
 const EMPTY_TAB: Record<Exclude<Tab, "all">, { title: string; description: string }> = {
   paid: {
-    title: "No approved claims yet",
-    description: "A claim is approved when every check passes and auto-pay is on, or when a person approves it.",
+    title: "No paid claims yet",
+    description: "A claim is paid once PayPal confirms the payout Remedy sent for it.",
+  },
+  settling: {
+    title: "Nothing settling",
+    description: "A payout Remedy sent waits here until PayPal confirms it.",
+  },
+  approved: {
+    title: "No approved claims waiting",
+    description: "A claim the rule passed, or a person approved, with nothing sent through PayPal yet.",
   },
   held: {
     title: "Nothing waiting for review",
@@ -61,6 +71,9 @@ const WIDE = "(min-width: 1280px)";
 // grouping and export step aside for the cards' sort. From 640px the grid has its columns and headers, 200% zoom on a
 // laptop included.
 const ROOMY = "(min-width: 640px)";
+// From 1440px the eight tabs, grouping, export and an open search share one row; below it an empty search folds to its
+// icon, as it does beside the docked panel, so the toolbar never wraps the search onto a row of its own.
+const BROAD = "(min-width: 1440px)";
 function useMedia(query: string) {
   return useSyncExternalStore(
     (on) => {
@@ -124,6 +137,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   const fill = useMedia(FILL);
   const roomy = useMedia(ROOMY);
+  const broad = useMedia(BROAD);
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "all");
   // The Verdict column's filter: the tab's, or what the column's menu picked.
   const [filter, setFilter] = useState<DecisionModel | null>(() => tabFilter(isTab(initialTab) ? initialTab : "all"));
@@ -194,14 +208,14 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   const counts = useMemo(() => {
     const c = Object.fromEntries(TABS.map((t) => [t.id, 0])) as Record<Tab, number>;
     c.all = searched.length;
-    for (const r of searched) if (r.decision in c) c[r.decision as Tab]++;
+    for (const r of searched) c[verdictOf(r)]++;
     return c;
   }, [searched]);
-  const tabRows = useMemo(() => (tab === "all" ? rows : rows.filter((r) => r.decision === tab)), [rows, tab]);
+  const tabRows = useMemo(() => (tab === "all" ? rows : rows.filter((r) => verdictOf(r) === tab)), [rows, tab]);
   const found = useMemo(() => (tab === "all" ? searched : searched.filter((r) => r.decision === tab)), [searched, tab]);
   const filtered = filter !== null && tabOf(filter) === "all";
   const openRow = rows.find((r) => r.id === open) ?? null;
-  const compact = ((wide && open !== null) || !roomy) && !search && !searchOpen;
+  const compact = ((wide && open !== null) || !roomy || !broad) && !search && !searchOpen;
   // A search with nothing in this tab: where its matches are instead, so an empty tab is never a dead end.
   const elsewhere = tab !== "all" && search ? TABS.filter((t) => t.id !== "all" && t.id !== tab && counts[t.id] > 0) : [];
 
@@ -463,7 +477,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
         // the key line says, and the list takes focus back.
         e.preventDefault();
         grid.current?.step(open, e.key === "ArrowDown" || e.key === "j" ? 1 : -1);
-      } else if (/^[1-6]$/.test(e.key)) {
+      } else if (/^[1-8]$/.test(e.key)) {
         // Never while a claim's confirm, reason or save is up, nor while an A, R or Enter waits for its claim to load: a
         // digit there is a quick reason or a slip, not a new list.
         if (!reviewing && !awaiting.current) changeTab(TABS[Number(e.key) - 1].id);
@@ -751,20 +765,17 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               <span className="text-text-2">
                 {shown === null || shown === rows.length ? plural(rows.length, "claim") : `${formatCount(shown)} of ${plural(rows.length, "claim")}`}
               </span>
-              {totals && totals.approvedCents > 0 && (
-                <>
-                  {" · "}
-                  <span className="font-mono">{formatCents(totals.approvedCents)}</span> approved
-                  {/* What PayPal took, only once it took something: the strip above says why nothing has. */}
-                  {totals.sentCents > 0 && (
-                    <>
-                      {" · "}
-                      <span className="font-mono">{formatCents(totals.sentCents)}</span> sent
-                    </>
-                  )}
-                </>
-              )}
-              {ledger.settling > 0 && ` · ${formatCount(ledger.settling)} settling at PayPal`}
+              {/* The money the filters show, in the one payout vocabulary (lib/payoutWords.ts): each state once it holds any. */}
+              {totals &&
+                (["paid", "settling", "approved"] as const).map(
+                  (k) =>
+                    totals.cents[k] > 0 && (
+                      <span key={k}>
+                        {" · "}
+                        <span className="font-mono">{formatCents(totals.cents[k])}</span> {MONEY_WORD[k].toLowerCase()}
+                      </span>
+                    ),
+                )}
               {tab === "held" && " · oldest first"}
             </span>
             <span className="ml-auto inline-flex items-center gap-4">
@@ -932,7 +943,7 @@ function Status({ state, at, failed, onRefresh }: { state: PollState; at: number
 // Each row: its keys, what joins them ("/" for either, "to" for a range, "+" for together), and what they do.
 const SHORTCUTS: [string[], "/" | "to" | "+" | null, string][] = [
   [["/"], null, "Search"],
-  [["1", "6"], "to", "1 All · 2 Approved · 3 Held · 4 Rejected · 5 Blocked · 6 In progress"],
+  [["1", "8"], "to", "1 All · 2 Paid · 3 Sent, settling · 4 Approved · 5 Held · 6 Rejected · 7 Blocked · 8 In progress"],
   [["↓", "J"], "/", "Next claim"],
   [["↑", "K"], "/", "Previous claim"],
   [["Enter"], null, "Open the claim"],

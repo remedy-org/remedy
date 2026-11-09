@@ -5,7 +5,7 @@ import { TOUR } from "./tour-copy";
 import styles from "./tour.module.css";
 
 // The recall analyst's answer on the homepage: a recording, never live. Mohit asks "Why were 9 claims refused?" once in
-// /console/insights on a workspace holding only the 40 sample claims and pastes the answer into analyst-sample.json;
+// /console/insights on a workspace holding only the seven demo claims and pastes the answer into analyst-sample.json;
 // analyst-sample.test.ts checks every number and claim id in it against the seed. With no recording the rail isn't
 // drawn at all, and the Insights step's canvas takes the full width.
 

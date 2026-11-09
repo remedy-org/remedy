@@ -16,7 +16,7 @@ export type StopKind = "refused" | "held" | "approved" | "waiting";
 export const STOP_KINDS: StopKind[] = ["refused", "held", "approved", "waiting"];
 
 export const kindOf = (decision: string | null | undefined): StopKind =>
-  decision === "Held" ? "held" : decision === "Rejected" || decision === "Blocked" ? "refused" : decision === "Paid" ? "approved" : "waiting";
+  decision === "Held" ? "held" : decision === "Rejected" || decision === "Blocked" ? "refused" : decision === "Paid" || decision === "Sent, settling" || decision === "Approved" ? "approved" : "waiting";
 
 export interface StopGroup {
   kind: StopKind;
