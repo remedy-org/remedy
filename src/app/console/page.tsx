@@ -11,9 +11,9 @@ import { loadClaims, loadWorkspace, pickRecall, viewerOf } from "./_lib/workspac
 
 export const metadata = { title: "Claims" };
 
-// On laptops the queue fills the viewport under the 56px header (plus its hairline) and the page itself never
+// On laptops the queue fills the viewport under the 64px header (plus its hairline) and the page itself never
 // scrolls; the grid scrolls inside. Phones keep the page's own scroll.
-const VIEWPORT = "lg:h-[calc(100dvh-57px)] lg:min-h-[640px] lg:flex-none lg:overflow-hidden";
+const VIEWPORT = "lg:h-[calc(100dvh-65px)] lg:min-h-[640px] lg:flex-none lg:overflow-hidden";
 
 export default async function ConsolePage({ searchParams }: PageProps<"/console">) {
   const session = await viewerOf(await requireSession("company", "/console"));
@@ -25,7 +25,7 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
 
   if (!recall) {
     return (
-      <main className="flex flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="page flex flex-1 flex-col gap-6 py-8">
         <PartialNotice what="recalls" ids={lostRecalls} total={lostRecalls.length} />
         <EmptyState
           className="my-auto"
@@ -41,7 +41,7 @@ export default async function ConsolePage({ searchParams }: PageProps<"/console"
   const rows = gridRows(claims, recall, session);
 
   return (
-    <main className={`flex flex-1 flex-col gap-4 px-4 pt-6 pb-3 sm:px-6 lg:px-8 ${rows.length ? VIEWPORT : ""}`}>
+    <main className={`page flex flex-1 flex-col gap-4 pt-6 pb-3 ${rows.length ? VIEWPORT : ""}`}>
       <WorkspaceNote recall={recall} recalls={recalls} company={session.name} />
       <RecallHeading
         recall={recall}

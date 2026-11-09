@@ -23,7 +23,7 @@ export default async function StatesPage() {
   if (process.env.NODE_ENV === "production") notFound();
   await requireSession("company", "/console/states");
   return (
-    <main className="flex flex-col gap-12 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="page flex flex-col gap-12 py-8">
       <h1 className="text-h2 font-medium">Console states</h1>
 
       <State name="Claims · empty (a recall with no claims)">

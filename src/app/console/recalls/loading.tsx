@@ -3,7 +3,7 @@ import { Skeleton, SkeletonText } from "@/components/ui";
 // Recall pages: a heading, then two cards.
 export default function Loading() {
   return (
-    <main aria-busy="true" aria-label="Loading the recall" className="flex flex-1 flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+    <main aria-busy="true" aria-label="Loading the recall" className="page flex flex-1 flex-col gap-8 py-8">
       <div className="flex flex-col gap-3">
         <Skeleton className="h-3 w-48" />
         <Skeleton className="h-8 w-72 max-w-full" />

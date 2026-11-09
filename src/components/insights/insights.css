@@ -125,7 +125,7 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
 }
 
 /*
- * The rail is a sheet fixed under the console's 57px header, over the report's right edge: opening it neither scrolls the
+ * The rail is a sheet fixed under the console's 65px header, over the report's right edge: opening it neither scrolls the
  * page nor reflows the report under it, and its question box is on screen at any scroll. Studio's root clips rather than
  * scrolls (overflow: clip makes no scroll container).
  */
@@ -135,7 +135,7 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
 
 .insights-report .ag-studio-root-panel-container-right {
   position: fixed;
-  top: 57px;
+  top: 65px;
   right: 0;
   bottom: 0;
   z-index: 30;
@@ -309,8 +309,22 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   padding-left: 40px;
 }
 
-/* Below 1024px the page's gutter is 24px (the header's sm:px-6), so the canvas keeps the same edge. */
+/*
+ * The report sits on the site's page frame (.page), like the header and the ledger over it: Studio pads its canvas 32px
+ * (24px below 1024px), so the frame adds only the rest of the gutter, and every panel's edge lands on the wordmark's.
+ */
+.insights-frame {
+  --canvas-pad: 32px;
+  margin-inline: auto;
+  width: 100%;
+  max-width: calc(var(--container-content) + 2 * var(--gutter));
+  padding-inline: max(0px, calc(var(--gutter) - var(--canvas-pad)));
+}
+
 @media (max-width: 1023px) {
+  .insights-frame {
+    --canvas-pad: 24px;
+  }
   .insights-report .ag-studio-root {
     --ag-studio-canvas-padding: 24px;
   }

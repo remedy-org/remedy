@@ -4,7 +4,7 @@ import { Button } from "@/components/ui";
  * so a company is never dropped onto the claim site's page. */
 export default function ConsoleNotFound() {
   return (
-    <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
+    <main className="page flex flex-1 flex-col py-8">
       <h1 className="text-h2 font-medium">Nothing at this address</h1>
       <p className="mt-1.5 max-w-read text-ui text-muted">The link may be mistyped, or the recall is not in this workspace.</p>
       <div className="mt-6">

@@ -3,7 +3,7 @@ import { Skeleton, SkeletonText } from "@/components/ui";
 // The report sheet while the claims load.
 export default function Loading() {
   return (
-    <main aria-busy="true" aria-label="Loading the report" className="flex flex-1 flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+    <main aria-busy="true" aria-label="Loading the report" className="page flex flex-1 flex-col gap-6 py-8">
       <div className="mx-auto flex w-full max-w-[52rem] flex-col gap-2">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-4 w-96 max-w-full" />

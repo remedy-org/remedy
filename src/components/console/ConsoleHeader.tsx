@@ -2,13 +2,16 @@ import { ThemeToggle, Wordmark } from "@/components/ui";
 import type { Session } from "@/lib/session";
 import { ConsoleNav } from "./ConsoleNav";
 
-/** App chrome: wordmark and the three places on the left; who is signed in, the theme and sign out on the right. */
+/**
+ * App chrome: wordmark and the places on the left; who is signed in, the theme and sign out on the right. The site's one
+ * header spec (DESIGN.md): the homepage's lockup, 64px bar and page frame, so the logo never moves from /signin in.
+ */
 export function ConsoleHeader({ session }: { session: Session | null }) {
   const who = session?.name ?? session?.email ?? null;
   return (
     <header data-console-header className="border-b border-line bg-bg print:hidden">
-      <div className="flex h-14 items-center gap-8 px-4 sm:px-6 lg:px-8">
-        <Wordmark href="/console" />
+      <div className="page flex h-16 items-center gap-8">
+        <Wordmark size="md" href="/console" />
         <ConsoleNav className="hidden self-stretch sm:flex" />
         <div className="ml-auto flex items-center gap-2">
           {who && (
@@ -28,7 +31,7 @@ export function ConsoleHeader({ session }: { session: Session | null }) {
           )}
         </div>
       </div>
-      <ConsoleNav className="flex border-t border-line px-4 sm:hidden" />
+      <ConsoleNav className="page flex border-t border-line sm:hidden" />
     </header>
   );
 }

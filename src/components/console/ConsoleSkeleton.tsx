@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui";
  * grid with no gap between them, as ClaimsQueue lays them out), so the page never shifts when the claims arrive. */
 export function ConsoleSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading claims" className="flex flex-1 flex-col gap-4 px-4 pt-6 pb-3 sm:px-6 lg:h-[calc(100dvh-57px)] lg:flex-none lg:overflow-hidden lg:px-8">
+    <div aria-busy="true" aria-label="Loading claims" className="page flex flex-1 flex-col gap-4 pt-6 pb-3 lg:h-[calc(100dvh-65px)] lg:flex-none lg:overflow-hidden">
       <div className="grid grid-cols-1 gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-8">
         <span className="flex h-11 items-center">
           <Skeleton className="h-7 w-80 max-w-full" />

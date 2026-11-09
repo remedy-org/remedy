@@ -38,14 +38,14 @@ const Rows = ({ n, bar = true }: { n: number; bar?: boolean }) => (
 export function InsightsSkeleton() {
   return (
     <div className="flex w-full flex-col" aria-busy="true" aria-label="Loading the report">
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div className="page">
         <div className="flex min-h-12 flex-wrap items-center gap-x-8 gap-y-2 border-y border-line py-2.5">
           {["w-28", "w-24", "w-32", "w-44", "w-36"].map((w) => (
             <Skeleton key={w} className={`h-5 ${w}`} />
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-1 px-4 pt-8 sm:px-6 lg:grid-cols-[2fr_1fr] lg:px-8">
+      <div className="page grid grid-cols-1 pt-8 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col">
           <Section title="Recall progress" first className="h-[208px]">
             <Skeleton className="mt-6 h-9 w-40" />

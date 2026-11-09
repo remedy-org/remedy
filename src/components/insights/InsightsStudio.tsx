@@ -259,52 +259,54 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
               requestAnimationFrame(() => askButton.current?.focus());
             }}
             aria-expanded
-            className="fixed top-[60px] right-4 z-40 inline-flex min-h-8 items-center rounded-control px-2 text-ui text-muted transition-colors duration-160 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-0"
+            className="fixed top-[68px] right-4 z-40 inline-flex min-h-8 items-center rounded-control px-2 text-ui text-muted transition-colors duration-160 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-0"
           >
             Close the analyst
           </button>,
           document.body,
         )}
       {/* The figures follow the page's filter; a pick no list here can read leaves them on every claim. */}
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div className="page">
         <InsightsLedger claims={(filtered && shown) || data.claims} unitsSold={data.recall.unitsSold} />
       </div>
       {/* The page's filter, said in words with a way out: a pick in one panel changes every number on the page. Always
           there at one height, saying how to pick until something is, so nothing under it moves when a pick lands. */}
-      <div ref={bar} tabIndex={-1} role="status" className="mx-4 flex h-11 items-center gap-x-3 border-b border-line text-ui outline-none sm:mx-6 lg:mx-8">
-        {!filtered && (
-          <p className="min-w-0 truncate text-muted">
-            Showing all {plural(data.claims.length, "claim")} · Pick a decision, a drop or a reason to filter the page
-          </p>
-        )}
-        {filtered && (
-          <>
+      <div className="page">
+        <div ref={bar} tabIndex={-1} role="status" className="flex h-11 items-center gap-x-3 border-b border-line text-ui outline-none">
+          {!filtered && (
             <p className="min-w-0 truncate text-muted">
-              Showing <span className="font-medium text-text">{filterLabel(picks)}</span>
-              {shown ? (
-                <>
-                  {" "}
-                  · <span className="tabular-nums text-text">{shown.length}</span> of {plural(data.claims.length, "claim")}
-                </>
-              ) : (
-                " · the figures above count every claim"
-              )}
+              Showing all {plural(data.claims.length, "claim")} · Pick a decision, a drop or a reason to filter the page
             </p>
-            <button
-              type="button"
-              onClick={clearFilter}
-              className="shrink-0 rounded-control px-2 py-1 font-medium text-text underline decoration-line-2 underline-offset-4 hover:decoration-text focus-visible:outline-2 focus-visible:outline-offset-0"
-            >
-              Clear filter
-            </button>
-          </>
-        )}
+          )}
+          {filtered && (
+            <>
+              <p className="min-w-0 truncate text-muted">
+                Showing <span className="font-medium text-text">{filterLabel(picks)}</span>
+                {shown ? (
+                  <>
+                    {" "}
+                    · <span className="tabular-nums text-text">{shown.length}</span> of {plural(data.claims.length, "claim")}
+                  </>
+                ) : (
+                  " · the figures above count every claim"
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={clearFilter}
+                className="shrink-0 rounded-control px-2 py-1 font-medium text-text underline decoration-line-2 underline-offset-4 hover:decoration-text focus-visible:outline-2 focus-visible:outline-offset-0"
+              >
+                Clear filter
+              </button>
+            </>
+          )}
+        </div>
       </div>
       <div
         ref={host}
         // The analyst's empty column says what it answers from (insights.css prints it).
         style={{ height, ["--analyst-intro" as string]: JSON.stringify(`Answers from this recall's ${plural(data.claims.length, "claim")}, naming the claim IDs it used. Ask for a chart and it adds one to this page.`) }}
-        className={clsx("insights-report w-full [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!", !askOpen && "insights-ask-closed")}
+        className={clsx("insights-report insights-frame [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!", !askOpen && "insights-ask-closed")}
       />
       <p id={PANEL_KEYS} hidden>
         Press Enter to use this panel&apos;s controls, the arrow keys or Tab to move between them, and Escape to come back out. A pick filters the whole page until you

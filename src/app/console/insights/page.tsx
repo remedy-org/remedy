@@ -35,7 +35,7 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
 
   if (!recall) {
     return (
-      <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
+      <main className="page flex flex-1 flex-col py-8">
         <EmptyState
           className="my-auto"
           title="Nothing to analyse yet"
@@ -48,7 +48,7 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
 
   if (!claims.length) {
     return (
-      <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
+      <main className="page flex flex-1 flex-col py-8">
         <PartialNotice what="claims" ids={unreadable} total={unreadable.length} />
         <EmptyState
           className="my-auto"
@@ -65,7 +65,7 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
   return (
     // The page scrolls as one: Studio's canvas is sized to the report, so no panel scrolls inside another.
     <main className="flex flex-col pb-8">
-      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 px-4 pt-8 pb-5 sm:px-6 lg:px-8">
+      <div className="page flex flex-wrap items-end justify-between gap-x-8 gap-y-3 pt-8 pb-5">
         <div className="min-w-0">
           <div className="mb-3 empty:hidden">
             <WorkspaceNote recall={recall} recalls={recalls} company={session.name} />
@@ -85,7 +85,7 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
         </div>
       </div>
       {unreadable.length > 0 && (
-        <div className="px-4 pt-4 sm:px-6 lg:px-8">
+        <div className="page pt-4">
           <PartialNotice what="claims" ids={unreadable} total={claims.length + unreadable.length} />
         </div>
       )}

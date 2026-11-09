@@ -36,7 +36,7 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
   const spec = shownSpec(recall.spec);
 
   return (
-    <main className="flex flex-1 flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="page flex flex-1 flex-col gap-8 py-8">
       {published && (
         <div role="status" className="flex items-start gap-3 rounded-card border border-line bg-pay-soft px-4 py-3 text-ui">
           <CheckIcon className="mt-0.5 shrink-0 text-pay" />
