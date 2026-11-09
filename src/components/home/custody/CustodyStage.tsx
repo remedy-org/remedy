@@ -1,12 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { frame as motionFrame, motion, useMotionValueEvent, useTransform } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { frame as motionFrame, motion, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { ClaimRow } from "@/app/console/_lib/view";
+import { Receipt } from "@/components/home/teardown";
 import { BEATS as EXHIBIT_BEATS, holdOf } from "../teardown/model";
-import { CHAPTERS, CONSENT_AT, SHOT_AT } from "./claim";
-import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, type Progress } from "./chapters";
+import { ARRIVAL, CONSOLE_IN, LAND, arrivalAt, cardAt, frameAt, lookAt, type Box } from "./arrival";
+import { CHAPTERS, CLAIM, CONSENT_AT, SHOT_AT } from "./claim";
+import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, QueueRow, type Progress } from "./chapters";
 import { ExhibitSlot } from "./ExhibitSlot";
 import { useBeatPaging } from "./paging";
 import { scrollAt } from "./pace";
@@ -30,10 +32,13 @@ const ON_GRID = HANDOFF[0];
 
 const inOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
 
-function Layer({ p, i, compact, fill, children }: { p: Progress; i: number; compact: boolean; fill?: boolean; children: ReactNode }) {
+function Layer({ p, i, compact, fill, gate, children }: { p: Progress; i: number; compact: boolean; fill?: boolean; gate?: MotionValue<number>; children: ReactNode }) {
   // A cut in time at the chapter's start (gate.ts), rising 8px as it comes in: never a scrubbed fade a reader can stop in.
-  const opacity = useChapterGate(p, (c) => c === i);
-  const y = useTransform(opacity, (o) => (i === 0 ? 0 : 8 * (1 - o)));
+  // `gate` overrides it, without the rise: the console's content comes in round the arriving card, which must find its
+  // slot where it will rest.
+  const cut = useChapterGate(p, (c) => c === i);
+  const opacity = gate ?? cut;
+  const y = useTransform(opacity, (o) => (i === 0 || gate ? 0 : 8 * (1 - o)));
   const visibility = useTransform(opacity, (o) => (o > 0 ? "visible" : "hidden"));
   return (
     // A claim screen sits in the middle of the window under the bar (at its top it left the lower 40% of the frame
@@ -155,6 +160,96 @@ function seekTo(st: HTMLElement | null, t: number) {
   window.scrollTo({ top: top + scrollAt(t) * (runway.offsetHeight - window.innerHeight), behavior: "instant" });
 }
 
+/**
+ * Chapter 06's arrival (arrival.ts), written straight to the elements as the clip is, so scrolling never re-renders
+ * React. From the console's cut (ARRIVAL[0]) to the row landing (LAND), the card stands in for the exhibit's receipt (hidden
+ * meanwhile): it starts as that receipt, in its place and look, folds into RM-0442's row where it lay, and glides to the
+ * row's slot at the top of the queue, settling flat; the window's edge (`ghost`) is drawn out round it from its fold on,
+ * and stays as the window's edge through the chapter. Back up, the card holds the receipt until the exhibit is whole
+ * over the stage again (its 500ms cut in), so the receipt never blinks.
+ */
+function paintArrival(refs: Record<"stage" | "card" | "ghost", RefObject<HTMLDivElement | null>>, v: number, exhibit: number) {
+  const st = refs.stage.current;
+  const el = refs.card.current;
+  const fr = refs.ghost.current;
+  if (!st || !el || !fr) return;
+  const S = st.getBoundingClientRect();
+  const rel = (e: Element | null): Box | null => {
+    if (!e) return null;
+    const r = e.getBoundingClientRect();
+    return { x: r.left - S.left, y: r.top - S.top, w: r.width, h: r.height };
+  };
+  const receipt = st.querySelector<HTMLElement>("[data-exhibit-slot] [data-receipt]");
+  const win = rel(st.querySelector("[data-screen-inner]"));
+  if (!win) return;
+  const slot = rel(st.querySelector('[data-layer="5"] [data-arriving]')) ?? win;
+  const r0 = rel(receipt) ?? slot;
+  const k = arrivalAt(v);
+  const c = chapterAt(v);
+  const on = !!receipt && ((v >= ARRIVAL[0] && v < LAND) || (c === 4 && exhibit < 1));
+  // The exhibit's own receipt is hidden while the card stands in for it, and through chapter 06 (the exhibit may still be
+  // dissolving out after a fast jump past the landing, and the receipt has gone into the queue).
+  if (receipt) receipt.style.visibility = on || c === 5 ? "hidden" : "";
+  const box = cardAt(k, r0, slot, win);
+  const f = c === 5 ? frameAt(k, box, win) : null;
+  fr.style.visibility = f ? "visible" : "hidden";
+  if (f) {
+    fr.style.transform = `translate(${f.x.toFixed(1)}px, ${f.y.toFixed(1)}px)`;
+    fr.style.width = `${f.w.toFixed(1)}px`;
+    fr.style.height = `${f.h.toFixed(1)}px`;
+  }
+  el.style.visibility = on ? "visible" : "hidden";
+  if (!on) return;
+  const look = lookAt(k);
+  el.style.transform = `translate(${box.x.toFixed(1)}px, ${box.y.toFixed(1)}px)`;
+  el.style.width = `${box.w.toFixed(1)}px`;
+  el.style.height = `${box.h.toFixed(1)}px`;
+  // Its ground: none at first (the receipt's own paper, perforated edge and all), then the receipt's paper turning to the
+  // console's surface, lifted on a hairline and a soft shadow, then flat: the row's own ground with the queue's flash
+  // (ConsoleChapter's, 8% at LAND), so the card's last frame and the row's first are one.
+  const lift = look.lift;
+  const ground = el.querySelector<HTMLElement>("[data-card-ground]");
+  if (ground) {
+    ground.style.backgroundColor = `color-mix(in oklab, var(--paper) ${(look.paper * 100).toFixed(1)}%, var(--surface))`;
+    ground.style.opacity = (look.ground * lift).toFixed(3);
+  }
+  const tint = el.querySelector<HTMLElement>("[data-card-tint]");
+  if (tint) tint.style.opacity = (1 - lift).toFixed(3);
+  const edge = look.ground * lift;
+  el.style.boxShadow = `0 0 0 1px color-mix(in oklch, var(--line) ${(edge * 100).toFixed(1)}%, transparent), 0 14px 32px -18px oklch(0 0 0 / ${(0.5 * edge).toFixed(3)})`;
+  el.style.borderRadius = `${(6 * lift).toFixed(2)}px`;
+  // The receipt stays where it lay while the card folds round it, cropped to the card from top and bottom alike; its own
+  // shadow shows only on the first frames, while it is still the receipt whole.
+  const rc = el.querySelector<HTMLElement>("[data-card-receipt]");
+  if (rc) {
+    const crop = Math.max(0, (r0.h - box.h) / 2);
+    const m = 64 * (1 - Math.min(1, k / 0.04));
+    rc.style.width = `${r0.w.toFixed(1)}px`;
+    rc.style.transform = `translate(${(box.w - r0.w).toFixed(1)}px, ${((box.h - r0.h) / 2).toFixed(1)}px)`;
+    rc.style.clipPath = `inset(${(crop - m).toFixed(1)}px ${-m}px ${(crop - m).toFixed(1)}px ${-m}px)`;
+    rc.style.opacity = look.receipt.toFixed(3);
+    // Once the card's ground is up under it (the receipt's own paper, to the shade), the receipt gives up its paper and
+    // shadow to the card: its words dim on the card's one ground as it turns to the console's surface, never a lighter
+    // receipt-shaped patch on a darker card.
+    const folding = look.ground >= 1;
+    const paper = rc.querySelector<HTMLElement>(".bg-paper");
+    const lifted = rc.querySelector<HTMLElement>(".paper-lifted");
+    if (paper) paper.style.background = folding ? "transparent" : "";
+    if (lifted) lifted.style.filter = folding ? "none" : "";
+    // "inherit", never "visible": a visible child would show through the card once it is hidden.
+    rc.style.visibility = look.receipt > 0 ? "inherit" : "hidden";
+  }
+  // The row at its own width from the card's left edge, the part past the card's right edge cut until it has widened.
+  const row = el.querySelector<HTMLElement>("[data-card-row]");
+  if (row) {
+    row.style.width = `${slot.w.toFixed(1)}px`;
+    row.style.transform = `translateY(${((box.h - slot.h) / 2).toFixed(1)}px)`;
+    row.style.clipPath = `inset(0 ${Math.max(0, slot.w - box.w).toFixed(1)}px 0 0)`;
+    row.style.opacity = look.row.toFixed(3);
+    row.style.visibility = look.row > 0 ? "inherit" : "hidden";
+  }
+}
+
 export interface CustodyStageProps {
   p: Progress;
   stage: RefObject<HTMLDivElement | null>;
@@ -165,17 +260,28 @@ export interface CustodyStageProps {
 
 export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps) {
   const screen = useRef<HTMLDivElement>(null);
+  const card = useRef<HTMLDivElement>(null);
+  const ghost = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const [chapter, setChapter] = useState(0);
   // The page-wide pager (scroll/keys.ts) pages these same beats wherever it runs, and from the console steps out of the
   // pin onto the Problem sheet open; this one is the pin's own, for when it doesn't.
   useBeatPaging(() => stage.current?.parentElement, PAGE_STOPS);
+  // The exhibit's layer (ExhibitSlot): in over chapter 02, out onto the console as a 280ms dissolve. Held here, so chapter
+  // 06's arrival knows when the exhibit is back whole over the stage and its own receipt can take over again.
+  const exhibitOn = useChapterGate(p, (c) => c >= 2 && c <= 4, { duration: 0.28, ease: IN_OUT });
+  const arriving = consoleRows.find((r) => r.id === CLAIM.id);
+  const paint = useCallback(() => paintArrival({ stage, card, ghost }, p.get(), exhibitOn.get()), [stage, p, exhibitOn]);
 
   useMotionValueEvent(p, "change", (v) => {
     // After Motion has written this frame's styles, so the laptop is measured where it is now, not a frame ago.
-    motionFrame.postRender(() => applyClip(screen.current, stage.current, p.get()));
+    motionFrame.postRender(() => {
+      applyClip(screen.current, stage.current, p.get());
+      paint();
+    });
     setChapter(chapterAt(v));
   });
+  useMotionValueEvent(exhibitOn, "change", () => motionFrame.postRender(paint));
 
   // Short laptop screens (a stage under 800px, so a viewport under about 864px) get the chapters' compact layouts:
   // tighter gaps, a smaller photo and fewer rows. Type never shrinks, so mono text stays at 12px.
@@ -184,17 +290,18 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
     if (!st) return;
     const fit = () => {
       applyClip(screen.current, st, p.get());
+      paint();
       setCompact(st.clientHeight < 800);
     };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(st);
     return () => ro.disconnect();
-  }, [stage, p]);
+  }, [stage, p, paint]);
 
   // Chapter 06's window is as tall as its queue, never a half-empty table on a tall screen (custody.module.css
   // .screen[data-fit]): its bar, the layer's padding, the queue's tabs, header and foot, and every claim's row at full
-  // height (RM-0442's opens into place as the chapter plays). Read from the layout, so the compact rows and the fonts
+  // height (RM-0442's slot is open from the start, arrival.ts). Read from the layout, so the compact rows and the fonts
   // count; the clip follows the window.
   useLayoutEffect(() => {
     const el = screen.current;
@@ -213,13 +320,14 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
       // A pixel over, so subpixel rounding never wraps the last row out of sight.
       el.style.setProperty("--fit-h", `${Math.ceil(h(bar) + pad + fixed + rows.children.length * row) + 1}px`);
       applyClip(el, st, p.get());
+      paint();
     };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(bar);
     ro.observe(queue);
     return () => ro.disconnect();
-  }, [chapter, compact, stage, p]);
+  }, [chapter, compact, stage, p, paint]);
 
   // The fitted window (data-fit) comes with chapter 06 and goes only once its console has cut out (LEAVE, 180ms), so
   // going back up the console never shows in the full-height window for a frame. Written straight to the element, as
@@ -230,6 +338,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
     const set = (on: boolean) => {
       el.toggleAttribute("data-fit", on);
       applyClip(el, stage.current, p.get());
+      paint();
     };
     if (chapter === 5) {
       set(true);
@@ -237,7 +346,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
     }
     const t = window.setTimeout(() => set(false), UNFIT_AFTER);
     return () => window.clearTimeout(t);
-  }, [chapter, stage, p]);
+  }, [chapter, stage, p, paint]);
 
   // As p passes 0.12, in time, the laptop's own screen hands over to the consent screen in two halves: the layer's
   // ground covers the laptop's checks list in 110ms, and only then does the consent screen's content rise in (140ms), so
@@ -253,9 +362,13 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
     pointerEvents: useTransform(handIn, (o) => (o > 0.5 ? "auto" : "none")),
   };
   // The screen's frame and app bar come in with the clip on the grid, so the growing clip never slices the bar's words.
-  // They and the rail leave while the exhibit covers the stage, and come back after it has gone, so its cuts in and
-  // out pass through the bare ground, never the exhibit's headline over the rail's list.
-  const frame = useGate(p, (v) => v >= ON_GRID && !inExhibit(v), CUT_IN, LEAVE);
+  // They and the rail leave while the exhibit covers the stage, and the rail comes back after it has gone, so its cuts
+  // in and out pass through the bare ground, never the exhibit's headline over the rail's list. In chapter 06 the
+  // window's edge is the arrival's frame (drawn out round the arriving card), and its bar comes in with the console's
+  // content once that frame is whole (CONSOLE_IN).
+  const frame = useGate(p, (v) => v >= ON_GRID && v < EXHIBIT_RANGE[0], CUT_IN, LEAVE);
+  const bar = useGate(p, (v) => v >= ON_GRID && !inExhibit(v) && (v < ARRIVAL[0] || v >= CONSOLE_IN), CUT_IN, LEAVE);
+  const consoleIn = useGate(p, (v) => v >= CONSOLE_IN);
   const railHead = useGate(p, (v) => v >= RAIL_IN && !inExhibit(v), CUT_IN, LEAVE);
   // The rail's skip link hides while the exhibit covers it: the exhibit carries the same link in its own foot. Past the
   // console it has nothing left to skip, so it fades out as the pin releases, never left alone on the stage.
@@ -268,7 +381,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
         {/* The window's edge: a definite hairline with its soft shadow, so its corners never float alone. */}
         <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-card ring-1 ring-line")} style={{ opacity: frame }} />
         <div className={styles.screenInner} data-screen-inner>
-          <motion.div style={{ opacity: frame }}>
+          <motion.div style={{ opacity: bar }}>
             <ScreenBar console={chapter === 5} />
           </motion.div>
           <motion.div className="relative min-h-0 flex-1" style={{ opacity: content }}>
@@ -280,7 +393,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
                 <CodeChapter p={p} />
               </Layer>
               {/* Chapters 03 to 05 are the Opened Exhibit, a full-stage layer above the screen and the rail (below). */}
-              <Layer p={p} i={5} compact={compact} fill>
+              <Layer p={p} i={5} compact={compact} fill gate={consoleIn}>
                 <ConsoleChapter p={p} rows={consoleRows} />
               </Layer>
             </Compact.Provider>
@@ -309,7 +422,24 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
         </motion.div>
       </div>
 
-      <ExhibitSlot p={p} skip={skip} onSeek={(t) => seekTo(stage.current, t)} />
+      <ExhibitSlot p={p} page={exhibitOn} skip={skip} onSeek={(t) => seekTo(stage.current, t)} />
+
+      {/* Chapter 06's arrival (arrival.ts, paintArrival): the console window's edge, drawn out round the card... */}
+      <div ref={ghost} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 z-[6] rounded-frame shadow-card ring-1 ring-line" style={{ visibility: "hidden" }} />
+      {/* ...and the card: the paid receipt, folding into RM-0442's row and gliding into its slot. Always mounted (hidden),
+          so its receipt's stamp has landed long before the card first shows it. */}
+      <div ref={card} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 z-[7]" style={{ visibility: "hidden" }}>
+        <div data-card-ground className="absolute inset-0 rounded-[inherit] opacity-0" />
+        <div data-card-tint className="absolute inset-0 rounded-[inherit] bg-[color-mix(in_oklch,var(--text)_8%,transparent)] opacity-0" />
+        <div data-card-receipt className="absolute top-0 left-0">
+          <Receipt stamped />
+        </div>
+        {arriving && (
+          <div data-card-row className="claims-grid absolute top-0 left-0 @container">
+            <QueueRow row={arriving} />
+          </div>
+        )}
+      </div>
     </>
   );
 }

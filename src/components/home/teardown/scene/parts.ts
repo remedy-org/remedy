@@ -213,14 +213,11 @@ export function buildTag(THREE: Three): Tag {
   };
 }
 
-// ---- Check 1: the phone's live camera. Held off the evidence's front right, its screen (the viewfinder) toward the
-// viewer, its camera's frustum running out toward the cut, and a scan plane travelling down it.
+// ---- Check 1: the phone's live camera. Held off the evidence's front right, its screen toward the viewer: the claim
+// page's camera with the photo it has just taken in a 3:4 frame, and a scan line sweeping down that photo alone, as the
+// phone's own app checks its capture.
 export interface Phone {
   group: T.Group;
-  lines: T.LineSegments;
-  sheet: T.Mesh;
-  lineMat: T.LineBasicMaterial;
-  sheetMat: T.MeshBasicMaterial;
   pose(open: number, scan: number): void;
   lens(out: T.Vector3): T.Vector3;
   /** The body's four face corners, in world space, for the leader's anchor (the group's box is far wider, tilted). */
@@ -230,13 +227,13 @@ export interface Phone {
 /** The phone at rest, and the point its camera looks at (the cut's middle). Metres. */
 const PHONE_AT = [0.5, 0.3, 0.36] as const;
 const PHONE_LOOK = [0.05, 0.05, 0.04] as const;
-/**
- * How far from the lens the frustum's frame floats, in metres: about a third of the way to the cut, so it hangs in the
- * gap between the phone and the pillow and never reaches the right half's arm (at 0.27 its edge met the arm).
- */
-const FRUSTUM_FAR = 0.16;
 /** How far the phone slides in along its own view axis as the part opens, from the viewer's side. */
 const PHONE_SLIDE = 0.08;
+/** The screen's canvas, px: its width, and the photo's frame on it (3:4, as the claim page's camera crops it). */
+const SCREEN_PX = 440;
+const SHOT = { x: 16, y: 132, w: 408, h: 544 } as const;
+/** The scan's glow above its line, as a share of the photo's height. */
+const TRAIL = 0.22;
 
 export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   const group = new THREE.Group();
@@ -257,29 +254,57 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   const sw = bw - 0.006;
   const sh = bh - 0.008;
   const cvs = document.createElement("canvas");
-  cvs.width = 440;
-  cvs.height = Math.round((440 * sh) / sw);
+  cvs.width = SCREEN_PX;
+  cvs.height = Math.round((SCREEN_PX * sh) / sw);
   const screenTex = new THREE.CanvasTexture(cvs);
   screenTex.colorSpace = THREE.SRGBColorSpace;
+  screenTex.anisotropy = 4;
   const drawScreen = () => {
     const g = cvs.getContext("2d");
     const img = photo.image as HTMLImageElement | undefined;
     if (!g || !img?.width) return;
-    g.fillStyle = "#000";
+    g.fillStyle = "#0b0b0c";
     g.fillRect(0, 0, cvs.width, cvs.height);
-    // The viewfinder: the photo, cover-fitted, as the claim page's camera shows it.
-    const k = Math.max(cvs.width / img.width, cvs.height / img.height);
+    // The photo just taken, cover-fitted into its 3:4 frame and cropped low, as the claim page's camera frames it
+    // (custody/claim.ts objectPosition 50% 75%): the cut and the tag in the middle of the frame.
+    const k = Math.max(SHOT.w / img.width, SHOT.h / img.height);
     const dw = img.width * k;
     const dh = img.height * k;
-    g.drawImage(img, (cvs.width - dw) / 2, (cvs.height - dh) / 2, dw, dh);
+    g.save();
+    g.beginPath();
+    g.rect(SHOT.x, SHOT.y, SHOT.w, SHOT.h);
+    g.clip();
+    g.drawImage(img, SHOT.x + (SHOT.w - dw) / 2, SHOT.y + (SHOT.h - dh) * 0.75, dw, dh);
+    g.restore();
+    // The viewfinder's four corners, just inside the photo: the frame the scan stays within, and the still the
+    // check rests on once it has passed.
+    const c = 34;
+    const m = 14;
+    g.strokeStyle = "rgba(255,255,255,.82)";
+    g.lineWidth = 4;
+    g.lineCap = "round";
+    for (const [x, y, dx, dy] of [
+      [SHOT.x + m, SHOT.y + m, 1, 1],
+      [SHOT.x + SHOT.w - m, SHOT.y + m, -1, 1],
+      [SHOT.x + SHOT.w - m, SHOT.y + SHOT.h - m, -1, -1],
+      [SHOT.x + m, SHOT.y + SHOT.h - m, 1, -1],
+    ]) {
+      g.beginPath();
+      g.moveTo(x, y + dy * c);
+      g.lineTo(x, y);
+      g.lineTo(x + dx * c, y);
+      g.stroke();
+    }
+    // The shutter, under the frame.
+    const cy = SHOT.y + SHOT.h + (cvs.height - SHOT.y - SHOT.h) / 2;
     g.fillStyle = "rgba(255,255,255,.92)";
     g.beginPath();
-    g.arc(cvs.width / 2, cvs.height - 70, 30, 0, Math.PI * 2);
+    g.arc(cvs.width / 2, cy, 30, 0, Math.PI * 2);
     g.fill();
     g.strokeStyle = "rgba(255,255,255,.5)";
     g.lineWidth = 4;
     g.beginPath();
-    g.arc(cvs.width / 2, cvs.height - 70, 38, 0, Math.PI * 2);
+    g.arc(cvs.width / 2, cy, 38, 0, Math.PI * 2);
     g.stroke();
     screenTex.needsUpdate = true;
   };
@@ -289,6 +314,41 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   screen.position.z = -0.0042;
   screen.rotation.y = Math.PI;
   group.add(screen);
+
+  // The scan: a white line across the photo's width with a soft glow above it, travelling from the photo's top edge to
+  // its foot. Its quad is cut to the photo's frame every pose (the glow never spills above the photo), so the line
+  // reads as the phone's own app working on its capture, not a beam in the room.
+  const glow = document.createElement("canvas");
+  glow.width = 4;
+  glow.height = 128;
+  const gg = glow.getContext("2d");
+  if (gg) {
+    const grd = gg.createLinearGradient(0, 0, 0, 120);
+    grd.addColorStop(0, "rgba(255,255,255,0)");
+    grd.addColorStop(1, "rgba(255,255,255,.3)");
+    gg.fillStyle = grd;
+    gg.fillRect(0, 0, 4, 120);
+    gg.fillStyle = "rgba(255,255,255,.95)";
+    gg.fillRect(0, 120, 4, 8);
+  }
+  const glowTex = new THREE.CanvasTexture(glow);
+  glowTex.colorSpace = THREE.SRGBColorSpace;
+  const scanMat = new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, depthWrite: false, toneMapped: false });
+  const scanGeo = new THREE.PlaneGeometry(1, 1);
+  const scanLine = new THREE.Mesh(scanGeo, scanMat);
+  scanLine.position.z = -0.0046;
+  scanLine.rotation.y = Math.PI;
+  scanLine.renderOrder = 6;
+  group.add(scanLine);
+  // The photo's frame in the screen's own metres (y up, centred on the screen).
+  const px = sw / cvs.width;
+  const frame = {
+    w: SHOT.w * px,
+    top: sh / 2 - SHOT.y * px,
+    h: SHOT.h * px,
+  };
+  const linePx = 8 / 128;
+
   const lensMat = new THREE.MeshPhysicalMaterial({
     color: "#0b0b0c",
     roughness: 0.2,
@@ -300,61 +360,18 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   lensM.position.set(-bw / 2 + 0.014, bh / 2 - 0.016, 0.0048);
   group.add(lensM);
   // Held off the front right of the evidence, a little above it, looking across and down at the cut, as the owner
-  // would. The check's shot (model.ts SHOTS.live) sees the phone beside the pillow, between it and the callout, and the
-  // frustum running out from it toward the cut: from the old spot above the front, the shot looked straight down the
-  // phone's own axis, so the phone and its frame lay on the pillow.
+  // would. The check's shot (model.ts SHOTS.live) sees the phone beside the pillow, between it and the callout.
   group.position.set(...PHONE_AT);
   group.lookAt(...PHONE_LOOK);
   const rest = group.position.clone();
+  group.updateMatrixWorld(true);
+  const az = new THREE.Vector3(0, 0, 1).transformDirection(group.matrixWorld);
 
-  const lineMat = new THREE.LineBasicMaterial({
-    color: 0xebb75b,
-    transparent: true,
-    opacity: 0,
-  });
-  const lines = new THREE.LineSegments(new THREE.BufferGeometry(), lineMat);
-  const sheetMat = new THREE.MeshBasicMaterial({
-    color: 0xebb75b,
-    transparent: true,
-    opacity: 0,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-  });
-  const sheet = new THREE.Mesh(new THREE.BufferGeometry(), sheetMat);
-  sheet.renderOrder = 5;
-  lines.renderOrder = 5;
-
-  const L = new THREE.Vector3();
   const lensLocal = lensM.position.clone().add(new THREE.Vector3(0, 0, 0.001));
   const lens = (out: T.Vector3) => {
     group.updateMatrixWorld(true);
     return group.localToWorld(out.copy(lensLocal));
   };
-  // The camera's view as a frustum gizmo: from the lens to a 3:4 portrait frame, 48 degrees tall, pointing at the cut
-  // (as the RM-0442 photo was taken). The frame floats short of the evidence: at the evidence's own distance it cut
-  // through the stuffing and read as a seam.
-  group.updateMatrixWorld(true);
-  const o = lens(new THREE.Vector3());
-  const ax = new THREE.Vector3(1, 0, 0).transformDirection(group.matrixWorld);
-  const ay = new THREE.Vector3(0, 1, 0).transformDirection(group.matrixWorld);
-  const az = new THREE.Vector3(0, 0, 1).transformDirection(group.matrixWorld);
-  const far = FRUSTUM_FAR;
-  const tv = Math.tan((48 / 2) * (Math.PI / 180));
-  const th = tv * 0.75;
-  const frameAt = (dist: number) =>
-    [
-      [-1, -1],
-      [1, -1],
-      [1, 1],
-      [-1, 1],
-    ].map(([sx, sy]) =>
-      o
-        .clone()
-        .addScaledVector(az, dist)
-        .addScaledVector(ax, sx * th * dist)
-        .addScaledVector(ay, sy * tv * dist),
-    );
-  const corners = frameAt(far);
 
   // The body's face corners, in the group's own space.
   const faceLocal = [
@@ -364,6 +381,8 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     [-1, 1],
   ].map(([sx, sy]) => new THREE.Vector3((sx * bw) / 2, (sy * bh) / 2, 0));
 
+  const pos = scanGeo.attributes.position as T.BufferAttribute;
+  const uv = scanGeo.attributes.uv as T.BufferAttribute;
   function pose(open: number, scan: number) {
     // The phone opens like the other parts: it grows in and slides along its own view axis toward the evidence,
     // fading up over the first 40% of its opening, so it never pops in whole.
@@ -372,48 +391,37 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     group.position.copy(rest).addScaledVector(az, -PHONE_SLIDE * (1 - open));
     const fade = smooth(Math.min(1, open / 0.4));
     for (const m of [bodyMat, screenMat, lensMat]) m.opacity = fade;
-    lens(L);
-    const pts: number[] = [];
-    // The four edges draw out from the lens as the part opens, then the far frame closes.
-    for (const c of corners) {
-      const e = L.clone().lerp(c, open);
-      pts.push(L.x, L.y, L.z, e.x, e.y, e.z);
-    }
-    if (open > 0.98)
-      for (let i = 0; i < 4; i++) {
-        const a = corners[i];
-        const b = corners[(i + 1) % 4];
-        pts.push(a.x, a.y, a.z, b.x, b.y, b.z);
-      }
-    // The scan: the frame's cross-section travels from the lens down to the frame.
+    // The line's foot runs from the photo's top edge (scan 0) to its foot (scan 1); the glow above it is cut at the
+    // photo's top. Off before and after the sweep: at rest the screen shows the photo in its frame, still.
     const s = Math.max(0, Math.min(1, scan));
     const on = open > 0.5 && s > 0 && s < 1;
-    const q = frameAt(far * (0.12 + 0.88 * s));
-    if (on)
-      for (let i = 0; i < 4; i++) {
-        const a = q[i];
-        const b = q[(i + 1) % 4];
-        pts.push(a.x, a.y, a.z, b.x, b.y, b.z);
-      }
-    lines.geometry.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
-    sheet.geometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(
-        [q[0], q[1], q[2], q[0], q[2], q[3]].flatMap((v) => [v.x, v.y, v.z]),
-        3,
-      ),
-    );
-    sheet.visible = on;
-    sheetMat.opacity = 0.1 * Math.sin(Math.PI * s);
-    lineMat.opacity = 0.8 * open;
-    lines.visible = open > 0.01;
+    scanLine.visible = on;
+    if (!on) return;
+    const foot = frame.top - s * frame.h;
+    const full = TRAIL * frame.h;
+    const head = Math.min(frame.top, foot + full);
+    const vTop = (head - foot) / full;
+    // PlaneGeometry(1, 1)'s vertices: top-left, top-right, bottom-left, bottom-right.
+    const x = frame.w / 2;
+    pos.setXYZ(0, -x, head, 0);
+    pos.setXYZ(1, x, head, 0);
+    pos.setXYZ(2, -x, foot, 0);
+    pos.setXYZ(3, x, foot, 0);
+    // The texture's line sits in its last rows (v 0 up to linePx; v 1 is the glow's clear top): the foot keeps the
+    // line whole however short the glow is cut.
+    const v1 = Math.max(vTop, linePx);
+    uv.setXY(0, 0, v1);
+    uv.setXY(1, 1, v1);
+    uv.setXY(2, 0, 0);
+    uv.setXY(3, 1, 0);
+    pos.needsUpdate = true;
+    uv.needsUpdate = true;
+    scanGeo.computeBoundingSphere();
+    // It brightens in and out over the sweep's first and last tenth, never popping on at the photo's edge.
+    scanMat.opacity = fade * smooth(Math.min(1, s / 0.1, (1 - s) / 0.1));
   }
   return {
     group,
-    lines,
-    sheet,
-    lineMat,
-    sheetMat,
     pose,
     lens,
     face: () => {
