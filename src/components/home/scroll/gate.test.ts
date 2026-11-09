@@ -514,10 +514,11 @@ describe("wheel stops", () => {
 
   it("never glides a gentle push out of the paced stretch into the next section: it scrolls 1:1; inside it, one beat", () => {
     // As 1440x900: the Chain of Custody's story from the hero to its console beat, the Problem sheet's from open to cut,
-    // Fraud checks 1324px past the cut. Pushes of 36, 60 and 100px from the cut down and Fraud checks up glided about 1.4
-    // windows into the next section; now each rests where the hand left it. Between the console beat and the open sheet
-    // a trackpad's push moves one beat (it rested 90px on, mid-page, off a beat).
-    const course = [0, 6698, 7988, 8586, 9910];
+    // Fraud checks 1324px past the cut, at the end of the sheet's pin, and the rule 451px on. Pushes of 36, 60 and 100px
+    // out of a story glided about 1.4 windows into the next section after the hand had stopped; below the sheet's pin a
+    // push now rests where the hand left it. From the hero to the end of the sheet's pin a trackpad's push moves one beat,
+    // as the finger lifts (from the console beat it rested 90px on, mid-page, off a beat).
+    const course = [0, 6698, 7988, 8586, 9910, 10361];
     const pins: [number, number][] = [
       [64, 6912],
       [6912, 9918],
@@ -532,6 +533,7 @@ describe("wheel stops", () => {
       [7988, -1],
       [8586, 1],
       [9910, -1],
+      [9910, 1],
     ] as const) {
       for (const px of [36, 60, 100]) {
         const g = setup(from, course, slow, undefined, undefined, pins, undefined, undefined, stories);
@@ -540,7 +542,7 @@ describe("wheel stops", () => {
         vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
         g.scroll();
         vi.restoreAllMocks();
-        const beat = from === 6698 ? [7988] : from === 7988 ? [6698] : [];
+        const beat = from === 6698 ? [7988] : from === 7988 ? [6698] : from === 8586 ? [9910] : dir < 0 ? [8586] : [];
         expect(g.lenis.landed, `${dir > 0 ? "down" : "up"} ${px}px from ${from}`).toEqual(beat);
       }
     }
@@ -565,9 +567,10 @@ describe("wheel stops", () => {
   });
 
   it("rests a push out of a story on the clean frame ahead when a line would be cut, never back against the hand", () => {
-    // A line cut at the screen's foot from 8640 to 8700: the push of 54px from the cut rests clear of it, ahead.
+    // A line cut at the screen's foot from 8640 to 8700: the push of 54px from the cut rests clear of it, ahead (here the
+    // next stop lies past the pin's end, so the sheet's paced stretch ends at the cut).
     const fit: Course["fit"] = (y, { min, max }) => [y, 8700, 8639].filter((v) => v >= min && v <= max && !(v > 8639 && v < 8700)).sort((a, b) => Math.abs(a - y) - Math.abs(b - y))[0];
-    const g = setup(8586, [0, 7988, 8586, 9910], [], undefined, undefined, [[6912, 9918]], fit, undefined, [[7988, 8586]]);
+    const g = setup(8586, [0, 7988, 8586, 10500], [], undefined, undefined, [[6912, 9918]], fit, undefined, [[7988, 8586]]);
     g.send(Array(6).fill(9));
     g.lenis.animatedScroll = g.lenis.targetScroll - 4;
     vi.spyOn(performance, "now").mockReturnValue(performance.now() + 1000);
@@ -988,9 +991,10 @@ describe("trackpad swipes", () => {
   ];
   const full = (at: number) =>
     setup(at, STOPS_ALL, SLOW_ALL, undefined, [1858, 2534, 6140], [[64, 6912], [6912, 9918]], undefined, RESTS_ALL, [[0, 6698], [7988, 8586]], [[7002, 7812, 7988]]);
-  const BEATS_ALL = RESTS_ALL.filter((y) => y <= 8586);
+  // To Fraud checks' stop, which ends the sheet's pin.
+  const BEATS_ALL = RESTS_ALL.filter((y) => y <= 9910);
 
-  it("G1: from the hero to the cut every swipe moves exactly one beat, the exhibit's checks at rest included, both ways", () => {
+  it("G1: from the hero to the end of the sheet every swipe moves exactly one beat, the exhibit's checks at rest included, both ways", () => {
     for (const shape of [TINY, SMALL, MEDIUM, HARD]) {
       BEATS_ALL.forEach((from, i) => {
         for (const dir of [1, -1] as const) {

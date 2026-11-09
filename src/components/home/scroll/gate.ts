@@ -16,8 +16,8 @@ import { CALM_PEAK, calm, calmLanding, landing as glide, warp, type Slow } from 
 // sheet half risen or half unfolded (unfolds). Only the wheel is gated: keys, anchor links,
 // the scrollbar, find-in-page, focus moves, touch and screen readers scroll natively and cancel a landing at once.
 //
-// A trackpad swipe anywhere from the hero to the Problem sheet's cut (the hull of the pinned stories, the console scrolling
-// away and the sheet unfolding between them included) moves one beat, whatever its size; its beats are the stops and every
+// A trackpad swipe anywhere from the hero to the end of the Problem sheet's pin (the hull of the pinned stories, the console
+// scrolling away and the sheet unfolding between them included, on to Fraud checks' stop) moves one beat, whatever its size; its beats are the stops and every
 // exhibit check at rest (the rests: every beat Page Down stops on). The page follows the hand for its first FOLLOW px, so
 // the move is seen to start from it, and is taken to the next beat in its direction as the finger lifts (its momentum
 // starts) or, sooner, once the hand is quick (QUICK). The landing is calm (landing.ts calmLanding: its time scales with
@@ -100,6 +100,9 @@ const CLEAN = 120;
  * windows, and still settle back onto it: a slow roll of ten notches from the open sheet ran 402px past the cut (283px at
  * 1920x1080) and rested there, the held sheet cut by Fraud checks' edge. A push begun on that last beat follows the hand. */
 const OVERRUN = 0.5;
+/** How far past a pin's end, in windows, the stop that ends it may lie (Fraud checks' heading, 8px from the Problem
+ * sheet's). */
+const PIN_END = 0.1;
 /** A notched wheel's quick flick is taken to the next stop this many windows away or nearer however short it is, as
  * Page Down is (keys.ts REACH): the stops below the Problem sheet are about a window apart, so three notches carried
  * about half the way and a flick ran free or glided to the stop by a few px of timing. */
@@ -335,11 +338,23 @@ export function createGate(read: () => Course) {
   const scrubbed = (y: number) => stories.some(([p, q]) => y > p + 1 && y < q - 1);
   /** The stretch outside the stories whose transition a page at rest at `y` would hold half played (unfolds). */
   const unfolding = (y: number) => unfolds.find(([a, b]) => y > a + 1 && y < b - 1);
-  /** Whether a trackpad swipe from `a` to `b` moves a beat: both from the first story's first beat to the last story's last
-   * (the hero to the Problem sheet's cut), the stretch between two stories included (the console scrolling away and the
-   * sheet unfolding: a tiny swipe from the console beat rested 90px on, mid-page). */
-  const paced = (a: number, b: number) =>
-    stories.length > 0 && Math.min(a, b) >= Math.min(...stories.map(([p]) => p)) - 1 && Math.max(a, b) <= Math.max(...stories.map(([, q]) => q)) + 1;
+  /** The stretch a trackpad swipe moves a beat in: from the first story's first beat to the last story's last (the hero to
+   * the Problem sheet's cut), the stretch between two stories included (the console scrolling away and the sheet
+   * unfolding: a tiny swipe from the console beat rested 90px on, mid-page), and on to the stop that ends the last
+   * story's pin (Fraud checks sliding over the held sheet), so the whole sheet is paced. Null with no story. */
+  function beatSpan(): [number, number] | null {
+    if (!stories.length) return null;
+    const from = Math.min(...stories.map(([p]) => p));
+    let to = Math.max(...stories.map(([, q]) => q));
+    const pin = pins.find(([p, q]) => to >= p - 1 && to <= q + 1);
+    const next = stops.find((s) => s > to + 1);
+    if (pin && next !== undefined && next <= pin[1] + PIN_END * innerHeight) to = next;
+    return [from, to];
+  }
+  const paced = (a: number, b: number) => {
+    const span = beatSpan();
+    return !!span && Math.min(a, b) >= span[0] - 1 && Math.max(a, b) <= span[1] + 1;
+  };
   /** Whether a trackpad gesture resting at `y` would leave the page off a beat: strictly inside that stretch. */
   const offBeat = (y: number) => paced(y - 2, y + 2);
   /** Whether this trackpad swipe's finger has lifted: its momentum decays (LIFT_RUN, LIFT). */
