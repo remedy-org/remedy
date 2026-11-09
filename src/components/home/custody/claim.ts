@@ -31,7 +31,7 @@ export const CHAPTERS = [
   {
     n: "01",
     title: "Log in with PayPal",
-    text: "The owner opens the recall's claim link and logs in with PayPal. Remedy sees the PayPal account ID, whether it's verified, and the photos; never the password, balance or cards.",
+    text: "The owner opens the recall’s claim link and logs in with PayPal. Remedy sees the PayPal account ID, whether it’s verified, and the photos; never the password, balance or cards.",
   },
   {
     n: "02",
@@ -41,7 +41,7 @@ export const CHAPTERS = [
   {
     n: "03",
     title: "Live photo",
-    text: "The owner photographs the pillow, cut in half with the tag on it, in the page's live camera. There is no upload button.",
+    text: "The owner photographs the pillow, cut in half with the tag on it, in the page’s live camera. There is no upload button.",
   },
   {
     n: "04",
@@ -52,12 +52,12 @@ export const CHAPTERS = [
   {
     n: "05",
     title: "Paid",
-    text: "Every check passed, so the rule paid $29.99 to the owner's PayPal account, 15 seconds after the photo.",
+    text: "Every check passed, so the rule paid $29.99 to the owner’s PayPal account, 15 seconds after the photo.",
   },
   {
     n: "06",
     title: "The recall team sees it",
-    text: "The paid claim lands in the recall team's console with its photo, its five checks and how fast they answered.",
+    text: "The paid claim lands in the recall team’s console with its photo, its five checks and how fast they answered.",
   },
 ] as const;
 

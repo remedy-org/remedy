@@ -3,15 +3,15 @@
 // claim". `alt` says what the photo shows, for the camera's still. `tag` is the tag in the photo, cut from the photo's
 // full-size original (2:1, 800 x 400), for a refusal that turns on what the tag says.
 export const SAMPLE_COPY: Record<string, { title: string; line: string; alt: string; tag?: string }> = {
-  genuine: { title: "A genuine claim", line: "The pillow cut in half, its tag written with this claim's code.", alt: "A pillow cut in half, its tag reading X-VESOLJE M4T" },
+  genuine: { title: "A genuine claim", line: "The pillow cut in half, its tag written with this claim’s code.", alt: "A pillow cut in half, its tag reading X-VESOLJE M4T" },
   "wrong-code": {
     title: "Wrong code on the tag",
     line: "A real cut pillow, but the tag carries a code this claim was never given.",
     alt: "A grey pillow cut in half, its tag reading X-VESOLJE K7Q",
     tag: "/demo/c11-tag.jpg",
   },
-  "ai-no-session": { title: "A photo from the web", line: "A picture of a cut pillow that was never taken in this claim's camera.", alt: "A floral pillow cut in half, a tag reading H6N beside it" },
-  reposted: { title: "A photo used before", line: "The genuine claim's photo, sent again as a new claim.", alt: "A pillow cut in half, its tag reading X-VESOLJE M4T" },
+  "ai-no-session": { title: "A photo from the web", line: "A picture of a cut pillow that was never taken in this claim’s camera.", alt: "A floral pillow cut in half, a tag reading H6N beside it" },
+  reposted: { title: "A photo used before", line: "The genuine claim’s photo, sent again as a new claim.", alt: "A pillow cut in half, its tag reading X-VESOLJE M4T" },
 };
 
 export const sampleTitle = (id: string, fallback = "Claim") => SAMPLE_COPY[id]?.title ?? fallback;

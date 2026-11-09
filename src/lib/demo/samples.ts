@@ -34,7 +34,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
   {
     id: "genuine",
     title: "A genuine claim",
-    description: "The pillow cut in half, with the X-VESOLJE tag and this claim's code, M4T, on it. Every check passes, so Remedy pays it.",
+    description: "The pillow cut in half, with the X-VESOLJE tag and this claim’s code, M4T, on it. Every check passes, so Remedy pays it.",
     photos: ["/demo/c02-1.jpg"],
     code: "M4T",
     tagReads: "M4T",
@@ -46,7 +46,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
   {
     id: "wrong-code",
     title: "The wrong code",
-    description: "A convincing cut pillow, but the tag reads K7Q and this claim's code is K7P. The model reads the tag character by character, and the rule rejects it.",
+    description: "A convincing cut pillow, but the tag reads K7Q and this claim’s code is K7P. The model reads the tag character by character, and the rule rejects it.",
     photos: ["/demo/c11-1.jpg"],
     code: "K7P",
     tagReads: "K7Q",
@@ -58,7 +58,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
   {
     id: "ai-no-session",
     title: "An uploaded photo",
-    description: "A photo of the cut Kikea pillow, made outside this claim's camera session, with someone else's code on the tag. Remedy blocks it before the model sees it.",
+    description: "A photo of the cut Kikea pillow, made outside this claim’s camera session, with someone else’s code on the tag. Remedy blocks it before the model sees it.",
     // c08's photo with its tag repainted to H6N (a code outside the issued alphabet, as K7Q is), so the two fakes never
     // carry the same code. The model never sees it: the camera check stops it first.
     photos: ["/demo/web-1.jpg"],
@@ -72,7 +72,7 @@ export const DEMO_SAMPLES: DemoSample[] = [
   {
     id: "reposted",
     title: "A reposted photo",
-    description: "The genuine claim's photo, sent again as a new claim. It matches a photo already claimed, so Remedy blocks it before the model.",
+    description: "The genuine claim’s photo, sent again as a new claim. It matches a photo already claimed, so Remedy blocks it before the model.",
     photos: ["/demo/c02-1.jpg"],
     code: null,
     tagReads: "M4T",
