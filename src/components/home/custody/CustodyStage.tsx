@@ -301,7 +301,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
 
   // Chapter 06's window is as tall as its queue, never a half-empty table on a tall screen (custody.module.css
   // .screen[data-fit]): its bar, the layer's padding, the queue's tabs, header and foot, and every claim's row at full
-  // height (RM-0442's opens into place as the chapter plays). Read from the layout, so the compact rows and the fonts
+  // height (RM-0442's slot is open from the start, arrival.ts). Read from the layout, so the compact rows and the fonts
   // count; the clip follows the window.
   useLayoutEffect(() => {
     const el = screen.current;

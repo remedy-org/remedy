@@ -88,7 +88,7 @@ export const WRITE_FOR = 0.3;
 /** Then what the photo must show lights in turn, leading into 03. */
 export const SHOT_AT = [0.432, 0.444, 0.456];
 
-// The console replica after the payout: RM-0442 slides in over the recall's other claims, exactly the rows the homepage's
+// The console replica after the payout: RM-0442 glides in over the recall's other claims, exactly the rows the homepage's
 // console tour and the console list (src/lib/demo/claims.ts, built by the seed), newest first: the same ids, photos,
 // verdicts, reasons, filing times, photo-check times and amounts, so a claim reads the same in every picture
 // (claims.test.ts checks it). Paid only where PayPal paid.
