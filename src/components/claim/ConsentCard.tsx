@@ -84,8 +84,8 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   const notice = demo ? undefined : { company, url: recall.url };
   // A cancelled login means nothing once a later one worked.
   const error = authError && !signedInAs ? AUTH_ERRORS[authError] : null;
-  // The offer, how, and the code's clock, as How it works' copy of this screen says them (consentCopy.ts).
-  const { title, how, clock } = consentLines(recall, CAPTURE_SESSION_MINUTES);
+  // The offer, what Remedy is, how, and the code's clock, as How it works' copy of this screen says them (consentCopy.ts).
+  const { title, about, how, clock } = consentLines(recall, CAPTURE_SESSION_MINUTES);
   // On the page, not in a box: the offer is the screen's headline, beside the recall it answers.
   const frame = "flex flex-col border-line max-lg:border-t max-lg:pt-8 lg:-ml-8 lg:self-stretch lg:border-l lg:pl-8";
 
@@ -105,6 +105,9 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         <StepTitle id="consent-title" className="text-pretty">
           <NoBreakHyphens>{demo ? "Try Remedy on a real recall" : title}</NoBreakHyphens>
         </StepTitle>
+        {/* A first-time owner from a recall notice has never heard of Remedy: one neutral line says what it is, so the
+            page never reads as a stranger borrowing the recall. Only on the plain logged-out offer, not under a notice. */}
+        {!demo && !signedInAs && !error && !refusal && !unverified && <p className="text-ui text-pretty text-muted">{about}</p>}
         <p className="text-body text-pretty text-muted">
           {demo ? (
             <>
@@ -154,7 +157,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
       {/* Back from PayPal with a refusal: focus lands on it, as on a limit notice, so a screen reader reads it (an alert
           already on the page at load is not announced). A limit notice focuses itself. */}
       {(unverified || error) && (
-        <div id={NOTICE_ID} tabIndex={-1} className="flex flex-col gap-7 rounded-control outline-hidden focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-focus">
+        <div id={NOTICE_ID} tabIndex={-1} className="flex flex-col gap-7 outline-hidden">
           {!refusal && <FocusTitle id={NOTICE_ID} />}
           {unverified && (
             <Notice title="This PayPal account isn’t verified">PayPal only lets us refund verified accounts. Verify yours with PayPal (a confirmed email and a linked bank or card), then log in again.</Notice>
@@ -168,6 +171,8 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
         {/* Before the button, so the copy buttons come first in reading and Tab order. */}
         {demo && !signedInAs && judgeLogin && <JudgeLoginPanel id={JUDGE_LOGIN_ID} login={judgeLogin} heading="h2" />}
         {demo && !signedInAs && !judgeLogin && <p className="text-ui text-muted">Log in with a PayPal demo account. Your own PayPal login won&rsquo;t work here.</p>}
+        {/* What the tap commits to, read before it: the code's clock starts on the next screen. */}
+        {!demo && !refusal && !unverified && <p className="text-ui text-pretty text-muted">{clock}</p>}
         {/* Refused by a limit: nothing starts until it resets, so the button is the notice's next step instead. */}
         {refusal ? (
           <LimitNextStep demo={Boolean(demo)} notice={notice} />
@@ -176,7 +181,6 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
             {action}
           </Button>
         )}
-        {!demo && !refusal && !unverified && <p className="-mt-1 text-ui text-pretty text-muted">{clock}</p>}
         <p className="text-ui text-faint">{signedInAs ? `Logged in with PayPal as ${signedInAs}.` : PAYPAL_CONSENT}</p>
       </div>
     </section>
@@ -201,7 +205,7 @@ function ClaimStatus({ claim, company, action }: { claim: YourClaim; company: st
       : claim.decision === "paid"
         ? `Paid on ${claim.paidOn}. This account’s claim for this recall is done.`
         : checking
-          ? "Your claim is saved. You can close this page, then open the claim link on your recall notice again to see the result. If it’s paid, PayPal emails you too."
+          ? "Your claim is saved. You can close this page, then open the link on your recall notice again to see the result. If it’s paid, PayPal emails you too."
           : claim.decision === "pending"
             ? "Your code is still running. Pick up where you left off."
             : "Each PayPal account can claim once per recall.";

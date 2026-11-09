@@ -310,11 +310,12 @@ export function maskEmail(email: string): string {
 const dayIn = (d: Date, timeZone?: string) => d.toLocaleDateString("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
 
 /**
- * When a daily limit resets, in the viewer's own time: "05:30 tomorrow", "23:00 today", "10 Nov, 05:30". Client only
+ * When a daily limit resets, in the viewer's own time, as a person says it: "5:30 am tomorrow", "11:00 pm today",
+ * "10 Nov, 5:30 am" (the time and its am/pm joined by a no-break space, so they never part at a line's end). Client only
  * (the server doesn't know the viewer's zone); `timeZone` pins it in tests.
  */
 export function resetWords(until: Date, now: Date, timeZone?: string): string {
-  const time = until.toLocaleTimeString("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const time = until.toLocaleTimeString("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).toLowerCase().replace(/\s+/g, "\u00a0");
   const day = dayIn(until, timeZone);
   if (day === dayIn(now, timeZone)) return `${time} today`;
   if (day === dayIn(new Date(now.getTime() + 86_400_000), timeZone)) return `${time} tomorrow`;

@@ -37,6 +37,25 @@ describe("sixRows", () => {
     }
   });
 
+  it("names each word it couldn't read on a held tag, and marks them as data for mono", () => {
+    const unsure: CheckRow[] = [
+      { id: "label", group: "model", label: "", state: "hold" },
+      { id: "code", group: "model", label: "", state: "hold" },
+      { id: "step_1", group: "model", label: "", state: "pass" },
+    ];
+    const code = sixRows([...pre("pass"), ...unsure], { ...base, code: "H9D", held: true }).find((r) => r.key === "code")!;
+    expect(code.detail).toBe("We couldn’t read X-VESOLJE or H9D on your paper tag.");
+    expect(code.marks).toEqual(["X-VESOLJE", "H9D"]);
+    // On the held result the lead says it: the row says who looks instead, with nothing left to set in mono.
+    const explained = sixRows([...pre("pass"), ...unsure], { ...base, code: "H9D", held: true, explained: true, company: "Kikea Store" }).find((r) => r.key === "code")!;
+    expect([explained.detail, explained.marks]).toEqual(["A person at Kikea Store will look at this.", undefined]);
+  });
+
+  it("says the camera check passed without repeating its name", () => {
+    const session = sixRows([...pre("pass"), ...model("pass")], base).find((r) => r.key === "session")!;
+    expect(session.because).toBe("Taken live, inside the code’s 10 minutes.");
+  });
+
   it("gives the cut a fixed line, never the photo check's sentence", () => {
     const pass = sixRows([...pre("pass"), ...model("pass")], base).find((r) => r.key === "destroyed")!;
     expect(pass.because).toBe("Both halves and the cut are in the photo.");

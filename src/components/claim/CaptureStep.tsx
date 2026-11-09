@@ -6,9 +6,9 @@ import { AlertIcon, ArrowLeftIcon, Button } from "@/components/ui";
 import styles from "./flow.module.css";
 import { rememberAspect } from "./ClaimPhotos";
 import { CodeTag } from "./CodeTag";
+import { MonoWords } from "./CheckList";
 import { firstShown, focusInView } from "./FocusTitle";
 import { InfoIcon } from "./icons";
-import { EvidenceText } from "./EvidenceText";
 import { coverCrop, photosTakenKey, type ClaimView } from "./model";
 import { PhoneHandoff } from "./PhoneHandoff";
 import { useClaimArrival } from "./useClaimArrival";
@@ -282,6 +282,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     }
     setSending(true);
     setSendError(null);
+    // One photo is said as one, in the error as in the button.
+    const one = shots.length === 1;
     const form = new FormData();
     form.set("sessionId", sessionId);
     blobs.forEach((b, i) => form.append("photo", b, `photo-${i + 1}.jpg`));
@@ -294,7 +296,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         return onSent(null);
       }
       if (!res.ok) {
-        setSendError({ status: res.status, message: body?.error ?? "The photos didn’t send. Try again." });
+        setSendError({ status: res.status, message: body?.error ?? (one ? "The photo didn’t send. Try again." : "The photos didn’t send. Try again.") });
         setSending(false);
         return;
       }
@@ -304,7 +306,10 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
       // Fresh URLs for the checking screen: this step frees its own thumbnails' URLs when it goes away.
       onSent(body as ClaimView, blobs.map((b) => URL.createObjectURL(b)));
     } catch {
-      setSendError({ status: 0, message: "No connection. Your photos are still here: send them again when you’re back online." });
+      setSendError({
+        status: 0,
+        message: one ? "No connection. Your photo is still here: send it again when you’re back online." : "No connection. Your photos are still here: send them again when you’re back online.",
+      });
       setSending(false);
     }
   }
@@ -318,8 +323,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const timerLabel = `${mmss(left)} left to take the photo`;
   // Said before the first shot, not behind (i): one photo is enough, so nobody thinks the three slots must be filled.
   const helpText = n === 0 ? `One photo of the ${framing.thing} and the ${framing.product} is enough.` : "Open a photo to check it or retake it.";
-  const errorTitle = sendError?.status === 401 ? "Your PayPal login has expired" : "The photos didn’t send";
-  const errorText = sendError?.status === 401 ? "Log in again to send them. You’ll need to retake them afterwards." : sendError?.message;
+  const errorTitle = sendError?.status === 401 ? "Your PayPal login has expired" : n === 1 ? "The photo didn’t send" : "The photos didn’t send";
+  const errorText = sendError?.status === 401 ? (n === 1 ? "Log in again to send it. You’ll need to retake it afterwards." : "Log in again to send them. You’ll need to retake them afterwards.") : sendError?.message;
   const shown = viewing !== null ? shots[viewing] : undefined;
   const said = sending
     ? "Sending your photos…"
@@ -340,16 +345,21 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
       <div className="hidden flex-col gap-6 lg:col-start-2 lg:row-start-1 lg:flex">
         {failed && n === 0 && !expired ? (
           <p className="text-body text-pretty text-muted">
-            <ReminderText>{reminder}</ReminderText>
+            <MonoWords words={[written, code]}>{reminder}</MonoWords>
           </p>
         ) : (
-          <h1 id="capture-title-wide" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+          // Expired, the frame's message says it ("Your 10 minutes are up"): the title is only read, and still takes focus.
+          <h1
+            id="capture-title-wide"
+            tabIndex={-1}
+            className={clsx("text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4", expired && "sr-only")}
+          >
             {expired ? (
               <>
                 Code <span className="font-mono">{code}</span> has expired
               </>
             ) : (
-              <ReminderText>{reminder}</ReminderText>
+              <MonoWords words={[written, code]}>{reminder}</MonoWords>
             )}
           </h1>
         )}
@@ -361,7 +371,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
         <CameraTopBar
           back={
             <button type="button" onClick={back} className={CAMERA_BACK}>
-              <ArrowLeftIcon className="shrink-0" /> Back to your code
+              {/* Expired, the code it would go back to is dead: just the way back. */}
+              <ArrowLeftIcon className="shrink-0" /> {expired ? "Back" : "Back to your code"}
             </button>
           }
         >
@@ -406,6 +417,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               camera={expired || camera === "live" ? "expired" : camera}
               platform={platform}
               device={coarse ? "your phone" : "this computer"}
+              phone={coarse}
               left={left}
               handoff={coarse && failed && !expired ? <PhoneHandoff qrSvg={qrSvg} url={phoneUrl} code={code} /> : undefined}
               collapsed={failed && n === 0 && !expired}
@@ -438,7 +450,9 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
 
         {/* What to photograph, under the frame; a laptop has it in the right column instead. A camera that won't open has
             no photo to describe: its message in the frame is the heading then. */}
-        <InstructionBar className={clsx("max-sm:gap-1 max-sm:pr-1", failed && n === 0 && !expired ? "hidden" : !sendError && "lg:hidden")}>
+        {/* Expired, the frame's message is the one said on screen: the bar and its title are only read (and the title
+            still takes focus). */}
+        <InstructionBar className={clsx("max-sm:gap-1 max-sm:pr-1", failed && n === 0 && !expired ? "hidden" : !sendError && "lg:hidden", expired && !sendError && "sr-only")}>
           <div className="flex flex-col gap-1">
             <h1 id="capture-title" tabIndex={-1} className={clsx("text-ui font-medium text-balance text-[oklch(0.96_0.006_85)] outline-none focus-visible:outline-2 focus-visible:outline-offset-4", sendError && "sr-only lg:hidden")}>
               {expired ? (
@@ -446,7 +460,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                   Code <span className="font-mono">{code}</span> has expired
                 </>
               ) : (
-                <ReminderText>{reminder}</ReminderText>
+                <MonoWords words={[written, code]}>{reminder}</MonoWords>
               )}
             </h1>
             {/* A failed send says so here, on the first screen, where the Send button is. */}
@@ -465,14 +479,19 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
               </div>
             )}
           </div>
+          {/* Before the first shot the hint is open anyway, so (i) would do nothing: it keeps its place but is hidden (and
+              out of the Tab order, so Tab from the title goes to the shutter), and from the first shot it toggles. */}
           {!expired && !sendError && (
             <button
               type="button"
               onClick={() => setHelp((h) => !h)}
-              aria-expanded={help || (n === 0 && live)}
+              aria-expanded={help}
               aria-controls="capture-help"
               aria-label="About the camera"
-              className="flex size-11 shrink-0 items-center justify-center rounded-full text-[oklch(0.74_0.005_80)] hover:text-[oklch(0.96_0.006_85)] sm:hidden"
+              className={clsx(
+                "flex size-11 shrink-0 items-center justify-center rounded-full text-[oklch(0.74_0.005_80)] hover:text-[oklch(0.96_0.006_85)] sm:hidden",
+                n === 0 && live && "invisible",
+              )}
             >
               <InfoIcon />
             </button>
@@ -660,23 +679,14 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
 }
 
 /** The reminder with its code in mono, and a hyphenated label (X-VESOLJE) never broken at its hyphen. */
-function ReminderText({ children }: { children: string }) {
-  return children.split(/(\S+-\S+)/).map((part, i) =>
-    i % 2 ? (
-      <span key={i} className="whitespace-nowrap">
-        <EvidenceText>{part}</EvidenceText>
-      </span>
-    ) : (
-      <EvidenceText key={i}>{part}</EvidenceText>
-    ),
-  );
-}
-
 const DENIED: Record<Platform, string> = {
   ios: "In Safari, tap aA in the address bar, then Website Settings, and set Camera to Allow.",
   android: "In Chrome, tap the settings icon left of the address bar, then Permissions, and turn on Camera.",
   other: "Allow the camera for this site from the address bar, then try again.",
 };
+
+/** A phone with no camera: a laptop is no way on there, another phone is (behind "Use another phone"). */
+const NO_CAMERA_PHONE = "Photos can only come from a live camera, never a file. Use another phone with a camera.";
 
 const MESSAGES: Record<Exclude<CameraState, "live"> | "expired", { title: string; body: string; retry?: boolean }> = {
   starting: { title: "Waiting for the camera", body: "Your browser will ask to use it. Choose Allow." },
@@ -695,6 +705,7 @@ function FrameMessage({
   camera,
   platform,
   device,
+  phone,
   left,
   handoff,
   collapsed,
@@ -705,6 +716,8 @@ function FrameMessage({
   platform: Platform;
   /** "your phone" or "this computer": where the photos are taken, and stay until they're sent. */
   device: string;
+  /** A touch phone: a phone with no camera is told to use another phone, not "a phone or a laptop". */
+  phone?: boolean;
   /** The code's time left: a camera to fix in the settings, or another app to close, runs it down meanwhile. */
   left: number;
   /** A phone: this claim's QR and link, for another phone, behind "Use another phone". */
@@ -730,8 +743,11 @@ function FrameMessage({
           {m.title}
         </h1>
       )}
-      <p className="max-w-[30rem] text-ui text-pretty text-muted">{camera === "denied" ? DENIED[platform] : camera === "starting" ? `${m.body} Only the photos you send leave ${device}.` : m.body}</p>
-      {m.retry && (
+      <p className="max-w-[30rem] text-ui text-pretty text-muted">
+        {camera === "denied" ? DENIED[platform] : camera === "starting" ? `${m.body} Only the photos you send leave ${device}.` : camera === "nocamera" && phone ? NO_CAMERA_PHONE : m.body}
+      </p>
+      {/* The code's clock runs on while the camera is fixed, or while another device is found. */}
+      {(m.retry || camera === "nocamera") && (
         <p className="text-ui text-muted">
           Your code&rsquo;s timer keeps running:{" "}
           <span role="timer" aria-live="off">

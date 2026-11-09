@@ -61,7 +61,7 @@ export function ClaimFlow(props: ClaimFlowProps) {
   const done = cutInHalf(props.spec) ? "cut in half" : "destroyed";
   // What the photo needs, in one line under the frame.
   const reminder = written
-    ? `Photograph your paper tag with ${written} ${code} beside the ${taggedThing(props.spec)?.replace(/^(cut|destroyed) /, "") || "product"} ${done}.`
+    ? `Photograph your paper tag with ${written} and ${code} beside the ${taggedThing(props.spec)?.replace(/^(cut|destroyed) /, "") || "product"} ${done}.`
     : `Photograph the code ${code} beside the label, and the product ${done}.`;
   const framing = { thing: written ? "paper tag" : "label", product: (written && taggedThing(props.spec)) || `${cutInHalf(props.spec) ? "cut" : "destroyed"} product` };
 

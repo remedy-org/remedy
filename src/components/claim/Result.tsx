@@ -5,7 +5,7 @@ import { canAskForReview, reviewAsked } from "@/lib/appeal";
 import type { DemoSample } from "@/lib/demo";
 import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import type { Claim, Recall, Reason } from "@/lib/types";
-import { CheckList, sixRows, type SixRow } from "./CheckList";
+import { CheckList, CodeLead, MonoWords, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
 import { evidenceSummary } from "./EvidenceText";
 import { ClaimFrame, ClaimLayout, NARROW_ONLY, OutcomeHead, photoWidth } from "./Exhibit";
@@ -280,21 +280,34 @@ function heldParts({ claim, recall, photoUrls, againHref, sample, round }: Resul
   const unanswered = noModelAnswer(claim.decision, claim.reasons);
   const by = businessDaysAfter(asked ?? submitted, 2);
   const refund = money(recall.refund);
-  // What's wrong, once: the checks that need a person, in the rows' own words.
-  const unsure = six.filter((r) => r.key !== "refund" && r.state === "hold" && r.detail).map((r) => sentence(r.detail!));
+  // What's wrong, once: the checks that need a person, in the rows' own words, the words they couldn't read in mono.
+  const unsure = [
+    ...new Map(
+      six.filter((r) => r.key !== "refund" && r.state === "hold" && r.detail).map((r) => [sentence(r.detail!), r.marks ?? []] as const),
+    ),
+  ];
   const lead = payout
-    ? `${payout === "network" ? "Remedy couldn’t reach PayPal to send it." : "PayPal didn’t accept the transfer."}${payout === "refused" ? " If your PayPal account shows a notice, sort it out there." : ""}`
+    ? `${claim.photos.length > 1 ? "Your photos passed" : "Your photo passed"} every check. ${payout === "network" ? "Remedy couldn’t reach PayPal to send the refund." : "PayPal didn’t accept the transfer."}${payout === "refused" ? " If your PayPal account shows a notice, sort it out there." : ""}`
     : unanswered
       ? "We couldn’t finish the photo check, so a person will look at your photos instead."
       : asked
         ? `You asked for a review. ${reasons.filter((r) => r.outcome === "reject").map((r) => sentence(refusalHeadline({ ...claim, decision: "rejected", reasons: [r] }, recall.spec))).join(" ")}`
-        : [...new Set(unsure)].join(" ") || "Some of the checks need a person to look.";
+        : unsure.length
+          ? unsure.map(([text, marks], i) => (
+              <span key={text}>
+                {i > 0 && " "}
+                <MonoWords words={marks}>{text}</MonoWords>
+              </span>
+            ))
+          : "Some of the checks need a person to look.";
+  // Until a person decides, the evidence is what they decide on: the cut halves and the paper tag (or the product).
+  const keep = cutInHalf(recall.spec) && handWrittenLabel(recall.spec) ? "Keep both halves and your paper tag" : "Keep the product";
   // What happens next, in true facts only: who decides, by when, and how the money would arrive.
   const next = payout
-    ? `A person at ${company} sends ${refund} by ${by}. Nothing has been paid yet, and PayPal emails you when it arrives.`
-    : `${company} decides by ${by}. If they approve it, PayPal sends you ${refund} and emails you.`;
+    ? `A person at ${company} sends ${refund} by ${by}. Nothing has been paid yet, and PayPal emails you when it arrives. ${keep} until the refund arrives.`
+    : `${company} decides by ${by}. If they approve it, PayPal sends you ${refund} and emails you. ${keep} until ${company} decides.`;
   return {
-    title: payout ? `Your photos passed. ${nb} will send your refund` : <>A person at {nb} will check this claim</>,
+    title: payout ? `${nb} will send your refund` : <>A person at {nb} will check this claim</>,
     lead,
     side: <ClaimPhotos urls={photoUrls} claimId={claim.id} read={readOf(claim)} />,
     meta: true,
@@ -326,17 +339,6 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
   // Each PayPal account claims once per recall: the way forward is the claim that counts (same account, so it's theirs).
   const earlier = !sample ? /\((RM-\d+)\)/.exec(reasons.find((r) => r.check === "payer")?.text ?? "")?.[1] : undefined;
   const seen = codeDiff(claim.code, claim.verdict?.challenge_code.text_seen);
-  // The catch at a glance: the characters that differ, marked in both lines (the tag's in red), and said in words.
-  const marked = (side: "seen" | "yours") =>
-    seen.cells.map((c, i) =>
-      c.same ? (
-        c[side]
-      ) : (
-        <span key={i} className={clsx("underline decoration-2 underline-offset-[5px]", side === "seen" ? "text-stop decoration-stop" : "decoration-text-2")}>
-          {c[side]}
-        </span>
-      ),
-    );
   // A demo claim's photo whose tag is known: the tag itself, enlarged. On a laptop under the photo it was cut from; on a
   // phone after the checks, the column's full width.
   const tag = sample && lead === "code" && seen.readable ? SAMPLE_COPY[sample.id]?.tag : undefined;
@@ -345,23 +347,8 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
   const first = reviewed ? (
     `${asked ? "You asked for a review, and" : "Your claim was held for a person, and"} ${company} refused it: ${reasons[0]?.text ?? ""}`
   ) : lead === "code" ? (
-    seen.readable ? (
-      // Two lines, read against each other: what the tag says, then what it should say.
-      <>
-        <span className="block">
-          The tag in your photo reads <span className="font-mono whitespace-nowrap">{marked("seen")}</span>.
-        </span>
-        <span className="block">
-          Your claim&rsquo;s code is <span className="font-mono whitespace-nowrap">{marked("yours")}</span>.
-        </span>
-        {/* The difference in words, so O and 0 (or a P and a Q) can't be mistaken: for everyone, not only a screen reader. */}
-        <span className="mt-1 block text-ui text-muted">{seen.caption}</span>
-      </>
-    ) : (
-      <>
-        We couldn&rsquo;t read a code on the tag. Your claim&rsquo;s code is <span className="font-mono whitespace-nowrap">{claim.code}</span>.
-      </>
-    )
+    // The catch at a glance, read against each other: what the tag says, then what it should say (CheckList.tsx).
+    <CodeLead code={claim.code} seen={claim.verdict?.challenge_code.text_seen} />
   ) : lead === "session" ? (
     // The row under it says this photo came from outside the camera: the lead says the rule, once.
     "Only photos taken in this claim’s camera, within 10 minutes of its code, count."
@@ -387,7 +374,7 @@ function refusedParts({ claim, recall, photoUrls, againHref, sample, round, dupl
         ? [adviceFor("screen")]
         : []
       : lead === "code"
-        ? ["Next time, write the code large and clear, in marker."]
+        ? ["Your new claim gets a new code. Copy it letter for letter and check it against the screen before the photo."]
         : lead === "session" || lead === "duplicate_photo"
           ? []
           : [...new Set((retry ? reasons : reasons.filter((r) => !canRetry([r]))).map((r) => adviceFor(r.check)))];
