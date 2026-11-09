@@ -43,7 +43,7 @@ export function LimitNotice({ refusal, demo, notice, now = new Date() }: { refus
         {demo
           ? "The company console shows every claim so far."
           : notice
-            ? `Your refund is still owed: ${notice.company}'s recall notice says how to reach them for it.`
+            ? `Your refund is still owed: ${notice.company}’s recall notice says how to reach them for it.`
             : null}
       </Notice>
     </div>

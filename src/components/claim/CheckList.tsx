@@ -88,7 +88,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
   const these = photos > 1 ? "these photos" : "this photo";
   const base: { key: SixKey; name: string; label: ReactNode; because?: string }[] = [
     // One name, demo and real: what the check can know is that the photo came through this claim's own camera.
-    { key: "session", name: CHECK_NAMES.session.toLowerCase().replace("remedy", "Remedy"), label: CHECK_NAMES.session, because: "Taken in this claim's camera, inside its 10 minutes." },
+    { key: "session", name: CHECK_NAMES.session.toLowerCase().replace("remedy", "Remedy"), label: CHECK_NAMES.session, because: "Taken in this claim’s camera, inside its 10 minutes." },
     { key: "duplicate", name: CHECK_NAMES.duplicate.toLowerCase(), label: CHECK_NAMES.duplicate, because: `No earlier claim has ${these}.` },
     { key: "account", name: CHECK_NAMES.account.toLowerCase().replace("paypal", "PayPal"), label: CHECK_NAMES.account, because: "No other claim from this PayPal account." },
     {

@@ -101,9 +101,10 @@ interface Parts {
   fold?: { arrive: boolean };
 }
 
-/** A sentence as the page writes it: "We couldn't…" for the pipeline's "Couldn't…", and a full stop. */
+/** A sentence as the page writes it: "We couldn’t…" for the pipeline's "Couldn't…", typeset (the rule stores straight
+ * apostrophes), and a full stop. */
 const sentence = (s: string) => {
-  const t = s.trim().replace(/^Couldn't/, "We couldn't");
+  const t = s.trim().replace(/^Couldn't/, "We couldn't").replace(/(?<=\p{L})'(?=\p{L})/gu, "’");
   return /[.!?]$/.test(t) ? t : `${t}.`;
 };
 
