@@ -6,8 +6,7 @@ import { sealedPhotoUrl } from "@/app/console/_lib/photoToken";
 import { claimAtVersion } from "@/app/console/_lib/photos";
 import { approveConflicts } from "@/app/console/_lib/review";
 import { decideStarter } from "@/app/console/_lib/starter";
-import { canSee, canSeeClaim, loadClaimFor, viewerOf } from "@/app/console/_lib/workspace";
-import { getAppStore } from "@/lib/demo";
+import { canSee, canSeeClaim, getConsoleStore, loadClaimFor, viewerOf } from "@/app/console/_lib/workspace";
 import { ClaimId } from "@/lib/types";
 
 const Version = z.coerce.number().int().min(1).max(10_000);
@@ -30,7 +29,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/
   let found: Awaited<ReturnType<typeof loadClaimFor>>;
   if (v.success) {
     const claim = await claimAtVersion(id.data, v.data, at).catch(() => null);
-    const store = await getAppStore();
+    const store = await getConsoleStore();
     const recall = claim ? await store.getRecall(claim.recallId) : null;
     // A starter claim comes as this company decided it (starter.ts), as loadClaimFor gives it.
     found = claim && recall && canSee(recall, session) && canSeeClaim(recall, session)(claim) ? { store, claim: decideStarter(claim, session.decided[claim.id]), recall } : null;

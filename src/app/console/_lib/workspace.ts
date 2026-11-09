@@ -2,8 +2,7 @@ import "server-only";
 import { isDeepStrictEqual } from "node:util";
 import { cookies } from "next/headers";
 import { recoverStale, STALE_AFTER_MS } from "@/app/api/claims/_lib/pipeline";
-import { getAppStore } from "@/lib/demo";
-import { DEMO_CLAIMS } from "@/lib/demo/claims";
+import { DEMO_ROUND_COOKIE, getAppStore, parseDemoRound } from "@/lib/demo";
 import { CAPTURE_SESSION_MINUTES } from "@/lib/ids";
 import { abandonedDemo } from "@/lib/limits";
 import { isTerminal, refreshPayouts } from "@/lib/paypal/status";
@@ -11,7 +10,12 @@ import type { Session } from "@/lib/session";
 import type { Store } from "@/lib/store";
 import { summarize, type ClaimSummary } from "@/lib/store/store";
 import type { Claim, Recall } from "@/lib/types";
+import { withDataset } from "./dataset";
 import { decideStarter, decideStarterRow, parseDecisions, STARTER_COOKIE, type StarterDecisions } from "./starter";
+
+/** The store as the console reads it: the demo recall and its seven claims from memory (dataset.ts), stored rows of any
+ * earlier seed left out. Every console page and route reads through it. */
+export const getConsoleStore = async (): Promise<Store> => withDataset(await getAppStore());
 
 // What a signed-in company can see: its own recalls plus the shared Kikea demo recall (owner null).
 export const canSee = (recall: Pick<Recall, "owner">, session: Pick<Session, "payerId">) => recall.owner === null || recall.owner === session.payerId;
@@ -28,7 +32,7 @@ export interface Workspace {
 // demo recall's settings are fixed. A wanted recall the cached list doesn't have yet (published a moment ago on
 // another instance) is looked up fresh.
 export async function loadWorkspace(session: Session, wanted?: string | string[]): Promise<Workspace> {
-  const store = await getAppStore();
+  const store = await getConsoleStore();
   const id = Array.isArray(wanted) ? wanted[0] : wanted;
   let listed = await store.listRecalls();
   if (id && !listed.some((r) => r.id === id)) listed = await store.listRecalls({ fresh: true });
@@ -51,44 +55,37 @@ export function pickRecall(recalls: Recall[], wanted: string | string[] | undefi
   return recalls.find((r) => r.id === id) ?? recalls[0] ?? null;
 }
 
-// On the shared demo recall every signed-in company is a different judge, so a company sees the seeded samples, the
-// demo claims (public sample photos, sandbox money) and real claims from its own PayPal account, never another
-// person's camera photos. A company's own recall shows every claim.
-export const canSeeClaim = (recall: Pick<Recall, "owner">, session: Pick<Session, "payerId">) => (c: Pick<ClaimSummary, "seeded" | "demo" | "payerId">) =>
-  recall.owner !== null || Boolean(c.seeded) || Boolean(c.demo) || c.payerId === session.payerId;
+// On the shared demo recall every signed-in company sees the dataset's claims (seeded), the demo runs its own browser
+// made (their demo round, round.ts: one person sees their own claim land, never another's runs, though many share
+// one sandbox login) and real claims from its own PayPal account, never another person's camera photos. A company's
+// own recall shows every claim.
+export const canSeeClaim = (recall: Pick<Recall, "owner">, session: Pick<Viewer, "payerId" | "round">) => (c: Pick<ClaimSummary, "seeded" | "demo" | "demoRound" | "payerId">) =>
+  recall.owner !== null || Boolean(c.seeded) || (c.demo ? Boolean(session.round) && c.demoRound === session.round : c.payerId === session.payerId);
 
-/** Who is looking: the company, and its decisions on the shared recall's starter claims (starter.ts). */
-export type Viewer = Pick<Session, "payerId"> & { decided?: StarterDecisions };
+/** Who is looking: the company, its decisions on the shared recall's starter claims (starter.ts) and its browser's demo
+ * round (round.ts), if it has run one. */
+export type Viewer = Pick<Session, "payerId"> & { decided?: StarterDecisions; round?: string | null };
 
 type CookieJar = { get(name: string): { value: string } | undefined };
 
-/** The company as the console's pages and routes see it: with its decisions on the starter claims, from its browser's
- * cookie. A route handler passes its request's cookies; a page reads them from the request it renders. */
-export const viewerOf = async <S extends Pick<Session, "payerId">>(session: S, jar?: CookieJar): Promise<S & { decided: StarterDecisions }> => ({
-  ...session,
-  decided: parseDecisions((jar ?? (await cookies())).get(STARTER_COOKIE)?.value, session.payerId),
-});
-
-/**
- * One recall's rows as the console lists them, from index.json: the claims this company may see, less the judges' demo
- * starts left before a photo was sent (abandonedDemo), which hold no evidence and no money, and the starter claims as
- * this company decided them. The queue, Insights and the report all list through here, so their totals agree.
- */
-export const listedClaims = <R extends ClaimSummary>(rows: R[], recall: Recall, viewer: Viewer, now = Date.now()): R[] => {
-  const older = olderSeed(rows);
-  return rows
-    .filter((r) => r.recallId === recall.id && canSeeClaim(recall, viewer)(r) && !abandonedDemo(r, new Date(now)) && !older(r))
-    .map((r) => (viewer.decided?.[r.id] ? (decideStarterRow(r, viewer.decided[r.id], recall) as R) : r));
+/** The company as the console's pages and routes see it: with its decisions on the starter claims and its demo round,
+ * from its browser's cookies. A route handler passes its request's cookies; a page reads them from the request it
+ * renders. */
+export const viewerOf = async <S extends Pick<Session, "payerId">>(session: S, jar?: CookieJar): Promise<S & { decided: StarterDecisions; round: string | null }> => {
+  const c = jar ?? (await cookies());
+  return { ...session, decided: parseDecisions(c.get(STARTER_COOKIE)?.value, session.payerId), round: parseDemoRound(c.get(DEMO_ROUND_COOKIE)?.value) };
 };
 
-// A store seeded with the demo claims (lib/demo/claims.ts) may still hold the seeded claims of an earlier seed, which the
-// store can't delete: they are left out, so the console lists the one dataset the homepage shows. The sign the dataset
-// is seeded: all its claims are there as seeded claims with their own codes, but for one a real claim may hold the id
-// of (RM-0442, filed through the demo); an earlier seed shares only a couple of id and code pairs with it.
-const DEMO_CODE = new Map(DEMO_CLAIMS.map((d) => [d.id, d.code]));
-type SeedRow = Pick<ClaimSummary, "id" | "seeded" | "code">;
-const olderSeed = (rows: SeedRow[]) =>
-  rows.filter((r) => r.seeded && DEMO_CODE.get(r.id) === r.code).length >= DEMO_CLAIMS.length - 1 ? (r: SeedRow) => Boolean(r.seeded) && !DEMO_CODE.has(r.id) : () => false;
+/**
+ * One recall's rows as the console lists them, from the console store's rows (getConsoleStore: the dataset's claims, no
+ * seeded rows of a store): the claims this company may see, less the demo starts left before a photo was sent
+ * (abandonedDemo), which hold no evidence and no money, and the starter claims as this company decided them. The
+ * queue, Insights and the report all list through here, so their totals agree.
+ */
+export const listedClaims = <R extends ClaimSummary>(rows: R[], recall: Recall, viewer: Viewer, now = Date.now()): R[] =>
+  rows
+    .filter((r) => r.recallId === recall.id && canSeeClaim(recall, viewer)(r) && !abandonedDemo(r, new Date(now)))
+    .map((r) => (viewer.decided?.[r.id] ? (decideStarterRow(r, viewer.decided[r.id], recall) as R) : r));
 
 // When this instance last read a claim whose row looks out of date. A payout that stays unsettled is asked about at
 // most once a minute per instance, not on every load: each ask reads the claim file.
@@ -133,7 +130,7 @@ export async function loadClaims(store: Store, recall: Recall, session: Viewer, 
 // A claim the company may open: its recall must be in the workspace. fresh reads the recall past the recall cache,
 // for the drawer and the reviews, which show and pay its current refund. A starter claim comes as the company decided it.
 export async function loadClaimFor(session: Viewer, claimId: string, { fresh = false } = {}): Promise<{ store: Store; claim: Claim; recall: Recall } | null> {
-  const store = await getAppStore();
+  const store = await getConsoleStore();
   const claim = await store.getClaim(claimId);
   if (!claim) return null;
   const recall = await store.getRecall(claim.recallId, { fresh });
@@ -145,7 +142,7 @@ export async function loadClaimFor(session: Viewer, claimId: string, { fresh = f
 // PATCH route), or one judge's edit would change the demo for every other. Read fresh: the settings form and the
 // PATCH change what they read.
 export async function loadRecallFor(session: Session, recallId: string): Promise<{ store: Store; recall: Recall } | null> {
-  const store = await getAppStore();
+  const store = await getConsoleStore();
   const recall = await store.getRecall(recallId, { fresh: true });
   if (!recall || !canSee(recall, session)) return null;
   return { store, recall };

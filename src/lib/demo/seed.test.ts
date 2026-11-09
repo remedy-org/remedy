@@ -1,20 +1,15 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { CODE_PATTERN } from "../codes";
 import { decide } from "../rule";
-import { getRecallBySlug } from "../store";
-import { localStore } from "../store/local";
 import { Claim } from "../types";
-import { DEMO_SLUG, demoRecall } from "./kikea";
+import { demoRecall } from "./kikea";
 import { DEMO_SAMPLES } from "./samples";
 import { DEMO_CLAIMS } from "./claims";
-import { buildSeedClaims, ensureDemoData, SEED_PHOTOS } from "./seed";
+import { buildSeedClaims, SEED_PHOTOS } from "./seed";
 import storedVerdicts from "./verdicts.json";
 
-const now = new Date("2026-11-07T12:00:00Z");
 const hashes = Object.fromEntries(SEED_PHOTOS.map((p, i) => [p, (i + 1).toString(16).padStart(16, "0")]));
 
 describe("buildSeedClaims", () => {
@@ -72,31 +67,6 @@ describe("buildSeedClaims", () => {
     expect(buildSeedClaims({ recall, hashes })).toEqual(claims);
     const taken = new Set([claims[0].id]);
     expect(buildSeedClaims({ recall, hashes, taken }).map((c) => c.id)).not.toContain(claims[0].id);
-  });
-});
-
-describe("ensureDemoData", () => {
-  let dir: string;
-  beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), "remedy-seed-"));
-  });
-  afterEach(async () => {
-    await rm(dir, { recursive: true, force: true });
-  });
-
-  it("seeds once, keeps a company's edits, and reseeds on reset", async () => {
-    const store = localStore(dir);
-    expect(await ensureDemoData(store, { now })).toEqual({ recall: "created", claims: "created", count: DEMO_CLAIMS.length });
-    const recall = await getRecallBySlug(DEMO_SLUG, store);
-    expect(recall).toMatchObject({ id: "27-071", refund: { value: "29.99" }, unitsSold: 19596, autoPay: true, owner: null });
-    expect(await store.getPhoto("seed/c02-1.jpg")).not.toBeNull();
-
-    await store.putRecall({ ...recall!, autoPay: false });
-    expect(await ensureDemoData(store, { now })).toEqual({ recall: "kept", claims: "kept", count: DEMO_CLAIMS.length });
-    expect((await store.getRecall("27-071"))?.autoPay).toBe(false);
-
-    expect(await ensureDemoData(store, { now, reset: true })).toMatchObject({ claims: "created", count: DEMO_CLAIMS.length });
-    expect(await store.listClaims()).toHaveLength(DEMO_CLAIMS.length);
   });
 });
 

@@ -14,7 +14,6 @@
     "eval:run": "tsx --env-file=.env eval/run.ts",
     "eval:summarize": "tsx eval/summarize.ts",
     "eval:photos": "tsx --env-file=.env eval/make-photos.ts",
-    "seed": "tsx --env-file=.env scripts/seed.ts",
     "dev-session": "tsx --env-file=.env scripts/dev-session.ts",
     "shots": "tsx scripts/shots.ts",
     "e2e": "tsx scripts/e2e.ts",

@@ -1,17 +1,12 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { CAPTURE_SESSION_MINUTES } from "../ids";
-import { dHash } from "../fingerprint";
 import { decide, preCheck, type OtherClaim } from "../rule";
-import type { Store } from "../store";
 import { Verdict, type Claim, type Decision, type Reason, type Recall } from "../types";
 import { DEMO_CLAIMS, type DemoClaim } from "./claims";
-import { DEMO_RECALL_ID, demoRecall } from "./kikea";
 import storedVerdicts from "./verdicts.json";
 
-// The demo recall's claims (claims.ts, DEMO_CLAIMS), built as stored claims so a new console isn't empty. Every model
-// answer is a real stored one from the eval (verdicts.json, from eval/out/runs); the decision and reasons come from the
-// app's own rule. Seeded claims are marked seeded: true and use generated payer ids. Only RM-0442 carries a PayPal
+// The demo recall's claims (claims.ts, DEMO_CLAIMS), built as full claims, in memory (dataset.ts): nothing writes them to a
+// store. Every model answer is a real stored one from the eval (verdicts.json, from eval/out/runs); the decision and
+// reasons come from the app's own rule. They are marked seeded: true and use generated payer ids. Only RM-0442 carries a PayPal
 // payout (the genuine claim, paid 15 s after its photo); the other approved claim has none sent.
 // A decided claim keeps its eval case's code (K7Q or R8D), from before the issued alphabet dropped Q and 8
 // (src/lib/codes.ts): the code is hand-written in the photos, so a new one would change the decision.
@@ -40,7 +35,7 @@ const answerOf = (d: DemoClaim) => {
 // The photos the seeded claims use, one set per claim.
 export const SEED_PHOTOS = [...new Set(DEMO_CLAIMS.flatMap((c) => c.photos))].sort();
 
-// Deterministic, so a reseed rewrites the same claims.
+// Deterministic, so every server builds the same claims.
 function prng(seed: number) {
   let a = seed >>> 0;
   return () => {
@@ -60,7 +55,7 @@ export interface SeedInput {
   taken?: ReadonlySet<string>;
 }
 
-// Pure: builds the seeded claims from DEMO_CLAIMS. ensureDemoData writes them.
+// Pure: builds the demo claims from DEMO_CLAIMS.
 export function buildSeedClaims({ recall, hashes, taken = new Set() }: SeedInput): Claim[] {
   const rand = prng(27071);
   const int = (n: number) => Math.floor(rand() * n);
@@ -147,45 +142,4 @@ export function buildSeedClaims({ recall, hashes, taken = new Set() }: SeedInput
   }
   // Newest first.
   return claims.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-export interface EnsureOptions {
-  now?: Date;
-  // Rewrite the seeded claims (DEMO_CLAIMS, same ids and times).
-  reset?: boolean;
-}
-
-export interface EnsureResult {
-  recall: "created" | "kept";
-  claims: "created" | "kept";
-  count: number;
-}
-
-// Idempotent: creates the Kikea recall if missing (never overwrites a company's edits to it) and the seeded claims
-// if none exist yet, or always with reset.
-export async function ensureDemoData(store: Store, { now = new Date(), reset = false }: EnsureOptions = {}): Promise<EnsureResult> {
-  let recall = await store.getRecall(DEMO_RECALL_ID);
-  const recallState = recall ? "kept" : "created";
-  if (!recall) {
-    recall = demoRecall(new Date(now.getTime() - 3 * 24 * 3_600_000));
-    await store.putRecall(recall);
-  }
-
-  const rows = await store.listClaims();
-  const seeded = rows.filter((r) => r.seeded);
-  if (seeded.length && !reset) return { recall: recallState, claims: "kept", count: seeded.length };
-
-  const hashes: Record<string, string> = {};
-  for (const name of SEED_PHOTOS) {
-    // A path rooted in public/demo, so the build traces only the sample photos, not the whole project.
-    const jpeg = await readFile(join(process.cwd(), "public", "demo", name));
-    await store.putPhoto(`${SEED_PHOTO_PREFIX}${name}`, jpeg);
-    hashes[name] = await dHash(jpeg);
-  }
-
-  const taken = new Set(rows.filter((r) => !r.seeded).map((r) => r.id));
-  const claims = buildSeedClaims({ recall, hashes, taken });
-  // One at a time: the blob store's index write retries on contention, and 40 at once would exhaust it.
-  for (const claim of claims) await store.putClaim(claim);
-  return { recall: recallState, claims: "created", count: claims.length };
 }
