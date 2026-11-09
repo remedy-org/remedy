@@ -28,7 +28,7 @@ export async function body<S extends z.ZodType>(request: Request, schema: S): Pr
   try {
     raw = await request.json();
   } catch {
-    return fail(400, "The request body isn't JSON.");
+    return fail(400, "The request body isn’t JSON.");
   }
   const parsed = schema.safeParse(raw);
   if (parsed.success) return parsed.data;

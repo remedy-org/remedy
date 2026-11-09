@@ -156,7 +156,8 @@ export default function InsightsPreview({
       <InsightsLedger claims={claims} unitsSold={data.recall.unitsSold} className="mx-5" />
       <div
         ref={host}
-        style={{ height }}
+        // The day lines are drawn up over the canvas's empty foot (its padding, all under the last row), as on the console.
+        style={{ height, marginBottom: chartsPaidByDay(data) ? undefined : -CANVAS_PAD }}
         className="insights-report w-full shrink-0 [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!"
       />
       {!chartsPaidByDay(data) && <PaidLines days={paidDays(claims)} className="mx-5" id="studio-paid-lines" />}

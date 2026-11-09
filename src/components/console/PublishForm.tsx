@@ -40,7 +40,7 @@ const UNSEEN = /\b(?:discard|dispose|throw (?:it |them )?away|bin it|stop using|
 
 /** A proof step a photo can't show, said under the step with what to write instead; null when it reads as visible. */
 export function unseenStep(step: string): string | null {
-  return UNSEEN.test(step) ? "A photo can't show this. Write a step it can prove, e.g. the bristles cut off the handle." : null;
+  return UNSEEN.test(step) ? "A photo can’t show this. Write a step it can prove, e.g. the bristles cut off the handle." : null;
 }
 
 /** The drafted checks, editable, then the refund, auto-pay and claim link. Publishing makes /r/<slug> live. */

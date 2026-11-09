@@ -478,9 +478,9 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
       const holds = c.reasons.filter((r) => r.outcome === "hold");
       const hold = holds.find((r) => !PROCESS_HOLD.has(r.check)) ?? holds[0];
       if (hold?.check === "auto_pay") return `All checks passed. Auto-pay is off, so a person approves the ${amount} refund.`;
-      if (hold?.check === "payout") return "All checks passed, but PayPal didn't accept the payout, so a person will send it.";
+      if (hold?.check === "payout") return "All checks passed, but PayPal didn’t accept the payout, so a person will send it.";
       if (hold && PROCESS_HOLD.has(hold.check)) return `A check before the payout found a conflict, so a person decides: ${lower(hold.text)}.`;
-      if (hold?.check === "model") return `The photo check gave no answer, so the rule couldn't decide: a person approves or rejects the ${amount} refund.`;
+      if (hold?.check === "model") return `The photo check gave no answer, so the rule couldn’t decide: a person approves or rejects the ${amount} refund.`;
       if (hold) return `One answer was unclear, so a person decides: ${lower(hold.text)}.`;
       return recall.autoPay ? "All checks passed, but the claim is held for a person." : `All checks passed. Auto-pay is off, so a person approves the ${amount} refund.`;
     }
@@ -526,7 +526,7 @@ export function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | 
     return ran ? { id, label, state: "pass", detail: pass } : { id, label, state: "waiting", detail: "" };
   };
   return [
-    row("session", CHECK_NAMES.session, "Taken in this claim's camera session, before it expired"),
+    row("session", CHECK_NAMES.session, "Taken in this claim’s camera session, before it expired"),
     // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the same
     // sample photo once: say that, next to the other rounds' claims with the same photo and code. The company reads a
     // round as a demo session.

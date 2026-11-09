@@ -69,7 +69,7 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
       const fresh = conflicts.filter((r) => !c.reasons.some((o) => o.check === r.check && o.text === r.text));
       return append({ ...c, reasons: [...c.reasons, ...fresh] }, now, "approve_refused", `Not paid on review: ${conflicts.map((r) => r.text).join("; ")}`);
     });
-    return { ok: false, status: 409, code: "send_check", message: "Remedy didn't send the payout: a check failed when it looked again.", reasons: conflicts };
+    return { ok: false, status: 409, code: "send_check", message: "Remedy didn’t send the payout: a check failed when it looked again.", reasons: conflicts };
   }
 
   const approved = await store.updateClaim(claim.id, (c) => (c.decision === "held" ? append(c, now, "approved", `Approved on review by ${by}`) : null));
@@ -81,8 +81,8 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
   } catch (e) {
     const reference = e instanceof PayPalError ? (e.debugId ?? undefined) : undefined;
     await store.updateClaim(claim.id, (c) => append(c, new Date(), "payout_failed", payoutFailedDetail(e)));
-    const what = e instanceof PayPalError ? "PayPal didn't take the payout" : "Remedy couldn't reach PayPal";
-    return { ok: false, status: 502, code: "paypal", message: `${what}. Nothing was sent and the claim is still held; it's safe to try again.`, reference };
+    const what = e instanceof PayPalError ? "PayPal didn’t take the payout" : "Remedy couldn’t reach PayPal";
+    return { ok: false, status: 502, code: "paypal", message: `${what}. Nothing was sent and the claim is still held; it’s safe to try again.`, reference };
   }
 
   // PayPal has the money, so the claim says paid whatever happened to it meanwhile. An approve that got here first

@@ -189,7 +189,7 @@ describe("approveClaim", () => {
     const claim = held();
     await store.putClaim(claim);
     const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay: async () => Promise.reject(new TypeError("fetch failed")) });
-    expect(result).toMatchObject({ ok: false, status: 502, message: expect.stringMatching(/^Remedy couldn't reach PayPal\. Nothing was sent/) });
+    expect(result).toMatchObject({ ok: false, status: 502, message: expect.stringMatching(/^Remedy couldn’t reach PayPal\. Nothing was sent/) });
     expect((await store.getClaim("RM-0412"))?.events.at(-1)?.detail).toBe("Remedy couldn't reach PayPal: fetch failed");
   });
 

@@ -313,7 +313,9 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
       <div
         ref={host}
         // The analyst's empty column says what it answers from (insights.css prints it).
-        style={{ height, ["--analyst-intro" as string]: JSON.stringify(`Answers from this recall’s ${plural(data.claims.length, "claim")}, naming the claim IDs it used. Ask for a chart and it adds one to this page.`) }}
+        // The panels start on the canvas's top edge (insights.css), so all of its padding is left under the last row: the
+        // day lines are drawn up over that empty foot, so they follow the panels as one panel follows another.
+        style={{ height, marginBottom: chartsPaidByDay(data) ? undefined : -CANVAS_PAD, ["--analyst-intro" as string]: JSON.stringify(`Answers from this recall’s ${plural(data.claims.length, "claim")}, naming the claim IDs it used. Ask for a chart and it adds one to this page.`) }}
         className={clsx("insights-report insights-frame [&_.ag-cell]:[font-variant-numeric:normal] [&_.ag-studio-layout-widget-title]:font-medium!", !askOpen && "insights-ask-closed")}
       />
       {/* Under three days of payouts, the day chart is plain lines: each day, its payouts and its dollars, following the

@@ -34,7 +34,9 @@ export function LinkedIds({ text, onOpen, self }: { text: string; onOpen?: (id: 
             {onOpen && id !== self ? (
               <button
                 type="button"
-                // Inside a grid row, the link opens the claim it names, never the row it sits on.
+                // Inside a grid row, the link opens the claim it names, never the row it sits on: AG Grid's own row click
+                // listens on the row itself, so it skips a click from here (ClaimsGrid.tsx onRowClicked, data-claim-link).
+                data-claim-link
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpen(id);

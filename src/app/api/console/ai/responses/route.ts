@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   try {
     raw = JSON.parse(text);
   } catch {
-    return error(400, "The request body isn't JSON.");
+    return error(400, "The request body isn’t JSON.");
   }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return error(400, "The request body isn't a JSON object.");
 

@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { paidDays, PAID_BY_DAY } from "./report";
 
 const plural = (n: number, one: string) => `${n.toLocaleString("en-US")} ${n === 1 ? one : `${one}s`}`;
@@ -6,7 +7,8 @@ const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" 
 /** What PayPal paid, a line a day, where a chart of one or two columns would stand nearly empty across the page. */
 export function PaidLines({ days, className = "page", id = "paid-lines" }: { days: ReturnType<typeof paidDays>; className?: string; id?: string }) {
   return (
-    <section aria-labelledby={id} className={className}>
+    // Positioned, so it sits over the empty foot of Studio's canvas it is drawn up onto (InsightsStudio, InsightsPreview).
+    <section aria-labelledby={id} className={clsx("relative", className)}>
       <div className="flex flex-col gap-3 border-t border-line pt-6">
         <h2 id={id} className="text-ui font-medium">
           {PAID_BY_DAY}

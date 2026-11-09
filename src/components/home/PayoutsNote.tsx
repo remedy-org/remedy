@@ -60,7 +60,7 @@ export function ReviewFoot({ claim, phase, onPhase }: { claim: StillClaim; phase
         </p>
       )}
       {phase === "reject" && reason && <p className="mb-2 text-ui text-muted">{TOUR.payouts.reason(reason)}</p>}
-      <div className="flex gap-2">
+      <div className={clsx("flex gap-2", phase === "idle" && "items-center")}>
         {phase === "idle" && (
           <>
             <button type="button" onClick={() => onPhase("confirm")} className={clsx("btn-primary cursor-pointer", BUTTON)}>
@@ -69,6 +69,9 @@ export function ReviewFoot({ claim, phase, onPhase }: { claim: StillClaim; phase
             <button type="button" onClick={() => onPhase("reject")} className={clsx("btn-quiet cursor-pointer", BUTTON)}>
               {TOUR.payouts.reject}
             </button>
+            {/* The console's own line for a held claim it starts with (EvidenceParts.tsx heldNote), word for word, beside
+                the buttons it is about, so the panel's foot is one row and the evidence keeps the height. */}
+            <p className="ml-2 min-w-0 text-ui text-pretty text-muted">{heldNote({ decision: "held", seeded: claim.drawer.seeded })}</p>
           </>
         )}
         {(phase === "confirm" || phase === "paying") && (
@@ -100,8 +103,6 @@ export function ReviewFoot({ claim, phase, onPhase }: { claim: StillClaim; phase
           </button>
         )}
       </div>
-      {/* The console's own line for a held claim it starts with (EvidenceParts.tsx heldNote), word for word. */}
-      {phase === "idle" && <p className="mt-2 text-ui text-muted">{heldNote({ decision: "held", seeded: claim.drawer.seeded })}</p>}
     </div>
   );
 }

@@ -59,7 +59,14 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
   const list = (
     // Every stage one row of the same height, its bar on the row's top line and its drop in the slot under it, so the
     // bars keep one pitch whether a stage has a drop or not (a drop of two kinds used to push its row 50px further down).
-    <ol className={clsx("grid min-h-0 auto-rows-[1fr]", flush ? "flex-1" : "h-full pb-1", spread ? "gap-0.5" : "gap-4")} onClick={onReset} onKeyDown={onKeyDown}>
+    // The last stage (Paid) has no drop under it: its row is only its line, so the panel ends on it, never on a slot of
+    // empty space over the next section's rule.
+    <ol
+      className={clsx("grid min-h-0", flush ? "flex-1" : "h-full pb-1", spread ? "gap-0.5" : "gap-4")}
+      style={{ gridTemplateRows: `repeat(${Math.max(steps.length - 1, 0)}, minmax(0, 1fr)) auto` }}
+      onClick={onReset}
+      onKeyDown={onKeyDown}
+    >
       {steps.map((s, i) => {
         const last = i === steps.length - 1;
         return (

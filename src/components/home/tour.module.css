@@ -253,6 +253,18 @@
   }
 }
 
+/* The panel's check rows, a step tighter than the console's (a picture, not a list to click through), so the held check
+   and its first line are in the docked panel's first view at a laptop's window height. */
+.dock ol > li {
+  padding-block: 6px;
+}
+
+/* A held or refused claim's photos stand beside what decided it (EvidenceStill.tsx), each whole at its own 2:3, never
+   cut to a band: the check that held it starts in view under them. */
+.dock [data-beside] figure > :first-child {
+  aspect-ratio: 2 / 3;
+}
+
 /* Step 02's foot: the panel's Pay and Reject, drawn (PayoutsNote.tsx). */
 .review {
   display: flex;
