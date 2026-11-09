@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { notYet, roundClaims } from "@/app/api/claims/_lib/pipeline";
 import { FlowShell, recallContext } from "@/components/claim/FlowShell";
 import { ClaimFrame } from "@/components/claim/Exhibit";
+import { inFourOrder } from "@/components/claim/fourOrder";
 import { companyName, maskPayer, noModelAnswer, productNoun } from "@/components/claim/model";
 import { SamplePicker, type DemoRun, type SampleOption } from "@/components/claim/SamplePicker";
 import { DEMO_SAMPLES, demoSample, getAppStore, isDemoAllowed } from "@/lib/demo";
@@ -31,9 +32,11 @@ export default async function SamplesPage({ params, searchParams }: PageProps<"/
     .map((r) => ({ id: r.id, href: `/r/${recall.slug}/try/${r.id}`, title: demoSample(r.sample ?? "")?.title ?? "Demo claim", decision: r.decision, sample: r.photoHashes.length ? r.sample : undefined, unanswered: noModelAnswer(r.decision, [r.reason]) }));
   const ran = new Set(rows.filter((r) => r.photoHashes.length > 0).map((r) => r.sample));
 
-  const options: SampleOption[] = DEMO_SAMPLES.map((sample) => ({ sample, locked: notYet(sample, rows) ?? undefined }));
+  // Listed in Fraud checks' order (fourOrder.ts); the one it opens on is the guided order's first still to run.
+  const options: SampleOption[] = inFourOrder(DEMO_SAMPLES).map((sample) => ({ sample, locked: notYet(sample, rows) ?? undefined }));
   const asked = typeof query.sample === "string" ? options.find((o) => o.sample.id === query.sample && !o.locked)?.sample.id : undefined;
-  const selected = asked ?? options.find((o) => !o.locked && !ran.has(o.sample.id))?.sample.id ?? "genuine";
+  const open = (id: string) => options.find((o) => o.sample.id === id && !o.locked && !ran.has(id));
+  const selected = asked ?? DEMO_SAMPLES.find((s) => open(s.id))?.id ?? "genuine";
   const roundDone = DEMO_SAMPLES.every((s) => ran.has(s.id));
   // A run the claim limits would refuse is never offered: the notice shows before "Start this claim", from the same
   // index.json read. Today's photo checks aren't read here (another Blob read on every view); the start still refuses
