@@ -119,7 +119,7 @@ export function CodeStep({ claimId, code, spec, expiresAt, startNow, frozen, qrS
             <p className="text-body text-pretty text-text">
               {written ? (
                 <>
-                  Photograph this paper tag with <span className="font-mono whitespace-nowrap">{written}</span> and <span className="font-mono whitespace-nowrap">{code}</span> beside the {thing} {cut ? "cut in half" : "destroyed"}.
+                  Photograph your paper tag with <span className="font-mono whitespace-nowrap">{written}</span> and <span className="font-mono whitespace-nowrap">{code}</span> beside the {thing} {cut ? "cut in half" : "destroyed"}.
                 </>
               ) : (
                 <>

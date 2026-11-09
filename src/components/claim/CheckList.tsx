@@ -25,6 +25,8 @@ export interface SixRow {
   unrun?: boolean;
   /** Why it failed or is held, in the owner's words. */
   detail?: string;
+  /** The words in `detail` that are data, set in mono: the label and the code the photo check couldn't read. */
+  marks?: string[];
   /** Why it passed, in one plain line. */
   because?: string;
   /** What the photo check read on the tag: the label and the code, and which of the code's characters are wrong. */
@@ -92,7 +94,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
   const these = photos > 1 ? "these photos" : "this photo";
   const base: { key: SixKey; name: string; label: ReactNode; because?: string }[] = [
     // One name, demo and real: what the check can know is that the photo came through this claim's own camera.
-    { key: "session", name: CHECK_NAMES.session.toLowerCase().replace("remedy", "Remedy"), label: CHECK_NAMES.session, because: "Taken in this claim’s camera, inside its 10 minutes." },
+    { key: "session", name: CHECK_NAMES.session.toLowerCase().replace("remedy", "Remedy"), label: CHECK_NAMES.session, because: "Taken live, inside the code’s 10 minutes." },
     { key: "duplicate", name: CHECK_NAMES.duplicate.toLowerCase(), label: CHECK_NAMES.duplicate, because: `No earlier claim has ${these}.` },
     { key: "account", name: CHECK_NAMES.account.toLowerCase().replace("paypal", "PayPal"), label: CHECK_NAMES.account, because: "No other claim from this PayPal account." },
     {
@@ -155,6 +157,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
         // Each unsure word named by its text, as the owner wrote it: "X-VESOLJE or H9D".
         const unsure = own.filter((r) => onTag(r) && r.state === "hold").map((r) => (r.id === "code" ? code : (written ?? "the label")));
         out.detail = unsure.length ? `We couldn’t read ${unsure.join(" or ")} on your ${written ? "paper " : ""}tag.` : "We couldn’t see the tag clearly.";
+        out.marks = unsure.filter((w) => w !== "the label");
         out.read = undefined;
       }
       if (state === "pass" && !out.read) out.because = "The tag matches this claim.";
@@ -176,6 +179,7 @@ export function sixRows(rows: CheckRow[], { code, noun, cut, decided, held, demo
     // failed row keeps its line, as a passed one does: the list reads the same from the checking screen to the result.
     if (explained && b.key !== "refund" && state === "hold") {
       out.detail = company ? `A person at ${company} will look at this.` : undefined;
+      out.marks = undefined;
       out.read = undefined;
     }
     return out;
@@ -295,8 +299,27 @@ function Reason({ r }: { r: SixRow }) {
     return <>{r.because}</>;
   }
   if (r.read && !r.detail) return <ReadOnTag read={r.read} className="text-text" />;
-  if (r.detail) return <EvidenceText>{r.detail}</EvidenceText>;
+  if (r.detail) return r.marks?.length ? <MonoWords words={r.marks}>{r.detail}</MonoWords> : <EvidenceText>{r.detail}</EvidenceText>;
   return null;
+}
+
+/** A line with the given words (a hand-written label, a code) each set in mono and never broken, as the code step sets them. */
+export function MonoWords({ children, words }: { children: string; words: readonly (string | null | undefined)[] }) {
+  const marks = words.filter((w): w is string => Boolean(w)).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (!marks.length) return <>{children}</>;
+  return (
+    <>
+      {children.split(new RegExp(`(${marks.join("|")})`)).map((part, i) =>
+        i % 2 ? (
+          <span key={i} className="font-mono whitespace-nowrap">
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
 }
 
 /**
