@@ -9,6 +9,7 @@ import {
   GLIDE,
   LAND,
   RAIL_BACK,
+  TURN,
   arrivalAt,
   cardAt,
   consoleAt,
@@ -17,10 +18,11 @@ import {
   frameAt,
   lookAt,
   railBackAt,
+  turnAt,
   type Box,
 } from "./arrival";
 import { PAGE_STOPS } from "./CustodyStage";
-import { scrollAt } from "./pace";
+import { SCROLL_VH, scrollAt } from "./pace";
 import { EXHIBIT_RANGE, STARTS } from "./timeline";
 
 const receipt: Box = { x: 1040, y: 230, w: 336, h: 412 };
@@ -126,5 +128,47 @@ describe("chapter 06's arrival", () => {
     const stop = 0.96;
     expect(scrollAt(stop)).toBe(PAGE_STOPS.at(-1));
     expect([...Array(n).keys()].every((i) => consoleAt(stop, i, n) === 1)).toBe(true);
+  });
+
+  describe("the dark room's turn, cream paper to the dark card", () => {
+    // Scroll px through the runway at a window height h.
+    const px = (p: number, h: number) => (scrollAt(p) * SCROLL_VH * h) / 100;
+    const at = (p: number) => lookAt(arrivalAt(p), turnAt(p));
+
+    it("starts where the card first stands in for the receipt, as the receipt exactly", () => {
+      expect(TURN[0]).toBe(EXHIBIT_OUT[0]);
+      expect(at(TURN[0])).toEqual(lookAt(0));
+      expect(at(paid)).toEqual(lookAt(0));
+    });
+
+    it("turns the paper over at least 160px of scroll at 900px tall and 200px at 1080, evenly", () => {
+      // The paper's tone from its first step off cream to the surface.
+      const from = [...Array(4001).keys()].map((i) => TURN[0] + (i * (TURN[1] - TURN[0])) / 4000);
+      const start = from.find((p) => at(p).paper < 1)!;
+      const end = from.find((p) => at(p).paper === 0)!;
+      expect(px(end, 900) - px(start, 900)).toBeGreaterThanOrEqual(160);
+      expect(px(end, 1080) - px(start, 1080)).toBeGreaterThanOrEqual(200);
+      // Never more than 6% of the turn in 8px of scroll at 900px tall: a crossfade, never a flip.
+      let most = 0;
+      for (let p = TURN[0]; p < TURN[1]; p += 0.0002) {
+        let q = p;
+        while (px(q, 900) - px(p, 900) < 8) q += 0.00002;
+        most = Math.max(most, at(p).paper - at(q).paper);
+      }
+      expect(most).toBeLessThan(0.06);
+    });
+
+    it("never prints the receipt's words and the row's over each other, and lands as the flat row", () => {
+      const ps = [...Array(1001).keys()].map((i) => 0.88 + i * 0.0001);
+      expect(ps.every((p) => at(p).receipt === 0 || at(p).row === 0)).toBe(true);
+      // The paper's own fill hands over to the card's ground only once that ground is whole under it.
+      expect(ps.every((p) => at(p).paper === 1 || at(p).ground === 1)).toBe(true);
+      expect(at(LAND)).toEqual(lookAt(1));
+    });
+
+    it("leaves the light room's look as it was", () => {
+      expect(lookAt(0.07)).toEqual(lookAt(0.07, undefined));
+      expect(lookAt(0.07).paper).toBeCloseTo(1 - (0.07 - 0.03) / 0.09);
+    });
   });
 });

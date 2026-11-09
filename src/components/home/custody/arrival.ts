@@ -96,19 +96,43 @@ export function frameAt(k: number, card: Box, win: Box): Box | null {
 }
 
 /**
+ * The dark room's turn from the receipt's cream paper to the console's dark card, on p: from the exhibit's way out
+ * (the card stands in for the receipt from EXHIBIT_OUT's start) to 30% into the arrival, as the card folds. About 220px
+ * of scroll at 900px tall and 270px at 1080, so the paper dims like a sheet carried out of the lamp's light, never a
+ * flip from cream to graphite between two frames (it took 27px). In light the paper and the surface are close in tone
+ * and the arrival's own short turn (lookAt) stays.
+ */
+export const TURN = [EXHIBIT_OUT[0], ARRIVAL[0] + 0.3 * (ARRIVAL[1] - ARRIVAL[0])] as const;
+
+/** How far the dark room's turn is at p, 0 to 1, linear: the card's ground mixes in oklab, so its tone moves evenly. */
+export const turnAt = (p: number) => ramp(p, ...TURN);
+
+/** Where in k RM-0442's row starts to come in, in both rooms. */
+const ROW_IN = 0.12;
+/** Where in the dark turn the receipt's words are gone: just as the row's start, so the card is never an empty box. */
+const WORDS_OUT = turnAt(ARRIVAL[0] + ROW_IN * (ARRIVAL[1] - ARRIVAL[0]));
+
+/**
  * The card's look at k, each 0 to 1. `receipt`: the receipt's own paper and words, gone as it folds. `paper`: the card's
  * ground, the receipt's paper turning to the console's surface. `row`: RM-0442's row, in once the card is all but
  * folded. `lift`: the card's ground, edge and shadow, settling flat into the queue as it lands. `ground`: the card's
  * ground coming up under the receipt's perforated edge, so its first frame is the receipt exactly. The receipt's words
  * dim with its paper and the row's come in as they go, the one straight after the other, so the card is never an
  * empty box for more than a frame and its words are never two sets printed over each other.
+ *
+ * `turn` (turnAt, dark only): the ground comes up under the receipt as the turn starts, then its paper dims to the
+ * surface over the whole turn, the receipt's words fading out over its first two thirds (dark ink on a darkening
+ * sheet) and the row's light words coming in straight after, at their usual k, once the ground is dark enough to carry
+ * them.
  */
-export function lookAt(k: number) {
-  return {
+export function lookAt(k: number, turn?: number) {
+  const look = {
     receipt: 1 - ramp(k, 0.03, 0.12),
     ground: ramp(k, 0, 0.03),
     paper: 1 - ramp(k, 0.03, 0.12),
-    row: ramp(k, 0.12, 0.2),
+    row: ramp(k, ROW_IN, 0.2),
     lift: 1 - ramp(k, 0.82, 1),
   };
+  if (turn === undefined) return look;
+  return { ...look, ground: Math.max(look.ground, ramp(turn, 0, 0.08)), paper: 1 - ramp(turn, 0.08, 1), receipt: 1 - ramp(turn, 0.08, WORDS_OUT) };
 }

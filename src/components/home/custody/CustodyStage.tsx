@@ -6,7 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import type { ClaimRow } from "@/app/console/_lib/view";
 import { Receipt } from "@/components/home/teardown";
 import { BEATS as EXHIBIT_BEATS, holdOf } from "../teardown/model";
-import { ARRIVAL, EXHIBIT_LIFT, LAND, arrivalAt, cardAt, consoleAt, consoleParts, exhibitOutAt, frameAt, lookAt, railBackAt, type Box } from "./arrival";
+import { ARRIVAL, EXHIBIT_LIFT, LAND, arrivalAt, cardAt, consoleAt, consoleParts, exhibitOutAt, frameAt, lookAt, railBackAt, turnAt, type Box } from "./arrival";
 import { CHAPTERS, CLAIM, CONSENT_AT, SHOT_AT } from "./claim";
 import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, QueueRow, type Progress } from "./chapters";
 import { ExhibitSlot } from "./ExhibitSlot";
@@ -202,7 +202,10 @@ function paintArrival(refs: Record<"stage" | "card" | "ghost", RefObject<HTMLDiv
   }
   el.style.visibility = on ? "visible" : "hidden";
   if (!on) return;
-  const look = lookAt(k);
+  // In the dark room the cream receipt turns to the dark card over a long stretch of scroll (arrival.ts TURN); light is
+  // data-theme="light" on <html> or the nearest themed subtree, dark the default.
+  const dark = st.closest("[data-theme]")?.getAttribute("data-theme") !== "light";
+  const look = lookAt(k, dark ? turnAt(v) : undefined);
   el.style.transform = `translate(${box.x.toFixed(1)}px, ${box.y.toFixed(1)}px)`;
   el.style.width = `${box.w.toFixed(1)}px`;
   el.style.height = `${box.h.toFixed(1)}px`;
