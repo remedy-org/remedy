@@ -327,7 +327,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const errorText = sendError?.status === 401 ? (n === 1 ? "Log in again to send it. You’ll need to retake it afterwards." : "Log in again to send them. You’ll need to retake them afterwards.") : sendError?.message;
   const shown = viewing !== null ? shots[viewing] : undefined;
   const said = sending
-    ? "Sending your photos…"
+    ? `Sending your ${n === 1 ? "photo" : "photos"}…`
     : removed !== null
       ? `Photo ${removed} removed. You can take ${MAX_PHOTOS - n} more.`
       : n === 0
