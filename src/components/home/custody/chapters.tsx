@@ -363,13 +363,14 @@ export function ConsoleChapter({ p }: { p: Progress }) {
   const opacity = useTransform(open, [0.5, 1], [0, 1]);
   // The console's one neutral flash on a changed row (never amber: the rail's running chapter is this screen's amber).
   const flash = useTransform(p, (v) => `color-mix(in oklch, var(--text) ${(8 * (1 - ramp(v, 0.94, 1))).toFixed(2)}%, transparent)`);
-  // It fills the stage down to its foot, so as the pin releases the stage never shows an empty band under it.
+  // Its window is as tall as the queue (CustodyStage, .screen[data-fit]): a tall screen shows the seven claims whole over
+  // their foot, never a well of empty rows; a short one keeps as many whole rows as the window holds.
   return (
     // The queue sits straight in the console's window on hairlines, as the tour draws it: no card inside the window, and
     // no heading over it (the rail already says who sees it; RM-0442's own row says when it was paid).
     <div className="h-full @container">
       <div className="flex h-full flex-col">
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div data-console-queue className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex gap-6 border-b border-line px-4 text-ui">
             {/* The console's own status tabs, in its words. */}
             {["All", "Approved", "Held", "Rejected", "Blocked"].map((t, i) => (
@@ -387,7 +388,7 @@ export function ConsoleChapter({ p }: { p: Progress }) {
           </div>
           {/* As many whole rows as the panel holds, so a tall screen shows more of the queue: a row that would not fit
               wraps out of sight beside the list, never cut through by the panel's foot. */}
-          <div className="flex min-h-0 flex-1 flex-col flex-wrap content-start overflow-hidden *:w-full *:shrink-0">
+          <div data-console-rows className="flex min-h-0 flex-1 flex-col flex-wrap content-start overflow-hidden *:w-full *:shrink-0">
             <motion.div className="overflow-hidden" style={{ height }}>
               <motion.div style={{ opacity, backgroundColor: flash }}>
                 <ConsoleRow row={M4T_ROW} first />

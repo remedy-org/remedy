@@ -113,6 +113,19 @@
   flex-direction: column;
 }
 
+/* Chapter 06, the console: the window as tall as its queue (CustodyStage measures it, --fit-h), so a tall screen shows
+   the claims whole over their foot rather than a half-empty table; never taller than the stage allows. It changes only
+   while the exhibit covers the stage. */
+.screen[data-fit] .screenInner {
+  bottom: auto;
+  height: min(var(--fit-h, 100%), calc(100% - 2rem));
+}
+
+/* Sized to the queue, the last claim's hairline would lie a pixel over the foot's: the foot's line alone closes it. */
+.screen[data-fit] [data-console-rows] > :last-child {
+  border-bottom-color: transparent;
+}
+
 .rail {
   position: absolute;
   z-index: 4;

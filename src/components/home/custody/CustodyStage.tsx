@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { frame as motionFrame, motion, useMotionValueEvent, useTransform } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { BEATS as EXHIBIT_BEATS, holdOf } from "../teardown/model";
 import { CHAPTERS, CONSENT_AT, SHOT_AT } from "./claim";
 import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, type Progress } from "./chapters";
@@ -186,6 +186,35 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
     return () => ro.disconnect();
   }, [stage, p]);
 
+  // Chapter 06's window is as tall as its queue, never a half-empty table on a tall screen (custody.module.css
+  // .screen[data-fit]): its bar, the layer's padding, the queue's tabs, header and foot, and every claim's row at full
+  // height (RM-0442's opens into place as the chapter plays). Read from the layout, so the compact rows and the fonts
+  // count; the clip follows the window.
+  useLayoutEffect(() => {
+    const el = screen.current;
+    const st = stage.current;
+    const inner = el?.querySelector<HTMLElement>("[data-screen-inner]");
+    const layer = el?.querySelector<HTMLElement>('[data-layer="5"]');
+    const queue = layer?.querySelector<HTMLElement>("[data-console-queue]");
+    const rows = queue?.querySelector<HTMLElement>("[data-console-rows]");
+    const bar = inner?.firstElementChild as HTMLElement | null | undefined;
+    if (!el || !layer || !queue || !rows || !bar) return;
+    const fit = () => {
+      const h = (e: Element | undefined) => e?.getBoundingClientRect().height ?? 0;
+      const row = h(rows.children[1]);
+      const fixed = [...queue.children].reduce((sum, c) => (c === rows ? sum : sum + h(c)), 0);
+      const pad = parseFloat(getComputedStyle(layer).paddingTop) + parseFloat(getComputedStyle(layer).paddingBottom);
+      // A pixel over, so subpixel rounding never wraps the last row out of sight.
+      el.style.setProperty("--fit-h", `${Math.ceil(h(bar) + pad + fixed + rows.children.length * row) + 1}px`);
+      applyClip(el, st, p.get());
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(bar);
+    ro.observe(queue);
+    return () => ro.disconnect();
+  }, [chapter, compact, stage, p]);
+
   // As p passes 0.12, in time, the laptop's own screen dissolves straight into the consent screen: the layer and its
   // content come in together (200ms and 240ms), so the screen never shows a frame of bare ground between the two UIs.
   // Back, both leave in 160ms. Opacity and pointer events as well as visibility: a chapter
@@ -210,7 +239,7 @@ export function CustodyStage({ p, stage, skip }: CustodyStageProps) {
 
   return (
     <>
-      <motion.div ref={screen} className={styles.screen} style={screenStyle} aria-hidden="true">
+      <motion.div ref={screen} className={styles.screen} style={screenStyle} data-fit={chapter === 5 || undefined} aria-hidden="true">
         {/* The window's edge: a definite hairline with its soft shadow, so its corners never float alone. */}
         <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-card ring-1 ring-line")} style={{ opacity: frame }} />
         <div className={styles.screenInner} data-screen-inner>
