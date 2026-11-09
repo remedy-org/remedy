@@ -115,12 +115,7 @@ export function ClaimCell({ data, context }: Cell) {
     <span className="flex h-full items-center gap-3">
       <span className="relative flex">
         <Thumbs row={data} />
-        {/* Shown on a picked row only (ClaimsGrid's pick style): a filled box with a check in place of the photos. */}
-        <span aria-hidden="true" className="pick-box">
-          <svg viewBox="0 0 12 12" className="size-3">
-            <path d="M2.75 6.25l2.1 2.1 4.4-4.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </span>
+        <PickBox />
       </span>
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="font-mono text-ui font-medium">{data.id}</span>
@@ -372,6 +367,17 @@ export function AmountCell({ data }: Cell) {
   );
 }
 
+/** Shown on a picked row only (ClaimsGrid's pick style): a filled box with a check in place of the photos. */
+function PickBox() {
+  return (
+    <span aria-hidden="true" className="pick-box">
+      <svg viewBox="0 0 12 12" className="size-3">
+        <path d="M2.75 6.25l2.1 2.1 4.4-4.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
 /** Narrow grids: one 88px card per claim. Photo, id and amount; then the pill in its track and the reason; then code, time and payout. */
 export function CardRow({ data }: Cell) {
   if (!data) return null;
@@ -392,7 +398,11 @@ export function CardRow({ data }: Cell) {
   return (
     <span className="flex h-full items-center gap-3 px-4">
       <span className="sr-only">{said}</span>
-      <Thumbs row={data} size="lg" />
+      <span className="relative flex shrink-0">
+        <Thumbs row={data} size="lg" />
+        {/* A picked card's check, in place of its photo, as on a wider grid's Claim cell. */}
+        <PickBox />
+      </span>
       <span aria-hidden="true" className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex items-baseline justify-between gap-3">
           <span className="font-mono text-ui font-medium">{data.id}</span>

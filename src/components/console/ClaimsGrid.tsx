@@ -307,7 +307,9 @@ function keepInView(root: HTMLElement | null, id: string) {
   const row = root?.querySelector<HTMLElement>(`.ag-row[row-id="${CSS.escape(id)}"]`);
   if (!row) return;
   const r = row.getBoundingClientRect();
-  if (r.top < 0 || r.bottom > window.innerHeight) row.scrollIntoView({ block: "nearest" });
+  // Above the page's scroll padding: the bulk bar stuck to a phone's foot (ClaimsQueue) covers that strip.
+  const foot = parseFloat(getComputedStyle(document.documentElement).scrollPaddingBottom) || 0;
+  if (r.top < 0 || r.bottom > window.innerHeight - foot) row.scrollIntoView({ block: "nearest" });
 }
 
 export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function ClaimsGrid(
@@ -1221,7 +1223,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
 function pickCss(picked: ReadonlySet<string>) {
   const rows = [...picked].filter((id) => /^[A-Za-z0-9_-]+$/.test(id)).map((id) => `.claims-grid .ag-row[row-id="${id}"]`);
   if (!rows.length) return "";
-  return `${rows.join(",")}{--row-picked:1}${rows.map((r) => `${r} .ag-cell`).join(",")}{background-color:var(--pick-bg)}${rows.map((r) => `${r} .pick-box`).join(",")}{opacity:1}${rows.map((r) => `${r} .thumbs`).join(",")}{opacity:0}`;
+  // A phone's card row is one full-width cell: the tint goes on the row itself.
+  return `${rows.join(",")}{--row-picked:1}${rows.map((r) => `${r} .ag-cell,${r}.ag-full-width-row`).join(",")}{background-color:var(--pick-bg)}${rows.map((r) => `${r} .pick-box`).join(",")}{opacity:1}${rows.map((r) => `${r} .thumbs`).join(",")}{opacity:0}`;
 }
 
 const CSV_HEADERS: Record<string, string> = {

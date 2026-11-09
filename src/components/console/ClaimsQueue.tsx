@@ -193,6 +193,22 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   // controls never crowd it into "Search cla". It opens on a click or /, and stays open while it holds words.
   const [searchOpen, setSearchOpen] = useState(false);
 
+  const bulkDock = useRef<HTMLDivElement>(null);
+  const picking = picked.length > 0;
+  useEffect(() => {
+    const el = bulkDock.current;
+    if (!el || fill) return;
+    const root = document.documentElement;
+    const set = () => (root.style.scrollPaddingBottom = `${el.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.scrollPaddingBottom = "";
+    };
+  }, [fill, picking]);
+
   const ledger = useMemo(() => ledgerOf(rows, recall), [rows, recall]);
   // Search: every word must appear in the claim id, code, PayPal account's last four, reason or verdict line, as the
   // grid's quick filter reads them (searchText: O and 0 match each other). It applies to every tab, so the tabs count
@@ -749,8 +765,10 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
           </div>
 
           {picked.length > 0 && (
-            // Docked under the grid, over the footer: the pick's actions in reach, and no row hidden behind them.
-            <div className="flex pt-2">
+            // Docked under the grid, over the footer: the pick's actions in reach, and no row hidden behind them. Below
+            // 1024px the page scrolls, so the bar sticks to the window's foot (clear of a phone's home bar), and the
+            // page's scroll padding keeps the keyboard's card above it.
+            <div ref={bulkDock} className="flex pt-2 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:bg-bg max-lg:pt-0 max-lg:pb-[env(safe-area-inset-bottom)]">
                 <BulkBar
                   rows={rows.filter((r) => pickedSet.has(r.id)).sort((a, b) => picked.indexOf(a.id) - picked.indexOf(b.id))}
                   mode={bulk}
