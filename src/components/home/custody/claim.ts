@@ -97,7 +97,7 @@ export const CONSOLE_ROWS: { photo: string; filed: string; id: string; status: V
   { photo: "/demo/k11-1.jpg", filed: "10:26", id: "RM-9475", status: "blocked", reason: "PayPal account not verified", fails: 2 },
   { photo: "/demo/k04-1.jpg", filed: "22:51", id: "RM-2125", status: "blocked", reason: "Photo already used in another claim · RM-6276", fails: 1 },
   { photo: "/demo/k02-1.jpg", filed: "17:39", id: "RM-0118", status: "rejected", reason: "Tag reads K7Q · code is K7P", time: "9 s", fails: 3 },
-  { photo: "/demo/k10-1.jpg", filed: "13:05", id: "RM-9629", status: "held", reason: "Couldn’t read the label clearly", time: "20 s", amount: 29.99 },
+  { photo: "/demo/k10-1.jpg", filed: "13:05", id: "RM-9629", status: "held", reason: "Couldn’t read the written code clearly; this claim’s code is H9D", time: "20 s", amount: 29.99 },
   { photo: "/demo/k04-1.jpg", filed: "08:17", id: "RM-6276", status: "rejected", reason: "Destruction not shown", time: "14 s", fails: 4 },
   { photo: "/demo/web-1.jpg", filed: "19:42", id: "RM-9545", status: "blocked", reason: "Photos outside the live camera session", fails: 0 },
 ];

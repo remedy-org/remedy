@@ -119,8 +119,9 @@ describe("the panel says what the grid row says", () => {
     const d = toDrawerClaim(of("RM-9629"), recall);
     expect(d.fiveRows[3]).toMatchObject({ state: "hold", name: "Tag shows X-VESOLJE and H9D" });
     expect(d.fiveRows[3].parts.map((p) => [p.label, p.state])).toEqual([
-      ["Label", "hold"],
+      // The code before the label (lib/reasonOrder.ts), as the grid's reason leads with it.
       ["Code H9D", "hold"],
+      ["Label", "hold"],
       ["X-VESOLJE tag on the cut pillow", "hold"],
     ]);
     expect(d.fiveRows[4]).toMatchObject({ state: "pass", name: "Pillow cut in half" });

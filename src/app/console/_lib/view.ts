@@ -1,6 +1,7 @@
 import { moneyCounts } from "@/lib/payoutWords";
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
+import { byCheck } from "@/lib/reasonOrder";
 import { cutInHalf, handWrittenLabel, nounOf } from "@/components/claim/model";
 import { CHECK_NAMES, checkOf, fiveNames, fiveOutcomes, type CheckNumber } from "@/lib/fiveChecks";
 import type { ClaimSummary } from "@/lib/store";
@@ -229,7 +230,8 @@ export const searchText = (r: Pick<ClaimRow, "id" | "code" | "payer" | "reason" 
  * "K7O" (a reviewer types what they see, and the two look alike). */
 export const searchKey = (t: string) => t.toLowerCase().replace(/o/g, "0");
 
-const first = (reasons: Reason[], outcome: Reason["outcome"]) => reasons.find((r) => r.outcome === outcome)?.text;
+// The first reason with this outcome in check order (lib/reasonOrder.ts): the one the grid and the panel lead with.
+const first = (reasons: Reason[], outcome: Reason["outcome"]) => byCheck(reasons).find((r) => r.outcome === outcome)?.text;
 
 // One line for the grid: why the claim is where it is. reason is the row's decidingReason.
 export function reasonOf(c: Pick<ClaimSummary, "decision" | "reason" | "photoHashes">, recall: Pick<Recall, "autoPay">): string {
@@ -469,13 +471,13 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `All checks passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
       // The rule refused it and the owner asked a person to look (src/lib/appeal.ts): the rule's reason stands beside it.
-      const refused = c.reasons.find((r) => r.outcome === "reject");
+      const refused = byCheck(c.reasons).find((r) => r.outcome === "reject");
       if (refused && c.reasons.some((r) => r.check === APPEAL_CHECK)) {
         return `The rule refused it (${lower(refused.text)}), and the owner asked for a review, so a person decides: approve sends the ${amount} refund, reject keeps it refused.`;
       }
       // A hold is the model's unclear answer, or a step of the process: auto-pay off, PayPal refusing the payout, or a
       // conflict the checks before the payout found. Each gets its own sentence.
-      const holds = c.reasons.filter((r) => r.outcome === "hold");
+      const holds = byCheck(c.reasons).filter((r) => r.outcome === "hold");
       const hold = holds.find((r) => !PROCESS_HOLD.has(r.check)) ?? holds[0];
       if (hold?.check === "auto_pay") return `All checks passed. Auto-pay is off, so a person approves the ${amount} refund.`;
       if (hold?.check === "payout") return "All checks passed, but PayPal didn’t accept the payout, so a person will send it.";
