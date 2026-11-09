@@ -137,6 +137,9 @@ describe("the five checks", () => {
     expect(d.fiveRows.map((r) => r.name)).toEqual(names);
     expect(console_.find((r) => r.id === GENUINE.id)?.checkNames).toEqual(names);
     expect(names.slice(0, 3)).toEqual([CHECK_NAMES.session, CHECK_NAMES.duplicate, CHECK_NAMES.account]);
+    // How it works' chapter 04 says them in a sentence.
+    const said = CHAPTERS.find((c) => c.n === "04")!.text.replace(/’/g, "'").toLowerCase();
+    for (const name of [...names.slice(0, 3), "the tag shows X-VESOLJE and M4T", "pillow is cut in half"]) expect(said).toContain(name.toLowerCase());
   });
 
   it("name every claim's five the same way in the console's rows and its evidence", () => {

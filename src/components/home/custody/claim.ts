@@ -46,7 +46,8 @@ export const CHAPTERS = [
   {
     n: "04",
     title: "Five checks",
-    text: "Three checks need no AI: a live camera session, a photo never seen before, a verified PayPal account. Then the model reads the label and the code M4T and confirms the cut, quoting what it sees.",
+    // The five checks by their names (lib/fiveChecks.ts), set in a sentence.
+    text: "Three checks need no AI: taken in Remedy’s camera, photo not used before, one claim per PayPal account. Then the model checks the tag shows X-VESOLJE and M4T and the pillow is cut in half, quoting what it sees.",
   },
   {
     n: "05",
