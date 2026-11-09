@@ -140,7 +140,7 @@ Colours are OKLCH tokens in `src/app/globals.css`, exposed to Tailwind through `
 | `--accent-ink` | `0.22 0.03 65` | same | Text on brass (9.5:1) |
 | `--accent-text` | `0.86 0.11 82` | `0.50 0.11 68` | The active state's label only |
 | `--pay` / `--hold` / `--stop` | `0.79 0.13 150` / `0.78 0.08 240` / `0.72 0.16 28` | `0.45 0.13 150` / `0.44 0.11 250` / `0.48 0.18 28` | Paid (the one cool note: money arriving stands out); held for a person (the only blue); rejected or blocked |
-| `--pay-fill` / `--pay-fill-text` | `0.5 0.085 150` / `--text` | `--pay` / `--bg` | Paid as an area (a chart's columns, the funnel's Paid bar): a calm forest green in dark, where the glyph's mint was the loudest thing on the page; its figures in the text colour (5.1:1) |
+| `--pay-fill` / `--pay-fill-text` | `0.5 0.085 150` / `--text` | `--pay` / `--bg` | Paid as an area (a chart's columns, the funnel's Paid bar, Insights' Decisions bar and the phone summary's Paid bar): a calm forest green in dark, where the glyph's mint was the loudest thing on the page; its figures in the text colour (5.1:1) |
 | `--pool` | brass light at 13% | warm light at 22% | The light table (see Depth) |
 | `--bevel` / `--halo` | 0.5px white top edge at 8% / cream halo at 5% | Clerk's two 2.4% soft layers / none | Machined detail on dark cards and controls |
 | `--band` / `--band-sheet` | `--paper` / `--paper-2` | `--paper-2` / `--paper` | Kept for any paper band; the homepage's Problem section is now an aged sheet on the desk (see Screens) |
