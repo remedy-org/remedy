@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { HOW_IT_WORKS, scrollAt } from "./pace";
 
 // Keyboard paging through a pinned runway. A browser page (Space, Page Down) is about 95vh, but a beat inside the pin
 // gets 56 to 85vh of scroll, so native paging skipped whole beats (check 2, the paid receipt). While the pin is on
@@ -57,6 +58,12 @@ function glideTo(top: number) {
   return ms;
 }
 
+/** The stops with How it works' beat among them, sorted (once is enough: a stop within 0.002 of it is it). */
+export function withHowItWorks(stops: readonly number[]) {
+  const how = scrollAt(HOW_IT_WORKS);
+  return stops.some((s) => Math.abs(s - how) < 0.002) ? [...stops] : [...stops, how].sort((a, b) => a - b);
+}
+
 const EDITABLE = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
 /** Space presses these, so it is theirs. */
 const PRESSABLE = "button, summary, [role='button'], [role='checkbox'], [role='switch'], [role='tab'], [role='menuitem']";
@@ -91,10 +98,13 @@ export function useBeatPaging(runway: () => HTMLElement | null | undefined, stop
       const nav = 4 * parseFloat(getComputedStyle(document.documentElement).fontSize);
       if (travel <= 0 || r.top > nav + 1 || r.bottom < innerHeight - 1) return;
       const now = Math.max(0, -r.top / travel);
+      // The laptop's runway (the phone's is a div with its own stops) has How it works between the hero and chapter 01,
+      // as the wheel and the homepage's keys do (scroll/stops.ts).
+      const beats = el.matches("section[data-runway]") ? withHowItWorks(list) : list;
       const last = aim.current;
       const from = last && performance.now() < last.t ? last.at : now;
       const after = getNext.current?.();
-      const all = after ? [...list, (after.getBoundingClientRect().top - r.top - nav) / travel] : list;
+      const all = after ? [...beats, (after.getBoundingClientRect().top - r.top - nav) / travel] : beats;
       const to = nextStop(all, from, dir);
       if (to === null) return;
       e.preventDefault();

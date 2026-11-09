@@ -5,7 +5,7 @@
 
 import { HANDOFF, PAGE_STOPS } from "../custody/CustodyStage";
 import { DOLLY } from "../custody/HeroRunway";
-import { scrollAt } from "../custody/pace";
+import { HOW_IT_WORKS, scrollAt } from "../custody/pace";
 import { EXHIBIT_RANGE } from "../custody/timeline";
 import { ANCHOR_AT, REST, T } from "../problemTimeline";
 import { BEATS as EXHIBIT_BEATS, RANGES, holdOf, tickAt, type BeatId } from "../teardown/model";
@@ -87,9 +87,9 @@ const checksStop = (p: Page) => p.fit(p.line("#checks header"), { min: p.line("#
 const SHEET_OPEN = ANCHOR_AT - 0.4;
 const SHEET_CUT = REST + 2;
 
-/** How it works' beat on the Chain of Custody's timeline: the dolly arrived (DOLLY ends at 0.12, its tilt by 0.11), just
- * short of the hand-over to chapter 01's screen. */
-const HOW_AT = HANDOFF[0] - 0.004;
+/** How it works' beat on the Chain of Custody's timeline (pace.ts HOW_IT_WORKS): the dolly arrived, just short of the
+ * hand-over to chapter 01's screen (HANDOFF). */
+const HOW_AT = HOW_IT_WORKS;
 
 /** Check 3's stop in the Chain of Custody's (PAGE_STOPS after the page top: 01, 02, the live photo, check 3). */
 const CHECK_3 = 3;

@@ -1,6 +1,6 @@
 import type Lenis from "lenis";
 import type { VirtualScrollData } from "lenis";
-import { calm, landing as glide, landingTime, warp, type Slow } from "./landing";
+import { CALM_PEAK, calm, calmLanding, landing as glide, warp, type Slow } from "./landing";
 
 // Scroll stops for the wheel. A fast wheel or trackpad fling is taken, as soon as it reads as fast, to the next stop in
 // its direction (stops.ts) and lands exactly there, on a glide long enough for the scrubbed transition on the way to be
@@ -16,12 +16,14 @@ import { calm, landing as glide, landingTime, warp, type Slow } from "./landing"
 // sheet half risen or half unfolded (unfolds). Only the wheel is gated: keys, anchor links,
 // the scrollbar, find-in-page, focus moves, touch and screen readers scroll natively and cancel a landing at once.
 //
-// A trackpad swipe inside a pinned story (the Chain of Custody from the hero to its console beat, the Problem sheet from
-// open to cut) moves one beat, whatever its size: the page follows the hand for its first FOLLOW px, so the move is seen
-// to start from it, and is taken to the next stop in its direction as the finger lifts (its momentum starts) or, sooner,
-// once the hand is quick (QUICK). The landing is calm (landing.ts calm, TRACK_TIME) and the momentum is absorbed; only a
-// fresh swipe, laid on top of it or after it, moves the next beat. A slow drag never lifts: it follows the hand and
-// settles on the beat ahead of where it stopped.
+// A trackpad swipe anywhere from the hero to the Problem sheet's cut (the hull of the pinned stories, the console scrolling
+// away and the sheet unfolding between them included) moves one beat, whatever its size; its beats are the stops and every
+// exhibit check at rest (the rests: every beat Page Down stops on). The page follows the hand for its first FOLLOW px, so
+// the move is seen to start from it, and is taken to the next beat in its direction as the finger lifts (its momentum
+// starts) or, sooner, once the hand is quick (QUICK). The landing is calm (landing.ts calmLanding: its time scales with
+// the way, its peak under CALM_PEAK) and the momentum is absorbed; only a fresh swipe, laid on top of it or after it,
+// moves the next beat. A slow drag never lifts: it follows the hand and settles on the beat ahead of where it stopped; a
+// tremor settles back.
 
 /** The input rate is measured over this many ms. */
 const WINDOW = 150;
@@ -136,14 +138,9 @@ const CHAIN_TIME = 0.8;
 /** The slow stretch's weight that marks the hero's dolly (stops.ts SLOW), and the weight a notched wheel crosses it at. */
 const DOLLY_WEIGHT = 5;
 const NOTCH_DOLLY = 3.5;
-/** Seconds a trackpad's landing across the dolly takes at most: the dolly plays, and the page is at rest about a second
- * after. */
-const DOLLY_TIME = 1.2;
-/** Seconds a landing may take longer for each slow stretch on its way but the dolly (stops.ts SLOW): an exhibit check,
- * the sheet's loop closing or its cut. The rest of the way is as quick as it can be already, so the time a transition
- * holds comes from here: two checks in a notched wheel's glide play in about a quarter of a second each. A notched wheel's,
- * in proportion to its shorter landing (NOTCH_TIME). */
-const SLOW_TIME = 0.12;
+/** Seconds a notched wheel's landing takes longer for each slow stretch on its way but the dolly (stops.ts SLOW): an
+ * exhibit check, the sheet's loop closing or its cut. The rest of the way is as quick as it can be already, so the time a
+ * transition holds comes from here: two checks in a notched wheel's glide play in about a quarter of a second each. */
 const NOTCH_SLOW_TIME = 0.12;
 /** A stop closer than this many windows to where the gesture began is where the reader already is: it goes on past. */
 const NEAR = 0.15;
@@ -185,12 +182,6 @@ const TAIL_FRAMES = 18;
 const FELL = 0.7;
 const RISE_RUN = 3;
 const RISE = 1.8;
-/** Seconds a trackpad's landing takes: TRACK_BASE and TRACK_PER a window of the way, TRACK_MIN to TRACK_TIME, each slow
- * stretch but the dolly adding SLOW_TIME. The beat ahead from the hero glided a screen in 0.5 s at 4,500 px/s. */
-const TRACK_BASE = 0.9;
-const TRACK_PER = 0.25;
-const TRACK_MIN = 0.95;
-const TRACK_TIME = 1.2;
 /** Seconds a trackpad gesture the page took as the reader's own (a slow drag) settles on its beat in: SETTLE_BASE and
  * SETTLE_PER a window left, SETTLE_TIME at most. */
 const SETTLE_BASE = 0.7;
@@ -344,9 +335,13 @@ export function createGate(read: () => Course) {
   const scrubbed = (y: number) => stories.some(([p, q]) => y > p + 1 && y < q - 1);
   /** The stretch outside the stories whose transition a page at rest at `y` would hold half played (unfolds). */
   const unfolding = (y: number) => unfolds.find(([a, b]) => y > a + 1 && y < b - 1);
-  /** Whether a swipe from `a` to `b` moves a beat of a pinned story: both in one story. Out of a story's first or last
-   * beat a swipe scrolls 1:1 (nudge), unless it is bound into the sheet's unfolding. */
-  const paced = (a: number, b: number) => stories.some(([p, q]) => Math.min(a, b) >= p - 1 && Math.max(a, b) <= q + 1);
+  /** Whether a trackpad swipe from `a` to `b` moves a beat: both from the first story's first beat to the last story's last
+   * (the hero to the Problem sheet's cut), the stretch between two stories included (the console scrolling away and the
+   * sheet unfolding: a tiny swipe from the console beat rested 90px on, mid-page). */
+  const paced = (a: number, b: number) =>
+    stories.length > 0 && Math.min(a, b) >= Math.min(...stories.map(([p]) => p)) - 1 && Math.max(a, b) <= Math.max(...stories.map(([, q]) => q)) + 1;
+  /** Whether a trackpad gesture resting at `y` would leave the page off a beat: strictly inside that stretch. */
+  const offBeat = (y: number) => paced(y - 2, y + 2);
   /** Whether this trackpad swipe's finger has lifted: its momentum decays (LIFT_RUN, LIFT). */
   function lifted(now: number) {
     if (deltas.length <= LIFT_RUN || sum(now - PACE, now) >= LIFT * peakPace) return false;
@@ -355,15 +350,18 @@ export function createGate(read: () => Course) {
   }
 
   /**
-   * The next stop past `from` in the direction of travel that the page at `at` has not yet passed, or will not reach
-   * within CATCH at `pace` px/s; within REACH, or anywhere in the same pinned story. Undefined when there is none: the
-   * fling is free.
+   * The next stop past `from` in the direction of travel (a trackpad's: the next rest) that the page at `at` has not yet
+   * passed, or will not reach within CATCH at `pace` px/s; within REACH, or anywhere in the same pinned story. Undefined
+   * when there is none: the fling is free.
    */
   function ahead(from: number, at: number, dir: Dir, pace = 0) {
     const near = NEAR * innerHeight;
     const lead = Math.max(0, pace) * CATCH;
     const ok = (s: number) => (dir > 0 ? s > from + near && s > at + lead : s < from - near && s < at - lead);
-    const next = dir > 0 ? stops.find(ok) : upStops.findLast(ok);
+    // A trackpad's beats are every finished beat Page Down stops on, the exhibit's checks at rest included: a tiny swipe
+    // from check 3 glided 1,862px past the code and the cut to the paid receipt.
+    const list = notched ? (dir > 0 ? stops : upStops) : rests;
+    const next = dir > 0 ? list.find(ok) : list.findLast(ok);
     return next !== undefined && (Math.abs(next - at) <= REACH * innerHeight || story(at, next)) ? next : undefined;
   }
 
@@ -387,23 +385,21 @@ export function createGate(read: () => Course) {
     // share of the time; it enters at the page's own speed. A notched wheel's landing is short, and shorter the nearer
     // its stop (NOTCH_BASE, NOTCH_TIME): it has no momentum, so a longer one drives on alone after the hand has stopped;
     // across the dolly it is slowed less and shorter still (NOTCH_DOLLY_TIME). Each other slow stretch on the way adds
-    // SLOW_TIME (NOTCH_SLOW_TIME). One taken on from a landing under way takes CHAIN_TIME at most. `cap` holds the whole
-    // landing to that many seconds (nudgeTime).
+    // NOTCH_SLOW_TIME. One taken on from a landing under way takes CHAIN_TIME at most. `cap` holds the whole landing to that
+    // many seconds (nudgeTime), a trackpad's no shorter than its calm floor.
     const from = l.animatedScroll;
     const on = slow.filter(([a, b]) => Math.max(a, b) > Math.min(from, to) && Math.min(a, b) < Math.max(from, to));
     const dolly = on.some(([, , k]) => k >= DOLLY_WEIGHT);
-    const way = warp(from, to, notched ? slow.map(([a, b, k]) => [a, b, k >= DOLLY_WEIGHT ? NOTCH_DOLLY : k] as const) : slow);
-    const base = notched
-      ? Math.min(dolly ? NOTCH_DOLLY_TIME : NOTCH_TIME, NOTCH_BASE + (NOTCH_PER * Math.abs(to - from)) / innerHeight)
-      : Math.min(dolly ? DOLLY_TIME : Infinity, landingTime(way.length / innerHeight));
     const stretches = on.filter(([, , k]) => k < DOLLY_WEIGHT).length;
-    // A trackpad's: TRACK_BASE and TRACK_PER a window, each slow stretch adding SLOW_TIME, TRACK_MIN to TRACK_TIME, on the
-    // calm curve, chained or not.
-    const track = Math.min(TRACK_TIME, Math.max(TRACK_MIN, TRACK_BASE + (TRACK_PER * Math.abs(to - from)) / innerHeight + SLOW_TIME * stretches));
-    const duration = notched ? Math.min(landing ? CHAIN_TIME : Infinity, cap, base + NOTCH_SLOW_TIME * stretches) : Math.min(cap, track);
+    // A trackpad's (calmLanding): its time scales with the way, chained or not, and its curve from rest (or entered at no
+    // more than its own peak) never passes CALM_PEAK.
+    const track = notched ? null : calmLanding(from, to, innerHeight, slow, cap);
+    const way = track ? track.way : warp(from, to, slow.map(([a, b, k]) => [a, b, k >= DOLLY_WEIGHT ? NOTCH_DOLLY : k] as const));
+    const base = Math.min(dolly ? NOTCH_DOLLY_TIME : NOTCH_TIME, NOTCH_BASE + (NOTCH_PER * Math.abs(to - from)) / innerHeight);
+    const duration = track ? track.duration : Math.min(landing ? CHAIN_TIME : Infinity, cap, base + NOTCH_SLOW_TIME * stretches);
     const v = Math.max(0, pageSpeed(l, dir));
-    const s0 = way.length < 1 ? 0 : (v * duration * way.entry) / way.length;
-    const curve = notched ? glide(s0) : calm(s0);
+    const s0 = way.length < 1 ? 0 : ((track ? Math.min(v, CALM_PEAK) : v) * duration * way.entry) / way.length;
+    const curve = track ? calm(Math.min(1.5, s0)) : glide(s0);
     landing = { to, dir };
     loose = false;
     fastSince = null;
@@ -457,7 +453,9 @@ export function createGate(read: () => Course) {
    * pinned stories slow scrolling stays the reader's: a push there, or out of a story's first or last beat, scrolls 1:1
    * and rests where it stops, on the clean frame nearest ahead (within CLEAN) when a line would be cut at the nav or the
    * screen's foot; but never inside a stretch that is a transition half played all the way across (unfolds: the Problem
-   * sheet rising and unfolding), where it goes on to the finished frame ahead in its direction.
+   * sheet rising and unfolding), where it goes on to the finished frame ahead in its direction. A trackpad's gesture is
+   * paced from the hero to the cut, the stretch between the two stories included: it settles there as inside a story (a
+   * tiny swipe from the console beat rested 90px on, mid-page).
    */
   function nudge(l: GateLenis) {
     loose = false;
@@ -475,7 +473,9 @@ export function createGate(read: () => Course) {
         return;
       }
     }
-    const unfold = unfolding(rest);
+    // A trackpad gesture between the hero and the cut settles on a beat wherever it went quiet (below, as inside a story).
+    const beaten = !notched && offBeat(rest);
+    const unfold = beaten ? undefined : unfolding(rest);
     if (unfold) {
       const [a, , c] = unfold;
       // A tremor from one of its ends goes back to the nearer.
@@ -483,7 +483,7 @@ export function createGate(read: () => Course) {
       land(l, to, to >= at ? 1 : -1, now, nudgeTime(to - at));
       return;
     }
-    if (!scrubbed(rest)) {
+    if (!scrubbed(rest) && !beaten) {
       if ((rest - origin) * dir < TREMOR) return;
       const clean = fit?.(rest, dir > 0 ? { min: rest, max: rest + CLEAN } : { min: rest - CLEAN, max: rest });
       if (clean !== undefined && Math.abs(clean - rest) > 1) land(l, clean, dir, now, nudgeTime(clean - at));
@@ -708,7 +708,8 @@ export function createGate(read: () => Course) {
         land(l, next, dir, now);
       }
       // A hard fling's momentum, still pouring in well past the take, carries it on past a story's inner beat.
-      else if (hold && innerStops.includes(landing.to) && total - takenAt >= (notched ? NOTCH_SKIM : SKIM * innerHeight)) {
+      // A trackpad swipe never skims: one swipe, one beat.
+      else if (hold && innerStops.includes(landing.to) && total - takenAt >= (notched ? NOTCH_SKIM : SKIM * innerHeight) && (notched || !paced(landing.to, landing.to))) {
         const on = ahead(landing.to, landing.to, dir);
         if (on !== undefined) land(l, on, dir, now);
       }
@@ -731,7 +732,8 @@ export function createGate(read: () => Course) {
       }
     }
     if (!notched) followed += a;
-    if (!fast) return startedInner ? true : pass();
+    // A trackpad swipe between the hero and the cut follows the hand for its first FOLLOW px, however quick.
+    if (!fast || (!notched && followed < FOLLOW && paced(origin, origin))) return startedInner ? true : pass();
     const next = ahead(origin, l.animatedScroll, dir, pageSpeed(l, dir));
     if (next === undefined || !carries(l, next, dir, now)) return startedInner ? true : pass();
     if (nested(event, dir)) return true;

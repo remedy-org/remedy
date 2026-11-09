@@ -43,3 +43,8 @@ export function scrollAt(t: number) {
   }
   return 1;
 }
+
+/** How it works' beat on the timeline: the dolly landed (it ends at 0.12, its tilt by 0.11), just short of the hand-over
+ * to chapter 01's screen (CustodyStage HANDOFF[0], 0.12). The wheel's stop (scroll/stops.ts) and the pin's own paging
+ * (paging.ts) both stop here. */
+export const HOW_IT_WORKS = 0.116;
