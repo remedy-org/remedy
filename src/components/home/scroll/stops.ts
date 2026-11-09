@@ -16,8 +16,8 @@ import type { Slow } from "./landing";
  */
 export const LINE = 48;
 
-/** A tall laptop screen, where Results is a screen of its own (Proof.tsx). */
-const TALL = 1000;
+/** A laptop screen tall enough (a 900px one and up) for Results to be a screen of its own (Proof.tsx). */
+const TALL = 860;
 
 /** What a frame may not cut, and where it may sit. */
 export type Frame = {
@@ -126,8 +126,8 @@ export const STOPS: readonly Stop[] = [
     at: (p) => p.fit(p.line(GATE_3, -1), { min: p.line(GATE_1, -1), before: "#proof header" }),
   },
   // Results: the heading, the zero and the footnote, For companies kept below the fold rather than cut by it. Never
-  // showing the end of Fraud checks above it. On a tall laptop screen the section is a screen of its own with its
-  // content centred (Proof.tsx): its top goes straight under the nav, so it reads as one slide, as on a laptop.
+  // showing the end of Fraud checks above it. On a laptop screen 860px tall and up the section is a screen of its own,
+  // its content 18% of the screen down (Proof.tsx): its top goes straight under the nav, so it reads as one slide.
   {
     name: "Results",
     at: (p) =>

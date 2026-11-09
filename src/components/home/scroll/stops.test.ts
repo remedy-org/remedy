@@ -117,6 +117,7 @@ describe("scroll stops", () => {
         const tops: Record<string, number> = {
           "#checks header": 10514,
           "#checks ol > li:nth-child(3)": 11050,
+          "#proof": 11844,
           "#proof header": 11940,
           "#companies header": 12530,
           "#companies [data-tour]": 12687,
@@ -130,8 +131,11 @@ describe("scroll stops", () => {
     // Every stop but the phone sequence's, which this laid-out laptop page doesn't have.
     expect(ys).toHaveLength(STOPS.length - 1);
     expect([...ys].sort((a, b) => a - b)).toEqual(ys);
-    // Results keeps For companies below the fold: its heading sits under the screen's foot.
-    expect(STOPS.find((s) => s.name === "Results")!.at(real)).toBe(12530 - 900);
+    // A 900px laptop screen and up: Results is a screen of its own, its top straight under the nav.
+    const results = STOPS.find((s) => s.name === "Results")!;
+    expect(results.at(real)).toBe(framed(11844, 64, 0));
+    // A shorter one: Results keeps For companies below the fold, its heading under the screen's foot.
+    expect(results.at({ ...real, size: { width: 1440, height: 800 }, fit: (y, frame) => (y === framed(11940, 64, LINE) && frame?.before === "#companies header" ? 12530 - 800 : y) })).toBe(12530 - 800);
   });
 
   it("takes the phone sequence's own paging stops where it pins", () => {
