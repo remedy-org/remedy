@@ -190,7 +190,7 @@ function paintArrival(refs: Record<"stage" | "card" | "ghost", RefObject<HTMLDiv
   // The exhibit's own receipt is hidden while the card stands in for it, and through chapter 06 (the exhibit may still be
   // dissolving out after a fast jump past the landing, and the receipt has gone into the queue).
   if (receipt) receipt.style.visibility = on || c === 5 ? "hidden" : "";
-  const box = cardAt(k, r0, slot, S.width);
+  const box = cardAt(k, r0, slot, win);
   const f = c === 5 ? frameAt(k, box, win) : null;
   fr.style.visibility = f ? "visible" : "hidden";
   if (f) {
@@ -228,7 +228,8 @@ function paintArrival(refs: Record<"stage" | "card" | "ghost", RefObject<HTMLDiv
     rc.style.transform = `translate(${(box.w - r0.w).toFixed(1)}px, ${((box.h - r0.h) / 2).toFixed(1)}px)`;
     rc.style.clipPath = `inset(${(crop - m).toFixed(1)}px ${-m}px ${(crop - m).toFixed(1)}px ${-m}px)`;
     rc.style.opacity = look.receipt.toFixed(3);
-    rc.style.visibility = look.receipt > 0 ? "visible" : "hidden";
+    // "inherit", never "visible": a visible child would show through the card once it is hidden.
+    rc.style.visibility = look.receipt > 0 ? "inherit" : "hidden";
   }
   // The row at its own width from the card's left edge, the part past the card's right edge cut until it has widened.
   const row = el.querySelector<HTMLElement>("[data-card-row]");
@@ -237,7 +238,7 @@ function paintArrival(refs: Record<"stage" | "card" | "ghost", RefObject<HTMLDiv
     row.style.transform = `translateY(${((box.h - slot.h) / 2).toFixed(1)}px)`;
     row.style.clipPath = `inset(0 ${Math.max(0, slot.w - box.w).toFixed(1)}px 0 0)`;
     row.style.opacity = look.row.toFixed(3);
-    row.style.visibility = look.row > 0 ? "visible" : "hidden";
+    row.style.visibility = look.row > 0 ? "inherit" : "hidden";
   }
 }
 

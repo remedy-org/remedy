@@ -130,9 +130,9 @@ export const HERO: Shot = {
  * turn of the wheel moves the frame: it pushes in 12% and turns 3 degrees round the part (HOLD_PUSH, HOLD_TURN). */
 export const SHOTS: Record<BeatId, Shot> = {
   intro: HERO,
-  // The whole cut pillow with the owner's phone held off its front right, between it and the callout: the phone's
-  // frustum runs out toward the cut and stops short of it, so the phone reads as a camera taking the photo, never as a
-  // phone lying on the pillow (scene/parts.ts poses it).
+  // The whole cut pillow with the owner's phone held off its front right, between it and the callout, its screen toward
+  // the viewer with the photo it took, so it reads as the camera that took it, never as a phone lying on the pillow
+  // (scene/parts.ts poses it).
   live: { az: 8, el: 30, at: [0.11, 0.12, 0.12], rx: 0.52, ry: 0.29 },
   // The print, held up out to the left; from this side the pillow is out of the frame and the earlier prints stack
   // behind it.
@@ -240,7 +240,7 @@ export interface ExhibitState {
   torn: number;
   /** The paid beat's explode, 0 to 1, held to the end. */
   explode: number;
-  /** The scan plane's sweep across the evidence, 0 to 1 (live check). */
+  /** The scan line's sweep down the photo on the phone's screen, 0 to 1 (live check). */
   scan: number;
   /** The fingerprint grid drawing on (photo check). */
   hash: number;

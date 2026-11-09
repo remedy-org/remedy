@@ -20,12 +20,12 @@ describe("chapter 06's arrival", () => {
   });
 
   it("is the receipt's box at its start and the row's slot at its end", () => {
-    expect(cardAt(0, receipt, slot, 1440)).toEqual(receipt);
-    expect(cardAt(1, receipt, slot, 1440)).toEqual(slot);
+    expect(cardAt(0, receipt, slot, win)).toEqual(receipt);
+    expect(cardAt(1, receipt, slot, win)).toEqual(slot);
   });
 
   it("folds in place: the receipt's right edge and middle held, the card the row's size", () => {
-    const f = cardAt(0.35, receipt, slot, 1440);
+    const f = cardAt(0.35, receipt, slot, win);
     expect(f.w).toBeCloseTo(slot.w);
     expect(f.h).toBeCloseTo(slot.h);
     expect(f.x + f.w).toBeCloseTo(receipt.x + receipt.w);
@@ -33,21 +33,21 @@ describe("chapter 06's arrival", () => {
   });
 
   it("keeps the folded card on the stage when the row is wider than the room left of the receipt", () => {
-    const f = cardAt(0.35, { ...receipt, x: 600 }, slot, 1440);
+    const f = cardAt(0.35, { ...receipt, x: 600 }, slot, win);
     expect(f.x).toBeGreaterThanOrEqual(16);
   });
 
   it("moves continuously, both ways: no step between two nearby k", () => {
     for (let k = 0; k < 1; k += 0.01) {
-      const a = cardAt(k, receipt, slot, 1440);
-      const b = cardAt(k + 0.01, receipt, slot, 1440);
+      const a = cardAt(k, receipt, slot, win);
+      const b = cardAt(k + 0.01, receipt, slot, win);
       expect(Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.w - b.w) + Math.abs(a.h - b.h)).toBeLessThan(120);
     }
   });
 
   it("draws the window's frame out from the card once it has folded, whole by the glide's end", () => {
-    expect(frameAt(0.2, cardAt(0.2, receipt, slot, 1440), win)).toBeNull();
-    expect(frameAt(0.8, cardAt(0.8, receipt, slot, 1440), win)).toEqual(win);
+    expect(frameAt(0.2, cardAt(0.2, receipt, slot, win), win)).toBeNull();
+    expect(frameAt(0.8, cardAt(0.8, receipt, slot, win), win)).toEqual(win);
     expect(frameAt(1, slot, win)).toEqual(win);
   });
 

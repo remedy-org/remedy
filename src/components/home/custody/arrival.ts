@@ -37,17 +37,15 @@ const mix = (a: Box, b: Box, t: number): Box => ({ x: a.x + (b.x - a.x) * t, y: 
 export const FOLD = [0, 0.35] as const;
 export const GLIDE = [0.35, 0.8] as const;
 
-/** The gutter the folded card keeps from the stage's right edge. */
-const EDGE = 16;
-
 /**
  * The card's box at k, in stage px: the receipt's box r0 at 0; folded by FOLD's end into a card the row's size, its
- * right edge and middle held where the receipt's were, so the receipt never moves while it folds; at the slot r1 by
+ * right edge and middle held where the receipt's were, so the receipt never moves while it folds, but never past the
+ * console window's columns `win` (so on a narrow laptop it never folds out over the rail's words); at the slot r1 by
  * GLIDE's end, and held there.
  */
-export function cardAt(k: number, r0: Box, r1: Box, stageW: number): Box {
-  const right = Math.min(r0.x + r0.w, stageW - EDGE);
-  const folded: Box = { x: Math.max(EDGE, right - r1.w), y: r0.y + r0.h / 2 - r1.h / 2, w: r1.w, h: r1.h };
+export function cardAt(k: number, r0: Box, r1: Box, win: Box): Box {
+  const x = Math.min(Math.max(r0.x + r0.w - r1.w, win.x), win.x + win.w - r1.w);
+  const folded: Box = { x, y: r0.y + r0.h / 2 - r1.h / 2, w: r1.w, h: r1.h };
   return mix(mix(r0, folded, inOut(ramp(k, ...FOLD))), r1, inOut(ramp(k, ...GLIDE)));
 }
 

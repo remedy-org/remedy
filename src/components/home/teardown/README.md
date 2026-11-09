@@ -44,7 +44,7 @@ Schibsted Grotesk and JetBrains Mono fonts. The component itself reads only the 
 | `claim.ts` | Every fact and quote the exhibit shows, with its source |
 | `model.ts` | The one input, `p` → `stateAt(p)`: beats, part openness, camera shot, readouts, ticks, receipt. Pure; tested in `model.test.ts` |
 | `OpenedExhibit.tsx` | Chooses the form, owns the pin, draws one frame per change of `p`, and writes the DOM overlay (readouts, check row, callout and leader, receipt) |
-| `scene/` | three.js, behind a dynamic import: `index.ts` (studio, framing, render), `pillow.ts` (the cut C-shaped pillow, torn edge, stuffing), `parts.ts` (tag and twine, phone and frustum, prints and fingerprints), `textures.ts`, `noise.ts` |
+| `scene/` | three.js, behind a dynamic import: `index.ts` (studio, framing, render), `pillow.ts` (the cut C-shaped pillow in slate blue-grey, torn edge, stuffing), `parts.ts` (tag and twine, the phone with the photo and its scan line on its screen, prints and fingerprints), `textures.ts`, `noise.ts` |
 | `public/teardown/*.webp` | 28 pre-rendered stills (7 beats × 2 themes × desktop/phone), 1.2 MB in all. The phone stills of the whole pillow are framed tight, so the object fills about 85% of a 375px screen |
 
 ### Forms, chosen after mount
@@ -122,7 +122,9 @@ The server always renders the static form.
   the beat before the camera arrives and fades (never retracts) over 6% as the camera leaves. The callout is up or
   down, eased in time by CSS, never scrubbed. The paid beat's halves part and stay parted to the end.
 - In the custody pin the exhibit comes and goes as one opaque layer, cut in time (`custody/gate.ts`) like the claim
-  screens: the outgoing layer leaves in 180ms and the incoming one rises in over 360ms, 140ms later.
+  screens: the outgoing layer leaves in 180ms and the incoming one rises in over 360ms, 140ms later. Out onto the
+  console its receipt (`data-receipt`, exported as `Receipt`) stays: `custody/arrival.ts` folds it into RM-0442's row
+  and glides it into the console.
 - The live canvas replaces the beat's still in one frame once warm, so the stage never shows the ground alone.
 
 ### Regenerating the stills
