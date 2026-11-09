@@ -37,8 +37,10 @@ describe("limitCopy", () => {
 describe("resetWords", () => {
   it("says the UTC midnight reset in the viewer's own time", () => {
     const evening = new Date("2026-11-07T15:00:00.000Z");
-    expect(resetWords(tomorrow, evening, "Asia/Kolkata")).toBe("05:30 tomorrow");
-    expect(resetWords(tomorrow, evening, "America/New_York")).toBe("19:00 today");
-    expect(resetWords(tomorrow, new Date("2026-11-06T12:00:00.000Z"), "UTC")).toBe("8 Nov, 00:00");
+    // 12-hour, lowercase am and pm, the space before them a no-break one.
+    expect(resetWords(tomorrow, evening, "Asia/Kolkata")).toBe("5:30\u00a0am tomorrow");
+    expect(resetWords(tomorrow, evening, "America/New_York")).toBe("7:00\u00a0pm today");
+    expect(resetWords(tomorrow, new Date("2026-11-06T12:00:00.000Z"), "UTC")).toBe("8 Nov, 12:00\u00a0am");
+    expect(resetWords(new Date("2026-11-10T00:00:00.000Z"), evening, "Asia/Kolkata")).toBe("10 Nov, 5:30\u00a0am");
   });
 });
