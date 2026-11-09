@@ -47,24 +47,22 @@ export interface ClaimFact {
   source: Source;
   payer: string;
   verified: boolean;
-  /** Dollars the rule paid; 0 unless paid. A sample claim's amount was decided, never sent. */
+  /** Dollars the rule paid; 0 unless paid. */
   amountPaid: number;
-  /** Dollars really sent through PayPal (sandbox in this build): 0 for a sample claim, whose payout never left. */
+  /** Dollars sent through PayPal; 0 unless paid. */
   amountSent: number;
   /** The same, empty (null) when nothing was sent: the day chart's value, so a day with nothing sent draws no column and
    * no "$0.00" on its axis. */
   paidOnDay: number | null;
-  /** The grid's refund cell, as the console's payout cell says it: "$29.99", "$29.99 · approved" on a starter claim, "$29.99 · not sent" on a held one, or "—". */
+  /** The grid's refund cell, as the console's payout cell says it: "$29.99", "$29.99 · not sent" on a held one, or "—". */
   refund: string;
   /** 1 when paid: a unit taken out of use and refunded. */
   remedied: number;
-  /** 1 when a sample claim was "paid": counted in remedied, but no money ever reached a real owner. */
-  remediedSample: number;
   refused: number;
   held: number;
-  /** Seconds from the photos arriving to the payout being sent; null unless paid. A sample claim's are made up. */
+  /** Seconds from the photos arriving to the payout being sent; null unless paid. */
   timeToPaySec: number | null;
-  /** The same, for payouts really sent through PayPal only; null for a sample claim. */
+  /** The same, for payouts sent through PayPal. */
   timeToSendSec: number | null;
   /** 1 when it was paid only after a person approved it on review: its time to pay includes the wait for that person. */
   paidOnReview: number;
@@ -160,20 +158,15 @@ export function claimFact(c: Claim, recall: Recall): ClaimFact {
     payer: `•••• ${c.payerId.slice(-4)}`,
     verified: c.payerVerified,
     amountPaid: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
-    amountSent: c.decision === "paid" && !c.seeded ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
-    paidOnDay: c.decision === "paid" && !c.seeded ? cents(amountOf(c.payout?.amount, recall)) / 100 : null,
-    // As the queue's payout column: what a paid or held claim pays; "approved" on a starter claim (the rule approved it, and
-    // starter claims never pay out) and "not sent" on a held one.
-    refund:
-      c.decision !== "paid" && c.decision !== "held"
-        ? "—"
-        : `${dollars.format(cents(amountOf(c.payout?.amount, recall)) / 100)}${c.decision === "held" ? " · not sent" : c.seeded ? " · approved" : ""}`,
+    amountSent: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : 0,
+    paidOnDay: c.decision === "paid" ? cents(amountOf(c.payout?.amount, recall)) / 100 : null,
+    // As the queue's payout column: what a paid or held claim pays, and "not sent" on a held one.
+    refund: c.decision !== "paid" && c.decision !== "held" ? "—" : `${dollars.format(cents(amountOf(c.payout?.amount, recall)) / 100)}${c.decision === "held" ? " · not sent" : ""}`,
     remedied: c.decision === "paid" ? 1 : 0,
-    remediedSample: c.decision === "paid" && c.seeded ? 1 : 0,
     refused: refused ? 1 : 0,
     held: c.decision === "held" ? 1 : 0,
     timeToPaySec: c.decision === "paid" ? seconds(photosIn, at(c, "payout_sent")) : null,
-    timeToSendSec: c.decision === "paid" && !c.seeded ? seconds(photosIn, at(c, "payout_sent")) : null,
+    timeToSendSec: c.decision === "paid" ? seconds(photosIn, at(c, "payout_sent")) : null,
     paidOnReview: c.decision === "paid" && c.reasons.some((r) => r.check === "review" && r.outcome === "pass") ? 1 : 0,
     modelSec: seconds(photosIn, at(c, "checked")),
     photoCount: c.photos.length,

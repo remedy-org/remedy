@@ -6,7 +6,7 @@ import type { ClaimSummary } from "@/lib/store";
 import type { Recall } from "@/lib/types";
 import { sealedPhotoUrl } from "./photoToken";
 import { toRow, type ClaimRow } from "./view";
-import { canSee, listedClaims } from "./workspace";
+import { canSee, listedClaims, type Viewer } from "./workspace";
 
 /** The grid's rows for one company: each photo's URLs carry a sealed ticket, so thumbnails never open a claim file. */
 export function gridRows(claims: ClaimSummary[], recall: Recall, session: Pick<Session, "payerId">, now = Date.now()): ClaimRow[] {
@@ -44,7 +44,7 @@ export interface Queue {
  * read warm and at most 3 cold. Unlike loadClaims it never reads a claim file or asks PayPal: a settling payout
  * changes its row when the webhook (or the next full page load) saves it.
  */
-export async function loadQueue(session: Pick<Session, "payerId">, wanted: string | null): Promise<Queue | null> {
+export async function loadQueue(session: Viewer, wanted: string | null): Promise<Queue | null> {
   const store = await getAppStore();
   let listed = await store.listRecalls();
   if (wanted && !listed.some((r) => r.id === wanted)) listed = await store.listRecalls({ fresh: true });

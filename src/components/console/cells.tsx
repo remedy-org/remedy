@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import type { CustomCellRendererProps, CustomTooltipProps } from "ag-grid-react";
-import { barsSentence, duration, formatCents, isPreCheck, NO_PAYOUT, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
+import { barsSentence, duration, formatCents, isPreCheck, type BarState, type CheckBar, type ClaimRow } from "@/app/console/_lib/view";
 import { checkOf, FIVE_CHECKS, fiveOutcomes, type Outcome } from "@/lib/fiveChecks";
 import { formatClock, formatDayTime, formatTime, plural } from "./format";
 import { LinkedIds } from "./LinkedIds";
@@ -90,7 +90,7 @@ function TagThumb({ row }: { row: Pick<ClaimRow, "photos"> }) {
   return <img src={first.thumb} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" className="size-10 shrink-0 rounded-[6px] bg-surface-2 object-cover ring-1 ring-line" />;
 }
 
-/** Thumbnails, the claim id (mono 14/500) and its code and filing time (mono 12, faint). The homepage's still
+/** Thumbnails, the claim id (mono 14/500) and its filing time (mono 12, faint). The homepage's still
  * (context.stacked) sets the second line in the sans, the day and time alone; a phone's (context.compact) shows one tag
  * photo and the time. */
 export function ClaimCell({ data, context }: Cell) {
@@ -123,14 +123,10 @@ export function ClaimCell({ data, context }: Cell) {
       </span>
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="font-mono text-ui font-medium">{data.id}</span>
-        {/* The code on the tag, then the day and time it was filed (UTC, as the column header says): a list spans days,
-            and a time alone made it look unsorted. */}
+        {/* The day and time it was filed (UTC, as the heading says): a list spans days, and a time alone made it look
+            unsorted. Each claim's one-time code belongs to that claim alone, so it is the evidence's to show (Tag must
+            read), beside the photos it is checked against; search still finds a claim by it. */}
         <span className="mt-0.5 truncate font-mono text-micro whitespace-nowrap text-faint" title={`Filed ${formatTime(data.createdAt)}`}>
-          {data.code && (
-            <>
-              <span className="text-muted">{data.code}</span> ·{" "}
-            </>
-          )}
           {formatDayTime(data.createdAt)}
         </span>
       </span>
@@ -327,21 +323,17 @@ export function PayerCell({ data, context }: Cell) {
 }
 
 const FAILED = new Set(["FAILED", "RETURNED", "BLOCKED", "DENIED", "REVERSED", "REFUNDED", "CANCELED"]);
-export { NO_PAYOUT };
-
 /** Whether money left for this claim (a payout PayPal took). */
-export const sent = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">) => r.decision === "paid" && Boolean(r.payoutStatus) && !r.seeded;
+export const sent = (r: Pick<ClaimRow, "decision" | "payoutStatus">) => r.decision === "paid" && Boolean(r.payoutStatus);
 
-export type PayoutState = { word: "Not sent" | "Sent" | "Refused"; detail: string | null; title: string };
+export type PayoutState = { word: "Sent" | "Refused"; detail: string | null; title: string };
 
 /**
- * The money's one column, in three words: Sent once PayPal has the payout (settling, then settled), Refused when PayPal
- * didn't take it, Not sent for an approved claim no payout went out for (a starter claim). Null while
- * nothing is owed: a held claim waits for a person, a refused one owes nothing.
+ * The money's one column, in two words: Sent once PayPal has the payout (settling, then settled), Refused when PayPal
+ * didn't take it. Null while nothing is owed: a held claim waits for a person, a refused one owes nothing.
  */
-export function payoutState(r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "payoutFailedAt">): PayoutState | null {
+export function payoutState(r: Pick<ClaimRow, "decision" | "payoutStatus" | "payoutFailedAt">): PayoutState | null {
   if (r.payoutFailedAt) return { word: "Refused", detail: `PayPal ${formatClock(r.payoutFailedAt).slice(0, 5)}`, title: `PayPal didn't take the payout at ${formatTime(r.payoutFailedAt)}: nothing was paid` };
-  if (r.decision === "paid" && !sent(r)) return { word: "Not sent", detail: null, title: NO_PAYOUT };
   if (!r.payoutStatus) return null;
   if (FAILED.has(r.payoutStatus)) return { word: "Refused", detail: "PayPal", title: `PayPal: ${r.payoutStatus}` };
   return { word: "Sent", detail: r.payoutStatus === "SUCCESS" ? "Settled" : "Settling", title: `PayPal: ${r.payoutStatus}` };
@@ -354,7 +346,7 @@ export function PayoutCell({ data }: Cell) {
   if (!p) return <span className="text-faint" aria-label="No payout">—</span>;
   return (
     <span className="flex h-full flex-col justify-center leading-tight" title={p.title}>
-      <span className={clsx("text-ui", p.word === "Refused" ? "text-stop" : p.word === "Sent" ? "text-text-2" : "text-muted")}>{p.word}</span>
+      <span className={clsx("text-ui", p.word === "Refused" ? "text-stop" : "text-text-2")}>{p.word}</span>
       {p.detail && <span className="mt-0.5 text-micro text-faint">{p.detail}</span>}
     </span>
   );
@@ -376,7 +368,7 @@ export function AmountText({ amount, tone, plain }: { amount: string; tone: Amou
   );
 }
 
-const toneOf = (r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded">): AmountTone => (sent(r) ? "sent" : r.decision === "paid" ? "approved" : "owed");
+const toneOf = (r: Pick<ClaimRow, "decision" | "payoutStatus">): AmountTone => (sent(r) ? "sent" : r.decision === "paid" ? "approved" : "owed");
 
 export function AmountCell({ data, context }: Cell) {
   if (!data) return null;
@@ -423,11 +415,11 @@ export function CardRow({ data }: Cell) {
             </span>
           )}
         </span>
-        {/* What the columns say on a wider grid, in one line: the code and filing time (data, in mono), then the payout
-            only where money moved or was refused. */}
+        {/* What the columns say on a wider grid, in one line: the filing time (data, in mono), then the payout only where
+            money moved or was refused. */}
         <span className="flex min-w-0 items-baseline gap-2 text-micro text-faint">
-          <span className="truncate font-mono">{[data.code, formatDayTime(data.createdAt)].filter(Boolean).join(" · ")}</span>
-          {payoutState(data)?.word !== "Not sent" && payoutWord(data) && <span className="shrink-0">· {payoutWord(data)}</span>}
+          <span className="truncate font-mono">{formatDayTime(data.createdAt)}</span>
+          {payoutWord(data) && <span className="shrink-0">· {payoutWord(data)}</span>}
         </span>
       </span>
     </span>
@@ -435,7 +427,7 @@ export function CardRow({ data }: Cell) {
 }
 
 /** The payout column's word, for the card row's line and the CSV. */
-export function payoutWord(r: Pick<ClaimRow, "decision" | "payoutStatus" | "seeded" | "payoutFailedAt">): string | null {
+export function payoutWord(r: Pick<ClaimRow, "decision" | "payoutStatus" | "payoutFailedAt">): string | null {
   return payoutState(r)?.word ?? null;
 }
 
@@ -494,13 +486,6 @@ export function HeaderOnlyTip({ location, value }: CustomTooltipProps<GridRow>) 
   return location === "header" ? <HeaderTip text={value} /> : null;
 }
 
-/** The Payout column: its legend on the header, and on a Not sent cell the reason no payout went out. */
-export function PayoutTooltip({ location, value, data }: CustomTooltipProps<GridRow>) {
-  if (location === "header") return <HeaderTip text={value} />;
-  const p = data ? payoutState(data) : null;
-  if (!p || p.word !== "Not sent") return null;
-  return <HeaderTip text={p.title} />;
-}
 
 /** Hovering the strip: the count, then each check by name with its result, under the five checks the homepage and the
  * owner's receipt name (Live camera, Never seen before, One claim per account, Code and label, Really destroyed). A
@@ -542,14 +527,10 @@ export function TimelineTooltip({ data, location, value }: CustomTooltipProps<Gr
     ["Photos in", 0],
     ["Photo check answered", t.answered],
     ["Decided", t.decided],
-    ...(data.seeded
-      ? []
-      : ([
-          ["PayPal sent", t.sent],
-          ["PayPal settled", t.settled],
-        ] as [string, number | null][])),
+    ["PayPal sent", t.sent],
+    ["PayPal settled", t.settled],
   ];
-  const tail = data.decision === "paid" && !sent(data) ? NO_PAYOUT : t.end === "held" ? "Waiting for a person to approve or reject." : null;
+  const tail = t.end === "held" ? "Waiting for a person to approve or reject." : null;
   return (
     <div className="w-[240px] rounded-card bg-surface px-3.5 py-3 shadow-float">
       <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-ui">

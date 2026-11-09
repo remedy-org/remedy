@@ -25,8 +25,7 @@ export const timeField = (claims: Pick<LedgerRow, "timeToSendSec">[]) =>
 const cents = (dollars: number) => Math.round(dollars * 100);
 
 /**
- * The figures over the report, in the console ledger's words: units remedied, money really sent through PayPal with
- * what was approved and not sent beside it, the median time (photo to payout, or the photo check while nothing was
+ * The figures over the report, in the console ledger's words: units remedied, money paid through PayPal, the median time (photo to payout, or the photo check while nothing was
  * sent: one claim a person approved hours later would drag an average to minutes) and refusals.
  */
 export function insightsLedger(claims: LedgerRow[]) {
@@ -36,8 +35,6 @@ export function insightsLedger(claims: LedgerRow[]) {
   return {
     remedied: claims.reduce((n, c) => n + c.remedied, 0),
     paidCents,
-    unsentCents: claims.reduce((n, c) => n + Math.max(0, cents(c.amountPaid) - cents(c.amountSent)), 0),
-    unsent: claims.filter((c) => cents(c.amountPaid) > cents(c.amountSent)).length,
     median: median(times),
     timeLabel: field === "timeToSendSec" ? "median photo to payout" : "median photo check",
     timed: times.length,

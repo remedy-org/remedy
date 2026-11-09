@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import type { CSSProperties, ReactNode } from "react";
 import type { Report } from "@/app/console/_lib/report";
-import { formatCents, formatMoney, noPayout, percent } from "@/app/console/_lib/view";
+import { formatCents, formatMoney, percent } from "@/app/console/_lib/view";
 import { TYPICAL_RETURN } from "@/components/insights/widgets/defs";
 import type { Recall } from "@/lib/types";
 import { formatCount, formatDate, formatPeriod, keepHyphens, plural } from "./format";
@@ -150,8 +150,7 @@ export function ProgressReport({
         </table>
       </section>
 
-      {/* The money: what PayPal sent, and, on a row of their own, the approved claims that came with the workspace and moved
-          none, so no approved claim reads as an owner left unpaid. Sent plus that row is every approved claim. */}
+      {/* The money: what PayPal sent, to how many owners, and how. */}
       <section className="mt-10 flex flex-col gap-4 break-inside-avoid">
         <H>Refunds</H>
         <div className="grid gap-6 sm:grid-cols-3">
@@ -161,7 +160,6 @@ export function ProgressReport({
             value={formatCents(report.sentCents)}
             note={`${plural(report.sent, "payout")}${report.sent ? each : ""}${report.settling ? ` · ${formatCount(report.settling)} settling` : report.sent ? " · all settled" : ""}`}
           />
-          {report.samplesPaid > 0 && <Figure label="Recorded without a payout" value={plural(report.samplesPaid, "claim")} note={noPayout(report.samplesPaid)} home={home} />}
           <Figure label="Method" value="PayPal" note="Payouts to each owner's verified PayPal account" home={home} />
         </div>
       </section>

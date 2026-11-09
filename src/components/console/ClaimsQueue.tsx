@@ -14,7 +14,6 @@ import { holdable, keyQueue } from "./keyQueue";
 import { formatCount, plural } from "./format";
 import { Ledger } from "./Ledger";
 import type { ReviewIntent } from "./ReviewActions";
-import { keepStarterDecision, useStarterDecisions, withStarterDecisions } from "./starterDecisions";
 import { StatusTabs, TABS, type Tab } from "./StatusTabs";
 import { useQueuePoll, type PollState } from "./useQueuePoll";
 
@@ -87,7 +86,6 @@ const tabOf = (m: DecisionModel | null): Tab => (m && m.decisions.length === 1 &
 const GROUPS: { id: GroupBy; label: string }[] = [
   { id: "none", label: "None" },
   { id: "reason", label: "Reason" },
-  { id: "code", label: "Code" },
   { id: "day", label: "Day" },
 ];
 
@@ -115,10 +113,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   // The pointer or keyboard focus in the grid: new claims wait rather than shift the rows (useQueuePoll).
   const [pointerIn, setPointerIn] = useState(false);
   const [focusIn, setFocusIn] = useState(false);
-  const { rows: polled, pending, showPending, at, failed, state, refresh } = useQueuePoll(recall.id, initial, initialAt, pointerIn || focusIn || open !== null);
-  // Starter claims this tab decided (starterDecisions.ts) read as decided here.
-  const starterDecided = useStarterDecisions();
-  const rows = useMemo(() => withStarterDecisions(polled, starterDecided), [polled, starterDecided]);
+  const { rows, pending, showPending, at, failed, state, refresh } = useQueuePoll(recall.id, initial, initialAt, pointerIn || focusIn || open !== null);
   useEffect(() => {
     // The evidence module, fetched while the reviewer reads the list.
     const t = window.setTimeout(() => void loadEvidence(), 1200);
@@ -279,15 +274,14 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
   }, [open]);
   const [session, setSession] = useState<{ since: number | null; done: { id: string; decision: string; at: number }[] }>({ since: null, done: [] });
   const decided = useCallback(
-    (id: string, decision?: string, claim?: { sample?: boolean; amount?: string } | null) => {
+    (id: string, decision?: string, claim?: { amount?: string } | null) => {
       const order = grid.current?.displayedIds() ?? found.map((r) => r.id);
       const byId = new Map(rows.map((r) => [r.id, r]));
       const held = order.filter((x) => x === id || byId.get(x)?.decision === "held");
       const i = held.indexOf(id);
       const nextId = (held[i + 1] ?? held[i - 1]) || null;
       setNext({ after: id, id: nextId });
-      const said =
-        decision === "rejected" ? `${id} rejected` : claim?.sample ? `${id} approved` : `${id} approved · ${claim?.amount ?? "refund"} sent`;
+      const said = decision === "rejected" ? `${id} rejected` : `${id} approved · ${claim?.amount ?? "refund"} sent`;
       // Keys typed while it saved are for the claim that opens next: they wait for its panel (keyQueue).
       decidedNow.current = true;
       const start = openedAt.current;
@@ -317,11 +311,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     (results: BulkResult[], decision: "approve" | "reject") => {
       const done = results.filter((r) => r.ok);
       const failed = results.filter((r) => !r.ok).map((r) => r.id);
-      const samples = done.filter((r) => r.sample).length;
-      const verb = decision === "reject" ? "rejected" : samples === done.length ? "approved" : "paid through PayPal";
-      for (const r of done) if (r.claim?.seeded) keepStarterDecision(r.claim);
-      // The confirm said why the starter claims send nothing: the result says what happened, once.
-      if (done.length) setHint(decision === "approve" && samples && samples < done.length ? `${plural(done.length - samples, "claim")} paid through PayPal, ${formatCount(samples)} approved` : `${plural(done.length, "claim")} ${verb}`);
+      if (done.length) setHint(`${plural(done.length, "claim")} ${decision === "reject" ? "rejected" : "paid through PayPal"}`);
       setBulk("idle");
       setPicked(failed);
       if (failed.length) return;

@@ -4,15 +4,16 @@ import { sendCheck } from "@/lib/rule";
 import type { ClaimSummary, Store } from "@/lib/store";
 import type { Claim, Reason, Recall } from "@/lib/types";
 import { othersFor, payoutFailedDetail, payoutNote } from "@/app/api/claims/_lib/pipeline";
-import { formatMoney, NO_PAYOUT, reviewReasonText } from "./view";
+import { decideStarter, type StarterDecision } from "./starter";
+import { formatMoney, reviewReasonText } from "./view";
 
 // A person's decision on a held claim. Kept free of Next imports so the money path is unit-tested. Every save goes
 // through store.updateClaim, so a decision is written only over the claim it was made on: a webhook or payout refresh
 // that lands in between is kept, never overwritten.
 
 export type ReviewResult =
-  // sample: a starter claim's review, decided as asked but never saved (the console keeps it for the reviewer's tab).
-  | { ok: true; claim: Claim; sample?: string }
+  // starter: a starter claim's decision, which the route keeps for the company (starter.ts); the shared record stays held.
+  | { ok: true; claim: Claim; starter?: StarterDecision }
   | { ok: false; status: number; code: "not_held" | "send_check" | "paypal"; message: string; reasons?: Reason[]; reference?: string };
 
 interface ReviewInput {
@@ -33,9 +34,9 @@ async function notHeld(store: Store, id: string): Promise<ReviewResult> {
   return { ok: false, status: 409, code: "not_held", message: current ? `This claim is already ${current.decision}.` : "This claim is gone." };
 }
 
-// Starter (seeded) claims sit on the shared recall, in every company's console, and were filed before PayPal Payouts was
-// connected. Reviewing one answers with the claim as decided but saves nothing: no payout, and one company's decision
-// doesn't empty the next company's review queue. The console keeps the decision in the reviewer's tab.
+// Starter (seeded) claims sit on the shared recall, in every company's console. Reviewing one answers with the claim as
+// decided and the decision for the route to keep for this company (starter.ts): the shared record stays held, so one
+// company's decision never empties the next company's review queue.
 
 /**
  * What the checks run again on approve would stop the payout for, from index.json's rows: the same set the owner's
@@ -55,13 +56,8 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
   if (claim.decision !== "held") return notHeld(store, claim.id);
   const amount = formatMoney(recall.refund);
   if (claim.seeded) {
-    const decided = append(
-      { ...claim, decision: "paid", reasons: [...claim.reasons, { check: "review", outcome: "pass", text: `Approved on review by ${by}` }] },
-      now,
-      "approved",
-      `Approved on review by ${by}. No payout: the claim came with the workspace.`,
-    );
-    return { ok: true, claim: decided, sample: `Approved. ${NO_PAYOUT}` };
+    const starter: StarterDecision = { k: "approve", at: now.toISOString(), by: by.slice(0, 120) };
+    return { ok: true, claim: decideStarter(claim, starter, recall), starter };
   }
 
   const conflicts = approveConflicts(claim, await store.listClaims());
@@ -109,18 +105,13 @@ export async function approveClaim({ store, claim: stale, recall, by, now = new 
 }
 
 // Reject with a reason the owner can act on. No money moves.
-export async function rejectClaim({ store, claim: stale, by, reason, now = new Date() }: ReviewInput & { reason: string }): Promise<ReviewResult> {
+export async function rejectClaim({ store, claim: stale, recall, by, reason, now = new Date() }: ReviewInput & { reason: string }): Promise<ReviewResult> {
   const claim = (await store.getClaim(stale.id)) ?? stale;
   if (claim.decision !== "held") return notHeld(store, claim.id);
   const text = reviewReasonText(reason);
   if (claim.seeded) {
-    const decided: Claim = {
-      ...claim,
-      decision: "rejected",
-      reasons: [...claim.reasons, { check: "review", outcome: "reject", text }],
-      events: [...claim.events, event(now, "rejected", `${text} (by ${by})`)],
-    };
-    return { ok: true, claim: decided, sample: "Rejected." };
+    const starter: StarterDecision = { k: "reject", at: now.toISOString(), by: by.slice(0, 120), r: reason };
+    return { ok: true, claim: decideStarter(claim, starter, recall), starter };
   }
   const rejected = await store.updateClaim(claim.id, (c) =>
     c.decision === "held"

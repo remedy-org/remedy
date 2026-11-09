@@ -69,7 +69,7 @@ export function EvidenceStill({ claim, note, fluid, className }: EvidenceStillPr
         <span className="flex items-center gap-3">
           <span className="font-mono text-ui font-medium whitespace-nowrap">{claim.id}</span>
           <VerdictMark
-            verdict={verdictOf({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null, seeded: claim.seeded })}
+            verdict={verdictOf({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null })}
             className={claim.decision === "paid" || claim.decision === "pending" ? undefined : "text-text"}
           />
         </span>

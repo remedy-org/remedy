@@ -1,6 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { canSee, listedClaims, pickRecall } from "@/app/console/_lib/workspace";
+import { decideStarter } from "@/app/console/_lib/starter";
+import { canSee, listedClaims, pickRecall, type Viewer } from "@/app/console/_lib/workspace";
 import { getAppStore } from "@/lib/demo";
 import type { Session } from "@/lib/session";
 import type { Claim, Recall } from "@/lib/types";
@@ -27,7 +28,7 @@ export interface InsightsLoad {
 
 // Read only: the recalls this company may see and one recall's claims, straight from the store. Unlike the claims
 // page it never asks PayPal for payout updates, so opening Insights writes nothing and calls nobody.
-export async function loadInsights(session: Session, wanted: string | string[] | undefined): Promise<InsightsLoad> {
+export async function loadInsights(session: Session & Viewer, wanted: string | string[] | undefined): Promise<InsightsLoad> {
   const store = await getAppStore();
   const rows = (await store.listRecalls()).filter((r) => canSee(r, session));
   const recalls = (await Promise.all(rows.map((r) => store.getRecall(r.id).catch(() => null)))).filter((r): r is Recall => r !== null);
@@ -39,7 +40,7 @@ export async function loadInsights(session: Session, wanted: string | string[] |
   const claims: Claim[] = [];
   const unreadable: string[] = [];
   read.forEach((r, i) => {
-    if (r.status === "fulfilled" && r.value) claims.push(r.value);
+    if (r.status === "fulfilled" && r.value) claims.push(decideStarter(r.value, session.decided?.[r.value.id], recall));
     else unreadable.push(index[i].id);
   });
   claims.sort((a, b) => b.createdAt.localeCompare(a.createdAt));

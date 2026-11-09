@@ -26,12 +26,9 @@ const TONE: Record<Verdict, string> = {
 /** The verdict's word, as the grid, the panel and the CSV say it. */
 export const verdictWord = (v: Verdict) => WORD[v];
 
-/**
- * A claim's verdict in the console: the rule passed it (Approved) until PayPal settles the payout (Paid). A claim that
- * came with the console never pays out, so it stays Approved.
- */
-export const verdictOf = (r: { decision: Decision; payoutStatus: string | null; seeded: boolean }): Verdict =>
-  r.decision === "paid" ? (r.payoutStatus === "SUCCESS" && !r.seeded ? "paid" : "approved") : r.decision;
+/** A claim's verdict in the console: the rule passed it (Approved) until PayPal settles the payout (Paid). */
+export const verdictOf = (r: { decision: Decision; payoutStatus: string | null }): Verdict =>
+  r.decision === "paid" ? (r.payoutStatus === "SUCCESS" ? "paid" : "approved") : r.decision;
 
 // Each glyph's marks on a 14px grid, in 1.5px strokes: a ring and a check (approved), a solid disc and a knocked-out
 // check (paid: the money landed), a ring and a pause (held for a person), a ring and a cross (rejected), a ring struck

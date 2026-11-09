@@ -107,7 +107,8 @@ export function DecisionFilter({ model, onModelChange, api }: CustomFilterDispla
 }
 
 export function ClaimFilter({ model, onModelChange, api }: CustomFilterDisplayProps<GridRow, GridContext, ClaimModel>) {
-  const { codes, days } = useMemo(() => ({ codes: tally(api, (r) => r.code ?? ""), days: tally(api, dayOf, "desc") }), [api]);
+  // By the day it was filed. A one-time code belongs to one claim, so it is searched for, never faceted.
+  const days = useMemo(() => tally(api, dayOf, "desc"), [api]);
   const current = model ?? { codes: [], days: [] };
   const set = (key: keyof ClaimModel, v: string) => {
     const next = toggled(current, key, v);
@@ -115,11 +116,6 @@ export function ClaimFilter({ model, onModelChange, api }: CustomFilterDisplayPr
   };
   return (
     <Menu onClear={model ? () => onModelChange(null) : undefined} narrow>
-      <Facet title="Code">
-        {codes.map(([c, n]) => (
-          <Check key={c} checked={current.codes.includes(c)} onChange={() => set("codes", c)} label={c || "No code"} mono={Boolean(c)} count={n} />
-        ))}
-      </Facet>
       <Facet title="Filed (UTC)" scroll>
         {days.map(([d, n]) => (
           <Check key={d} checked={current.days.includes(d)} onChange={() => set("days", d)} label={formatDate(d)} count={n} />

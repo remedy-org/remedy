@@ -50,27 +50,23 @@ const lowerFirst = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 
 /**
  * One name for each review action, the same on the panel's buttons, the photo viewer's and the key hints: "Pay $29.99…"
- * (or "Try again: pay…" after a payout that failed on the way to PayPal), "Reject…"; a starter claim's are "Approve…"
- * and "Reject…", since nothing is paid (it came with the workspace). blocked: approve's checks
- * would stop the payout now (DrawerClaim.stops), so Reject leads and approve isn't offered as a button. confirmKey:
- * what A does once the confirm is open.
+ * (or "Try again: pay…" after a payout that failed on the way to PayPal), "Reject…". blocked: approve's checks would
+ * stop the payout now (DrawerClaim.stops), so Reject leads and approve isn't offered as a button. confirmKey: what A
+ * does once the confirm is open.
  */
 export function reviewLabels(claim: Pick<DrawerClaim, "review" | "amount" | "decision" | "events" | "stops">) {
-  const sample = Boolean(claim.review?.sample);
   const failure = payoutFailure(claim);
-  const blocked = !sample && claim.stops.length > 0;
   return {
-    blocked,
-    approve: sample ? "Approve…" : `${failure ? "Try again: pay" : "Pay"} ${claim.amount}…`,
-    approveKey: sample ? "Approve" : "Pay",
-    confirmKey: sample ? "Approve" : `Pay ${claim.amount}`,
+    blocked: claim.stops.length > 0,
+    approve: `${failure ? "Try again: pay" : "Pay"} ${claim.amount}…`,
+    approveKey: "Pay",
+    confirmKey: `Pay ${claim.amount}`,
     reject: "Reject…",
   };
 }
 
 /**
  * Approve and pay, or reject with a reason, for a held claim. Paying takes a second, explicit press: Pay, or A again.
- * A starter claim's decision comes back decided but unsaved, and the panel keeps it for this tab (starterDecisions.ts).
  * The keyboard's A and R (intent) open the same confirm or form as the buttons and move focus into it. While the
  * confirm or form is open (data-review-open), the queue's A and R do nothing; the confirm takes A itself, the reason
  * takes ⌘↵ (Ctrl+Enter), and 1 to 4 pick a quick reason while it is empty or holds another quick reason. onMode tells the panel which form opened (the
@@ -317,34 +313,21 @@ export function ReviewActions({
       {mode === "approve" && !labels.blocked && (
         <>
           {/* One line, so the evidence above keeps its height. */}
-          {review.sample ? (
-            <p className="text-ui text-pretty text-muted">
-              {/* The one place a starter claim's decision says why no money moves. */}
-              <span className="font-medium text-text">Approve {claim.id}?</span> It came with your workspace, so no PayPal payout goes out.
-            </p>
-          ) : (
-            <p className="text-ui text-muted">
-              <span className="font-medium text-text">
-                Pay <span className="font-mono">{claim.amount}</span> to <span className="font-mono">{claim.payer}</span>?
-              </span>{" "}
-              Through PayPal Payouts.
-            </p>
-          )}
+          <p className="text-ui text-muted">
+            <span className="font-medium text-text">
+              Pay <span className="font-mono">{claim.amount}</span> to <span className="font-mono">{claim.payer}</span>?
+            </span>{" "}
+            Through PayPal Payouts.
+          </p>
           {dropped && (
             <p role="status" className="text-ui text-text-2">
               Not paid yet: that was the second click of a double-click. Press Pay once to send it.
             </p>
           )}
           <div className="flex flex-wrap items-center gap-3">
-            {review.sample ? (
-              <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Approving" autoFocus className="flex-1 sm:flex-none">
-                Approve
-              </Button>
-            ) : (
-              <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Paying through PayPal" autoFocus className="flex-1 sm:flex-none">
-                Pay {claim.amount}
-              </Button>
-            )}
+            <Button onClick={pay} onKeyDown={payKeys} pending={busy} pendingLabel="Paying through PayPal" autoFocus className="flex-1 sm:flex-none">
+              Pay {claim.amount}
+            </Button>
             <Button variant="tertiary" arrow={false} onClick={reset} disabled={busy}>
               Cancel
             </Button>

@@ -5,9 +5,9 @@ type Row = Parameters<typeof insightsLedger>[0][number];
 const row = (over: Partial<Row> = {}): Row => ({ remedied: 0, refused: 0, amountPaid: 0, amountSent: 0, timeToSendSec: null, modelSec: 2, ...over });
 
 describe("figures", () => {
-  it("counts money really sent through PayPal, with what was approved and not sent beside it", () => {
-    const l = insightsLedger([row({ remedied: 1, amountPaid: 29.99 }), row({ remedied: 1, amountPaid: 29.99, amountSent: 29.99, timeToSendSec: 4 }), row({ refused: 1 })]);
-    expect(l).toMatchObject({ remedied: 2, paidCents: 2999, unsentCents: 2999, refused: 1 });
+  it("counts money sent through PayPal", () => {
+    const l = insightsLedger([row({ remedied: 1, amountPaid: 29.99, amountSent: 29.99, timeToSendSec: 4 }), row({ refused: 1 })]);
+    expect(l).toMatchObject({ remedied: 1, paidCents: 2999, refused: 1 });
   });
 
   it("is the median of payouts really sent, and falls back to the photo check's time when none was", () => {

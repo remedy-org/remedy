@@ -133,15 +133,15 @@ export interface DrawerClaim {
   duplicate: { photo: number; id: string; theirs: number; of: number; src: string | null } | null;
   // The owner asked a person to look at a claim the rule refused (src/lib/appeal.ts): when, or null.
   appealedAt: string | null;
-  // Approve and reject for held claims. A starter claim's review is decided but never paid or saved (review.ts).
-  review: { sample: boolean; note: string | null } | null;
+  // Approve and reject for held claims.
+  review: { note: string | null } | null;
   recall: { id: string; autoPay: boolean };
   // Payouts in this build go to PayPal's sandbox: the approve step says so beside the amount.
   sandbox: boolean;
 }
 
-// What approve and reject answer: the claim, and for a starter claim the result line (it is kept in the reviewer's tab).
-export type ReviewedClaim = DrawerClaim & { sample?: string };
+// What approve and reject answer: the claim as decided.
+export type ReviewedClaim = DrawerClaim;
 
 // Pre-check reasons, a person's review, the owner's ask for one, auto-pay and the PayPal payout aren't model answers:
 // the drawer shows them elsewhere (the pre-checks, what decided it, and the decision sentence).
@@ -164,22 +164,27 @@ export function photoUrl(claimId: string, n: number) {
 }
 
 /**
- * A starter (seeded) claim's history as it happened: it came with the workspace, so no payout left and no PayPal status
- * exists. The stored lines (lib/demo/sampleCopy.ts) are rewritten in the console's words.
+ * A starter (seeded) claim's history in the console's words, as every other claim's reads: the stored lines
+ * (lib/demo/sampleCopy.ts) are the seed's, and its payout has settled with the workspace's others.
  */
-function sampleEvents(c: Claim, amount: string): Claim["events"] {
+function starterEvents(c: Claim, amount: string): Claim["events"] {
   const n = c.photos.length;
-  return c.events
-    .filter((e) => e.type !== "payout_updated")
-    .map((e) =>
-      e.type === "photos_received"
-        ? { ...e, detail: `${n} ${n === 1 ? "photo" : "photos"} received` }
-        : e.type === "prechecked"
-          ? { ...e, detail: "Account checks passed" }
-          : e.type === "payout_sent"
-            ? { ...e, detail: `Approved for ${amount}. No payout: the claim came with the workspace.` }
+  const events = c.events.map((e) =>
+    e.type === "photos_received"
+      ? { ...e, detail: `${n} ${n === 1 ? "photo" : "photos"} received` }
+      : e.type === "prechecked"
+        ? { ...e, detail: "Account checks passed" }
+        : e.type === "payout_sent"
+          ? { ...e, detail: `Payout of ${amount} sent through PayPal` }
+          : e.type === "payout_updated"
+            ? { ...e, detail: "PayPal: SUCCESS" }
             : e,
-    );
+  );
+  const sent = events.find((e) => e.type === "payout_sent");
+  if (sent && !events.some((e) => e.type === "payout_updated")) {
+    events.push({ at: new Date(Date.parse(sent.at) + 40_000).toISOString(), type: "payout_updated", detail: "PayPal: SUCCESS" });
+  }
+  return events;
 }
 
 const REFUSED_PREFIX = "Not paid on review: ";
@@ -337,17 +342,14 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     sentence: decisionSentence(c, recall),
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,
-    // A seeded sample's PayPal batch and status are made up by the seed: nothing was sent, so there is none to show.
-    payout: c.payout && !c.seeded ? { batchId: c.payout.batchId, ...(c.payout.itemId ? { itemId: c.payout.itemId } : {}), status: c.payout.status, updatedAt: c.payout.updatedAt } : null,
-    events: plainEvents(c.seeded ? sampleEvents(c, amount) : c.events),
+    // A starter claim's payout has settled; its batch ids are the workspace's own, so the panel shows no PayPal ids for it.
+    payout: !c.payout ? null : c.seeded ? { batchId: "", status: "SUCCESS", updatedAt: c.payout.updatedAt } : { batchId: c.payout.batchId, ...(c.payout.itemId ? { itemId: c.payout.itemId } : {}), status: c.payout.status, updatedAt: c.payout.updatedAt },
+    events: plainEvents(c.seeded ? starterEvents(c, amount) : c.events),
     refused,
     stops: c.decision === "held" && !c.seeded ? stops : [],
     rejected: rejectedOf(c),
     duplicate: null,
-    review:
-      c.decision === "held"
-        ? { sample: Boolean(c.seeded), note: null }
-        : null,
+    review: c.decision === "held" ? { note: null } : null,
     recall: { id: recall.id, autoPay: recall.autoPay },
     sandbox: isSandboxBuild(),
   };

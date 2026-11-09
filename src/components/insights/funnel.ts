@@ -4,9 +4,9 @@
 export const STAGES = ["Filed", "Photos sent", "Passed account checks", "Passed photo check", "Paid"] as const;
 export type Stage = (typeof STAGES)[number];
 
-/** How the report shows a decision or a stage: "Paid" reads as "Approved", as the console's pill does, since "paid"
- * belongs only beside a payout really sent. The data keeps its own values, so filters still match. */
-export const shownAs = (value: string) => (value === "Paid" ? "Approved" : value);
+/** How the report shows a decision or a stage: as the console's verdict says it ("Paid" once PayPal settled it, which
+ * every paid claim in the console has). One place, so the page never says a word the queue doesn't. */
+export const shownAs = (value: string) => value;
 
 /**
  * Why a claim stopped where it did: refused by a check (rejected or blocked, drawn in --stop), held for a person

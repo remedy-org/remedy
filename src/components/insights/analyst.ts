@@ -20,7 +20,6 @@ const RULES = `You can't approve, reject or pay a claim. A person does that in t
 
 function instructions(api: AgStudioApi, data: InsightsData) {
   const n = (k: "remedied" | "refused" | "held") => data.claims.reduce((sum, c) => sum + c[k], 0);
-  const samples = data.claims.filter((c) => c.source === "Starter").length;
   const demo = data.claims.filter((c) => c.source === "Demo").length;
   const tables = api
     .getAiContext()
@@ -35,7 +34,7 @@ You are the Recall analyst in Remedy's company console. Remedy pays recall refun
 ## This recall
 CPSC ${data.recall.id}: ${data.recall.product}. ${data.recall.unitsSold.toLocaleString("en-US")} units sold; refund $${data.recall.refund.toFixed(2)}; auto-pay ${data.recall.autoPay ? "on" : "off"}.
 Right now: ${data.claims.length} claims, ${n("remedied")} paid, ${n("held")} held for a person, ${n("refused")} refused.
-${samples} of them came with the workspace, so approving one recorded the decision and sent no payout; ${demo} were filed from the try page. Mention this only when the user asks where claims came from, or when a money figure includes refunds that were approved but never sent; call them claims that came with the workspace, never starter, sample or demo claims. Amounts are USD.
+${demo} of them were filed from the try page. Mention where claims came from only when the user asks; never call them starter, sample or demo claims. Amounts are USD.
 Tables: ${tables}.
 
 ## How you work

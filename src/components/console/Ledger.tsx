@@ -1,8 +1,7 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { duration, formatCents, noPayout, type Ledger as LedgerData } from "@/app/console/_lib/view";
+import { duration, formatCents, type Ledger as LedgerData } from "@/app/console/_lib/view";
 import { formatCount } from "./format";
-import { HoverNote } from "./HoverNote";
 
 /** One figure: the value (22/500) and what it counts (12, muted). The term comes first in the DOM, as a definition list
  * reads; the value leads on screen. */
@@ -21,17 +20,9 @@ export function LedgerStrip({ className, children }: { className?: string; child
   return <dl className={clsx("flex min-h-12 flex-wrap items-center gap-x-6 gap-y-2 border-y border-line py-2.5 min-[900px]:gap-x-8", className)}>{children}</dl>;
 }
 
-/** What PayPal sent leads; refunds approved but never sent (starter claims, which came with the workspace) follow as
- * their own quieter figure, its label a hover card that says why, so approved = sent + not sent is on the strip. */
-export function MoneyItems({ sentCents, unsentCents, unsent }: { sentCents: number; unsentCents: number; unsent: number }) {
-  return (
-    <>
-      {/* Nothing sent yet beside approved claims that send nothing (a picture of the shared recall's starter claims):
-          the approved figure says it, never a leading $0.00. */}
-      {(sentCents > 0 || !unsent) && <LedgerItem value={formatCents(sentCents)} label="sent" />}
-      {unsent > 0 && <LedgerItem value={<span className="text-muted">{formatCents(unsentCents)}</span>} label={<HoverNote note={noPayout(unsent)}>approved, not sent</HoverNote>} />}
-    </>
-  );
+/** What PayPal sent: the one money figure, in the words the tour and the report use. */
+export function MoneyItems({ sentCents }: { sentCents: number }) {
+  return <LedgerItem value={formatCents(sentCents)} label="paid through PayPal" />;
 }
 
 /**
@@ -51,7 +42,7 @@ export function Ledger({ ledger, className }: { ledger: LedgerData; className?: 
         }
         label="remedied"
       />
-      <MoneyItems sentCents={ledger.paidCents} unsentCents={ledger.sampleCents} unsent={ledger.sampleRemedied} />
+      <MoneyItems sentCents={ledger.paidCents} />
       {ledger.medianToPay !== null && (
         <LedgerItem
           value={durationFigure(ledger.medianToPay)}

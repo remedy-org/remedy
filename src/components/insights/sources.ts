@@ -19,7 +19,6 @@ const secs = { createValueFormatter: () => (v: number | null | undefined) => (ty
 const whole = { formatOptions: { format: new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }) } };
 
 const HONESTY =
-  "Starter claims (source = Starter) came with the workspace: approving one records the decision and sends no payout. " +
   "Demo claims (source = Demo) come from the try page. Amounts are USD sent through PayPal.";
 
 export function buildSources(data: InsightsData): AgDataSourcesDefinition<InsightsRegistry> {
@@ -50,11 +49,10 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["payer", "PayPal account", "textFormat", { description: "Last four characters of the PayPal payer id only." }],
           ["verified", "PayPal verified", "booleanFormat"],
           ["amountPaid", "Paid out", "currencyFormat", { ...usd, description: "USD the rule approved for this claim; 0 unless approved. On a starter claim it was approved, never sent." }],
-          ["refund", "Refund", "textFormat", { description: "The refund as the console shows it: the amount, \"· approved\" on a starter claim, \"· not sent\" on a held one, or — when the claim was refused or is in progress." }],
-          ["amountSent", "Paid through PayPal", "currencyFormat", { ...usd, description: "USD sent through PayPal; 0 for starter claims, whose payouts never left." }],
+          ["refund", "Refund", "textFormat", { description: "The refund as the console shows it: the amount, \"· not sent\" on a held one, or — when the claim was refused or is in progress." }],
+          ["amountSent", "Paid through PayPal", "currencyFormat", { ...usd, description: "USD sent through PayPal." }],
           ["paidOnDay", "Paid through PayPal (sent only)", "currencyFormat", { ...usd, hide: true, description: "USD sent through PayPal, empty when nothing was sent: the day chart's value." }],
           ["remedied", "Units remedied", "integerFormat", { ...whole, description: "1 when the claim was paid: a unit destroyed and refunded." }],
-          ["remediedSample", "Starter units remedied", "integerFormat", { ...whole, hide: true, description: "1 when a starter claim was approved. Its payout was never sent." }],
           ["refused", "Refused", "integerFormat", { ...whole, description: "1 when the claim was rejected or blocked." }],
           ["held", "Held", "integerFormat", { ...whole, description: "1 when the claim waits for a person." }],
           ["timeToPaySec", "Photo to PayPal", "decimalFormat", { ...secs, description: "Seconds from the photos arriving to the payout being sent. Paid claims only; a starter claim's are when the rule approved it, since nothing was sent." }],

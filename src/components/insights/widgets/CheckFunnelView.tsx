@@ -63,7 +63,6 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
         return (
           <li key={s.stage} className="flex flex-col gap-1">
             <div className="grid grid-cols-[11.5rem_2.5rem_1fr] items-center gap-3">
-              {/* The console says Approved for a payout it has not sent (funnel.ts shownAs); the homepage's are sent. */}
               <span className="truncate text-ui text-text">{flush ? s.stage : shownAs(s.stage)}</span>
               <span className={clsx("text-right text-ui text-text", figure)}>{s.reached}</span>
               <span className="relative h-3 rounded-[3px] bg-surface-2" aria-hidden="true">

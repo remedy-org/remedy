@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { company, fail, isResponse } from "@/app/console/_lib/api";
 import { loadQueue } from "@/app/console/_lib/queue";
+import { viewerOf } from "@/app/console/_lib/workspace";
 import type { ClaimRow } from "@/app/console/_lib/view";
 
 export interface QueueResponse {
@@ -16,7 +17,7 @@ export interface QueueResponse {
 export async function GET(request: NextRequest) {
   const session = await company();
   if (isResponse(session)) return session;
-  const queue = await loadQueue(session, request.nextUrl.searchParams.get("recall"));
+  const queue = await loadQueue(await viewerOf(session, request.cookies), request.nextUrl.searchParams.get("recall"));
   if (!queue) return fail(404, "No recall with that id in this workspace.");
   return NextResponse.json<QueueResponse>({ recallId: queue.recall.id, rows: queue.rows, at: new Date().toISOString() }, { headers: { "Cache-Control": "private, no-store" } });
 }

@@ -48,7 +48,6 @@ import {
   GroupRow,
   PayerCell,
   PayoutCell,
-  PayoutTooltip,
   PhotoTooltip,
   ToPayCell,
   HeaderOnlyTip,
@@ -741,10 +740,8 @@ export const ClaimsGrid = forwardRef<ClaimsGridHandle, ClaimsGridProps>(function
         valueGetter: (p) => (p.data ? (p.data.payoutFailedAt ? `not sent ${p.data.payoutFailedAt}` : p.data.payoutStatus) : null),
         cellRenderer: PayoutCell,
         width: OPTIONAL[still ? "still" : "queue"].payoutStatus,
-        headerTooltip: still ? undefined : "Sent once PayPal has the payout, Refused when PayPal didn't take it, Not sent when no payout went out.",
-        tooltipComponent: still ? undefined : PayoutTooltip,
-        // Not sent says why on hover.
-        tooltip: (p) => (!still && p.data && p.data.decision === "paid" && !sent(p.data) && pointerSettled() ? p.data.id : undefined),
+        headerTooltip: still ? undefined : "Sent once PayPal has the payout (Settling, then Settled), Refused when PayPal didn't take it.",
+        tooltipComponent: still ? undefined : HeaderOnlyTip,
         enableCellChangeFlash: true,
         // The homepage's still draws its claims as live ones: one the rule decided to pay during its arrival flashes paid.
         cellClass: (p) => (p.data?.payoutStatus === "SUCCESS" || (still && p.data?.decision === "paid") ? undefined : "flash-neutral"),

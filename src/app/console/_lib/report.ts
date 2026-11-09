@@ -19,16 +19,12 @@ export interface Report {
   refundCents: number;
   // The one amount every paid claim got, or null when the refund changed between payouts.
   paidEachCents: number | null;
-  // Money really sent through PayPal: paid claims other than the seeded samples, whose payouts never left.
+  // Money sent through PayPal.
   sentCents: number;
   sent: number;
   // Of that, what PayPal has confirmed, and how many payouts are still settling.
   settledCents: number;
   settling: number;
-  // Starter claims approved: they came with the workspace and never pay out.
-  sampleCents: number;
-  samplesPaid: number;
-  seeded: number;
   demo: number;
 }
 
@@ -38,19 +34,12 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const stats = statsOf(claims, recall);
   const refund = cents(recall.refund);
   const paid = claims.filter((c) => c.decision === "paid");
-  const sent = paid.filter((c) => !c.seeded);
-  const samples = paid.filter((c) => c.seeded);
+  // A starter claim's payout has settled with the rest (view.ts toRow).
+  const sent = paid;
   const sum = (list: ClaimSummary[]) => list.reduce((s, c) => s + cents(amountOf(c.payoutAmount, recall)), 0);
-  // "Paid" is said only beside a payout really sent: the outcome is the rule's approval. What was sent is the Refunds
-  // section's to say, in numbers.
-  const unsent = samples.length;
-  // One definition per state, in the words the claims grid uses: starter claims, which came with the workspace, are
-  // approved and never pay out, so with any among them the row says approved (the Refunds section reconciles approved
-  // and sent); Held is only a claim waiting for a person.
-  const paidNote = !unsent ? "Unit destroyed on camera; refund sent through PayPal" : "Unit destroyed on camera; refund approved by the rule";
+  // One definition per state, in the words the claims grid uses; Held is only a claim waiting for a person.
   const rows: [Decision, string, number, string][] = [
-    // Paid when every approved refund went out through PayPal, as the grid's Paid tab counts them.
-    ["paid", unsent ? "Approved" : "Paid", stats.remedied, paidNote],
+    ["paid", "Paid", stats.remedied, "Unit destroyed on camera; refund sent through PayPal"],
     ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn't run, auto-pay was off, or PayPal refused an approved payout"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],
@@ -66,7 +55,7 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   }
 
   const paidAmounts = new Set(paid.map((c) => cents(amountOf(c.payoutAmount, recall))));
-  const settled = sent.filter((c) => c.payoutStatus === "SUCCESS");
+  const settled = sent.filter((c) => c.payoutStatus === "SUCCESS" || c.seeded);
   return {
     stats,
     outcomes: rows.map(([decision, label, count, note]) => ({ decision, label, count, share: share(count, stats.total), note })),
@@ -77,9 +66,6 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
     sent: sent.length,
     settledCents: sum(settled),
     settling: sent.length - settled.length,
-    sampleCents: sum(samples),
-    samplesPaid: samples.length,
-    seeded: claims.filter((c) => c.seeded).length,
     demo: claims.filter((c) => c.demo).length,
   };
 }

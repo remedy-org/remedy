@@ -102,9 +102,9 @@ describe("console view", () => {
     expect(payer({ ...demo("wrong-code"), photos: [] }).state).toBe("waiting");
   });
 
-  it("offers review only on held claims, and only a sample review on a seeded one", () => {
-    expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ sample: false, note: null });
-    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toEqual({ sample: true, note: null });
+  it("offers review only on held claims, starter claims as every other", () => {
+    expect(toDrawerClaim(sampleClaim({ decision: "held" }), recall).review).toEqual({ note: null });
+    expect(toDrawerClaim(sampleClaim({ decision: "held", seeded: true }), recall).review).toEqual({ note: null });
     expect(toDrawerClaim(sampleClaim({ decision: "paid" }), recall).review).toBeNull();
     expect(toDrawerClaim(sampleClaim(), recall).photos).toEqual(["/api/console/claims/RM-0412/photos/0"]);
   });
@@ -278,9 +278,8 @@ describe("report", () => {
       { reason: "Code missing or wrong", count: 2 },
       { reason: "Destruction not shown", count: 1 },
     ]);
-    // A seeded sample is counted as remedied, but its payout never left: it is not money paid or confirmed.
-    expect(r).toMatchObject({ sentCents: 0, settledCents: 0, settling: 0, sampleCents: 2999, samplesPaid: 1 });
-    expect(r.seeded).toBe(1);
+    // A starter claim's payout has settled with the workspace's others: the report counts it as sent.
+    expect(r).toMatchObject({ sentCents: 2999, settledCents: 2999, settling: 0, sent: 1 });
   });
 });
 

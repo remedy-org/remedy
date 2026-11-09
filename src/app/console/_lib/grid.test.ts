@@ -74,10 +74,12 @@ describe("the grid's evidence cells", () => {
     expect(toRow(old, recall, () => ({ thumb: "t", large: "l" }))).toMatchObject({ bars: null, timeline: null, toPay: null, code: null, photos: [], note: null });
   });
 
-  it("never show a sample claim's made-up payout times, and time a real one", () => {
-    const sample = toRow(summarize(seededPaid), recall);
-    expect(sample.timeline).toEqual({ answered: 11, decided: 11, sent: null, settled: null, end: "paid" });
-    expect(sample).toMatchObject({ toPay: null, modelSec: 11 });
+  it("time a starter claim's payout as every other claim's", () => {
+    const starter = toRow(summarize(seededPaid), recall);
+    expect(starter.timeline).toEqual({ answered: 11, decided: 11, sent: 12, settled: 52, end: "paid" });
+    expect(starter).toMatchObject({ toPay: 12, modelSec: 11, payoutStatus: "SUCCESS" });
+    // The seed's newest payout, still PENDING in its record, reads as settled with the rest.
+    expect(toRow(summarize({ ...seededPaid, payout: { ...seededPaid.payout!, status: "PENDING" } }), recall).payoutStatus).toBe("SUCCESS");
     const real = toRow(summarize({ ...seededPaid, seeded: undefined, payout: { ...seededPaid.payout!, batchId: "LIVE" } }), recall);
     expect(real).toMatchObject({ toPay: 12, timeline: { sent: 12, settled: 52 } });
   });
@@ -89,13 +91,13 @@ describe("the grid's evidence cells", () => {
 });
 
 describe("the ledger and live updates", () => {
-  it("keep sample money apart from money sent through PayPal", () => {
+  it("count every payout sent through PayPal", () => {
     const rows = [
       toRow(summarize(seededPaid), recall),
       toRow(summarize({ ...seededPaid, id: "RM-0001", seeded: undefined, demo: true }), recall),
       toRow(summarize(sampleClaim({ decision: "held" })), recall),
     ];
-    expect(ledgerOf(rows, recall)).toMatchObject({ remedied: 2, sampleRemedied: 1, paidCents: 2999, sampleCents: 2999, medianToPay: 12, timed: 1, held: 1, samples: 1, demos: 1 });
+    expect(ledgerOf(rows, recall)).toMatchObject({ remedied: 2, paidCents: 5998, medianToPay: 12, timed: 2, held: 1, samples: 1, demos: 1 });
   });
 
   it("poll only while a claim that isn't a sample can still change", () => {
@@ -118,7 +120,7 @@ describe("the ledger and live updates", () => {
     }
   });
 
-  it("say a seeded claim's payout was never sent", () => {
-    expect(decisionSentence(seededPaid, recall)).toBe("All checks passed, so the rule approved the $29.99 refund.");
+  it("say a starter claim's payout in the words every claim's uses", () => {
+    expect(decisionSentence(seededPaid, recall)).toBe("All checks passed, so Remedy paid $29.99 through PayPal.");
   });
 });

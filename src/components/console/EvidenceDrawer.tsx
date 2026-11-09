@@ -19,7 +19,6 @@ import { Keys } from "./Keys";
 import { LinkedIds } from "./LinkedIds";
 import { PhotoViewer } from "./PhotoViewer";
 import { payoutFailure, ReviewActions, reviewLabels, type ReviewIntent } from "./ReviewActions";
-import { keepStarterDecision, starterDecision } from "./starterDecisions";
 import { VerdictMark, verdictOf } from "./VerdictMark";
 
 export { DrawerSkeleton };
@@ -47,7 +46,7 @@ export interface EvidenceProps {
   // Opens another claim of the queue (the claim a repost copied, the next held claim).
   onOpen?: (id: string) => void;
   // A person approved or rejected this claim (ClaimsQueue works out the next held one). claim: what was decided.
-  onDecided?: (id: string, decision: DrawerClaim["decision"], claim?: { sample?: boolean; amount?: string } | null) => void;
+  onDecided?: (id: string, decision: DrawerClaim["decision"], claim?: { amount?: string } | null) => void;
   // After a decision: the next held claim in the list, null when none is left, undefined before.
   nextHeld?: string | null;
   // The claim this one was opened from through a link in its evidence: the header offers the way back.
@@ -66,9 +65,6 @@ type Load = { state: "loading" } | { state: "error"; error: ApiError } | { state
 /** Loads a claim, keeping the one shown before on screen until the next arrives (no skeleton flash between rows). */
 function useClaim(id: string, version: number | null | undefined, filedAt: string | undefined) {
   const key = seenKey(id, version);
-  // A starter claim this tab decided: the evidence as decided (starterDecisions.ts), never the shared held one.
-  const local = starterDecision(id);
-  if (local && seen.get(key) !== local) seen.set(key, local);
   // Bumped when a fetch lands in `seen`, so this renders again.
   const [, setLanded] = useState(0);
   const [failure, setFailure] = useState<{ key: string; error: ApiError } | null>(null);
@@ -211,12 +207,10 @@ function EvidenceContent({
     // Another claim's evidence may now read differently (approving this one makes the account's other claim stop on
     // approve, rejecting it frees it): every claim loads afresh from here.
     seen.clear();
-    // A starter claim's decision is kept in this tab (the shared record stays held); nothing else needs reloading.
-    if (c.seeded) keepStarterDecision(c);
     replace(c);
     setSaved({ id: c.id, decision: c.decision, at: new Date().toISOString() });
-    onDecided?.(c.id, c.decision, { sample: Boolean(c.sample), amount: c.amount });
-    if (!c.seeded) router.refresh();
+    onDecided?.(c.id, c.decision, { amount: c.amount });
+    router.refresh();
   };
   const heading = useRef<HTMLHeadingElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -289,7 +283,7 @@ function EvidenceContent({
             <span className="inline-flex w-[6.5rem]">
               {claim ? (
                 <VerdictMark
-                  verdict={verdictOf({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null, seeded: Boolean(claim.seeded) })}
+                  verdict={verdictOf({ decision: claim.decision, payoutStatus: claim.payout?.status ?? null })}
                   className={EXCEPTION.has(claim.decision) ? "text-text" : undefined}
                 />
               ) : row?.id === id ? (
@@ -385,7 +379,7 @@ function EvidenceContent({
             <span className="font-medium text-text">
               {justSaved.decision === "paid" ? "Approved" : "Rejected"} at <span className="font-mono">{formatClock(justSaved.at)}</span> UTC.
             </span>{" "}
-            {justSaved.decision !== "paid" ? "The owner sees your reason on their claim page." : claim.seeded ? null : `${claim.amount} sent through PayPal.`}
+            {justSaved.decision !== "paid" ? "The owner sees your reason on their claim page." : `${claim.amount} sent through PayPal.`}
             {nextHeld === null && " No held claims are left in this list."}
           </p>
           {nextHeld && onOpen && (
@@ -469,8 +463,6 @@ function moneySteps(claim: DrawerClaim): Step[] {
     { label: "Photo check", at: at((e) => e.type === "checked"), note: claim.decision === "blocked" ? "The account checks stopped it, so the photos were never read." : undefined },
     { label: "Decision", at: decided },
   ];
-  // A starter claim sends no payout: the approve confirm said so when it was decided, and the Payout cell says so on hover.
-  if (claim.seeded) return [...steps, { label: "PayPal", at: null }];
   if (claim.decision === "rejected" || claim.decision === "blocked") return steps;
   const failure = payoutFailure(claim);
   if (failure) {

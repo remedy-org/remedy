@@ -47,14 +47,15 @@ describe("approveClaim", () => {
     expect(pay).not.toHaveBeenCalled();
   });
 
-  it("answers a starter claim's approve as decided, without paying or saving", async () => {
+  it("answers a starter claim's approve as decided, for the company to keep, without calling PayPal or saving", async () => {
     const claim = held({ seeded: true });
     await store.putClaim(claim);
     const pay = vi.fn();
-    const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay });
-    expect(result).toMatchObject({ ok: true, claim: { decision: "paid", payout: null }, sample: expect.stringContaining("sends no payout") });
+    const now = new Date("2026-11-08T22:08:58.000Z");
+    const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay, now });
+    expect(result).toMatchObject({ ok: true, claim: { decision: "paid", payout: { status: "SUCCESS" } }, starter: { k: "approve", at: now.toISOString(), by: "x" } });
     expect(result.ok && result.claim.reasons.at(-1)).toEqual({ check: "review", outcome: "pass", text: "Approved on review by x" });
-    expect(JSON.stringify(result)).not.toMatch(/came with your console/);
+    expect(JSON.stringify(result)).not.toMatch(/workspace|no payout/i);
     expect(pay).not.toHaveBeenCalled();
     expect(await store.getClaim("RM-0412")).toEqual(claim);
   });
@@ -223,7 +224,7 @@ describe("rejectClaim", () => {
     const claim = held({ seeded: true });
     await store.putClaim(claim);
     const result = await rejectClaim({ store, claim, recall: sampleRecall(), by: "x", reason: "The code isn't on the cut pillow" });
-    expect(result).toMatchObject({ ok: true, claim: { decision: "rejected" }, sample: "Rejected." });
+    expect(result).toMatchObject({ ok: true, claim: { decision: "rejected" }, starter: { k: "reject", r: "The code isn't on the cut pillow" } });
     expect(result.ok && result.claim.reasons.at(-1)).toEqual({ check: "review", outcome: "reject", text: "Rejected on review: The code isn't on the cut pillow" });
     expect(await store.getClaim("RM-0412")).toEqual(claim);
   });

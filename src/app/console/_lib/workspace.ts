@@ -1,5 +1,6 @@
 import "server-only";
 import { isDeepStrictEqual } from "node:util";
+import { cookies } from "next/headers";
 import { recoverStale, STALE_AFTER_MS } from "@/app/api/claims/_lib/pipeline";
 import { getAppStore } from "@/lib/demo";
 import { CAPTURE_SESSION_MINUTES } from "@/lib/ids";
@@ -9,6 +10,7 @@ import type { Session } from "@/lib/session";
 import type { Store } from "@/lib/store";
 import { summarize, type ClaimSummary } from "@/lib/store/store";
 import type { Claim, Recall } from "@/lib/types";
+import { decideStarter, decideStarterRow, parseDecisions, STARTER_COOKIE, type StarterDecisions } from "./starter";
 
 // What a signed-in company can see: its own recalls plus the shared Kikea demo recall (owner null).
 export const canSee = (recall: Pick<Recall, "owner">, session: Pick<Session, "payerId">) => recall.owner === null || recall.owner === session.payerId;
@@ -54,13 +56,27 @@ export function pickRecall(recalls: Recall[], wanted: string | string[] | undefi
 export const canSeeClaim = (recall: Pick<Recall, "owner">, session: Pick<Session, "payerId">) => (c: Pick<ClaimSummary, "seeded" | "demo" | "payerId">) =>
   recall.owner !== null || Boolean(c.seeded) || Boolean(c.demo) || c.payerId === session.payerId;
 
+/** Who is looking: the company, and its decisions on the shared recall's starter claims (starter.ts). */
+export type Viewer = Pick<Session, "payerId"> & { decided?: StarterDecisions };
+
+type CookieJar = { get(name: string): { value: string } | undefined };
+
+/** The company as the console's pages and routes see it: with its decisions on the starter claims, from its browser's
+ * cookie. A route handler passes its request's cookies; a page reads them from the request it renders. */
+export const viewerOf = async <S extends Pick<Session, "payerId">>(session: S, jar?: CookieJar): Promise<S & { decided: StarterDecisions }> => ({
+  ...session,
+  decided: parseDecisions((jar ?? (await cookies())).get(STARTER_COOKIE)?.value, session.payerId),
+});
+
 /**
  * One recall's rows as the console lists them, from index.json: the claims this company may see, less the judges' demo
- * starts left before a photo was sent (abandonedDemo), which hold no evidence and no money. The queue, Insights and the
- * report all list through here, so their totals agree.
+ * starts left before a photo was sent (abandonedDemo), which hold no evidence and no money, and the starter claims as
+ * this company decided them. The queue, Insights and the report all list through here, so their totals agree.
  */
-export const listedClaims = <R extends ClaimSummary>(rows: R[], recall: Recall, session: Pick<Session, "payerId">, now = Date.now()): R[] =>
-  rows.filter((r) => r.recallId === recall.id && canSeeClaim(recall, session)(r) && !abandonedDemo(r, new Date(now)));
+export const listedClaims = <R extends ClaimSummary>(rows: R[], recall: Recall, viewer: Viewer, now = Date.now()): R[] =>
+  rows
+    .filter((r) => r.recallId === recall.id && canSeeClaim(recall, viewer)(r) && !abandonedDemo(r, new Date(now)))
+    .map((r) => (viewer.decided?.[r.id] ? (decideStarterRow(r, viewer.decided[r.id], recall) as R) : r));
 
 // When this instance last read a claim whose row looks out of date. A payout that stays unsettled is asked about at
 // most once a minute per instance, not on every load: each ask reads the claim file.
@@ -77,7 +93,7 @@ const stuck = (r: ClaimSummary, now: number) => r.decision === "pending" && r.ph
 // Every claim for one recall that this company may see, newest first, from index.json alone: its rows carry what the
 // grid, the stats and the report show. Rows that can't stay as they are (a payout settling, a check stuck) are read
 // again (a few, briefly), so the grid is right without webhooks; only those claims' files are read.
-export async function loadClaims(store: Store, recall: Recall, session: Pick<Session, "payerId">, now = Date.now()): Promise<ClaimSummary[]> {
+export async function loadClaims(store: Store, recall: Recall, session: Viewer, now = Date.now()): Promise<ClaimSummary[]> {
   const rows = listedClaims(await store.listClaims(), recall, session, now);
   const due = rows
     .filter((r) => !r.seeded && (settling(r) || stuck(r, now)))
@@ -103,14 +119,14 @@ export async function loadClaims(store: Store, recall: Recall, session: Pick<Ses
 }
 
 // A claim the company may open: its recall must be in the workspace. fresh reads the recall past the recall cache,
-// for the drawer and the reviews, which show and pay its current refund.
-export async function loadClaimFor(session: Session, claimId: string, { fresh = false } = {}): Promise<{ store: Store; claim: Claim; recall: Recall } | null> {
+// for the drawer and the reviews, which show and pay its current refund. A starter claim comes as the company decided it.
+export async function loadClaimFor(session: Viewer, claimId: string, { fresh = false } = {}): Promise<{ store: Store; claim: Claim; recall: Recall } | null> {
   const store = await getAppStore();
   const claim = await store.getClaim(claimId);
   if (!claim) return null;
   const recall = await store.getRecall(claim.recallId, { fresh });
   if (!recall || !canSee(recall, session) || !canSeeClaim(recall, session)(claim)) return null;
-  return { store, claim, recall };
+  return { store, claim: decideStarter(claim, session.decided?.[claim.id], recall), recall };
 }
 
 // A recall the company may open. Only its own can be changed: the shared demo recall's settings are fixed (see the

@@ -7,7 +7,7 @@ import { WorkspaceNote } from "@/components/console/WorkspaceNote";
 import { requireSession } from "@/lib/session";
 import { claimUrl } from "./_lib/links";
 import { gridRows } from "./_lib/queue";
-import { loadClaims, loadWorkspace, pickRecall } from "./_lib/workspace";
+import { loadClaims, loadWorkspace, pickRecall, viewerOf } from "./_lib/workspace";
 
 export const metadata = { title: "Claims" };
 
@@ -16,7 +16,7 @@ export const metadata = { title: "Claims" };
 const VIEWPORT = "lg:h-[calc(100dvh-57px)] lg:min-h-[640px] lg:flex-none lg:overflow-hidden";
 
 export default async function ConsolePage({ searchParams }: PageProps<"/console">) {
-  const session = await requireSession("company", "/console");
+  const session = await viewerOf(await requireSession("company", "/console"));
   const params = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const wanted = params.recall;

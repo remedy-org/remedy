@@ -5,7 +5,8 @@ import { duplicateFor, toDrawerClaim } from "@/app/console/_lib/drawer";
 import { sealedPhotoUrl } from "@/app/console/_lib/photoToken";
 import { claimAtVersion } from "@/app/console/_lib/photos";
 import { approveConflicts } from "@/app/console/_lib/review";
-import { canSee, canSeeClaim, loadClaimFor } from "@/app/console/_lib/workspace";
+import { decideStarter } from "@/app/console/_lib/starter";
+import { canSee, canSeeClaim, loadClaimFor, viewerOf } from "@/app/console/_lib/workspace";
 import { getAppStore } from "@/lib/demo";
 import { ClaimId } from "@/lib/types";
 
@@ -18,8 +19,9 @@ const Version = z.coerce.number().int().min(1).max(10_000);
 // and its recall, 2. The photos come with sealed tickets, so they never read the claim again. A held claim a person can
 // pay reads the index too (1 more), for what approve's checks would stop now: the panel says so before the decision.
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/claims/[id]">) {
-  const session = await company();
-  if (isResponse(session)) return session;
+  const auth = await company();
+  if (isResponse(auth)) return auth;
+  const session = await viewerOf(auth, request.cookies);
   const id = ClaimId.safeParse((await ctx.params).id);
   if (!id.success) return fail(404, "No claim with that id.");
   const v = Version.safeParse(request.nextUrl.searchParams.get("v"));
@@ -30,7 +32,8 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/
     const claim = await claimAtVersion(id.data, v.data, at).catch(() => null);
     const store = await getAppStore();
     const recall = claim ? await store.getRecall(claim.recallId) : null;
-    found = claim && recall && canSee(recall, session) && canSeeClaim(recall, session)(claim) ? { store, claim, recall } : null;
+    // A starter claim comes as this company decided it (starter.ts), as loadClaimFor gives it.
+    found = claim && recall && canSee(recall, session) && canSeeClaim(recall, session)(claim) ? { store, claim: decideStarter(claim, session.decided[claim.id], recall), recall } : null;
   } else {
     found = await loadClaimFor(session, id.data, { fresh: true });
   }

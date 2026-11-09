@@ -5,12 +5,12 @@ import { RecallPicker } from "@/components/console/RecallPicker";
 import { Button, EmptyState } from "@/components/ui";
 import { requireSession } from "@/lib/session";
 import { buildReport } from "../_lib/report";
-import { loadClaims, loadWorkspace, pickRecall } from "../_lib/workspace";
+import { loadClaims, loadWorkspace, pickRecall, viewerOf } from "../_lib/workspace";
 
 export const metadata = { title: "CPSC report" };
 
 export default async function ReportPage({ searchParams }: PageProps<"/console/report">) {
-  const session = await requireSession("company", "/console/report");
+  const session = await viewerOf(await requireSession("company", "/console/report"));
   const wanted = (await searchParams).recall;
   const { store, recalls } = await loadWorkspace(session, wanted);
   const recall = pickRecall(recalls, wanted);

@@ -8,6 +8,7 @@ import { Button, EmptyState } from "@/components/ui";
 import { INSIGHTS_ACTIONS } from "@/components/insights/actions";
 import { keepHyphens } from "@/components/console/format";
 import { requireSession } from "@/lib/session";
+import { viewerOf } from "../_lib/workspace";
 import { buildInsights } from "./facts";
 import { loadInsights } from "./load";
 
@@ -29,7 +30,7 @@ function filed(dates: string[]): string {
 }
 
 export default async function InsightsPage({ searchParams }: PageProps<"/console/insights">) {
-  const session = await requireSession("company", "/console/insights");
+  const session = await viewerOf(await requireSession("company", "/console/insights"));
   const { recall, recalls, claims, unreadable } = await loadInsights(session, (await searchParams).recall);
 
   if (!recall) {

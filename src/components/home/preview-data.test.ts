@@ -52,8 +52,7 @@ describe("homepage console tour data", () => {
     const { ledger } = previewProps();
     const { report } = reportPreview();
     expect(ledger!.paidCents).toBeGreaterThan(0);
-    expect(ledger!.sampleCents).toBe(0);
-    expect(report).toMatchObject({ seeded: 0, demo: 0, samplesPaid: 0 });
+    expect(report).toMatchObject({ demo: 0 });
     expect(report.sentCents).toBe(ledger!.paidCents);
   });
 

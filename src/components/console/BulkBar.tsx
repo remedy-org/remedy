@@ -18,8 +18,6 @@ export type BulkMode = "idle" | "approve" | "reject";
 export interface BulkResult {
   id: string;
   ok: boolean;
-  // A starter claim (it came with the workspace): decided, never paid, kept in this tab.
-  sample: boolean;
   // The claim as decided, when it was.
   claim?: ReviewedClaim;
   error?: ApiError;
@@ -55,8 +53,7 @@ export function BulkBar({
   onOpen?: (id: string) => void;
 }) {
   const held = rows.filter((r) => r.decision === "held");
-  const owed = held.filter((r) => !r.seeded);
-  const cents = owed.reduce((n, r) => n + (r.cents ?? 0), 0);
+  const cents = held.reduce((n, r) => n + (r.cents ?? 0), 0);
   const [progress, setProgress] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +75,7 @@ export function BulkBar({
       const quick = QUICK.find((q) => generic(q) === reason);
       const text = quick ? quick.text(r.code ?? "") : reason;
       const res = await api<ReviewedClaim>(`/api/console/claims/${r.id}/${decision}`, { method: "POST", json: decision === "reject" ? { reason: text } : undefined });
-      results.push(res.ok ? { id: r.id, ok: true, sample: Boolean(res.data.sample), claim: res.data } : { id: r.id, ok: false, sample: false, error: res.error });
+      results.push(res.ok ? { id: r.id, ok: true, claim: res.data } : { id: r.id, ok: false, error: res.error });
     }
     setProgress(null);
     const bad = results.filter((r) => !r.ok);
@@ -87,7 +84,7 @@ export function BulkBar({
   };
 
   const busy = progress !== null;
-  const verb = mode === "reject" ? "Rejecting" : owed.length ? "Paying" : "Approving";
+  const verb = mode === "reject" ? "Rejecting" : "Paying";
 
   return (
     <div
@@ -197,7 +194,7 @@ export function BulkBar({
               <LinkedIds text={failed.map((f) => `${f.id} (${f.error?.error ?? "no answer"})`).join(", ")} onOpen={onOpen} />
             </span>
           ) : mode === "approve" ? (
-            <span className="text-text">{approveLine(held, owed, cents)}</span>
+            <span className="text-text">{`Pay ${formatCents(cents)} to ${plural(held.length, "owner")} through PayPal?`}</span>
           ) : mode === "reject" ? (
             <span className="text-text">Reject {plural(held.length, "held claim")}.</span>
           ) : (
@@ -216,7 +213,7 @@ export function BulkBar({
           {mode === "idle" && held.length > 0 && (
             <>
               <Button size="sm" variant="secondary" onClick={() => onMode("approve")}>
-                {owed.length ? `Pay ${held.length}…` : `Approve ${held.length}…`}
+                {`Pay ${held.length}…`}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => onMode("reject")}>
                 Reject {held.length}…
@@ -226,7 +223,7 @@ export function BulkBar({
           {mode === "approve" && (
             <>
               <Button size="sm" data-autofocus pending={busy} pendingLabel={verb} onClick={() => run("approve")}>
-                {owed.length ? `Pay ${formatCents(cents)}` : `Approve ${held.length}`}
+                {`Pay ${formatCents(cents)}`}
               </Button>
               <Button size="sm" variant="tertiary" arrow={false} disabled={busy} onClick={() => onMode("idle")}>
                 Cancel
@@ -268,7 +265,7 @@ export function BulkBar({
             </>
           ) : mode === "approve" ? (
             <>
-              <Keys k={["A"]}>{owed.length ? `Pay ${formatCents(cents)}` : `Approve ${held.length}`}</Keys>
+              <Keys k={["A"]}>{`Pay ${formatCents(cents)}`}</Keys>
               <Keys k={["Esc"]}>Cancel</Keys>
             </>
           ) : (
@@ -283,12 +280,4 @@ export function BulkBar({
       )}
     </div>
   );
-}
-
-/** "Pay $59.98 to 2 owners through PayPal?", saying what the starter claims (they came with the workspace) do. */
-function approveLine(held: ClaimRow[], owed: ClaimRow[], cents: number) {
-  const starter = held.length - owed.length;
-  if (!owed.length) return `Approve ${plural(held.length, "held claim")}? ${held.length === 1 ? "It" : "They"} came with your workspace, so no PayPal payout goes out.`;
-  const pay = `Pay ${formatCents(cents)} to ${plural(owed.length, "owner")} through PayPal?`;
-  return starter ? `${pay} ${plural(starter, "other claim")} came with your workspace and ${starter === 1 ? "sends" : "send"} no payout.` : pay;
 }

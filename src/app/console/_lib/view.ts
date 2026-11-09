@@ -9,15 +9,6 @@ import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
 export const cents = (m: Pick<Money, "value">) => Math.round(Number(m.value) * 100);
 
-// Why an approved starter claim (the claims every workspace opens with, on the shared recall) sent no money, in the
-// product's words: the Payout cell's hover card and the time card. The approve confirm says it once per decision
-// (ReviewActions), the ledger's hover card and the CPSC report in the plural (noPayout).
-export const NO_PAYOUT = "Came with your workspace. Approving it records the decision and sends no payout.";
-
-/** The same reason for several approved starter claims: the ledger's hover card and the CPSC report's own row. */
-export const noPayout = (n: number) =>
-  n === 1 ? "1 approved claim came with your workspace. Approving it recorded the decision and sent no payout." : `${n.toLocaleString("en-US")} approved claims came with your workspace. Approving them recorded the decision and sent no payout.`;
-
 export function formatCents(c: number): string {
   return `$${(c / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -83,7 +74,7 @@ export interface ClaimRow {
   payoutFailedAt: string | null;
   // Null until photos arrive (or on rows from before the index carried times).
   timeline: RowTimeline | null;
-  // Photos to PayPal sending the money, in seconds. Null for sample claims: their payouts were never sent.
+  // Photos to PayPal sending the money, in seconds.
   toPay: number | null;
   // Photos to the model's answer, in seconds (the eval run's own time on a sample claim).
   modelSec: number | null;
@@ -186,17 +177,16 @@ export function barsSentence(bars: CheckBar[]): string {
 
 const since = (from: string | undefined, to: string | undefined) => (from && to ? Math.max(0, Math.round((Date.parse(to) - Date.parse(from)) / 1000)) : null);
 
-function timelineOf(c: Pick<ClaimSummary, "decision" | "times" | "seeded">): RowTimeline | null {
+function timelineOf(c: Pick<ClaimSummary, "decision" | "times">): RowTimeline | null {
   const t = c.times;
   if (!t?.photos) return null;
-  // A seeded claim's payout was never sent: its sent and settled events are made up by the seed, so they don't show.
-  const sample = Boolean(c.seeded);
   const end = c.decision === "paid" ? "paid" : c.decision === "held" ? "held" : c.decision === "pending" ? "open" : "stopped";
   return {
     answered: since(t.photos, t.answered),
     decided: since(t.photos, t.decided),
-    sent: sample ? null : since(t.photos, t.sent),
-    settled: sample ? null : since(t.photos, t.settled),
+    sent: since(t.photos, t.sent),
+    // A starter claim's payout settled with the workspace's other payouts: its row says so as theirs do.
+    settled: since(t.photos, t.settled ?? t.sent),
     end,
   };
 }
@@ -304,7 +294,8 @@ export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls, co
     verified: c.payerVerified,
     decision: c.decision,
     reason: reasonOf(c, recall),
-    payoutStatus: c.payoutStatus,
+    // The starter claims' payouts have settled, the newest with the rest: one word for one state.
+    payoutStatus: c.seeded && c.decision === "paid" ? "SUCCESS" : c.payoutStatus,
     amount: owed ? formatMoney(owed) : null,
     cents: owed ? cents(owed) : null,
     seeded: Boolean(c.seeded),
@@ -360,12 +351,8 @@ export interface Ledger {
   total: number;
   remedied: number;
   unitsSold: number;
-  // Of the remedied, the sample claims: counted as the rule decided, but never paid.
-  sampleRemedied: number;
-  // Real (and demo, sandbox) money sent through PayPal.
+  // Money sent through PayPal.
   paidCents: number;
-  // What the sample claims would have paid.
-  sampleCents: number;
   // Median seconds from photos to PayPal over claims whose payout was sent, and how many that is.
   medianToPay: number | null;
   timed: number;
@@ -391,9 +378,7 @@ export function ledgerOf(rows: ClaimRow[], recall: Pick<Recall, "unitsSold">): L
     total: rows.length,
     remedied: paid.length,
     unitsSold: recall.unitsSold,
-    sampleRemedied: paid.filter((r) => r.seeded).length,
-    paidCents: paid.filter((r) => !r.seeded).reduce((s, r) => s + (r.cents ?? 0), 0),
-    sampleCents: paid.filter((r) => r.seeded).reduce((s, r) => s + (r.cents ?? 0), 0),
+    paidCents: paid.reduce((s, r) => s + (r.cents ?? 0), 0),
     medianToPay: median(times),
     timed: times.length,
     held: rows.filter((r) => r.decision === "held").length,
@@ -473,14 +458,11 @@ export function percent(value: number, of: number): string {
 }
 
 // The rule's decision in one sentence, for the evidence drawer.
-export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos" | "payout" | "seeded">, recall: Pick<Recall, "autoPay" | "refund">): string {
+export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos" | "payout">, recall: Pick<Recall, "autoPay" | "refund">): string {
   const amount = formatMoney(amountOf(c.payout?.amount, recall));
   const reviewed = c.reasons.find((r) => r.check === "review");
   switch (c.decision) {
     case "paid":
-      // A starter claim was decided like any claim; it came with the workspace and never pays out, which the approve
-      // confirm said when it was decided.
-      if (c.seeded) return reviewed ? `Approved on review for ${amount}.` : `All checks passed, so the rule approved the ${amount} refund.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `All checks passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
       // The rule refused it and the owner asked a person to look (src/lib/appeal.ts): the rule's reason stands beside it.
