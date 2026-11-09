@@ -28,9 +28,9 @@ export interface SectionProps {
   pageClassName?: string;
   /** How the heading enters: focus-in or a plain rise, both a fade and 8px up over 360ms (never a blur). */
   reveal?: "focus" | "rise";
-  /** With `stack`: what stands beside the heading and its lead on laptops, on columns 8 to 12 (under them on phones). */
+  /** With `stack`: what stands beside the heading and its lead on laptops, on columns 8 to 12 (last on phones). */
   aside?: ReactNode;
-  /** With `stack`: a footnote under the lead on laptops, so the aside beside them ends on its last line; last on phones. */
+  /** With `stack`: a paragraph under the lead, so the aside beside them on laptops ends on its last line. */
   note?: ReactNode;
 }
 
@@ -86,13 +86,13 @@ export function Section({
             )}
           </div>
           {aside && stack && (
-            <div className={clsx(enter, "col-span-12 mt-6 lg:col-span-5 lg:col-start-8 lg:mt-0", note && "lg:row-span-2 lg:row-start-1")} style={line(3)}>
+            <div className={clsx(enter, "col-span-12 mt-6 max-lg:order-last lg:col-span-5 lg:col-start-8 lg:mt-0", note && "lg:row-span-2 lg:row-start-1")} style={line(3)}>
               {aside}
             </div>
           )}
-          {/* Under the lead on laptops (the aside ends on its last line); last on phones, after every mark it sources. */}
+          {/* Under the lead (on laptops the aside beside them ends on its last line). */}
           {note && stack && (
-            <div className={clsx(enter, "col-span-12 max-lg:order-last lg:col-span-7 lg:col-start-1 lg:row-start-2")} style={line(3)}>
+            <div className={clsx(enter, "col-span-12 lg:col-span-7 lg:col-start-1 lg:row-start-2")} style={line(3)}>
               {note}
             </div>
           )}
