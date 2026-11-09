@@ -45,7 +45,7 @@ export function buildSources(data: InsightsData): AgDataSourcesDefinition<Insigh
           ["refusalGate", "Refused by", "textFormat", { description: "Where the claim was refused: before the model read the photo (an account check), by the model (the photo check) or by a person (a review). Blank unless refused." }],
           ["failedCheck", "Deciding check", "textFormat", { description: "The check that refused or held the claim (code, label, same_item, screen, step_N, session, duplicate_photo, payer, payer_verified, review)." }],
           ["reason", "Reason", "textFormat"],
-          ["source", "Source", "textFormat", { hide: true, description: "Starter, Demo or Owner." }],
+          ["source", "Source", "textFormat", { hide: true, description: "Demo or Owner." }],
           ["payer", "PayPal account", "textFormat", { description: "Last four characters of the PayPal payer id only." }],
           ["verified", "PayPal verified", "booleanFormat"],
           ["amountPaid", "Paid out", "currencyFormat", { ...usd, description: "USD the rule approved for this claim; 0 unless approved. On a starter claim it was approved, never sent." }],

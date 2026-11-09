@@ -53,7 +53,8 @@ describe("approveClaim", () => {
     const pay = vi.fn();
     const now = new Date("2026-11-08T22:08:58.000Z");
     const result = await approveClaim({ store, claim, recall: sampleRecall(), by: "x", pay, now });
-    expect(result).toMatchObject({ ok: true, claim: { decision: "paid", payout: { status: "SUCCESS" } }, starter: { k: "approve", at: now.toISOString(), by: "x" } });
+    // Approved, never Paid: nothing went to PayPal.
+    expect(result).toMatchObject({ ok: true, claim: { decision: "paid", payout: null }, starter: { k: "approve", at: now.toISOString(), by: "x" } });
     expect(result.ok && result.claim.reasons.at(-1)).toEqual({ check: "review", outcome: "pass", text: "Approved on review by x" });
     expect(JSON.stringify(result)).not.toMatch(/workspace|no payout/i);
     expect(pay).not.toHaveBeenCalled();

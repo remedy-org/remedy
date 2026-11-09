@@ -5,7 +5,7 @@ import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Outcome, Reason, Recall } from "@/lib/types";
 import { isSandboxBuild } from "@/lib/demo/allowed";
 import { demoSample } from "@/lib/demo/samples";
-import { CHECK_NAMES, checkOf, type CheckNumber } from "@/lib/fiveChecks";
+import { checkOf, fiveNames, type CheckNumber } from "@/lib/fiveChecks";
 import { allPreChecks, amountOf, checkLabel, companyReasonText, decisionSentence, formatMoney, maskPayer, preChecksOf, type PreCheckRow, type PreCheckState } from "./view";
 
 // Everything the evidence drawer shows for one claim, built on the server so the client never sees a full payer id.
@@ -42,13 +42,8 @@ const RANK: PreCheckState[] = ["reject", "hold", "waiting", "skipped", "pass"];
 
 /** The five checks from the pre-checks (all of them, skipped included) and the photo check's answers. */
 export function fiveRowsOf(c: Pick<Claim, "code" | "decision" | "photos" | "seeded" | "demo">, recall: Pick<Recall, "spec">, pre: PreCheckRow[], checks: DrawerCheck[]): FiveRow[] {
-  const names: Record<CheckNumber, string> = {
-    1: CHECK_NAMES.session,
-    2: CHECK_NAMES.duplicate,
-    3: CHECK_NAMES.account,
-    4: CHECK_NAMES.code(c.code, handWrittenLabel(recall.spec)),
-    5: CHECK_NAMES.destroyed(nounOf(recall.spec), cutInHalf(recall.spec)),
-  };
+  const [n1, n2, n3, n4, n5] = fiveNames(c.code, handWrittenLabel(recall.spec), nounOf(recall.spec), cutInHalf(recall.spec));
+  const names: Record<CheckNumber, string> = { 1: n1, 2: n2, 3: n3, 4: n4, 5: n5 };
   const parts: FiveRow["parts"] = [
     ...pre.map((p) => ({ id: p.id, label: p.label, state: p.state, text: p.detail, evidence: null })),
     ...checks.map((r) => ({ id: r.id, label: r.label, state: r.outcome as PreCheckState, text: r.rule, evidence: r.evidence })),
@@ -164,27 +159,26 @@ export function photoUrl(claimId: string, n: number) {
 }
 
 /**
- * A starter (seeded) claim's history in the console's words, as every other claim's reads: the stored lines
- * (lib/demo/sampleCopy.ts) are the seed's, and its payout has settled with the workspace's others.
+ * A seeded claim's history in the console's words, as every other claim's reads. Claims seeded before lib/demo/claims.ts
+ * stored other lines; a payout line only where the claim has a payout, so nothing reads as sent that wasn't.
  */
 function starterEvents(c: Claim, amount: string): Claim["events"] {
   const n = c.photos.length;
-  const events = c.events.map((e) =>
+  return c.events.flatMap((e) =>
     e.type === "photos_received"
-      ? { ...e, detail: `${n} ${n === 1 ? "photo" : "photos"} received` }
+      ? [{ ...e, detail: `${n} ${n === 1 ? "photo" : "photos"} received` }]
       : e.type === "prechecked"
-        ? { ...e, detail: "Account checks passed" }
+        ? [{ ...e, detail: "Account checks passed" }]
         : e.type === "payout_sent"
-          ? { ...e, detail: `Payout of ${amount} sent through PayPal` }
+          ? c.payout?.status === "SUCCESS"
+            ? [{ ...e, detail: `Payout of ${amount} sent through PayPal` }]
+            : []
           : e.type === "payout_updated"
-            ? { ...e, detail: "PayPal: SUCCESS" }
-            : e,
+            ? c.payout?.status === "SUCCESS"
+              ? [{ ...e, detail: "PayPal: SUCCESS" }]
+              : []
+            : [e],
   );
-  const sent = events.find((e) => e.type === "payout_sent");
-  if (sent && !events.some((e) => e.type === "payout_updated")) {
-    events.push({ at: new Date(Date.parse(sent.at) + 40_000).toISOString(), type: "payout_updated", detail: "PayPal: SUCCESS" });
-  }
-  return events;
 }
 
 const REFUSED_PREFIX = "Not paid on review: ";
@@ -343,7 +337,7 @@ export function toDrawerClaim(c: Claim, recall: Recall, { stops = [] }: { stops?
     appealedAt: reviewAsked(c) ? (c.events.find((e) => e.type === "review_requested")?.at ?? c.createdAt) : null,
     amount,
     // A starter claim's payout has settled; its batch ids are the workspace's own, so the panel shows no PayPal ids for it.
-    payout: !c.payout ? null : c.seeded ? { batchId: "", status: "SUCCESS", updatedAt: c.payout.updatedAt } : { batchId: c.payout.batchId, ...(c.payout.itemId ? { itemId: c.payout.itemId } : {}), status: c.payout.status, updatedAt: c.payout.updatedAt },
+    payout: !c.payout ? null : c.seeded ? { batchId: "", status: c.payout.status, updatedAt: c.payout.updatedAt } : { batchId: c.payout.batchId, ...(c.payout.itemId ? { itemId: c.payout.itemId } : {}), status: c.payout.status, updatedAt: c.payout.updatedAt },
     events: plainEvents(c.seeded ? starterEvents(c, amount) : c.events),
     refused,
     stops: c.decision === "held" && !c.seeded ? stops : [],

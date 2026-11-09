@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from "node:util";
 import { cookies } from "next/headers";
 import { recoverStale, STALE_AFTER_MS } from "@/app/api/claims/_lib/pipeline";
 import { getAppStore } from "@/lib/demo";
+import { DEMO_CLAIMS, GENUINE } from "@/lib/demo/claims";
 import { CAPTURE_SESSION_MINUTES } from "@/lib/ids";
 import { abandonedDemo } from "@/lib/limits";
 import { isTerminal, refreshPayouts } from "@/lib/paypal/status";
@@ -73,10 +74,19 @@ export const viewerOf = async <S extends Pick<Session, "payerId">>(session: S, j
  * starts left before a photo was sent (abandonedDemo), which hold no evidence and no money, and the starter claims as
  * this company decided them. The queue, Insights and the report all list through here, so their totals agree.
  */
-export const listedClaims = <R extends ClaimSummary>(rows: R[], recall: Recall, viewer: Viewer, now = Date.now()): R[] =>
-  rows
-    .filter((r) => r.recallId === recall.id && canSeeClaim(recall, viewer)(r) && !abandonedDemo(r, new Date(now)))
+export const listedClaims = <R extends ClaimSummary>(rows: R[], recall: Recall, viewer: Viewer, now = Date.now()): R[] => {
+  const older = olderSeed(rows);
+  return rows
+    .filter((r) => r.recallId === recall.id && canSeeClaim(recall, viewer)(r) && !abandonedDemo(r, new Date(now)) && !older(r))
     .map((r) => (viewer.decided?.[r.id] ? (decideStarterRow(r, viewer.decided[r.id], recall) as R) : r));
+};
+
+// A store seeded with the demo claims (lib/demo/claims.ts: a seeded RM-0442 is the sign) may still hold the seeded
+// claims of an earlier seed, which the store can't delete: they are left out, so the console lists the one dataset the
+// homepage shows.
+const DEMO_IDS = new Set(DEMO_CLAIMS.map((d) => d.id));
+const olderSeed = (rows: Pick<ClaimSummary, "id" | "seeded">[]) =>
+  rows.some((r) => r.seeded && r.id === GENUINE.id) ? (r: Pick<ClaimSummary, "id" | "seeded">) => Boolean(r.seeded) && !DEMO_IDS.has(r.id) : () => false;
 
 // When this instance last read a claim whose row looks out of date. A payout that stays unsettled is asked about at
 // most once a minute per instance, not on every load: each ask reads the claim file.
@@ -126,7 +136,7 @@ export async function loadClaimFor(session: Viewer, claimId: string, { fresh = f
   if (!claim) return null;
   const recall = await store.getRecall(claim.recallId, { fresh });
   if (!recall || !canSee(recall, session) || !canSeeClaim(recall, session)(claim)) return null;
-  return { store, claim: decideStarter(claim, session.decided?.[claim.id], recall), recall };
+  return { store, claim: decideStarter(claim, session.decided?.[claim.id]), recall };
 }
 
 // A recall the company may open. Only its own can be changed: the shared demo recall's settings are fixed (see the

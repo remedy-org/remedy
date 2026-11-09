@@ -7,26 +7,31 @@ const { insightsPreview } = await import("@/components/insights/preview");
 const { insightsStill } = await import("@/components/insights/still");
 const { homeInsightsReport } = await import("@/components/insights/report");
 
-// The homepage's grid, Insights still, Studio report and CPSC draft all read the one seed: their numbers must agree.
+// The homepage's grid, Insights still, Studio report and CPSC draft all read the demo claims (lib/demo/claims.ts): their
+// numbers must agree. (src/lib/demo/claims.test.ts checks every replica against the dataset itself.)
 
 describe("homepage console tour data", () => {
-  it("counts the same 40 claims everywhere", () => {
+  it("counts the same 7 claims everywhere", () => {
     const counts = previewProps().counts!;
     const { report } = reportPreview();
     const { totals } = insightsStill(insightsPreview());
-    expect(counts).toMatchObject({ all: 40, paid: 26, held: 3 });
-    expect(counts.rejected + counts.blocked).toBe(9);
-    expect(report.stats).toMatchObject({ total: 40, remedied: 26, held: 3 });
-    expect(totals).toMatchObject({ claims: 40, paid: 26, held: 3, refused: 9 });
+    expect(counts).toMatchObject({ all: 7, paid: 2, held: 1, rejected: 1, blocked: 3 });
+    expect(report.stats).toMatchObject({ total: 7, remedied: 2, held: 1 });
+    // Paid is only RM-0442, the claim PayPal paid; RM-6276 is approved with nothing sent.
+    expect(report.outcomes.filter((o) => o.decision === "paid").map((o) => [o.label, o.count])).toEqual([
+      ["Paid", 1],
+      ["Approved", 1],
+    ]);
+    expect(totals).toMatchObject({ claims: 7, paid: 1, held: 1, refused: 4 });
     expect(totals.refused).toBe(counts.rejected + counts.blocked);
   });
 
-  it("reads the funnel 38 → 35 → 26", () => {
+  it("reads the funnel 7 → 4 → 2 → 1", () => {
     const { totals } = insightsStill(insightsPreview());
-    expect([totals.photos, totals.preChecked, totals.photoChecked, totals.paid]).toEqual([38, 35, 26, 26]);
+    expect([totals.photos, totals.preChecked, totals.photoChecked, totals.paid]).toEqual([7, 4, 2, 1]);
   });
 
-  it("replays an arrival of a paid claim already in the rows, never a 41st", () => {
+  it("replays the arrival of RM-0442, already in the rows, never an extra claim", () => {
     const { rows } = previewProps();
     const arrive = rows.find((r) => r.id === ARRIVE_ID);
     expect(arrive?.decision).toBe("paid");
@@ -42,18 +47,19 @@ describe("homepage console tour data", () => {
     expect(rows.map((r) => r.createdAt)).toEqual([...rows.map((r) => r.createdAt)].sort().reverse());
     expect(rows[0].id).toBe(ARRIVE_ID);
     expect(rows.filter((r) => r.evidence).map((r) => r.id)).toEqual(rows.filter((r) => r.photoCount > 0).map((r) => r.id));
-    const decided = rows.filter((r) => r.decision !== "pending").slice(0, CONSOLE_ROWS.length);
+    const { verdictOf } = await import("@/components/console/VerdictMark");
+    const decided = rows.filter((r) => r.decision !== "pending" && r.id !== ARRIVE_ID);
     expect(CONSOLE_ROWS.map((r) => [r.id, r.status, r.filed, r.time ?? null])).toEqual(
-      decided.map((r) => [r.id, r.decision, formatDayTime(r.createdAt), r.modelSec === null ? null : duration(r.modelSec)]),
+      decided.map((r) => [r.id, verdictOf(r), formatDayTime(r.createdAt), r.modelSec === null ? null : duration(r.modelSec)]),
     );
     expect(CONSOLE_ROWS.find((r) => r.status === "held")?.id).toBe(PREVIEW_OPEN_ID);
   });
 
-  it("draws the claims as a live workspace: paid through PayPal, nothing labelled as a sample", () => {
+  it("says paid through PayPal only for the money PayPal paid, and labels nothing as a sample", () => {
     const { ledger } = previewProps();
     const { report } = reportPreview();
-    expect(ledger!.paidCents).toBeGreaterThan(0);
-    expect(report).toMatchObject({ demo: 0 });
+    expect(ledger!.paidCents).toBe(2999);
+    expect(report).toMatchObject({ demo: 0, sent: 1 });
     expect(report.sentCents).toBe(ledger!.paidCents);
   });
 
@@ -70,8 +76,8 @@ describe("homepage console tour data", () => {
     expect(JSON.stringify(read)).not.toMatch(/\b(demo|sample|test)\b/i);
   });
 
-  it("puts all 40 claims in the grid", () => {
-    expect(previewProps().rows).toHaveLength(40);
+  it("puts every claim in the grid", () => {
+    expect(previewProps().rows).toHaveLength(7);
   });
 
   it("keeps Studio's home report to six widgets, titled, with two value KPIs and the day chart, fitted to its rows", () => {
@@ -87,7 +93,7 @@ describe("homepage console tour data", () => {
   });
 
   it("gives the refusal reasons' place to the day chart on a shorter frame, so each day's dollars fit in its column", () => {
-    const widgets = homeInsightsReport(insightsPreview(), 35).pages[0].widgets ?? {};
+    const widgets = homeInsightsReport(insightsPreview(), 34).pages[0].widgets ?? {};
     expect(Object.keys(widgets)).not.toContain("refusals");
     expect(Object.keys(widgets)).toContain("paid-by-day");
   });

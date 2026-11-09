@@ -470,15 +470,15 @@ export function HeaderOnlyTip({ location, value }: CustomTooltipProps<GridRow>) 
 }
 
 
-/** Hovering the strip: the count, then each check by name with its result, under the five checks the homepage and the
- * owner's receipt name (Live camera, Never seen before, One claim per account, Code and label, Really destroyed). A
+/** Hovering the strip: the count, then each check by name with its result, under the five checks by the names the
+ * evidence, the homepage and the owner's receipt give them (fiveChecks.ts fiveNames): the finer answers sit only here. A
  * check that doesn't apply to this claim keeps its dash in the strip but isn't listed. */
 export function ChecksTooltip({ data, location, value, context }: CustomTooltipProps<GridRow, unknown, GridContext>) {
   if (location === "header") return <HeaderTip text={value} />;
   if (!data?.bars) return null;
   if (context?.stacked) return <FiveCard row={data} bars={data.bars} />;
   const shown = data.bars.filter((b) => !(isPreCheck(b.id) && b.state === "skipped"));
-  const groups = FIVE_CHECKS.map((c) => ({ title: c.short, bars: shown.filter((b) => checkOf(b.id) === c.n) })).filter((g) => g.bars.length);
+  const groups = FIVE_CHECKS.map((c) => ({ title: data.checkNames?.[c.n - 1] ?? c.short, bars: shown.filter((b) => checkOf(b.id) === c.n) })).filter((g) => g.bars.length);
   return (
     // Wide enough for the longest check beside its longest word ("Same item in both photos", "One photo, not needed");
     // a longer one wraps, never cut.
@@ -542,7 +542,7 @@ function FiveCard({ row, bars }: { row: GridRow; bars: CheckBar[] }) {
         {five.map((f) => (
           <li key={f.n} className="flex items-center gap-2.5 text-ui">
             <Bar bar={{ state: FIVE_BAR[f.outcome] }} />
-            <span className="min-w-0 flex-1 text-text-2">{FIVE_CHECKS[f.n - 1].short}</span>
+            <span className="min-w-0 flex-1 text-text-2">{row.checkNames?.[f.n - 1] ?? FIVE_CHECKS[f.n - 1].short}</span>
             <span className="shrink-0 text-micro text-muted">{FIVE_WORD[f.outcome]}</span>
           </li>
         ))}

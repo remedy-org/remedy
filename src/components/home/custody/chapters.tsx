@@ -298,12 +298,12 @@ function Thumb({ src }: { src: string }) {
 
 const GRID = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 @min-[720px]:grid-cols-[11rem_minmax(0,1fr)_6rem_6.5rem_5rem]";
 
-/** Claim RM-0442 as the recall team's console lists it, paid, just filed: its photo check answered at 0:14, the
- * payout sent at 0:15 (the exhibit's clock, teardown/model.ts elapsed). Its line says the payout's time, so the 14 s the
- * photo check took never reads as the receipt's 15 s. */
+/** Claim RM-0442 as the recall team's console lists it, paid, at its filing time: its photo check answered at 0:14,
+ * the payout sent at 0:15 (the exhibit's clock, teardown/model.ts elapsed). Its line says the payout's time, so the 14 s
+ * the photo check took never reads as the receipt's 15 s. */
 const M4T_ROW = {
   photo: CLAIM.photo,
-  filed: "Just now",
+  filed: CLAIM.filed,
   id: CLAIM.id,
   status: "paid" as const,
   reason: `Paid ${CLAIM.seconds} s after the photo`,

@@ -55,7 +55,10 @@ describe("console view", () => {
   });
 
   it("says the rule's decision in one sentence", () => {
-    expect(decisionSentence(sampleClaim({ decision: "paid" }), recall)).toBe("All checks passed, so Remedy paid $29.99 through PayPal.");
+    const payout = { batchId: "B1", status: "SUCCESS" as const, updatedAt: "2026-11-07T10:01:00Z" };
+    expect(decisionSentence(sampleClaim({ decision: "paid", payout }), recall)).toBe("All checks passed, so Remedy paid $29.99 through PayPal.");
+    // Approved with nothing sent: no payout named.
+    expect(decisionSentence(sampleClaim({ decision: "paid" }), recall)).toBe("All checks passed: $29.99 approved, nothing sent yet.");
     expect(decisionSentence(sampleClaim({ decision: "blocked", reasons: [reject("payer_verified", "This PayPal account isn't verified")] }), recall)).toBe(
       "Stopped by the account checks before the photo check: this PayPal account isn't verified.",
     );
@@ -89,8 +92,8 @@ describe("console view", () => {
       ["payer_verified", "pass"],
     ]);
     expect(preChecksOf(sampleClaim({ photos: [] })).every((r) => r.state === "waiting")).toBe(true);
-    // A check that didn't run isn't listed.
-    expect(preChecksOf(sampleClaim({ seeded: true })).find((r) => r.id === "duplicate_photo")).toBeUndefined();
+    // Every demo claim has its own photos: the fingerprint check ran on a seeded claim too.
+    expect(preChecksOf(sampleClaim({ seeded: true })).find((r) => r.id === "duplicate_photo")?.state).toBe("pass");
   });
 
   it("says what the one-claim check covered: paid or open claims, the round for the genuine sample, nothing for the others", () => {

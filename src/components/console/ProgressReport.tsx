@@ -132,7 +132,7 @@ export function ProgressReport({
           </thead>
           <tbody>
             {report.outcomes.map((o, i) => (
-              <tr key={o.decision}>
+              <tr key={o.label}>
                 <td className={td}>
                   {/* The console's mark and word, in the sheet's ink: a filed document reads in words, not in chips. */}
                   <VerdictMark verdict={o.decision === "paid" ? (o.label === "Paid" ? "paid" : "approved") : o.decision} className="text-text">

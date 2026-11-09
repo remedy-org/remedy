@@ -1,6 +1,7 @@
 import { APPEAL_CHECK } from "@/lib/appeal";
 import { oneClaimChecked } from "@/lib/demo/samples";
-import { CHECK_NAMES, fiveOutcomes } from "@/lib/fiveChecks";
+import { cutInHalf, handWrittenLabel, nounOf } from "@/components/claim/model";
+import { CHECK_NAMES, fiveNames, fiveOutcomes } from "@/lib/fiveChecks";
 import type { ClaimSummary } from "@/lib/store";
 import type { Claim, Decision, Money, Reason, Recall } from "@/lib/types";
 
@@ -48,6 +49,8 @@ export interface RowPhoto {
 
 export interface ClaimRow {
   id: string;
+  /** The five checks' names for this claim (fiveChecks.ts fiveNames), as the evidence lists them. */
+  checkNames?: string[];
   createdAt: string;
   payer: string;
   verified: boolean;
@@ -122,12 +125,11 @@ export function barsOf(c: Pick<ClaimSummary, "decision" | "checks" | "photoHashe
   const ran = c.photoHashes.length > 0 || c.decision === "blocked";
   const failed = (id: string) => c.checks?.find((r) => r.check === id && r.outcome !== "pass");
   // A pre-check that doesn't apply to a claim keeps its place in the strip as a skipped slot (a dash), so every row
-  // draws the same four account slots in the same place; the drawer leaves it out of the list (preChecksOf). Those are
-  // the starter claims' fingerprint check, and one claim per account on a demo sample but the genuine one.
+  // draws the same four account slots in the same place; the drawer leaves it out of the list (preChecksOf): one claim
+  // per account on a demo sample but the genuine one.
   const pre = PRE_CHECKS.map(([id, label]): CheckBar => {
     const f = failed(id);
     if (f) return { id, label, state: f.outcome };
-    if (id === "duplicate_photo" && c.seeded && ran) return { id, label, state: "skipped" };
     if (id === "payer" && c.demo && c.sample !== "genuine" && ran) return { id, label, state: "skipped" };
     return { id, label, state: ran ? "pass" : "waiting" };
   });
@@ -276,13 +278,14 @@ export function toRow(c: ClaimSummary, recall: Recall, photoUrls?: PhotoUrls, co
   const failedAt = c.decision === "held" ? (c.payoutFailedAt ?? null) : null;
   return {
     id: c.id,
+    checkNames: fiveNames(c.code ?? "", handWrittenLabel(recall.spec), nounOf(recall.spec), cutInHalf(recall.spec)),
     createdAt: c.createdAt,
     payer: maskPayer(c.payerId),
     verified: c.payerVerified,
     decision: c.decision,
     reason: reasonOf(c, recall),
-    // The starter claims' payouts have settled, the newest with the rest: one word for one state.
-    payoutStatus: c.seeded && c.decision === "paid" ? "SUCCESS" : c.payoutStatus,
+    // Paid only where PayPal confirmed the payout; a claim the rule passed with nothing sent reads Approved.
+    payoutStatus: c.payoutStatus,
     amount: owed ? formatMoney(owed) : null,
     cents: owed ? cents(owed) : null,
     seeded: Boolean(c.seeded),
@@ -338,7 +341,7 @@ export interface Ledger {
   total: number;
   remedied: number;
   unitsSold: number;
-  // Money sent through PayPal.
+  // Money PayPal paid (payouts it confirmed).
   paidCents: number;
   // Median seconds from photos to PayPal over claims whose payout was sent, and how many that is.
   medianToPay: number | null;
@@ -365,7 +368,8 @@ export function ledgerOf(rows: ClaimRow[], recall: Pick<Recall, "unitsSold">): L
     total: rows.length,
     remedied: paid.length,
     unitsSold: recall.unitsSold,
-    paidCents: paid.reduce((s, r) => s + (r.cents ?? 0), 0),
+    // Paid through PayPal: only payouts PayPal confirmed, never a claim approved with nothing sent.
+    paidCents: paid.filter((r) => r.payoutStatus === "SUCCESS").reduce((s, r) => s + (r.cents ?? 0), 0),
     medianToPay: median(times),
     timed: times.length,
     held: rows.filter((r) => r.decision === "held").length,
@@ -450,6 +454,8 @@ export function decisionSentence(c: Pick<Claim, "decision" | "reasons" | "photos
   const reviewed = c.reasons.find((r) => r.check === "review");
   switch (c.decision) {
     case "paid":
+      // Approved with nothing sent: no PayPal payout to name.
+      if (!c.payout) return reviewed ? `Approved on review: ${amount} approved, nothing sent yet.` : `All checks passed: ${amount} approved, nothing sent yet.`;
       return reviewed ? `Approved on review, so Remedy paid ${amount} through PayPal.` : `All checks passed, so Remedy paid ${amount} through PayPal.`;
     case "held": {
       // The rule refused it and the owner asked a person to look (src/lib/appeal.ts): the rule's reason stands beside it.
@@ -511,16 +517,12 @@ export function allPreChecks(c: Pick<Claim, "decision" | "reasons" | "photos" | 
   };
   return [
     row("session", CHECK_NAMES.session, "Taken in this claim's camera session, before it expired"),
-    // Seeded claims share a handful of reference photos, so the fingerprint check was never run on them: it is left out
-    // rather than shown as a pass next to another claim with the same photo.
-    c.seeded && ran
-      ? { id: "duplicate_photo", label: CHECK_NAMES.duplicate, state: "skipped", detail: "" }
-      : // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the
-        // same sample photo once: say that, next to the other rounds' claims with the same photo and code. The company
-        // reads a round as a demo session.
-        c.demo
-        ? row("duplicate_photo", CHECK_NAMES.duplicate, "No other claim in this session used these photos")
-        : row("duplicate_photo", CHECK_NAMES.duplicate, "No other claim used these photos"),
+    // A demo claim is checked only against its own demo round (pipeline.ts othersFor), so every judge can send the same
+    // sample photo once: say that, next to the other rounds' claims with the same photo and code. The company reads a
+    // round as a demo session.
+    c.demo
+      ? row("duplicate_photo", CHECK_NAMES.duplicate, "No other claim in this session used these photos")
+      : row("duplicate_photo", CHECK_NAMES.duplicate, "No other claim used these photos"),
     // In the demo only the genuine sample is held to one claim, within its round (pipeline.ts receivePhotos). A person's
     // approve checks every sample (review.ts), and a conflict it found shows here.
     !c.demo

@@ -33,7 +33,7 @@ describe("layout", () => {
 });
 
 describe("cross-filter", () => {
-  const claim = (id: string, decision: string, refusalReason: string | null, source: "Starter" | "Demo" | "Owner", filedAt = "2026-11-07T10:00:00Z") => ({
+  const claim = (id: string, decision: string, refusalReason: string | null, source: "Demo" | "Owner", filedAt = "2026-11-07T10:00:00Z") => ({
     id,
     decision,
     refusalReason,
@@ -45,7 +45,7 @@ describe("cross-filter", () => {
     paidOnReview: 0,
   });
   const claims = [
-    claim("RM-1", "Paid", null, "Starter", "2026-11-04T23:59:00Z"),
+    claim("RM-1", "Paid", null, "Owner", "2026-11-04T23:59:00Z"),
     claim("RM-2", "Paid", null, "Demo"),
     claim("RM-3", "Rejected", "Rejected by a person on review", "Demo"),
     claim("RM-4", "Rejected", "Photo of a screen or a print", "Owner"),

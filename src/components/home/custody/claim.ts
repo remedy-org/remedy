@@ -1,17 +1,20 @@
-import type { Status } from "@/components/ui";
+import type { Verdict } from "@/components/console/VerdictMark";
+import { GENUINE } from "@/lib/demo/claims";
 
-// The one claim the homepage stages, start to finish: RM-0442, filed through the demo on 7 Nov 2026 with the genuine
-// claim (src/lib/demo/samples.ts: photo c02, code M4T) on the X-VESOLJE recall (CPSC 27-071). It took 15 s from photos
-// received to the PayPal payout. Its photo is generated (benchmark case c02-pillow-cut-lamplight, docs/EVAL.md), and it
-// carries no label (owner rule: no internal labels; the site's one sandbox line is in /terms). These are presentational
-// copies of the claim screens: nothing here imports src/components/claim/*.
+// The one claim the homepage stages, start to finish: RM-0442 (src/lib/demo/claims.ts, GENUINE), the genuine claim (photo
+// c02, code M4T) on the X-VESOLJE recall (CPSC 27-071), 15 s from photos received to the PayPal payout. Its photo is
+// generated (benchmark case c02-pillow-cut-lamplight, docs/EVAL.md), and it carries no label (owner rule: no internal
+// labels; the site's one sandbox line is in /terms). These are presentational copies of the claim screens: nothing here
+// imports src/components/claim/*.
 export const CLAIM = {
-  id: "RM-0442",
-  code: "M4T",
+  id: GENUINE.id,
+  code: GENUINE.code,
   amount: 29.99,
   /** Photos received to payout sent, claim RM-0442 (7 Nov 2026). */
-  seconds: 15,
-  photo: "/demo/c02-1.jpg",
+  seconds: GENUINE.toPayout!,
+  /** When it was filed, as the console lists it (UTC). */
+  filed: "7 Nov 15:08",
+  photo: `/demo/${GENUINE.photos[0]}`,
   /** The photo is 2:3 portrait; the camera frame is 4:3, cropped here (as the claim flow's camera does). */
   objectPosition: "50% 75%",
   recall: "CPSC 27-071",
@@ -74,25 +77,16 @@ export const WRITE_FOR = 0.3;
 /** Then what the photo must show lights in turn, leading into 03. */
 export const SHOT_AT = [0.432, 0.444, 0.456];
 
-// The console replica after the payout: the M4T claim slides in over the recall's newest claims, exactly the rows the
-// homepage's console tour opens on, newest first (components/console/preview.ts, the seed's claims: src/lib/demo/seed.ts,
-// seed 27071), the two still waiting for photos left out: the same ids, photos, verdicts, reasons, filing times and
-// photo-check times, so a claim reads the same in both pictures (a test checks it). Rows past the panel's foot are cut
-// by it, as a list is: a tall screen (1920x1080) shows more of the queue, never an empty well.
+// The console replica after the payout: RM-0442 slides in over the recall's other claims, exactly the rows the homepage's
+// console tour and the console list (src/lib/demo/claims.ts, built by the seed), newest first: the same ids, photos,
+// verdicts, reasons, filing times, photo-check times and amounts, so a claim reads the same in every picture
+// (claims.test.ts checks it). Paid only where PayPal paid; Approved is a claim the rule passed with nothing sent.
 // `fails`: which of the five checks (0 to 4) stopped a rejected or blocked claim. `filed`: day and time, UTC.
-export const CONSOLE_ROWS: { photo: string; filed: string; id: string; status: Status; reason: string; time?: string; amount?: number; fails?: number }[] = [
-  { photo: "/demo/c03-1.jpg", filed: "8 Nov 08:58", id: "RM-0553", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
-  { photo: "/demo/c03-1.jpg", filed: "8 Nov 05:59", id: "RM-9629", status: "held", reason: "Couldn’t tell if both photos show the same item", time: "12 s" },
-  { photo: "/demo/c10-1.jpg", filed: "8 Nov 05:04", id: "RM-9545", status: "rejected", reason: "Photo of a screen or a print", time: "19 s", fails: 4 },
-  { photo: "/demo/c01-1.jpg", filed: "8 Nov 04:58", id: "RM-7581", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
-  { photo: "/demo/c03-1.jpg", filed: "8 Nov 03:18", id: "RM-9475", status: "blocked", reason: "PayPal account not verified", fails: 2 },
-  { photo: "/demo/c05-1.jpg", filed: "8 Nov 02:40", id: "RM-6276", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
-  { photo: "/demo/c03-1.jpg", filed: "7 Nov 23:32", id: "RM-2125", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
-  { photo: "/demo/c01-1.jpg", filed: "7 Nov 23:28", id: "RM-8501", status: "paid", reason: "Every check passed", time: "15 s", amount: 29.99 },
-  { photo: "/demo/c05-1.jpg", filed: "7 Nov 19:09", id: "RM-8466", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
-  { photo: "/demo/c03-1.jpg", filed: "7 Nov 17:16", id: "RM-8121", status: "paid", reason: "Every check passed", time: "13 s", amount: 29.99 },
-  { photo: "/demo/c09-1.jpg", filed: "7 Nov 16:47", id: "RM-0118", status: "rejected", reason: "Code missing or wrong · reads K7O, expected K7Q", time: "12 s", fails: 3 },
-  { photo: "/demo/c01-1.jpg", filed: "7 Nov 14:47", id: "RM-6827", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
-  { photo: "/demo/c05-1.jpg", filed: "7 Nov 12:38", id: "RM-0017", status: "paid", reason: "Every check passed", time: "14 s", amount: 29.99 },
-  { photo: "/demo/c03-1.jpg", filed: "7 Nov 10:21", id: "RM-0375", status: "paid", reason: "Every check passed", time: "11 s", amount: 29.99 },
+export const CONSOLE_ROWS: { photo: string; filed: string; id: string; status: Verdict; reason: string; time?: string; amount?: number; fails?: number }[] = [
+  { photo: "/demo/c09-1.jpg", filed: "7 Nov 10:26", id: "RM-9475", status: "blocked", reason: "PayPal account not verified", fails: 2 },
+  { photo: "/demo/c05-1.jpg", filed: "6 Nov 22:51", id: "RM-2125", status: "blocked", reason: "Photo already used in another claim · RM-6276", fails: 1 },
+  { photo: "/demo/c11-1.jpg", filed: "6 Nov 17:39", id: "RM-0118", status: "rejected", reason: "Code missing or wrong · reads K7Q, expected K7P", time: "10 s", fails: 3 },
+  { photo: "/demo/c03-1.jpg", filed: "6 Nov 13:05", id: "RM-9629", status: "held", reason: "Couldn’t tell if both photos show the same item", time: "12 s", amount: 29.99 },
+  { photo: "/demo/c05-1.jpg", filed: "6 Nov 08:17", id: "RM-6276", status: "approved", reason: "All checks passed", time: "11 s", amount: 29.99 },
+  { photo: "/demo/web-1.jpg", filed: "5 Nov 19:42", id: "RM-9545", status: "blocked", reason: "Photos outside the live camera session", fails: 0 },
 ];

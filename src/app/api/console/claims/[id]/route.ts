@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/console/
     const store = await getAppStore();
     const recall = claim ? await store.getRecall(claim.recallId) : null;
     // A starter claim comes as this company decided it (starter.ts), as loadClaimFor gives it.
-    found = claim && recall && canSee(recall, session) && canSeeClaim(recall, session)(claim) ? { store, claim: decideStarter(claim, session.decided[claim.id], recall), recall } : null;
+    found = claim && recall && canSee(recall, session) && canSeeClaim(recall, session)(claim) ? { store, claim: decideStarter(claim, session.decided[claim.id]), recall } : null;
   } else {
     found = await loadClaimFor(session, id.data, { fresh: true });
   }
