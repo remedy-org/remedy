@@ -10,6 +10,8 @@ Spacious marketing, comfortable owner flow, dense company workspace; short state
 
 Remedy keeps its animated product story: laptop, screen dolly, live-camera sequence, five checks, receipt and company console. Visual changes must improve this explanation rather than replace it.
 
+Desktop hero copy stays left aligned with the laptop on the right. The checks matrix follows scroll position; arriving or pausing must not automatically finish its claim paths.
+
 ## Tokens
 
 `src/app/globals.css` owns colors and sizing. Keep semantic token names; do not hard-code old warm values in components.

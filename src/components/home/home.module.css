@@ -1,7 +1,6 @@
 /*
- * The homepage's own moves (DESIGN.md, Motion): focus-in and ink. Everything rests in its final state: a
- * section is only "armed" (hidden, waiting) when JS runs, motion is allowed and it starts below the fold (see
- * useEnter in Reveal.tsx), so no-JS visitors, reduced motion and full-page screenshots all see the finished page.
+ * Homepage entry moves: focus-in and ink. Base CSS shows the complete readable fallback. Reveal.tsx arms text
+ * entrances; Pipeline.tsx paints reversible scroll progress with transforms and opacity.
  */
 
 @media (prefers-reduced-motion: no-preference) {
@@ -52,29 +51,7 @@
       scale 240ms var(--ease-out-quart) var(--draw-at, 0ms);
   }
 
-  /* 3. Ink, Fraud checks: each claim's line draws down its lane, row by row at one steady pace, to the check that
-     stops it, and its outcome prints as the line arrives. Pipeline.tsx arms each lane on its own (data-go on every
-     cell of the lane; --go-at staggers lanes that come into view together; --ink under 1 quickens a lane played on a
-     glide, so it has finished when the glide lands). */
-  .lane[data-go="armed"] .trail {
-    scale: 1 0;
-  }
 
-  .lane[data-go="play"] .trail {
-    transition: scale calc(var(--trail-for, 120ms) * var(--ink, 1)) linear calc(var(--go-at, 0ms) + var(--trail-at, 0ms) * var(--ink, 1));
-  }
-
-  .lane[data-go="armed"] .outcome {
-    opacity: 0;
-    translate: 0 4px;
-  }
-
-  .lane[data-go="play"] .outcome {
-    transition:
-      opacity calc(360ms * var(--ink, 1)) var(--ease-out-quart),
-      translate calc(360ms * var(--ink, 1)) var(--ease-out-quart);
-    transition-delay: calc(var(--go-at, 0ms) + var(--outcome-at, 600ms) * var(--ink, 1));
-  }
 }
 
 .draw {

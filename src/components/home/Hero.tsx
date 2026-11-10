@@ -8,7 +8,7 @@ import styles from "./custody/custody.module.css";
 
 const line = (n: number) => ({ "--line": n }) as CSSProperties;
 
-/** The introduction and the device share a centered axis; the first scroll moves into the laptop glass.
+/** Desktop copy on the left and the physical laptop on the right; the first scroll moves into its glass.
  * Server-rendered copy remains the first paint, with the illustrative sandbox scope beside the actions. */
 export function Hero() {
   const copy = (

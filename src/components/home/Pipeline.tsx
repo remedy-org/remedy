@@ -2,13 +2,14 @@
 
 import clsx from "clsx";
 import Image from "next/image";
-import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { refusalLine } from "@/app/console/_lib/view";
 import { Money } from "@/components/ui";
 import { GENUINE } from "@/lib/demo/claims";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
 import styles from "./home.module.css";
-import { landingUnderWay } from "./scroll/landing";
+import { claimAt, clamp01, trailAt } from "./pipeline-motion";
+import { readPage, STOPS } from "./scroll/stops";
 
 // The checks in the order they run (src/lib/rule.ts): preCheck's three need no model; then the model describes and a
 // fixed rule decides.
@@ -86,128 +87,137 @@ function Outcome({ sample, named }: { sample: Sample; named?: boolean }) {
   );
 }
 
-// Ink timing (DESIGN.md, move 3): a lane's line draws down from its photo once the check that stops it is in view, at
-// least 180ms after the lane before, over DRAW_FOR in all; its outcome prints as the line arrives.
-const LANE_GAP = 180;
-const DRAW_FOR = 900;
-/**
- * On a glide onto Fraud checks (a swipe, a fling or Page Down whose landing, landing.ts, rests with the matrix framed),
- * every lane still waiting plays at once as the matrix comes into view, FAST_GAP apart and at FAST_INK of its pace, so
- * the ink is finished by the time the glide lands, never still drawing after it. The calm glide's peak is under
- * 1 px/ms, as slow as a wheel notch's ease, so its speed can't say it; only a page moving faster than GLIDE px/ms with
- * the matrix in view (a native fling, where nothing glides) plays the same way.
- */
-const GLIDE = 1.2;
-const FAST_GAP = 50;
-const FAST_INK = 0.4;
-const vars = (v: Record<string, string | number>) => v as CSSProperties;
-
-// On the page grid: the checks in columns 1 to 5, the four claims' lanes in 6 to 12, so each lane has room for its
-// outcome in two short lines. A lane's line runs under the centre of its 48px photo (24px in); its outcome prints
-// under the line's end, on the photo's left edge.
+// On the page grid: the checks in columns 1 to 5, the four claims in 6 to 12.
 const GATE = "col-span-5";
 const LANES = "col-span-7 grid grid-cols-4 gap-x-4 xl:gap-x-[var(--col-gap)]";
 const LINE = "absolute left-6 w-px bg-line-strong";
 
-/**
- * Arms each lane separately: a lane's line draws only once the check that stops it is in view (its top above 70% of the
- * viewport), so the reader sees every claim stop, the wrong code at the fourth check and the payout at the foot. Once
- * the page comes to rest with the matrix framed (its top above the middle of the screen, as the section's scroll stop
- * leaves it at any size), every lane still waiting plays, in order: a tall screen's stop keeps the last checks under
- * the 70% line, and a frame never settles with lanes idle.
- * Nothing is armed without JS, under reduced motion, or when the matrix is already on screen at load.
- */
-function useLanes<T extends HTMLElement>(ref: RefObject<T | null>) {
+/** The existing section and rule scroll stops are the start/end of the matrix's move. There is no autoplay or
+ * catch-up timer: claim photos, ink and outcomes follow the reader in either direction, including a direct anchor. */
+function useLanes<T extends HTMLElement>(ref: RefObject<T | null>, matrix = false) {
   useEffect(() => {
     const root = ref.current;
-    if (!root || !root.offsetWidth || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    if (root.getBoundingClientRect().top < window.innerHeight * 0.9) return;
-    const cells = (lane: string) => root.querySelectorAll<HTMLElement>(`[data-lane="${lane}"]`);
-    root.querySelectorAll<HTMLElement>("[data-lane]").forEach((el) => (el.dataset.go = "armed"));
-    let next = 0;
-    const play = (stop: HTMLElement, fast = false) => {
-      io.unobserve(stop);
-      const lane = stop.dataset.stop!;
-      if (cells(lane)[0]?.dataset.go === "play") return;
-      // Lanes that come into view together still draw one after another.
-      const now = performance.now();
-      next = Math.max(now, next + (fast ? FAST_GAP : LANE_GAP));
-      cells(lane).forEach((el) => {
-        el.style.setProperty("--go-at", `${Math.round(next - now)}ms`);
-        if (fast) el.style.setProperty("--ink", String(FAST_INK));
-        el.dataset.go = "play";
-      });
+    if (!root) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const heads = [...root.querySelectorAll<HTMLElement>("[data-lane-head]")];
+    const outcomes = [...root.querySelectorAll<HTMLElement>("[data-outcome]")];
+    const trails = [...root.querySelectorAll<HTMLElement>("[data-trail]")];
+    let frame = 0;
+    let lastProgress = -1;
+    let range: [number, number] | null = null;
+    let lanes: { head: HTMLElement; origin: number; stop: number; trails: { el: HTMLElement; top: number; height: number }[]; outcomes: HTMLElement[] }[] = [];
+    const clear = () => {
+      delete root.dataset.progress;
+      lastProgress = -1;
+      heads.forEach((el) => el.style.removeProperty("transform"));
+      trails.forEach((el) => el.style.removeProperty("transform"));
+      outcomes.forEach((el) => el.style.removeProperty("opacity"));
     };
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) if (e.isIntersecting) play(e.target as HTMLElement);
-      },
-      { rootMargin: "0px 0px -30% 0px" },
-    );
-    const stops = [...root.querySelectorAll<HTMLElement>("[data-stop]")];
-    stops.forEach((el) => io.observe(el));
-    // At rest with the matrix framed: the lanes still waiting play, in their order.
-    let rest = 0;
-    const settle = () => {
-      const r = root.getBoundingClientRect();
-      if (r.top < window.innerHeight / 2 && r.bottom > window.innerHeight / 2) stops.forEach((s) => play(s));
+    const paint = () => {
+      frame = 0;
+      if (!root.offsetWidth || reduced.matches) return;
+      if (!matrix) {
+        // A narrow screen keeps each claim beside its check; reveal its result only as that row is read.
+        root.querySelectorAll<HTMLElement>("[data-stop]").forEach((cell) => {
+          const amount = clamp01((innerHeight * 0.82 - cell.getBoundingClientRect().top) / 64);
+          cell.querySelectorAll<HTMLElement>("[data-outcome]").forEach((el) => (el.style.opacity = amount.toFixed(3)));
+        });
+        return;
+      }
+      if (!range || !lanes.length) return;
+      const progress = clamp01((scrollY - range[0]) / (range[1] - range[0]));
+      if (progress === lastProgress) return;
+      lastProgress = progress;
+      root.dataset.progress = progress.toFixed(4);
+      const last = Math.max(...lanes.map((lane) => lane.stop));
+      for (const lane of lanes) {
+        const state = claimAt(progress, lane.origin, lane.stop, last);
+        lane.head.style.transform = `translateY(${state.travel.toFixed(2)}px)`;
+        lane.trails.forEach(({ el, top, height }) => (el.style.transform = `scaleY(${trailAt(state.tip, top, height).toFixed(4)})`));
+        lane.outcomes.forEach((el) => (el.style.opacity = state.outcome.toFixed(3)));
+      }
     };
-    // A glide onto the matrix: the lanes still waiting play now, fast, so they have finished when it lands.
-    const framedAt = (y: number, r: DOMRect) => {
-      const top = r.top + window.scrollY - y;
-      return top < window.innerHeight / 2 && top + r.height > window.innerHeight / 2;
+    const request = () => {
+      if (!frame) frame = requestAnimationFrame(paint);
     };
-    let last = { y: window.scrollY, t: performance.now() };
-    const onScroll = () => {
-      window.clearTimeout(rest);
-      rest = window.setTimeout(settle, 160);
-      const now = { y: window.scrollY, t: performance.now() };
-      const speed = Math.abs(now.y - last.y) / Math.max(1, now.t - last.t);
-      last = now;
-      const r = root.getBoundingClientRect();
-      if (r.top >= window.innerHeight || r.bottom <= 0) return;
-      const glide = landingUnderWay();
-      if (speed > GLIDE || (glide && framedAt(glide.to, r))) stops.forEach((s) => play(s, true));
+    const measure = () => {
+      if (!root.offsetWidth || reduced.matches) {
+        range = null;
+        clear();
+        return;
+      }
+      if (matrix) {
+        lastProgress = -1;
+        const page = readPage();
+        const first = STOPS.find((stop) => stop.name === "Fraud checks")?.at(page);
+        const final = STOPS.find((stop) => stop.name === "Fraud checks, the rule")?.at(page);
+        if (typeof first !== "number") return;
+        // On a screen tall enough to show the whole matrix, the next natural scroll still advances the claims.
+        range = [first, typeof final === "number" && final > first + 1 ? final : first + Math.min(480, innerHeight * 0.35)];
+        lanes = heads.flatMap((head) => {
+          const lane = head.dataset.laneHead!;
+          const origin = head.parentElement!;
+          const stop = root.querySelector<HTMLElement>(`[data-stop="${lane}"]`);
+          if (!stop) return [];
+          return [{
+            head,
+            origin: origin.getBoundingClientRect().bottom + scrollY,
+            stop: stop.getBoundingClientRect().top + scrollY + 28,
+            trails: trails.filter((el) => el.dataset.trail === lane).map((el) => ({ el, top: el.getBoundingClientRect().top + scrollY, height: el.offsetHeight })),
+            outcomes: [...stop.querySelectorAll<HTMLElement>("[data-outcome]")],
+          }];
+        });
+      }
+      paint();
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    const main = root.closest("main");
+    if (main) ro.observe(main);
+    window.addEventListener("scroll", request, { passive: true });
+    window.addEventListener("resize", measure);
+    reduced.addEventListener("change", measure);
+    document.fonts?.ready.then(measure);
+    measure();
     return () => {
-      window.clearTimeout(rest);
-      window.removeEventListener("scroll", onScroll);
-      io.disconnect();
-      // Disarm, so a second run (React's StrictMode in dev, or a remount) starts from the resting state.
-      root.querySelectorAll<HTMLElement>("[data-lane]").forEach((el) => {
-        delete el.dataset.go;
-        el.style.removeProperty("--go-at");
-        el.style.removeProperty("--ink");
-      });
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+      window.removeEventListener("scroll", request);
+      window.removeEventListener("resize", measure);
+      reduced.removeEventListener("change", measure);
+      clear();
     };
-  }, [ref]);
+  }, [ref, matrix]);
 }
 
 /**
  * Fraud checks on laptops: the five checks as rows on hairlines, each marked No AI or Photo check, and the four claims
  * from /try as lanes beside them, each headed by its photo. A lane's line runs down through every check its claim
  * passes and ends at the one that stops it, with the outcome said once; the genuine claim runs on to the rule and is
- * paid. Every resting state is in the markup; the lines only draw in when motion is allowed.
+ * paid. No-JS and reduced motion keep the full diagram; ordinary motion scrubs from one existing scroll frame to the next.
  */
 export function Pipeline() {
   const ref = useRef<HTMLDivElement>(null);
-  useLanes(ref);
+  useLanes(ref, true);
   const rows = [...GATES, null];
 
   return (
-    <div ref={ref} className="relative hidden lg:block">
+    <div ref={ref} data-pipeline className="relative hidden lg:block">
       {/* Each lane's head: the claim's name, its photo, and the line's first stretch down to the first check. */}
       <div className="grid-12 items-end" data-lanes-top>
         <p className={clsx(GATE, "max-w-[44ch] pb-6 text-ui text-muted")}>Four prepared claims. Follow each one to the check that stops it.</p>
         <ul className={LANES} aria-label="The four claims">
-          {SAMPLES.map((s) => (
+          {SAMPLES.map((s, lane) => (
             <li key={s.name} className="relative flex flex-col items-start justify-end pb-6">
               {/* On one top line: each on one line where its column has room (1280px up); narrower, each in a box two
                   lines tall, balanced, its first line on the same top as the others'. */}
               <span className="mb-3 block min-h-[2lh] w-full text-ui text-balance text-text-2 xl:min-h-0 xl:whitespace-nowrap">{s.name}</span>
-              <Image src={s.photo} alt="" width={48} height={48} className="size-12 rounded-control object-cover shadow-ring" />
-              <span aria-hidden="true" className={clsx(LINE, "bottom-0 h-6")} />
+              <span data-lane-origin className="relative block size-12">
+                <span data-lane-head={lane} className="absolute inset-0 z-10 block">
+                  <Image src={s.photo} alt="" width={48} height={48} className="size-12 rounded-control object-cover shadow-ring" />
+                </span>
+              </span>
+              <span data-trail={lane} aria-hidden="true" className={clsx(styles.trail, LINE, "bottom-0 h-18")} />
             </li>
           ))}
         </ul>
@@ -239,24 +249,19 @@ export function Pipeline() {
                   return (
                     <div
                       key={s.name}
-                      className={clsx(styles.lane, "relative")}
+                      className="relative"
                       data-lane={lane}
                       data-stop={stopsHere ? lane : undefined}
-                      style={vars({
-                        "--trail-at": `${Math.round((row / (s.stop + 1)) * DRAW_FOR)}ms`,
-                        "--trail-for": `${Math.round(DRAW_FOR / (s.stop + 1))}ms`,
-                        "--outcome-at": `${DRAW_FOR}ms`,
-                      })}
                     >
                       {/* Through: the line crosses the whole row. Stopped: it ends on a short bar across it, level with
                           the top of the check's name, and the outcome prints under the bar on the lane's left edge, the
                           photo's. */}
-                      {through && <span aria-hidden="true" className={clsx(styles.trail, LINE, "inset-y-0")} />}
+                      {through && <span data-trail={lane} aria-hidden="true" className={clsx(styles.trail, LINE, "inset-y-0")} />}
                       {stopsHere && (
                         <>
-                          <span aria-hidden="true" className={clsx(styles.trail, LINE, "top-0 h-7")} />
-                          <span aria-hidden="true" className={clsx(styles.outcome, "absolute top-7 left-[1.125rem] h-px w-3.5", s.paid ? "bg-pay" : "bg-stop")} />
-                          <p className={clsx(styles.outcome, "pt-9 pr-1 pb-5 text-ui text-pretty")}>
+                          <span data-trail={lane} aria-hidden="true" className={clsx(styles.trail, LINE, "top-0 h-7")} />
+                          <span data-outcome aria-hidden="true" className={clsx("absolute top-7 left-[1.125rem] z-20 h-px w-3.5", s.paid ? "bg-pay" : "bg-stop")} />
+                          <p data-outcome className="pt-9 pr-1 pb-5 text-ui text-pretty">
                             <Outcome sample={s} named />
                           </p>
                         </>
@@ -283,11 +288,11 @@ export function PipelineList() {
       // Flat on the page, on hairlines (DESIGN.md: no boxes on the page): each claim a row under the check's text.
       <ul className="mt-4 flex flex-col">
         {stoppedAt(row).map((s) => (
-          <li key={s.name} data-lane={SAMPLES.indexOf(s)} data-stop={SAMPLES.indexOf(s)} className={clsx(styles.lane, "grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 border-t border-line py-3 text-ui last:pb-0")}>
+          <li key={s.name} data-lane={SAMPLES.indexOf(s)} data-stop={SAMPLES.indexOf(s)} className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-x-3 border-t border-line py-3 text-ui last:pb-0">
             <Image src={s.photo} alt="" width={40} height={40} className="size-10 rounded-control object-cover" />
             <span className="min-w-0">
               <span className="block text-text-2">{s.name}</span>
-              <span className={clsx(styles.outcome, "mt-1 block")}>
+              <span data-outcome className="mt-1 block">
                 <Outcome sample={s} />
               </span>
             </span>

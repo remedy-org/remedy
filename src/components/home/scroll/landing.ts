@@ -94,17 +94,8 @@ const CALM_SLOW = 0.3;
  * shortens it, but never under that floor.
  */
 export function calmLanding(from: number, to: number, screen: number, slow: readonly Slow[] = [], cap = Infinity, minimum = CALM_MIN) {
-  const landing = plan(from, to, screen, slow, cap, minimum);
-  underWay = { to, until: performance.now() + landing.duration * 1000 };
-  return landing;
+  return plan(from, to, screen, slow, cap, minimum);
 }
-
-/** The landing under way, for the page to read: its stop (scrollY) and when it lands (performance.now()). Recorded as
- * gate.ts and keys.ts plan each glide (calmLanding), and read only by Pipeline.tsx, which inks Fraud checks as a glide
- * heads for it (the curve's peak is under the speed that once said so); nothing in the glide reads it back. */
-let underWay: { to: number; until: number } | null = null;
-export const landingUnderWay = (): Readonly<{ to: number; until: number }> | null =>
-  underWay && performance.now() < underWay.until ? underWay : null;
 
 function plan(from: number, to: number, screen: number, slow: readonly Slow[], cap: number, minimum: number) {
   const px = Math.abs(to - from);
