@@ -6,6 +6,7 @@ import { AlertIcon, ArrowLeftIcon, Button } from "@/components/ui";
 import styles from "./flow.module.css";
 import { rememberAspect } from "./ClaimPhotos";
 import { CodeTag } from "./CodeTag";
+import { checkDemoPhotoReceipt, DEMO_SEND_WAIT_MS } from "./demoPhotoRequest";
 import { MonoWords } from "./CheckList";
 import { firstShown, focusInView } from "./FocusTitle";
 import { InfoIcon } from "./icons";
@@ -92,7 +93,19 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const [attempt, setAttempt] = useState(0);
   const [shots, setShots] = useState<Shot[]>(() => (preview?.shots ?? []).map((url) => ({ url, blob: null })));
   const [sending, setSending] = useState(preview?.sending ?? false);
+  const [receipt, setReceipt] = useState<"slow" | "uncertain" | null>(null);
+  const [checkingReceipt, setCheckingReceipt] = useState(false);
   const [sendError, setSendError] = useState<{ status: number; message: string } | null>(preview?.sendError ? { status: 500, message: preview.sendError } : null);
+  const sendLocked = useRef(Boolean(preview?.sending));
+  const sendFinished = useRef(false);
+  const sendAttempt = useRef(0);
+  const receiptChecking = useRef(false);
+  const sendWait = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; clearTimeout(sendWait.current); };
+  }, []);
   const [flash, setFlash] = useState(false);
   const [phoneOpen, setPhoneOpen] = useState(preview?.showPhone ?? false);
   const [help, setHelp] = useState(false);
@@ -110,7 +123,8 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const coarse = useSyncExternalStore(subscribeCoarse, () => window.matchMedia("(pointer: coarse)").matches, () => false);
   const platform = useSyncExternalStore(noop, platformOf, () => "other" as const);
   const left = useCountdown(expiresAt, startNow, Boolean(preview));
-  const expired = left <= 0;
+  // An in-flight send may already be accepted: confirm its receipt before offering a new code.
+  const expired = left <= 0 && !sending;
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -273,15 +287,53 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     } else onBack();
   };
 
+  function received(view: ClaimView | null, localPhotos = false) {
+    if (!mounted.current || sendFinished.current) return;
+    sendFinished.current = true;
+    clearTimeout(sendWait.current);
+    stop();
+    sentAll();
+    // A receipt or 409 may concern another device's photo. Only this POST's success proves these local shots arrived.
+    if (!localPhotos) return onSent(view);
+    shots.forEach((s, i) => s.w && s.h && rememberAspect(claimId, i + 1, s.w, s.h));
+    // Fresh URLs for checking: this step frees its own thumbnails when it goes away.
+    onSent(view, shots.flatMap((s) => s.blob ? [URL.createObjectURL(s.blob)] : []));
+  }
+
+  async function checkReceipt() {
+    if (receiptChecking.current || sendFinished.current) return;
+    const attempt = sendAttempt.current;
+    receiptChecking.current = true;
+    setCheckingReceipt(true);
+    const result = await checkDemoPhotoReceipt(claimId);
+    receiptChecking.current = false;
+    if (!mounted.current || sendFinished.current) return;
+    setCheckingReceipt(false);
+    if (result.kind === "received") return received(null);
+    // A late POST rejection or a newer send takes precedence over this older status read.
+    if (!sendLocked.current || attempt !== sendAttempt.current) return;
+    clearTimeout(sendWait.current);
+    setReceipt("uncertain");
+    setSendError({ status: 0, message: result.message });
+  }
+
   async function send() {
     const blobs = shots.map((s) => s.blob).filter((b): b is Blob => b !== null);
-    if (!blobs.length || sending) return;
+    if (!blobs.length || sendLocked.current || sendFinished.current) return;
     if (blobs.reduce((n, b) => n + b.size, 0) > MAX_BYTES) {
       setSendError({ status: 413, message: blobs.length === 1 ? "This photo is too large to send. Retake it and try again." : "These photos are too large to send together. Remove one and try again." });
       return;
     }
+    sendLocked.current = true;
+    sendAttempt.current++;
     setSending(true);
+    setReceipt(null);
     setSendError(null);
+    sendWait.current = setTimeout(() => {
+      if (!mounted.current || sendFinished.current) return;
+      setReceipt("slow");
+      setSendError({ status: 0, message: "The send may still be running. Your photos stay with this claim; check whether they arrived." });
+    }, DEMO_SEND_WAIT_MS);
     // One photo is said as one, in the error as in the button.
     const one = shots.length === 1;
     const form = new FormData();
@@ -289,28 +341,32 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
     blobs.forEach((b, i) => form.append("photo", b, `photo-${i + 1}.jpg`));
     try {
       const res = await fetch(`/api/claims/${claimId}/photos`, { method: "POST", body: form });
+      if (!mounted.current || sendFinished.current) return;
+      if (res.status === 409) return received(null);
       const body = await res.json().catch(() => null);
-      if (res.status === 409) {
-        stop();
-        sentAll();
-        return onSent(null);
-      }
+      if (!mounted.current || sendFinished.current) return;
+      clearTimeout(sendWait.current);
       if (!res.ok) {
-        setSendError({ status: res.status, message: body?.error ?? (one ? "The photo didn’t send. Try again." : "The photos didn’t send. Try again.") });
-        setSending(false);
+        if ([400, 401, 404, 413].includes(res.status)) {
+          sendLocked.current = false;
+          setReceipt(null);
+          setSendError({ status: res.status, message: body?.error ?? (one ? "The photo wasn’t accepted. Try again." : "The photos weren’t accepted. Try again.") });
+          setSending(false);
+        } else {
+          setReceipt("uncertain");
+          setSendError({ status: res.status, message: "The reply was lost. Your photos may already have arrived. Check this claim before sending again." });
+        }
         return;
       }
-      stop();
-      sentAll();
-      shots.forEach((s, i) => s.w && s.h && rememberAspect(claimId, i + 1, s.w, s.h));
-      // Fresh URLs for the checking screen: this step frees its own thumbnails' URLs when it goes away.
-      onSent(body as ClaimView, blobs.map((b) => URL.createObjectURL(b)));
+      received(body as ClaimView | null, true);
     } catch {
+      if (!mounted.current || sendFinished.current) return;
+      clearTimeout(sendWait.current);
+      setReceipt("uncertain");
       setSendError({
         status: 0,
-        message: one ? "No connection. Your photo is still here: send it again when you’re back online." : "No connection. Your photos are still here: send them again when you’re back online.",
+        message: "The reply was lost. Your photos may already have arrived. Check this claim before sending again.",
       });
-      setSending(false);
     }
   }
 
@@ -323,7 +379,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
   const timerLabel = `${mmss(left)} left to take the photo`;
   // Said before the first shot, not behind (i): one photo is enough, so nobody thinks the three slots must be filled.
   const helpText = n === 0 ? `One photo of the ${framing.thing} and the ${framing.product} is enough.` : "Open a photo to check it or retake it.";
-  const errorTitle = sendError?.status === 401 ? "Your PayPal login has expired" : n === 1 ? "The photo didn’t send" : "The photos didn’t send";
+  const errorTitle = receipt === "slow" ? "Still waiting for a reply" : receipt === "uncertain" ? "Receipt not confirmed" : sendError?.status === 401 ? "Your PayPal login has expired" : n === 1 ? "The photo didn’t send" : "The photos didn’t send";
   const errorText = sendError?.status === 401 ? (n === 1 ? "Log in again to send it. You’ll need to retake it afterwards." : "Log in again to send them. You’ll need to retake them afterwards.") : sendError?.message;
   const shown = viewing !== null ? shots[viewing] : undefined;
   const said = sending
@@ -465,11 +521,16 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
             </h1>
             {/* A failed send says so here, on the first screen, where the Send button is. */}
             {sendError && (
-              <div role="alert" className="flex items-start gap-2.5 text-left">
-                <AlertIcon className="mt-0.5 shrink-0 text-stop" />
+              <div role={receipt ? "status" : "alert"} className="flex items-start gap-2.5 text-left">
+                <AlertIcon className={clsx("mt-0.5 shrink-0", receipt ? "text-muted" : "text-stop")} />
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <p className="text-ui font-medium text-[oklch(0.96_0.006_85)]">{errorTitle}</p>
                   <p className="text-ui text-pretty text-[oklch(0.74_0.005_80)]">{errorText}</p>
+                  {receipt && (
+                    <Button variant="secondary" size="sm" className="mt-2 self-start" onClick={checkReceipt} aria-disabled={checkingReceipt || undefined} aria-busy={checkingReceipt || undefined}>
+                      {checkingReceipt ? "Checking this claim…" : "Check this claim"}
+                    </Button>
+                  )}
                   {sendError.status === 401 && (
                     <Button href={loginHref} variant="secondary" size="sm" className="mt-2 self-start">
                       Log in with PayPal
@@ -640,7 +701,7 @@ export function CaptureStep({ claimId, sessionId, code, expiresAt, startNow, qrS
                 Leave the camera?
               </p>
               <p id="leave-text" className="text-ui text-pretty text-[oklch(0.74_0.005_80)]">
-                {n === 1 ? "Your photo isn’t sent yet and will be lost." : `Your ${n} photos aren’t sent yet and will be lost.`}
+                {sending ? "The send may still be running. Keep this claim open to confirm your photos arrived." : n === 1 ? "Your photo isn’t sent yet and will be lost." : `Your ${n} photos aren’t sent yet and will be lost.`}
               </p>
             </div>
             <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
