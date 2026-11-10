@@ -25,11 +25,6 @@ describe("For companies, as rendered", () => {
   // The laptop tour and the phone story are both in the markup; a visitor reads one of them.
   const [tour, story] = html.split("data-story").map(visibleWords);
 
-  it("speaks as the product: no sample, sandbox, test or demo labels anywhere in the section", () => {
-    expect(words.length).toBeGreaterThan(2000);
-    expect(words).not.toMatch(/\b(samples?|sandbox|test|demo|never sent|no money moved|AI-made|exhibit)\b/i);
-  });
-
   it("says that no money moves at most once in each layout", () => {
     for (const layout of [tour, story]) expect(layout.match(/money mov/gi)?.length ?? 0).toBeLessThanOrEqual(1);
   });

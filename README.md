@@ -208,29 +208,31 @@ There is no separate backend and no database. Claims are JSON in a private Verce
 
 I tested the vision check before building on it, and again on the shipping check on 9 Nov. Every number here comes from [docs/EVAL.md](docs/EVAL.md), apart from the 9 Nov re-run line, which comes from that run's own report.
 
+**Scope.** These runs test photo interpretation and the fixed rule; they do not execute PayPal payouts. The code-bearing eligible and held-out images are prepared AI-made photos, not real owner submissions. The separate historical PayPal sandbox spike is documented in [EVAL.md](docs/EVAL.md#spike-1-the-paypal-money-chain).
+
 **Method.** I used 36 claims:
 
-- 17 claims made of web photos: real owner photos, official examples, CPSC shots, and traps such as a screenshot or a photo of a monitor. None can carry this claim's code, so none may ever pay (one control turns the code check off).
+- 17 claims made of web photos: real owner photos, official examples, CPSC shots, and traps such as a screenshot or a photo of a monitor. None can carry this claim's code, so none should pass the rule (one control turns the code check off).
 - 14 claims made of AI images carrying a code: genuine claims, wrong codes, a photo of a screen, and one AI image with a physical flaw (`c14`).
 - 5 held-out claims, written after the round-1 fixes.
 
 Each model ran 3 times at high effort. Every answer (label, each step, code, screen) was scored against an answer key, not just the decision. These results came from the first runner, a plain-JS copy of the app's check with the same prompt, schema and rule, which resized with macOS `sips`. The runner now calls the app's own `runVisionCheck` and `decide`, and the 9 Nov shipping-check re-run below used it. The table is round 2 (31 claims), 3 runs per model:
 
-| Model | Genuine claims paid | Fakes paid | Seconds a claim | Cost a claim |
+| Model | Eligible cases passed | Ineligible cases passed | Seconds a photo check | Model cost a photo check |
 |---|---|---|---|---|
 | **GPT-6.1 Sol** (in production) | 21 of 21 | 3, all `c14` | 16 | $0.011 |
 | GPT-6 Astra | 21 of 21 | 1, `c14` | 26 | $0.064 |
 | GPT-6.1 Terra | 18 of 21 | 2, `c14` | 10 | $0.005 |
 | GPT-6 Luna | 16 of 21 | 3, `c14`, plus 2 held-out (`h03`) | 10 | $0.0006 |
 
-GPT-6.1 Sol in full, round 2 then the 5 held-out claims: decisions right 29–30 of 31 and 5 of 5; genuine claims paid 21 of 21 and 6 of 6; fakes paid 3 (all `c14`) and 0; answers right 91% and 96%; 16 seconds a claim, 40 at most.
+GPT-6.1 Sol in full, round 2 then the 5 held-out claims: decisions right 29–30 of 31 and 5 of 5; eligible cases passed 21 of 21 and 6 of 6; ineligible cases passed 3 (all `c14`) and 0; answers right 91% and 96%; 16 seconds a claim, 40 at most.
 
 Across both sets, for GPT-6.1 Sol:
 
-- **0 of 16 web photos paid**, across 48 tries.
-- **9 of 9 genuine claims paid**, in all 27 tries.
+- **0 of 16 web photos passed the rule**, across 48 tries.
+- **9 of 9 prepared eligible cases passed the rule**, in all 27 tries.
 - **4 of 4 wrong codes refused**, in all 12 tries.
-- **1.1 cents** to check a claim.
+- **1.1 cents** in model cost per photo check.
 
 All four models rejected every wrong code and, with the code check on, every web photo, in every run. Sol at medium effort matched high effort on the 17 web claims, at 8 seconds a claim.
 

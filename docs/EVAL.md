@@ -32,9 +32,11 @@ If PayPal also rejects `127.0.0.1`, run `ngrok http 8787`. Use the `https://…n
 
 ## Spike 2: the camera check
 
+**Scope:** this is a vision-model and rule benchmark. No PayPal payouts were executed in these runs. Code-on and held-out inputs are prepared AI-made photos, not actual owner claims; passing a case means the rule returned `pass`. The separate PayPal execution evidence is in Spike 1 above.
+
 **Result, 7 Nov: GO with GPT-6.1 Sol at high effort.**
-- Across 36 claims, 3 runs each, it paid every real claim and rejected every wrong code, wrong label and wrong model.
-- With the code check on, it never paid a web photo. (`w03`, the control with the code check off, is meant to pass.)
+- Across 36 claims, 3 runs each, it passed every prepared eligible case and rejected every wrong code, wrong label and wrong model.
+- With the code check on, it never passed a web photo. (`w03`, the control with the code check off, is meant to pass.)
 - It costs about 1.1¢ and 16 seconds a claim.
 - Its one miss is an AI image with a subtle physical flaw. That's a job for the capture path, not the model (see "What this can't show").
 
@@ -42,7 +44,7 @@ If PayPal also rejects `127.0.0.1`, run `ngrok http 8787`. Use the `https://…n
 
 | Set | Cases | What it tests |
 |---|---|---|
-| Web photos | `w01`–`w17`: real owner photos (Govee, Aloha Breeze, Midea); official "correct photo" examples (Steamfast, Lexmark); CPSC product shots (DREO, HotHands, Kikea); traps (other pillows, AI fakes from news coverage, a screenshot, a photo of a monitor, a photo against the wrong recall) | Reading labels and steps. No web photo can carry this claim's code, so none may ever pay. `w03` turns the code check off and should pass. |
+| Web photos | `w01`–`w17`: real owner photos (Govee, Aloha Breeze, Midea); official "correct photo" examples (Steamfast, Lexmark); CPSC product shots (DREO, HotHands, Kikea); traps (other pillows, AI fakes from news coverage, a screenshot, a photo of a monitor, a photo against the wrong recall) | Reading labels and steps. No web photo can carry this claim's code, so none should pass the rule. `w03` turns the code check off and should pass. |
 | Code-on | `c01`–`c14`, AI images made by `eval/make-photos.ts`: eight real-looking claims with the code (`c01`–`c08`); wrong codes (`c09` has K7O written, while `c11`–`c13` reuse a good photo under a different expected code); a photo of a screen (`c10`); an AI artifact (`c14`, three cut ends on two pieces) | The pass path, and the character-by-character code check |
 | Held out | `h01`–`h05`, written after the round-1 fixes: new HotHands and Kikea claims, a wrong label (X-VESOLIE), a model that isn't recalled (SF-430), a slit instead of a cut | Whether the fixes hold on photos they never saw |
 
@@ -74,28 +76,28 @@ The results below came from the first runner, a plain-JS copy of the check that 
 
 ### Results: 3 runs per model, high effort
 
-Round 2 covers the 31 `w` and `c` claims; the held-out set is the 5 `h` claims. Each cell shows round 2 first, then held out. "Decisions right" counts claims in one run; the paid columns add up all 3 runs (7 genuine claims, `c01`–`c03` and `c05`–`c08`, make 21; the held-out `h01` and `h02` make 6).
+Round 2 covers the 31 `w` and `c` claims; the held-out set is the 5 `h` claims. Each cell shows round 2 first, then held out. "Decisions right" counts claims in one run; the pass columns add up all 3 runs (7 genuine claims, `c01`–`c03` and `c05`–`c08`, make 21; the held-out `h01` and `h02` make 6).
 
-| Model | Decisions right | Genuine claims paid (3 runs) | Fakes paid (3 runs) | Answers right | Seconds per claim | Cost per claim |
+| Model | Decisions right | Eligible cases passed (3 runs) | Ineligible cases passed (3 runs) | Answers right | Seconds per claim | Cost per claim |
 |---|---|---|---|---|---|---|
 | **GPT-6.1 Sol** | 29–30 of 31 · 5 of 5 | 21 of 21 · 6 of 6 | 3, all `c14` · 0 | 91% · 96% | 16 (max 40) | $0.011 |
 | GPT-6 Astra | 29–30 of 31 · 5 of 5 | 21 of 21 · 6 of 6 | 1, `c14` · 0 | 90% · 96% | 26 (max 67) | $0.064 |
 | GPT-6.1 Terra | 29–30 of 31 · 5 of 5 | 18 of 21 · 6 of 6 | 2, `c14` · 0 | 93% · 96% | 10 (max 19) | $0.005 |
 | GPT-6 Luna | 28–29 of 31 · 4–5 of 5 | 16 of 21 · 6 of 6 | 3, `c14` · 2, `h03` | 93% · 96% | 10 (max 27) | $0.0006 |
 
-All four models rejected all 12 wrong-code attempts (4 cases, 3 runs) and, with the code check on, every web photo, in every run. `w03`, the control with the code check off, was paid as expected in 7 runs. The raw runs are in `eval/out/runs` (round 2) and `eval/out/holdout`.
+All four models rejected all 12 wrong-code attempts (4 cases, 3 runs) and, with the code check on, every web photo, in every run. `w03`, the control with the code check off, passed as expected in 7 runs. The raw runs are in `eval/out/runs` (round 2) and `eval/out/holdout`.
 
 Why Sol:
 - **Terra** holds the two-photo claim because it can't confirm both photos show the same pillow.
-- **Luna** reads "R8D" as "R&D" every time, and paid the X-VESOLIE label twice.
+- **Luna** reads "R8D" as "R&D" every time, and passed the X-VESOLIE label twice.
 - **Astra** is 6× the price and too slow to demo. It does catch the `c14` flaw (2 of 3 runs here, 3 of 3 in round 1).
 - **Sol at medium effort** matched Sol at high on the 17 web claims, at 8 s a claim. That's an option if the demo needs speed.
 
-The strict go line still prints NO-GO for every model, because every model paid `c14` at least once.
+The strict go line still prints NO-GO for every model, because every model passed `c14` at least once.
 
 ### What changed between rounds
 
-In round 1, Sol paid 16 of 21 real claims and Terra only 3. None of the holds was a vision failure. The models were right to hold, given what they'd been told:
+In round 1, Sol passed 16 of 21 eligible cases and Terra only 3. None of the holds was a vision failure. The models were right to hold, given what they'd been told:
 1. The stand-in spec never said the handwritten X-VESOLJE tag *is* the stand-in's label, so Terra doubted it was a product label.
 2. The HotHands spec asked for "the claim number" in "permanent marker". The models couldn't know the one-time code is the claim number, can't see permanence, and couldn't tell which printed number is the batch code.
 3. The Kikea spec copied CPSC's text ("leaves"), but the pillow also has blue flowers.

@@ -20,13 +20,11 @@ export const TOUR = {
   /** Step 03's sentence goes on to the analyst only when a recorded answer is there to show (AnalystRail.tsx). */
   analystSentence: " Then ask the recall analyst why.",
   cta: {
-    body: "No separate sign-up. Your console opens on a working recall. Import yours whenever you’re ready.",
+    body: "No separate sign-up. Your console opens on a prepared recall. Import yours whenever you’re ready.",
     button: "Log in with PayPal",
-    // Which account: the company's business account (docs/PRODUCT.md, Company sign-in), never an owner's own.
-    account: "With your company’s PayPal Business account.",
-    // What a buyer asks next: whose money pays the refunds and who holds it (docs/PRODUCT.md, the launch model, said in
-    // the present tense as the vision is), and what a check costs (the benchmark's 1.1¢ a claim, Proof.tsx).
-    facts: "Refunds go from your PayPal Business account straight to each owner’s PayPal account through PayPal Payouts, and Remedy never holds the money. Checking a claim costs 1.1¢.",
+    account: "Explore with the demo account shown on the sign-in page.",
+    // Current funding and planned merchant onboarding are separate, as in README.md and docs/SUBMISSION.md.
+    facts: "This build sends refunds from Remedy’s single PayPal sandbox business account; no real money moves. Per-company funding and PayPal partner onboarding are planned.",
   },
   /** Step 02's foot of the evidence (PayoutsNote.tsx): the console panel's own buttons and what they lead to. The
    * recall's claims are the console's own, where approving one records the decision (ReviewActions.tsx), so the tour

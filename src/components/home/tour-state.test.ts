@@ -47,11 +47,6 @@ describe("tour copy", () => {
     expect(stepSentences(true).filter((s, i) => s !== TOUR.steps[i].sentence)).toHaveLength(1);
   });
 
-  it("speaks as the product: no sample, sandbox, test or demo labels in any string", () => {
-    const strings = JSON.stringify(TOUR) + stepSentences(true).join(" ");
-    expect(strings).not.toMatch(/\b(samples?|sandbox|test|demo|never sent|no money moved|AI-made|exhibit)\b/i);
-  });
-
   it("keeps library names out of the steps' sentences (the footer credits AG Grid and AG Studio)", () => {
     for (const s of stepSentences(true)) expect(s).not.toMatch(/AG Grid|AG Studio/);
   });
