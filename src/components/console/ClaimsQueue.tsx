@@ -228,7 +228,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
     return c;
   }, [searched]);
   const tabRows = useMemo(() => (tab === "all" ? rows : rows.filter((r) => verdictOf(r) === tab)), [rows, tab]);
-  const found = useMemo(() => (tab === "all" ? searched : searched.filter((r) => r.decision === tab)), [searched, tab]);
+  const found = useMemo(() => (tab === "all" ? searched : searched.filter((r) => verdictOf(r) === tab)), [searched, tab]);
   const filtered = filter !== null && tabOf(filter) === "all";
   const openRow = rows.find((r) => r.id === open) ?? null;
   const compact = ((wide && open !== null) || !roomy || !broad) && !search && !searchOpen;
@@ -260,7 +260,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
       // A new list is a new pick: claims the list no longer shows are never acted on unseen.
       pick([]);
       const row = open ? rows.find((r) => r.id === open) : null;
-      if (row && t !== "all" && row.decision !== t) {
+      if (row && t !== "all" && verdictOf(row) !== t) {
         setOpen(null);
         setIntent(null);
       }

@@ -7,9 +7,9 @@ import { formatCount } from "./format";
  * reads; the value leads on screen. */
 export function LedgerItem({ value, label, title, className }: { value: ReactNode; label: ReactNode; title?: string; className?: string }) {
   return (
-    <div className={clsx("flex min-w-0 flex-1 flex-col gap-1 whitespace-nowrap px-4 py-3 first:pl-0", className)} title={title}>
+    <div className={clsx("flex min-w-32 flex-1 flex-col gap-1 px-4 py-3 first:pl-0", className)} title={title}>
       <dt className="order-2 text-micro text-muted">{label}</dt>
-      <dd className="order-1 font-display text-head-sm leading-7 font-medium text-text">{value}</dd>
+      <dd className="order-1 font-display text-head-sm leading-7 font-medium whitespace-nowrap text-text">{value}</dd>
     </div>
   );
 }

@@ -60,15 +60,15 @@ export interface EvidenceProps {
   onSaved?: () => void;
 }
 
-// Claims this page view already loaded, by id and version: walking back up the queue costs nothing.
+// Claims this page view already loaded, by id, version and filing time: walking back up the queue costs nothing.
 const seen = new Map<string, DrawerClaim>();
-const seenKey = (id: string, version: number | null | undefined) => `${id}@${version ?? "latest"}`;
+const seenKey = (id: string, version: number | null | undefined, filedAt: string | undefined) => `${id}@${version ?? "latest"}#${filedAt ?? ""}`;
 
 type Load = { state: "loading" } | { state: "error"; error: ApiError } | { state: "ready" };
 
 /** Loads a claim, keeping the one shown before on screen until the next arrives (no skeleton flash between rows). */
 function useClaim(id: string, version: number | null | undefined, filedAt: string | undefined) {
-  const key = seenKey(id, version);
+  const key = seenKey(id, version, filedAt);
   // Bumped when a fetch lands in `seen`, so this renders again.
   const [, setLanded] = useState(0);
   const [failure, setFailure] = useState<{ key: string; error: ApiError } | null>(null);
