@@ -7,11 +7,11 @@ import type { ClaimRow } from "@/app/console/_lib/view";
 import { Receipt } from "@/components/home/teardown";
 import { BEATS as EXHIBIT_BEATS, holdOf } from "../teardown/model";
 import { ARRIVAL, EXHIBIT_LIFT, LAND, arrivalAt, cardAt, consoleAt, consoleParts, exhibitOutAt, frameAt, lookAt, railBackAt, turnAt, type Box } from "./arrival";
-import { CHAPTERS, CLAIM, CONSENT_AT, SHOT_AT } from "./claim";
+import { CHAPTERS, CLAIM, SHOT_AT } from "./claim";
 import { CodeChapter, Compact, ConsentChapter, ConsoleChapter, QueueRow, type Progress } from "./chapters";
 import { ExhibitSlot } from "./ExhibitSlot";
 import { useBeatPaging } from "./paging";
-import { scrollAt } from "./pace";
+import { HOW_IT_WORKS, scrollAt } from "./pace";
 import { ScreenBar } from "./frames";
 import { CUT_IN, ENTER, IN_OUT, LEAVE, useChapterGate, useGate } from "./gate";
 import { EXHIBIT_RANGE, chapterAt, clamp01, inExhibit } from "./timeline";
@@ -60,21 +60,22 @@ const UNFIT_AFTER = 260;
 /** The rail items come in one after another, this far apart (seconds). */
 const RAIL_STAGGER = 0.05;
 
-function RailItem({ p, i }: { p: Progress; i: number }) {
+function RailItem({ p, i, compact }: { p: Progress; i: number; compact: boolean }) {
   const c = CHAPTERS[i];
   // Enters in turn once p passes RAIL_IN, in time (the whole list in about half a second), then 100% while its chapter
-  // is on screen, else 35%. Item 06 is the console, the screen's layer 5.
+  // is on screen, else a readable 55%. Item 06 is the console, the screen's layer 5.
   const enter = useGate(p, (v) => v >= RAIL_IN, { ...ENTER, delay: i * RAIL_STAGGER }, LEAVE);
   const on = useOn(p, i);
-  const opacity = useTransform(() => enter.get() * (0.35 + 0.65 * on.get()));
+  const opacity = useTransform(() => enter.get() * (0.55 + 0.45 * on.get()));
   const x = useTransform(enter, (k) => -12 * (1 - k));
   // The amber edge marks the chapter on screen, full height beside its name as soon as it is on (in time, with the
   // chapter's own cut, never scrubbed): a mark, not a meter, so it never rests as a stub. Chapters 03 to 05 are under
   // the exhibit; 06's edge marks the console.
   return (
-    <motion.li className="relative py-2.5" style={{ opacity, x }}>
-      <motion.span className="absolute inset-y-1.5 -left-4 w-0.5 rounded-full bg-accent" style={{ scaleY: on, originY: 0 }} />
-      <span className="text-body font-medium">{c.title}</span>
+    <motion.li className={clsx("relative", compact ? "pb-2 text-center" : "grid grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-1.5 py-1.5")} style={{ opacity, x }}>
+      <motion.span className={compact ? "absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent" : "absolute inset-y-1.5 -left-4 w-0.5 rounded-full bg-accent"} style={compact ? { scaleX: on, originX: 0 } : { scaleY: on, originY: 0 }} />
+      <span className="font-mono text-micro text-muted">{c.n}</span>
+      {!compact && <span className="text-ui font-medium">{c.title}</span>}
     </motion.li>
   );
 }
@@ -85,17 +86,6 @@ function useOn(p: Progress, i: number) {
   const chapter = useChapterGate(p, (n) => n === i);
   const first = useGate(p, (v) => v >= HANDOFF[0] && chapterAt(v) === 0, CUT_IN, LEAVE);
   return i === 0 ? first : chapter;
-}
-
-function RailCaption({ p, i }: { p: Progress; i: number }) {
-  const on = useOn(p, i);
-  const enter = useGate(p, (v) => v >= RAIL_IN);
-  const opacity = useTransform(() => on.get() * enter.get());
-  return (
-    <motion.p className="absolute inset-x-0 top-0 text-ui text-pretty text-text-2" style={{ opacity }}>
-      {CHAPTERS[i].text}
-    </motion.p>
-  );
 }
 
 /**
@@ -146,7 +136,7 @@ const EXHIBIT_STOPS = ["intro", "acct", "paid"] as const;
  */
 export const PAGE_STOPS = [
   0,
-  CONSENT_AT[2] + 0.015,
+  HOW_IT_WORKS,
   SHOT_AT[2] + 0.012,
   ...EXHIBIT_BEATS.filter((b) => (EXHIBIT_STOPS as readonly string[]).includes(b.id)).map((b) => EXHIBIT_RANGE[0] + holdOf(b.id) * (EXHIBIT_RANGE[1] - EXHIBIT_RANGE[0])),
   0.96,
@@ -280,6 +270,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
   const ghost = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const [chapter, setChapter] = useState(0);
+  const [opening, setOpening] = useState(p.get() < HANDOFF[1]);
   // The page-wide pager (scroll/keys.ts) pages these same beats wherever it runs, and from the console steps out of the
   // pin onto the Problem sheet open; this one is the pin's own, for when it doesn't.
   useBeatPaging(() => stage.current?.parentElement, PAGE_STOPS);
@@ -301,6 +292,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
       paint();
     });
     setChapter(chapterAt(v));
+    setOpening(v < HANDOFF[1]);
   });
   useMotionValueEvent(exhibitOn, "change", () => motionFrame.postRender(paint));
 
@@ -319,6 +311,41 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
     ro.observe(st);
     return () => ro.disconnect();
   }, [stage, p, paint]);
+
+  // One fitted window for the first two steps: changing chapters never resizes the frame under the outgoing screen.
+  useLayoutEffect(() => {
+    const st = stage.current;
+    const el = screen.current;
+    const inner = el?.querySelector<HTMLElement>("[data-screen-inner]");
+    const bar = inner?.firstElementChild;
+    const layers = [0, 1].map((i) => inner?.querySelector<HTMLElement>(`[data-layer="${i}"]`));
+    const roots = layers.map((layer) => layer?.firstElementChild?.firstElementChild as HTMLElement | undefined);
+    if (!st || !el || !bar || roots.some((root) => !root)) return;
+    const fit = () => {
+      const content = Math.max(...layers.map((layer, i) => {
+        const css = getComputedStyle(layer!);
+        return roots[i]!.offsetHeight + parseFloat(css.paddingTop) + parseFloat(css.paddingBottom);
+      }));
+      st.style.setProperty("--intro-fit-h", `${Math.ceil(bar.getBoundingClientRect().height + content + 1)}px`);
+      applyClip(el, st, p.get());
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    roots.forEach((root) => ro.observe(root!));
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, [compact, stage, p]);
+
+  useLayoutEffect(() => {
+    const st = stage.current;
+    if (!st) return;
+    if (chapter < 2) {
+      st.setAttribute("data-intro-fit", "");
+      return;
+    }
+    const timer = window.setTimeout(() => st.removeAttribute("data-intro-fit"), UNFIT_AFTER);
+    return () => window.clearTimeout(timer);
+  }, [chapter, stage]);
 
   // Chapter 06's window is as tall as its queue, never a half-empty table on a tall screen (custody.module.css
   // .screen[data-fit]): its bar, the layer's padding, the queue's tabs, header and foot, and every claim's row at full
@@ -410,7 +437,7 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
           </motion.div>
           <motion.div className="relative min-h-0 flex-1" style={{ opacity: content }}>
             <Compact.Provider value={compact}>
-              <Layer p={p} i={0} compact={compact}>
+              <Layer p={p} i={0} compact={compact} fill>
                 <ConsentChapter p={p} />
               </Layer>
               <Layer p={p} i={1} compact={compact}>
@@ -426,22 +453,21 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
       </motion.div>
 
       <div className={clsx(styles.rail, "pointer-events-none")}>
-        <motion.div className="flex min-h-0 flex-1 flex-col" style={{ opacity: railHead }} aria-hidden="true">
+        <motion.div className="flex flex-col" style={{ opacity: railHead }} aria-hidden="true">
           <span className="eyebrow text-muted">How it works</span>
-          <ol className="mt-5">
+          <div key={opening ? "opening" : chapter} className={clsx("mt-5", styles.chapterIn)}>
+            <p className="font-mono text-micro text-accent-text">{opening ? "ONE CLAIM" : `${CHAPTERS[chapter].n} / 06`}</p>
+            <h2 className="mt-3 text-title font-medium text-balance text-text">{opening ? "Step inside the claim." : CHAPTERS[chapter].title}</h2>
+            <p className="mt-4 text-ui text-pretty text-text-2">{opening ? "Follow the owner's evidence, the decision and an eligible PayPal refund." : CHAPTERS[chapter].text}</p>
+          </div>
+          <p className="mt-4 text-micro text-muted">Illustrative claim · PayPal sandbox</p>
+          <ol className={clsx("mt-6", compact && "grid grid-cols-6 gap-2")}>
             {CHAPTERS.map((c, i) => (
-              <RailItem key={c.n} p={p} i={i} />
+              <RailItem key={c.n} p={p} i={i} compact={compact} />
             ))}
           </ol>
-          <div className="relative mt-8 flex-1">
-            <div className="relative">
-              {CHAPTERS.map((c, i) => (
-                <RailCaption key={c.n} p={p} i={i} />
-              ))}
-            </div>
-          </div>
         </motion.div>
-        <motion.div className="pointer-events-auto pt-4 focus-within:!opacity-100" style={{ opacity: skipOpacity, visibility: skipVisibility }}>
+        <motion.div className="pointer-events-auto mt-6 shrink-0 focus-within:!opacity-100" style={{ opacity: skipOpacity, visibility: skipVisibility }}>
           {skip}
         </motion.div>
       </div>

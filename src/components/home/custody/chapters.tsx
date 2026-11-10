@@ -11,7 +11,7 @@ import { durationFigure, LedgerItem } from "@/components/console/Ledger";
 import { TABS } from "@/components/console/StatusTabs";
 import { verdictOf } from "@/components/console/VerdictMark";
 import { PAYPAL_CONSENT } from "@/components/claim/consentCopy";
-import { ClockIcon, EASE, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
+import { ClockIcon, EASE, Money, NoBreakHyphens, Paper, SPRING } from "@/components/ui";
 import { LAND, consoleAt, consoleParts } from "./arrival";
 import { CLAIM, CODE_AT, CODE_STAGGER, CONSENT, SHOT_AT, WRITE_FOR } from "./claim";
 import { ENTER, LEAVE, useGate } from "./gate";
@@ -85,7 +85,7 @@ function StepLine({ p, at, steps, className }: { p?: Progress; at: readonly numb
 /** The claim page's (RecallBrief.tsx) line under the product: the CPSC number in mono, the date, the notice's link. */
 function SourceLine({ link = true }: { link?: boolean }) {
   return (
-    <span className="text-ui text-muted">
+    <span className="text-micro text-muted">
       CPSC <span className="font-mono">{CLAIM.recall.replace(/^CPSC /, "")}</span> · Recalled {CLAIM.recalled}
       {link && (
         <>
@@ -98,10 +98,9 @@ function SourceLine({ link = true }: { link?: boolean }) {
 }
 
 /**
- * The real claim page (/r/kikea-x-vesolje) as it is: the recall's brief beside the offer on a hairline, no card and no
- * steps, every word from the page's own copy (claim/consentCopy.ts). `p` brings the brief in once the screen has taken
- * over the laptop's glass; without it, it is all there. `about`: the line under the headline at every width (the static
- * figure, which has no frame to fit; the phone's frame leaves it out below 720px).
+ * The illustrative consent screen: the real recall beside its eligible refund, with the account's purpose and exact
+ * privacy disclosure. Compact desktops keep the product photo; narrow phones keep the offer and account disclosure.
+ * `about` includes the full preparation copy in the unpinned static figures, where the page can grow naturally.
  */
 export function ConsentChapter({ p, about = false }: { p?: Progress; about?: boolean }) {
   const compact = useContext(Compact);
@@ -112,68 +111,49 @@ export function ConsentChapter({ p, about = false }: { p?: Progress; about?: boo
   const product = useGate(p ?? done, (v) => v >= 0.12);
   return (
     <div className="@container">
-      {/* The claim page's two columns (Exhibit.tsx STEP_GRID) from 720px: the brief, then the offer on a hairline. */}
-      <div className="grid items-start gap-6 @min-[720px]:grid-cols-2 @min-[720px]:gap-16">
-        <motion.div className={clsx("hidden flex-col @min-[720px]:flex", compact ? "gap-4" : "gap-6")} style={{ opacity: product }}>
-          {/* The brief's small header (RecallBrief.tsx), so the offer beside it is the one headline. */}
-          <div className="flex flex-col gap-1">
+      <div className="grid items-start gap-4 @min-[36rem]:grid-cols-2 @min-[36rem]:gap-6">
+        <motion.div className="hidden flex-col gap-4 @min-[36rem]:flex" style={{ opacity: product }}>
+          <div className="flex flex-col gap-1.5">
             <p className="text-body font-medium text-balance text-text">{CLAIM.product}</p>
             <SourceLine />
           </div>
-          {/* The live recall page's own hazard (RecallBrief.tsx): one sentence on a red rule, no box, no icon. */}
-          <p className="border-l-2 border-stop pl-4 text-body font-medium text-pretty text-text">Risk of serious injury or death from suffocation. Stop using it now.</p>
-          {/* CPSC's photo on its paper plate, as the live page shows it under the hazard; a short screen gives it way. */}
-          <div className={clsx("flex h-44 items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line brightness-[0.84] in-data-[theme=light]:brightness-100", compact && "hidden")}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={CLAIM.cpscPhoto} alt="" loading="lazy" className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
-          </div>
-          <dl className={clsx("grid grid-cols-2 border-t border-line text-ui", compact && "hidden")}>
-            {[
-              ["Units recalled", CLAIM.units],
-              ["Sold by", CLAIM.company],
-            ].map(([k, v]) => (
-              <div key={k} className="flex flex-col gap-1 py-3">
-                <dt className="text-faint">{k}</dt>
-                <dd className="text-text">{v}</dd>
-              </div>
-            ))}
-          </dl>
+          <figure className="m-0 flex flex-col gap-2">
+            <div className={clsx("flex items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line", compact ? "h-44" : "h-52")}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={CLAIM.cpscPhoto} alt="" loading="lazy" className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
+            </div>
+            <figcaption className="text-micro text-muted">Product pictured in the recall notice</figcaption>
+          </figure>
+          <p className="border-l-2 border-stop pl-4 text-ui text-pretty text-text-2">Risk of serious injury or death from suffocation. Stop using it now.</p>
         </motion.div>
 
-        {/* On a phone, where the brief is hidden, the recall is said first, as the claim page's phone brief now says it:
-            the product, then the CPSC line; a short phone gives the second way. */}
-        <div className="flex flex-col gap-1 @min-[720px]:hidden">
-          <p className="text-body font-medium text-balance text-text">{CLAIM.product}</p>
+        <div className="flex flex-col gap-1 @min-[36rem]:hidden">
+          <p className="text-ui font-medium text-balance text-text">{CLAIM.product}</p>
           <span className={clsx(compact && "hidden")}>
             <SourceLine link={false} />
           </span>
         </div>
 
-        {/* The offer as the claim page sets it (ConsentCard.tsx): on the page, not in a box, a hairline from the brief. */}
         <div
           data-dolly-target
-          className={clsx(
-            "flex flex-col border-line @max-[719px]:border-t @max-[719px]:pt-6 @min-[720px]:-ml-8 @min-[720px]:self-stretch @min-[720px]:border-l @min-[720px]:pl-8",
-            compact ? "gap-5" : "gap-7",
-          )}
+          className="flex flex-col gap-4 border-line @max-[36rem]:border-t @max-[36rem]:pt-4 @min-[36rem]:self-stretch @min-[36rem]:border-l @min-[36rem]:pl-6"
         >
-          <div className="flex flex-col gap-3">
-            <p className="text-title font-medium text-balance text-text">
-              <NoBreakHyphens>{CONSENT.title}</NoBreakHyphens>
+          <div className="flex flex-col gap-2">
+            <p className="text-micro text-muted">Eligible recall refund · PayPal sandbox</p>
+            <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <Money value={CLAIM.amount} className="text-[2.25rem] leading-none font-medium tracking-tight" />
+              <span className="text-ui text-muted">through PayPal</span>
             </p>
-            {/* What Remedy is, under the headline as on the page; the phone's frame leaves it out, so its button and the
-                consent line stay inside the frame. The static figure keeps it (`about`). */}
-            <p className={clsx("text-ui text-pretty text-muted", !about && "@max-[719px]:hidden")}>{CONSENT.about}</p>
-            <p className="text-body text-pretty text-muted">{CONSENT.how}</p>
+            <p className="text-ui text-pretty text-text-2">{CONSENT.about}</p>
           </div>
-          <div className="flex flex-col gap-4">
-            {/* The claim page's own button, as it looks there: brass, the screen's one amber. A picture, so it is no
-                control (the whole screen is hidden from screen readers and takes no pointer). The code's clock is read first,
-                as on the page. */}
-            <p className="text-ui text-pretty text-muted">{CONSENT.clock}</p>
+          <div className="flex flex-col gap-3">
+            <p className={clsx("text-ui text-pretty text-muted", compact && !about && "@max-[36rem]:hidden")}>
+              Cut the pillow in half. Photograph it with the code issued next.
+            </p>
             <span className="btn-primary pointer-events-none flex h-12 items-center justify-center rounded-button-lg text-body font-medium select-none">Log in with PayPal</span>
-            <p className={clsx("text-ui text-pretty text-faint", compact && "@max-[719px]:hidden")}>{PAYPAL_CONSENT}</p>
+            <p className="text-micro text-pretty text-muted">{PAYPAL_CONSENT}</p>
           </div>
+          <p className="border-t border-line pt-3 text-micro text-pretty text-muted">{about ? CONSENT.clock : "Next: a one-time code and a 10-minute photo session."}</p>
         </div>
       </div>
     </div>

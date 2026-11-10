@@ -98,8 +98,7 @@ export function useBeatPaging(runway: () => HTMLElement | null | undefined, stop
       const nav = 72;
       if (travel <= 0 || r.top > nav + 1 || r.bottom < innerHeight - 1) return;
       const now = Math.max(0, -r.top / travel);
-      // The laptop's runway (the phone's is a div with its own stops) has How it works between the hero and chapter 01,
-      // as the wheel and the homepage's keys do (scroll/stops.ts).
+      // The laptop's How it works stop is its completed first chapter, shared with the wheel and homepage keys.
       const beats = el.matches("section[data-runway]") ? withHowItWorks(list) : list;
       const last = aim.current;
       const from = last && performance.now() < last.t ? last.at : now;

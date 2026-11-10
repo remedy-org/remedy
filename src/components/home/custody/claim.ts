@@ -1,4 +1,4 @@
-import { consentLines, PAYPAL_CONSENT } from "@/components/claim/consentCopy";
+import { consentLines } from "@/components/claim/consentCopy";
 import type { Verdict } from "@/components/console/VerdictMark";
 import { GENUINE } from "@/lib/demo/claims";
 import { demoRecall } from "@/lib/demo/kikea";
@@ -6,8 +6,8 @@ import { demoRecall } from "@/lib/demo/kikea";
 // The one claim the homepage stages, start to finish: RM-0442 (src/lib/demo/claims.ts, GENUINE), the genuine claim (photo
 // k01, code M4T) on the X-VESOLJE recall (CPSC 27-071), sent to PayPal 15 s after its photos arrived and confirmed by PayPal at 55 s. Its photo is
 // generated (eval case k01-feathers-M4T: the recalled feather print, cut in half and tagged), and it carries no label (owner rule: no internal
-// labels; the site's one sandbox line is in /terms). These are presentational copies of the claim screens; only the
-// consent screen's words come from the claim page's own (claim/consentCopy.ts), so chapter 01 reads as the page does.
+// labels). These are illustrative versions of the claim screens; chapter 01 shares the claim page's account-purpose
+// copy (claim/consentCopy.ts), while the visible sandbox labels distinguish this walkthrough from a live claim.
 export const CLAIM = {
   id: GENUINE.id,
   code: GENUINE.code,
@@ -41,14 +41,12 @@ export const CHAPTERS = [
   {
     n: "01",
     title: "Log in with PayPal",
-    // How an owner arrives, as the site says it (the link on the recall notice), then what Remedy sees, in the login
-    // screen's own sentence (consentCopy.ts PAYPAL_CONSENT).
-    text: `The owner opens the link on the recall notice and logs in with PayPal. The screen tells them: “${PAYPAL_CONSENT}”`,
+    text: "Sign in with PayPal to connect the claim and any eligible refund to the same verified account.",
   },
   {
     n: "02",
     title: "One-time code",
-    text: "Remedy issues a three-character code, M4T. The owner writes X-VESOLJE M4T on a tag. The camera session lasts 10 minutes.",
+    text: "A one-time code links this photo session to this claim.",
   },
   {
     n: "03",

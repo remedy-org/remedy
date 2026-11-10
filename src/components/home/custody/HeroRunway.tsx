@@ -12,7 +12,7 @@ import { HeroPhone } from "./HeroPhone";
 import { PhoneRunway } from "./PhoneRunway";
 import { StaticFigures } from "./StaticFigures";
 import { ENTER, IN_OUT, LEAVE, useGate } from "./gate";
-import { PACE, SCROLL_VH, scrollAt } from "./pace";
+import { HOW_IT_WORKS, PACE, SCROLL_VH, scrollAt } from "./pace";
 import styles from "./custody.module.css";
 
 // Which form the Chain of Custody takes (spec H2). The server always renders the static figures; after hydration a
@@ -103,6 +103,8 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(st);
+    const win = st.querySelector("[data-screen-inner]");
+    if (win) ro.observe(win);
     // A resize midway through the story cannot be measured against transformed glass. Calibrate when it returns home.
     const off = p.on("change", (v) => {
       if (!pending || v > DOLLY[0]) return;
@@ -201,7 +203,7 @@ export function HeroRunway({ copy, journey, consoleRows }: { copy: ReactNode; jo
     >
       {/* The nav's "How it works" lands on the first chapter, once the screen has taken over from the laptop. Each #how
           takes focus after the jump (tabIndex -1), so the next Tab goes on from there. */}
-      {pinned && <span id="how" tabIndex={-1} className="absolute left-0 outline-none" style={{ top: `${(scrollAt(0.215) * SCROLL_VH).toFixed(1)}vh` }} aria-hidden="true" />}
+      {pinned && <span id="how" tabIndex={-1} className="absolute left-0 outline-none" style={{ top: `${(scrollAt(HOW_IT_WORKS) * SCROLL_VH).toFixed(1)}vh` }} aria-hidden="true" />}
       <div ref={stage} className={pinned ? styles.stage : "relative"}>
         <div className={styles.hero}>
           <motion.div className={styles.copy} style={pinned ? dolly.text : undefined}>

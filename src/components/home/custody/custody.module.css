@@ -223,6 +223,23 @@
   flex-direction: column;
 }
 
+/* The owner screens share a content-sized window, measured before the laptop zoom is calibrated. */
+.stage[data-intro-fit] {
+  --intro-h: min(var(--intro-fit-h, 100%), calc(100% - 2rem));
+  --intro-top: max(1rem, calc((100% - var(--intro-h)) / 2));
+}
+
+.stage[data-intro-fit] .screenInner {
+  top: var(--intro-top);
+  bottom: auto;
+  height: var(--intro-h);
+}
+
+.stage[data-intro-fit] .rail {
+  top: var(--intro-top);
+  bottom: auto;
+}
+
 /* Chapter 06, the console: the window as tall as its queue (CustodyStage measures it, --fit-h), so a tall screen shows
    the claims whole over their foot rather than a half-empty table; never taller than the stage allows, and centred in
    it, so a tall screen's stage is never a window under the nav over an empty lower third (1920x1080 left 350px). It
@@ -246,7 +263,7 @@
   bottom: 1rem;
   left: var(--edge);
   width: calc(3 * var(--col) + 2 * var(--col-gap));
-  padding: 2rem 1.5rem 1.5rem 0;
+  padding: 1rem 1.5rem 1.5rem 0;
   display: flex;
   flex-direction: column;
 }

@@ -76,19 +76,18 @@ describe("scroll stops", () => {
   });
 
   it("stops the wheel on every beat Space and Page Down stop on in the Chain of Custody, in order", () => {
-    const custody = STOPS.filter((s) => /^Chain of Custody \d/.test(s.name)).map((s) => s.at(page));
+    const custody = STOPS.filter((s) => s.name === "How it works" || /^Chain of Custody \d/.test(s.name)).map((s) => s.at(page));
     expect(custody).toEqual(PAGE_STOPS.slice(1).map((f) => 64 + f * 7316));
     expect(custody).toHaveLength(6); // 01, 02, the exhibit's live photo, check 3 and paid receipt, the console
   });
 
-  it("stops on How it works between the hero and chapter 01: the dolly landed, before the hand-over, never a beat skimmed", () => {
+  it("finishes the zoom on the first readable scene, without a separate enlarged-preview stop", () => {
     const names = STOPS.map((s) => s.name);
-    expect(names.slice(0, 3)).toEqual(["Hero", "How it works", "Chain of Custody 1"]);
+    expect(names.slice(0, 3)).toEqual(["Hero", "How it works", "Chain of Custody 2"]);
     const how = STOPS[1].at(page) as number;
     const dolly = SLOW.find((s) => s.name === "The dolly")!.at(page)!;
-    // Inside the dolly's slow stretch, past where the laptop arrives (p 0.11) and short of the hand-over (p 0.12).
-    expect(how).toBeGreaterThan(dolly[0]);
-    expect(how).toBeLessThan(dolly[1]);
+    expect(how).toBeGreaterThan(dolly[1]);
+    expect(how).toBe(page.beat(PAGE_STOPS[1]));
     expect(how).toBeGreaterThan(MERGE);
     expect((STOPS[2].at(page) as number) - how).toBeGreaterThan(MERGE);
     expect(STOPS[1].inner).toBeUndefined();
@@ -96,7 +95,7 @@ describe("scroll stops", () => {
 
   it("goes up on the same finished beats as down, as Page Up does: no stop is one way, the sheet's included", () => {
     expect(STOPS.filter((s) => "down" in s).map((s) => s.name)).toEqual([]);
-    const story = STOPS.filter((s) => s.name.startsWith("Chain of Custody ")).map((s) => s.name);
+    const story = STOPS.filter((s) => s.name === "How it works" || /^Chain of Custody \d/.test(s.name)).map((s) => s.name);
     // A hard fling skims the story's inner beats, never a section's stop, nor check 3: a fling down the exhibit rests
     // once on the checks.
     const inner = STOPS.filter((s) => s.inner).map((s) => s.name);
@@ -127,7 +126,7 @@ describe("scroll stops", () => {
   });
 
   it("slows each exhibit check's draw three times on a glide, and lets a slow gesture rest on any check at its hold", () => {
-    const custody = STOPS.filter((s) => /^Chain of Custody \d/.test(s.name)).map((s) => s.at(page) as number);
+    const custody = STOPS.filter((s) => s.name === "How it works" || /^Chain of Custody \d/.test(s.name)).map((s) => s.at(page) as number);
     const draws = SLOW.filter((s) => s.name.startsWith("Check ")).map((s) => s.at(page)!);
     // The live camera, the fingerprint, the tag's code and the cut: two on the glide to check 3, two on the one to paid.
     expect(draws).toHaveLength(4);

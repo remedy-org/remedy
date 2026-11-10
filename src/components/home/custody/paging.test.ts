@@ -39,13 +39,14 @@ describe("keyboard paging through the pin", () => {
     for (const d of [300, 900, 1800, 3000]) expect(d / glideMs(d, 900)).toBeLessThan(1.05);
   });
 
-  it("stops on How it works between the hero and chapter 01, just before the screen hands over, once", () => {
-    expect(HOW_IT_WORKS).toBeCloseTo(HANDOFF[0] - 0.004, 9);
+  it("lands How it works on the finished first screen once, after the zoom and handoff", () => {
+    expect(HOW_IT_WORKS).toBeGreaterThan(HANDOFF[1]);
     const list = withHowItWorks(PAGE_STOPS);
-    expect(list).toHaveLength(PAGE_STOPS.length + 1);
+    expect(list).toHaveLength(PAGE_STOPS.length);
     expect(nextStop(list, 0, 1)).toBeCloseTo(scrollAt(HOW_IT_WORKS), 9);
-    expect(nextStop(list, scrollAt(HOW_IT_WORKS), 1)).toBe(PAGE_STOPS[1]);
-    expect(nextStop(list, PAGE_STOPS[1], -1)).toBeCloseTo(scrollAt(HOW_IT_WORKS), 9);
+    expect(list[1]).toBeCloseTo(scrollAt(HOW_IT_WORKS), 9);
+    expect(nextStop(list, list[1], 1)).toBe(PAGE_STOPS[2]);
+    expect(nextStop(list, PAGE_STOPS[2], -1)).toBeCloseTo(scrollAt(HOW_IT_WORKS), 9);
     expect(withHowItWorks(list)).toEqual(list);
   });
 });

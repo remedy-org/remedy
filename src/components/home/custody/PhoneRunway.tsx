@@ -65,7 +65,7 @@ export function PhoneRunway({ skip }: { skip: ReactNode }) {
         </div>
         <PhoneFrame bar className="flex min-h-0 flex-1 flex-col">
           <div ref={well} className="relative min-h-0 flex-1">
-            <div key={Math.min(at, 1)} className={`absolute inset-0 overflow-hidden p-4 ${styles.chapterIn}`} aria-hidden="true">
+            <div key={Math.min(at, 1)} className={`absolute inset-0 overflow-x-hidden overflow-y-auto p-4 ${styles.chapterIn}`} aria-hidden="true">
               <Compact.Provider value={compact}>{at === 0 ? <ConsentChapter /> : <CodeChapter p={done} />}</Compact.Provider>
             </div>
           </div>

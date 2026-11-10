@@ -21,6 +21,7 @@ export function ScreenBar({ console: isConsole, compact }: { console?: boolean; 
         <>
           <span aria-hidden="true" className="h-4 w-px shrink-0 bg-line-2" />
           <span className="truncate text-ui text-muted">{CLAIM.product} recall</span>
+          <span className="ml-auto shrink-0 text-micro text-muted">PayPal sandbox</span>
         </>
       )}
       {isConsole && (

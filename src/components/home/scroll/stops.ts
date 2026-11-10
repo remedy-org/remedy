@@ -5,7 +5,7 @@
 
 import { HANDOFF, PAGE_STOPS } from "../custody/CustodyStage";
 import { DOLLY } from "../custody/HeroRunway";
-import { HOW_IT_WORKS, scrollAt } from "../custody/pace";
+import { scrollAt } from "../custody/pace";
 import { EXHIBIT_RANGE } from "../custody/timeline";
 import { ANCHOR_AT, REST, T } from "../problemTimeline";
 import { BEATS as EXHIBIT_BEATS, RANGES, holdOf, tickAt, type BeatId } from "../teardown/model";
@@ -87,10 +87,6 @@ const checksStop = (p: Page) => p.fit(p.line("#checks header"), { min: p.line("#
 const SHEET_OPEN = ANCHOR_AT - 0.4;
 const SHEET_CUT = REST + 2;
 
-/** How it works' beat on the Chain of Custody's timeline (pace.ts HOW_IT_WORKS): the dolly arrived, just short of the
- * hand-over to chapter 01's screen (HANDOFF). */
-const HOW_AT = HOW_IT_WORKS;
-
 /** Check 3's stop in the Chain of Custody's (PAGE_STOPS after the page top: 01, 02, the live photo, check 3). */
 const CHECK_3 = 3;
 
@@ -105,10 +101,6 @@ const GATE_1 = "#checks ol > li:nth-child(1)";
 export const STOPS: readonly Stop[] = [
   // The hero at rest, its laptop's checks ticked and the payout landed.
   { name: "Hero", at: (p) => p.top("[aria-labelledby='hero-title']") },
-  // How it works: the dolly landed, the laptop's screen on the custody window under the rail's How it works and its
-  // chapter list, a beat before the screen hands over to chapter 01 (HANDOFF). A small swipe from the hero rests here,
-  // one beat, where it used to run on through the dolly and glide on to chapter 01 by itself once the hand had stopped.
-  { name: "How it works", at: (p) => p.beat(scrollAt(HOW_AT)) },
   // The Chain of Custody: the stops Space and Page Down use in the pin (CustodyStage), so the keys and the wheel stop on
   // the same beats: 01 and 02 with every line lit, the exhibit's live photo and five checks at their holds, the paid
   // receipt, then the console. Its first stop is the runway's top, the page top.
@@ -116,7 +108,8 @@ export const STOPS: readonly Stop[] = [
   // hard fling skims 02, the live photo and the paid receipt, never check 3: a fling down the exhibit rests once on the
   // checks, so they never all pass in one glide.
   ...PAGE_STOPS.slice(1).map((f, i, all) => ({
-    name: `Chain of Custody ${i + 1}`,
+    // The first gesture completes the zoom and lands on consent, rather than parking on an enlarged preview.
+    name: i === 0 ? "How it works" : `Chain of Custody ${i + 1}`,
     at: (p: Page) => p.beat(f),
     ...(i > 0 && i < all.length - 1 && i !== CHECK_3 && { inner: true as const }),
   })),
