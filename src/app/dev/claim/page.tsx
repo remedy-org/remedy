@@ -61,12 +61,24 @@ async function flow(over: Partial<ClaimFlowProps> & Pick<ClaimFlowProps, "previe
 function result(d: { claim: Claim; photoUrls: string[] }, over: Partial<ResultProps> = {}) {
   // A demo claim shows its sample's own photo, as ClaimScreen does.
   const photoUrls = over.sample ? d.photoUrls.map(() => over.sample!.photos[0]) : d.photoUrls;
+  // The same result fixtures also illustrate real claims. Demo previews must carry the actual sample identity and
+  // its account-check exception, so their checklist and run disclosure describe the same pipeline behavior.
+  const claim: Claim = over.sample ? {
+    ...d.claim,
+    demo: true,
+    events: [
+      ...d.claim.events.filter((e) => e.type !== "demo_sample").map((e) => e.type === "prechecked" && over.sample!.id !== "genuine"
+        ? { ...e, detail: "Sent in the camera session, new photos; one-claim check not run on this demo claim" }
+        : e),
+      { at: d.claim.createdAt, type: "demo_sample", detail: over.sample.id },
+    ],
+  } : d.claim;
   return (
     <FlowShell context={recallContext(fx.recall)}>
       <Result
-        claim={d.claim}
+        claim={claim}
         recall={fx.recall}
-        rows={checkRows(d.claim, fx.recall.spec)}
+        rows={checkRows(claim, fx.recall.spec)}
         photoUrls={photoUrls}
         againHref="#"
         now={fx.NOW + 10 * 60_000}

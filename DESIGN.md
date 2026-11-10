@@ -14,7 +14,7 @@ Desktop hero copy stays left aligned with the laptop on the right. The checks ma
 
 The opening desktop copy aligns near the laptop's top instead of the viewport's middle. A small recall-specific eyebrow and a ruled evidence → decision → PayPal trail explain the journey before scrolling. The trail shares the copy's existing dolly fade; both additions are omitted on phones.
 
-The first deliberate scroll completes the laptop zoom and rests on the PayPal sign-in step. Its product photo, recall source, hazard and eligible sandbox refund stay together in a content-sized window. Sign-in and one-time code share that window's dimensions; the left guide explains the current step before listing the rest. The logo uses a native top anchor and cancels a pending story gesture so a fresh scroll starts normally.
+The first deliberate scroll completes the laptop zoom and rests on the PayPal sign-in step. Sign-in and code occupy the same full stage as the physical exhibit: shared page gutters, a 48px header line, large object on the left, restrained action copy on the right, and a common footer. The intact pillow is labeled as a 3D illustration; the tag is written as its code appears. Keep the recall source, hazard, account disclosure and eligible sandbox refund visible. The console keeps its existing framed arrival. The logo uses a native top anchor and cancels a pending story gesture so a fresh scroll starts normally.
 
 The exhibit phone's photo window renders the same product and tag through the illustrated phone's rear lens, with a crop that keeps the evidence in frame. Its body, pose, camera controls and surrounding scene stay fixed. This is a live-rendered illustration, not access to a visitor's camera. Reduced-capability stills must show the same view.
 
@@ -64,6 +64,8 @@ The return-receipt mark is a rounded slip with a negative-space return arrow and
 Every data surface includes empty/loading/error/partial/success states and preserves existing focus, recovery and keyboard behavior. The state models, auth, payment APIs, deterministic rule and AG integrations remain authoritative.
 
 Home previews are illustrative, use prepared data, and must say so. Demo entry/result identifies PayPal sandbox and prepared photos. Never imply a generated-photo detector, camera provenance attestation, guaranteed settlement time, or a real customer deployment. RM-0442's sample payment/timings are not a fresh PayPal transaction. AI describes evidence, the fixed rule decides, and the payment provider confirms the payout.
+
+Demo capture must show image loading, delayed loading, sending, delayed receipt and recovery in view. An uncertain receipt keeps the original send locked; observe stored claim status before advancing, with no blind resend. Distinguish prepared photos, fixed codes, simulated camera-session conditions and demo account-rule exceptions from the applicable per-attempt checks. Expose the saved claim ID, model event, time and actual returned evidence; mark replay or missing answers explicitly. These records are server-saved facts, not independent provider attestation.
 
 Controls transition in 150–200ms, panels in 200–300ms. Respect prefers-reduced-motion. Essential content remains visible with JavaScript disabled or reduced motion. With motion enabled, a story beat must finish and stop before a fresh scroll gesture advances it. Preserve native nested scrolling, keyboard navigation and deliberate reverse direction; outside story spans the page scrolls freely.
 

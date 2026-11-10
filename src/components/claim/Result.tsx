@@ -7,6 +7,7 @@ import { SAMPLE_COPY, sampleTitle } from "@/lib/demo/sampleCopy";
 import type { Claim, Recall, Reason } from "@/lib/types";
 import { CheckList, CodeLead, MonoWords, sixRows, type SixRow } from "./CheckList";
 import { ClaimPhotos } from "./ClaimPhotos";
+import { DemoRunEvidence } from "./DemoRunEvidence";
 import { evidenceSummary } from "./EvidenceText";
 import { ClaimFrame, ClaimLayout, NARROW_ONLY, OutcomeHead, photoWidth } from "./Exhibit";
 import styles from "./flow.module.css";
@@ -156,6 +157,7 @@ export function Result(props: ResultProps) {
           ) : (
             list
           )}
+          {props.sample && <DemoRunEvidence claim={claim} sample={props.sample} />}
         </>
       }
       photo={parts.side}
