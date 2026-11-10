@@ -1,8 +1,8 @@
 # UI transformation: verification and handoff
 
-10 November 2026. Implementation is uncommitted. The latest UI and Diatype font files are deployed to https://remedy-recalls.vercel.app.
+10 November 2026. Archived on branch `ui/flat-review`. Review deployment: https://remedy-flat-review.vercel.app. The canonical deployment now shows the original animated UI.
 
-Deployment: `dpl_DVimJqMNM1uV9NFajWWMKrSfmYue` (production, Ready). Both WOFF2 assets returned HTTP200 and matched the local SHA256; homepage, sign-in and demo entry loaded both weights correctly. No live mobile overflow or page errors were observed. Release evidence is in `../planning/kiro-redesign-2026-11-10/transformation/diatype-release.json`.
+Deployment: `dpl_DVimJqMNM1uV9NFajWWMKrSfmYue` (production, Ready). Both WOFF2 assets returned HTTP200 and matched the local SHA256; homepage, sign-in and demo entry loaded both weights correctly. No live mobile overflow or page errors were observed. Release evidence is in `../planning/visual-redesign-2026-11-10/transformation/diatype-release.json`.
 
 ## Delivered
 
@@ -49,7 +49,7 @@ npx vitest run src/components/claim/CheckList.test.ts src/components/claim/Limit
 - Print report fixture: `/dev/redesign?view=report`
 - Owner fixtures: `/dev/claim?s=code`, `?s=paid-settled`, `?s=held`, `?s=rejected`, `?s=camera-denied`
 
-The review server uses placeholder provider credentials and does not validate PayPal login/payments. Fixture routes return not-found in production. Screenshots and machine-readable verification are in `../planning/kiro-redesign-2026-11-10/transformation/`.
+The review server uses placeholder provider credentials and does not validate PayPal login/payments. Fixture routes return not-found in production. Screenshots and machine-readable verification are in `../planning/visual-redesign-2026-11-10/transformation/`.
 
 ## Boundaries and release notes
 

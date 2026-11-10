@@ -1,6 +1,6 @@
 # Remedy design system
 
-Updated 10 November 2026. This replaces the previous Lamplight/brass system at the user's request. Reference measurements and full product transformation plan: `../planning/kiro-redesign-2026-11-10/`.
+Updated 10 November 2026. This replaces the previous Lamplight/brass system at the user's request. Reference measurements and full product transformation plan: `../planning/visual-redesign-2026-11-10/`.
 
 ## Direction
 
@@ -8,7 +8,7 @@ Product-led marketing; calm evidence and refund operations.
 Pure black, violet action, crisp photography, rounded frames, technical display type.
 Spacious marketing, comfortable owner flow, dense company workspace; short state transitions.
 
-Kiro is the primary visual reference. Linear, Stripe Dashboard and Raycast inform interaction hierarchy only. Remedy's mark and components are original.
+Remedy uses a black canvas, violet actions and a distinct return-receipt identity.
 
 ## Tokens
 
@@ -33,7 +33,7 @@ This hackathon deployment uses user-supplied ABC Diatype Regular and Bold for he
 
 The font binaries live in Git-ignored `public/fonts/diatype/` and are included only in the CLI deployment. `next.config.ts` detects their presence at build time and compiles the same choice into static and dynamic routes. Source checkouts without those files use Inter headings and Work Sans body text, self-hosted by next/font. The fallback never requires private fonts to build.
 
-Kiro uses AWS Diatype and AWS Diatype Rounded Semi Mono. The fidelity target is appropriately licensed ABC Diatype and ABC Diatype Rounded Semi Mono, with suitable delivery rights for a public-source project. The user-provided Diatype binaries are not committed to the public repository. Font families are centralized in root layout and the `--font-sans`, `--font-display`, `--font-mono` tokens, including AG Grid and Studio.
+The user-provided Diatype binaries are not committed to the public repository. Font families are centralized in root layout and the `--font-sans`, `--font-display`, `--font-mono` tokens, including AG Grid and Studio.
 
 Hero 40–60px, section heading 28–40px, feature title 22–25px, body 17px, UI 15px, metadata 12px. Display line height 1.1 with restrained negative tracking; body 1.55. Use medium/semibold headings, not arbitrary bold inline prose. Amounts and data use tabular figures. Always check longest realistic recall title/reason.
 
@@ -47,7 +47,7 @@ No global grain, warm light pools, floor grids, ornamental bevels or forced scro
 
 ## Identity
 
-The original return-receipt mark is a rounded slip with a negative-space return arrow and a small folded tail. Master paths live in `components/ui/markPaths.ts`; Wordmark, Open Graph and generated icons share them. Run `npx tsx scripts/apple-icon.ts` after changing the paths. Wordmark is lowercase `remedy`; accessible product name is Remedy. One-color white or text-color master; no Kiro ghost asset.
+The original return-receipt mark is a rounded slip with a negative-space return arrow and a small folded tail. Master paths live in `components/ui/markPaths.ts`; Wordmark, Open Graph and generated icons share them. Run `npx tsx scripts/apple-icon.ts` after changing the paths. Wordmark is lowercase `remedy`; accessible product name is Remedy. One-color white or text-color master.
 
 ## States, truth and motion
 
