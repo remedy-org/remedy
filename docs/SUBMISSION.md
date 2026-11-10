@@ -49,7 +49,7 @@ The payment path had its own edge cases: PayPal sandbox account eligibility, the
 
 I connected a concrete recall workflow to PayPal identity and Payouts, with a shared evidence trail for owners and companies. Historical sandbox testing confirmed a successful payout to the authenticated payer ID. Model experiments include genuine-looking prepared samples, wrong codes, web photographs, screen photographs and ambiguous destruction evidence. The committed evaluation describes both successful checks and generated-image failures.
 
-The product also explains its workflow through an animated laptop-to-phone-to-console story, while retaining mobile, reduced-motion and static fallbacks. The latest UI verification passed the production build, lint and 293 selected pure tests; it did not certify a fresh live transaction.
+The product also explains its workflow through an animated laptop-to-phone-to-console story, while retaining mobile, reduced-motion and static fallbacks. The 11 November verification passed the production build, lint, TypeScript, 476 selected tests, 37 isolated browser scenarios and 52 public deployment checks. The isolated scenarios use synthetic responses, and the public checks are read-only; these checks did not certify a fresh live transaction.
 
 ### What I learned
 

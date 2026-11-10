@@ -13,7 +13,7 @@ const NAV_LINKS: readonly NavMenuLink<SectionId>[] = [
   { id: "how", label: "How it works", note: "One claim, photo to PayPal payout" },
   { id: "problem", label: "Why recalls stall", note: "Why recall refunds stay stuck, and where Remedy cuts the loop" },
   { id: "checks", label: "Fraud checks", note: "The five checks a fake has to beat, and four claims to try" },
-  { id: "proof", label: "Results", note: "Every genuine claim paid, every stolen photo stopped" },
+  { id: "proof", label: "Results", note: "The photo-check benchmark, including its limits" },
   { id: "companies", label: "For companies", note: "Every claim with its evidence, and the CPSC report" },
 ];
 
