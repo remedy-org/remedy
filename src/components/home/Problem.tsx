@@ -47,18 +47,22 @@ const facsimile = Tinos({
 const SOURCES = [
   {
     label: "PIRG, Too Much to Recall, Jan 2024",
+    short: "PIRG · 2024",
     href: "https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf",
   },
   {
     label: "CPSC recalls API, 1 Oct–5 Nov 2026 (JSON), counted by Remedy",
+    short: "Photo-recall sample",
     href: "https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2026-10-01&RecallDateEnd=2026-11-05",
   },
   {
     label: "CPSC 27-071",
+    short: "CPSC 27-071",
     href: "https://www.cpsc.gov/Recalls/2027/Kikea-Store-Recalls-X-VESOLJE-Nursing-Pillows-Due-to-Risk-of-Serious-Injury-or-Death-from-Suffocation-Violate-Mandatory-Standards-for-Nursing-Pillows",
   },
   {
     label: "CPSC-2026-0067",
+    short: "Federal Register filing",
     href: "https://public-inspection.federalregister.gov/2026-07328.pdf",
   },
 ];
@@ -296,15 +300,15 @@ export function Problem() {
       else if (mode === "pin") {
         // The entrance: out of the desk's shade (smoothstep), rising and settling on --ease-out-expo. The lower part
         // turns from 95deg (tucked behind the sheet, edge-on and hidden) to flat on --ease-in-out-quart, unfolding down
-        // out of the crease. It is drawn without perspective (its height is cos of its turn), so it never flares wider
-        // than the sheet or reads as the face of a box.
+        // out of the crease. The lower face rotates as physical paper, while its contact shadow follows the
+        // projected height; the content arrives only as the face settles.
         set("--y", `${(6 * (1 - outExpo(seg(t, T.rise)))).toFixed(3)}vh`);
         set("--lean", `${(14 * (1 - outExpo(seg(t, T.lean)))).toFixed(3)}deg`);
         set("--tilt", `${(-5.5 * (1 - outExpo(seg(t, T.tilt)))).toFixed(3)}deg`);
         const th = 95 * (1 - inOutQuart(seg(t, T.fold)));
         const rad = (th * Math.PI) / 180;
         const light = seg(t, T.shade);
-        set("--fk", Math.max(0, Math.cos(rad)));
+        set("--fold-angle", `${(-th).toFixed(3)}deg`);
         set("--shade", 0.92 * (1 - light * light * (3 - 2 * light)));
         // The turning part darkens a little by (1 - cos)/2, most along the crease, never past about 10%: paused
         // mid-unfold it still reads as the same paper folded, not a grey slab.
@@ -339,9 +343,9 @@ export function Problem() {
           [3, T.card3],
           [4, T.card4],
         ] as const) {
-          // Stacked, a card lands on --ease-out-quart over its own 14% of the screen, so the drop is seen.
+          // Each card drops and settles on the same calm curve in both the board and stacked layouts.
           const c = o ? o[`c${n}`] : seg(t, range);
-          set(`--c${n}`, o ? outQuart(c) : outExpo(c));
+          set(`--c${n}`, outQuart(c));
           // The brass pin goes in as the card settles.
           set(`--p${n}`, clamp((c - 0.55) * 3));
         }
@@ -755,7 +759,7 @@ export function Problem() {
 
                   <p ref={payoff} className={s.payoff}>
                     <span className={s.payoffLead}>Remedy cuts the loop.</span>{" "}
-                    <span className={s.payoffRest}>The refund stays fast for a real owner and a dead end for a fake.</span>
+                    <span className={s.payoffRest}>Keep the owner’s claim simple. Check the evidence before paying.</span>
                   </p>
 
                   <p className={s.sources}>
@@ -763,8 +767,8 @@ export function Problem() {
                     {SOURCES.map((src, i) => (
                       <span key={src.href} className={s.source}>
                         <span className={s.nowrap}>
-                          <a href={src.href} target="_blank" rel="noopener noreferrer">
-                            {src.label}
+                          <a href={src.href} title={src.label} aria-label={`${src.label} (opens in a new tab)`} target="_blank" rel="noopener noreferrer">
+                            {src.short}
                             <span className="sr-only"> (opens in a new tab)</span>
                           </a>
                           {i < SOURCES.length - 1 && <span className={s.sep}>&nbsp;·</span>}

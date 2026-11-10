@@ -13,7 +13,7 @@
  */
 
 .section {
-  --aged: oklch(0.94 0.008 295);
+  --aged: oklch(0.955 0.007 295);
   --aged-back: oklch(0.9 0.012 295);
   --aged-burn: oklch(0.65 0.025 295);
   --aged-edge: oklch(0.58 0.03 295);
@@ -26,8 +26,8 @@
   --crease-light: oklch(1 0 0 / 0.5);
   --evidence-card: var(--paper);
   --evidence-clip: var(--paper-2);
-  --brass: oklch(0.74 0.075 82);
-  --brass-deep: oklch(0.52 0.06 75);
+  --brass: oklch(0.78 0.018 295);
+  --brass-deep: oklch(0.54 0.025 295);
   --desk-shadow: oklch(0 0 0 / 0.55);
   /* The darkest the grain gets (it multiplies by 0.84 at most): black at 16%, for the contrast check. */
   --grain-floor: oklch(0 0 0 / 0.16);
@@ -168,10 +168,10 @@
     /* the lamp: one soft hotspot, upper left */
     radial-gradient(70% 60% at 32% 28%, oklch(1 0.01 85 / 0.24), transparent 70%),
     /* age: a warm falloff into each corner, strongest where the sheet was handled (lower right) */
-    radial-gradient(circle at 100% 100%, color-mix(in oklch, var(--aged-burn) 42%, transparent), transparent max(150px, 17cqw)),
-    radial-gradient(circle at 0 100%, color-mix(in oklch, var(--aged-burn) 30%, transparent), transparent max(110px, 12cqw)),
-    radial-gradient(circle at 100% 0, color-mix(in oklch, var(--aged-burn) 34%, transparent), transparent max(130px, 14cqw)),
-    radial-gradient(circle at 0 0, color-mix(in oklch, var(--aged-burn) 26%, transparent), transparent max(110px, 12cqw)),
+    radial-gradient(circle at 100% 100%, color-mix(in oklch, var(--aged-burn) 18%, transparent), transparent max(150px, 17cqw)),
+    radial-gradient(circle at 0 100%, color-mix(in oklch, var(--aged-burn) 12%, transparent), transparent max(110px, 12cqw)),
+    radial-gradient(circle at 100% 0, color-mix(in oklch, var(--aged-burn) 14%, transparent), transparent max(130px, 14cqw)),
+    radial-gradient(circle at 0 0, color-mix(in oklch, var(--aged-burn) 10%, transparent), transparent max(110px, 12cqw)),
     var(--grain);
   background-size:
     100% 100%,
@@ -269,8 +269,8 @@
 .sources {
   position: relative;
   margin: 28px 0 0;
-  font-size: 0.75rem;
-  line-height: 1.7;
+  font-size: 0.8125rem;
+  line-height: 1.65;
   color: var(--sheet-muted);
   opacity: var(--src, 1);
 }
@@ -336,11 +336,11 @@
   z-index: 2;
 }
 
-/* A card dropping onto the sheet: 24px above, turned 2deg, settling as --c goes 0 to 1. */
+/* A card dropping onto the sheet: 32px above, turned 1.5deg, settling as --c goes 0 to 1. */
 .land {
   opacity: clamp(0, calc(var(--c, 1) * 2.2), 1);
-  translate: 0 calc((1 - var(--c, 1)) * -24px);
-  rotate: calc((1 - var(--c, 1)) * 2deg);
+  translate: 0 calc((1 - var(--c, 1)) * -32px);
+  rotate: calc((1 - var(--c, 1)) * 1.5deg);
 }
 
 /* Card 3 slides out from under its pin instead. */
@@ -576,7 +576,7 @@
   height: 22px;
   margin: -11px 0 0 -11px;
   border-radius: 50%;
-  background: radial-gradient(circle at 36% 30%, oklch(0.88 0.045 88) 0, var(--brass) 42%, var(--brass-deep) 100%);
+  background: radial-gradient(circle at 36% 30%, oklch(0.92 0.012 295) 0, var(--brass) 42%, var(--brass-deep) 100%);
   box-shadow:
     inset 0 0 0 0.5px oklch(0.3 0.03 70 / 0.6),
     inset 0 -1px 1px oklch(0.3 0.03 70 / 0.25),
@@ -828,17 +828,17 @@
     position: absolute;
     left: 6%;
     top: 7.5%;
-    width: 52%;
+    width: 46%;
     max-width: none;
   }
 
   .title {
-    font-size: clamp(1.9rem, 3.9cqw, 3.5rem);
+    font-size: clamp(1.875rem, 3.35cqw, 3rem);
   }
 
   .sub {
     margin-top: 1.1cqw;
-    font-size: clamp(1rem, 1.65cqw, 1.3rem);
+    font-size: clamp(0.9375rem, 1.45cqw, 1.125rem);
   }
 
   .cards {
@@ -858,28 +858,28 @@
   .slot1 {
     left: 6%;
     top: 31%;
-    width: 25.5%;
+    width: 29%;
     rotate: -0.4deg;
   }
 
   .slot2 {
-    left: 61.5%;
-    top: 8%;
-    width: 34%;
+    left: 58%;
+    top: 9%;
+    width: 36%;
     rotate: 0.3deg;
   }
 
   .slot3 {
-    left: 67.5%;
+    left: 64%;
     top: 63%;
-    width: 25.5%;
+    width: 30%;
     rotate: 0.5deg;
   }
 
   .slot4 {
-    left: 7%;
+    left: 6%;
     top: 70.5%;
-    width: 25%;
+    width: 28%;
     rotate: 0.3deg;
   }
 
@@ -939,7 +939,7 @@
     right: 6%;
     bottom: 5.4%;
     margin: 0;
-    font-size: clamp(0.75rem, 0.98cqw, 0.8125rem);
+    font-size: 0.8125rem;
   }
 
   .stat {
@@ -966,7 +966,7 @@
     position: absolute;
     left: var(--cut-x, 50%);
     top: calc(var(--cut-y, 67%) + 6% + 12px);
-    width: 34cqw;
+    width: 30cqw;
     max-width: none;
     margin: 0;
     text-align: center;
@@ -975,15 +975,15 @@
   }
 
   .payoffLead {
-    font-size: clamp(1.5rem, 3.3cqw, 3rem);
+    font-size: clamp(1.375rem, 2.8cqw, 2.5rem);
     white-space: nowrap;
   }
 
   .payoffRest {
-    max-width: 30cqw;
+    max-width: 28cqw;
     margin-inline: auto;
     margin-top: 0.8cqw;
-    font-size: clamp(0.875rem, 1.35cqw, 1.2rem);
+    font-size: clamp(0.875rem, 1.25cqw, 1.0625rem);
   }
 }
 
@@ -1091,7 +1091,8 @@
     top: var(--hinge-at);
     bottom: 0;
     transform-origin: 50% 0;
-    transform: translateZ(0.5px) scaleY(var(--fk, 1));
+    transform: translateZ(0.5px) rotateX(var(--fold-angle, 0deg));
+    backface-visibility: hidden;
     will-change: transform;
   }
 

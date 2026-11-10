@@ -1,6 +1,6 @@
 // The evidence: the Kikea X-VESOLJE nursing pillow, cut in half at the front with stuffing at the cut faces, as in the
-// RM-0442 photo (public/demo/k01-1.jpg). The exhibit draws its cloth in one calm slate blue-grey, the feather print a
-// faint tone-on-tone hint in it, so the object reads simply in both themes; the claim's photos keep the recalled print.
+// RM-0442 photo (public/demo/k01-1.jpg). The illustrated fabric retains the dark multicolour feather print from
+// that photo, so the product, the phone preview and the later evidence prints remain visually consistent.
 // Built from code at load; posed every frame from the cut.
 import type * as T from "three";
 import { fbm3, noise3, rng } from "./noise";
@@ -18,8 +18,9 @@ export const SPAN = 2.6;
 /** Height of the tube's centre line: it rests flattened on the floor. */
 export const YC = RH * 0.8;
 
-/** The cloth's colour, sRGB 0 to 255: a calm slate blue-grey, before the studio light. */
-const SLATE: [number, number, number] = [86, 95, 108];
+/** The photo's near-black brown fabric, before the studio light. */
+const FABRIC: [number, number, number] = [42, 31, 36];
+const FEATHERS = ["#d9b451", "#b8d4cf", "#e7a0ad", "#a489c0", "#dd7493", "#cfd4b3", "#7ea9c9", "#d9a17b"] as const;
 
 const N = 110; // rings along the half
 const M = 60; // vertices round each ring
@@ -78,18 +79,17 @@ function fuzzMaterial(THREE: Three, level: number) {
 }
 
 export async function pillowMaterials(THREE: Three): Promise<PillowMaterials> {
-  // A slate blue-grey that holds its shape on the dark theme's graphite and the light theme's off-white alike, the
-  // feathers a few steps lighter in the same hue, faint.
-  const tex = await fabricTextures(THREE, SLATE, { tone: "#a9b2bf", alpha: 0.13 });
+  // Match the distinguishing print in the evidence photo rather than silently changing the product colour.
+  const tex = await fabricTextures(THREE, FABRIC, { tone: FEATHERS, alpha: 0.95 });
   tex.map.repeat.set(1, 1);
   const cloth = new THREE.MeshPhysicalMaterial({
     map: tex.map,
     normalMap: tex.normalMap,
     normalScale: new THREE.Vector2(0.35, 0.35),
     roughness: 0.92,
-    sheen: 0.75,
+    sheen: 0.35,
     sheenRoughness: 0.55,
-    sheenColor: new THREE.Color("#9ea7b3"),
+    sheenColor: new THREE.Color("#b5adae"),
     envMapIntensity: 0.5,
     side: THREE.DoubleSide,
   });
@@ -382,11 +382,11 @@ export function buildHalf(THREE: Three, dir: 1 | -1, seed: number, mats: PillowM
     }
   });
 
-  // Strands: loose fibres off the clumps (off-white) and frayed threads off the torn fabric (the cloth's slate), one draw call.
+  // Strands: loose fibres off the clumps (off-white) and frayed threads off the torn fabric (the cloth's dark ground), one draw call.
   const sp: number[] = [];
   const sc: number[] = [];
   const white = [0.92, 0.9, 0.86];
-  const thread = SLATE.map((c) => (c / 255) * 0.85);
+  const thread = FABRIC.map((c) => (c / 255) * 0.85);
   const strand = (x: number, y: number, z: number, nx: number, ny: number, nz: number, len: number, c: number[], segs = 3) => {
     let px = x;
     let py = y;

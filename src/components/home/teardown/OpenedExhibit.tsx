@@ -7,6 +7,7 @@ import { CheckIcon, Money, Paper, Stamp } from "@/components/ui";
 import { CHECKS, CONFIRMED_ROW, EXHIBIT, RECEIPT_ROWS } from "./claim";
 import { BEATS, RANGES, RECEIPT_FADE, TOTAL_VH, clock, holdOf, stateAt, tickAt, type BeatId, type ExhibitState, type Shot } from "./model";
 import { scanAt, scanGeometry } from "./scan";
+import { posterFrame } from "./poster-geometry";
 import type { Colors, Exhibit, Frame, Rect, Tier } from "./scene";
 import { createFrameWatch, stageLayers } from "./watch";
 import styles from "./teardown.module.css";
@@ -319,6 +320,8 @@ function discreteKey(s: ExhibitState) {
 }
 
 function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
+  const narrow = useMedia("(max-width: 1023px)", false);
+  const subjectPoster = small || narrow;
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const subject = useRef<HTMLDivElement>(null);
@@ -341,6 +344,7 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
   const [warm, setWarm] = useState(false);
   const [failed, setFailed] = useState(false);
   const scene = useRef<Exhibit | null>(null);
+  const renderedFrame = useRef<Frame | null>(null);
   const rectOverride = useRef<Rect | null>(null);
   const shotOverride = useRef<Shot | null>(null);
   const live = mode === "live" && !failed;
@@ -440,12 +444,21 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
             }
           : { x0: 0.05, y0: 0.2, x1: 0.65, y1: 0.8 });
       const f = ex.render(st, rect);
+      renderedFrame.current = f;
       anchor = f.anchor;
       watchFrames(ex);
       // The first sweep starts at the photo's top as the phone comes up.
       if (f.photo && !photo.current) scanFrom.current = performance.now();
       photo.current = capture ? null : f.photo;
-    } else photo.current = null;
+    } else {
+      const img = posters.current?.querySelector<HTMLImageElement>(`[data-poster="${st.beat}"]`);
+      const box = posters.current?.getBoundingClientRect();
+      const contained = !!posters.current?.classList.contains(styles.subjectPosters);
+      const f = img?.complete && img.naturalWidth && box ? posterFrame(st.beat, contained, box, stage) : null;
+      anchor = f?.anchor ?? null;
+      if (f?.photo && !photo.current) scanFrom.current = performance.now();
+      photo.current = f?.photo ?? null;
+    }
     // In the same frame as the scene, so the line never trails the phone by a frame while the camera moves.
     paintScan(performance.now());
     if (photo.current) runScan();
@@ -455,7 +468,9 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
       account.current.toggleAttribute("data-on", acct);
       if (acct) {
         const a = account.current.getBoundingClientRect();
-        anchor = { x: a.right - stage.left, y: a.top - stage.top + a.height / 2 };
+        anchor = small
+          ? { x: a.left - stage.left + a.width / 2, y: a.bottom - stage.top + 4 }
+          : { x: a.right - stage.left, y: a.top - stage.top + a.height / 2 };
       }
     }
     // Leader: from the part to the callout's first line, drawn on like ink as the camera arrives on the part, and faded
@@ -466,9 +481,11 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
     if (path && dot.current) {
       const vis = anchor && box && st.callout ? st.leader : 0;
       if (anchor && box && vis) {
-        const tx = box.left - stage.left - 12;
-        const ty = box.top - stage.top + 9;
-        path.setAttribute("d", `M${anchor.x.toFixed(1)},${anchor.y.toFixed(1)} L${(tx - 18).toFixed(1)},${ty.toFixed(1)} L${tx.toFixed(1)},${ty.toFixed(1)}`);
+        const tx = box.left - stage.left + (small ? 8 : -12);
+        const ty = box.top - stage.top + (small ? -10 : 9);
+        path.setAttribute("d", small
+          ? `M${anchor.x.toFixed(1)},${anchor.y.toFixed(1)} L${anchor.x.toFixed(1)},${(ty - 12).toFixed(1)} Q${anchor.x.toFixed(1)},${ty.toFixed(1)} ${(anchor.x - 12).toFixed(1)},${ty.toFixed(1)} L${tx.toFixed(1)},${ty.toFixed(1)}`
+          : `M${anchor.x.toFixed(1)},${anchor.y.toFixed(1)} L${(tx - 18).toFixed(1)},${ty.toFixed(1)} L${tx.toFixed(1)},${ty.toFixed(1)}`);
         dot.current.setAttribute("cx", anchor.x.toFixed(1));
         dot.current.setAttribute("cy", anchor.y.toFixed(1));
       }
@@ -515,7 +532,7 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
         shown.current = { el: posters.current, at: on };
       }
     }
-  }, [p, live, watchFrames, capture, paintScan, runScan]);
+  }, [p, live, small, watchFrames, capture, paintScan, runScan]);
 
   const schedule = useCallback(() => {
     if (raf.current || !visible.current) return;
@@ -673,6 +690,7 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
         draw();
       },
       bounds: () => scene.current?.bounds() ?? [],
+      frame: () => renderedFrame.current,
       info: () => scene.current?.info(),
     };
   }, [capture, p, draw]);
@@ -682,28 +700,29 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
   const showPosters = layers.posters;
   const beatIndex = POSTER_BEATS.indexOf(s.beat);
   const postersEl = showPosters && (
-    <div ref={posters} className={styles.posters} aria-hidden="true">
+    <div ref={posters} className={clsx(styles.posters, subjectPoster && styles.subjectPosters)} aria-hidden="true">
       {POSTER_BEATS.map((b, k) => (
         // eslint-disable-next-line @next/next/no-img-element -- pre-rendered stills, swapped by scroll; next/image adds nothing here
         <img
           key={b}
           data-poster={b}
           alt=""
-          src={Math.abs(k - beatIndex) <= 1 ? posterSrc(b, dark, small) : undefined}
+          src={Math.abs(k - beatIndex) <= 1 ? posterSrc(b, dark, subjectPoster) : undefined}
           style={{ opacity: k === beatIndex ? 1 : 0 }}
           decoding="async"
+          onLoad={schedule}
         />
       ))}
     </div>
   );
 
   return (
-    <div ref={root} className={clsx(styles.stage, small && styles.small)} data-mode={live ? "live" : "poster"} data-beat={s.beat} data-warm={warm || undefined}>
+    <div ref={root} className={clsx(styles.stage, small && styles.small)} data-mode={live ? "live" : "poster"} data-beat={s.beat} data-subject-poster={subjectPoster || undefined} data-warm={warm || undefined}>
       <div className={styles.pool} aria-hidden="true" />
-      {!small && postersEl}
+      {!subjectPoster && postersEl}
       {layers.canvas && <canvas ref={canvas} className={clsx(styles.canvas, layers.canvasOn && styles.canvasOn)} aria-hidden="true" />}
       {/* Check 1's scan line over the phone's photo: a glow trailing above a crisp white line (scan.ts). */}
-      {layers.canvasOn && (
+      {(layers.canvasOn || showPosters) && (
         <svg ref={scanSvg} className={styles.scan} aria-hidden="true" data-scan>
           <defs>
             <linearGradient ref={scanGrad} id={gradId} gradientUnits="userSpaceOnUse">
@@ -728,8 +747,8 @@ function Stage({ p, mode, small, onSeek, skip, capture }: StageProps) {
         </header>
         <div className={styles.main}>
           <div ref={subject} className={styles.subject} aria-hidden="true">
-            {small && postersEl}
-            {!small && <AccountCard ref={account} />}
+            {subjectPoster && postersEl}
+            <AccountCard ref={account} />
           </div>
           <div className={styles.side} aria-hidden="true">
             {/* A new check's words mount fresh and rise in; check 5's hold on into the payout. */}
@@ -850,7 +869,7 @@ function SelfPinned({ mode, small, capture }: { mode: "live" | "poster"; small: 
         Skip the five checks
       </a>
       <div className={styles.sticky}>
-        <Stage p={scrollYProgress} mode={mode} small={small} onSeek={seek} capture={capture} />
+        <Stage key={`${mode}-${small}`} p={scrollYProgress} mode={mode} small={small} onSeek={seek} capture={capture} />
       </div>
       <span id={`${skipId}-after`} className={styles.after} tabIndex={-1} />
     </section>
@@ -874,6 +893,7 @@ export function OpenedExhibit({ progress, onSeek, skip, chapters, capture }: Ope
     return (
       <div className="relative h-full w-full">
         <Stage
+          key={`${mode}-${small && !capture}`}
           p={progress}
           mode={mode}
           small={small && !capture}

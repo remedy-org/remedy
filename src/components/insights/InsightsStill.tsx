@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
 import { InsightsLedger } from "./InsightsLedger";
+import { HomeInsights } from "./HomeInsights";
 import { MobileSummary } from "./MobileSummary";
 import { PaidLines } from "./PaidLines";
 import { rowsOf } from "./report";
@@ -10,12 +11,8 @@ import { DecisionMixView } from "./widgets/DecisionMixView";
 import { RecallProgressView } from "./widgets/RecallProgressView";
 import { GATE_LABEL, RefusalReasonsView } from "./widgets/RefusalReasonsView";
 
-// The homepage's Insights step in plain DOM: the console's Insights page, panel for panel and word for word, from the
-// seed (still.ts): its ledger, then Recall progress beside Decisions and Where claims stop beside Why claims were refused
-// (two thirds and one third, as the console's canvas lays them out), then what PayPal paid by day as the console's plain
-// lines, each drawn by the view the console's own Studio widget renders. On laptops it is what the frame shows until AG
-// Studio has drawn the same page (InsightsPreview.tsx); on phones it is the console's phone summary (MobileSummary), the
-// story's third block, under the same "Built on AG Studio" foot as the queue's "Built on AG Grid".
+// Default: the complete application report in plain DOM, using the same facts and widget views as Studio.
+// Marketing opts into the compact HomeInsights view: outcomes and claim progression, with explicit sample scope.
 
 /** A panel as the console's canvas draws it (insights.css): a section under a hairline (none on the first row, which the
  * ledger's closes), the right column 40px off the left one's bars. */
@@ -33,6 +30,7 @@ export function InsightsStill({
   rail,
   form = "frame",
   credit,
+  home = false,
 }: {
   data: InsightsStillData;
   /** The recall analyst's recorded answer, beside the canvas (under it on phones). */
@@ -40,7 +38,10 @@ export function InsightsStill({
   form?: "frame" | "phone";
   /** Phones: the foot under the dashboard naming the SDK it is built on. */
   credit?: string;
+  /** A compact explanation for marketing; the full application report remains unchanged. */
+  home?: boolean;
 }) {
+  if (home) return <HomeInsights data={data} rail={rail} phone={form === "phone"} />;
   if (form === "phone") {
     return (
       <div className="overflow-hidden rounded-frame bg-bg shadow-float">

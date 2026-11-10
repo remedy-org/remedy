@@ -64,7 +64,7 @@ export function ClaimScreen({ phase }: { phase: number }) {
               alt=""
               fill
               loading="eager"
-              sizes="(max-width: 640px) 60vw, 420px"
+              sizes="(max-width: 640px) 60vw, 740px"
               className="object-cover"
               style={{ objectPosition: "50% 75%" }}
             />

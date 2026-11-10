@@ -109,21 +109,14 @@ export const turnAt = (p: number) => ramp(p, ...TURN);
 
 /** Where in k RM-0442's row starts to come in, in both rooms. */
 const ROW_IN = 0.12;
-/** Where in the dark turn the receipt's words are gone: just as the row's start, so the card is never an empty box. */
-const WORDS_OUT = turnAt(ARRIVAL[0] + ROW_IN * (ARRIVAL[1] - ARRIVAL[0]));
 
 /**
- * The card's look at k, each 0 to 1. `receipt`: the receipt's own paper and words, gone as it folds. `paper`: the card's
- * ground, the receipt's paper turning to the console's surface. `row`: RM-0442's row, in once the card is all but
- * folded. `lift`: the card's ground, edge and shadow, settling flat into the queue as it lands. `ground`: the card's
- * ground coming up under the receipt's perforated edge, so its first frame is the receipt exactly. The receipt's words
- * dim with its paper and the row's come in as they go, the one straight after the other, so the card is never an
- * empty box for more than a frame and its words are never two sets printed over each other.
- *
- * `turn` (turnAt, dark only): the ground comes up under the receipt as the turn starts, then its paper dims to the
- * surface over the whole turn, the receipt's words fading out over its first two thirds (dark ink on a darkening
- * sheet) and the row's light words coming in straight after, at their usual k, once the ground is dark enough to carry
- * them.
+ * The card's look at k, each 0 to 1. `ground` takes over the perforated receipt's paper; `paper` turns that ground
+ * from cream to the console surface; `receipt` and `row` hand the claim's details between formats; `lift` settles
+ * the card's edge and shadow into the queue. In light, the two formats follow one another. In dark, the ink stays
+ * whole through the paper's long lighting change, then overlaps briefly with the row during the fold. Fading that
+ * ink with the lighting erased it before the fold and left a nearly empty stage. CustodyStage keeps the receipt's
+ * ink legible against the changing ground.
  */
 export function lookAt(k: number, turn?: number) {
   const look = {
@@ -134,5 +127,5 @@ export function lookAt(k: number, turn?: number) {
     lift: 1 - ramp(k, 0.82, 1),
   };
   if (turn === undefined) return look;
-  return { ...look, ground: Math.max(look.ground, ramp(turn, 0, 0.08)), paper: 1 - ramp(turn, 0.08, 1), receipt: 1 - ramp(turn, 0.08, WORDS_OUT) };
+  return { ...look, ground: Math.max(look.ground, ramp(turn, 0, 0.08)), paper: 1 - ramp(turn, 0.08, 1), receipt: 1 - ramp(k, 0.16, 0.24) };
 }

@@ -133,7 +133,7 @@ export const SHOTS: Record<BeatId, Shot> = {
   // The whole cut pillow with the owner's phone held off its front right, between it and the callout, its screen toward
   // the viewer with the photo it took, so it reads as the camera that took it, never as a phone lying on the pillow
   // (scene/parts.ts poses it).
-  live: { az: 8, el: 30, at: [0.11, 0.12, 0.12], rx: 0.52, ry: 0.29 },
+  live: { az: 28, el: 30, at: [0.11, 0.12, 0.12], rx: 0.52, ry: 0.29 },
   // The print, held up out to the left; from this side the pillow is out of the frame and the earlier prints stack
   // behind it.
   fp: { az: 28, el: 8, at: [-0.9, 0.23, 0.02], rx: 0.24, ry: 0.17 },

@@ -92,7 +92,7 @@
   initial-value: 0px;
 }
 .stage:not(.small) .canvas,
-.stage:not(.small) .posters,
+.stage:not(.small) .posters:not(.subjectPosters),
 .stage:not(.small) .scan {
   mask-image:
     linear-gradient(
@@ -114,6 +114,16 @@
   mask-composite: intersect;
 }
 
+/* A short desktop stage has less than a full macro shot below the header. Keep the label outside the fade. */
+@media (max-height: 699px) {
+  .stage:not(.small) .canvas,
+  .stage:not(.small) .posters:not(.subjectPosters),
+  .stage:not(.small) .scan {
+    --m-in: 0px;
+    --m-len: 32px;
+  }
+}
+
 /* The canvas replaces the posters in one frame, the render it shows already drawn: a fade in over them left the ground
    alone for a frame (the posters unmount as it starts), then a pale pillow. Both show the same beat, so it reads as a
    cut, never a ghost of one pillow over the other. */
@@ -131,6 +141,10 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.subjectPosters img {
+  object-fit: contain;
 }
 
 /* Check 1's scan line over the photo on the phone's screen (scan.ts): white in both themes, as it lies on the photo, a
@@ -464,17 +478,26 @@ button.cellBody:hover .label {
   gap: 16px;
 }
 
+.small .head h2 {
+  margin-top: 8px;
+  max-width: 25ch;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
 .small .readouts {
-  grid-template-columns: 6.75rem 7.5rem 3.75rem;
-  gap: 16px;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 0.7fr);
+  gap: 12px;
 }
 
 .small .readouts dt {
   white-space: nowrap;
+  font-size: 13px;
 }
 
 .small .readouts dd {
-  font-size: var(--text-ui);
+  font-size: 14px;
 }
 
 .small .main {
@@ -521,8 +544,30 @@ button.cellBody:hover .label {
   position: relative;
 }
 
+/* The mobile still lives inside the layout, so its evidence overlays must sit above that layer too. */
+.stage[data-subject-poster] .scan,
+.stage[data-subject-poster] .leaders {
+  z-index: 4;
+}
+
+.small .account {
+  top: 20%;
+  right: 0;
+  min-width: min(13rem, 100%);
+  padding: 12px 16px;
+}
+
+.small[data-beat="acct"] .posters {
+  opacity: 0.45;
+}
+
 .small .posters img {
   object-fit: contain;
+}
+
+.small .posters {
+  transform: scale(1.28);
+  transform-origin: center;
 }
 
 /* The phone's tag macro still has the pillow's body across its top (the desktop's mask above is not used on phones):

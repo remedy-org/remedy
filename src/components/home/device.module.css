@@ -18,18 +18,22 @@
 
 .view {
   /* 1em = 1/80 of the stage width. */
-  font-size: calc(100cqw / 80);
+  font-size: calc(100cqw / 80 * var(--raster-scale, 1));
   position: absolute;
   inset: 0;
+  width: calc(100% * var(--raster-scale, 1));
+  height: calc(100% * var(--raster-scale, 1));
+  transform: scale(calc(1 / var(--raster-scale, 1)));
+  transform-origin: 0 0;
   /*
    * A long lens and a shallow turn, as a product shot: the deck's front edge stays within 1.1x of the lid's width (a
    * short lens made the keyboard look longer than the screen), and its front corner stays inside the page frame.
    */
   perspective: 420em;
   perspective-origin: 50% 38%;
-  --rx: -10deg;
-  --ry: 6deg;
-  --scene-top: 8%;
+  --rx: -8deg;
+  --ry: -5deg;
+  --scene-top: 5%;
   /*
    * The laptop: cool space grey, with a restrained violet reflection. In dark the deck sits well above the page (about
    * 0.2 L) and catches a cool rim light along its front edge and the hinge, so the lower half reads as metal, not as a
@@ -53,9 +57,9 @@
   /* The table: one surface step above the page, a centimetre grid in the hairline colour, faint enough to stay a surface. */
   --table: var(--surface);
   --grid-major: color-mix(in oklch, var(--text) 9%, transparent);
-  --grid-minor: color-mix(in oklch, var(--text) 4.5%, transparent);
+  --grid-minor: transparent;
   /* The pool under the laptop, a little stronger than the page-wide --pool, so the object sits on something. */
-  --hero-pool: oklch(0.64 0.2 295 / 0.16);
+  --hero-pool: oklch(0.64 0.2 295 / 0.1);
   --contact: oklch(0.05 0.006 285 / 0.7);
 }
 
@@ -90,9 +94,9 @@
   left: 50%;
   top: var(--scene-top);
   width: 64em;
-  /* The lid is 64 x 43em (a 1.53 screen, as on a laptop), set left of centre so the turned deck ends inside the frame. */
-  height: 43em;
-  margin-left: -38.5em;
+  /* A centered 16:10 lid and shallower deck keep the camera move optically balanced. */
+  height: 40em;
+  margin-left: -32em;
   transform-style: preserve-3d;
   /* --tilt-k (0 to 1) takes the resting tilt out as the Chain of Custody dollies in. */
   transform: rotateX(calc(var(--rx) * var(--tilt-k, 1))) rotateY(calc(var(--ry) * var(--tilt-k, 1)));
@@ -143,8 +147,8 @@
 .receipt {
   position: absolute;
   z-index: 2;
-  left: -14%;
-  top: 76%;
+  left: 0%;
+  top: 62%;
   transform-origin: 0 0;
 }
 
@@ -197,7 +201,7 @@
   position: absolute;
   inset: 0;
   transform-origin: 50% 100%;
-  transform: rotateX(10deg);
+  transform: rotateX(calc(10deg * var(--tilt-k, 1)));
   border-radius: 1.6em;
   background: var(--lid);
   border: 1px solid var(--lid-edge);
@@ -230,7 +234,7 @@
   left: 0;
   right: 0;
   top: 100%;
-  height: 41em;
+  height: 36em;
   transform-origin: 50% 0;
   transform: rotateX(90deg);
   transform-style: preserve-3d;
@@ -266,15 +270,18 @@
   box-shadow: inset 0 -1px 0 var(--rim);
 }
 
-/* The keyboard well: one soft inset, a step darker than the deck, with no keys drawn in it. */
+/* A quiet keyboard texture follows the deck perspective; the screen remains the focus. */
 .keys {
   position: absolute;
   left: 4em;
   right: 4em;
   top: 2.6em;
-  height: 19.8em;
+  height: 17.4em;
   border-radius: 0.9em;
-  background: linear-gradient(var(--well-top), var(--well-bottom));
+  background:
+    repeating-linear-gradient(90deg, transparent 0 3.1em, var(--well-shade) 3.1em 3.4em),
+    repeating-linear-gradient(0deg, transparent 0 2.7em, var(--well-shade) 2.7em 3em),
+    linear-gradient(var(--well-top), var(--well-bottom));
   box-shadow:
     inset 0 0.2em 0.5em var(--well-shade),
     inset 0 -1px 0 var(--well-rim);
@@ -285,8 +292,8 @@
   left: 50%;
   width: 26em;
   margin-left: -13em;
-  top: 24.4em;
-  height: 13.4em;
+  top: 22.4em;
+  height: 10.4em;
   border-radius: 1em;
   background: var(--pad);
   box-shadow: inset 0 0 0 1px var(--pad-edge);

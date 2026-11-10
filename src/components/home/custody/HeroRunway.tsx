@@ -69,17 +69,33 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
   useEffect(() => {
     const st = stage.current;
     if (!st) return;
+    let pending = false;
+    let frame = 0;
     const measure = () => {
       const dev = device.current;
       const scr = dev?.querySelector("[data-laptop-screen]");
-      if (!dev || !scr || p.get() > DOLLY[0]) return;
+      if (!dev || !scr) return;
+      if (p.get() > DOLLY[0]) {
+        pending = true;
+        return;
+      }
+      pending = false;
       const S = st.getBoundingClientRect();
       const D = dev.getBoundingClientRect();
+      // Calibrate against the flat glass that the dolly lands on, then restore the resting product pose before paint.
+      const pose = dev.style.getPropertyValue("--tilt-k");
+      const tilt = dev.querySelector<HTMLElement>("[data-laptop] > div");
+      const pointerPose = tilt?.style.transform;
+      dev.style.setProperty("--tilt-k", "0");
+      if (tilt) tilt.style.transform = "none";
       const P = scr.getBoundingClientRect();
+      if (pose) dev.style.setProperty("--tilt-k", pose);
+      else dev.style.removeProperty("--tilt-k");
+      if (tilt) tilt.style.transform = pointerPose ?? "";
       const win = st.querySelector("[data-screen-inner]")?.getBoundingClientRect();
       const cx = D.left + D.width / 2;
       const cy = D.top + D.height / 2;
-      const s = win ? Math.min(MAX_SCALE, Math.max(1.35, win.width / P.width)) : 1.35;
+      const s = win ? Math.min(MAX_SCALE, Math.max(1.05, win.width / P.width)) : 1.35;
       const tx = win ? win.left + win.width / 2 : S.left + S.width / 2;
       const ty = win ? win.top + (s * P.height) / 2 : S.top + S.height / 2;
       target.current = { x: tx - cx - s * (P.left + P.width / 2 - cx), y: ty - cy - s * (P.top + P.height / 2 - cy), s };
@@ -87,8 +103,18 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(st);
+    // A resize midway through the story cannot be measured against transformed glass. Calibrate when it returns home.
+    const off = p.on("change", (v) => {
+      if (!pending || v > DOLLY[0]) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    });
     document.fonts?.ready.then(measure);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      off();
+      cancelAnimationFrame(frame);
+    };
   }, [p, stage, device]);
 
   // Out of the gate at once (ease-out) once the copy is nearly gone: the laptop is well on its way to the centre by the
@@ -106,12 +132,18 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
   const labels = useTransform(() => Math.min(labelGate.get(), out(p.get())));
   // will-change only while the dolly is moving: held, Chrome keeps the layer at its scale-1 raster and blows it up.
   const will = useMotionValue<"auto" | "transform, opacity">("auto");
+  const raster = useMotionValue(1);
   const idle = useRef(0);
   useMotionValueEvent(p, "change", (v) => {
     window.clearTimeout(idle.current);
+    raster.set(1);
     if (v <= 0.02 || v >= 0.22) return will.set("auto");
     will.set("transform, opacity");
-    idle.current = window.setTimeout(() => will.set("auto"), SETTLE_MS);
+    idle.current = window.setTimeout(() => {
+      will.set("auto");
+      // Draw settled glass at its displayed resolution rather than enlarging a small text raster.
+      raster.set(1 + (target.current.s - 1) * k.get());
+    }, SETTLE_MS);
   });
   useEffect(() => () => window.clearTimeout(idle.current), []);
   // The laptop goes once the consent screen has dissolved in over its screen (at 0.12, CustodyStage), before the clip's
@@ -129,6 +161,7 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
       scale: useTransform(k, (t) => 1 + (target.current.s - 1) * t),
       opacity: body,
       "--tilt-k": useTransform(p, (v) => 1 - inOut(ramp(v, DOLLY[0], DOLLY[1] - 0.01))),
+      "--raster-scale": raster,
       willChange: will,
     },
     labels,

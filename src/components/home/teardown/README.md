@@ -1,7 +1,7 @@
 # Opened Exhibit
 
 Claim RM-0442's evidence in 3D. Each of the five checks opens the physical part it is about, then the fixed rule
-pays $29.99. This is wave 3's judged concept 1, built from the prototype in
+approves the claim and PayPal confirms the illustrative $29.99 payout. This is wave 3's judged concept 1, built from the prototype in
 `scratchpad/wave3/concepts/opened-exhibit/`.
 
 One export: `OpenedExhibit` from `@/components/home/teardown`.
@@ -43,10 +43,11 @@ Schibsted Grotesk and JetBrains Mono fonts. The component itself reads only the 
 |---|---|
 | `claim.ts` | Every fact and quote the exhibit shows, with its source |
 | `model.ts` | The one input, `p` → `stateAt(p)`: beats, part openness, camera shot, readouts, ticks, receipt. Pure; tested in `model.test.ts` |
+| `poster-geometry.ts` / `poster-frames.json` | The captured still's photo plane and feature anchors, transformed by its actual object-fit layout so poster/mobile scan and connector overlays remain attached to the same evidence |
 | `scan.ts` | Check 1's scan line: where it is on the clock, and the photo's projective map that lays it on the phone's tilted screen. Pure; tested in `scan.test.ts` |
 | `OpenedExhibit.tsx` | Chooses the form, owns the pin, draws one frame per change of `p`, and writes the DOM overlay (readouts, check row, callout and leader, receipt) |
-| `scene/` | three.js, behind a dynamic import: `index.ts` (studio, framing, render), `pillow.ts` (the cut C-shaped pillow in slate blue-grey, torn edge, stuffing), `parts.ts` (tag and twine, the phone with the photo on its screen and that photo's corners for the scan line, prints and fingerprints), `textures.ts`, `noise.ts` |
-| `public/teardown/*.webp` | 28 pre-rendered stills (7 beats × 2 themes × desktop/phone), 1.2 MB in all. The phone stills of the whole pillow are framed tight, so the object fills about 85% of a 375px screen |
+| `scene/` | three.js, behind a dynamic import: `index.ts` (studio, framing, render), `pillow.ts` (the cut C-shaped pillow with the photo's dark multicolour feather print, torn edge, stuffing), `parts.ts` (tag and twine, the phone with the photo on its screen and that photo's corners for the scan line, prints and fingerprints), `textures.ts`, `noise.ts` |
+| `public/teardown/*.webp` | 28 pre-rendered stills (7 beats × 2 themes × desktop/phone), 1.65 MB in all. The phone stills of the whole pillow are framed tight, so the object fills about 85% of a 375px screen |
 
 ### Forms, chosen after mount
 
@@ -73,8 +74,10 @@ The server always renders the static form.
   over the canvas, laid on the photo's four projected corners (the scene returns them with each frame) through their
   projective map, so it stays crisp and clipped to the photo however small and tilted the phone is, and only its few
   attributes are written each frame; the scene is not redrawn. It starts at the photo's top as the phone comes up and
-  is drawn in the same frame as the scene, so it never trails the phone while the camera moves. The stills and the
-  capture tool's frames leave it out.
+  is drawn in the same frame as the scene, so it never trails the phone while the camera moves. Still files leave it out,
+  but their captured photo geometry drives the same live SVG scan in poster/mobile mode. Feature connectors use those
+  same captured coordinates. The account-verification card is visible in both layouts, and mobile connectors enter the
+  caption band below the evidence rather than using the desktop's side-column geometry.
 - Tier 2 caps the pixel ratio at 1.5, uses a 1024 VSM shadow map, and draws two fibre shells.
 - Tier 1 drops to a pixel ratio of 1, 512 shadows and one shell. The drop happens:
   - after a start-up benchmark of over 12 ms a frame. The benchmark ends on a 1px `readPixels`, which blocks until the
@@ -90,7 +93,7 @@ The server always renders the static form.
   A slow tier 1 falls back to the posters, and the canvas is removed with the scene, so its last frame never sits over
   the current beat's still.
 - Each frame has 42 draw calls and about 220k triangles, shadow pass included.
-- **Measured** on an Apple M5 Pro through ANGLE Metal, scrolling the pin one step per frame for 240 frames:
+- **Previously measured** on an Apple M5 Pro through ANGLE Metal, scrolling the pin one step per frame for 240 frames:
 
   | Viewport | Mean frame | p95 | Start-up benchmark |
   |---|---|---|---|
@@ -106,8 +109,9 @@ The server always renders the static form.
 
 ### Honesty
 
-- No label on the exhibit (owner rule: no internal labels on the site). The photo is generated (docs/EVAL.md), and
-  the sandbox payout is stated once, in /terms.
+- The homepage identifies its prepared illustrative PayPal sandbox claim. The photo is generated (docs/EVAL.md);
+  its stored verdict and payout timings are narrative evidence, not a fresh provider transaction. The illustrated
+  pillow keeps the same dark multicolour feather print so the phone photo and scanned product do not silently differ.
 - The two quotes are the model's stored words on that photo. `claim.ts` gives the run file and the field each one
   comes from.
 - The fingerprints are the real dHash values of the demo photos, computed with `src/lib/fingerprint.ts`.
@@ -144,6 +148,9 @@ Start `next dev`, then run:
 npx tsx scripts/teardown-capture.ts --base http://127.0.0.1:<port> --posters public/teardown
 npx tsx scripts/teardown-capture.ts --base http://127.0.0.1:<port> --at 0,beats --sizes 1440x900,1920x1080 --check
 ```
+
+Regeneration also writes `poster-frames.json`. Commit that geometry with the stills: the overlay coordinates must
+correspond to the same camera poses and image dimensions. Capture is headless and blocks application API requests.
 
 `--check` reports every DOM text box with solid scene pixels under it. It must report none.
 

@@ -158,9 +158,20 @@ describe("chapter 06's arrival", () => {
       expect(most).toBeLessThan(0.06);
     });
 
-    it("never prints the receipt's words and the row's over each other, and lands as the flat row", () => {
+    it("keeps the receipt readable until the fold, then hands its ink to the row without an empty card", () => {
       const ps = [...Array(1001).keys()].map((i) => 0.88 + i * 0.0001);
-      expect(ps.every((p) => at(p).receipt === 0 || at(p).row === 0)).toBe(true);
+      expect(at(ARRIVAL[0]).receipt).toBe(1);
+      // The paper dims before the fold; its ink must not vanish with that lighting change.
+      expect(at(ARRIVAL[0] - 0.001).receipt).toBe(1);
+      for (const p of ps) {
+        const { receipt, row } = at(p);
+        expect(Math.max(receipt, row)).toBeGreaterThanOrEqual(0.75 - 1e-8);
+        // Only a brief crossfade inside the fold; the row is whole before the glide starts.
+        if (receipt > 0 && row > 0) {
+          expect(arrivalAt(p)).toBeGreaterThan(0.12);
+          expect(arrivalAt(p)).toBeLessThan(0.24);
+        }
+      }
       // The paper's own fill hands over to the card's ground only once that ground is whole under it.
       expect(ps.every((p) => at(p).paper === 1 || at(p).ground === 1)).toBe(true);
       expect(at(LAND)).toEqual(lookAt(1));

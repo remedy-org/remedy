@@ -54,11 +54,10 @@ async function tileNoise(n: number, cells: number, seed: number) {
 
 /**
  * The feather print's shape on one tile (8 cm of fabric): staggered rows of small feathers, each a leaf shape with a
- * quill, leaning the same way as on the CPSC photo. Drawn wrapped, so the tile repeats without a seam. The exhibit draws
- * it tone on tone (`tone`, at `alpha`), a faint hint in the cloth rather than the recalled print's nine colours: the
- * object reads simply, and the claim's own photos (public/demo) keep the real print.
+ * quill, leaning the same way as on the CPSC photo. Drawn wrapped, so the tile repeats without a seam. The illustrated cloth keeps the same dark ground and multicolour feather print as the claim photo, so the phone
+ * and the product in front of it visibly belong to the same evidence sequence.
  */
-function drawFeathers(g: CanvasRenderingContext2D, n: number, seed: number, tone: string, alpha: number) {
+function drawFeathers(g: CanvasRenderingContext2D, n: number, seed: number, tone: string | readonly string[], alpha: number) {
   const r = rng(seed);
   const cols = 3;
   const rows = 4;
@@ -70,7 +69,8 @@ function drawFeathers(g: CanvasRenderingContext2D, n: number, seed: number, tone
     for (let col = 0; col < cols; col++) {
       const cx = ((col + (row % 2) * 0.5 + (r() - 0.5) * 0.12) / cols) * n;
       const cy = ((row + (r() - 0.5) * 0.12) / rows) * n;
-      const tilt = -0.45 + (r() - 0.5) * 0.15;
+      const tilt = -0.15 + (r() - 0.5) * 0.2;
+      const colour = typeof tone === "string" ? tone : tone[Math.floor(r() * tone.length)];
       for (const dx of [-n, 0, n])
         for (const dy of [-n, 0, n]) {
           const x = cx + dx;
@@ -79,12 +79,25 @@ function drawFeathers(g: CanvasRenderingContext2D, n: number, seed: number, tone
           g.save();
           g.translate(x, y);
           g.rotate(tilt);
-          g.fillStyle = tone;
+          g.fillStyle = colour;
           g.beginPath();
           g.moveTo(0, -len / 2);
           g.quadraticCurveTo(wid, -len * 0.1, 0, len / 2);
           g.quadraticCurveTo(-wid, -len * 0.1, 0, -len / 2);
           g.fill();
+          g.strokeStyle = "rgba(255,255,255,0.55)";
+          g.lineWidth = Math.max(1, n / 420);
+          g.beginPath();
+          g.moveTo(0, -len * 0.44);
+          g.lineTo(0, len * 0.48);
+          for (let barb = -3; barb <= 3; barb++) {
+            const y = barb * len * 0.1;
+            const reach = wid * (1 - Math.abs(barb) * 0.12) * 0.55;
+            g.moveTo(-reach, y - len * 0.08);
+            g.lineTo(0, y);
+            g.lineTo(reach, y - len * 0.08);
+          }
+          g.stroke();
           g.restore();
         }
     }
@@ -93,11 +106,11 @@ function drawFeathers(g: CanvasRenderingContext2D, n: number, seed: number, tone
 }
 
 /**
- * Brushed cotton in one calm colour (`base`) with the feather print a faint tone-on-tone hint (`print`): colour with
+ * Brushed cotton with the claim photo's dark fabric ground (`base`) and feather colours (`print`): colour with
  * faint large mottling under the print, and a normal map of fine, irregular fibre noise with a slight grain along the
  * weft. No regular ribs. Built in slices (see yieldToMain).
  */
-export async function fabricTextures(THREE: Three, base: [number, number, number], print: { tone: string; alpha: number }) {
+export async function fabricTextures(THREE: Three, base: [number, number, number], print: { tone: string | readonly string[]; alpha: number }) {
   const n = 512;
   const mottle = await tileNoise(n, 6, 11);
   const f1 = await tileNoise(n, 96, 12);

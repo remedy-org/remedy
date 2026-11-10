@@ -158,7 +158,7 @@ export const STOPS: readonly Stop[] = [
   // least: Results stays the frame's head, as the nav's Results lands it.
   {
     name: "Results",
-    at: (p) => p.fit(p.line("#proof header"), { min: p.past("#checks [data-try-cta]"), max: p.line("#proof header", 16), before: "#companies header" }),
+    at: (p) => p.fit(p.line("#proof header"), { min: p.line("#proof header"), max: p.line("#proof header", 16), before: "#companies header" }),
   },
   // Keep the whole heading and eyebrow under the header. The console below can be explored in its own scroller;
   // fitting its foot must never push the section's introduction behind the navigation.
@@ -471,6 +471,8 @@ export function alignAnchor(hash: string) {
   const section = document.getElementById(id);
   if (!stop || !section) return;
   const y = stop.at(readPage());
-  // html's scroll-padding-top (the nav) and the section's margin together put its top at y.
-  if (typeof y === "number") section.style.scrollMarginTop = `${docTop(section) - nav() - y}px`;
+  // Native anchors include the root's header clearance, which may be larger than the header itself.
+  const padding = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop);
+  const inset = Number.isFinite(padding) ? padding : nav();
+  if (typeof y === "number") section.style.scrollMarginTop = `${docTop(section) - inset - y}px`;
 }

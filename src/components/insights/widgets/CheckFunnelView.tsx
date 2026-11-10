@@ -32,7 +32,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
         {steps.map((s, i) => (
           <li key={s.stage} className="flex flex-col gap-1">
             <div className="grid grid-cols-[1fr_2rem] items-center gap-2 text-ui">
-              <span>{s.stage}</span>
+              <span>{shownAs(s.stage)}</span>
               <span className={clsx("text-right", figure)}>{s.reached}</span>
             </div>
             <span aria-hidden="true" className="h-2 rounded-[3px] bg-surface-2">
@@ -79,7 +79,7 @@ export function CheckFunnelView({ steps, selected = new Set(), onToggle, onReset
           <li key={s.stage} className={clsx("grid grid-cols-[11.5rem_2.5rem_1fr] content-start items-center gap-x-3", flush ? "gap-y-1" : "grid-rows-[20px_auto] gap-y-0.5")}>
             <div className="contents">
               {/* A long stage wraps to a second line rather than cut. */}
-              <span className="row-span-2 self-start text-ui leading-tight text-pretty text-text">{flush ? s.stage : shownAs(s.stage)}</span>
+              <span className="row-span-2 self-start text-ui leading-tight text-pretty text-text">{shownAs(s.stage)}</span>
               <span className={clsx("text-right text-ui leading-tight text-text", figure)}>{s.reached}</span>
               <span className="relative h-3 rounded-[3px] bg-surface-2" aria-hidden="true">
                 {/* A stage no claim reached draws no bar, not a sliver (Paid under a Held pick reads 0 on an empty track). */}

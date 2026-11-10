@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PAGE_STOPS } from "../custody/CustodyStage";
 import { ANCHOR_AT, REST, SECTION_VH, T } from "../problemTimeline";
-import { ANCHORED, framed, LINE, MERGE, nearestClean, RESTS, SLOW, STOPS, tidy, type Page } from "./stops";
+import { alignAnchor, ANCHORED, framed, LINE, MERGE, nearestClean, readPage, RESTS, SLOW, STOPS, tidy, type Page } from "./stops";
 
 /** A stand-in page at 1440x900: the runway at 64 with 7316px of travel, the Problem sheet's top at 8280. */
 const page: Page = {
@@ -231,5 +231,36 @@ describe("scroll stops", () => {
     const phone = STOPS.find((s) => s.name === "Chain of Custody, phone")!;
     expect(phone.at({ ...page, beats: (sel) => (sel.includes("data-scroll-stops") ? [700, 1400] : undefined) })).toEqual([700, 1400]);
     expect(phone.at(page)).toBeUndefined();
+  });
+});
+
+describe("native section anchors", () => {
+  it.each([0, 88, 112])("lands on the wheel stop with %ipx root scroll padding", (padding) => {
+    const root = {};
+    const section = { offsetTop: 8000, offsetParent: null, offsetHeight: 3340, children: [{}], style: { scrollMarginTop: "" } };
+    vi.stubGlobal("innerWidth", 1440);
+    vi.stubGlobal("innerHeight", 900);
+    vi.stubGlobal("document", { documentElement: root, getElementById: () => section, querySelector: () => null });
+    vi.stubGlobal("getComputedStyle", (el: unknown) => el === root ? { scrollPaddingTop: `${padding}px` } : { position: "sticky" });
+    try {
+      const expected = STOPS.find((s) => s.name === ANCHORED.problem)!.at(readPage());
+      alignAnchor("#problem");
+      const nativeLanding = section.offsetTop - padding - parseFloat(section.style.scrollMarginTop);
+      expect(nativeLanding).toBeCloseTo(expected as number, 9);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps the Results heading near the nav when the next section cuts the viewport foot", () => {
+    const geometry: Page = {
+      ...page,
+      line: (_selector, under = LINE) => framed(2000, 72, under),
+      past: () => 1200,
+      fit: (prefer, range) => prefer === undefined ? undefined : nearestClean(prefer, [[2700, 3000]], [72, 900], range),
+    };
+    const at = STOPS.find((s) => s.name === "Results")!.at(geometry) as number;
+    expect(2000 - at).toBeGreaterThanOrEqual(72 + 16);
+    expect(2000 - at).toBeLessThanOrEqual(72 + LINE);
   });
 });

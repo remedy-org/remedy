@@ -1,8 +1,7 @@
 import { ARRIVE_ID, PREVIEW_OPEN_ID, previewProps, reportPreview, STILL_ROWS } from "@/components/console/preview";
 import { ProgressReport } from "@/components/console/ProgressReport";
-import { STUDIO_ON_HOME } from "@/components/insights/InsightsPreviewLazy";
 import { InsightsStill } from "@/components/insights/InsightsStill";
-import { insightsPreview, insightsPreviewForStudio } from "@/components/insights/preview";
+import { insightsPreview } from "@/components/insights/preview";
 import { insightsStill } from "@/components/insights/still";
 import { Button } from "@/components/ui";
 import { AnalystRail, RECORDING } from "./AnalystRail";
@@ -28,6 +27,9 @@ export function Companies() {
   // Step 03 names the recall analyst only when its recorded answer is there to show.
   const sentences = stepSentences(Boolean(RECORDING));
   const descriptions = describe(still.totals, { id: PREVIEW_OPEN_ID, amount: evidence?.amount ?? "" }, RECORDING);
+  sentences[2] = "See every outcome and where claims stop, from the same claims in the queue." + (RECORDING ? TOUR.analystSentence : "");
+  descriptions[2] = `Illustrative Insights workspace: ${still.totals.claims} prepared claims, ${still.totals.paid} paid through PayPal, ${still.totals.held} held for a person and ${still.totals.refused} rejected or blocked. The progression chart shows how many claims reached each check. Recall size: ${still.totals.unitsSold} units.` +
+    (RECORDING ? ` Recorded analyst answer: ${RECORDING.answer}` : "");
   const sheet = <ProgressReport recall={recall} report={report} generated={generated} daysIn={daysIn} reportNo={reportNo} home />;
 
   return (
@@ -51,9 +53,9 @@ export function Companies() {
           openId={PREVIEW_OPEN_ID}
           arriveId={ARRIVE_ID}
           descriptions={descriptions}
-          insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail /> : undefined} />}
+          insights={<InsightsStill data={still} rail={RECORDING ? <AnalystRail /> : undefined} home />}
           report={sheet}
-          studio={STUDIO_ON_HOME ? { data: insightsPreviewForStudio() } : null}
+          studio={null}
         />
       </div>
       <div data-story className="lg:hidden">
@@ -62,7 +64,7 @@ export function Companies() {
           sentences={sentences}
           evidence={evidence}
           insights={
-            <InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" />
+            <InsightsStill data={still} rail={RECORDING ? <AnalystRail form="phone" /> : undefined} form="phone" home />
           }
           report={sheet}
         />

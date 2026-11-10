@@ -28,8 +28,8 @@ export interface Report {
   // Of that, what PayPal has confirmed, and how many payouts are still settling.
   settledCents: number;
   settling: number;
-  // CPSC's units corrected by refund: units whose refund PayPal sent (Paid, or Sent, settling). A unit destroyed on
-  // camera whose refund is approved and not yet sent is remedied, not yet corrected.
+  // Units corrected by refund count payouts sent (Paid, or Sent, settling), rather than evidence acceptance alone.
+  // An approved claim with nothing sent is kept separate.
   correctedByRefund: number;
   approvedUnsent: number;
   demo: number;
@@ -50,9 +50,9 @@ export function buildReport(claims: ClaimSummary[], recall: Recall): Report {
   const rows: Row[] = [
     // The one payout vocabulary (lib/payoutWords.ts): Paid only where PayPal confirmed the payout, Sent, settling while it
     // hasn't, Approved where the rule or a person approved and nothing was sent.
-    ["paid", MONEY_WORD.paid, money.paid, "Unit destroyed on camera; refund paid through PayPal"],
-    ...(money.settling ? [["settling", MONEY_WORD.settling, money.settling, "Unit destroyed on camera; refund sent through PayPal, not yet confirmed"] as Row] : []),
-    ...(money.approved ? [["approved", MONEY_WORD.approved, money.approved, "Unit destroyed on camera; refund approved, nothing sent through PayPal yet"] as Row] : []),
+    ["paid", MONEY_WORD.paid, money.paid, "Evidence accepted; refund paid through PayPal"],
+    ...(money.settling ? [["settling", MONEY_WORD.settling, money.settling, "Evidence accepted; refund sent through PayPal, not yet confirmed"] as Row] : []),
+    ...(money.approved ? [["approved", MONEY_WORD.approved, money.approved, "Evidence accepted; refund approved, nothing sent through PayPal yet"] as Row] : []),
     ["held", "Held", stats.held, "Waiting for a person to approve or reject: an answer was unclear, a check couldn’t run, auto-pay was off, or PayPal refused an approved payout"],
     ["rejected", "Rejected", stats.rejected, "A photo check failed, or a person rejected it on review"],
     ["blocked", "Blocked", stats.blocked, "Stopped before the photo check"],

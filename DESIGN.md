@@ -1,6 +1,6 @@
 # Remedy design system
 
-Updated 10 November 2026. This replaces the previous Lamplight/brass system at the user's request. Current animation review evidence: `../planning/animation-review-2026-11-10/`.
+Updated 10 November 2026. This replaces the previous Lamplight/brass system at the user's request. Current refinement evidence: `../planning/refinement-2026-11-10/`.
 
 ## Direction
 
@@ -35,7 +35,7 @@ The font binaries live in Git-ignored `public/fonts/diatype/` and are included o
 
 Font families are centralized in root layout and the `--font-sans`, `--font-display`, `--font-mono` tokens, including AG Grid and Studio. The user-provided font binaries stay outside Git.
 
-Hero 40–60px, section heading 28–40px, feature title 22–25px, body 17px, UI 15px, metadata 12px. Display line height 1.1 with restrained negative tracking; body 1.55. Use medium/semibold headings, not arbitrary bold inline prose. Amounts and data use tabular figures. Always check longest realistic recall title/reason.
+Hero 40–64px, section heading 28–40px, feature title 22–25px, body 17px, UI 15px, metadata 12px. Display line height 1.1 with restrained negative tracking; body 1.55. Use medium/semibold headings, not arbitrary bold inline prose. Amounts and data use tabular figures. Always check longest realistic recall title/reason.
 
 ## Layout and controls
 
@@ -47,7 +47,7 @@ No global grain or warm page tint. Preserve the laptop's physical form and table
 
 ## Identity
 
-The return-receipt mark is a rounded slip with a negative-space return arrow and a small folded tail. Master paths live in `components/ui/markPaths.ts`; Wordmark, Open Graph and generated icons share them. Run `npx tsx scripts/apple-icon.ts` after changing the paths. Wordmark uses uppercase outline letters; accessible product name is Remedy. One-color white or text-color master.
+The return-receipt mark is a rounded slip with a negative-space return arrow and a perforated receipt edge. Master paths live in `components/ui/markPaths.ts`; Wordmark, Open Graph and generated icons share them. Run `npx tsx scripts/apple-icon.ts` after changing the paths. Wordmark uses bold lowercase letters; accessible product name is Remedy. One-color white or text-color master.
 
 ## States, truth and motion
 

@@ -4,9 +4,9 @@
 export const STAGES = ["Filed", "Photos sent", "Passed the account checks", "Passed photo check", "Paid"] as const;
 export type Stage = (typeof STAGES)[number];
 
-/** How the report shows a decision or a stage: as the console's verdict says it ("Paid" once PayPal settled it, which
- * every paid claim in the console has). One place, so the page never says a word the queue doesn't. */
-export const shownAs = (value: string) => value;
+/** Display labels keep the underlying stage keys used by queries and cross-filters stable. The pre-AI stage includes
+ * the session and duplicate-photo checks as well as the PayPal account check. */
+export const shownAs = (value: string) => value === "Passed the account checks" ? "Pre-AI checks passed" : value;
 
 /**
  * Why a claim stopped where it did: refused by a check (rejected or blocked, drawn in --stop), held for a person

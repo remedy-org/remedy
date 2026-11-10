@@ -10,7 +10,7 @@ import { SHARE_IMAGE } from "@/lib/shareImage";
 
 const description =
   "Remedy connects recall evidence and PayPal payouts. Owners submit photos with a one-time code; five checks and a fixed rule route each claim to payment, review or rejection.";
-const share = "Remedy · Recall refunds, paid in a minute";
+const share = "Remedy · Recall refunds, from proof to PayPal";
 
 export const metadata: Metadata = {
   title: { absolute: share },

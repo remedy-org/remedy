@@ -180,9 +180,9 @@ export function ProgressReport({
           <tbody>
             {(
               [
-                ["Units corrected by refund", formatCount(report.correctedByRefund), "Destroyed on camera; refund sent through PayPal"],
+                ["Units corrected by refund", formatCount(report.correctedByRefund), "Evidence accepted; refund sent through PayPal"],
                 // Remedied but not yet corrected: the refund is approved and PayPal hasn't sent it.
-                report.approvedUnsent ? ["Destroyed on camera, refund approved, not yet sent", formatCount(report.approvedUnsent), "Counted as corrected once PayPal sends the refund"] : null,
+                report.approvedUnsent ? ["Evidence accepted, refund approved, not yet sent", formatCount(report.approvedUnsent), "Counted as corrected once PayPal sends the refund"] : null,
                 ["Units corrected by repair or replacement", "0", "The remedy is a refund"],
                 [
                   "Units remaining at consumer level",

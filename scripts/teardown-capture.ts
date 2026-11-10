@@ -37,9 +37,11 @@ const RAW = `${BARE} [data-mode] > canvas { mask-image: none !important }`;
 
 async function main() {
   const browser = await chromium.launch({
+    headless: true,
     args: ["--ignore-gpu-blocklist", "--enable-gpu-rasterization", "--use-angle=metal", "--enable-webgl", "--hide-scrollbars"],
   });
   const report: unknown[] = [];
+  const geometry: Record<string, unknown> = {};
   try {
     const jobs = values.posters
       ? (["dark", "light"] as const).flatMap((theme) => [
@@ -73,6 +75,7 @@ async function main() {
         [THEME_STORAGE_KEY, job.theme],
       );
       const page = await ctx.newPage();
+      await ctx.route("**/api/**", (route) => route.abort());
       const errors: string[] = [];
       page.on("pageerror", (e) => errors.push(String(e)));
       page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -81,6 +84,16 @@ async function main() {
       });
       await page.waitForFunction(() => (window as unknown as { __exhibit?: { ready(): boolean } }).__exhibit?.ready(), null, { timeout: 60000 });
       await page.evaluate(() => document.fonts.ready);
+      // The capture wrapper is historical; render the current product palette into its transparent stills.
+      await page.locator("[data-mode]").evaluate((el, theme) => {
+        const style = (el as HTMLElement).style;
+        style.setProperty("--bg", theme === "dark" ? "#000000" : "#faf9fc");
+        style.setProperty("--accent", theme === "dark" ? "#9147ff" : "#8436e8");
+        style.setProperty("--paper", "#f6f4f9");
+        style.setProperty("--ink", "#201c18");
+        style.setProperty("--faint", theme === "dark" ? "#afa8b6" : "#6b5e76");
+        document.documentElement.style.setProperty("--capture-refresh", String(performance.now()));
+      }, job.theme);
       const out = resolve(values.posters ?? values.out);
       await mkdir(out, { recursive: true });
       // --ref: the cut evidence posed like the RM-0442 photo (from the front, about 52 degrees down), canvas only.
@@ -131,6 +144,13 @@ async function main() {
         // A frame, React's commit, then the frame the commit schedules.
         await page.evaluate(() => new Promise((r) => setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(r)), 120)));
         if (values.posters) {
+          if (job.theme === "dark") {
+            geometry[`${job.form}-${at.name}`] = await page.evaluate(() => {
+              const api = (window as unknown as { __exhibit: { frame(): unknown } }).__exhibit;
+              const r = document.querySelector("[data-mode]")!.getBoundingClientRect();
+              return { width: r.width, height: r.height, ...api.frame() as object };
+            });
+          }
           const style = await page.addStyleTag({ content: RAW });
           const png = await page.screenshot({ omitBackground: true });
           await style.evaluate((n) => (n as Element).remove());
@@ -209,6 +229,7 @@ async function main() {
       await ctx.close();
     }
     if (values.check) await writeFile(join(resolve(values.out), "collisions.json"), JSON.stringify(report, null, 2));
+    if (values.posters) await writeFile(resolve("src/components/home/teardown/poster-frames.json"), JSON.stringify(geometry, null, 2) + "\n");
   } finally {
     await browser.close();
   }

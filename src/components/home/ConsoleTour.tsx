@@ -32,9 +32,8 @@ import { nextTab, stateAt, STEPS, type Step } from "./tour-state";
  *   02 the same grid with a claim selected and its evidence laid over the grid's right-hand columns: a held claim's Pay
  *      and Reject play the decision in the browser (no request), the row, counts and ledger following, and are put
  *      back when the visitor leaves the queue or the section;
- *   03 Insights: real AG Studio, drawn out of sight once a visitor shows intent (a pointer over its step, focus or a
- *      pick), so a page that is only scrolled past never loads it (the still stands in until then). A visitor may
- *      hover its charts and cross-filter it, and clear the filter from the frame;
+ *   03 Insights: a compact overview of outcomes and claim progression. When Studio data is supplied, its report is
+ *      loaded only on intent and may be cross-filtered; the marketing page leaves that fuller view in the workspace;
  *   04 the CPSC report draft, the section's one paper object, read by scrolling it.
  * The grid scrolls inside the frame only once a visitor has clicked or focused it, the report also once the pointer
  * rests on it with the page still: a wheel passing over the frame keeps moving the page.
@@ -508,21 +507,26 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       const railH = tabsRow.getBoundingClientRect().height;
       el.style.setProperty("--rail-h", `${Math.round(railH)}px`);
       const top = section.getBoundingClientRect().top;
-      const head = (section.querySelector("h2")?.getBoundingClientRect().top ?? top) - top;
+      const head = (section.querySelector(studio ? "h2" : "header")?.getBoundingClientRect().top ?? top) - top;
       const tabs = tabsRow.getBoundingClientRect().top - top;
-      // Where the heading, the tabs and a frame of at least FIT_MIN fit one screen (a 1440x900 laptop), the frame takes
-      // the height that leaves the heading in view too; otherwise the CSS height, which fits it under the tabs.
+      // Keep the introduction and tabs visible with the fixed frame wherever they fit.
       const withHead = window.innerHeight - NAV - AIR - (tabs - head) - railH - GAP - AIR;
-      if (withHead >= FIT_MIN && withHead < FRAME_MAX) frame.current?.style.setProperty("--frame-h", `${Math.floor(withHead)}px`);
-      else frame.current?.style.removeProperty("--frame-h");
+      // The compact overview and scrollable queue remain legible in a smaller fixed frame on short laptops.
+      // Include the section eyebrow in that fit so an anchor does not trade away the bottom of its charts.
+      const min = studio ? FIT_MIN : 400;
+      const fallback = Math.min(FRAME_MAX, Math.max(studio ? 520 : 400, window.innerHeight - NAV - railH - GAP - 2 * AIR));
+      let height = withHead >= min ? Math.min(FRAME_MAX, withHead) : fallback;
       // The grid area holds whole rows, and no more rows than the queue has: the frame gives up what would show of a row
       // cut at its foot, and the slots under its last claim.
       const grid = gridGate.current;
       if (grid && frame.current) {
-        const slots = Math.min(rowCount, Math.floor((grid.clientHeight - GRID_HEAD) / GRID_ROW));
-        const extra = grid.clientHeight - GRID_HEAD - slots * GRID_ROW;
-        if (extra > 0) frame.current.style.setProperty("--frame-h", `${Math.floor(frame.current.getBoundingClientRect().height - extra)}px`);
+        const chrome = frame.current.getBoundingClientRect().height - grid.clientHeight;
+        const available = height - chrome;
+        const slots = Math.max(0, Math.min(rowCount, Math.floor((available - GRID_HEAD) / GRID_ROW)));
+        height -= Math.max(0, available - GRID_HEAD - slots * GRID_ROW);
       }
+      // One final size write avoids a ResizeObserver loop between the base height and its whole-row trim.
+      frame.current?.style.setProperty("--frame-h", `${Math.floor(height)}px`);
       const bottom = (frame.current?.getBoundingClientRect().bottom ?? 0) - top;
       const from = bottom - head + AIR <= window.innerHeight - NAV ? head : tabs;
       // The page's scroll padding already keeps the jump under the nav: the margin only adds the air and skips the
@@ -537,7 +541,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
       ro.disconnect();
       window.removeEventListener("resize", place);
     };
-  }, [rowCount]);
+  }, [rowCount, studio]);
 
   // The evidence panel's left edge lands on a column boundary: it covers the columns after Checks (the time, the payer
   // and the money, which it repeats), or from Checks on where those leave it too narrow, at least 380px. Where the status
@@ -869,7 +873,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
         <div
           ref={insightsEl}
           {...gate("insights")}
-          inert={studioState !== "shown"}
+          inert={Boolean(studio) && studioState !== "shown"}
           data-on={state.body === "insights" || undefined}
           data-studio-shown={studioState === "shown" || undefined}
           // The page under it (the still's or Studio's) scrolls: at its end the foot's fade goes, as the draft's does.
@@ -878,7 +882,7 @@ export function ConsoleTour({ rows, stillRows, sentences, unitsSold, openId, arr
             if (!el.matches("[data-still], [data-insights-scroll]")) return;
             e.currentTarget.toggleAttribute("data-end", el.scrollTop + el.clientHeight >= el.scrollHeight - 2);
           }}
-          className={clsx(styles.body, styles.insightsBody)}
+          className={clsx(styles.body, styles.insightsBody, !studio && "mask-none!")}
         >
           {insights}
           {studio && (studioState === "mounted" || studioState === "shown") && (

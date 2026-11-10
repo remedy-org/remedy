@@ -3,43 +3,33 @@ import { Money, Paper, Stamp } from "@/components/ui";
 import { CLAIM } from "./claim";
 import { PhoneFrame } from "./frames";
 
-// The hero below 1024px: no laptop (its screen would render at 5px), a phone at 1:1 showing where the claim ends, the
-// refund receipt. A presentational copy of the claim flow's receipt for claim RM-0442.
+/** The mobile introduction pairs the actual evidence with its illustrative outcome before the step-by-step story. */
 export function HeroPhone() {
   return (
     <figure className="m-0 flex flex-col items-center gap-3">
       <PhoneFrame bar className="relative">
-        <div className="flex flex-col gap-4 p-4" aria-hidden="true">
-          {/* The paid receipt, flat: the one physical moment, so the one stamp. The amount and the claim id once each. */}
-          <Paper variant="receipt" perforated padding="none">
-            <div className="flex flex-col px-5 pt-8 pb-5">
-              <div className="flex items-baseline justify-between gap-3 text-ui text-ink-muted">
-                <span>Refund receipt</span>
-                <span className="font-mono text-micro font-medium text-ink">{CLAIM.id}</span>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-3">
+          <div className="relative overflow-hidden rounded-control border border-line bg-surface">
+            <Image
+              src={CLAIM.photo}
+              alt="Example evidence: the X-VESOLJE nursing pillow cut in half beside its handwritten M4T code."
+              width={544}
+              height={364}
+              className="aspect-[3/2] w-full object-cover"
+              style={{ objectPosition: CLAIM.objectPosition }}
+            />
+            <span className="absolute top-3 left-3 rounded-control bg-photo-scrim px-2 py-1 text-micro text-photo-scrim-text">Example evidence</span>
+          </div>
+          <Paper variant="receipt" perforated padding="none" className="mt-3">
+            <div className="flex items-center justify-between gap-4 px-4 pt-5 pb-4">
+              <div>
+                <p className="mb-2 text-micro text-ink-muted">Refund in this example</p>
                 <Money value={CLAIM.amount} size="amount" />
-                <Stamp tone="pay">Paid</Stamp>
               </div>
-              <dl className="mt-4 text-ui">
-                {[
-                  ["Paid to", "Verified PayPal account"],
-                  ["Recall", CLAIM.recall],
-                ].map(([k, v], i) => (
-                  <div key={k} className="flex justify-between gap-4 border-t border-dashed border-paper-line py-2">
-                    <dt className="text-ink-muted">{k}</dt>
-                    <dd className={i === 1 ? "font-mono" : "font-medium"}>{v}</dd>
-                  </div>
-                ))}
-              </dl>
+              <Stamp tone="pay">Paid</Stamp>
             </div>
           </Paper>
-          <div className="flex items-center gap-3 px-1">
-            <span className="relative size-12 shrink-0 overflow-hidden rounded-control border border-line">
-              <Image src={CLAIM.photo} alt="" width={48} height={48} className="size-full object-cover" style={{ objectPosition: CLAIM.objectPosition }} />
-            </span>
-            <span className="text-ui text-text-2">All 5 checks passed</span>
-          </div>
+          <p className="mt-3 px-1 text-micro text-muted">Same product. Five checks. One recorded outcome.</p>
         </div>
       </PhoneFrame>
     </figure>

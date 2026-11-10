@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { MARK_STUB, MARK_TAG } from "@/components/ui/markPaths";
 
-export const alt = "Remedy: recall refunds, without the inbox. Evidence checks and traceable PayPal refunds.";
+export const alt = "Remedy: recall refunds, from proof to PayPal. Evidence checks and traceable refunds.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -18,8 +18,8 @@ export default async function OpengraphImage() {
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ color: "#c59eff", fontSize: 20, marginBottom: 24 }}>From recall evidence to a PayPal refund.</div>
-          <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1.05, letterSpacing: -3 }}>Recall refunds,</div>
-          <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1.05, letterSpacing: -3 }}>without the inbox.</div>
+          <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1.05, letterSpacing: -3 }}>Recall refunds.</div>
+          <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1.05, letterSpacing: -3 }}>Proof to PayPal.</div>
           <div style={{ fontSize: 26, color: "#c1bec6", marginTop: 28, lineHeight: 1.4 }}>AI describes. Rules decide. PayPal pays.</div>
         </div>
         <div style={{ display: "flex", fontSize: 18, color: "#c1bec6" }}>PayPal sandbox · prepared demo photos</div>

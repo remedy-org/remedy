@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { animate, motion, useInView, useMotionTemplate, useMotionValue, useSpring, type MotionValue } from "motion/react";
+import { animate, motion, useInView, useMotionTemplate, useMotionValue, useSpring, useTransform, type MotionValue } from "motion/react";
 import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from "react";
 import { Money, Paper, Stamp } from "@/components/ui";
 import { CLAIM } from "./custody/claim";
@@ -9,15 +9,15 @@ import { ClaimScreen, FINAL_PHASE } from "./ClaimScreen";
 import { Laptop } from "./Laptop";
 import styles from "./device.module.css";
 
-// The hero moment (DESIGN.md, Motion): once the device is in view the five checks tick in 130ms apart, then the payout
-// chip lands, and the paid receipt leaves the screen to rest on the light table (spec H1), landing within 1.5 s, so a
-// visitor who glances for two seconds sees the payoff, not empty boxes. It plays once and rests on
+// The hero moment (DESIGN.md, Motion): once the device is in view the five checks tick 200ms apart, then the payout
+// chip lands, and the paid receipt leaves the screen to rest on the light table (spec H1), landing within 2.6 s, so a
+// visitor sees the checks before the receipt leaves the screen. It plays once and rests on
 // its final frame, which is what a return visit finds. Reduced motion shows the final state and no tilt; without JS the
 // <noscript> style below shows it too. Laptops only: below 1024px the hero shows a phone instead (HeroPhone).
 
-const PHASE_AT = [200, 330, 460, 590, 720, 850];
-const TAG_AFTER = 160;
-const MAX_TILT = 4;
+const PHASE_AT = [520, 720, 920, 1120, 1320, 1560];
+const TAG_AFTER = 240;
+const MAX_TILT = 2;
 
 const NOSCRIPT = `<style>[data-hero-device] [data-seq=show]{opacity:1!important;transform:none!important}[data-hero-device] [data-seq=hide]{opacity:0!important}</style>`;
 
@@ -55,7 +55,7 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
   }, [inView, reduced]);
 
   // The payout leaves the screen: the receipt starts at the chip's size and place on the screen, and flies out over
-  // the bezel to its rest on the table, 440ms --ease-snap, its shadow fading in as it lands. Only ever scaled up to
+  // the bezel to its rest on the table, 720ms --ease-snap, its shadow fading in as it lands. Only ever scaled up to
   // its rest size, so its text stays sharp.
   useEffect(() => {
     const tag = tagRef.current;
@@ -78,8 +78,8 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
       const k = r.width / tag.offsetWidth || 1;
       const x = (c.left + c.width / 2 - (r.left + r.width / 2)) / k;
       const y = (c.top + c.height / 2 - (r.top + r.height / 2)) / k;
-      const a = animate(tag, { x: [x, 0], y: [y, 0], scale: [s, 1], opacity: [0, 1, 1], rotate: [6, -2] }, { duration: 0.44, ease: [0.2, 0.8, 0.2, 1] });
-      const b = animate(shadow, { opacity: [0, 1] }, { duration: 0.2, delay: 0.3 });
+      const a = animate(tag, { x: [x, 0], y: [y, 0], scale: [s, 1], opacity: [0, 1, 1], rotate: [6, -2] }, { duration: 0.72, ease: [0.2, 0.8, 0.2, 1] });
+      const b = animate(shadow, { opacity: [0, 1] }, { duration: 0.3, delay: 0.42 });
       stop = () => {
         a.stop();
         b.stop();
@@ -91,12 +91,15 @@ export function HeroDevice({ labels }: HeroDeviceProps) {
     };
   }, [phase, reduced]);
 
-  // Pointer tilt: up to 4deg on each axis, sprung.
+  // Pointer tilt: up to 2deg on each axis, sprung.
   const tiltX = useMotionValue(0);
   const tiltY = useMotionValue(0);
   const rx = useSpring(tiltX, { stiffness: 140, damping: 20 });
   const ry = useSpring(tiltY, { stiffness: 140, damping: 20 });
-  const transform = useMotionTemplate`rotateX(${rx}deg) rotateY(${ry}deg)`;
+  const resting = useMotionValue(1);
+  const visibleRx = useTransform([rx, labels ?? resting], ([v, k]) => Number(v) * Number(k));
+  const visibleRy = useTransform([ry, labels ?? resting], ([v, k]) => Number(v) * Number(k));
+  const transform = useMotionTemplate`rotateX(${visibleRx}deg) rotateY(${visibleRy}deg)`;
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!finePointer || reduced || !stageRef.current) return;

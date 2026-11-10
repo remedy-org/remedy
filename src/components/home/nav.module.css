@@ -22,6 +22,7 @@
 }
 
 .bar {
+  border-color: var(--line-2);
   backdrop-filter: blur(4px);
   transition:
     background-color 200ms cubic-bezier(0.4, 0, 1, 1),
@@ -29,7 +30,7 @@
 }
 
 .header[data-scrolled] .bar {
-  border-color: var(--line);
+  border-color: var(--line-2);
   background: rgb(25 25 25 / 60%);
 }
 
@@ -54,10 +55,10 @@
   padding: 16px 12px;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.3;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   white-space: nowrap;
   transition: color 160ms var(--ease-snap);
@@ -125,6 +126,7 @@
 .source {
   width: 46px;
   height: 46px;
+  border-color: var(--line-2);
 }
 
 .source:hover,
@@ -336,7 +338,7 @@
   }
 }
 
-@media (min-width: 64rem) {
+@media (min-width: 72rem) {
   .bar {
     max-width: 1480px;
     margin-inline: auto;
@@ -350,7 +352,6 @@
     translate: -50% -50%;
   }
 
-  .wideLink,
   .menuButton {
     display: none;
   }
@@ -361,10 +362,6 @@
 }
 
 @media (min-width: 80rem) {
-  .wideLink {
-    display: block;
-  }
-
   .actions {
     gap: 16px;
   }

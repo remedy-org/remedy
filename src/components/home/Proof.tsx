@@ -18,16 +18,7 @@ const FIGURES: { figure: string; text: string }[] = [
   { figure: "1.1¢", text: "to check a claim" },
 ];
 
-/**
- * Results: the one number that matters is the heading, the zero at the display size (never bigger than the hero's h1)
- * with what it counts beside it, its top on the cap height of their first line; the lead under it, and the one fake's
- * sentence under that, on columns 1 to 7. The three supporting counts stand beside them on columns 8 to 12 on laptops,
- * a list on hairlines (each figure with its words), with the benchmark's footnote under them, the figures it sources,
- * ending on the fake's sentence's last line; on phones they follow the lead. On a laptop it starts 64px inside its
- * top, about 160px under "Try to fool it" as one section starts under another (a screen of its own, its block
- * centred, it left 310 to 390px of air above it and 375 to 470 below), and ends 104px inside its foot, so at its stop on
- * a 900px laptop screen the screen's foot falls above For companies' console, never through its bar.
- */
+/** Recorded results stay explicit about denominators and the boundary between photo reading and other controls. */
 export function Proof() {
   return (
     <Section
@@ -36,40 +27,23 @@ export function Proof() {
       exhibit="Results"
       headingSpan={7}
       stack
-      title={
-        // The zero's top on the cap height of the words' first line: both boxes from the top, the zero lowered by the
-        // difference between where each one's caps start in its line (Schibsted Grotesk: ascent 0.98, descent 0.26, cap
-        // 0.70 of the size; the words at line-height 1.06, the zero at 0.9).
-        <span className="flex items-start gap-x-3 sm:gap-x-4">
-          <span
-            aria-hidden="true"
-            className="mt-[calc(var(--text-title-lg)*0.187-0.107em)] text-display leading-[0.9] min-[1600px]:text-[clamp(3.5rem,3.75vw,4.5rem)]"
-          >
-            0
-          </span>
-          <span className="max-w-[22ch] text-balance">
-            <span className="sr-only">0 </span>of {WEB.photos} stolen web photos paid, across {WEB.tries} tries.
-          </span>
-        </span>
-      }
-      lead="We put Remedy up against real owner photos, official recall photos, photos of screens, wrong codes and AI-made fakes. It reads the code on every tag character by character, so one wrong letter refuses the claim."
+      title={<>0 payouts from {WEB.photos} web photos.</>}
+      lead={`Each web photo was tried three times: ${WEB.tries} attempts, none paid. The benchmark also covers genuine owner claims, wrong codes, photos of screens and AI-made images.`}
       note={
-        // The fake that passed, said once in the lead's own voice: it is why the camera session is the first check.
+        // Preserve the failed photo-check case: these figures are not a generated-image detection guarantee.
         <p className="max-w-[60ch] text-body text-pretty text-text-2">
-          A generated image of a cut pillow with the right code drawn on can pass the photo check: ours did, in every try.
-          So a claim&rsquo;s photos must arrive inside its own 10-minute camera session, and each verified PayPal account
-          gets one claim per recall.
+          A generated cut-pillow image with the right code passed the photo check in every try. The session and account checks are separate controls: neither establishes that a camera took the picture.
         </p>
       }
       aside={
         <div>
-          <dl>
+          <dl aria-label="Recorded benchmark figures">
             {FIGURES.map((f) => (
               <div key={f.text} className="flex items-baseline gap-x-4 border-t border-line py-4 lg:gap-x-6 lg:py-5">
-                <dt className="w-[5.5ch] shrink-0 text-head-sm font-medium whitespace-nowrap sm:w-[6.5ch] sm:text-title lg:w-[3.25em] lg:text-title-lg">
+                <dt className="w-[5.5ch] shrink-0 text-title font-medium tabular-nums whitespace-nowrap sm:w-[6.5ch] lg:w-[3.75em]">
                   {f.figure}
                 </dt>
-                <dd className="text-body text-pretty text-text-2">{f.text}</dd>
+                <dd className="text-ui text-pretty text-text-2">{f.text}</dd>
               </div>
             ))}
           </dl>

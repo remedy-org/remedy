@@ -12,8 +12,6 @@ export interface NavMenuLink<Id extends string> {
   label: string;
   /** One line under the label, in the sheet only. */
   note: string;
-  /** "xl": in the bar from xl only (it is always in the sheet). */
-  bar?: "xl";
 }
 
 const noop = () => () => {};
@@ -42,9 +40,9 @@ export function NavMenu<Id extends string>({ links, current, onPick }: { links: 
   };
   const close = () => dialog.current?.close();
 
-  // A window that grows to lg shows the links in the bar, so the sheet goes. Leaving the page always unlocks Lenis.
+  // A window wide enough for every link closes the sheet. Leaving the page always unlocks Lenis.
   useEffect(() => {
-    const lg = window.matchMedia("(min-width: 64rem)");
+    const lg = window.matchMedia("(min-width: 72rem)");
     const grow = () => lg.matches && dialog.current?.close();
     lg.addEventListener("change", grow);
     return () => {

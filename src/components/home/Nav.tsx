@@ -1,6 +1,5 @@
 "use client";
 
-import clsx from "clsx";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/ui";
@@ -9,11 +8,10 @@ import styles from "./nav.module.css";
 
 type SectionId = "how" | "problem" | "checks" | "proof" | "companies";
 
-// In page order, in plain words; each section's eyebrow says the same. Why recalls stall is in the sheet always, and in the bar
-// from xl only: at 1024 the four others and the right side fill it.
+// Every section is available together: in the desktop row when it fits, otherwise in the menu.
 const NAV_LINKS: readonly NavMenuLink<SectionId>[] = [
   { id: "how", label: "How it works", note: "One claim, photo to PayPal payout" },
-  { id: "problem", label: "Why recalls stall", note: "Why recall refunds stay stuck, and where Remedy cuts the loop", bar: "xl" },
+  { id: "problem", label: "Why recalls stall", note: "Why recall refunds stay stuck, and where Remedy cuts the loop" },
   { id: "checks", label: "Fraud checks", note: "The five checks a fake has to beat, and four claims to try" },
   { id: "proof", label: "Results", note: "Every genuine claim paid, every stolen photo stopped" },
   { id: "companies", label: "For companies", note: "Every claim with its evidence, and the CPSC report" },
@@ -143,7 +141,7 @@ export function Nav() {
         <Wordmark size="md" href="/" className={styles.wordmark} />
         <ul className={styles.links}>
           {NAV_LINKS.map((l) => (
-            <li key={l.id} className={clsx(l.bar === "xl" && styles.wideLink)}>
+            <li key={l.id}>
               {/* A native, instant jump (Lenis leaves anchors alone): a smooth one would scrub the pinned sequence. */}
               <a href={`#${l.id}`} onClick={() => pick(l.id)} aria-current={current === l.id ? "location" : undefined} className={styles.sectionLink}>
                 {l.label}

@@ -233,10 +233,21 @@ function paintArrival(refs: Record<"stage" | "card" | "ghost", RefObject<HTMLDiv
     rc.style.transform = `translate(${(box.w - r0.w).toFixed(1)}px, ${((box.h - r0.h) / 2).toFixed(1)}px)`;
     rc.style.clipPath = `inset(${(crop - m).toFixed(1)}px ${-m}px ${(crop - m).toFixed(1)}px ${-m}px)`;
     rc.style.opacity = look.receipt.toFixed(3);
+    // The incoming row occupies the fold's centre. Cut that strip out of the old print as soon as the row appears,
+    // so the two formats can overlap in time without ever printing their labels over one another.
+    rc.style.maskImage = look.row > 0 && look.receipt > 0
+      ? `linear-gradient(to bottom, #000 calc(50% - ${slot.h / 2}px), transparent calc(50% - ${slot.h / 2}px), transparent calc(50% + ${slot.h / 2}px), #000 calc(50% + ${slot.h / 2}px))`
+      : "";
     // Once the card's ground is up under it (the receipt's own paper, to the shade), the receipt gives up its paper and
-    // shadow to the card: its words dim on the card's one ground as it turns to the console's surface, never a lighter
-    // receipt-shaped patch on a darker card.
+    // shadow to the card, leaving one continuous ground rather than a lighter receipt-shaped patch.
     const folding = look.ground >= 1;
+    // The paper passes through grey on its way to the console surface. Keep the printed details readable while
+    // that happens: at this mix the ground crosses the luminance where black and white each clear 4.5:1.
+    const ink = dark && folding ? (look.paper > 0.46 ? "#000000" : "#ffffff") : "";
+    for (const token of ["--ink", "--ink-muted", "--pay-ink"]) {
+      if (ink) rc.style.setProperty(token, ink);
+      else rc.style.removeProperty(token);
+    }
     const paper = rc.querySelector<HTMLElement>(".bg-paper");
     const lifted = rc.querySelector<HTMLElement>(".paper-lifted");
     if (paper) paper.style.background = folding ? "transparent" : "";
