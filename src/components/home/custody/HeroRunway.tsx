@@ -175,7 +175,7 @@ const filedOf = (rows: ClaimRow[]) => {
 };
 
 /** `consoleRows`: chapter 06's queue, drawn on the server from the claims /console reads (Hero.tsx). */
-export function HeroRunway({ copy, consoleRows }: { copy: ReactNode; consoleRows: ClaimRow[] }) {
+export function HeroRunway({ copy, journey, consoleRows }: { copy: ReactNode; journey: ReactNode; consoleRows: ClaimRow[] }) {
   const wide = useMedia("(min-width: 1024px) and (min-height: 700px)");
   const motionOk = useMedia("(prefers-reduced-motion: no-preference)");
   const mode: Mode = !motionOk ? "static" : wide ? "pinned" : "phone";
@@ -213,6 +213,9 @@ export function HeroRunway({ copy, consoleRows }: { copy: ReactNode; consoleRows
           <div className="mt-12 lg:hidden">
             <HeroPhone />
           </div>
+          <motion.div className={styles.journey} style={pinned ? dolly.text : undefined}>
+            {journey}
+          </motion.div>
         </div>
         {pinned && <CustodyStage p={p} stage={stage} skip={<SkipLink />} consoleRows={consoleRows} />}
       </div>

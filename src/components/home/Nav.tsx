@@ -129,7 +129,7 @@ export function Nav() {
   const { current, pick } = useNavSpy();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const read = () => setScrolled(window.scrollY > 12);
+    const read = () => setScrolled(window.scrollY > 0);
     read();
     window.addEventListener("scroll", read, { passive: true });
     return () => window.removeEventListener("scroll", read);

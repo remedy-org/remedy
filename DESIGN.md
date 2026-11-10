@@ -12,6 +12,8 @@ Remedy keeps its animated product story: laptop, screen dolly, live-camera seque
 
 Desktop hero copy stays left aligned with the laptop on the right. The checks matrix follows scroll position; arriving or pausing must not automatically finish its claim paths.
 
+The opening desktop copy aligns near the laptop's top instead of the viewport's middle. A small recall-specific eyebrow and a ruled evidence → decision → PayPal trail explain the journey before scrolling. The trail shares the copy's existing dolly fade; both additions are omitted on phones.
+
 ## Tokens
 
 `src/app/globals.css` owns colors and sizing. Keep semantic token names; do not hard-code old warm values in components.
@@ -37,11 +39,13 @@ The font binaries live in Git-ignored `public/fonts/diatype/` and are included o
 
 Font families are centralized in root layout and the `--font-sans`, `--font-display`, `--font-mono` tokens, including AG Grid and Studio. The user-provided font binaries stay outside Git.
 
-Hero 40–64px, section heading 28–40px, feature title 22–25px, body 17px, UI 15px, metadata 12px. Display line height 1.1 with restrained negative tracking; body 1.55. Use medium/semibold headings, not arbitrary bold inline prose. Amounts and data use tabular figures. Always check longest realistic recall title/reason.
+Hero 40–72px (48px on short desktop screens), section heading 28–40px, feature title 22–25px, body 17px, UI 15px, metadata 12px. Display line height 1.1 with restrained negative tracking; body 1.55. Use medium/semibold headings, not arbitrary bold inline prose. Amounts and data use tabular figures. Always check longest realistic recall title/reason.
 
 ## Layout and controls
 
 Fluid 24–64px content gutters, 32px desktop navigation gutters, 12-column shared alignment, 4/8px rhythm. Desktop marketing navigation 72px; app header remains 64px to match existing viewport offsets. No horizontal page overflow at 375px; grid overflow is scoped to its region.
+
+The marketing navbar starts with a transparent border and background. Any positive scroll brings in the structural-line border and a 60%-opaque #191919 surface with 4px backdrop blur; returning to the top removes them without changing its geometry. Its 200ms color transition is disabled for reduced motion.
 
 Radius: 48px showcase, 24px major frame, 16px card/large button, 10–12px controls. Data views keep tight hairline structure. Large violet buttons have white labels, turn white with dark labels on hover in dark mode, and show independent visible keyboard focus. Touch targets are at least 44px. Keep pending labels stable and actions explicit.
 

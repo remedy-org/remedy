@@ -22,7 +22,6 @@
 }
 
 .bar {
-  border-color: var(--line-2);
   backdrop-filter: blur(4px);
   transition:
     background-color 200ms cubic-bezier(0.4, 0, 1, 1),
@@ -30,7 +29,7 @@
 }
 
 .header[data-scrolled] .bar {
-  border-color: var(--line-2);
+  border-color: var(--line);
   background: rgb(25 25 25 / 60%);
 }
 
@@ -368,6 +367,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .bar,
   .sheet,
   .sheet[open],
   .sectionLink::after {

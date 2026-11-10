@@ -13,12 +13,15 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
 export function Hero() {
   const copy = (
     <>
+      <p className={clsx(styles.eyebrow, styles.focusIn)} style={line(0)}>
+        Recall evidence. Resolved.
+      </p>
       <h1 id="hero-title" className={clsx(styles.headline, styles.focusIn)} style={line(0)}>
         Recall refunds.
         <span className={styles.headlineAccent}>From proof to PayPal.</span>
       </h1>
       <p className={clsx(styles.lead, styles.focusIn)} style={line(1)}>
-        Proof of destruction, five checks, and a refund through PayPal.
+        Owners photograph the destruction. Remedy checks the evidence. Eligible refunds go straight to PayPal.
       </p>
       <div className={clsx(styles.actions, styles.focusIn)} style={line(2)}>
         {/* The owner's path is the screen's primary action; companies get a quieter link to their section, the nav's
@@ -43,5 +46,35 @@ export function Hero() {
   );
   // Chapter 06's queue: the recall's claims exactly as /console draws them (its words, its cells), newest first.
   const consoleRows = previewProps(560, { asConsole: true }).rows;
-  return <HeroRunway copy={copy} consoleRows={consoleRows} />;
+  const journey = (
+    <>
+      <ol className={styles.journeySteps} aria-label="From evidence to refund">
+        <li>
+          <span className={styles.journeyNumber}>01</span>
+          <div>
+            <span className={styles.journeyTitle}>The evidence</span>
+            <span className={styles.journeyNote}>Photo + one-time code</span>
+          </div>
+        </li>
+        <li>
+          <span className={styles.journeyNumber}>02</span>
+          <div>
+            <span className={styles.journeyTitle}>The decision</span>
+            <span className={styles.journeyNote}>Five checks. Review if needed.</span>
+          </div>
+        </li>
+        <li>
+          <span className={styles.journeyNumber}>03</span>
+          <div>
+            <span className={styles.journeyTitle}>The refund</span>
+            <span className={styles.journeyNote}>A traceable PayPal payout</span>
+          </div>
+        </li>
+      </ol>
+      <p className={styles.scrollNote}>
+        Scroll to follow one claim <span aria-hidden="true">↓</span>
+      </p>
+    </>
+  );
+  return <HeroRunway copy={copy} journey={journey} consoleRows={consoleRows} />;
 }

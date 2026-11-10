@@ -56,6 +56,11 @@
   color: var(--accent-text);
 }
 
+.eyebrow,
+.journey {
+  display: none;
+}
+
 .lead {
   max-width: 64ch;
   margin: 16px 0 0;
@@ -88,7 +93,7 @@
 @media (min-width: 1024px) {
   .hero {
     height: calc(100svh - 4.5rem);
-    min-height: 39rem;
+    min-height: min(39rem, calc(100svh - 4.5rem));
     padding-block: 0;
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -100,11 +105,55 @@
     grid-column: 1 / span 6;
     grid-row: 1;
     align-items: flex-start;
+    align-self: start;
+    padding-top: clamp(96px, 14svh, 160px);
     text-align: left;
   }
 
-  .lead { max-width: 44ch; }
+  .eyebrow {
+    display: block;
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+  }
+
+  .headline { font-size: clamp(3rem, 4.8vw, 4.5rem); }
+  .lead { max-width: 36ch; }
   .actions { justify-content: flex-start; }
+
+  .journey {
+    position: absolute;
+    bottom: 32px;
+    left: var(--gutter);
+    right: var(--gutter);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+
+  .journeySteps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 32px;
+    width: min(100%, 880px);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .journeySteps li { display: flex; gap: 12px; }
+  .journeySteps li > div { display: flex; flex-direction: column; gap: 4px; }
+  .journeyNumber { padding-top: 2px; color: var(--accent-text); font-family: var(--font-mono); font-size: 12px; }
+  .journeyTitle { color: var(--text-2); font-size: 14px; line-height: 1.5; }
+  .journeyNote { color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .scrollNote { display: flex; flex-shrink: 0; align-items: center; gap: 16px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .scrollNote > span { color: var(--text-2); font-size: 20px; }
 
   /* The device starts on column seven, with room for its table toward the right edge. */
   .device {
@@ -119,6 +168,7 @@
 }
 
 @media (min-width: 1024px) and (max-height: 799px) {
+  .eyebrow { margin-bottom: 16px; }
   .headline { font-size: 48px; }
   .lead { margin-top: 12px; font-size: 16px; }
   .actions { margin-top: 20px; }
