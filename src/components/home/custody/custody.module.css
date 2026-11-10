@@ -175,6 +175,11 @@
   .sample { margin-top: 8px; }
 }
 
+/* Short windows use the unpinned story, so the introduction may grow and scroll naturally. */
+@media (min-width: 1024px) and (max-height: 699px) {
+  .hero { min-height: 39rem; }
+}
+
 @media (max-width: 639px) {
   .actions { width: 100%; gap: 4px; }
   .headline { max-width: 13ch; }
