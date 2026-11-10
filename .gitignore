@@ -20,6 +20,9 @@ next-env.d.ts
 # vercel
 .vercel
 
+# Licensed hackathon font files are supplied locally for CLI deployments.
+/public/fonts/diatype/
+
 # local data and eval fixtures (test photos belong to their owners)
 data/
 eval/photos/

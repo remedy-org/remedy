@@ -1,82 +1,23 @@
-import { Section } from "./Section";
+import Image from "next/image";
+import { Button } from "@/components/ui";
+import { DEMO_SAMPLES, sampleLinkName } from "@/lib/demo/samples";
+import { SAMPLE_COPY } from "@/lib/demo/sampleCopy";
+import styles from "./landing.module.css";
 
-// Figures: docs/EVAL.md (7 Nov 2026), GPT-6.1 Sol, the model Remedy runs; the full table and method stay there. Each is
-// a count of photos or claims out of those put to it, with the tries behind it (every claim was run 3 times), never a
-// bare percentage and never a try counted as a photo:
-// - web photos: w01 to w17 less the w03 control (the code check off), 16 photos, 48 tries, none paid;
-// - genuine claims: 7 in round 2 and 2 held out, 9 claims, 27 tries, all paid;
-// - wrong codes: 4 cases, 12 tries, all refused;
-// - cost: $0.011 a claim.
-// The one fake the photo check passed (c14, an AI-made image with the code drawn on, in all 3 runs; the 9 Nov test's
-// two clean fakes passed too, 6 of 6) is said once, in body text under the lead, as the reason for what stops it: the
-// claim's own camera session and one claim per verified PayPal account. The session check proves the photos arrived
-// with the session's key inside its 10 minutes, not that a camera took them, so the sentence says only that.
-const WEB = { photos: 16, tries: 48 };
-const FIGURES: { figure: string; text: string }[] = [
-  { figure: "9 of 9", text: "genuine claims paid, in all 27 tries" },
-  { figure: "4 of 4", text: "wrong codes refused, in all 12 tries" },
-  { figure: "1.1¢", text: "to check a claim" },
-];
+const OUTCOMES = {
+  genuine: { result: "Paid", reason: "All five checks pass", tone: "paid" },
+  "wrong-code": { result: "Rejected", reason: "The tag’s code doesn’t match", tone: "rejected" },
+  "ai-no-session": { result: "Blocked", reason: "Sent outside the camera session", tone: "blocked" },
+  reposted: { result: "Blocked", reason: "Photo used in an earlier claim", tone: "blocked" },
+} as const;
 
-/**
- * Results: the one number that matters is the heading, the zero at the display size (never bigger than the hero's h1)
- * with what it counts beside it, its top on the cap height of their first line; the lead under it, and the one fake's
- * sentence under that, on columns 1 to 7. The three supporting counts stand beside them on columns 8 to 12 on laptops,
- * a list on hairlines (each figure with its words), with the benchmark's footnote under them, the figures it sources,
- * ending on the fake's sentence's last line; on phones they follow the lead. On a laptop it starts 64px inside its
- * top, about 160px under "Try to fool it" as one section starts under another (a screen of its own, its block
- * centred, it left 310 to 390px of air above it and 375 to 470 below), and ends 104px inside its foot, so at its stop on
- * a 900px laptop screen the screen's foot falls above For companies' console, never through its bar.
- */
 export function Proof() {
   return (
-    <Section
-      id="proof"
-      padClassName="py-18 lg:pt-16 lg:pb-26"
-      exhibit="Results"
-      headingSpan={7}
-      stack
-      title={
-        // The zero's top on the cap height of the words' first line: both boxes from the top, the zero lowered by the
-        // difference between where each one's caps start in its line (Schibsted Grotesk: ascent 0.98, descent 0.26, cap
-        // 0.70 of the size; the words at line-height 1.06, the zero at 0.9).
-        <span className="flex items-start gap-x-3 sm:gap-x-4">
-          <span
-            aria-hidden="true"
-            className="mt-[calc(var(--text-title-lg)*0.187-0.107em)] text-display leading-[0.9] min-[1600px]:text-[clamp(3.5rem,3.75vw,4.5rem)]"
-          >
-            0
-          </span>
-          <span className="max-w-[22ch] text-balance">
-            <span className="sr-only">0 </span>of {WEB.photos} stolen web photos paid, across {WEB.tries} tries.
-          </span>
-        </span>
-      }
-      lead="We put Remedy up against real owner photos, official recall photos, photos of screens, wrong codes and AI-made fakes. It reads the code on every tag character by character, so one wrong letter refuses the claim."
-      note={
-        // The fake that passed, said once in the lead's own voice: it is why the camera session is the first check.
-        <p className="max-w-[60ch] text-body text-pretty text-text-2">
-          A generated image of a cut pillow with the right code drawn on can pass the photo check: ours did, in every try.
-          So a claim&rsquo;s photos must arrive inside its own 10-minute camera session, and each verified PayPal account
-          gets one claim per recall.
-        </p>
-      }
-      aside={
-        <div>
-          <dl>
-            {FIGURES.map((f) => (
-              <div key={f.text} className="flex items-baseline gap-x-4 border-t border-line py-4 lg:gap-x-6 lg:py-5">
-                <dt className="w-[5.5ch] shrink-0 text-head-sm font-medium whitespace-nowrap sm:w-[6.5ch] sm:text-title lg:w-[3.25em] lg:text-title-lg">
-                  {f.figure}
-                </dt>
-                <dd className="text-body text-pretty text-text-2">{f.text}</dd>
-              </div>
-            ))}
-          </dl>
-          {/* Where every figure on this slide comes from, once, under the counts, with no marks to send a reader down to it. */}
-          <p className="border-t border-line pt-4 text-micro text-pretty text-faint">Remedy fraud benchmark, 7 Nov 2026: 36 claims, each run 3 times.</p>
-        </div>
-      }
-    />
+    <section id="proof" aria-labelledby="proof-title" className={`${styles.container} ${styles.proofSection}`}>
+      <div className={styles.proofIntro}><div><p className={styles.kicker}><span />Try it for yourself</p><h2 id="proof-title" tabIndex={-1}>Four claims.<br />See what gets through.</h2></div><div><p>Try the same pipeline on four prepared photos. Follow the genuine claim to a PayPal sandbox payout, then inspect why the other cases stop.</p><p className={styles.proofNote}>Expected outcomes below. Your demo run shows its actual results.</p></div></div>
+      <div className={styles.caseList}>{DEMO_SAMPLES.map((sample, index) => { const copy = SAMPLE_COPY[sample.id]; const outcome = OUTCOMES[sample.id]; return <a key={sample.id} href={`/r/kikea-x-vesolje/try?claim=${sampleLinkName(sample.id)}`} className={styles.caseRow}><span className={styles.caseNumber}>{String(index + 1).padStart(2, "0")}</span><Image src={sample.photos[0]} alt={copy.alt} width={80} height={64} sizes="80px" /><div className={styles.caseTitle}><h3>{copy.title}</h3><p>{outcome.reason}</p></div><span className={styles.previewStatus} data-tone={outcome.tone}><span aria-hidden="true">{outcome.tone === "paid" ? "✓" : "⊘"}</span>{outcome.result}</span><span className={styles.caseArrow} aria-hidden="true">↗</span></a>; })}</div>
+      <div className={styles.evidenceNote}><span aria-hidden="true">ⓘ</span><div><h3>Evidence checks have limits.</h3><p>Clean generated images with the correct code can pass the visual check. Session timing, photo-reuse checks, and account limits add controls; they don’t prove that a camera took the image. Uncertain reads are held for a person.</p><details><summary>Read the evaluation notes <span aria-hidden="true">+</span></summary><p>The 9 November evaluation covered 97 cases, run three times each. All four prepared demo cases produced their intended outcomes in three of three runs. Two clean generated fakes passed the photo check in all six attempts. Real handwriting in phone photos has not yet been evaluated.</p><a href="https://github.com/remedy-org/remedy#evaluation" target="_blank" rel="noreferrer">Method, results, and limitations ↗</a></details></div></div>
+      <div className={styles.proofCta}><Button href="/r/kikea-x-vesolje/try" prefetch={false} size="lg" arrow>Try all four claims</Button><span>PayPal sandbox · Prepared demo photos</span></div>
+    </section>
   );
 }

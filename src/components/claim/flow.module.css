@@ -1,18 +1,76 @@
-/*
- * The claim flow's motion (DESIGN.md: state changes, plus one arrival moment, the receipt). Transform, opacity and
- * clip-path only. Every move runs only under prefers-reduced-motion: no-preference; the resting state is the final one.
- */
+/* Claim surfaces share the app tokens, including the explicit light theme. */
+.shell {
+  background: var(--bg);
+}
+
+.entryCard {
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+}
+
+.credentials {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.receipt {
+  --ink: var(--text);
+  --ink-muted: var(--muted);
+  --paper-line: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.receipt::before {
+  content: "";
+  display: block;
+  height: 4px;
+  background: var(--pay);
+}
+
+.codeTag {
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+}
+
+.codePaper {
+  border-radius: 12px;
+  padding: 28px 20px;
+  background: #fafafa;
+  color: #19161d;
+}
+
+.signinPreview {
+  min-width: 0;
+  padding: 32px 0 0 32px;
+  overflow: hidden;
+  border-radius: 32px;
+  background: #c59eff;
+  color: #19161d;
+}
+
+@media (max-width: 639px) {
+  .entryCard { padding: 24px 20px; border-radius: 20px; }
+  .credentials { padding: 16px; }
+  .codeTag { padding: 20px; }
+}
 
 @media (prefers-reduced-motion: no-preference) {
   /*
    * The receipt prints: the paper feeds down out of the slot (the refund row's top hairline) into the room it will
    * take, clipped at the slot's edge only, so its shadow and the perforation's bites stay whole on the other sides.
    */
-  .feed {
-    clip-path: inset(0 -48px -64px -48px);
-  }
+  .feed { overflow: clip; }
   .feed > * {
-    animation: feed var(--feed-ms, 900ms) var(--ease-out-quart) var(--feed-delay, 0ms) both;
+    animation: rise 240ms var(--ease-snap) both;
   }
 
   /* The receipt's shadow comes on once the paper is out: while it prints, nothing hangs below the slot but paper. */
@@ -22,7 +80,7 @@
 
   /* What waits for the receipt to print, then comes in: the paid result's way on. */
   .later {
-    animation: swap 360ms var(--ease-snap) calc(var(--feed-delay, 0ms) + var(--feed-ms, 900ms)) both;
+    animation: swap 180ms var(--ease-snap) both;
   }
 
   /* A paid result's five passed checks folding into their one line (PassedChecks), and opening again on a tap. */

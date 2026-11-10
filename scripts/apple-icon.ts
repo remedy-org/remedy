@@ -1,28 +1,19 @@
-// Renders src/app/apple-icon.png (180 x 180, opaque) from the mark's master paths, so the home-screen icon never
-// drifts from RemedyMark. Run after any change to src/components/ui/markPaths.ts:
-//   npx tsx scripts/apple-icon.ts
+// Generate matching browser/home-screen icons from the original Remedy mark.
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import sharp from "sharp";
 import { MARK_STUB, MARK_TAG } from "../src/components/ui/markPaths";
+async function main() {
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180"><rect width="180" height="180" rx="38" fill="#000000"/><g transform="translate(30 30) scale(5)"><path fill="#fafafa" fill-rule="evenodd" d="${MARK_TAG}${MARK_STUB}"/></g></svg>`;
+await sharp(Buffer.from(svg)).png().toFile(resolve("src/app/apple-icon.png"));
+const favicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#000000"/><path transform="translate(4 4)" fill="#fafafa" fill-rule="evenodd" d="${MARK_TAG}${MARK_STUB}"/></svg>`;
+await writeFile(resolve("src/app/icon.svg"), favicon);
+const png = await sharp(Buffer.from(favicon)).resize(32, 32).png().toBuffer();
+const header = Buffer.alloc(22);
+header.writeUInt16LE(1, 2); header.writeUInt16LE(1, 4); header[6] = 32; header[7] = 32;
+header.writeUInt16LE(1, 10); header.writeUInt16LE(32, 12); header.writeUInt32LE(png.length, 14); header.writeUInt32LE(22, 18);
+await writeFile(resolve("src/app/favicon.ico"), Buffer.concat([header, png]));
+console.log("Generated Remedy SVG, favicon and apple icon.");
 
-const SIZE = 180;
-const BG = "#0d0c0a"; // --bg (dark)
-const PAPER = "#efebe1"; // --paper: the tag
-const ACCENT = "#ebb75b"; // --accent (brass): the stub
-// The mark spans x 0 to 23 and y -1.124 to 16 on its grid. At 4.65 units a pixel it is 107px wide, 37px clear of
-// each side; the tag (y 0 to 16) is centred, and the stub's lifted corner rises into the top margin.
-const SCALE = 4.65;
-const X = (SIZE - 23 * SCALE) / 2;
-const Y = (SIZE - 16 * SCALE) / 2;
-
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
-<rect width="${SIZE}" height="${SIZE}" fill="${BG}"/>
-<g transform="translate(${X} ${Y}) scale(${SCALE})"><path fill-rule="evenodd" fill="${PAPER}" d="${MARK_TAG}"/><path fill="${ACCENT}" d="${MARK_STUB}"/></g>
-</svg>`;
-
-const out = resolve(import.meta.dirname, "../src/app/apple-icon.png");
-sharp(Buffer.from(svg))
-  .flatten({ background: BG })
-  .png({ compressionLevel: 9 })
-  .toFile(out)
-  .then(() => console.log(`wrote ${out}`));
+}
+void main();

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ThemeToggle, Wordmark } from "@/components/ui";
 import type { Recall } from "@/lib/types";
+import styles from "./flow.module.css";
 
 // A 44px target on a 24px line (the ::after overhangs the footer's own padding), and a focus ring that hugs the word.
 const FOOT_LINK = "text-link scroll-mb-6 underline decoration-line-2 underline-offset-4 transition-colors duration-160 hover:text-text hover:decoration-text";
@@ -24,12 +25,12 @@ export interface FlowShellProps {
 export function FlowShell({ children, context }: FlowShellProps) {
   return (
     // A phone's pinned action bar (MobileCta) never covers the end of the page: room for it under the footer.
-    <div className="grain flex min-h-dvh flex-col max-sm:pointer-coarse:has-[[data-mobile-cta]]:pb-16">
+    <div className={`${styles.shell} flex min-h-dvh flex-col max-sm:pointer-coarse:has-[[data-mobile-cta]]:pb-16`}>
       {/* A phone's camera step is the whole screen, with its own bar: the site's header and footer step aside. */}
       <header className="border-b border-line max-sm:[body:has([data-camera])_&]:hidden">
         {/* The homepage's frame, so the wordmark stays where it was when "Try a claim" brings an owner here. */}
         <div className="page">
-          <div className="flex h-16 items-center justify-between gap-4 [@media(max-height:600px)]:h-12">
+          <div className="flex h-18 items-center justify-between gap-4 max-sm:h-16 [@media(max-height:600px)]:h-12">
             <div className="flex min-w-0 items-center gap-4">
               {/* No homepage prefetch: an owner from a recall email never opens it, and on a phone it costs data. */}
               <Wordmark size="md" href="/" prefetch={false} />
@@ -45,7 +46,7 @@ export function FlowShell({ children, context }: FlowShellProps) {
         </div>
       </header>
 
-      <main id="main" tabIndex={-1} className="page flex-1 pt-8 pb-10 outline-none sm:pt-12 sm:pb-16 max-sm:[body:has([data-camera])_&]:pb-0 [@media(max-height:600px)]:pt-4">
+      <main id="main" tabIndex={-1} className="page flex-1 pt-8 pb-10 outline-none sm:pt-14 sm:pb-20 max-sm:[body:has([data-camera])_&]:pb-0 [@media(max-height:600px)]:pt-4">
         {children}
       </main>
 

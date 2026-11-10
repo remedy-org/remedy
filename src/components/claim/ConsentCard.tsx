@@ -14,6 +14,7 @@ import { consentLines, PAYPAL_CONSENT } from "./consentCopy";
 import { FocusTitle } from "./FocusTitle";
 import { companyName, productNoun } from "./model";
 import { Notice } from "./Notice";
+import styles from "./flow.module.css";
 
 export type AuthError = "denied" | "state" | "paypal" | "refused";
 
@@ -89,7 +90,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   // The offer, what Remedy is, how, and the code's clock, as How it works' copy of this screen says them (consentCopy.ts).
   const { title, about, how, clock } = consentLines(recall, CAPTURE_SESSION_MINUTES);
   // On the page, not in a box: the offer is the screen's headline, beside the recall it answers.
-  const frame = "flex flex-col border-line max-lg:border-t max-lg:pt-8 lg:-ml-8 lg:self-stretch lg:border-l lg:pl-8";
+  const frame = `${styles.entryCard} flex min-w-0 flex-col`;
 
   if (yourClaim) {
     return (
@@ -103,6 +104,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
   return (
     <section aria-labelledby="consent-title" className={`${frame} gap-7`}>
       <div className="flex flex-col gap-3">
+        {demo && <p className="text-ui font-medium text-accent-text">PayPal sandbox · prepared demo photos</p>}
         {/* The page's one headline: the brief beside it is the recall it answers, a step smaller. An attempt's title is
             balanced, so its last line never ends on a short tail ("the web"). */}
         <StepTitle id="consent-title" className={demo && heading ? "text-balance" : "text-pretty"}>
@@ -116,7 +118,7 @@ export function ConsentCard({ recall, href, signedInAs, demo, authError, unverif
             heading.lede
           ) : demo ? (
             <>
-              Send four claims for the <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens>. Remedy pays the genuine one and stops the three that aren&rsquo;t.
+              Try four prepared claims for the <NoBreakHyphens>{productNoun(recall)}</NoBreakHyphens>. See which evidence passes, which check stops a claim, and how a refund reaches PayPal.
             </>
           ) : (
             how

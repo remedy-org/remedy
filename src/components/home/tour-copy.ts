@@ -23,10 +23,10 @@ export const TOUR = {
     body: "No separate sign-up. Your console opens on a working recall. Import yours whenever you’re ready.",
     button: "Log in with PayPal",
     // Which account: the company's business account (docs/PRODUCT.md, Company sign-in), never an owner's own.
-    account: "With your company’s PayPal Business account.",
+    account: "Use the PayPal sandbox demo account to explore the workspace.",
     // What a buyer asks next: whose money pays the refunds and who holds it (docs/PRODUCT.md, the launch model, said in
     // the present tense as the vision is), and what a check costs (the benchmark's 1.1¢ a claim, Proof.tsx).
-    facts: "Refunds go from your PayPal Business account straight to each owner’s PayPal account through PayPal Payouts, and Remedy never holds the money. Checking a claim costs 1.1¢.",
+    facts: "This demo sends refunds from Remedy’s PayPal sandbox account. Per-company funding requires PayPal partner onboarding. The benchmark model-call cost was about 1.1¢ per claim.",
   },
   /** Step 02's foot of the evidence (PayoutsNote.tsx): the console panel's own buttons and what they lead to. The
    * recall's claims are the console's own, where approving one records the decision (ReviewActions.tsx), so the tour

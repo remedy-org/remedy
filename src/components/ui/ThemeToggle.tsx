@@ -15,6 +15,7 @@ function subscribe(onChange: () => void) {
 function apply(theme: Theme) {
   if (theme === "light") document.documentElement.dataset.theme = "light";
   else delete document.documentElement.dataset.theme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#faf9fc" : "#000000");
   try {
     // Both choices are stored: "dark" must outlast a system that prefers light.
     localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -45,7 +46,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       className={clsx(
         // A framed key at rest (a hairline border, so forced colours keeps it too), so on a phone it reads as a button,
         // not a glyph; hover fills it, and a press fills it a step further and sinks, which shows on touch too.
-        "relative inline-flex size-9 shrink-0 items-center justify-center rounded-button border border-line-2 text-muted",
+        "relative inline-flex size-9 shrink-0 items-center justify-center rounded-button border border-line-strong text-muted",
         "transition-[background-color,color,scale] duration-160 ease-snap hover:bg-surface-2 hover:text-text active:scale-[0.96] active:bg-surface-3 active:text-text active:duration-75",
         "after:absolute after:-inset-1 after:content-['']",
         className,

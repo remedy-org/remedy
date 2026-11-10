@@ -62,13 +62,13 @@ export function ProgressReport({
     <article
       data-theme="light"
       className={clsx(
-        "report-sheet w-full max-w-[52rem] rounded-card bg-paper px-6 text-text shadow-[var(--paper-shadow-flat)] print:max-w-none print:rounded-none print:bg-[#fff]! print:p-0 print:shadow-none!",
+        "report-sheet w-full max-w-[52rem] rounded-card border border-line bg-[#fff] px-6 text-text shadow-float print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none!",
         home ? "@container mx-auto py-7 sm:px-10 sm:py-9" : "py-8 sm:px-12 sm:py-12",
       )}
     >
       <header className={clsx("flex flex-col gap-3 border-b border-line", home ? "pb-6" : "pb-8")}>
         <p className="text-ui text-muted">Draft · generated {generated}</p>
-        <h2 className={clsx("font-medium text-balance", home ? "text-head-sm" : "text-h2")}>
+        <h2 className={clsx("font-display font-medium text-balance", home ? "text-head-sm" : "text-h2")}>
           CPSC {recall.id}: {keepHyphens(recall.product)}
         </h2>
         <p data-peek-hide className="text-ui text-muted">
@@ -115,7 +115,7 @@ export function ProgressReport({
         <H>Progress</H>
         <div data-peek-row className="grid gap-6 sm:grid-cols-3">
           <Figure label="Units sold" value={s.unitsSold ? formatCount(s.unitsSold) : "Not given"} note={cpscUnits(recall, s.unitsSold)} home={home} />
-          <Figure label="Units remedied" value={formatCount(s.remedied)} note="Destroyed on camera" home={home} />
+          <Figure label="Units remedied" value={formatCount(s.remedied)} note="Evidence checks passed" home={home} />
           <Figure label="Share remedied" value={percent(s.remedied, s.unitsSold)} note={`${formatCount(s.held)} more waiting for review`} home={home} />
         </div>
         {s.unitsSold > 0 && <ReturnRuler remedied={s.remedied} sold={s.unitsSold} daysIn={daysIn} />}

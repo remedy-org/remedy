@@ -1,4 +1,3 @@
-// Shared by the root layout's pre-paint script and ThemeToggle. Dark is the default. A visitor's choice is stored
-// ("dark" or "light"); with nothing stored, prefers-color-scheme decides.
+// Shared by the root layout and ThemeToggle. Dark is the default; an explicit app preference survives marketing visits.
 export const THEME_STORAGE_KEY = "remedy-theme";
 export type Theme = "dark" | "light";

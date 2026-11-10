@@ -75,7 +75,8 @@ export default async function InsightsPage({ searchParams }: PageProps<"/console
         </div>
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
           <div className="min-w-0">
-            <h1 className="text-h2 font-medium text-balance">{keepHyphens(recall.product)}</h1>
+            <p className="mb-2 font-display text-micro text-accent-text">Recall insights</p>
+            <h1 className="font-display text-h2 font-semibold text-balance">{keepHyphens(recall.product)}</h1>
             <p className="mt-1.5 text-ui text-muted">
               {filed(data.claims.map((c) => c.filedAt))} ·{" "}
               <Link href={`/console?recall=${recall.id}`} className="text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">

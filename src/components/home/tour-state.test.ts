@@ -47,9 +47,10 @@ describe("tour copy", () => {
     expect(stepSentences(true).filter((s, i) => s !== TOUR.steps[i].sentence)).toHaveLength(1);
   });
 
-  it("speaks as the product: no sample, sandbox, test or demo labels in any string", () => {
-    const strings = JSON.stringify(TOUR) + stepSentences(true).join(" ");
-    expect(strings).not.toMatch(/\b(samples?|sandbox|test|demo|never sent|no money moved|AI-made|exhibit)\b/i);
+  it("states the current sandbox funding and scopes the benchmark cost", () => {
+    expect(TOUR.cta.facts).toMatch(/Remedy’s PayPal sandbox account/);
+    expect(TOUR.cta.facts).toMatch(/Per-company funding requires/);
+    expect(TOUR.cta.facts).toMatch(/benchmark model-call cost/);
   });
 
   it("keeps library names out of the steps' sentences (the footer credits AG Grid and AG Studio)", () => {

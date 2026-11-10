@@ -172,6 +172,7 @@ export function Result(props: ResultProps) {
   return (
     <ClaimFrame>
       <FocusTitle id="result-title" />
+      {(props.sandbox || props.sample) && <p className="text-ui font-medium text-accent-text">PayPal sandbox{props.sample ? " · prepared demo photo" : ""}</p>}
       {paid ? (
         <PayoutLive claimId={claim.id} status={props.payout?.status ?? claim.payout?.status ?? null} live={Boolean(props.payout?.live)} amount={money(claim.payout?.amount ?? recall.refund)}>
           {page}

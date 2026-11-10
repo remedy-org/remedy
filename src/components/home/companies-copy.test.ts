@@ -3,43 +3,35 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-
 const { Companies } = await import("./Companies");
-const { STUDIO_ON_HOME } = await import("@/components/insights/InsightsPreviewLazy");
-const { studioLicence } = await import("@/lib/agStudioLicence");
 
-// What a visitor reads in the For companies section, laptop tour and phone story both: its text, and the words its
-// images and regions carry (alt, aria-label, title). Seed text is in it, so the model's recorded answers are covered.
+// Prevent a sample preview or future funding model being presented as current customer/payment proof.
 function visibleWords(html: string) {
-  const attrs = [...html.matchAll(/\s(?:alt|aria-label|title)="([^"]*)"/g)].map((m) => m[1]);
-  const text = html
-    .replace(/<(script|style|noscript)[^>]*>[\s\S]*?<\/\1>/g, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&[a-z#0-9]+;/g, " ");
-  return `${text} ${attrs.join(" ")}`.replace(/\s+/g, " ");
+  return html.replace(/<(script|style|noscript)[^>]*>[\s\S]*?<\/\1>/g, " ")
+    .replace(/<[^>]+>/g, " ").replace(/&[a-z#0-9]+;/g, " ").replace(/\s+/g, " ");
 }
 
 describe("For companies, as rendered", () => {
   const html = renderToStaticMarkup(createElement(Companies));
   const words = visibleWords(html);
-  // The laptop tour and the phone story are both in the markup; a visitor reads one of them.
-  const [tour, story] = html.split("data-story").map(visibleWords);
 
-  it("speaks as the product: no sample, sandbox, test or demo labels anywhere in the section", () => {
-    expect(words.length).toBeGreaterThan(2000);
-    expect(words).not.toMatch(/\b(samples?|sandbox|test|demo|never sent|no money moved|AI-made|exhibit)\b/i);
+  it("labels the previews and identifies current sandbox funding", () => {
+    expect(words).toContain("Sample workspace");
+    expect(words).toContain("Illustrative workspace");
+    expect(words).toContain("This build uses Remedy’s PayPal sandbox account");
+    expect(words).toContain("Per-company funding requires PayPal partner onboarding");
   });
 
-  it("says that no money moves at most once in each layout", () => {
-    for (const layout of [tour, story]) expect(layout.match(/money mov/gi)?.length ?? 0).toBeLessThanOrEqual(1);
+  it("preserves evidence review, real integration names, and the analyst boundary", () => {
+    expect(words).toContain("exact check that decided it");
+    expect(words).toContain("AG Grid");
+    expect(words).toContain("AG Studio");
+    expect(words).toContain("It can’t approve a claim or move money");
+    expect(html).toContain('href="/signin"');
   });
 
-  it("uses typeset quotes and apostrophes in the seed's words", () => {
-    expect(words).not.toMatch(/\w'\w|"/);
-  });
-
-  it("mounts AG Studio on the Insights step only under a valid key, so no visitor sees a licence notice", () => {
-    expect(STUDIO_ON_HOME).toBe(studioLicence() !== null);
-    expect(words).not.toMatch(/licen[cs]e|trial|watermark/i);
+  it("does not turn model-call cost or sample payment timing into a product promise", () => {
+    expect(words).not.toMatch(/costs? 1\.1|paid in a minute|15 seconds|55 seconds/i);
+    expect(words).not.toMatch(/refunds go from your PayPal Business account/i);
   });
 });

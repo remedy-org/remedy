@@ -119,8 +119,9 @@ export function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: 
   const d = deciding(claim);
   if (!d) return null;
   return (
-    <section aria-labelledby="deciding-title" className="flex flex-col gap-1.5">
-      <h3 id="deciding-title" className="text-ui font-medium text-text">
+    <section aria-labelledby="deciding-title" className="flex flex-col gap-2 rounded-control border border-line bg-surface-2 p-4">
+      <p className="font-display text-micro font-medium text-muted">Deciding evidence</p>
+      <h3 id="deciding-title" className="text-body font-medium text-text">
         {/* Typeset, with no capital after a colon ("Not done: the pillow is cut fully in half…"). */}
         <LinkedIds text={lowerAfterColons(typesetText(d.title))} onOpen={onOpen} self={claim.id} />
       </h3>
@@ -129,8 +130,7 @@ export function Deciding({ claim, onOpen }: { claim: DrawerClaim; onOpen?: (id: 
           <LinkedIds text={typesetText(d.detail)} onOpen={onOpen} self={claim.id} />
         </p>
       )}
-      {d.evidence && <q className="block border-l border-line-strong pl-3 font-sans text-ui leading-[1.55] text-muted"><ModelQuote>{d.evidence}</ModelQuote></q>}
-      {claim.five && <p className="mt-1 text-micro text-muted">{claim.five}</p>}
+      {d.evidence && <q className="block border-l-2 border-accent-text pl-3 font-sans text-ui leading-[1.55] text-text-2"><ModelQuote>{d.evidence}</ModelQuote></q>}
     </section>
   );
 }

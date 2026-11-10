@@ -12,12 +12,12 @@ const LINKS = [
   { href: "/console/report", label: "Report", match: (p: string) => p.startsWith("/console/report") },
 ] as const;
 
-/** The console's places. The current one is full text colour with a hairline underline; the rest are muted. */
+/** The current workspace has a violet tint and a persistent bottom marker. */
 export function ConsoleNav({ className }: { className?: string }) {
   const path = usePathname();
   return (
     <nav aria-label="Console" className={className}>
-      <ul className="flex items-stretch gap-6">
+      <ul className="flex items-stretch gap-1 sm:gap-1.5">
         {LINKS.map((l) => {
           const active = l.match(path);
           return (
@@ -26,8 +26,8 @@ export function ConsoleNav({ className }: { className?: string }) {
                 href={l.href}
                 aria-current={active ? "page" : undefined}
                 className={clsx(
-                  "relative inline-flex min-h-11 items-center text-ui font-medium transition-colors",
-                  active ? "text-text after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-text" : "text-muted hover:text-text",
+                  "relative my-2 inline-flex min-h-10 items-center rounded-control px-3 font-display text-ui font-medium transition-colors",
+                  active ? "bg-accent-soft text-accent-text after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-accent" : "text-muted hover:bg-surface hover:text-text",
                 )}
               >
                 {l.label}

@@ -4,6 +4,8 @@
 .claude/
 .gstack/
 data/
+eval/photos/
+eval/out/
 .shots/
 test-results/
 playwright-report/

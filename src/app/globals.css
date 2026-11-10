@@ -1,132 +1,116 @@
 @import "tailwindcss";
 
-/*
- * Evidence Room tokens, "Lamplight" (DESIGN.md): a warm graphite room, cream paper and one amber. Dark is the default;
- * light is data-theme="light" on <html> (the pre-paint script in layout.tsx sets it from the saved choice, else from
- * prefers-color-scheme) or on any subtree. Token NAMES are stable; every page follows them.
- *
- * Cascade: the shared block `:root, [data-theme]` comes after the two theme blocks with equal specificity, so any
- * token that differs by theme lives only in the theme blocks, never in the shared one.
- *
- * Guards: dark neutrals stay at chroma 0.004, hue 75 (above 0.005 the room turns brown and amber stops popping), and
- * dark surfaces step by exactly +0.035 L. Run `npx tsx scripts/contrast.ts` after changing any colour.
- */
+@font-face {
+  font-family: "Remedy Diatype";
+  src: url("/fonts/diatype/regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Remedy Diatype";
+  src: url("/fonts/diatype/bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+html[data-fonts="diatype"] {
+  --font-app-sans: "Remedy Diatype";
+  --font-app-display: "Remedy Diatype";
+}
+
+/* Remedy: black canvas, violet action, precise evidence. See DESIGN.md. */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: oklch(0.155 0.004 75);
-  --surface: oklch(0.19 0.004 75);
-  --surface-2: oklch(0.225 0.004 75);
-  --surface-3: oklch(0.26 0.004 75);
-  --line: oklch(0.96 0.02 85 / 0.08);
-  --line-2: oklch(0.96 0.02 85 / 0.15);
-  /* Input and search-field borders only: opaque, 3:1 on --bg, --surface and --surface-2. */
-  --line-strong: oklch(0.53 0.006 80);
-  --text: oklch(0.96 0.006 85);
-  --text-2: oklch(0.86 0.005 80);
-  --muted: oklch(0.74 0.005 80);
-  --faint: oklch(0.68 0.005 80);
-  /* Brass: the amber of a manila tag and a brass grommet, calmer than marigold. Hover lightens, press deepens; the edge
-     is the button's 1px rim (and the mark's, in light). */
-  --accent: oklch(0.81 0.125 80);
-  --accent-hover: oklch(0.84 0.13 80);
-  --accent-press: oklch(0.76 0.125 78);
-  --accent-edge: oklch(0.64 0.11 74);
-  --accent-ink: oklch(0.22 0.03 65);
-  --accent-text: oklch(0.86 0.11 82);
-  /* The focus ring: ink, as in light, 3:1 on every surface. Brass is the money's colour (the one Pay button), so a focus
-     ring never competes with it. */
-  --focus: var(--text-2);
-  --pay: oklch(0.79 0.13 150);
-  /* A chart's paid columns: a calm forest green, not the glyph's bright mint, which as an area was the loudest thing on
-     the page; its figures in the text colour. */
-  --pay-fill: oklch(0.5 0.085 150);
-  --pay-fill-text: var(--text);
-  --hold: oklch(0.78 0.08 240);
-  --stop: oklch(0.72 0.16 28);
-  /* The light table: one warm pool of light under the paper that leads the screen. The only light on the site. */
-  --pool: oklch(0.8 0.1 78 / 0.13);
-  /* A machined 0.5px top edge on dark cards and controls, and a cream halo around dark cards. */
-  --bevel: inset 0 0.5px 0 oklch(1 0 0 / 0.08);
-  --halo: 0 0 20px 5px oklch(0.83 0.03 85 / 0.05);
-  --float-shadow: 0 16px 40px -16px oklch(0 0 0 / 0.6);
-  /* Paper resting on the room: a 1px ink ring, an inner top highlight, a contact shadow and a long soft drop. */
-  --paper-shadow: 0 0 0 1px oklch(0.23 0.01 65 / 0.12), inset 0 1px 0 oklch(1 0 0 / 0.7), 0 2px 3px oklch(0 0 0 / 0.28), 0 22px 44px -14px oklch(0 0 0 / 0.6);
-  /* The same, for masked paper (a punched tag, a perforated receipt), as a filter on the wrapper. */
-  --paper-drop: drop-shadow(0 0 0.5px oklch(0.23 0.01 65 / 0.5)) drop-shadow(0 2px 2px oklch(0 0 0 / 0.28)) drop-shadow(0 18px 22px oklch(0 0 0 / 0.45));
-  /* The Problem band, and a notice lying on it. */
+  --bg: #000000;
+  --surface: #19161d;
+  --surface-2: #211d25;
+  --surface-3: #29242f;
+  --line: #352f3d;
+  --line-2: #514858;
+  --line-strong: #82768f;
+  --text: #fafafa;
+  --text-2: #dedbe2;
+  --muted: #c1bec6;
+  --faint: #afa8b6;
+  --accent: #9147ff;
+  --accent-hover: #ffffff;
+  --accent-press: #7b35df;
+  --accent-edge: #a66aff;
+  --accent-ink: #ffffff;
+  --accent-text: #c59eff;
+  --focus: #c59eff;
+  --pay: #68dfa1;
+  --pay-fill: #245c40;
+  --pay-fill-text: #ffffff;
+  --hold: #82b2ff;
+  --stop: #ff7a88;
+  --pool: transparent;
+  --bevel: 0 0 #0000;
+  --halo: 0 0 #0000;
+  --float-shadow: 0 24px 64px #00000080;
+  --paper-shadow: 0 0 0 1px var(--paper-line);
+  --paper-drop: none;
   --band: var(--paper);
   --band-sheet: var(--paper-2);
-  /* Buttons (ui/Button.tsx, .btn-primary and .btn-quiet below). The primary is lit from above: a white top edge, a
-     darker foot, the brass rim and a short contact shadow. The quiet button is a raised key with a hairline ring. */
-  --btn-primary-shadow: inset 0 1px 0 oklch(1 0 0 / 0.3), inset 0 -1px 0 oklch(0.22 0.03 65 / 0.22), 0 0 0 1px var(--accent-edge), 0 1px 2px oklch(0 0 0 / 0.35);
-  --btn-primary-shadow-press: inset 0 1px 2px oklch(0.22 0.03 65 / 0.28), 0 0 0 1px var(--accent-edge);
-  --btn-quiet-bg: var(--surface-2);
-  --btn-quiet-bg-hover: var(--surface-3);
-  --btn-quiet-shadow: inset 0 0 0 1px var(--line-2), inset 0 1px 0 oklch(1 0 0 / 0.08);
-  --btn-quiet-shadow-hover: inset 0 0 0 1px oklch(0.96 0.02 85 / 0.24), inset 0 1px 0 oklch(1 0 0 / 0.1);
-  --btn-quiet-shadow-press: inset 0 0 0 1px var(--line-2), inset 0 1px 2px oklch(0 0 0 / 0.35);
-  /* Pressed, the key sinks below its resting fill, so a tap shows on touch, where there is no hover. */
-  --btn-quiet-bg-press: var(--surface);
-  /* The primary's hover sheen: white from the top edge. Light has none (it cancelled out the deeper fill). */
-  --btn-sheen: oklch(1 0 0 / 0.22);
-  /* The nav link's chip needs no ring on the dark room; in light it gets a hairline, since --surface-2 is 1.06:1 there. */
+  --btn-primary-shadow: none;
+  --btn-primary-shadow-press: none;
+  --btn-quiet-bg: transparent;
+  --btn-quiet-bg-hover: var(--surface-2);
+  --btn-quiet-bg-press: var(--surface-3);
+  --btn-quiet-shadow: inset 0 0 0 1px var(--line-strong);
+  --btn-quiet-shadow-hover: inset 0 0 0 1px var(--faint);
+  --btn-quiet-shadow-press: inset 0 0 0 1px var(--line-strong);
+  --btn-sheen: transparent;
   --nav-chip-ring: 0 0 #0000;
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg: oklch(0.985 0.003 85);
-  --surface: oklch(1 0 0);
-  --surface-2: oklch(0.962 0.004 85);
-  --surface-3: oklch(0.935 0.005 85);
-  --line: oklch(0.25 0.02 65 / 0.11);
-  --line-2: oklch(0.25 0.02 65 / 0.18);
-  --line-strong: oklch(0.62 0.008 70);
-  --text: oklch(0.21 0.008 65);
-  --text-2: oklch(0.33 0.008 65);
-  --muted: oklch(0.45 0.008 65);
-  --faint: oklch(0.51 0.008 65);
-  /* The dark brass a step deeper and richer: at 0.81 it read pale (mustard) on the near-white page. Hover deepens (a
-     lighter fill would vanish into the page), and the 1px rim carries the button's edge at 3:1, since brass is under
-     2:1 on the page. */
-  --accent: oklch(0.79 0.13 77);
-  --accent-hover: oklch(0.75 0.135 75);
-  --accent-press: oklch(0.72 0.13 74);
-  --accent-edge: oklch(0.62 0.11 74);
-  --accent-ink: oklch(0.22 0.03 65);
-  --accent-text: oklch(0.5 0.11 68);
-  /* In light, amber is under 2.1:1 on the page, a card and an amber button: the ring is ink, 3:1 on all of them. */
-  --focus: var(--text);
-  --pay: oklch(0.45 0.13 150);
-  --pay-fill: var(--pay);
-  --pay-fill-text: var(--bg);
-  --hold: oklch(0.44 0.11 250);
-  --stop: oklch(0.48 0.18 28);
-  --pool: oklch(0.9 0.06 85 / 0.22);
-  /* Clerk's soft ring layers in light; no halo. */
-  --bevel: 0 1px 1px oklch(0.23 0.01 65 / 0.024), 0 3px 3px oklch(0.23 0.01 65 / 0.024);
+  --bg: #faf9fc;
+  --surface: #ffffff;
+  --surface-2: #f0edf5;
+  --surface-3: #e7e2ee;
+  --line: #ddd7e5;
+  --line-2: #c9c0d4;
+  --line-strong: #807488;
+  --text: #21182d;
+  --text-2: #3b3048;
+  --muted: #65596f;
+  --faint: #6b5e76;
+  --accent: #8436e8;
+  --accent-hover: #21182d;
+  --accent-press: #702ac9;
+  --accent-edge: #8436e8;
+  --accent-ink: #ffffff;
+  --accent-text: #702ac9;
+  --focus: #702ac9;
+  --pay: #19683e;
+  --pay-fill: #19683e;
+  --pay-fill-text: #ffffff;
+  --hold: #245aa2;
+  --stop: #a8223a;
+  --pool: transparent;
+  --bevel: 0 0 #0000;
   --halo: 0 0 #0000;
-  --float-shadow: 0 16px 40px -20px oklch(0.23 0.01 65 / 0.22);
-  --paper-shadow: 0 0 0 1px oklch(0.23 0.01 65 / 0.16), inset 0 1px 0 oklch(1 0 0 / 0.7), 0 1px 2px oklch(0.23 0.01 65 / 0.08), 0 3px 8px oklch(0.23 0.01 65 / 0.06), 0 18px 36px -12px oklch(0.23 0.01 65 / 0.22);
-  --paper-drop: drop-shadow(0 0 0.5px oklch(0.23 0.01 65 / 0.5)) drop-shadow(0 1px 2px oklch(0.23 0.01 65 / 0.1)) drop-shadow(0 14px 18px oklch(0.23 0.01 65 / 0.14));
-  /* In light the band is clean warm paper, a step under the page (paper-2 read khaki next to the white page), and a
-     notice on it is a lighter sheet. */
-  --band: oklch(0.935 0.01 85);
-  --band-sheet: oklch(0.975 0.007 85);
-  /* The primary as in dark, its top edge brighter, no darker foot (on white it read skeuomorphic) and its shadow ink.
-     The quiet button is a white key on the page: a ring and a short drop at rest; on hover it tints, the ring darkens
-     and the drop grows, so the step shows on white; pressed it tints a step further. */
-  --btn-primary-shadow: inset 0 1px 0 oklch(1 0 0 / 0.4), 0 0 0 1px var(--accent-edge), 0 1px 2px oklch(0.23 0.01 65 / 0.16);
-  --btn-primary-shadow-press: inset 0 1px 2px oklch(0.22 0.03 65 / 0.28), 0 0 0 1px var(--accent-edge);
-  --btn-quiet-bg: var(--surface);
+  --float-shadow: 0 24px 64px #21182d22;
+  --paper-shadow: 0 0 0 1px var(--paper-line);
+  --paper-drop: none;
+  --band: var(--paper-2);
+  --band-sheet: var(--paper);
+  --btn-primary-shadow: none;
+  --btn-primary-shadow-press: none;
+  --btn-quiet-bg: transparent;
   --btn-quiet-bg-hover: var(--surface-2);
   --btn-quiet-bg-press: var(--surface-3);
-  --btn-quiet-shadow: 0 0 0 1px oklch(0.25 0.02 65 / 0.26), inset 0 1px 0 oklch(1 0 0 / 0.9), 0 1px 2px oklch(0.23 0.01 65 / 0.08);
-  --btn-quiet-shadow-hover: 0 0 0 1px oklch(0.25 0.02 65 / 0.44), inset 0 1px 0 oklch(1 0 0 / 0.9), 0 2px 5px oklch(0.23 0.01 65 / 0.12);
-  --btn-quiet-shadow-press: 0 0 0 1px oklch(0.25 0.02 65 / 0.44);
+  --btn-quiet-shadow: inset 0 0 0 1px var(--line-strong);
+  --btn-quiet-shadow-hover: inset 0 0 0 1px var(--muted);
+  --btn-quiet-shadow-press: inset 0 0 0 1px var(--line-strong);
   --btn-sheen: transparent;
-  --nav-chip-ring: inset 0 0 0 1px var(--line-2);
+  --nav-chip-ring: 0 0 #0000;
 }
 
 /*
@@ -144,8 +128,8 @@
   --stop-soft: color-mix(in oklch, var(--stop) 14%, transparent);
   --accent-soft: color-mix(in oklch, var(--accent) 10%, transparent);
 
-  --paper: oklch(0.94 0.014 85);
-  --paper-2: oklch(0.9 0.016 85);
+  --paper: #f6f4f9;
+  --paper-2: #eeebf3;
   --paper-line: oklch(0.23 0.01 65 / 0.18);
   /* The inner top highlight for masked paper (an inset shadow survives the mask). */
   --paper-top: inset 0 1px 0 oklch(1 0 0 / 0.7);
@@ -156,12 +140,12 @@
   --hold-ink: oklch(0.44 0.11 250);
   --stop-ink: oklch(0.47 0.17 28);
   /* Highlighter under ink, drawn left to right (.highlight). */
-  --highlight: color-mix(in oklch, var(--accent) 55%, transparent);
+  --highlight: color-mix(in oklch, var(--accent) 14%, transparent);
   /* The light table's pool, as a background: a radial falloff to nothing, no hard edge. */
-  --table-glow: radial-gradient(closest-side, var(--pool), transparent);
+  --table-glow: none;
   /* The backing for the chips on photos (the photo number), and its text. */
-  --photo-scrim: oklch(0.155 0.004 75 / 0.78);
-  --photo-scrim-text: oklch(0.96 0.006 85);
+  --photo-scrim: #000000cc;
+  --photo-scrim-text: #fafafa;
 
   /* The page frame: content at most 82rem (1312px) inside fluid gutters, 1440px in all at 1440. */
   --gutter: clamp(24px, 4.45vw, 64px);
@@ -238,9 +222,10 @@
   --color-photo-scrim: var(--photo-scrim);
   --color-photo-scrim-text: var(--photo-scrim-text);
 
-  /* Schibsted Grotesk for every word; JetBrains Mono for evidence (codes, ids, grid amounts, timestamps, stamps). */
-  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
+  /* Diatype for this hackathon build; Inter/Work Sans remain the source-checkout fallback. */
+  --font-sans: var(--font-app-sans, var(--font-brand-sans)), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-app-display, var(--font-brand-display)), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-brand-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Six steps, one voice: 56 / 40 / 22 / 17 / 14 / 12 (28 is the 40 step's phone floor and the app's screen titles). */
   --text-*: initial;
@@ -248,8 +233,8 @@
    * The homepage h1 and the one money figure per screen where the number is the point: 56px at 1440, 40px on phones
    * (40, not 36: at 36 the hero lead's block outweighs the h1 and becomes the phone's LCP element).
    */
-  --text-display: clamp(2.5rem, 3.9vw, 3.5rem);
-  --text-display--line-height: 1.03;
+  --text-display: clamp(2.25rem, 4.17vw, 3.75rem);
+  --text-display--line-height: 1.1;
   --text-display--letter-spacing: -0.03em;
   /* Section headings (two-tone), the Problem stats, Proof's 0: 40px at 1440, 28px at 375. */
   --text-title-lg: clamp(1.75rem, 2.8vw, 2.5rem);
@@ -281,7 +266,7 @@
   /* Running text, in --text-2, at most 68ch. */
   --text-body: 1.0625rem;
   --text-body--line-height: 1.55;
-  --text-ui: 0.875rem;
+  --text-ui: 0.9375rem;
   --text-ui--line-height: 1.45;
   --text-micro: 0.75rem;
   --text-micro--line-height: 1.4;
@@ -292,14 +277,15 @@
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   --radius-*: initial;
-  --radius-control: 6px;
+  --radius-control: 10px;
   /* Buttons: the radius grows with the height, 8px at 36 and 44px, 10px at 48px. */
-  --radius-button: 8px;
-  --radius-button-lg: 10px;
-  --radius-card: 10px;
-  --radius-frame: 16px;
+  --radius-button: 12px;
+  --radius-button-lg: 16px;
+  --radius-card: 16px;
+  --radius-frame: 24px;
 
   --shadow-*: initial;
   /* Controls and insets: the hairline ring and the machined top edge. */
@@ -351,7 +337,7 @@
   /* The homepage's sticky header is 4rem tall: anchor jumps and whatever focus brings into view stop under it, never
      behind it. Scoped to the homepage so app pages' own scroll margins do not stack on it; sections carry none. */
   html:has([data-home-nav]) {
-    scroll-padding-top: 4rem;
+    scroll-padding-top: 5.5rem;
   }
 
   /* The 4rem bars themselves (the header, and the Menu sheet's own bar over its scroll-pt-16 sheet) sit inside that
@@ -391,6 +377,10 @@
   kbd,
   samp,
   pre,
+  h1, h2 {
+    font-family: var(--font-display);
+  }
+
   .font-mono {
     font-variant-numeric: tabular-nums slashed-zero;
   }
@@ -471,6 +461,7 @@
     position: relative;
   }
   .grain::after {
+    display: none;
     content: "";
     position: absolute;
     inset: 0;
@@ -565,7 +556,7 @@
     z-index: -1;
     border-radius: inherit;
     pointer-events: none;
-    background: radial-gradient(120% 100% at 50% 0%, var(--btn-sheen), transparent 65%);
+    background: transparent;
     opacity: 0;
     transition: opacity 160ms var(--ease-out-quart);
   }
@@ -594,6 +585,7 @@
   @media (hover: hover) {
     .btn-primary:hover:not(:active) {
       background-color: var(--accent-hover);
+      color: light-dark(#ffffff, #000000);
     }
 
     .btn-primary:hover:not(:active)::before {

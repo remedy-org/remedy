@@ -205,8 +205,9 @@ function Frame({ intro, aside, asideLast, children }: { intro: { title: string; 
   return (
     <div className="flex flex-col gap-8">
       <header className="max-w-read">
-        <h1 className="text-h2 font-medium">{intro.title}</h1>
-        <p className="mt-2 text-body text-muted">{intro.lead}</p>
+        <p className="mb-3 font-display text-ui text-accent-text">Recall setup</p>
+        <h1 className="font-display text-h2 font-semibold">{intro.title}</h1>
+        <p className="mt-3 text-body text-muted">{intro.lead}</p>
       </header>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
         {/* On a phone CPSC's card leads the step it informs; the waiting steps follow the form. */}

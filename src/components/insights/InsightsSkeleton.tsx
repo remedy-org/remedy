@@ -39,9 +39,12 @@ export function InsightsSkeleton() {
   return (
     <div className="flex w-full flex-col" aria-busy="true" aria-label="Loading the report">
       <div className="page">
-        <div className="flex min-h-12 flex-wrap items-center gap-x-8 gap-y-2 border-y border-line py-2.5">
+        <div className="flex min-h-20 flex-wrap items-center gap-x-8 gap-y-2 border-y border-line py-3">
           {["w-28", "w-24", "w-32", "w-44", "w-36"].map((w) => (
-            <Skeleton key={w} className={`h-5 ${w}`} />
+            <div key={w} className="flex flex-1 flex-col gap-2">
+              <Skeleton className={`h-5 ${w}`} />
+              <Skeleton className="h-3 w-24" />
+            </div>
           ))}
         </div>
       </div>

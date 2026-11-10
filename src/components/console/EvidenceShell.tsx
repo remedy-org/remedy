@@ -42,8 +42,8 @@ export function RowMeta({ row }: { row: ClaimRow }) {
  * claim's foot, each at the loaded panel's own geometry, so nothing moves when the evidence lands. */
 export function EvidenceShell({ row, onClose }: { row: ClaimRow | null; onClose?: () => void }) {
   return (
-    <div aria-busy="true" className="flex h-full w-full shrink-0 flex-col overflow-hidden rounded-card bg-surface shadow-float">
-      <div className="flex items-start gap-3 border-b border-line px-5 py-3">
+    <div aria-busy="true" className="flex h-full w-full shrink-0 flex-col overflow-hidden rounded-card border border-line bg-surface shadow-float">
+      <div className="flex items-start gap-3 border-b border-line bg-surface-2 px-5 py-4">
         <div className="min-w-0 flex-1">
           {row ? (
             <>

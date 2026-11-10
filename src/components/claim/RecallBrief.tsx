@@ -12,7 +12,7 @@ export const hazardLine = (recall: Pick<Recall, "title">) => {
 function Hazard({ text }: { text: string }) {
   return (
     // One sentence on a red rule: serious, and no louder than the page around it.
-    <p role="note" className="border-l-2 border-stop pl-4 text-body font-medium text-pretty text-text">
+    <p role="note" className="rounded-control border border-stop/35 bg-stop-soft px-4 py-3 text-ui font-medium text-pretty text-text">
       {text}
     </p>
   );
@@ -76,7 +76,7 @@ export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; headin
 
       {/* Laptops: the product as the brief's small header, so the offer beside it is the one headline. */}
       <div className="flex flex-col gap-1 max-lg:hidden">
-        <p aria-hidden="true" className="text-body font-medium text-balance text-text">
+        <p aria-hidden="true" className="font-display text-body font-semibold text-balance text-text">
           {recall.product}
         </p>
         <p className="text-ui text-muted">{source}</p>
@@ -85,13 +85,10 @@ export function RecallBrief({ recall, heading = "h2" }: { recall: Recall; headin
 
       {image && (
         <figure className="flex flex-col gap-2 max-lg:hidden">
-          {/* CPSC's own photo, hot-linked from cpsc.gov so it stays the official one. Multiplied into the plate, so its
-              white studio background never reads as a slab brighter than the plate around it. The caption is its text. */}
-          {/* The plate's height is fixed, so the page is laid out before cpsc.gov's photo arrives: nothing under it moves. */}
-          {/* In the dark room the cream plate is dimmed a step, so it never outshines the page's one amber. */}
-          <div className="flex h-80 items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line brightness-[0.84] in-data-[theme=light]:brightness-100">
+          {/* Preserve the official photograph's colors; the plate has a fixed height to prevent layout shift. */}
+          <div className="flex h-80 items-center justify-center overflow-hidden rounded-card bg-surface p-4 ring-1 ring-line">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.url} alt={image.caption ? "" : `The recalled ${recall.product}`} fetchPriority="high" className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
+            <img src={image.url} alt={image.caption ? "" : `The recalled ${recall.product}`} fetchPriority="high" className="block max-h-full w-auto max-w-full rounded-control object-contain" />
           </div>
           {image.caption && <figcaption className="max-w-read text-ui text-faint">{image.caption}</figcaption>}
         </figure>

@@ -49,9 +49,9 @@ export function EvidenceStill({ claim, note, fluid, className }: EvidenceStillPr
   return (
     <aside
       aria-label={`Evidence for ${claim.id}`}
-      className={clsx("flex flex-col overflow-hidden rounded-card bg-surface shadow-float", fluid ? "w-full" : "h-full w-[380px] shrink-0", className)}
+      className={clsx("flex flex-col overflow-hidden rounded-card border border-line bg-surface shadow-float", fluid ? "w-full" : "h-full w-[380px] shrink-0", className)}
     >
-      <header className="border-b border-line px-5 py-3">
+      <header className="border-b border-line bg-surface-2 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <p className="font-mono text-body font-medium">{claim.id}</p>
           <span className="inline-flex w-[6.5rem]">

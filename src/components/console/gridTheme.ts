@@ -1,11 +1,7 @@
 import { themeQuartz } from "ag-grid-community";
 
-// AG Grid's Quartz theme mapped to the Evidence Room tokens (DESIGN.md). Every colour is a CSS variable, so the one
-// theme follows the app's dark and light tokens as data-theme flips: no second theme, no flash on toggle.
-// The header is a quiet sentence-case label row in the sans face, one surface step up (--surface-2, DESIGN.md's console
-// layers): mono is for data. Rows are 52px for two-line cells with thumbnails (Mercury 51, HR 65). claims-grid.css adds
-// the open row's ink edge and the filter icons that show on hover. The filter popups, inputs and checkboxes use the same tokens:
-// ink, not amber, since amber is the one action's.
+// One token-driven theme for the live queue and its product previews. Preserve row geometry so keyboard navigation,
+// skeletons and the narrow card layout keep the same footprint when the theme changes.
 export const gridTheme = themeQuartz.withParams({
   browserColorScheme: "inherit",
   fontFamily: "var(--font-sans)",
@@ -18,8 +14,8 @@ export const gridTheme = themeQuartz.withParams({
   rowHeight: 52,
   spacing: 4,
   cellHorizontalPadding: 12,
-  borderRadius: 6,
-  wrapperBorderRadius: 10,
+  borderRadius: 8,
+  wrapperBorderRadius: 16,
 
   backgroundColor: "var(--surface)",
   foregroundColor: "var(--text)",
@@ -43,8 +39,8 @@ export const gridTheme = themeQuartz.withParams({
   headerRowBorder: true,
   pinnedColumnBorder: false,
   oddRowBackgroundColor: "var(--surface)",
-  rowHoverColor: "color-mix(in oklch, var(--text) 3%, transparent)",
-  selectedRowBackgroundColor: "var(--surface-2)",
+  rowHoverColor: "var(--surface-2)",
+  selectedRowBackgroundColor: "color-mix(in srgb, var(--accent) 9%, var(--surface))",
   pinnedRowBackgroundColor: "var(--surface-2)",
   pinnedRowBorder: { color: "var(--line)" },
   headerColumnResizeHandleColor: "var(--line-2)",
@@ -57,15 +53,15 @@ export const gridTheme = themeQuartz.withParams({
   menuTextColor: "var(--text-2)",
   menuBorder: { color: "var(--line)" },
   popupShadow: "var(--float-shadow)",
-  inputBackgroundColor: "var(--bg)",
-  inputBorder: { color: "var(--line-2)" },
-  inputFocusBorder: { color: "var(--text-2)" },
+  inputBackgroundColor: "var(--surface-2)",
+  inputBorder: { color: "var(--line-strong)" },
+  inputFocusBorder: { color: "var(--focus)" },
   inputFocusShadow: "none",
   inputPlaceholderTextColor: "var(--faint)",
   inputHeight: 32,
-  checkboxCheckedBackgroundColor: "var(--text)",
-  checkboxCheckedBorderColor: "var(--text)",
-  checkboxCheckedShapeColor: "var(--bg)",
+  checkboxCheckedBackgroundColor: "var(--accent)",
+  checkboxCheckedBorderColor: "var(--accent)",
+  checkboxCheckedShapeColor: "var(--accent-ink)",
   checkboxUncheckedBorderColor: "var(--line-strong)",
   checkboxUncheckedBackgroundColor: "transparent",
   pickerListBackgroundColor: "var(--surface)",

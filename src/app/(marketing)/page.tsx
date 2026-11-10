@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
-import { Checks } from "@/components/home/Checks";
 import { Companies } from "@/components/home/Companies";
 import { Footer } from "@/components/home/Footer";
 import { Hero } from "@/components/home/Hero";
 import { Nav } from "@/components/home/Nav";
-import { Problem } from "@/components/home/Problem";
+import { HowItWorks } from "@/components/home/HowItWorks";
 import { Proof } from "@/components/home/Proof";
 import { SHARE_IMAGE } from "@/lib/shareImage";
 
 const description =
-  "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera, five checks and a fixed rule decide, and PayPal pays the refund within a minute.";
-const share = "Remedy · Recall refunds, paid in a minute";
+  "Remedy connects recall-photo evidence, clear decisions, and eligible refunds through PayPal. Owners submit photos; companies review uncertain claims and track every payment.";
+const share = "Remedy · Recall refunds, without the inbox";
 
 export const metadata: Metadata = {
   title: { absolute: share },
@@ -18,8 +17,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: share, description, images: [SHARE_IMAGE] },
 };
 
-// Drawn ahead of time and again every hour: the For companies tour, its Insights and its report draft read the console's
-// dataset, whose claims move to the visit's day (lib/demo/dataset.ts), so their dates stay the console's.
+// The read-only previews share the console's sample dataset and date model.
 export const revalidate = 3600;
 
 // The production site, so search engines and agents get one canonical identity whichever host serves the page.
@@ -33,7 +31,7 @@ const JSON_LD = {
       name: "Remedy",
       url: SITE,
       logo: `${SITE}/apple-icon.png`,
-      description: "Remedy pays product-recall refunds through PayPal once a live-camera photo proves the product destroyed.",
+      description: "Remedy connects product-recall evidence reviews and eligible refunds through PayPal.",
     },
     {
       "@type": "SoftwareApplication",
@@ -44,9 +42,9 @@ const JSON_LD = {
       operatingSystem: "Web",
       publisher: { "@id": `${SITE}/#organization` },
       description:
-        "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera with a one-time code, five fraud checks and a fixed rule decide, and PayPal Payouts sends the refund within a minute. Companies get a claims console, recall analytics and a CPSC progress report.",
+        "Remedy brings recall-photo evidence, deterministic claim decisions, human review, and PayPal Payouts into one workflow. Companies get a claims console, recall analytics, and a CPSC progress-report draft. The public demonstration uses PayPal sandbox payments and prepared photographs.",
       featureList: [
-        "Live-camera proof of destruction with a one-time code",
+        "Capture-session photo evidence with a one-time code",
         "Five fraud checks, the first three before any AI",
         "Payouts through PayPal Payouts",
         "Claims console on AG Grid",
@@ -58,19 +56,18 @@ const JSON_LD = {
   ],
 };
 
-// Nav, the hero with How it works (Hero renders the #how marker), then Problem, Fraud checks, Results, For companies.
+// A product-led story with ordinary document scrolling and read-only sample previews.
 export default function Home() {
   return (
     <>
       <Nav />
-      {/* clip, not hidden: the light table runs past the edges without a horizontal scrollbar or breaking sticky. */}
+      {/* Keep wide product previews inside the page while preserving normal document scrolling. */}
       <main id="main" tabIndex={-1} className="overflow-x-clip outline-none">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD).replace(/</g, "\\u003c") }} />
         <Hero />
-        <Problem />
-        <Checks />
-        <Proof />
+        <HowItWorks />
         <Companies />
+        <Proof />
       </main>
       <Footer />
     </>

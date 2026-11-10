@@ -119,7 +119,7 @@ export function EvidencePanel({ claimId, row, viewPhotos, version, filedAt, onCl
     <aside
       role="complementary"
       aria-label={`Evidence for ${claimId}`}
-      className="evidence-panel flex h-full w-full shrink-0 flex-col overflow-hidden rounded-card bg-surface shadow-float"
+      className="evidence-panel flex h-full w-full shrink-0 flex-col overflow-hidden rounded-card border border-line bg-surface shadow-float"
     >
       <EvidenceContent
         id={claimId}
@@ -165,7 +165,7 @@ export function EvidenceDrawer({ claimId, row, viewPhotos, version, filedAt, onC
       // A click on the backdrop lands on the dialog itself.
       onClick={(e) => e.target === e.currentTarget && e.currentTarget.close()}
       aria-labelledby="drawer-title"
-      className="evidence-panel evidence-sheet fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-none overflow-hidden bg-surface p-0 text-text shadow-float transition-[translate,opacity] duration-240 ease-snap backdrop:bg-[oklch(0.1_0.004_75/0.6)] starting:translate-x-6 starting:opacity-0 sm:w-[min(36rem,100vw)] sm:rounded-l-card"
+      className="evidence-panel evidence-sheet fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-none overflow-hidden border-l border-line bg-surface p-0 text-text shadow-float transition-[translate,opacity] duration-240 ease-snap backdrop:bg-[rgb(0_0_0/0.7)] starting:translate-x-6 starting:opacity-0 sm:w-[min(36rem,100vw)] sm:rounded-l-card"
     >
       {claimId && (
         <EvidenceContent
@@ -282,7 +282,7 @@ function EvidenceContent({
       // The claim's evidence is in: keys waiting for it (keyQueue) go on.
       data-ready={claim?.id === id ? id : undefined}
     >
-      <header className={clsx("flex items-start gap-3 border-b border-line py-3", pad)}>
+      <header className={clsx("flex items-start gap-3 border-b border-line bg-surface-2 py-4", pad)}>
         <div className="min-w-0 flex-1">
           {back && onBack && (
             <button type="button" onClick={onBack} className="-mt-1 mb-1 inline-flex min-h-8 items-center gap-1.5 text-ui text-muted hover:text-text">
@@ -438,7 +438,7 @@ function Section({ title, children, aside }: { title: ReactNode; children: React
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-ui font-medium text-text">{title}</h3>
+        <h3 className="font-display text-ui font-medium text-text">{title}</h3>
         {aside && <span className="text-ui text-muted">{aside}</span>}
       </div>
       {children}

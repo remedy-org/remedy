@@ -116,6 +116,7 @@ export function SamplePicker({
       {/* A limit's notice, rendered later, takes focus from the title. */}
       <FocusTitle id="picker-title" />
       <div className="flex flex-col gap-2">
+        <p className="text-ui font-medium text-accent-text">PayPal sandbox · prepared demo photos</p>
         <StepTitle id="picker-title">Choose a claim</StepTitle>
         {context}
       </div>
@@ -141,9 +142,9 @@ export function SamplePicker({
                 key={sample.id}
                 aria-disabled={locked || off ? true : undefined}
                 className={clsx(
-                  "group relative flex items-center gap-4 rounded-control px-3 py-3 transition-colors duration-160",
+                  "group relative flex items-center gap-4 rounded-control border border-transparent px-4 py-4 transition-colors duration-160",
                   // Selected: a 1px ink ring, never an outline, which is focus's alone. The screen's one amber is the button.
-                  !off && "has-checked:ring-1 has-checked:ring-text",
+                  !off && "has-checked:border-accent has-checked:bg-accent-soft",
                   "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus",
                   !off && !locked && "cursor-pointer hover:bg-surface",
                   locked && "cursor-not-allowed",
@@ -200,7 +201,7 @@ export function SamplePicker({
                     aria-hidden="true"
                     className={clsx(
                       "flex size-5 shrink-0 items-center justify-center rounded-full border border-line-strong",
-                      "peer-checked:border-text peer-checked:after:size-2.5 peer-checked:after:rounded-full peer-checked:after:bg-text",
+                      "peer-checked:border-accent peer-checked:after:size-2.5 peer-checked:after:rounded-full peer-checked:after:bg-accent",
                       locked && "border-dashed",
                     )}
                   />
@@ -253,7 +254,8 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
     <section aria-labelledby="picker-title" className="flex w-full flex-col gap-8">
       <FocusTitle id="picker-title" />
       <div className="flex max-w-[34rem] flex-col gap-3">
-        <StepTitle id="picker-title">{clean ? "Remedy paid the genuine claim and stopped all three fakes" : "All four claims sent"}</StepTitle>
+        <p className="text-ui font-medium text-accent-text">PayPal sandbox · your demo results</p>
+        <StepTitle id="picker-title">{clean ? "One claim paid. Three stopped by the checks." : "All four claims sent"}</StepTitle>
         <p className="text-body text-pretty text-muted">Open any of them to see why. The company sees the same four, with their evidence, in its console.</p>
       </div>
       <ul className="flex flex-col border-t border-line">
@@ -297,7 +299,7 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
       <div className="flex flex-col gap-3">
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
           <Button href={first ? `/console?claim=${first.id}` : "/console"} size="lg" prefetch={false} aria-describedby="console-note">
-            See them as {company} sees them
+            Open the company console
           </Button>
           <form action="/api/claims/round" method="post" className="flex">
             <input type="hidden" name="recall" value={slug} />
@@ -307,7 +309,7 @@ function RoundDone({ slug, company, options, latest, resultOf }: { slug: string;
           </form>
         </div>
         <p className="text-ui text-faint">
-          <span id="console-note">Opens {company}&rsquo;s console, which has its own login.</span>{" "}
+          <span id="console-note">See these claims in the demo workspace for {company}&rsquo;s public recall. The console has its own login.</span>{" "}
           <span id="start-over-note">Start over clears these four.</span>
         </p>
       </div>

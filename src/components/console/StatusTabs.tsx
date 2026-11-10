@@ -94,12 +94,12 @@ export function StatusTabs({ value, counts, onChange, controls }: { value: Tab; 
             onKeyDown={(e) => move(e, i)}
             className={clsx(
               "relative inline-flex min-h-11 shrink-0 items-center gap-1.5 px-2 text-ui font-medium whitespace-nowrap transition-colors first:pl-0 sm:gap-2 sm:px-3",
-              active ? "text-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0 sm:after:inset-x-3" : "text-muted hover:text-text",
+              active ? "text-accent-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent first:after:left-0 sm:after:inset-x-3" : "text-muted hover:text-text",
             )}
           >
             {t.label}
             {/* Two figures wide at least, so a search that takes a count from 49 to 0 never moves the tabs. */}
-            <span className={clsx("inline-block min-w-[2ch] font-mono text-micro tabular-nums", active ? "text-muted" : "text-faint")}>{counts[t.id]}</span>
+            <span className={clsx("inline-flex min-w-[2ch] justify-center rounded-[4px] px-1 font-mono text-micro tabular-nums", active ? "bg-accent-soft text-accent-text" : "text-faint")}>{counts[t.id]}</span>
           </button>
         );
       })}

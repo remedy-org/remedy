@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PAYPAL_CONSENT } from "@/components/claim/ConsentCard";
 import { JudgeLoginPanel } from "@/components/claim/JudgeLoginPanel";
+import styles from "@/components/claim/flow.module.css";
 import { previewProps } from "@/components/console/preview";
 import { SigninPreview } from "@/components/console/SigninPreview";
 import { Button, CheckIcon, ErrorState, NoBreakHyphens, ThemeToggle, Wordmark } from "@/components/ui";
@@ -47,7 +48,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
     // 1024px the console it opens, flat, from column 6 running off the right edge. Phones get the form alone, from the top
     // (centred, it left a screen of air under the header); from 1024px the form is centred beside the console.
     <div className="flex min-h-dvh flex-col overflow-x-clip">
-      <header className="page flex h-16 items-center justify-between gap-4">
+      <header className="page flex h-18 items-center justify-between gap-4 max-sm:h-16">
         {/* The homepage's lockup: sign-in is on the homepage's frame, so the logo keeps its size from "Log in". */}
         <Wordmark size="md" href="/" prefetch={false} />
         <div className="flex items-center gap-2 sm:gap-5">
@@ -57,11 +58,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <ThemeToggle />
         </div>
       </header>
-      <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none max-lg:content-start sm:py-16 sm:pb-28 lg:items-start">
-        <div className="col-span-12 mx-auto flex w-full max-w-[400px] flex-col lg:col-span-4 lg:mx-0">
+      <main id="main" tabIndex={-1} className="page grid-12 flex-1 content-center items-center py-12 outline-none max-lg:content-start sm:py-16 sm:pb-24 lg:items-center">
+        <div className="col-span-12 mx-auto flex w-full max-w-[420px] flex-col lg:col-span-4 lg:mx-0">
           {/* Its cap height trimmed at the top, so the letters' top sits on the preview window's top edge, not 5px under it. */}
-          <h1 className="text-h2 font-medium [text-box:trim-start_cap_alphabetic]">Log in to Remedy</h1>
-          <p className="mt-2 text-ui text-muted">Review recall claims and pay refunds through PayPal.</p>
+          <p className="mb-5 font-display text-ui font-medium text-accent-text">The company workspace</p>
+          <h1 className="font-display text-h2 font-semibold [text-box:trim-start_cap_alphabetic]">Your recall.<br />Every claim, in view.</h1>
+          <p className="mt-4 text-body text-muted">Review the evidence, resolve uncertain claims, and track refunds through PayPal.</p>
 
           {error && <ErrorState variant="inline" className="mt-6" title={error.title} description={error.description} />}
           {signedOut && (
@@ -74,15 +76,15 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <Button href={start} size="lg" block className="mt-8" prefetch={false}>
             Log in with PayPal
           </Button>
-          <p className="mt-3 text-ui text-muted">{PAYPAL_CONSENT}</p>
+          <p className="mt-4 text-ui text-muted">{PAYPAL_CONSENT}</p>
 
           {/* The shared login sits under the real way in, never in front of it (a company's own PayPal login is the door):
               one quiet line, "Use the demo account", that opens the same rows as /try's, under /try's name. Open from the
               start when a try result sent the visitor here for its claim. */}
           {login && (
-            <details className="group mt-6" open={fromClaim || undefined}>
+            <details className="group mt-6 rounded-card border border-line bg-surface px-5 py-2" open={fromClaim || undefined}>
               <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-ui text-muted hover:text-text [&::-webkit-details-marker]:hidden">
-                Use the demo account
+                Explore with the demo account
                 <svg aria-hidden="true" viewBox="0 0 10 6" className="h-1.5 w-2.5 transition-transform duration-160 group-open:rotate-180">
                   <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -110,9 +112,13 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
         </div>
 
         <div className="hidden lg:col-span-7 lg:col-start-6 lg:block">
+          <div className={styles.signinPreview}>
+            <p className="mb-6 pr-8 font-display text-ui font-medium">A clear decision. The evidence behind it.</p>
           {/* Decided claims lead (the claims still waiting for photos at the foot), and no figure or count is drawn: the
               console a visitor opens has its own, live ones, so the picture never shows a number that then changes. */}
           <SigninPreview rows={[...preview.rows.filter((r) => r.decision !== "pending"), ...preview.rows.filter((r) => r.decision === "pending")]} height={preview.height} />
+          </div>
+          <p className="mt-4 text-ui text-faint">Illustrative workspace · PayPal sandbox</p>
         </div>
       </main>
     </div>

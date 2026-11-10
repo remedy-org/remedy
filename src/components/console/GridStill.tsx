@@ -104,7 +104,7 @@ export function GridStill({
           )}
         >
           {columns.map(({ id, cell: Cell, className: col }) => (
-            <span key={id} className={clsx("flex min-w-0 shrink-0 items-center overflow-hidden px-3 text-ui whitespace-nowrap", edge, col)}>
+            <span key={id} data-col={id} className={clsx("flex min-w-0 shrink-0 items-center overflow-hidden px-3 text-ui whitespace-nowrap", edge, col)}>
               <span className={clsx("min-w-0 flex-1", (id === "amount" || id === "time") && "flex justify-end")}>
                 <Cell {...props(r, phone, slots)} />
               </span>

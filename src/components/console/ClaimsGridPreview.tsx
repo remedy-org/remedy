@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Wordmark } from "@/components/ui";
 import { ledgerOf, type ClaimRow, type Ledger as LedgerData } from "@/app/console/_lib/view";
 import { ClaimsGrid, type ClaimsGridHandle } from "./ClaimsGrid";
 import { EvidenceStill, type StillClaim } from "./EvidenceStill";
@@ -206,10 +207,10 @@ function FramedPreview({ rows, openId, height, ledger, counts, panelClassName, o
     <div className={clsx("overflow-hidden rounded-frame bg-bg text-text", className ?? "shadow-float")}>
       {/* App chrome. Insights and Report are the console’s other pages: faint, since this still can’t open them. The
           whole frame is a picture (the caller makes it inert). */}
-      <div className="flex h-12 items-center gap-4 border-b border-line px-4 sm:gap-6 sm:px-5" aria-hidden="true">
-        <span className="font-semibold">Remedy</span>
-        <span className="hidden gap-5 text-ui font-medium sm:flex">
-          <span className="relative text-text after:absolute after:inset-x-0 after:-bottom-[15px] after:h-px after:bg-text">Claims</span>
+      <div className="flex h-12 items-center gap-4 border-b border-line bg-surface-2 px-4 sm:gap-6 sm:px-5" aria-hidden="true">
+        <Wordmark />
+        <span className="hidden gap-5 font-display text-ui font-medium sm:flex">
+          <span className="relative text-accent-text after:absolute after:inset-x-0 after:-bottom-[15px] after:h-0.5 after:bg-accent">Claims</span>
           <span className="text-faint">Insights</span>
           <span className="text-faint">Report</span>
         </span>

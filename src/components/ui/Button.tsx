@@ -9,7 +9,7 @@ export type ButtonVariant = "primary" | "secondary" | "tertiary";
 export type ButtonSize = "sm" | "md" | "lg";
 
 interface Common {
-  /** primary = brass fill (one per view), secondary = the quiet button (a raised key, a hairline ring), tertiary = text with an arrow. */
+  /** primary = violet action, secondary = outlined action, tertiary = text with an arrow. */
   variant?: ButtonVariant;
   /** sm 36px (hit area stays 44px), md 44px, lg 48px; the radius is 8px, 8px and 10px. Tertiary ignores height. */
   size?: ButtonSize;

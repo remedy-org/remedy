@@ -7,16 +7,16 @@ import { formatCount } from "./format";
  * reads; the value leads on screen. */
 export function LedgerItem({ value, label, title, className }: { value: ReactNode; label: ReactNode; title?: string; className?: string }) {
   return (
-    <div className={clsx("flex min-w-0 items-baseline gap-x-2 whitespace-nowrap", className)} title={title}>
+    <div className={clsx("flex min-w-0 flex-1 flex-col gap-1 whitespace-nowrap px-4 py-3 first:pl-0", className)} title={title}>
       <dt className="order-2 text-micro text-muted">{label}</dt>
-      <dd className="order-1 text-head-sm leading-7 font-medium">{value}</dd>
+      <dd className="order-1 font-display text-head-sm leading-7 font-medium text-text">{value}</dd>
     </div>
   );
 }
 
 /** The figures' strip: hairlines above and below, no boxes, one row that wraps only when it must. */
 export function LedgerStrip({ className, children }: { className?: string; children: ReactNode }) {
-  return <dl className={clsx("flex min-h-12 flex-wrap items-center gap-x-6 gap-y-2 border-y border-line py-2.5 min-[900px]:gap-x-8", className)}>{children}</dl>;
+  return <dl className={clsx("flex min-h-20 flex-wrap items-stretch gap-x-4 gap-y-0 border-y border-line py-1 min-[900px]:gap-x-6", className)}>{children}</dl>;
 }
 
 /**

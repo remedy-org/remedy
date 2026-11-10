@@ -36,7 +36,7 @@ export function ExhibitPhoto({ src, alt, n, frame = "aspect-[4/3]", fit = "cover
  */
 export function StepTitle({ id, as: Tag = "h1", className, children }: { id: string; as?: "h1" | "h2"; className?: string; children: ReactNode }) {
   return (
-    <Tag id={id} tabIndex={-1} className={clsx("text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4", className)}>
+    <Tag id={id} tabIndex={-1} className={clsx("font-display text-title font-semibold text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4", className)}>
       {children}
     </Tag>
   );
@@ -138,5 +138,5 @@ export function OutcomeHead({ id, thumb, thumbAlt, title, lead, small, aside }: 
  * and footer's edges), so nothing moves sideways from step to step.
  */
 export function ClaimFrame({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={clsx("mx-auto flex w-full max-w-[60rem] flex-col gap-8 sm:gap-10", className)}>{children}</div>;
+  return <div className={clsx("mx-auto flex w-full max-w-[68rem] flex-col gap-8 sm:gap-10", className)}>{children}</div>;
 }

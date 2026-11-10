@@ -24,11 +24,11 @@ export function RecallPhoto({ url, caption, product }: { url: string; caption?: 
         onClick={open}
         aria-haspopup="dialog"
         aria-label={`Enlarge CPSC’s photo of the recalled ${product}`}
-        className="group relative flex h-28 w-full items-center justify-center rounded-control bg-paper p-2 ring-1 ring-line brightness-[0.84] transition-shadow duration-160 hover:ring-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus in-data-[theme=light]:brightness-100"
+        className="group relative flex h-36 w-full items-center justify-center overflow-hidden rounded-card bg-surface p-3 ring-1 ring-line transition-shadow duration-160 hover:ring-line-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="" className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
-        <span aria-hidden="true" className="absolute right-1.5 bottom-1.5 inline-flex h-6 items-center gap-1 rounded-[4px] bg-paper px-1.5 text-micro font-medium text-ink ring-1 ring-paper-line">
+        <img src={url} alt="" className="block max-h-full w-auto max-w-full rounded-control object-contain" />
+        <span aria-hidden="true" className="absolute right-2 bottom-2 inline-flex h-7 items-center gap-1 rounded-control bg-surface px-2 text-micro font-medium text-text ring-1 ring-line">
           <svg width={12} height={12} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" aria-hidden="true">
             <circle cx="5.25" cy="5.25" r="3.5" />
             <path d="M7.9 7.9l2.6 2.6" />
@@ -44,9 +44,9 @@ export function RecallPhoto({ url, caption, product }: { url: string; caption?: 
       >
         <figure className="flex flex-col gap-3 p-4 max-sm:px-0 max-sm:pt-0">
           {/* A phone: the plate edge to edge with no inset, the photo twice the screen's width inside it, panned sideways. */}
-          <div ref={plate} className="rounded-control bg-paper p-4 ring-1 ring-line max-sm:touch-pan-x max-sm:touch-pinch-zoom max-sm:overflow-x-auto max-sm:rounded-none max-sm:p-0 max-sm:ring-0">
+          <div ref={plate} className="rounded-control bg-surface-2 p-4 ring-1 ring-line max-sm:touch-pan-x max-sm:touch-pinch-zoom max-sm:overflow-x-auto max-sm:rounded-none max-sm:p-0 max-sm:ring-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={caption ? "" : `The recalled ${product}`} className="mx-auto block max-h-[60dvh] w-auto max-w-full object-contain mix-blend-multiply max-sm:max-h-none max-sm:min-w-[200vw]" />
+            <img src={url} alt={caption ? "" : `The recalled ${product}`} className="mx-auto block max-h-[60dvh] w-auto max-w-full object-contain max-sm:max-h-none max-sm:min-w-[200vw]" />
           </div>
           {caption && <figcaption className="text-ui text-pretty text-muted max-sm:px-4">{caption}</figcaption>}
           <form method="dialog" className="flex justify-end max-sm:px-4">

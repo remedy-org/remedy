@@ -19,9 +19,9 @@ export function onSharedRecall({ recall, recalls, company }: Workspace) {
 export function WorkspaceNote({ recall, recalls, company }: Workspace) {
   if (!onSharedRecall({ recall, recalls, company })) return null;
   return (
-    <p className="text-ui text-muted">
-      Your console opens on Remedy&rsquo;s own run of public CPSC recall <span className="font-mono">{recall.id}</span>, {keepHyphens(recall.product)}, so you can see a running
-      queue.{" "}
+    <p className="rounded-control border border-line bg-surface px-4 py-3 text-ui text-muted">
+      <span className="mr-2 font-medium text-text">Demo workspace</span>
+      Public CPSC recall <span className="font-mono">{recall.id}</span>, {keepHyphens(recall.product)}. Includes sample claims and your demo round.{" "}
       <Link href="/console/recalls/new" className="whitespace-nowrap text-text underline decoration-line-strong underline-offset-4 hover:decoration-text">
         Import your own recall <span aria-hidden="true">→</span>
       </Link>

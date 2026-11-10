@@ -1,23 +1,22 @@
 "use client";
 
 import { useLayoutEffect } from "react";
+import { usePathname } from "next/navigation";
 import { THEME_STORAGE_KEY } from "./theme";
 
-/**
- * The pre-paint theme script's logic again, from React: a page Next renders as an error document (a notFound() under
- * /r/*) never runs the root layout's inline script, so without this a light-mode visitor would get the dark default.
- * Runs before paint; does nothing when the script already set the theme.
- */
+/** Apply the saved app preference on navigation without letting marketing overwrite it. */
 export function ThemeSync() {
+  const pathname = usePathname();
   useLayoutEffect(() => {
     const root = document.documentElement;
-    if (root.dataset.theme) return;
+    let theme = "dark";
     try {
-      const t = localStorage.getItem(THEME_STORAGE_KEY);
-      if (t === "light" || (t !== "dark" && matchMedia("(prefers-color-scheme: light)").matches)) root.dataset.theme = "light";
+      if (pathname !== "/" && localStorage.getItem(THEME_STORAGE_KEY) === "light") theme = "light";
     } catch {
       // Storage blocked: the dark default stands.
     }
-  }, []);
+    root.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "light" ? "#faf9fc" : "#000000");
+  }, [pathname]);
   return null;
 }

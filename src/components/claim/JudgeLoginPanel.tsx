@@ -2,6 +2,7 @@ import clsx from "clsx";
 import type { ReactNode } from "react";
 import type { JudgeLogin } from "@/lib/demo/judgeLogin";
 import { CopyValue } from "./CopyValue";
+import styles from "./flow.module.css";
 
 // An email with a break allowed after its @: the <wbr> adds no text, so Copy still reads the whole address.
 function atBreak(email: string) {
@@ -49,9 +50,9 @@ export function JudgeLoginPanel({
       id={id}
       tabIndex={id ? -1 : undefined}
       aria-label={title}
-      className={clsx("flex scroll-mt-24 flex-col gap-2 text-ui outline-hidden focus:outline-2 focus:outline-solid focus:outline-offset-4 focus:outline-focus", className)}
+      className={clsx(styles.credentials, "flex scroll-mt-24 flex-col gap-2 text-ui outline-hidden focus:outline-2 focus:outline-solid focus:outline-offset-4 focus:outline-focus", className)}
     >
-      <Heading className={quietTitle ? "sr-only" : "font-medium text-text"}>{title}</Heading>
+      <Heading className={quietTitle ? "sr-only" : "font-display font-semibold text-text"}>{title}</Heading>
       {why && <p className="text-muted">{why}</p>}
       {/* Said first, in neutral text, before the email and password. */}
       <p className="text-muted">Use these when PayPal asks you to log in.</p>

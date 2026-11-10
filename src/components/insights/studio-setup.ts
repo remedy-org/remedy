@@ -31,5 +31,8 @@ export function fonts() {
     const family = root.getPropertyValue(name).trim();
     return family ? `${family}, ${fallback}` : fallback;
   };
-  return { sans: stack("--font-schibsted", "ui-sans-serif, system-ui, sans-serif") };
+  return {
+    sans: stack("--font-sans", "ui-sans-serif, system-ui, sans-serif"),
+    display: stack("--font-display", "ui-monospace, monospace"),
+  };
 }

@@ -40,7 +40,7 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   border: 1px solid color-mix(in oklch, var(--line-strong) 60%, transparent);
   border-radius: 4px;
   color: var(--muted);
-  font: 400 12px/18px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  font: 400 12px/18px var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   pointer-events: none;
 }
 
@@ -63,7 +63,7 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   margin-inline: 0;
 }
 
-/* The analyst's rail sits inside the page's gutter, set off by one hairline on its left, never a filled box. */
+/* A clear surface step separates the analyst from the reporting canvas. */
 .insights-report .ag-studio-ai-panel {
   border: 0;
   box-shadow: inset 1px 0 0 var(--line);
@@ -77,32 +77,30 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   padding: 8px 16px 16px;
 }
 
-/* The analyst's starting questions: quiet text rows on hairlines, under the intro, never outlined pills; a row lifts to
-   the text colour on hover. */
+/* Starting questions are full-width controls with enough room for a useful, readable prompt. */
 .insights-report .ag-studio-ai-prompt-starters {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0;
+  gap: 8px;
   padding: 4px 16px;
 }
 
 .insights-report .ag-studio-ai-prompt-starter {
   justify-content: flex-start;
-  min-height: 40px;
-  border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   background: none;
   box-shadow: none;
-  padding: 8px 0;
+  padding: 12px;
   color: var(--text-2);
   text-align: left;
   transition: color var(--dur-ui) ease-out;
 }
 
 .insights-report .ag-studio-ai-prompt-starter:hover {
-  background: none;
+  background: var(--surface-2);
   color: var(--text);
 }
 
@@ -112,7 +110,7 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   display: block;
   padding: 16px 0 12px;
   color: var(--text-2);
-  font: 400 14px/1.55 var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  font: 400 14px/1.55 var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* The reader's own question: a plain bubble on the surface step, no rule inside it (the rule is the model's quotes). */
@@ -149,7 +147,7 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
   z-index: 30;
   width: min(400px, calc(100vw - 32px));
   height: auto;
-  background: var(--bg);
+  background: var(--surface);
   /* It lies over the page: one soft shadow toward it, so what is under its edge reads as covered, not cut mid-word. */
   box-shadow: -1px 0 0 var(--line-2), -24px 0 48px oklch(0 0 0 / 0.45);
 }
@@ -255,7 +253,7 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
 .insights-report .ag-studio-widget-toolbar-button {
   padding: 0 8px;
   color: var(--muted);
-  font: 400 12px/22px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  font: 400 12px/22px var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -362,13 +360,13 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
 }
 
 .insights-report .ag-studio-ai-panel .ag-studio-panel-title {
-  font: 500 14px/20px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  font: 500 14px/20px var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   color: var(--text);
 }
 
 .insights-report .ag-studio-ai-thread-new-button {
   color: var(--muted);
-  font: 400 14px/20px var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  font: 400 14px/20px var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   text-decoration: underline;
   text-decoration-color: var(--line-strong);
   text-underline-offset: 3px;
@@ -396,4 +394,29 @@ html:not([data-modality="pointer"]) .insights-report .ag-studio-layout-widget:ha
 
 .insights-report .insights-retry:hover {
   text-decoration-color: var(--text);
+}
+
+/* A wide desktop can give the analyst its own column. Smaller screens keep a sheet so charts remain legible. */
+@media (min-width: 1600px) {
+  [data-analyst="open"] > .insights-report {
+    width: calc(100% - 400px);
+  }
+  [data-analyst="open"] > .page {
+    width: calc(100% - 400px);
+    margin-left: 0;
+  }
+  .insights-report .ag-studio-root-panel-container-right {
+    box-shadow: -1px 0 0 var(--line);
+  }
+}
+
+.insights-report .ag-studio-ai-assistant-input {
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+.insights-report .ag-studio-ai-assistant-input:focus-within {
+  border-color: var(--focus);
+}
+.insights-report .ag-studio-layout-widget-title {
+  font-family: var(--font-display);
 }

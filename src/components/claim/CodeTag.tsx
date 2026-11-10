@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { Paper } from "@/components/ui";
+import styles from "./flow.module.css";
 
 export interface CodeTagProps {
   code: string;
@@ -22,22 +22,22 @@ export function CodeTag({ code, written, foot, expired, className }: CodeTagProp
   // "Tag: X-VESOLJE, your code M 4 T": the code a letter at a time, as it is written.
   const spoken = `Tag: ${written ? `${written}, ` : ""}${expired ? "expired code" : "your code"} ${code.split("").join(" ")}`;
   return (
-    <figure className={clsx("relative w-full max-w-[22.5rem]", className)} aria-label={spoken}>
-      {/* An expired tag stays paper: only its ink fades and the code is struck through, as a used tag would be. */}
-      <Paper variant="tag" hole padding="lg">
+    <figure className={clsx(styles.codeTag, "relative w-full max-w-[27rem]", className)} aria-label={spoken}>
+      <p className="mb-5 text-ui text-muted">Your one-time photo code</p>
+      <div className={styles.codePaper}>
         {written && (
-          <p aria-hidden="true" className={clsx("mt-4 text-center font-mono text-[1.75rem] leading-none font-medium tracking-[0.08em] whitespace-nowrap", expired ? "text-ink-muted" : "text-ink")}>
+          <p aria-hidden="true" className={clsx("text-center font-mono text-[1.4rem] leading-none font-medium tracking-[0.04em] [overflow-wrap:anywhere]", expired && "opacity-50")}>
             {written}
           </p>
         )}
         <p
           aria-hidden="true"
-          className={clsx("mt-4 text-center font-mono text-[4rem] leading-none font-medium tracking-[0.14em]", expired ? "text-ink-muted line-through decoration-ink decoration-2" : "text-ink")}
+          className={clsx("mt-5 text-center font-mono text-[4rem] leading-none font-medium tracking-[0.14em]", expired && "line-through decoration-2 opacity-50")}
         >
           {code}
         </p>
-        {foot && <p className="mt-6 border-t border-dashed border-paper-line pt-3 text-ui text-ink-muted">{foot}</p>}
-      </Paper>
+      </div>
+      {foot && <p className="mt-5 text-ui text-muted">{foot}</p>}
     </figure>
   );
 }

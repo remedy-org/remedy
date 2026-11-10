@@ -22,7 +22,7 @@
   inset-block: 0;
   left: 0;
   width: 2px;
-  background: var(--text-2);
+  background: var(--accent);
   z-index: 5;
 }
 
@@ -248,7 +248,7 @@
    in place of its photos (they step aside, so a photo and a control never share one spot). The tint is the open row's step, mixed a little warmer, so a picked row reads apart from the
    one whose evidence is open. ClaimsGrid writes the per-row rules; these are the shared parts. */
 .claims-grid {
-  --pick-bg: color-mix(in oklch, var(--text) 9%, var(--surface));
+  --pick-bg: color-mix(in srgb, var(--accent) 12%, var(--surface));
 }
 
 .claims-grid .pick-box {

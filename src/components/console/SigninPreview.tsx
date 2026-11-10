@@ -35,11 +35,11 @@ export function SigninPreview({ rows, height }: { rows: PreviewRow[]; height: nu
       className="pointer-events-none relative w-full select-none [mask-image:linear-gradient(to_bottom,#000_62%,transparent_96%)]"
     >
       {/* A window's edge in both themes: one hairline border (the mask would clip a ring drawn outside it), no lift. */}
-      <div className="overflow-hidden rounded-card border border-line-2 bg-bg text-text">
-        <div className="flex h-12 items-center gap-6 border-b border-line px-5">
+      <div className="overflow-hidden rounded-card border border-line-2 bg-surface text-text">
+        <div className="flex h-12 items-center gap-6 border-b border-line bg-surface-2 px-5">
           <Wordmark />
-          <span className="flex gap-5 text-ui font-medium">
-            <span className="text-text">Claims</span>
+          <span className="flex gap-5 font-display text-ui font-medium">
+            <span className="text-accent-text">Claims</span>
             <span className="text-muted">Insights</span>
             <span className="text-muted">New recall</span>
             <span className="text-muted">Report</span>
@@ -47,12 +47,12 @@ export function SigninPreview({ rows, height }: { rows: PreviewRow[]; height: nu
           <span className="ml-auto text-ui text-muted">Recall team</span>
         </div>
         <div className="px-5 pt-5">
-          <p className="text-head-sm font-medium">X-VESOLJE Nursing Pillows</p>
+          <p className="font-display text-head-sm font-medium">X-VESOLJE Nursing Pillows</p>
           {/* The tabs by name alone: their counts are the live console's to give. Each on one line; a narrow window clips
               the last behind a fade, as the console's own strip does on a phone. */}
           <div className="mt-3 flex overflow-hidden border-b border-line [mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)]">
             {TABS.map((t, i) => (
-              <span key={t.id} className={clsx("relative inline-flex min-h-11 shrink-0 items-center px-3 text-ui font-medium whitespace-nowrap first:pl-0", i === 0 ? "text-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-text first:after:left-0" : "text-muted")}>
+              <span key={t.id} className={clsx("relative inline-flex min-h-11 shrink-0 items-center px-3 text-ui font-medium whitespace-nowrap first:pl-0", i === 0 ? "text-accent-text after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-accent first:after:left-0" : "text-muted")}>
                 {t.label}
               </span>
             ))}

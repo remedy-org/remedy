@@ -281,8 +281,7 @@ export default function InsightsStudio({ data, narrow = false }: { data: Insight
   // insights-report (insights.css) takes Studio's editor chrome off the read-only panels.
   const filtered = picks.length > 0;
   return (
-    // The analyst's sheet floats over the page's right edge (insights.css), so opening it reflows nothing: the header,
-    // the note and every panel keep their lines.
+    // The analyst gets a separate column on wide desktops; narrower windows use a sheet to protect chart legibility.
     <div data-analyst={askOpen ? "open" : undefined} className="flex w-full flex-col">
       {actions &&
         !askOpen &&

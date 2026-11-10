@@ -18,8 +18,8 @@ export async function generateMetadata({ params }: PageProps<"/console/recalls/[
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-5 border-t border-line py-8 first:border-t-0 first:pt-0">
-      <h2 className="text-body font-medium">{title}</h2>
+    <section className="mb-6 flex flex-col gap-5 rounded-card border border-line bg-surface p-6 sm:p-8">
+      <h2 className="font-display text-body font-medium">{title}</h2>
       {children}
     </section>
   );
@@ -56,7 +56,7 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
 
       {/* Two columns from 1024px: the link owners use on the left, what the recall pays and what a photo must show on the
           right. One column of hairline sections below. */}
-      <div className="grid gap-x-16 lg:grid-cols-2">
+      <div className="grid gap-x-6 lg:grid-cols-2">
         <div className="flex flex-col">
           <Section title="Claim link">
             <CopyField value={url} label="Claim link" />
@@ -69,12 +69,12 @@ export default async function RecallPage({ params, searchParams }: PageProps<"/c
           </Section>
         </div>
 
-        <div className="flex flex-col max-lg:border-t max-lg:border-line max-lg:pt-8">
+        <div className="flex flex-col">
           <Section title="Refund">
             {recall.owner === null ? (
               <p className="text-ui text-text-2">
                 <span className="font-mono text-text">{formatMoney(recall.refund)}</span> per unit, auto-pay {recall.autoPay ? "on" : "off"}. Both are fixed for
-                this recall.
+                this demonstration recall.
               </p>
             ) : (
               <RecallSettingsForm recallId={recall.id} refund={recall.refund.value} autoPay={recall.autoPay} />

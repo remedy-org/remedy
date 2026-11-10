@@ -70,7 +70,8 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
     <form onSubmit={submit} className="flex flex-col gap-8" noValidate>
       <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
         <div>
-          <h2 className="text-body font-medium">What an owner&rsquo;s photos must show</h2>
+          <p className="mb-2 font-display text-micro text-accent-text">01 · Evidence requirements</p>
+          <h2 className="font-display text-body font-medium">What an owner&rsquo;s photos must show</h2>
           <p className="mt-1 text-ui text-muted">
             {drafted ? "Drafted from the notice. " : ""}Remedy checks every claim&rsquo;s photos against these lines, and money moves only when each one is visibly
             confirmed. Ask only for what a photo can show.
@@ -110,7 +111,10 @@ export function PublishForm({ cpscRef, notice, initial, drafted, onPublished, on
       </section>
 
       <section className="flex flex-col gap-6 rounded-card border border-line bg-surface p-6">
-        <h2 className="text-body font-medium">Refund and claim link</h2>
+        <div>
+          <p className="mb-2 font-display text-micro text-accent-text">02 · Refund program</p>
+          <h2 className="font-display text-body font-medium">Refund and claim link</h2>
+        </div>
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Refund per unit" error={f?.refund}>
             {(c) => (

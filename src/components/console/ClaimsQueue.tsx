@@ -584,7 +584,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
               <button
                 type="button"
                 onClick={() => grid.current?.exportCsv()}
-                className="inline-flex h-8 items-center rounded-control px-1 text-ui whitespace-nowrap text-muted transition-colors hover:text-text"
+                className="inline-flex h-8 items-center rounded-control border border-line px-3 text-ui whitespace-nowrap text-muted transition-colors hover:bg-surface-2 hover:text-text"
               >
                 Export CSV
               </button>
@@ -629,7 +629,7 @@ export function ClaimsQueue({ recall, rows: initial, at: initialAt, initialTab, 
                     // Short enough to stay whole beside the toolbar at 1440; what it searches is the tooltip and the label.
                     placeholder="Search claims"
                     title="Search claims by id, code, PayPal account or reason (/)"
-                    className="h-9 w-full rounded-control border border-line bg-surface pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0 [&::-webkit-search-cancel-button]:appearance-none"
+                    className="h-9 w-full rounded-control border border-line-strong bg-surface-2 pr-9 pl-3 text-ui text-text placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-0 [&::-webkit-search-cancel-button]:appearance-none"
                   />
                 </label>
                 {/* Clear shows whenever there is text, focused or not (the browser's own × hides on blur). */}

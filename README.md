@@ -1,8 +1,10 @@
 # Remedy
 
-**Recall refunds through PayPal, for companies running CPSC refund recalls. The owner photographs the destroyed product in the claim's own camera; AI describes the photo, a fixed rule in code decides, and PayPal Payouts pays. Stolen and reused photos get nothing. A fake has to arrive inside the claim's 10-minute camera session, carry the code issued in it, and come from a verified PayPal account with no other paid or open claim on the recall.**
+**Remedy turns recall-photo reviews into traceable PayPal refunds. Owners submit destruction photos with a one-time code; AI describes the evidence, fixed rules decide eligibility, uncertain claims wait for human review, and PayPal pays eligible refunds.**
 
-- **Live:** https://remedy-recalls.vercel.app. The homepage tells one claim, RM-0442, a beat per swipe: how it works, the cut pillow in slate blue-grey 3D while the phone scans its own photo, the five checks, then the paid receipt folding into its row and gliding into the console.
+This is a PayPal sandbox build with prepared judge-demo photographs. The image model does not reliably detect generated photos, and session admission is not camera provenance. The homepage and built-in company claims are illustrative; the fresh judge flow runs real model and PayPal sandbox calls. See the evidence boundaries and evaluation limitations below.
+
+- **Live:** https://remedy-recalls.vercel.app. The homepage connects the owner claim, evidence review and company console in a clearly labeled illustrative walkthrough, followed by the workflow, company tools and four prepared demo cases.
 - **Judges' demo:** https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try (a PayPal sandbox login is on the page)
 - **Company console:** https://remedy-recalls.vercel.app/signin (open **Use the demo account**: it is the same sandbox login as the try page)
 
@@ -53,7 +55,7 @@ When a product is recalled for safety, the company often refunds owners who dest
 - **It happens every week.** Matching the same API by keyword (approximate counts), 2026 to 5 Nov has 514 recalls, 362 with a refund, 268 requiring destruction plus a photo and 238 taking that photo by email, covering 5.28M units. 157 of 2026's refund recalls send the proof to a personal webmail inbox.
 - **AI broke photo proof, and the regulator says so.** CPSC's request for information CPSC-2026-0067 (15 Apr 2026) names "altered, fabricated, or artificially generated images... purporting to demonstrate product destruction", and warns that fraud controls "impose burdens on legitimate consumers and reduce recall participation" ([Federal Register](https://public-inspection.federalregister.gov/2026-07328.pdf)). The CPSC then launched a [national recall-fraud effort](https://www.cpsc.gov/Newsroom/News-Releases/2026/US-Consumer-Product-Safety-Commission-Launches-National-Recall-Fraud-Effort-as-Part-of-Trump-Administrations-Anti-Fraud-Initiative). Sedgwick, the largest recall administrator, reports 20,000 suspected fraudulent claims and "multimillion" exposure ([Foley, Jul 2026](https://www.foley.com/insights/publications/2026/07/when-recalls-go-rogue-the-impact-of-ai-fueled-recall-fraud/)).
 
-That is the trap: photo-only refunds raise participation, and AI fakes push firms back to physical returns, which kill it. Remedy keeps the refund easy for real owners. Stolen and reused photos get nothing, and a fake has to arrive inside the claim's 10-minute camera session, carry the code issued in it, and come from a verified PayPal account that has no other paid or open claim on the recall.
+That is the trap: photo-only refunds raise participation, and AI fakes push firms back to physical returns, which kill it. Remedy keeps the refund easy for real owners. Session admission, photo-reuse checks, code matching and account limits add controls while keeping a short claim path. They do not guarantee that a photograph is genuine.
 
 **Who it's for:** small and mid-size sellers running a CPSC refund recall from an inbox, often marketplace sellers. They are legally required to run the remedy, they review photos by hand, and they absorb the fraudulent refunds. Settlement tools verify the person. Remedy verifies that the product is destroyed.
 
@@ -85,7 +87,7 @@ Checks 1 to 3 run before any model call; a fail there is **blocked**. Then a fix
 
 Every screen lists a claim's reasons with the one that decided it first, then the rest, the model's checks always in one fixed order (the code, the label, the same item, the screen, then each step), so the same photo reads the same way each time it is checked (`src/lib/reasonOrder.ts`).
 
-**What stops a fake.** A generated image with the right code drawn on can pass the photo check: `c14` did in my eval, and two clean fakes did in every try of the 9 Nov re-run. The model is not the defence. What stops a fake is the camera session (the photo has to arrive inside the claim's 10-minute session, carrying its key, with the code issued in that session) and one claim per verified PayPal account. The session check proves when and through which session a photo arrived, not that a camera took it.
+**Limits of the evidence checks.** A generated image with the right code drawn on can pass the photo check: `c14` did in my eval, and two clean fakes did in every try of the 9 Nov re-run. Session admission and one claim per verified PayPal account add timing and account controls; they do not prove that the submitted image is genuine. The session check proves when and through which session a photo arrived, not that a camera took it.
 
 ### PayPal: identity, money and status
 
@@ -248,7 +250,7 @@ All four models rejected every wrong code and, with the code check on, every web
 
 **What the eval can't show:**
 
-- Every model, Sol included, paid `c14` at least once. `c14` is an AI image with a subtle flaw: three cut ends on two pieces. So the strict go line in the summary script still prints NO-GO. In the 9 Nov re-run, two clean AI fakes with the right code passed the photo check 6 of 6. The model can't tell a clean AI image from a photo; the camera session and one claim per verified PayPal account are what stop one.
+- Every model, Sol included, paid `c14` at least once. `c14` is an AI image with a subtle flaw: three cut ends on two pieces. So the strict go line in the summary script still prints NO-GO. In the 9 Nov re-run, two clean AI fakes with the right code passed the photo check 6 of 6. The model cannot reliably distinguish a clean generated image from a photograph. Session and account controls limit admission and repeat claims; they do not establish image authenticity.
 - Every photo carrying a code is AI-made, so real handwriting in a real phone photo hasn't been tested yet.
 - One person (me) wrote the answer keys and checked them by eye.
 - Claude wasn't evaluated.
@@ -366,7 +368,7 @@ FEEDBACK.md              issues I hit in PayPal's developer tools
 ## Limits
 
 - **Sandbox only.** No real money moves, and every refund comes from Remedy's one sandbox business account until per-company payouts land through PayPal partner onboarding.
-- **The model is not the fake detector.** A generated image with the right code drawn on can pass the photo check (`c14`, and both clean fakes in the 9 Nov re-run). The camera session, the code issued in it and one claim per verified PayPal account are what stop it.
+- **The model is not the fake detector.** A generated image with the right code drawn on can pass the photo check (`c14`, and both clean fakes in the 9 Nov re-run). Session admission, code matching and account limits provide additional controls, not a guarantee against generated-image fraud.
 - **The camera session proves when a photo arrived, not how it was made.** A photo counts only if it arrives inside the claim's 10-minute session carrying its key, and the page has no upload button, but the check can't tell that a camera took it.
 - **The fingerprint catches reposts, not every edit.** A mirror image, a crop of 5% or more off one side or a screenshot gets past it. The code check and the screen check are what stand in the way then.
 - **Not yet tested on real handwriting** in a real phone photo. Every code-on eval photo is AI-made.

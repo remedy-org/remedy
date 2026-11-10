@@ -19,10 +19,11 @@ export function ConsoleSkeleton() {
         </span>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-12 flex-wrap items-center gap-x-8 gap-y-2 border-y border-line py-2.5">
+        <div className="flex min-h-20 flex-wrap items-center gap-x-8 gap-y-2 border-y border-line py-3">
           {["w-40", "w-28", "w-44", "w-56"].map((w) => (
-            <span key={w} className="flex h-7 items-center">
+            <span key={w} className="flex h-12 flex-1 flex-col gap-2">
               <Skeleton className={`h-5 ${w}`} />
+              <Skeleton className="h-3 w-24" />
             </span>
           ))}
         </div>

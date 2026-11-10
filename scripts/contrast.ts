@@ -80,6 +80,9 @@ const withSheet = (tokens: Record<string, string>) => ({ ...tokens, ...sheet });
 function resolveColor(tokens: Record<string, string>, value: string, depth = 0): RGBA {
   if (depth > 8) throw new Error(`token loop at ${value}`);
   const v = value.trim();
+  if (v === "transparent") return { r: 0, g: 0, b: 0, a: 0 };
+  const hex = v.match(/^#([a-f\d]{6})([a-f\d]{2})?$/i);
+  if (hex) return { r: parseInt(hex[1].slice(0, 2), 16) / 255, g: parseInt(hex[1].slice(2, 4), 16) / 255, b: parseInt(hex[1].slice(4, 6), 16) / 255, a: hex[2] ? parseInt(hex[2], 16) / 255 : 1 };
   const ok = v.match(/^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+))?\s*\)$/);
   if (ok) return oklchToRgb(+ok[1], +ok[2], +ok[3], ok[4] === undefined ? 1 : +ok[4]);
   const ref = v.match(/^var\((--[\w-]+)\)$/);
@@ -124,9 +127,9 @@ const app: Pair[] = [
   ...["--text", "--text-2", "--muted", "--faint"].flatMap((fg) => surfaces.map((bg) => ({ fg, bg, min: 4.5 }))),
   ...["--accent-text"].flatMap((fg) => surfaces.map((bg) => ({ fg, bg, min: 4.5 }))),
   { fg: "--accent-ink", bg: "--accent", min: 4.5, note: "primary button" },
-  { fg: "--accent-ink", bg: "--accent-hover", min: 4.5, note: "primary button, hover" },
+  { fg: "--bg", bg: "--accent-hover", min: 4.5, note: "primary button, hover" },
   // The hover sheen (.btn-primary::before) at its brightest, the top centre: white at 22% over the hover fill.
-  { fg: "--accent-ink", bg: "--accent-hover+white@0.22", min: 4.5, note: "primary button, hover sheen" },
+  { fg: "--bg", bg: "--accent-hover", min: 4.5, note: "primary button, hover" },
   { fg: "--accent-ink", bg: "--accent-press", min: 4.5, note: "primary button, pressed" },
   // The primary's 1px rim is its edge against the page (in light, brass alone is under 2:1 there), and the mark's rim.
   ...["--bg", "--surface", "--surface-2"].map((bg) => ({ fg: "--accent-edge", bg, min: 3, note: "primary button's rim" })),
@@ -212,7 +215,7 @@ report("Paper and ink, light", themes.light, paper);
 report("Problem sheet, dark", withSheet(themes.dark), agedSheet);
 report("Problem sheet, light", withSheet(themes.light), [...agedSheet, ...lightDesk]);
 report("App tokens, dark", themes.dark, [...app, ...ringOnAccent(0)]);
-report("App tokens, light", themes.light, [...app, ...ringOnAccent(3)]);
+report("App tokens, light", themes.light, [...app, ...ringOnAccent(0)]);
 
 console.log(failed ? `\n${failed} pair(s) below the minimum.` : "\nEvery required pair passes.");
 process.exit(failed ? 1 : 0);

@@ -2,9 +2,8 @@
 
 import clsx from "clsx";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { Stamp } from "@/components/ui";
 import styles from "./flow.module.css";
-import { FEED_MS, payoutWords, receiptPollDelay, type ClaimStatus } from "./model";
+import { payoutWords, receiptPollDelay, type ClaimStatus } from "./model";
 
 interface Live {
   status: string | null;
@@ -132,9 +131,10 @@ export function PaidStamp({ arrive, delay = 0 }: { arrive: boolean; delay?: numb
   const { status, changed } = useContext(PayoutContext);
   if (!received(status)) return <span aria-hidden="true" className="h-8 w-[4.75rem] shrink-0" />;
   return (
-    <Stamp tone="pay" land={changed ? 0 : arrive ? delay + FEED_MS : undefined} className="mr-1">
+    <span className={clsx("inline-flex shrink-0 items-center gap-2 rounded-full bg-pay-soft px-3 py-1.5 text-ui font-medium text-pay", (changed || arrive) && styles.swap)} style={{ animationDelay: !changed && arrive ? `${delay}ms` : undefined }}>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 8 3 3 7-7" /></svg>
       Paid
-    </Stamp>
+    </span>
   );
 }
 
@@ -148,9 +148,9 @@ export function PayoutRow({ confirmed }: { confirmed?: number | null }) {
   const { status, changed } = useContext(PayoutContext);
   const words = payoutWords(status);
   const when = words.tone === "pay" && !changed && confirmed != null ? `${confirmed} ${confirmed === 1 ? "second" : "seconds"} after your photo` : null;
-  const note = words.label === "On its way" ? "Usually in your PayPal within a minute." : words.note;
+  const note = words.label === "On its way" ? "PayPal is processing the transfer." : words.note;
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 border-b border-dashed border-paper-line py-2.5">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 border-b border-paper-line py-3">
       <dt className="text-ink-muted">Status</dt>
       <dd key={words.label} className={clsx("text-right font-medium text-ink", changed && styles.swap)}>
         {words.label}

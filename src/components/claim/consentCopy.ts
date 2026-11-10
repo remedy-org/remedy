@@ -28,9 +28,7 @@ export function consentLines(recall: Recall, minutes: number) {
     title: `${money(recall.refund)} back for your ${productNoun(recall)}`,
     // What Remedy is, for an owner who has never heard of it: the product in one line, naming no company (DESIGN.md:95).
     about: "Remedy pays recall refunds through PayPal, straight to the account you log in with.",
-    // How fast, in the one wording the site uses for it (the footer, the metadata): an auto-paid claim is sent the moment
-    // its checks pass and PayPal confirms it within the minute (RM-0442: sent at 15 s, confirmed at 55 s).
-    how: `${cut ? `Cut the ${thing} in half` : `Destroy the ${thing} as the notice says`}, photograph it with the code we give you, and your refund lands in your PayPal ${recall.autoPay ? "within a minute" : `once ${company} approves it`}.`,
+    how: `${cut ? `Cut the ${thing} in half` : `Destroy the ${thing} as the notice says`}, then photograph it with the code we give you. ${recall.autoPay ? "When the evidence passes the checks, Remedy sends your refund through PayPal." : `Once ${company} approves the evidence, your refund is sent through PayPal.`}`,
     // What the tap commits to: the code's clock starts on the next screen, so the cutting and the marker come first.
     clock: `Your code is good for ${minutes} minutes, so ${cut ? `cut the ${thing}` : `destroy the ${thing}`} and have paper and a marker ready first.`,
   };

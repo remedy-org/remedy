@@ -1,65 +1,48 @@
 # Remedy
 
-> Remedy turns proof of destruction into a payment trigger. When a recall says "destroy it and send a photo," the owner logs in with PayPal, writes a one-time code on the recalled unit and cuts it apart in front of a live camera. Code checks the evidence, and the refund lands in the exact PayPal account that logged in: on claim RM-0442 it was sent to PayPal 15 seconds after the photo, and PayPal confirmed it at 55 seconds. No account, no form, no email. Settlement tools verify the person. Remedy verifies the product is destroyed.
+Remedy turns recall-photo reviews into traceable PayPal refunds. Owners submit destruction photographs with a one-time code. AI describes the evidence, fixed rules decide whether a claim passes or needs review, and PayPal Payouts sends eligible refunds.
 
-## The problem
+## Product
 
-- Only 6–10% of recalled products are ever returned or destroyed ([PIRG, 2024](https://publicinterestnetwork.org/wp-content/uploads/2024/01/TOO-MUCH-TO-RECALL-FINAL-1-11-1.pdf)).
-- Refunds still run on email: in our count of the [CPSC recalls API](https://www.saferproducts.gov/RestWebServices/Recall?format=json&RecallDateStart=2026-10-01&RecallDateEnd=2026-11-05), 1 Oct to 5 Nov 2026, 20 of the 27 refund recalls that required a photo told owners to email it, some to @gmail.com inboxes.
-- The CPSC names "artificially generated images… purporting to demonstrate product destruction" as a threat, and warns that fraud controls can "reduce recall participation" ([RFI CPSC-2026-0067](https://public-inspection.federalregister.gov/2026-07328.pdf)). Remedy answers both: easy for honest owners, no payout for a photo that isn't tied to a live claim.
+For companies running CPSC refund recalls, particularly smaller sellers who receive destruction photos by email. Owners need clear instructions and a short refund path. Companies need evidence review, human decisions for uncertainty, payout tracking and recall reporting.
 
-## Try it now
+The owner reviews the recall, logs in with PayPal, writes an issued code, and photographs the product according to the recall instructions. The code/session lasts ten minutes. Desktop users can continue on a phone through QR handoff. Real claims use a camera interface; the judge demo uses clearly labeled prepared photos.
 
-- [Claim a refund](https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try): Phone-first, on real recall CPSC 27-071 (X-VESOLJE nursing pillows, about 19,596 units, suffocation risk, $29.99 refund). Demo PayPal account on the page.
-- [Company console](https://remedy-recalls.vercel.app/signin): The evidence room a recalling company works from. Demo account on the page.
-- [Home](https://remedy-recalls.vercel.app/): The whole story in one scroll.
+## Five checks
 
-## Why a fake can't get paid
+1. Photos arrived within the claim's ten-minute session carrying its key.
+2. Photo fingerprints do not match an earlier claim within the configured threshold.
+3. One open or paid claim per verified PayPal account on the recall.
+4. The model reads the label/code; code compares the text.
+5. The model describes whether required destruction evidence is visible.
 
-Remedy doesn't bet on spotting AI images. It makes a fake worthless, and the first three checks use no AI:
+The first three run before AI. Fixed rules reject a no, hold an unclear answer for human review, and pass otherwise. Auto-pay and duplicate/account checks remain in code. Payment status distinguishes sent/settling from confirmed. Failures and uncertainty are held; eligible rejected claims can request review once.
 
-1. **Sent in the camera session.** No upload button: laptop webcam, or a phone through a QR hand-off. Photos must arrive inside the claim's 10-minute camera session, carrying its key.
-2. **Photo not used before.** A perceptual fingerprint compares every photo against every earlier claim.
-3. **One verified PayPal account, one claim per recall.** Whoever proves the destruction is paid, in their own verified name.
-4. **A code that didn't exist ten minutes ago.** Letter, digit, letter, no look-alike characters, read back character by character. No web, stock or old photo can carry it. CPSC recalls already have owners write on the unit (HotHands, 27-011).
-5. **Really destroyed, really the recalled product.** GPT-6.1 Sol reads the label and each step of the cut, quoting what it sees, in schema-validated output.
+## Company tools
 
-**Code decides, never the model.** Any "no" rejects, any "unclear" goes to a person, and only a pass on every check pays.
+AG Grid queue with status tabs, filters/search, sorting, grouping, selection, CSV, keyboard navigation and mobile cards. The evidence drawer shows deciding reason, checks, model quotations, photographs and payout timeline. AG Studio Insights provides custom widgets, charts and a Recall analyst. The analyst can read, explain, chart and draft; it cannot approve or pay. CPSC notice import drafts editable requirements for human review before publishing. Settings, claim links/QR and printable progress reports complete the workflow.
 
-## Results
+## What is real, sandbox and illustrative
 
-- **Sent to PayPal 15 seconds after the photo, confirmed by PayPal at 55 seconds** (claim RM-0442). A passing claim is usually paid within a minute.
-- **Zero web photos ever paid** with the code check on. Every wrong code caught.
-- **Genuine owners paid**, including on claims the system had never seen, where 96% of the model's check answers were right. Every answer carries a quote a reviewer can check.
-- **$0.011 of AI per claim**, about 16 seconds of vision. A penny to verify a refund.
-- **Passes all four of PIRG's easy-refund tests:** online, one sitting, photo proof, real money.
+The judge flow uses real model/PayPal sandbox calls with prepared photos. Genuine and wrong-code cases reach AI; outside-session and reused-photo cases stop in the pre-checks.
 
-## PayPal is the product
+All money in this build is PayPal sandbox money from Remedy's one shared sandbox business account. Per-company funding requires future PayPal partner onboarding. Kikea Store is the firm named in the public example recall, not a Remedy customer. The $29.99 amount is a demo setting.
 
-- **Log in with PayPal (OpenID Connect):** The verified payer ID and verified flag gate every claim. Companies sign in the same way.
-- **PayPal Payouts to that PayPal ID:** A gift or second-hand owner with no original payment to refund still gets paid, with no onboarding. One key is both PayPal-Request-Id and sender_batch_id, so a retry can never pay twice.
-- **Payout webhooks:** Each is signature-verified with PayPal before it updates the console.
-- **Fails safe:** If PayPal or the model is down, the claim is held for a person and never lost.
+The homepage walkthrough and seven built-in company claims are illustrative. Some carry real recorded model answers, but generated payer IDs, shifting sample dates and stand-in payout records. RM-0442's 15-second send and 55-second confirmation are illustrative, not fresh provider calls. Fresh judge claims appear beside these only to the browser round that created them.
 
-## The evidence room: AG Grid 36 and AG Studio 3
+## Limitations
 
-- **Recall to claim link in minutes:** Paste a CPSC recall URL or number; AI drafts the checks from the official record; the company edits and publishes a claim link and QR code.
-- **Custom evidence cells:** Photo thumbnails, a decision pill with its reason, an evidence barcode (one bar per check), payout status and a timeline chip. Live every 8 s with cell flash; keyboard-driven.
-- **Docked evidence panel:** Every photo, quote and the rule's sentence. Approve takes a second press, re-runs the checks and pays through the same idempotent payout.
-- **Insights:** Recall progress against the 6–10% norm, a check funnel and refusal reasons, all cross-filtering. A Recall analyst agent quotes the evidence word for word; by design it has no tool that can approve, reject or pay.
-- **CPSC progress report:** A printable draft built from the claim records.
-
-## Where this goes
-
-For recalling companies and recall administrators: stop paying fakes and satisfy the CPSC. Next:
-
-- Each company connects its own PayPal business account: refunds go straight to the owner and Remedy never holds money.
-- Transaction Search on the seller's account to tell direct PayPal buyers of a recalled model.
-- Every "destroy it and send a photo" recall, then anywhere money should move because a physical act was seen.
+The model does not reliably detect generated images. Two clean generated images with the correct code passed the 9 November photo-check evaluation in all six runs. The session proves admission with its key and timing, not camera provenance. Real phone handwriting remains untested in that evaluation. A 64-bit dHash check catches the documented tested edits; mirrors and larger crops can evade it. Model-call cost/timing is not end-to-end operating cost, customer pricing or a settlement guarantee. See README for full dataset scope and limitations.
 
 ## More
 
-- [llms-full.txt](https://remedy-recalls.vercel.app/llms-full.txt): Architecture, every check in depth, and the industry data with sources.
-- [Source code](https://github.com/remedy-org/remedy): One Next.js 16 app on Vercel, MIT licence.
+Full product notes: /llms-full.txt
 
-Remedy is an independent product built on PayPal's public APIs. It is not made by PayPal.
+## Architecture and links
+
+Next.js, React, TypeScript on Vercel; PayPal identity/Payouts/status/verified webhooks; OpenAI structured vision; Vercel Blob or local storage; AG Grid/Studio; public CPSC data.
+
+- Homepage: https://remedy-recalls.vercel.app
+- Judge demo: https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try
+- Company sign-in: https://remedy-recalls.vercel.app/signin
+- Source and evaluation: https://github.com/remedy-org/remedy

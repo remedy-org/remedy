@@ -108,7 +108,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
           title goes on to the shutter. */}
       <div className="hidden flex-col gap-6 lg:col-start-2 lg:row-start-1 lg:flex">
         <div className="flex flex-col gap-3">
-          <h1 id="sample-title-wide" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+          <h1 id="sample-title-wide" tabIndex={-1} className="font-display text-title font-semibold text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
             {title}
           </h1>
           <p className="text-body text-pretty text-muted">{line}</p>
@@ -128,7 +128,7 @@ export function DemoCaptureStep({ claimId, code, sample, onSent, backHref, writt
             <ArrowLeftIcon className="shrink-0" /> All four claims
           </a>
           <div className="flex flex-col gap-1 lg:hidden">
-            <h1 id="sample-title" tabIndex={-1} className="text-title font-medium text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
+            <h1 id="sample-title" tabIndex={-1} className="font-display text-title font-semibold text-balance text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-4">
               {title}
             </h1>
             <p className="text-body text-pretty text-muted">{line}</p>
