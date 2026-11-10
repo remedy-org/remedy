@@ -8,6 +8,7 @@ import { Money } from "@/components/ui";
 import { GENUINE } from "@/lib/demo/claims";
 import { CHECK_NAMES } from "@/lib/fiveChecks";
 import styles from "./home.module.css";
+import laneStyles from "./pipeline.module.css";
 import { claimAt, clamp01, trailAt } from "./pipeline-motion";
 import { readPage, STOPS } from "./scroll/stops";
 
@@ -90,7 +91,7 @@ function Outcome({ sample, named }: { sample: Sample; named?: boolean }) {
 // On the page grid: the checks in columns 1 to 5, the four claims in 6 to 12.
 const GATE = "col-span-5";
 const LANES = "col-span-7 grid grid-cols-4 gap-x-4 xl:gap-x-[var(--col-gap)]";
-const LINE = "absolute left-6 w-px bg-line-strong";
+const LINE = clsx(laneStyles.wire, "absolute w-px bg-line-strong");
 
 /** The existing section and rule scroll stops are the start/end of the matrix's move. There is no autoplay or
  * catch-up timer: claim photos, ink and outcomes follow the reader in either direction, including a direct anchor. */
@@ -101,17 +102,22 @@ function useLanes<T extends HTMLElement>(ref: RefObject<T | null>, matrix = fals
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const heads = [...root.querySelectorAll<HTMLElement>("[data-lane-head]")];
     const outcomes = [...root.querySelectorAll<HTMLElement>("[data-outcome]")];
+    const copies = [...root.querySelectorAll<HTMLElement>("[data-outcome-copy]")];
     const trails = [...root.querySelectorAll<HTMLElement>("[data-trail]")];
     let frame = 0;
     let lastProgress = -1;
     let range: [number, number] | null = null;
-    let lanes: { head: HTMLElement; origin: number; stop: number; trails: { el: HTMLElement; top: number; height: number }[]; outcomes: HTMLElement[] }[] = [];
+    let lanes: { head: HTMLElement; origin: number; stop: number; trails: { el: HTMLElement; top: number; height: number }[]; outcomes: HTMLElement[]; copies: HTMLElement[] }[] = [];
     const clear = () => {
       delete root.dataset.progress;
       lastProgress = -1;
-      heads.forEach((el) => el.style.removeProperty("transform"));
+      heads.forEach((el) => {
+        el.style.removeProperty("transform");
+        el.style.removeProperty("--docked");
+      });
       trails.forEach((el) => el.style.removeProperty("transform"));
       outcomes.forEach((el) => el.style.removeProperty("opacity"));
+      copies.forEach((el) => el.style.removeProperty("transform"));
     };
     const paint = () => {
       frame = 0;
@@ -133,8 +139,10 @@ function useLanes<T extends HTMLElement>(ref: RefObject<T | null>, matrix = fals
       for (const lane of lanes) {
         const state = claimAt(progress, lane.origin, lane.stop, last);
         lane.head.style.transform = `translateY(${state.travel.toFixed(2)}px)`;
+        lane.head.style.setProperty("--docked", state.dock.toFixed(4));
         lane.trails.forEach(({ el, top, height }) => (el.style.transform = `scaleY(${trailAt(state.tip, top, height).toFixed(4)})`));
         lane.outcomes.forEach((el) => (el.style.opacity = state.outcome.toFixed(3)));
+        lane.copies.forEach((el) => (el.style.transform = `translateY(${(8 * (1 - state.outcome)).toFixed(2)}px)`));
       }
     };
     const request = () => {
@@ -158,13 +166,15 @@ function useLanes<T extends HTMLElement>(ref: RefObject<T | null>, matrix = fals
           const lane = head.dataset.laneHead!;
           const origin = head.parentElement!;
           const stop = root.querySelector<HTMLElement>(`[data-stop="${lane}"]`);
-          if (!stop) return [];
+          const dock = root.querySelector<HTMLElement>(`[data-lane-dock="${lane}"]`);
+          if (!stop || !dock) return [];
           return [{
             head,
-            origin: origin.getBoundingClientRect().bottom + scrollY,
-            stop: stop.getBoundingClientRect().top + scrollY + 28,
+            origin: origin.getBoundingClientRect().top + scrollY,
+            stop: dock.getBoundingClientRect().top + scrollY,
             trails: trails.filter((el) => el.dataset.trail === lane).map((el) => ({ el, top: el.getBoundingClientRect().top + scrollY, height: el.offsetHeight })),
             outcomes: [...stop.querySelectorAll<HTMLElement>("[data-outcome]")],
+            copies: [...stop.querySelectorAll<HTMLElement>("[data-outcome-copy]")],
           }];
         });
       }
@@ -202,7 +212,7 @@ export function Pipeline() {
   const rows = [...GATES, null];
 
   return (
-    <div ref={ref} data-pipeline className="relative hidden lg:block">
+    <div ref={ref} data-pipeline className={clsx(laneStyles.pipeline, "relative hidden lg:block")}>
       {/* Each lane's head: the claim's name, its photo, and the line's first stretch down to the first check. */}
       <div className="grid-12 items-end" data-lanes-top>
         <p className={clsx(GATE, "max-w-[44ch] pb-6 text-ui text-muted")}>Four prepared claims. Follow each one to the check that stops it.</p>
@@ -213,7 +223,7 @@ export function Pipeline() {
                   lines tall, balanced, its first line on the same top as the others'. */}
               <span className="mb-3 block min-h-[2lh] w-full text-ui text-balance text-text-2 xl:min-h-0 xl:whitespace-nowrap">{s.name}</span>
               <span data-lane-origin className="relative block size-12">
-                <span data-lane-head={lane} className="absolute inset-0 z-10 block">
+                <span data-lane-head={lane} className={clsx(laneStyles.head, "absolute inset-0 z-10 block rounded-control", s.paid ? "text-pay" : "text-stop")}>
                   <Image src={s.photo} alt="" width={48} height={48} className="size-12 rounded-control object-cover shadow-ring" />
                 </span>
               </span>
@@ -253,16 +263,19 @@ export function Pipeline() {
                       data-lane={lane}
                       data-stop={stopsHere ? lane : undefined}
                     >
-                      {/* Through: the line crosses the whole row. Stopped: it ends on a short bar across it, level with
-                          the top of the check's name, and the outcome prints under the bar on the lane's left edge, the
-                          photo's. */}
+                      {/* Each photo docks inside its row, aligned with the check title. Text starts below the photo;
+                          both anchors reserve their final geometry while the scroll-driven photo approaches. */}
                       {through && <span data-trail={lane} aria-hidden="true" className={clsx(styles.trail, LINE, "inset-y-0")} />}
                       {stopsHere && (
                         <>
-                          <span data-trail={lane} aria-hidden="true" className={clsx(styles.trail, LINE, "top-0 h-7")} />
-                          <span data-outcome aria-hidden="true" className={clsx("absolute top-7 left-[1.125rem] z-20 h-px w-3.5", s.paid ? "bg-pay" : "bg-stop")} />
-                          <p data-outcome className="pt-9 pr-1 pb-5 text-ui text-pretty">
-                            <Outcome sample={s} named />
+                          <span data-trail={lane} aria-hidden="true" className={clsx(styles.trail, LINE, laneStyles.dockTrail)} />
+                          <span data-lane-dock={lane} aria-hidden="true" className={laneStyles.dock}>
+                            <span className={clsx(laneStyles.dockPhoto, s.paid ? "text-pay" : "text-stop")}>
+                              <Image src={s.photo} alt="" width={48} height={48} className="size-full rounded-control object-cover shadow-ring" />
+                            </span>
+                          </span>
+                          <p data-outcome className={clsx(laneStyles.outcome, "pr-1 pb-5 text-ui text-pretty")}>
+                            <span data-outcome-copy className="block"><Outcome sample={s} named /></span>
                           </p>
                         </>
                       )}

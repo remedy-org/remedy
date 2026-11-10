@@ -70,7 +70,7 @@ const TEXT = [
   "#companies header p, #companies h2, #companies [role=tab], #companies [data-story] ~ div > *",
   "main ~ footer h2, main ~ footer p, main ~ footer li a",
 ].join(", ");
-const OBJECTS = "#checks [data-lanes-top] [data-lane-origin], #companies [role=tablist], #companies [data-step], #companies [data-cta] a, main ~ footer > div:first-child";
+const OBJECTS = "#checks [data-lanes-top] [data-lane-origin], #checks [data-lane-dock], #companies [role=tablist], #companies [data-step], #companies [data-cta] a, main ~ footer > div:first-child";
 /** The Problem sheet's, only while it isn't pinned: pinned, its stage sticks, so its layout positions follow the scroll
  * and it is covered by Fraud checks wherever a section frame could meet it. */
 const PROBLEM_TEXT = "#problem h2, #problem p:not(.sr-only)";
