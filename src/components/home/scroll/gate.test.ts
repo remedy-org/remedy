@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createGate, notchQuiet, type Course, type GateLenis } from "./gate";
 import { storyFrom } from "./stops";
-import { CALM_PEAK, type Slow } from "./landing";
+import { CALM_PEAK, STORY_MIN, type Slow } from "./landing";
 
 // The gate against a stand-in Lenis: wheel streams in, which events it takes, and where it lands the page.
 const STOPS = [0, 1410, 2144, 2821, 3205];
@@ -63,8 +63,9 @@ function setup(at = 1410, stops = STOPS, slow: Slow[] = [], up?: number[], inner
     lenis.animatedScroll = lenis.targetScroll = to;
     lenis.isScrolling = false;
     vi.stubGlobal("scrollY", to);
-    lenis.complete?.();
+    // Lenis emits its final, no-longer-scrolling frame before calling onComplete.
     onScroll();
+    lenis.complete?.();
   };
   const fire = (type: string, e: unknown = {}) => listeners.get(type)?.forEach((fn) => fn(e));
   return { lenis, send, finish, fire, scroll: () => onScroll() };
@@ -555,8 +556,8 @@ describe("wheel stops", () => {
     up.scroll();
     vi.restoreAllMocks();
     expect(up.lenis.landed).toEqual([7988]);
-    expect(up.lenis.duration).toBeGreaterThanOrEqual(1.3);
-    expect(up.lenis.duration).toBeLessThanOrEqual(1.6);
+    expect(up.lenis.duration).toBeGreaterThanOrEqual(STORY_MIN);
+    expect(up.lenis.duration).toBeLessThanOrEqual(STORY_MIN + 0.3);
     // A fling is no nudge: any one, however short, still lands on the next section's stop, as before.
     const flung = setup(8586, course, slow, undefined, undefined, pins, undefined, undefined, stories);
     flung.send([100, 100, 100], 16);
@@ -590,25 +591,25 @@ describe("wheel stops", () => {
     g.scroll();
     vi.restoreAllMocks();
     expect(g.lenis.landed).toEqual([823]);
-    expect(g.lenis.duration).toBeGreaterThanOrEqual(1.3);
-    expect(g.lenis.duration).toBeLessThanOrEqual(1.6 + 1e-9);
+    expect(g.lenis.duration).toBeGreaterThanOrEqual(STORY_MIN);
+    expect(g.lenis.duration).toBeLessThanOrEqual(STORY_MIN + 0.3 + 1e-9);
   });
 
-  it("skims a notched power spin past a story's inner beats, three notches a beat, never past a section stop", () => {
+  it("holds a notched power spin on the story's next beat until its animation finishes", () => {
     const beats = [0, 823, 1858, 2534, 4278, 6140, 6698];
     const inner = [1858, 2534, 6140];
     const spin = setup(823, beats, [], undefined, inner, [[0, 6698]]);
     spin.send(Array(10).fill(100), 27);
-    expect(spin.lenis.landed).toEqual([1858, 2534, 4278]);
+    expect(spin.lenis.landed).toEqual([1858]);
     // A quick flick of four notches stops on the inner beat.
     const flick = setup(823, beats, [], undefined, inner, [[0, 6698]]);
     flick.send(Array(4).fill(100), 24);
     expect(flick.lenis.landed).toEqual([1858]);
-    // Its landing is the calm one: under a window, 1.3 s.
+    // A beat under a window still has time for the incoming screen to finish.
     const near = setup(1858, beats, [], undefined, inner, [[0, 6698]]);
     near.send(Array(4).fill(100), 24);
     expect(near.lenis.landed).toEqual([2534]);
-    expect(near.lenis.duration).toBeCloseTo(1.3, 6);
+    expect(near.lenis.duration).toBeCloseTo(STORY_MIN, 6);
   });
 
   /**
@@ -649,22 +650,19 @@ describe("wheel stops", () => {
     return { landed: g.lenis.landed, atLast, through, duration: g.lenis.duration };
   }
 
-  it("brings a slow roll of notches inside a pinned story to rest on the beat nearest where the hand stopped, never on past it", () => {
-    // As the Problem sheet at 1920x1080: the sheet open, the loop cut 717px on, Fraud checks 1535px past the cut, all
-    // pinned. Ten notches 100 ms apart from the open sheet stop 283px past the cut: the page settles back onto it, rather
-    // than glide on to Fraud checks from where the last notch began.
+  it("finishes one beat for a continuous moderate notched roll, while separated slow notches retain their quiet settle", () => {
     const course = [0, 1000, 1717, 3252, 4000];
     const pins: [number, number][] = [[0, 3315]];
     for (const gap of [80, 100, 120, 150]) {
       const roll = wheelOnClock(1000, course, pins, [Array(10).fill(100)], { inside: gap, between: gap });
-      expect(roll.through, `${gap} ms`).toBe(1000); // every notch is the reader's: nothing settles mid-roll
+      expect(roll.through, `${gap} ms`).toBe(gap < 140 ? 100 : 1000);
       expect(roll.landed, `${gap} ms`).toEqual([1717]);
-      expect(Math.abs(1717 - roll.atLast), `${gap} ms`).toBeLessThanOrEqual(0.3 * 900);
+      if (gap >= 140) expect(Math.abs(1717 - roll.atLast), `${gap} ms`).toBeLessThanOrEqual(0.3 * 900);
     }
     // Five notches stop short of the cut: on to it, in the hand's direction.
     expect(wheelOnClock(1000, course, pins, [Array(5).fill(100)], { inside: 100, between: 100 }).landed).toEqual([1717]);
-    // Eighteen go nearer Fraud checks than the cut: on to it.
-    expect(wheelOnClock(1000, course, pins, [Array(18).fill(100)], { inside: 100, between: 100 }).landed).toEqual([3252]);
+    // Continuing the same movement never skips the cut to reach Fraud checks.
+    expect(wheelOnClock(1000, course, pins, [Array(18).fill(100)], { inside: 100, between: 100 }).landed).toEqual([1717]);
     // Going up, the same: ten notches from Fraud checks rest 465px above the cut, nearer it than the open sheet.
     expect(wheelOnClock(3252, course, pins, [Array(10).fill(-100)], { inside: 100, between: 100 }).landed).toEqual([1717]);
   });
@@ -685,8 +683,8 @@ describe("wheel stops", () => {
       unfolds: [[8390, 9374, 9586]],
     });
     expect(roll.landed).toEqual([9586]);
-    expect(roll.duration).toBeGreaterThanOrEqual(1.3);
-    expect(roll.duration).toBeLessThanOrEqual(1.6);
+    expect(roll.duration).toBeGreaterThanOrEqual(STORY_MIN);
+    expect(roll.duration).toBeLessThanOrEqual(STORY_MIN + 0.7 * (1549 / 900 - 1) + 0.3);
   });
 
   // As 1440x900: the Chain of Custody's story from the hero to its console beat (an inner beat at 6140), the Problem
@@ -710,9 +708,9 @@ describe("wheel stops", () => {
     const { course, pins, stories, unfolds } = SHEET;
     for (const gap of [80, 100, 120, 150]) {
       const down = wheelOnClock(7988, course, pins, [Array(10).fill(100)], { inside: gap, between: gap }, { stories, unfolds });
-      expect(down.through, `${gap} ms`).toBe(1000);
+      expect(down.through, `${gap} ms`).toBe(gap < 140 ? 100 : 1000);
       expect(down.landed, `down ${gap} ms`).toEqual([8586]);
-      expect(down.duration).toBeCloseTo(1.3, 6);
+      expect(down.duration).toBeCloseTo(STORY_MIN, 6);
       // Up from the cut: 402px past the open sheet, the sheet half unfolded; back onto the open sheet.
       expect(wheelOnClock(8586, course, pins, [Array(10).fill(-100)], { inside: gap, between: gap }, { stories, unfolds }).landed, `up ${gap} ms`).toEqual([7988]);
     }
@@ -721,8 +719,8 @@ describe("wheel stops", () => {
     // A roll begun on the last beat and leaving the story goes one beat, to the stop that ends the sheet's pin (Fraud
     // checks): three notches from the cut rested 300px on, Fraud checks half over the held sheet.
     expect(wheelOnClock(8586, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([9910]);
-    // Past half a window, fifteen notches from the open sheet run 902px past the cut: on to Fraud checks, the beat nearest.
-    expect(wheelOnClock(7988, course, pins, [Array(15).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([9910]);
+    // Fifteen notches are still one continuous movement: the cut must finish before Fraud checks can advance.
+    expect(wheelOnClock(7988, course, pins, [Array(15).fill(100)], { inside: 100, between: 100 }, { stories, unfolds }).landed).toEqual([8586]);
   });
 
   it("never leaves the Problem sheet half risen or half unfolded: a gesture that goes quiet there goes on to a whole frame", () => {
@@ -731,13 +729,13 @@ describe("wheel stops", () => {
     // last frame unseen was a rest of its own, off a beat).
     const up = wheelOnClock(7988, course, pins, [Array(3).fill(-100)], { inside: 90, between: 90 }, { stories, unfolds });
     expect(up.landed).toEqual([6698]);
-    expect(up.duration).toBeGreaterThanOrEqual(1.3);
-    expect(up.duration).toBeLessThanOrEqual(1.6);
+    expect(up.duration).toBeGreaterThanOrEqual(STORY_MIN);
+    expect(up.duration).toBeLessThanOrEqual(STORY_MIN + 0.3);
     // Ten notches down from the console beat rested at 7698: on to the open sheet.
     const down = wheelOnClock(6698, course, pins, [Array(10).fill(100)], { inside: 100, between: 100 }, { stories, unfolds });
     expect(down.landed).toEqual([7988]);
-    expect(down.duration).toBeGreaterThanOrEqual(1.3);
-    expect(down.duration).toBeLessThanOrEqual(1.6);
+    expect(down.duration).toBeGreaterThanOrEqual(STORY_MIN);
+    expect(down.duration).toBeLessThanOrEqual(STORY_MIN + 0.3);
     // Three notches down from the console beat rested at 6998, the sheet still unseen, off a beat: on to the open sheet.
     expect(wheelOnClock(6698, course, pins, [Array(3).fill(100)], { inside: 90, between: 90 }, { stories, unfolds }).landed).toEqual([7988]);
     // A trackpad's gentle pushes up from the open sheet go on to the console beat, down from the console beat to the open
@@ -766,7 +764,7 @@ describe("wheel stops", () => {
     expect(tremor.lenis.landed).toEqual([6698]);
   });
 
-  it("still takes three quick flicks of a notched wheel, a pause between them, to three beats", () => {
+  it("finishes the story beat before accepting quick notched flicks that arrive while it is playing", () => {
     const beats = [0, 1000, 2000, 3000, 4000, 5000];
     const pins: [number, number][] = [[0, 5000]];
     for (const [n, inside, between] of [
@@ -776,7 +774,7 @@ describe("wheel stops", () => {
       [2, 35, 300],
     ]) {
       const { landed } = wheelOnClock(1000, beats, pins, Array(3).fill(Array(n).fill(100)), { inside, between });
-      expect(landed, `${n} notches ${inside} ms apart, ${between} ms pauses`).toEqual([2000, 3000, 4000]);
+      expect(landed, `${n} notches ${inside} ms apart, ${between} ms pauses`).toEqual([2000]);
     }
   });
 
@@ -897,7 +895,7 @@ describe("trackpad swipes", () => {
     }
   });
 
-  it("F2: a second swipe while the landing still glides moves on exactly one more stop", () => {
+  it("F2: a second swipe while the landing still glides lets the current animation finish", () => {
     const g = course(0);
     const first = SMALL();
     // The second swipe's fingers stop the first's momentum 350 ms in, as macOS does.
@@ -905,7 +903,7 @@ describe("trackpad swipes", () => {
     expect(g.lenis.landed).toEqual([414]);
     g.lenis.animatedScroll = 300; // part way there
     g.send(SMALL(), 16, 24);
-    expect(g.lenis.landed).toEqual([414, 823]);
+    expect(g.lenis.landed).toEqual([414]);
   });
 
   it("F2: a swipe's momentum merged into fewer, larger events after a stall is still its own tail", () => {
@@ -920,14 +918,14 @@ describe("trackpad swipes", () => {
     expect(g.lenis.landed).toEqual([1858]);
   });
 
-  it("F3: a one-beat landing takes 1.3 s under a screen, longer with the way, and ends on the stop", () => {
+  it("F3: a story landing takes at least 1.65 s, longer with the way, and ends on the stop", () => {
     for (const from of [0, 414, 823, 4278]) {
       const g = course(from);
       g.send(SMALL());
       const way = BEATS[BEATS.indexOf(from) + 1] - from;
-      expect(g.lenis.duration).toBeGreaterThanOrEqual(1.3);
+      expect(g.lenis.duration).toBeGreaterThanOrEqual(STORY_MIN);
       // 1,862px (check 3 to the paid receipt with no check rests between) takes as long as its calm peak needs.
-      expect(g.lenis.duration).toBeLessThanOrEqual(Math.max(1.6 + 0.7 * Math.max(0, way / 900 - 1), way / (0.86 * CALM_PEAK)) + 1e-9);
+      expect(g.lenis.duration).toBeLessThanOrEqual(Math.max(STORY_MIN + 0.3 + 0.7 * Math.max(0, way / 900 - 1), way / (0.86 * CALM_PEAK)) + 1e-9);
       expect(g.lenis.easing!(1)).toBeCloseTo(1, 6);
     }
   });
@@ -1039,7 +1037,7 @@ describe("trackpad swipes", () => {
     }
   });
 
-  it("F2: a busy page merging the momentum's events in pairs still reads the lift, and the second swipe still moves on", () => {
+  it("F2: merged momentum still reads the lift, and a second swipe waits for the current beat to finish", () => {
     const g = course(0);
     const d = SMALL();
     // The finger phase as sent, then the momentum two frames an event, 32 ms apart, until the second swipe at 350 ms.
@@ -1048,7 +1046,7 @@ describe("trackpad swipes", () => {
     for (let i = 6; t < 350 - 32; i += 2, t += 32) g.send([d[i] + d[i + 1]], 32);
     expect(g.lenis.landed).toEqual([414]);
     g.send(SMALL(), 16, 24);
-    expect(g.lenis.landed).toEqual([414, 823]);
+    expect(g.lenis.landed).toEqual([414]);
   });
   // As 1440x900 on ui/merge: every beat Page Down stops on from the hero to the cut (the stops, and the exhibit's four
   // other checks at rest), the two stories, the console scrolling away and the sheet unfolding between them, the dolly
@@ -1065,6 +1063,98 @@ describe("trackpad swipes", () => {
     setup(at, STOPS_ALL, SLOW_ALL, undefined, [1858, 2534, 6140], [[64, 6912], [6912, 9918]], undefined, RESTS_ALL, [[0, 6698], [7988, 8586]], [[7002, 7812, 7988]]);
   // To Fraud checks' stop, which ends the sheet's pin.
   const BEATS_ALL = RESTS_ALL.filter((y) => y <= 9910);
+
+  it("holds a continuous 60×50px wheel stream at 50ms intervals on one story beat, before and after it lands", () => {
+    // 1,000px/s is below FAST (2,000): this used to run the whole 3,000px through the story before its quiet settle.
+    const g = full(0);
+    expect(g.send(Array(30).fill(50), 50)).toBe(50);
+    expect(g.lenis.landed).toEqual([414]);
+    g.finish();
+    expect(g.send(Array(30).fill(50), 50)).toBe(0);
+    expect(g.lenis.landed).toEqual([414]);
+    g.send([50, 50], 50, 200);
+    expect(g.lenis.landed).toEqual([414, 823]);
+  });
+
+  it("does not mistake busy-frame gaps under140ms for a new story wheel gesture after landing", () => {
+    const g = full(0);
+    g.send([50, 50], 50);
+    g.finish();
+    expect(g.send(Array(30).fill(50), 100)).toBe(0);
+    expect(g.lenis.landed).toEqual([414]);
+  });
+
+  it("leaves the same moderate wheel stream native outside the story and inside a nested scroller", () => {
+    const ordinary = setup(12000, [12000, 14000, 16000]);
+    expect(ordinary.send(Array(60).fill(50), 50)).toBe(3000);
+    expect(ordinary.lenis.landed).toEqual([]);
+    class Scroller {
+      scrollHeight = 1000;
+      clientHeight = 200;
+      scrollTop = 20;
+      hasAttribute() { return false; }
+    }
+    vi.stubGlobal("HTMLElement", Scroller);
+    vi.stubGlobal("document", { body: {}, documentElement: {} });
+    vi.stubGlobal("getComputedStyle", () => ({ overflowY: "auto" }));
+    const nested = full(0);
+    const scroller = new Scroller();
+    expect(nested.send(Array(60).fill(50), 50, 0, { composedPath: () => [scroller as unknown as EventTarget] })).toBe(3000);
+    expect(nested.lenis.landed).toEqual([]);
+  });
+
+  it("keeps the reproduced three-burst trackpad trace on the zoom beat, including input still rising as it lands", () => {
+    const g = full(0);
+    const burst = [4, 9, 18, 32, 48, 65, 84, 94, 94, 84, 65, 48, 32, 18, 9, 4];
+    g.send(burst);
+    g.send(burst, 16, 150);
+    g.send(burst.slice(0, 7), 16, 150);
+    expect(g.lenis.landed).toEqual([414]);
+    // On the real page the first glide finishes as burst three is still accelerating. Its remaining input is still
+    // part of the move that began before that finished frame, so it must not start a second animation afterwards.
+    g.finish();
+    expect(g.send(burst.slice(7))).toBe(0);
+    expect(g.lenis.landed).toEqual([414]);
+    g.send(burst, 16, 300);
+    expect(g.lenis.landed).toEqual([414, 823]);
+  });
+
+  it("absorbs an entire long integer or fractional wheel spin inside the story, through completion and momentum", () => {
+    for (const delta of [100, 119.5]) {
+      const g = full(1858);
+      g.send(Array(100).fill(delta), 16);
+      expect(g.lenis.landed).toEqual([2534]);
+      g.finish();
+      expect(g.send(Array(80).fill(delta), 16)).toBe(0);
+      expect(g.lenis.landed).toEqual([2534]);
+      g.send(Array(8).fill(delta), 16, 300);
+      expect(g.lenis.landed).toEqual([2534, 3067]);
+    }
+  });
+
+  it("gives a mouse wheel every finished check in both directions, including checks absent from the main section stops", () => {
+    for (const [from, to, dir] of [[2534, 3067, 1], [3067, 3691, 1], [4278, 4972, 1], [4972, 5653, 1], [6140, 5653, -1], [3691, 3067, -1]]) {
+      const g = full(from);
+      g.send(Array(4).fill(100 * dir), 24);
+      expect(g.lenis.landed, `${from} to ${to}`).toEqual([to]);
+    }
+  });
+
+  it("still yields an in-flight story landing immediately to a reversal, a scroll key, and a native focus scroll", () => {
+    const reversed = full(823);
+    reversed.send(SMALL());
+    reversed.lenis.animatedScroll = reversed.lenis.targetScroll = 1200;
+    expect(reversed.send([-15, -15], 16)).toBe(-30);
+    const keyed = full(823);
+    keyed.send(SMALL());
+    keyed.fire("keydown", { key: "PageDown" });
+    expect(keyed.lenis.stops).toBe(1);
+    const native = full(823);
+    native.send(SMALL());
+    vi.stubGlobal("scrollY", 3000);
+    native.fire("scroll");
+    expect(native.lenis.stops).toBe(1);
+  });
 
   it("G1: from the hero to the end of the sheet every swipe moves exactly one beat, the exhibit's checks at rest included, both ways", () => {
     for (const shape of [TINY, SMALL, MEDIUM, HARD]) {
@@ -1090,8 +1180,8 @@ describe("trackpad swipes", () => {
     const two = full(4278);
     two.send(SMALL().slice(0, Math.round(350 / 16)));
     expect(two.lenis.landed).toEqual([4972]);
-    two.lenis.animatedScroll = 4700;
-    two.send(SMALL(), 16, 24);
+    two.finish();
+    two.send(SMALL(), 16, 300);
     expect(two.lenis.landed).toEqual([4972, 5653]);
   });
 

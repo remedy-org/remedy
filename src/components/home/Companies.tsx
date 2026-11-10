@@ -33,7 +33,7 @@ export function Companies() {
   return (
     <Section
       id="companies"
-      exhibit="For companies"
+      exhibit="For companies · illustrative workspace"
       title={TOUR.title}
       headingSpan={12}
       bodyClassName="mt-10 lg:mt-6"

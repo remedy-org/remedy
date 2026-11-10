@@ -80,6 +80,8 @@ export const CALM_PEAK = 1000;
  * still when its way is too long to cover at CALM_PEAK easing gently; up to CALM_SLOW more when the way crosses slow
  * stretches, so their transitions play. */
 const CALM_MIN = 1.3;
+/** A story beat gets time for its camera move and incoming screen to finish before the reader moves on. */
+export const STORY_MIN = 1.65;
 const CALM_PER = 0.7;
 const CALM_SLOW = 0.3;
 
@@ -91,8 +93,8 @@ const CALM_SLOW = 0.3;
  * over, and the rest of the way is never sped up past CALM_PEAK to pay for it. Its ease is as long as CALM_PEAK leaves room for, half the time each way at most. `cap`
  * shortens it, but never under that floor.
  */
-export function calmLanding(from: number, to: number, screen: number, slow: readonly Slow[] = [], cap = Infinity) {
-  const landing = plan(from, to, screen, slow, cap);
+export function calmLanding(from: number, to: number, screen: number, slow: readonly Slow[] = [], cap = Infinity, minimum = CALM_MIN) {
+  const landing = plan(from, to, screen, slow, cap, minimum);
   underWay = { to, until: performance.now() + landing.duration * 1000 };
   return landing;
 }
@@ -104,11 +106,11 @@ let underWay: { to: number; until: number } | null = null;
 export const landingUnderWay = (): Readonly<{ to: number; until: number }> | null =>
   underWay && performance.now() < underWay.until ? underWay : null;
 
-function plan(from: number, to: number, screen: number, slow: readonly Slow[], cap: number) {
+function plan(from: number, to: number, screen: number, slow: readonly Slow[], cap: number, minimum: number) {
   const px = Math.abs(to - from);
   const full = warp(from, to, slow);
   const soft = CALM_PEAK * (1 - EASE_SOFT);
-  const base = CALM_MIN + (CALM_PER * Math.max(0, px - screen)) / screen;
+  const base = minimum + (CALM_PER * Math.max(0, px - screen)) / screen;
   const want = full.length > px ? Math.max(base, Math.min(base + CALM_SLOW, full.length / soft)) : base;
   const duration = Math.max(px / (CALM_PEAK * (1 - EASE_MIN)), Math.min(cap, want));
   // The share of each slow stretch's extra weight this time has room for, easing over EASE_SOFT of it.

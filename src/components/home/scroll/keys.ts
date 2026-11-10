@@ -1,5 +1,5 @@
 import type Lenis from "lenis";
-import { calm, calmLanding } from "./landing";
+import { calm, calmLanding, STORY_MIN } from "./landing";
 import type { Course } from "./gate";
 
 // The keyboard's paging on the homepage, on the wheel's own stops (stops.ts). A browser page is about 95% of the
@@ -57,27 +57,58 @@ function scrollsOn(el: Element, dir: 1 | -1) {
 
 /** Starts the pager on a Lenis. `read` gives the stops, the finished beats and the slow stretches as laid out now, `pins`
  * the pinned stretches. */
-export function attachKeys(lenis: Pick<Lenis, "scrollTo" | "isStopped" | "animatedScroll">, read: () => Course, pins: () => [number, number][]) {
-  // A held key, or presses quicker than the glide, step on from the stop last aimed at.
-  let aim: { to: number; until: number } | null = null;
+export function attachKeys(lenis: Pick<Lenis, "scrollTo" | "isStopped" | "animatedScroll" | "stop" | "start">, read: () => Course, pins: () => [number, number][]) {
+  // Ordinary sections retain browser-like paging. Inside the story a physical key press finishes one readable beat.
+  let aim: { to: number; until: number; dir: 1 | -1; story: boolean } | null = null;
+  const release = () => { aim = null; };
+  const cancel = () => {
+    if (aim?.story && !lenis.isStopped) {
+      lenis.stop();
+      lenis.start();
+    }
+    release();
+  };
   const onKey = (e: KeyboardEvent) => {
     const dir = pageDirection(e);
+    if (!dir && ["ArrowDown", "ArrowUp", "Home", "End", "Tab"].includes(e.key)) cancel();
     if (!dir || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || lenis.isStopped) return;
     const target = e.target instanceof Element ? e.target : null;
-    if (target?.closest(EDITABLE) || target?.closest(OWN_KEYS) || (e.key === " " && target?.closest(PRESSABLE))) return;
+    if (target?.closest(EDITABLE) || target?.closest(OWN_KEYS) || (e.key === " " && target?.closest(PRESSABLE))) return cancel();
     // A focused scroller with room in that direction (the tour's report) pages itself.
-    if (target && scrollsOn(target, dir)) return;
+    if (target && scrollsOn(target, dir)) return cancel();
+    const now = performance.now();
+    let pending = aim && now < aim.until ? aim : null;
+    if (pending?.story && dir === pending.dir) {
+      e.preventDefault();
+      return;
+    }
+    if (pending?.story && dir !== pending.dir) {
+      cancel();
+      pending = null;
+    }
     const { stops, rests = stops, slow = [] } = read();
-    const from = aim && performance.now() < aim.until ? aim.to : scrollY;
-    const to = keyStop(rests, from, dir, REACH * innerHeight, pins());
+    const from = pending && !pending.story ? pending.to : scrollY;
+    const stretches = pins();
+    const to = keyStop(rests, from, dir, REACH * innerHeight, stretches);
     if (to === null) return;
+    const inStory = stretches.some(([a, b]) => (from >= a - EPS && from <= b + EPS) || (to >= a - EPS && to <= b + EPS));
     e.preventDefault();
-    const { duration, way, ease } = calmLanding(lenis.animatedScroll, to, innerHeight, slow);
+    if (inStory && e.repeat) return;
+    const { duration, way, ease } = calmLanding(lenis.animatedScroll, to, innerHeight, slow, Infinity, inStory ? STORY_MIN : undefined);
     const curve = calm(0, ease);
-    aim = { to, until: performance.now() + duration * 1000 + 200 };
-    lenis.scrollTo(to, { duration, easing: (t) => way.at(curve(t)) });
+    const next = { to, until: now + duration * 1000 + 200, dir, story: inStory };
+    aim = next;
+    lenis.scrollTo(to, { duration, easing: (t) => way.at(curve(t)), onComplete: () => {
+      if (aim === next) next.until = performance.now();
+    } });
   };
   // Capture, so the pin's own paging (custody/paging.ts, for when this one isn't running) never pages the same key.
   addEventListener("keydown", onKey, { capture: true });
-  return () => removeEventListener("keydown", onKey, { capture: true });
+  addEventListener("wheel", release, { passive: true });
+  addEventListener("touchstart", release, { passive: true });
+  return () => {
+    removeEventListener("keydown", onKey, { capture: true });
+    removeEventListener("wheel", release);
+    removeEventListener("touchstart", release);
+  };
 }

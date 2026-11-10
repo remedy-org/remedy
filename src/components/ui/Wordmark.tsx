@@ -21,9 +21,9 @@ export function RemedyMark({ className }: { className?: string }) {
 
 export function Wordmark({ size = "sm", href, className, nameClassName, prefetch }: WordmarkProps) {
   const body = (
-    <span className={clsx("inline-flex items-center gap-2 font-display font-semibold tracking-[-0.05em] text-text", size === "md" ? "text-[22px]" : "text-[17px]", className)}>
-      <RemedyMark className={size === "md" ? "size-8" : "size-6"} />
-      <span className={nameClassName}>remedy</span>
+    <span className={clsx("inline-flex items-center gap-2 font-display font-bold leading-none tracking-[-0.025em] text-text", size === "md" ? "text-[22px]" : "text-[17px]", className)}>
+      <RemedyMark className={size === "md" ? "size-7" : "size-6"} />
+      <span className={clsx("uppercase", nameClassName)} style={{ WebkitTextStroke: "0.7px currentColor", WebkitTextFillColor: "transparent" }}>remedy</span>
     </span>
   );
   if (!href) return body;

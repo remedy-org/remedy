@@ -55,7 +55,7 @@ describe("keyboard paging on the wheel's stops", () => {
       vi.stubGlobal("Element", class {});
       vi.stubGlobal("innerHeight", 900);
       vi.stubGlobal("scrollY", at);
-      vi.stubGlobal("addEventListener", (_: string, fn: (e: KeyboardEvent) => void) => listeners.push(fn));
+      vi.stubGlobal("addEventListener", (type: string, fn: (e: KeyboardEvent) => void) => { if (type === "keydown") listeners.push(fn); });
       vi.stubGlobal("removeEventListener", () => {});
       const went: number[] = [];
       const lenis = {
@@ -91,10 +91,104 @@ describe("keyboard paging on the wheel's stops", () => {
       vi.stubGlobal("Element", class {});
       vi.stubGlobal("innerHeight", 900);
       vi.stubGlobal("scrollY", 2534);
-      vi.stubGlobal("addEventListener", (_: string, fn: (e: KeyboardEvent) => void) => listeners.push(fn));
+      vi.stubGlobal("addEventListener", (type: string, fn: (e: KeyboardEvent) => void) => { if (type === "keydown") listeners.push(fn); });
       attachKeys({ isStopped: false, animatedScroll: 2534, scrollTo: (to: number) => went.push(to) } as never, () => ({ stops: STOPS_ }), () => [[64, 6912]]);
       listeners.forEach((fn) => fn({ key: "PageDown", shiftKey: false, target: null, defaultPrevented: false, preventDefault() {} } as unknown as KeyboardEvent));
       expect(went).toEqual([4278]);
     });
+  });
+});
+
+describe("readable story key paging", () => {
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  function pager(at = 0) {
+    let clock = 1000;
+    const listeners = new Map<string, ((e: KeyboardEvent) => void)[]>();
+    class Widget {
+      closest(selector: string) { return selector.includes("treegrid") ? this : null; }
+    }
+    vi.stubGlobal("Element", Widget);
+    vi.stubGlobal("innerHeight", 900);
+    vi.stubGlobal("scrollY", at);
+    vi.stubGlobal("addEventListener", (type: string, fn: (e: KeyboardEvent) => void) => listeners.set(type, [...(listeners.get(type) ?? []), fn]));
+    vi.stubGlobal("removeEventListener", () => {});
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+    const went: number[] = [];
+    let current: { to: number; onComplete?: () => void } | null = null;
+    const lenis = {
+      isStopped: false,
+      animatedScroll: at,
+      cancellations: 0,
+      scrollTo(to: number, options: { onComplete?: () => void }) { went.push(to); current = { to, onComplete: options.onComplete }; },
+      stop() { this.cancellations++; this.isStopped = true; current = null; },
+      start() { this.isStopped = false; },
+    };
+    attachKeys(lenis as never, () => ({ stops: [0, 1000, 2000, 3000, 4000, 5000, 6000] }), () => [[0, 3000]]);
+    const press = (key: string, repeat = false, target: unknown = null) => {
+      let prevented = false;
+      const event = { key, repeat, target, shiftKey: false, defaultPrevented: false, preventDefault() { prevented = true; } };
+      listeners.get("keydown")?.forEach((fn) => fn(event as unknown as KeyboardEvent));
+      return prevented;
+    };
+    const position = (y: number) => { lenis.animatedScroll = y; vi.stubGlobal("scrollY", y); };
+    const finish = () => {
+      if (!current) return;
+      position(current.to);
+      clock += 3000;
+      current.onComplete?.();
+      current = null;
+    };
+    return { lenis, went, press, position, finish, Widget, pending: () => current };
+  }
+
+  it("keeps PageDown/Space repeats and rapid presses on one beat, requiring a fresh press after completion", () => {
+    for (const key of ["PageDown", " "]) {
+      const g = pager();
+      g.press(key);
+      for (let i = 0; i < 8; i++) g.press(key, true);
+      g.press(key);
+      expect(g.went).toEqual([1000]);
+      g.finish();
+      g.press(key, true);
+      expect(g.went).toEqual([1000]);
+      g.press(key);
+      expect(g.went).toEqual([1000, 2000]);
+    }
+  });
+
+  it("cancels an immediate reversal before the first rendered frame and reverses from the actual position mid-glide", () => {
+    const immediate = pager();
+    immediate.press("PageDown");
+    immediate.press("PageUp");
+    expect(immediate.lenis.cancellations).toBe(1);
+    expect(immediate.pending()).toBeNull();
+    const midway = pager(1000);
+    midway.press("PageDown");
+    midway.position(1300);
+    midway.press("PageUp");
+    expect(midway.lenis.cancellations).toBe(1);
+    expect(midway.went).toEqual([2000, 1000]);
+  });
+
+  it("hands Home, End and widget paging back without an old story glide overriding them", () => {
+    for (const key of ["Home", "End", "Tab", "ArrowUp"]) {
+      const g = pager();
+      g.press("PageDown");
+      expect(g.press(key)).toBe(false);
+      expect(g.pending()).toBeNull();
+      expect(g.lenis.cancellations).toBe(1);
+    }
+    const widget = pager();
+    widget.press("PageDown");
+    expect(widget.press("PageDown", false, new widget.Widget())).toBe(false);
+    expect(widget.pending()).toBeNull();
+  });
+
+  it("retains repeated paging outside the pinned story", () => {
+    const g = pager(4000);
+    g.press("PageDown");
+    g.press("PageDown", true);
+    expect(g.went).toEqual([5000, 6000]);
   });
 });

@@ -150,6 +150,29 @@ describe("scroll stops", () => {
     for (const name of Object.values(ANCHORED)) expect(names).toContain(name);
   });
 
+  it("keeps the company introduction 8 to 16px below a 72px header even when the console is taller than the viewport", () => {
+    const companies = STOPS.find((s) => s.name === "For companies")!;
+    for (const size of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+      const headerTop = 12530;
+      const frames: unknown[] = [];
+      const laidOut: Page = {
+        ...page,
+        size,
+        line: (sel, under = LINE) => sel === "#companies header" ? framed(headerTop, 72, under) : undefined,
+        foot: () => headerTop + 1200 - size.height,
+        fit: (y, frame) => {
+          frames.push(frame);
+          return y === undefined ? undefined : Math.min(frame?.max ?? Infinity, Math.max(frame?.min ?? 0, y + 300));
+        },
+      };
+      const y = companies.at(laidOut) as number;
+      expect(headerTop - y - 72).toBeGreaterThanOrEqual(8);
+      expect(headerTop - y - 72).toBeLessThanOrEqual(16);
+      expect(frames).toEqual([{ min: headerTop - 72 - 16, max: headerTop - 72 - 8 }]);
+    }
+    expect(ANCHORED.companies).toBe("For companies");
+  });
+
   it("lists the stops top to bottom on a laid-out page", () => {
     const real: Page = {
       ...page,

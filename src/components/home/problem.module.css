@@ -13,10 +13,10 @@
  */
 
 .section {
-  --aged: oklch(0.925 0.022 84);
-  --aged-back: oklch(0.895 0.022 82);
-  --aged-burn: oklch(0.6 0.06 68);
-  --aged-edge: oklch(0.55 0.07 62);
+  --aged: oklch(0.94 0.008 295);
+  --aged-back: oklch(0.9 0.012 295);
+  --aged-burn: oklch(0.65 0.025 295);
+  --aged-edge: oklch(0.58 0.03 295);
   /* Muted ink for text printed straight on the aged sheet (the sub-line, the sources): a step darker than
      --ink-muted, so it holds 4.5:1 on the grain's darkest and the warm edge band. */
   --sheet-muted: oklch(0.36 0.012 65);
@@ -24,8 +24,8 @@
   --loop-ink: oklch(0.38 0.14 28);
   --crease-dark: oklch(0.23 0.01 65 / 0.085);
   --crease-light: oklch(1 0 0 / 0.5);
-  --evidence-card: oklch(0.962 0.009 88);
-  --evidence-clip: oklch(0.975 0.005 95);
+  --evidence-card: var(--paper);
+  --evidence-clip: var(--paper-2);
   --brass: oklch(0.74 0.075 82);
   --brass-deep: oklch(0.52 0.06 75);
   --desk-shadow: oklch(0 0 0 / 0.55);
@@ -41,7 +41,7 @@
   /* The room the lamp goes down into, and how far it falls over the sheet: far enough that the pool on the cut leads,
      never so far that the cards around it stop reading (55% in dark). In light the lamp goes down to a neutral warm
      grey (--dim-light) at most 40%, so the paper never turns brown. */
-  --room: oklch(0.16 0.006 70);
+  --room: var(--bg);
   --dim-light: oklch(0.58 0.01 75);
   --dim-tone: var(--room);
   --dim-max: 0.16;
@@ -1005,7 +1005,7 @@
     top: 0;
     height: 100vh;
     height: 100svh;
-    padding-block: 64px 0;
+    padding-block: 72px 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1021,13 +1021,13 @@
     width: 100vw;
     height: 220px;
     translate: -50% 0;
-    background: linear-gradient(var(--bg) 64px, transparent);
+    background: linear-gradient(var(--bg) 72px, transparent);
     pointer-events: none;
   }
 
-  /* The label, the sheet and (without JS) the payoff under it, all under the 64px nav. */
+  /* The label, the sheet and (without JS) the payoff under it, all under the 72px nav. */
   .column {
-    width: min(1440px, 100%, (100svh - 64px - 196px) * 5 / 3);
+    width: min(1440px, 100%, (100svh - 72px - 196px) * 5 / 3);
   }
 
   /* Covered all but a strip, the section's name and the sheet leave with it (Problem.tsx --away). */
@@ -1037,7 +1037,7 @@
   }
 
   .section[data-armed] .column {
-    width: min(1440px, 100%, (100svh - 64px - 104px) * 5 / 3);
+    width: min(1440px, 100%, (100svh - 72px - 104px) * 5 / 3);
   }
 
   .lift {

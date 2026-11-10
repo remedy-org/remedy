@@ -3,8 +3,9 @@
 import clsx from "clsx";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, ThemeToggle, Wordmark } from "@/components/ui";
+import { Wordmark } from "@/components/ui";
 import { NavMenu, type NavMenuLink } from "./NavMenu";
+import styles from "./nav.module.css";
 
 type SectionId = "how" | "problem" | "checks" | "proof" | "companies";
 
@@ -19,7 +20,7 @@ const NAV_LINKS: readonly NavMenuLink<SectionId>[] = [
 ];
 
 // The header's height, which html's scroll-padding-top matches (globals.css).
-const HEADER = 64;
+const HEADER = 72;
 // What the spy watches, in page order: the hero's whole runway for How it works (its #how marker is a 0px span in the
 // pinned form), then the four sections.
 const SPIED = ["[data-spy=how]", "#problem", "#checks", "#proof", "#companies"];
@@ -110,43 +111,6 @@ function useNavSpy() {
 }
 
 /**
- * Whether an on-page "try" button ([data-try-cta]: the hero's, Checks' and the footer tag's) is at least half in view,
- * below lg only; null until known. From lg the bar's button always shows: the pinned hero's button never leaves the
- * viewport, it only fades, so watching it there would hide the bar's for the whole pin.
- */
-function useTryInView() {
-  const [inView, setInView] = useState<boolean | null>(null);
-  useEffect(() => {
-    const phone = window.matchMedia("(max-width: 63.99rem)");
-    const seen = new Set<Element>();
-    let io: IntersectionObserver | undefined;
-    const watch = () => {
-      io?.disconnect();
-      seen.clear();
-      if (!phone.matches) return setInView(false);
-      io = new IntersectionObserver(
-        (entries) => {
-          for (const e of entries) {
-            if (e.intersectionRatio >= 0.5) seen.add(e.target);
-            else seen.delete(e.target);
-          }
-          setInView(seen.size > 0);
-        },
-        { threshold: 0.5, rootMargin: `-${HEADER}px 0px 0px 0px` },
-      );
-      document.querySelectorAll("[data-try-cta]").forEach((el) => io?.observe(el));
-    };
-    watch();
-    phone.addEventListener("change", watch);
-    return () => {
-      phone.removeEventListener("change", watch);
-      io?.disconnect();
-    };
-  }, []);
-  return inView;
-}
-
-/**
  * A native jump to a section (the bar's, the sheet's, the footer's, the hero's) adds a history entry the router did not
  * write, and the router ignores Back to such an entry: Back from /signin left the sign-in page on screen under
  * "/#companies". Once the jump has landed, the entry is written again through the router (its documented
@@ -162,76 +126,41 @@ function useRouterOwnsHashJumps() {
   }, []);
 }
 
-// The link's box is the chip: 32px tall and 8px past the text each side (the negative margin keeps the row where it
-// was), with a 44px hit area around it, so the focus ring and the current chip are one shape. Only the current link
-// wears the chip, --text on --surface-2 (with the light theme's --line-2 hairline), so it always says where the reader
-// is; a link under the pointer or keyboard focus only turns --text. Never amber.
-const linkClass = clsx(
-  "relative isolate -mx-2 inline-flex h-8 items-center rounded-control px-2 text-ui whitespace-nowrap text-muted transition-colors duration-160 hover:text-text focus-visible:text-text",
-  "after:absolute after:inset-x-0 after:-inset-y-1.5",
-  "before:absolute before:inset-0 before:-z-10 before:rounded-control before:bg-surface-2 before:shadow-(--nav-chip-ring) before:opacity-0 before:transition-opacity before:duration-160 before:ease-snap",
-  "aria-[current=location]:text-text aria-[current=location]:before:opacity-100",
-);
-
-/**
- * The homepage nav on the page frame: the wordmark on the first grid line, a flat table of contents in plain words
- * beside it (the current one chipped), then the theme, a hairline, the companies' sign-in as quiet text and "Try a
- * claim" as the quiet button: the same words as the hero's amber "Try a claim", the screen's one action (the nav's never turns amber: below the hero, amber is already on almost every screen). Below lg a Menu
- * sheet holds the links and the theme, and the bar names the current section where it has room; "Try a claim"
- * steps aside while an on-page try button is in view.
- * No rule under it, a solid page tone (a translucent bar turned grey-brown over the cream paper band), and it never
- * hides: the pinned stage is laid out against a constant 64px header.
- */
+/** The fixed-height bar stays quiet while the product story moves underneath it. */
 export function Nav() {
   const { current, pick } = useNavSpy();
-  const tryInView = useTryInView();
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const read = () => setScrolled(window.scrollY > 12);
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, []);
   useRouterOwnsHashJumps();
-  const here = NAV_LINKS.find((l) => l.id === current);
   return (
-    <header data-home-nav="" className="sticky top-0 z-30 bg-bg">
-      <nav aria-label="Main" data-current={current ?? undefined} className="page flex h-16 items-center gap-3 sm:gap-4">
-        <Wordmark size="md" href="/" nameClassName="max-[359px]:sr-only" />
-        <ul className="ml-6 hidden items-center gap-4 lg:flex xl:gap-7">
+    <header data-home-nav="" data-scrolled={scrolled || undefined} className={styles.header}>
+      <nav aria-label="Main" data-current={current ?? undefined} className={styles.bar}>
+        <Wordmark size="md" href="/" className={styles.wordmark} />
+        <ul className={styles.links}>
           {NAV_LINKS.map((l) => (
-            <li key={l.id} className={clsx(l.bar === "xl" && "hidden xl:block")}>
+            <li key={l.id} className={clsx(l.bar === "xl" && styles.wideLink)}>
               {/* A native, instant jump (Lenis leaves anchors alone): a smooth one would scrub the pinned sequence. */}
-              <a href={`#${l.id}`} onClick={() => pick(l.id)} aria-current={current === l.id ? "location" : undefined} className={linkClass}>
+              <a href={`#${l.id}`} onClick={() => pick(l.id)} aria-current={current === l.id ? "location" : undefined} className={styles.sectionLink}>
                 {l.label}
               </a>
             </li>
           ))}
         </ul>
-        {/* Below lg, where the links are in the sheet: the current section's name after a hairline, as a breadcrumb, from
-            about 720px (the slot has to hold the longest name, or it shows none, so it never comes and goes by
-            section). Text, not a chip, so it never reads as a button. Visual only; the sheet's rows carry aria-current. */}
-        <div aria-hidden="true" className="@container hidden min-w-0 flex-1 sm:block lg:hidden">
-          <span className={clsx("hidden items-center gap-3 text-ui whitespace-nowrap text-text-2 transition-opacity duration-160 ease-snap @min-[8rem]:flex", !here && "opacity-0")}>
-            <span className="h-4 w-px bg-line-2" />
-            {here?.label}
-          </span>
-        </div>
-        <div className="ml-auto flex items-center gap-3 sm:gap-5">
-          <div className="hidden items-center lg:flex">
-            <ThemeToggle />
-            <span aria-hidden="true" className="-mr-2 ml-3 h-4 w-px bg-line-2" />
-          </div>
-          {/* The shared nav link: the same chip on hover and focus, pulled out by its padding so the text stays put. */}
-          <Link href="/signin" className="nav-link -mx-2.5 hidden sm:inline-flex">
-            Log in
-          </Link>
-          {/* Hidden, not removed, so the bar never shifts; hidden also takes it out of the Tab order. Server-rendered
-              hidden below lg until the observer says no try button is in view. */}
-          <Button
-            href="/r/kikea-x-vesolje/try"
-            variant="secondary"
-            size="sm"
-            className={clsx(
-              "max-lg:transition-[background-color,color,transform,opacity,visibility]",
-              tryInView !== false && "max-lg:invisible max-lg:opacity-0",
-            )}
-          >
+        <div className={styles.actions}>
+          <a href="https://github.com/remedy-org/remedy" target="_blank" rel="noopener noreferrer" aria-label="View Remedy source on GitHub (opens in a new tab)" title="View source on GitHub" className={styles.source}>
+            <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-14-2 18" />
+            </svg>
+          </a>
+          <Link href="/signin" className={styles.login}>Log in</Link>
+          <Link href="/r/kikea-x-vesolje/try" className={styles.claim}>
             Try a claim
-          </Button>
+          </Link>
           <NavMenu links={NAV_LINKS} current={current} onPick={pick} />
         </div>
       </nav>

@@ -1,6 +1,6 @@
 # Remedy design system
 
-Updated 10 November 2026. This replaces the previous Lamplight/brass system at the user's request. Reference measurements and full product transformation plan: `../planning/kiro-redesign-2026-11-10/`.
+Updated 10 November 2026. This replaces the previous Lamplight/brass system at the user's request. Current animation review evidence: `../planning/animation-review-2026-11-10/`.
 
 ## Direction
 
@@ -8,7 +8,7 @@ Product-led marketing; calm evidence and refund operations.
 Pure black, violet action, crisp photography, rounded frames, technical display type.
 Spacious marketing, comfortable owner flow, dense company workspace; short state transitions.
 
-Kiro is the primary visual reference. Linear, Stripe Dashboard and Raycast inform interaction hierarchy only. Remedy's mark and components are original.
+Remedy keeps its animated product story: laptop, screen dolly, live-camera sequence, five checks, receipt and company console. Visual changes must improve this explanation rather than replace it.
 
 ## Tokens
 
@@ -33,21 +33,21 @@ This hackathon deployment uses user-supplied ABC Diatype Regular and Bold for he
 
 The font binaries live in Git-ignored `public/fonts/diatype/` and are included only in the CLI deployment. `next.config.ts` detects their presence at build time and compiles the same choice into static and dynamic routes. Source checkouts without those files use Inter headings and Work Sans body text, self-hosted by next/font. The fallback never requires private fonts to build.
 
-Kiro uses AWS Diatype and AWS Diatype Rounded Semi Mono. The fidelity target is appropriately licensed ABC Diatype and ABC Diatype Rounded Semi Mono, with suitable delivery rights for a public-source project. The user-provided Diatype binaries are not committed to the public repository. Font families are centralized in root layout and the `--font-sans`, `--font-display`, `--font-mono` tokens, including AG Grid and Studio.
+Font families are centralized in root layout and the `--font-sans`, `--font-display`, `--font-mono` tokens, including AG Grid and Studio. The user-provided font binaries stay outside Git.
 
 Hero 40–60px, section heading 28–40px, feature title 22–25px, body 17px, UI 15px, metadata 12px. Display line height 1.1 with restrained negative tracking; body 1.55. Use medium/semibold headings, not arbitrary bold inline prose. Amounts and data use tabular figures. Always check longest realistic recall title/reason.
 
 ## Layout and controls
 
-Fluid 24–64px gutters, 12-column shared alignment, 4/8px rhythm. Desktop marketing navigation 72px; app header remains 64px to match existing viewport offsets. No horizontal page overflow at 375px; grid overflow is scoped to its region.
+Fluid 24–64px content gutters, 32px desktop navigation gutters, 12-column shared alignment, 4/8px rhythm. Desktop marketing navigation 72px; app header remains 64px to match existing viewport offsets. No horizontal page overflow at 375px; grid overflow is scoped to its region.
 
 Radius: 48px showcase, 24px major frame, 16px card/large button, 10–12px controls. Data views keep tight hairline structure. Large violet buttons have white labels, turn white with dark labels on hover in dark mode, and show independent visible keyboard focus. Touch targets are at least 44px. Keep pending labels stable and actions explicit.
 
-No global grain, warm light pools, floor grids, ornamental bevels or forced scroll choreography. Photograph content is never recolored. White code examples remain white for writing legibility. Report sheets remain white for print.
+No global grain or warm page tint. Preserve the laptop's physical form and table, the evidence sheet and existing product animations. Restrained violet reflections may support those objects. Photograph content is never recolored. White code examples remain white for writing legibility. Report sheets remain white for print.
 
 ## Identity
 
-The original return-receipt mark is a rounded slip with a negative-space return arrow and a small folded tail. Master paths live in `components/ui/markPaths.ts`; Wordmark, Open Graph and generated icons share them. Run `npx tsx scripts/apple-icon.ts` after changing the paths. Wordmark is lowercase `remedy`; accessible product name is Remedy. One-color white or text-color master; no Kiro ghost asset.
+The return-receipt mark is a rounded slip with a negative-space return arrow and a small folded tail. Master paths live in `components/ui/markPaths.ts`; Wordmark, Open Graph and generated icons share them. Run `npx tsx scripts/apple-icon.ts` after changing the paths. Wordmark uses uppercase outline letters; accessible product name is Remedy. One-color white or text-color master.
 
 ## States, truth and motion
 
@@ -55,7 +55,7 @@ Every data surface includes empty/loading/error/partial/success states and prese
 
 Home previews are illustrative, use prepared data, and must say so. Demo entry/result identifies PayPal sandbox and prepared photos. Never imply a generated-photo detector, camera provenance attestation, guaranteed settlement time, or a real customer deployment. RM-0442's sample payment/timings are not a fresh PayPal transaction. AI describes evidence, the fixed rule decides, and the payment provider confirms the payout.
 
-Controls transition in 150–200ms, panels in 200–300ms. Respect prefers-reduced-motion. Essential content appears without an animation and scrolling stays native. Product view selection is explicit and never overrides the visitor's choice.
+Controls transition in 150–200ms, panels in 200–300ms. Respect prefers-reduced-motion. Essential content remains visible with JavaScript disabled or reduced motion. With motion enabled, a story beat must finish and stop before a fresh scroll gesture advances it. Preserve native nested scrolling, keyboard navigation and deliberate reverse direction; outside story spans the page scrolls freely.
 
 ## Verification
 

@@ -55,7 +55,7 @@ export type Page = {
 export type Stop = {
   name: string;
   at: (page: Page) => number | readonly number[] | undefined;
-  /** A story's inner beat, which a hard fling may skim past (gate.ts SKIM); a flick still stops on it. */
+  /** An inner beat outside the paced story that a hard fling may skim past (gate.ts SKIM). */
   inner?: true;
 };
 
@@ -160,23 +160,13 @@ export const STOPS: readonly Stop[] = [
     name: "Results",
     at: (p) => p.fit(p.line("#proof header"), { min: p.past("#checks [data-try-cta]"), max: p.line("#proof header", 16), before: "#companies header" }),
   },
-  // For companies: the eyebrow on the top line with the whole tour under it, wherever the console frame's foot still
-  // clears the screen's foot from there (a 900px laptop screen and taller: ConsoleTour sizes the window to its rows and
-  // the header is tight enough for this); else the heading 24px under the nav, its eyebrow tucked under it, where the
-  // frame still clears the foot; else the tour
-  // whole, its steps under the nav, never above the heading's foot. The heading is read whole with air above it, or is
-  // wholly under the nav, never jammed against it. Phones and narrow windows, which get the story instead, stop at its
-  // heading.
+  // Keep the whole heading and eyebrow under the header. The console below can be explored in its own scroller;
+  // fitting its foot must never push the section's introduction behind the navigation.
   {
     name: "For companies",
     at: (p) => {
-      const head = p.line("#companies header");
-      const frame = p.foot("#tour-panel", 1);
-      if (head === undefined || frame === undefined) return head;
-      if (head >= frame + 16) return p.fit(head);
-      const h2 = p.line("#companies h2", 24)!;
-      if (h2 >= frame + 8) return p.fit(h2, { min: frame + 8 });
-      return p.fit(Math.max(p.line("#companies [data-tour]", 16)!, p.past("#companies h2")! + 8), { min: p.past("#companies h2") });
+      const head = p.line("#companies header", 16);
+      return head === undefined ? undefined : p.fit(head, { min: head, max: p.line("#companies header", 8) });
     },
   },
   // The footer's tag: "See a refund land in a minute." and Try a claim, at the page end; on a short screen, where the end
@@ -233,7 +223,7 @@ function span(a: number | undefined, b: number | undefined, weight: number): Slo
  * section. Problem's lands on the open sheet at ANCHOR_AT exactly (its CSS margin alone left out the nav's 4rem, so it
  * landed with card 3 half down). For companies' lands on its heading, which its stop leaves above the tour.
  */
-export const ANCHORED: Readonly<Record<string, string>> = { problem: "Problem, the sheet open", checks: "Fraud checks", proof: "Results" };
+export const ANCHORED: Readonly<Record<string, string>> = { problem: "Problem, the sheet open", checks: "Fraud checks", proof: "Results", companies: "For companies" };
 
 /** Stops closer than this are one stop, the first kept: the pinned runway's own start, 64px down, is the page top. */
 export const MERGE = 80;
@@ -253,8 +243,8 @@ export function tidy(ys: readonly number[], limit: number, merge = MERGE): numbe
 
 // ------------------------------------------------------------------------------------------------ Reading the page.
 
-/** The 4rem nav. */
-const nav = () => 4 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+/** The homepage header's height, shared by the pinned stages and scroll padding. */
+const nav = () => 72;
 
 /** An element's top in the document from layout (offsetTop), so an entrance's transform (Reveal) never moves a stop. */
 function docTop(el: HTMLElement) {

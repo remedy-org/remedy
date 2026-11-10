@@ -31,51 +31,51 @@
   --ry: 6deg;
   --scene-top: 8%;
   /*
-   * The laptop: warm space grey (hue 75, chroma 0.004, like the room). In dark the deck sits well above the page (about
+   * The laptop: cool space grey, with a restrained violet reflection. In dark the deck sits well above the page (about
    * 0.2 L) and catches a cool rim light along its front edge and the hinge, so the lower half reads as metal, not as a
    * smudge on the graphite room.
    */
-  --lid: oklch(0.13 0.004 75);
+  --lid: oklch(0.13 0.006 285);
   --lid-edge: oklch(1 0 0 / 0.14);
-  --deck-top: oklch(0.36 0.004 75);
-  --deck-bottom: oklch(0.31 0.004 75);
-  --hinge-a: oklch(0.15 0.004 75);
-  --hinge-b: oklch(0.24 0.004 75);
-  --well-top: oklch(0.3 0.004 75);
-  --well-bottom: oklch(0.285 0.004 75);
+  --deck-top: oklch(0.36 0.006 285);
+  --deck-bottom: oklch(0.31 0.006 285);
+  --hinge-a: oklch(0.15 0.006 285);
+  --hinge-b: oklch(0.24 0.006 285);
+  --well-top: oklch(0.3 0.006 285);
+  --well-bottom: oklch(0.285 0.006 285);
   --well-shade: oklch(0 0 0 / 0.35);
   --well-rim: oklch(1 0 0 / 0.05);
-  --pad: oklch(0.345 0.004 75);
+  --pad: oklch(0.345 0.006 285);
   --pad-edge: oklch(1 0 0 / 0.06);
-  --lip: oklch(0.24 0.004 75);
-  --lip-low: oklch(0.17 0.004 75);
+  --lip: oklch(0.24 0.006 285);
+  --lip-low: oklch(0.17 0.006 285);
   --rim: oklch(0.62 0.006 240 / 0.6);
   /* The table: one surface step above the page, a centimetre grid in the hairline colour, faint enough to stay a surface. */
   --table: var(--surface);
   --grid-major: color-mix(in oklch, var(--text) 9%, transparent);
   --grid-minor: color-mix(in oklch, var(--text) 4.5%, transparent);
   /* The pool under the laptop, a little stronger than the page-wide --pool, so the object sits on something. */
-  --hero-pool: oklch(0.8 0.1 78 / 0.19);
-  --contact: oklch(0.05 0.004 75 / 0.7);
+  --hero-pool: oklch(0.64 0.2 295 / 0.16);
+  --contact: oklch(0.05 0.006 285 / 0.7);
 }
 
 /* In light the laptop is silver: the same object a step lighter, so it sits on a light table, not as a hole in it. */
 :global([data-theme="light"]) .view {
-  --lid: oklch(0.2 0.004 75);
+  --lid: oklch(0.2 0.006 285);
   --lid-edge: oklch(0.23 0.01 65 / 0.3);
   /* Silver, lighter at the back, with a soft keyboard well: texture, not the strongest contrast on the right of the page. */
-  --deck-top: oklch(0.9 0.004 75);
-  --deck-bottom: oklch(0.84 0.004 75);
-  --hinge-a: oklch(0.6 0.004 75);
-  --hinge-b: oklch(0.76 0.004 75);
-  --well-top: oklch(0.8 0.004 75);
-  --well-bottom: oklch(0.82 0.004 75);
+  --deck-top: oklch(0.9 0.006 285);
+  --deck-bottom: oklch(0.84 0.006 285);
+  --hinge-a: oklch(0.6 0.006 285);
+  --hinge-b: oklch(0.76 0.006 285);
+  --well-top: oklch(0.8 0.006 285);
+  --well-bottom: oklch(0.82 0.006 285);
   --well-shade: oklch(0.23 0.01 65 / 0.22);
   --well-rim: oklch(1 0 0 / 0.5);
-  --pad: oklch(0.86 0.004 75);
+  --pad: oklch(0.86 0.006 285);
   --pad-edge: oklch(0.23 0.01 65 / 0.07);
-  --lip: oklch(0.8 0.004 75);
-  --lip-low: oklch(0.7 0.004 75);
+  --lip: oklch(0.8 0.006 285);
+  --lip-low: oklch(0.7 0.006 285);
   --rim: oklch(1 0 0 / 0.9);
   --hero-pool: var(--pool);
   --table: var(--surface-2);
@@ -159,7 +159,7 @@
   position: absolute;
   inset: 30% -6% -14% 6%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, oklch(0.12 0.004 75 / 0.5), transparent);
+  background: radial-gradient(closest-side, oklch(0.12 0.006 285 / 0.5), transparent);
   filter: blur(6px);
 }
 
@@ -212,7 +212,7 @@
   height: 0.45em;
   margin-left: -0.225em;
   border-radius: 50%;
-  background: oklch(0.3 0.004 75);
+  background: oklch(0.3 0.006 285);
 }
 
 .screen {

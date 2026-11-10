@@ -1,7 +1,7 @@
 import { SmoothScroll } from "@/components/home/SmoothScroll";
 
-// The homepage follows the theme like every other page (dark by default). The root is its own stacking context so
-// each section's light and fade stay under its content; grain lies over everything.
+// The marketing canvas is dark; the saved app preference is preserved by ThemeSync.
+// Isolation keeps each scene's physical lighting beneath its content.
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="grain relative isolate min-h-dvh bg-bg text-text">

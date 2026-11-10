@@ -11,7 +11,7 @@ const line = (n: number) => ({ "--line": n }) as CSSProperties;
 /**
  * The hero at rest and the Chain of Custody that grows out of it (spec H1, H2): one section, `#how`, the scroll runway.
  * Confidence through restraint: a 56px headline in one colour, its second sentence the subhead, and one line of proof
- * from a real claim under the action; the product carries the attention. An owner with a real recall finds the way to
+ * from the illustrative claim under the action; the product carries the attention. An owner with a real recall finds the way to
  * hers in the footer and the phone menu, not here. The copy is server-rendered and fades in with
  * CSS on first paint, so the h1 is the LCP and never waits for JS.
  */
@@ -30,7 +30,7 @@ export function Hero() {
       </p>
       {/* No lead under the subhead: How it works, straight below, shows the claim the lead would describe. */}
       <div className={clsx("mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 lg:mt-10", styles.focusIn)} style={line(2)}>
-        {/* The owner's path is the screen's one amber action; companies get a quieter link to their section, the nav's
+        {/* The owner's path is the screen's primary action; companies get a quieter link to their section, the nav's
             "For companies" (its sign-in is in the bar). */}
         {/* Full width inside the gutters on phones; at 320px it fits on one line with tighter padding, or wraps. */}
         <Button
@@ -46,11 +46,11 @@ export function Hero() {
         </Button>
       </div>
       <div className={clsx("mt-4", styles.focusIn)} style={line(3)}>
-        {/* One proof, from a real claim, as the console's timeline has it: sent at CLAIM.seconds, confirmed at CLAIM.confirmed,
-            both in one unit ("15 s", "55 s"). */}
+        {/* The prepared example shares the same identifiers and timing throughout the story. */}
         {/* The claim's ids on a line of their own, so the sentence wraps clear of the receipt (44ch at 1024). */}
         <p className="max-w-[44ch] text-ui text-pretty text-text-2 xl:max-w-none">
-          Sent to the owner&rsquo;s PayPal {CLAIM.seconds}&nbsp;s after the photo, confirmed by PayPal at {CLAIM.confirmed}&nbsp;s
+          <span className="mb-1 block text-caption font-medium text-accent-text">Illustrative claim · PayPal sandbox</span>
+          Sent to the owner&rsquo;s PayPal {CLAIM.seconds}&nbsp;s after the photo, confirmed at {CLAIM.confirmed}&nbsp;s in this example.
           <span className="block">
             Claim <span className="font-mono whitespace-nowrap">{CLAIM.id}</span> · CPSC{" "}
             <span className="font-mono whitespace-nowrap">{CLAIM.recall.replace(/^CPSC /, "")}</span>

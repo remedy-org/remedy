@@ -45,7 +45,7 @@
 
 @media (min-width: 1024px) {
   .hero {
-    height: calc(100svh - 4rem);
+    height: calc(100svh - 4.5rem);
     min-height: 39rem;
     padding-block: 0;
     display: grid;
@@ -79,13 +79,13 @@
 /* The runway: the paced scroll (pace.ts, --scroll) plus the sticky stage itself. */
 .runway {
   position: relative;
-  height: calc(var(--scroll, 560vh) + 100svh - 4rem);
+  height: calc(var(--scroll, 560vh) + 100svh - 4.5rem);
 }
 
 .stage {
   position: sticky;
-  top: 4rem;
-  height: calc(100svh - 4rem);
+  top: 4.5rem;
+  height: calc(100svh - 4.5rem);
   overflow: clip;
   /* The page frame inside the full-width stage: its content edge and one grid column, so the rail and the screen
      sit on the same grid lines as every section. Used for left/right/width only (the % is the stage's width). */
@@ -146,13 +146,13 @@
    stage. */
 .phoneRunway {
   position: relative;
-  height: calc(var(--scroll, 544vh) + 100svh - 4rem);
+  height: calc(var(--scroll, 544vh) + 100svh - 4.5rem);
 }
 
 .phoneStage {
   position: sticky;
-  top: 4rem;
-  height: calc(100svh - 4rem);
+  top: 4.5rem;
+  height: calc(100svh - 4.5rem);
   display: flex;
   flex-direction: column;
   align-items: center;

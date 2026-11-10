@@ -9,7 +9,7 @@ import { Proof } from "@/components/home/Proof";
 import { SHARE_IMAGE } from "@/lib/shareImage";
 
 const description =
-  "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera, five checks and a fixed rule decide, and PayPal pays the refund within a minute.";
+  "Remedy connects recall evidence and PayPal payouts. Owners submit photos with a one-time code; five checks and a fixed rule route each claim to payment, review or rejection.";
 const share = "Remedy · Recall refunds, paid in a minute";
 
 export const metadata: Metadata = {
@@ -33,7 +33,7 @@ const JSON_LD = {
       name: "Remedy",
       url: SITE,
       logo: `${SITE}/apple-icon.png`,
-      description: "Remedy pays product-recall refunds through PayPal once a live-camera photo proves the product destroyed.",
+      description: "Remedy connects product-recall evidence checks and refunds through PayPal.",
     },
     {
       "@type": "SoftwareApplication",
@@ -44,7 +44,7 @@ const JSON_LD = {
       operatingSystem: "Web",
       publisher: { "@id": `${SITE}/#organization` },
       description:
-        "Remedy turns any CPSC recall into a live refund program. Owners prove the product destroyed on a live camera with a one-time code, five fraud checks and a fixed rule decide, and PayPal Payouts sends the refund within a minute. Companies get a claims console, recall analytics and a CPSC progress report.",
+        "Owners submit recall evidence with a one-time code. Five checks and a fixed rule route claims to payment, human review or rejection. PayPal confirms payout status. Companies get a claims console, recall analytics and a CPSC progress report draft.",
       featureList: [
         "Live-camera proof of destruction with a one-time code",
         "Five fraud checks, the first three before any AI",

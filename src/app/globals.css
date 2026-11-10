@@ -334,18 +334,18 @@ html[data-fonts="diatype"] {
     scroll-padding-top: 5rem;
   }
 
-  /* The homepage's sticky header is 4rem tall: anchor jumps and whatever focus brings into view stop under it, never
+  /* The homepage's sticky header is 4.5rem tall: anchor jumps and whatever focus brings into view stop under it, never
      behind it. Scoped to the homepage so app pages' own scroll margins do not stack on it; sections carry none. */
   html:has([data-home-nav]) {
     scroll-padding-top: 5.5rem;
   }
 
-  /* The 4rem bars themselves (the header, and the Menu sheet's own bar over its scroll-pt-16 sheet) sit inside that
+  /* The homepage header and menu bar sit inside that
      padding: without this, focusing anything in them (Shift+Tab back up, focus going back to Menu) scrolls the page
      half a screen. */
   [data-home-nav] *,
   [data-sheet-bar] * {
-    scroll-margin-top: -4rem;
+    scroll-margin-top: -4.5rem;
   }
 
   /* The homepage's Menu sheet (NavMenu.tsx) covers the page: the page under it does not scroll. */

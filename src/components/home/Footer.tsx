@@ -48,9 +48,9 @@ function CtaTag() {
         <div className="flex flex-col gap-8 px-6 pt-14 pb-8 sm:px-12 sm:pt-14 sm:pb-10 lg:grid lg:grid-cols-12 lg:items-end lg:gap-x-(--col-gap) lg:px-0">
           <div className="lg:col-span-7 lg:pl-12">
             <p className="eyebrow text-ink-muted">Try it</p>
-            <h2 className="mt-4 text-title-lg font-medium text-balance">See a refund land in a minute.</h2>
+            <h2 className="mt-4 text-title-lg font-medium text-balance">See how a recall refund lands.</h2>
             <p className="mt-3 max-w-[40ch] text-body text-pretty text-ink-muted">
-              Send four claims, one of them genuine. Remedy pays it through PayPal and stops the three fakes.
+              Try four prepared claims in PayPal sandbox. One passes; three fakes stop at different checks. Payout confirmation time varies.
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-3 lg:col-span-5 lg:col-start-8 lg:items-end lg:pr-12">
@@ -118,7 +118,7 @@ export function Footer() {
           <div className="col-span-12 md:col-span-5 lg:col-span-6">
             <Wordmark size="md" />
             <p className="mt-3 max-w-[44ch] text-ui text-muted">
-              Recall refunds, proven and paid. Remedy gives any US product recall its own claim link and pays owners through PayPal within a minute.
+              Recall refunds, checked and paid. Remedy connects recall evidence, five checks and PayPal payouts in one claim flow.
             </p>
             {/* An owner with a real recall: the demo is not her claim, and this is where hers is (the phone menu's line). */}
             <p className="mt-3 max-w-[44ch] text-ui text-pretty text-muted">

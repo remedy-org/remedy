@@ -7,7 +7,7 @@
  */
 
 /* The steps: four words on column 1, a 2px ink bar under the active word only (measured: --x, --w), no rule under the
-   row, so it never reads as the status tabs inside the window. Docked under the 64px nav when a step takes focus. */
+   row, so it never reads as the status tabs inside the window. Docked under the 72px nav when a step takes focus. */
 .steps {
   isolation: isolate;
   scroll-margin-top: 16px;
@@ -53,13 +53,13 @@
 }
 
 /*
- * The window fits a laptop screen with its steps: at most 680px, and never taller than the viewport less the nav (64),
+ * The window fits a laptop screen with its steps: at most 680px, and never taller than the viewport less the nav (72),
  * the steps row (measured by ConsoleTour.tsx, --rail-h), the 16px between them and 16px of air above and below, so a
  * visitor who picks a step sees the whole step change. Never below 520px, where a step stops reading. ConsoleTour
  * trims it to the queue's whole rows, and to no more rows than the queue has.
  */
 .stage {
-  --frame-h: min(680px, max(520px, calc(100svh - 64px - var(--rail-h, 56px) - 16px - 32px)));
+  --frame-h: min(680px, max(520px, calc(100svh - 72px - var(--rail-h, 56px) - 16px - 32px)));
   scroll-margin-top: 16px;
 }
 

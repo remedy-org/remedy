@@ -31,11 +31,11 @@ describe("keyboard paging through the pin", () => {
     expect(SCROLL_VH).toBeGreaterThan(95);
   });
 
-  it("S1: moves every page on the calm glide: 1.3 s under a screen, about 2 s across two, never over 1,000 px/s on average", () => {
-    expect(glideMs(200, 900)).toBeCloseTo(1300, 6);
-    expect(glideMs(-200, 900)).toBeCloseTo(1300, 6);
-    expect(glideMs(1800, 900)).toBeGreaterThanOrEqual(1900);
-    expect(glideMs(1800, 900)).toBeLessThanOrEqual(2100);
+  it("S1: gives each story page at least 1.65 s, grows with distance, and stays under 1,000 px/s on average", () => {
+    expect(glideMs(200, 900)).toBeCloseTo(1650, 6);
+    expect(glideMs(-200, 900)).toBeCloseTo(1650, 6);
+    expect(glideMs(1800, 900)).toBeGreaterThanOrEqual(2300);
+    expect(glideMs(1800, 900)).toBeLessThanOrEqual(2400);
     for (const d of [300, 900, 1800, 3000]) expect(d / glideMs(d, 900)).toBeLessThan(1.05);
   });
 

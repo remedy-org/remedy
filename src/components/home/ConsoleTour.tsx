@@ -61,7 +61,7 @@ type Area = "grid" | "insights" | "report";
 // half-grown bar.
 const STILL_ENTRANCE = 1500;
 // The nav's height, and the air the nav jump leaves under it.
-const NAV = 64;
+const NAV = 72;
 const AIR = 16;
 // The space between the steps and the frame (the root's gap-4).
 const GAP = 16;

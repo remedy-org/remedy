@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { calm, calmLanding } from "../scroll/landing";
+import { calm, calmLanding, STORY_MIN } from "../scroll/landing";
 import { HOW_IT_WORKS, scrollAt } from "./pace";
 
 // Keyboard paging through a pinned runway. A browser page (Space, Page Down) is about 95vh, but a beat inside the pin
@@ -25,8 +25,8 @@ function direction(e: KeyboardEvent): 1 | -1 | 0 {
 }
 
 /** How long a page takes, ms, on a screen `screen` px tall: the homepage's one calm glide (scroll/landing.ts
- * calmLanding), 1.3 s for a beat under a screen away, its peak under CALM_PEAK, as the wheel's and the keys'. */
-export const glideMs = (distance: number, screen = innerHeight) => 1000 * calmLanding(0, Math.abs(distance), screen).duration;
+ * calmLanding), at least 1.65 s per story beat, its peak under CALM_PEAK, as the wheel's and the keys'. */
+export const glideMs = (distance: number, screen = innerHeight) => 1000 * calmLanding(0, Math.abs(distance), screen, [], Infinity, STORY_MIN).duration;
 
 let glide = 0;
 /**
@@ -39,7 +39,7 @@ function glideTo(top: number) {
   const from = scrollY;
   const d = top - from;
   const ms = glideMs(d);
-  const curve = calm(0, calmLanding(0, Math.abs(d), innerHeight).ease);
+  const curve = calm(0, calmLanding(0, Math.abs(d), innerHeight, [], Infinity, STORY_MIN).ease);
   const t0 = performance.now();
   const stop = () => {
     cancelAnimationFrame(glide);
@@ -94,8 +94,8 @@ export function useBeatPaging(runway: () => HTMLElement | null | undefined, stop
       if (!el) return;
       const r = el.getBoundingClientRect();
       const travel = el.offsetHeight - innerHeight;
-      // Only while the pin holds the screen: its stage sticks under the 4rem nav.
-      const nav = 4 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+      // Only while the pin holds the screen: its stage sticks under the header.
+      const nav = 72;
       if (travel <= 0 || r.top > nav + 1 || r.bottom < innerHeight - 1) return;
       const now = Math.max(0, -r.top / travel);
       // The laptop's runway (the phone's is a div with its own stops) has How it works between the hero and chapter 01,
