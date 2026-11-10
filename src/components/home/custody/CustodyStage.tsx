@@ -19,26 +19,22 @@ import styles from "./custody.module.css";
 
 // The pinned Chain of Custody on laptops (spec H2). Everything here is drawn from one timeline p (paced against the
 // scroll in pace.ts). The laptop dollies in until its screen's glass covers chapter 01's consent card (0.04 to 0.12,
-// HeroRunway), then hands over to a flat, unscaled screen layer: between 0.12 and 0.17 its clip-path grows from the laptop screen's measured rect to the screen's place on the grid, so no text is ever scaled,
-// up or down. The rail takes columns 1 to 3 and the screen columns 4 to 12 of the page grid, like every section.
+// HeroRunway), then hands over to a flat, unscaled scene: between 0.12 and 0.17 its clip-path grows from the laptop's
+// measured glass to the full stage. The owner steps and physical exhibit share the page grid; the console uses its rail.
 
 export const HANDOFF = [0.12, 0.17] as const;
 /** The rail's chapter list comes in as the hero copy goes (the dolly's first quarter), so the left of the screen is
  * never empty while the laptop moves into the window: just after the copy leaves (HeroRunway DOLLY[0] + 0.005). */
 const RAIL_IN = 0.045;
-/** The screen's own frame and bar come in with the consent screen: the glass already spans the window's width and top,
- * so the clip only grows down and never slices them. */
-const ON_GRID = HANDOFF[0];
-
 const inOut = (t: number) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
 
-function Layer({ p, i, compact, fill, gate, children }: { p: Progress; i: number; compact: boolean; fill?: boolean; gate?: MotionValue<number>; children: ReactNode }) {
+function Layer({ p, i, compact, fill, scene, gate, children }: { p: Progress; i: number; compact: boolean; fill?: boolean; scene?: boolean; gate?: MotionValue<number>; children: ReactNode }) {
   // A cut in time at the chapter's start (gate.ts), rising 8px as it comes in: never a scrubbed fade a reader can stop in.
   // `gate` overrides it, without the rise: the console's content comes in round the arriving card, which must find its
   // slot where it will rest.
   const cut = useChapterGate(p, (c) => c === i);
   const opacity = gate ?? cut;
-  const y = useTransform(opacity, (o) => (i === 0 || gate ? 0 : 8 * (1 - o)));
+  const y = useTransform(opacity, (o) => (i === 0 || gate ? 0 : (scene ? 20 : 8) * (1 - o)));
   const visibility = useTransform(opacity, (o) => (o > 0 ? "visible" : "hidden"));
   return (
     // A claim screen sits in the middle of the window under the bar (at its top it left the lower 40% of the frame
@@ -46,11 +42,34 @@ function Layer({ p, i, compact, fill, gate, children }: { p: Progress; i: number
     <motion.div
       data-layer={i}
       // The console's queue starts 24px under its bar, as the tour's does under its ledger, never a well of empty ground.
-      className={clsx("absolute inset-0 flex items-start justify-center px-8", compact || fill ? "pt-6 pb-4" : "pt-12 pb-8")}
+      className={scene ? "absolute inset-0" : clsx("absolute inset-0 flex items-start justify-center px-8", compact || fill ? "pt-6 pb-4" : "pt-12 pb-8")}
       style={{ opacity, y, visibility }}
     >
-      <div className={clsx("w-full max-w-[66rem]", fill ? "h-full" : "my-auto")}>{children}</div>
+      <div className={scene ? "h-full" : clsx("w-full max-w-[66rem]", fill ? "h-full" : "my-auto")}>{children}</div>
     </motion.div>
+  );
+}
+
+/** The owner steps share the exhibit's full-stage header, object/copy grid and footer. */
+function OwnerScene({ i, skip, children }: { i: 0 | 1; skip: ReactNode; children: ReactNode }) {
+  return (
+    <div className={styles.ownerScene} data-owner-layout>
+      <header className={styles.ownerHead} aria-hidden="true">
+        <div>
+          <p className="eyebrow text-muted">How it works</p>
+          <h2 className="mt-3 max-w-[26ch] text-title font-medium text-pretty">{i === 0 ? "The refund starts with your account." : "One claim. One code in the photo."}</h2>
+        </div>
+        <div className="flex shrink-0 flex-col gap-2 pt-1 text-right">
+          <p className="text-ui text-text-2"><span className="mr-3 font-mono text-accent-text">{CHAPTERS[i].n} / 06</span>{CHAPTERS[i].title}</p>
+          <p className="text-micro text-muted">Illustrative claim · PayPal sandbox</p>
+        </div>
+      </header>
+      <div className={styles.ownerMain} aria-hidden="true">{children}</div>
+      <footer className={styles.ownerFoot}>
+        {skip}
+        <p className="text-ui text-muted" aria-hidden="true">{i === 0 ? "Next: write the one-time code" : "Next: frame the pillow and tag"}<span className="ml-3 text-accent-text">↓</span></p>
+      </footer>
+    </div>
   );
 }
 
@@ -97,10 +116,15 @@ function useOn(p: Progress, i: number) {
  */
 function applyClip(el: HTMLElement | null, st: HTMLElement | null, v: number) {
   if (!el || !st || v < HANDOFF[0]) return;
+  // Once the owner scene fills the stage, the stage contains its edges. Only the handoff and console need a mask.
+  if (v >= HANDOFF[1] && v < ARRIVAL[0]) {
+    el.style.clipPath = "none";
+    return;
+  }
   const S = st.getBoundingClientRect();
-  const inner = el.querySelector("[data-screen-inner]")?.getBoundingClientRect();
+  const inner = el.querySelector(v < ARRIVAL[0] ? "[data-owner-window]" : "[data-screen-inner]")?.getBoundingClientRect();
   const end = inner
-    ? { t: inner.top - S.top, r: S.right - inner.right, b: S.bottom - inner.bottom, l: inner.left - S.left, round: 16 }
+    ? { t: inner.top - S.top, r: S.right - inner.right, b: S.bottom - inner.bottom, l: inner.left - S.left, round: v < ARRIVAL[0] ? 0 : 16 }
     : { t: 16, r: 16, b: 16, l: 16, round: 16 };
   let box = end;
   if (v < HANDOFF[1]) {
@@ -270,7 +294,6 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
   const ghost = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const [chapter, setChapter] = useState(0);
-  const [opening, setOpening] = useState(p.get() < HANDOFF[1]);
   // The page-wide pager (scroll/keys.ts) pages these same beats wherever it runs, and from the console steps out of the
   // pin onto the Problem sheet open; this one is the pin's own, for when it doesn't.
   useBeatPaging(() => stage.current?.parentElement, PAGE_STOPS);
@@ -292,7 +315,6 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
       paint();
     });
     setChapter(chapterAt(v));
-    setOpening(v < HANDOFF[1]);
   });
   useMotionValueEvent(exhibitOn, "change", () => motionFrame.postRender(paint));
 
@@ -311,41 +333,6 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
     ro.observe(st);
     return () => ro.disconnect();
   }, [stage, p, paint]);
-
-  // One fitted window for the first two steps: changing chapters never resizes the frame under the outgoing screen.
-  useLayoutEffect(() => {
-    const st = stage.current;
-    const el = screen.current;
-    const inner = el?.querySelector<HTMLElement>("[data-screen-inner]");
-    const bar = inner?.firstElementChild;
-    const layers = [0, 1].map((i) => inner?.querySelector<HTMLElement>(`[data-layer="${i}"]`));
-    const roots = layers.map((layer) => layer?.firstElementChild?.firstElementChild as HTMLElement | undefined);
-    if (!st || !el || !bar || roots.some((root) => !root)) return;
-    const fit = () => {
-      const content = Math.max(...layers.map((layer, i) => {
-        const css = getComputedStyle(layer!);
-        return roots[i]!.offsetHeight + parseFloat(css.paddingTop) + parseFloat(css.paddingBottom);
-      }));
-      st.style.setProperty("--intro-fit-h", `${Math.ceil(bar.getBoundingClientRect().height + content + 1)}px`);
-      applyClip(el, st, p.get());
-    };
-    fit();
-    const ro = new ResizeObserver(fit);
-    roots.forEach((root) => ro.observe(root!));
-    ro.observe(bar);
-    return () => ro.disconnect();
-  }, [compact, stage, p]);
-
-  useLayoutEffect(() => {
-    const st = stage.current;
-    if (!st) return;
-    if (chapter < 2) {
-      st.setAttribute("data-intro-fit", "");
-      return;
-    }
-    const timer = window.setTimeout(() => st.removeAttribute("data-intro-fit"), UNFIT_AFTER);
-    return () => window.clearTimeout(timer);
-  }, [chapter, stage]);
 
   // Chapter 06's window is as tall as its queue, never a half-empty table on a tall screen (custody.module.css
   // .screen[data-fit]): its bar, the layer's padding, the queue's tabs, header and foot, and every claim's row at full
@@ -415,34 +402,36 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
   // into the console is one move, played at the reader's pace both ways: the rail comes back once the exhibit's heading
   // has all but gone (RAIL_BACK); the window's edge is the arrival's frame, drawn out round the arriving card; and its
   // bar is the first of the console's parts to come in once that frame is all but drawn (CONSOLE_IN).
-  const frame = useGate(p, (v) => v >= ON_GRID && v < EXHIBIT_RANGE[0], CUT_IN, LEAVE);
-  const bar = useTransform(() => (p.get() >= ARRIVAL[0] ? consoleAt(p.get(), 0, parts) : frame.get()));
+  const bar = useTransform(p, (v) => v >= ARRIVAL[0] ? consoleAt(v, 0, parts) : 0);
   const consoleLayer = useTransform(p, (v): number => (v >= ARRIVAL[0] ? 1 : 0));
-  const railGate = useGate(p, (v) => v >= RAIL_IN && v < EXHIBIT_RANGE[0], CUT_IN, LEAVE);
-  const railHead = useTransform(() => (p.get() >= EXHIBIT_RANGE[1] ? railBackAt(p.get()) : railGate.get()));
+  const railHead = useTransform(p, (v) => v >= EXHIBIT_RANGE[1] ? railBackAt(v) : 0);
   // The rail's skip link hides while the exhibit covers it: the exhibit carries the same link in its own foot. Past the
   // console it has nothing left to skip, so it fades out as the pin releases, never left alone on the stage.
   const skipVisibility = useTransform(p, (v) => (inExhibit(v) ? "hidden" : "visible"));
   const skipGate = useGate(p, (v) => v >= RAIL_IN && v < 0.97, ENTER, { duration: 0.24, ease: IN_OUT });
-  const skipOpacity = useTransform(() => skipGate.get() * (p.get() >= EXHIBIT_RANGE[1] ? railBackAt(p.get()) : 1));
+  const skipOpacity = useTransform(() => skipGate.get() * (p.get() >= EXHIBIT_RANGE[1] ? railBackAt(p.get()) : 0));
 
   return (
     <>
-      <motion.div ref={screen} className={styles.screen} style={screenStyle} aria-hidden="true">
-        {/* The window's edge: a definite hairline with its soft shadow, so its corners never float alone. */}
-        <motion.div className={clsx(styles.screenInner, "pointer-events-none rounded-frame shadow-card ring-1 ring-line")} style={{ opacity: frame }} />
-        <div className={styles.screenInner} data-screen-inner>
+      <motion.div ref={screen} className={styles.screen} style={screenStyle}>
+        <div className={styles.ownerWindow} data-owner-window>
+          <motion.div className="h-full" style={{ opacity: content }}>
+            <Compact.Provider value={compact}>
+              <Layer p={p} i={0} compact={compact} scene>
+                <OwnerScene i={0} skip={skip}><ConsentChapter p={p} scene /></OwnerScene>
+              </Layer>
+              <Layer p={p} i={1} compact={compact} scene>
+                <OwnerScene i={1} skip={skip}><CodeChapter p={p} scene /></OwnerScene>
+              </Layer>
+            </Compact.Provider>
+          </motion.div>
+        </div>
+        <div className={styles.screenInner} data-screen-inner aria-hidden="true">
           <motion.div style={{ opacity: bar }}>
-            <ScreenBar console={chapter === 5} />
+            <ScreenBar console />
           </motion.div>
           <motion.div className="relative min-h-0 flex-1" style={{ opacity: content }}>
             <Compact.Provider value={compact}>
-              <Layer p={p} i={0} compact={compact} fill>
-                <ConsentChapter p={p} />
-              </Layer>
-              <Layer p={p} i={1} compact={compact}>
-                <CodeChapter p={p} />
-              </Layer>
               {/* Chapters 03 to 05 are the Opened Exhibit, a full-stage layer above the screen and the rail (below). */}
               <Layer p={p} i={5} compact={compact} fill gate={consoleLayer}>
                 <ConsoleChapter p={p} rows={consoleRows} />
@@ -455,10 +444,10 @@ export function CustodyStage({ p, stage, skip, consoleRows }: CustodyStageProps)
       <div className={clsx(styles.rail, "pointer-events-none")}>
         <motion.div className="flex flex-col" style={{ opacity: railHead }} aria-hidden="true">
           <span className="eyebrow text-muted">How it works</span>
-          <div key={opening ? "opening" : chapter} className={clsx("mt-5", styles.chapterIn)}>
-            <p className="font-mono text-micro text-accent-text">{opening ? "ONE CLAIM" : `${CHAPTERS[chapter].n} / 06`}</p>
-            <h2 className="mt-3 text-title font-medium text-balance text-text">{opening ? "Step inside the claim." : CHAPTERS[chapter].title}</h2>
-            <p className="mt-4 text-ui text-pretty text-text-2">{opening ? "Follow the owner's evidence, the decision and an eligible PayPal refund." : CHAPTERS[chapter].text}</p>
+          <div className="mt-5">
+            <p className="font-mono text-micro text-accent-text">{`${CHAPTERS[5].n} / 06`}</p>
+            <h2 className="mt-3 text-title font-medium text-balance text-text">{CHAPTERS[5].title}</h2>
+            <p className="mt-4 text-ui text-pretty text-text-2">{CHAPTERS[5].text}</p>
           </div>
           <p className="mt-4 text-micro text-muted">Illustrative claim · PayPal sandbox</p>
           <ol className={clsx("mt-6", compact && "grid grid-cols-6 gap-2")}>

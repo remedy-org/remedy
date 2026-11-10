@@ -63,9 +63,9 @@ function Lit({ p, at, delay = 0, className, children }: { p?: Progress; at: numb
  * A list of steps on a hairline, each with a small node that lights in turn (no numerals: the order is the line). `p`
  * lights them at `at`; without it they are all lit.
  */
-function StepLine({ p, at, steps, className }: { p?: Progress; at: readonly number[]; steps: readonly string[]; className?: string }) {
+function StepLine({ p, at, steps, dense, className }: { p?: Progress; at: readonly number[]; steps: readonly string[]; dense?: boolean; className?: string }) {
   return (
-    <ol className={clsx("relative flex flex-col gap-2.5 before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-line", className)}>
+    <ol className={clsx("relative flex flex-col before:absolute before:top-2 before:bottom-2 before:left-[3.5px] before:w-px before:bg-line", dense ? "gap-1.5" : "gap-2.5", className)}>
       {steps.map((s, i) => (
         <li key={s} className="relative grid grid-cols-[1.25rem_minmax(0,1fr)] text-ui">
           <span className="mt-1.5 flex size-2 rounded-full bg-bg">
@@ -102,7 +102,7 @@ function SourceLine({ link = true }: { link?: boolean }) {
  * privacy disclosure. Compact desktops keep the product photo; narrow phones keep the offer and account disclosure.
  * `about` includes the full preparation copy in the unpinned static figures, where the page can grow naturally.
  */
-export function ConsentChapter({ p, about = false }: { p?: Progress; about?: boolean }) {
+export function ConsentChapter({ p, about = false, scene = false }: { p?: Progress; about?: boolean; scene?: boolean }) {
   const compact = useContext(Compact);
   // In the pinned sequence the product column comes in with the consent column as the screen takes over the laptop's
   // glass (0.12, CustodyStage's HANDOFF): the glass spans the window's width from the top, so the clip, growing only down
@@ -110,24 +110,24 @@ export function ConsentChapter({ p, about = false }: { p?: Progress; about?: boo
   const done = useDone();
   const product = useGate(p ?? done, (v) => v >= 0.12);
   return (
-    <div className="@container">
-      <div className="grid items-start gap-4 @min-[36rem]:grid-cols-2 @min-[36rem]:gap-6">
-        <motion.div className="hidden flex-col gap-4 @min-[36rem]:flex" style={{ opacity: product }}>
+    <div className={clsx("@container", scene && "h-full min-h-0")} data-owner-scene={scene ? "consent" : undefined}>
+      <div className={scene ? "grid h-full min-h-0 grid-cols-[minmax(0,1fr)_minmax(18rem,21rem)] items-center gap-14" : "grid items-start gap-4 @min-[36rem]:grid-cols-2 @min-[36rem]:gap-6"}>
+        <motion.div data-scene-subject={scene || undefined} className={scene ? "flex h-full min-h-0 flex-col gap-4" : "hidden flex-col gap-4 @min-[36rem]:flex"} style={{ opacity: product }}>
           <div className="flex flex-col gap-1.5">
             <p className="text-body font-medium text-balance text-text">{CLAIM.product}</p>
             <SourceLine />
           </div>
-          <figure className="m-0 flex flex-col gap-2">
-            <div className={clsx("flex items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line", compact ? "h-44" : "h-52")}>
+          <figure className={scene ? "m-0 flex min-h-0 flex-1 flex-col justify-center gap-3" : "m-0 flex flex-col gap-2"}>
+            <div className={scene ? "flex min-h-0 flex-1 items-center justify-center" : clsx("flex items-center justify-center rounded-control bg-paper p-4 ring-1 ring-line", compact ? "h-44" : "h-52")}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={CLAIM.cpscPhoto} alt="" loading="lazy" className="block max-h-full w-auto max-w-full object-contain mix-blend-multiply" />
+              <img src={scene ? "/teardown/intact-pillow.webp" : CLAIM.cpscPhoto} alt="" loading="lazy" className={scene ? "block max-h-full w-full max-w-[38rem] object-contain" : "block max-h-full w-auto max-w-full object-contain mix-blend-multiply"} />
             </div>
-            <figcaption className="text-micro text-muted">Product pictured in the recall notice</figcaption>
+            <figcaption className="text-micro text-muted">{scene ? "3D illustration · recalled feather-print style" : "Product pictured in the recall notice"}</figcaption>
           </figure>
-          <p className="border-l-2 border-stop pl-4 text-ui text-pretty text-text-2">Risk of serious injury or death from suffocation. Stop using it now.</p>
+          <p className={clsx("border-l-2 border-stop pl-4 text-ui text-pretty text-text-2", scene && "max-w-[44ch]")}>Risk of serious injury or death from suffocation. Stop using it now.</p>
         </motion.div>
 
-        <div className="flex flex-col gap-1 @min-[36rem]:hidden">
+        <div className={scene ? "hidden" : "flex flex-col gap-1 @min-[36rem]:hidden"}>
           <p className="text-ui font-medium text-balance text-text">{CLAIM.product}</p>
           <span className={clsx(compact && "hidden")}>
             <SourceLine link={false} />
@@ -136,24 +136,25 @@ export function ConsentChapter({ p, about = false }: { p?: Progress; about?: boo
 
         <div
           data-dolly-target
-          className="flex flex-col gap-4 border-line @max-[36rem]:border-t @max-[36rem]:pt-4 @min-[36rem]:self-stretch @min-[36rem]:border-l @min-[36rem]:pl-6"
+          data-scene-copy={scene || undefined}
+          className={scene ? clsx("flex flex-col", compact ? "gap-3" : "gap-6") : "flex flex-col gap-4 border-line @max-[36rem]:border-t @max-[36rem]:pt-4 @min-[36rem]:self-stretch @min-[36rem]:border-l @min-[36rem]:pl-6"}
         >
           <div className="flex flex-col gap-2">
-            <p className="text-micro text-muted">Eligible recall refund · PayPal sandbox</p>
+            <p className={scene ? "text-ui text-muted" : "text-micro text-muted"}>{scene ? "Eligible recall refund" : "Eligible recall refund · PayPal sandbox"}</p>
             <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <Money value={CLAIM.amount} className="text-[2.25rem] leading-none font-medium tracking-tight" />
+              <Money value={CLAIM.amount} className={clsx("leading-none font-medium tracking-tight", scene ? "text-[clamp(2.5rem,4vw,3.5rem)]" : "text-[2.25rem]")} />
               <span className="text-ui text-muted">through PayPal</span>
             </p>
-            <p className="text-ui text-pretty text-text-2">{CONSENT.about}</p>
+            <p className="text-ui text-pretty text-text-2">{scene ? "Your eligible refund goes to the PayPal account you connect." : CONSENT.about}</p>
           </div>
           <div className="flex flex-col gap-3">
-            <p className={clsx("text-ui text-pretty text-muted", compact && !about && "@max-[36rem]:hidden")}>
+            <p className={clsx("text-ui text-pretty text-muted", scene && compact ? "hidden" : compact && !about && "@max-[36rem]:hidden")}>
               Cut the pillow in half. Photograph it with the code issued next.
             </p>
             <span className="btn-primary pointer-events-none flex h-12 items-center justify-center rounded-button-lg text-body font-medium select-none">Log in with PayPal</span>
             <p className="text-micro text-pretty text-muted">{PAYPAL_CONSENT}</p>
           </div>
-          <p className="border-t border-line pt-3 text-micro text-pretty text-muted">{about ? CONSENT.clock : "Next: a one-time code and a 10-minute photo session."}</p>
+          <p className="border-t border-line pt-3 text-micro text-pretty text-muted">{about ? CONSENT.clock : scene ? "Next: your code · 10-minute photo session." : "Next: a one-time code and a 10-minute photo session."}</p>
         </div>
       </div>
     </div>
@@ -184,7 +185,7 @@ const sessionLeft = (v: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-export function CodeChapter({ p }: { p: Progress }) {
+export function CodeChapter({ p, scene = false }: { p: Progress; scene?: boolean }) {
   const compact = useContext(Compact);
   const swung = useAfter(p, 0.34);
   const left = useTransform(p, sessionLeft);
@@ -192,11 +193,11 @@ export function CodeChapter({ p }: { p: Progress }) {
   const write = useGate(p, (v) => v >= CODE_AT - 0.004, { duration: WRITE_FOR, ease: EASE.outQuart, delay: 2 * CODE_STAGGER }, LEAVE);
   const wipe = useTransform(write, (k) => `inset(-0.2em ${((1 - k) * 100).toFixed(2)}% -0.2em 0)`);
   return (
-    <div className="@container">
-      <div className={clsx("grid items-center @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] @min-[720px]:gap-14", compact ? "gap-6" : "gap-10")}>
-        <div className={clsx("flex flex-col", compact ? "gap-4" : "gap-6")}>
+    <div className={clsx("@container", scene && "h-full min-h-0")} data-owner-scene={scene ? "code" : undefined}>
+      <div className={scene ? "grid h-full min-h-0 grid-cols-[minmax(0,1fr)_minmax(18rem,21rem)] items-center gap-14" : clsx("grid items-center @min-[720px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] @min-[720px]:gap-14", compact ? "gap-6" : "gap-10")}>
+        <div data-scene-copy={scene || undefined} className={clsx("flex flex-col", scene ? clsx("order-2", compact ? "gap-2" : "gap-6") : compact ? "gap-4" : "gap-6")}>
           <div className="flex items-center justify-between gap-4">
-            <p className="text-title font-medium">Your one-time code</p>
+            <p className={scene ? "text-ui text-muted" : "text-title font-medium"}>{scene ? "Write this code on the tag" : "Your one-time code"}</p>
             <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-ui text-muted">
               <ClockIcon size={14} />
               <motion.span>{left}</motion.span>
@@ -207,18 +208,18 @@ export function CodeChapter({ p }: { p: Progress }) {
               <CodeCell key={c} p={p} i={i} char={c} />
             ))}
           </div>
-          <p className={clsx("max-w-[44ch] text-body text-muted", compact && "@max-[719px]:hidden")}>Write it on a tag with <NoBreakHyphens>X-VESOLJE</NoBreakHyphens>, big, in marker. Then photograph the cut pillow with the tag on it, in this page&rsquo;s camera.</p>
-          <div className="hidden flex-col gap-2 @min-[720px]:flex">
-            <span className="text-ui text-faint">Your photo must show</span>
-            <StepLine p={p} at={SHOT_AT} steps={SHOT_LIST} />
+          <p className={clsx("max-w-[44ch] text-muted", scene ? "text-ui" : "text-body", !scene && compact && "@max-[719px]:hidden")}>{scene && compact ? "Use a thick marker. Keep the tag beside the cut pillow." : <>Write it on a tag with <NoBreakHyphens>X-VESOLJE</NoBreakHyphens>, big, in marker. Then photograph the cut pillow with the tag on it, in this page&rsquo;s camera.</>}</p>
+          <div className={scene ? "flex flex-col gap-3 border-t border-line pt-4" : "hidden flex-col gap-2 @min-[720px]:flex"}>
+            <span className="text-ui text-faint">{scene ? "Keep all three in frame" : "Your photo must show"}</span>
+            <StepLine p={p} at={SHOT_AT} steps={SHOT_LIST} dense={scene && compact} />
           </div>
         </div>
 
-        <div className={clsx("flex justify-center", compact ? "pt-6 @min-[720px]:pt-10" : "pt-12 @min-[720px]:pt-14")}>
+        <div data-scene-subject={scene || undefined} className={clsx("flex justify-center", scene ? "order-1 h-full min-h-0 items-center pt-12" : compact ? "pt-6 @min-[720px]:pt-10" : "pt-12 @min-[720px]:pt-14")}>
           <motion.div
-            className={clsx("relative w-full origin-[50%_19px] @min-[720px]:max-w-[22rem]", compact ? "max-w-[15rem]" : "max-w-[18rem]")}
+            className={clsx("relative w-full origin-[50%_19px]", scene ? "max-w-[26rem]" : clsx("@min-[720px]:max-w-[22rem]", compact ? "max-w-[15rem]" : "max-w-[18rem]"))}
             initial={false}
-            animate={swung ? { rotate: 0, y: 0, opacity: 1 } : { rotate: -6, y: -28, opacity: 0 }}
+            animate={swung ? { rotate: scene ? -3 : 0, y: 0, opacity: 1 } : { rotate: -6, y: -28, opacity: 0 }}
             transition={swung ? SPRING.drop : { duration: 0.16 }}
           >
             {/* The string, from the punched hole up and off the top of the frame; shorter on a short phone, where the
@@ -241,7 +242,7 @@ export function CodeChapter({ p }: { p: Progress }) {
                 compact ? "bottom-[calc(100%+37px)]" : "bottom-[calc(100%+61px)]",
               )}
             />
-            <CodeTag wipe={wipe} short={compact} />
+            <CodeTag wipe={wipe} short={compact} scene={scene} />
           </motion.div>
         </div>
       </div>
@@ -250,20 +251,20 @@ export function CodeChapter({ p }: { p: Progress }) {
 }
 
 /** The owner's paper tag with the recall's name and the one-time code, written left to right as `wipe` opens. */
-export function CodeTag({ wipe, short, className }: { wipe?: MotionValue<string>; short?: boolean; className?: string }) {
+export function CodeTag({ wipe, short, scene = false, className }: { wipe?: MotionValue<string>; short?: boolean; scene?: boolean; className?: string }) {
   return (
     <Paper variant="tag" hole padding="lg" className={clsx("w-full", className)}>
       {/* Headed by the recall it answers, never by the seller's name: the seller isn't Remedy's customer here. */}
-      <p className="flex items-baseline justify-between gap-3 text-ui text-ink-muted">
+      {!scene && <p className="flex items-baseline justify-between gap-3 text-ui text-ink-muted">
         Recall
         <span className="font-mono text-micro">{CLAIM.recall}</span>
-      </p>
-      <motion.p className="mt-5 font-mono leading-none font-medium tracking-[0.08em]" style={wipe ? { clipPath: wipe } : undefined}>
-        <span className="block text-[1.75rem]">X-VESOLJE</span>
-        <span className="mt-3 block text-[3.5rem] tracking-[0.14em]">{CLAIM.code}</span>
+      </p>}
+      <motion.p className={clsx("font-mono leading-none font-medium tracking-[0.08em]", scene ? "py-4" : "mt-5")} style={wipe ? { clipPath: wipe } : undefined}>
+        <span className={clsx("block", scene ? "text-[clamp(1.25rem,2.25vw,2rem)]" : "text-[1.75rem]")}>X-VESOLJE</span>
+        <span className={clsx("mt-3 block tracking-[0.14em]", scene ? "text-[clamp(3rem,5.6vw,5rem)]" : "text-[3.5rem]")}>{CLAIM.code}</span>
       </motion.p>
       {/* On a short phone the tag's foot gives way; the laptop and the static figure always show it. */}
-      <p className={clsx("mt-6 border-t border-dashed border-paper-line pt-3 text-ui text-ink-muted", short && "@max-[719px]:hidden")}>Write it big, in marker.</p>
+      {!scene && <p className={clsx("mt-6 border-t border-dashed border-paper-line pt-3 text-ui text-ink-muted", short && "@max-[719px]:hidden")}>Write it big, in marker.</p>}
     </Paper>
   );
 }

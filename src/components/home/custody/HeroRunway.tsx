@@ -92,7 +92,7 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
       if (pose) dev.style.setProperty("--tilt-k", pose);
       else dev.style.removeProperty("--tilt-k");
       if (tilt) tilt.style.transform = pointerPose ?? "";
-      const win = st.querySelector("[data-screen-inner]")?.getBoundingClientRect();
+      const win = st.querySelector("[data-owner-window]")?.getBoundingClientRect();
       const cx = D.left + D.width / 2;
       const cy = D.top + D.height / 2;
       const s = win ? Math.min(MAX_SCALE, Math.max(1.05, win.width / P.width)) : 1.35;
@@ -103,7 +103,7 @@ function useDolly(p: MotionValue<number>, stage: RefObject<HTMLDivElement | null
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(st);
-    const win = st.querySelector("[data-screen-inner]");
+    const win = st.querySelector("[data-owner-window]");
     if (win) ro.observe(win);
     // A resize midway through the story cannot be measured against transformed glass. Calibrate when it returns home.
     const off = p.on("change", (v) => {
