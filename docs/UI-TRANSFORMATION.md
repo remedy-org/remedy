@@ -1,6 +1,6 @@
 # Animated UI review and release
 
-10 November 2026. The revised UI was reviewed separately on `ui/animated-review` before release approval. The approved version is being promoted to `main` and the canonical `https://remedy-recalls.vercel.app` site as part of submission closeout. The original animated implementation is preserved on `archive/original-ui` at `c37bb9d`, with its own `https://remedy-original-review.vercel.app` deployment. The flattened alternative remains archived on `ui/flat-review`.
+10 November 2026. The revised UI was reviewed separately on `ui/animated-review` before release approval. The approved version is published on `main` and the canonical `https://remedy-recalls.vercel.app` site. The original animated implementation is preserved on `archive/original-ui` at `c37bb9d`, with its public `https://remedy-refunds.vercel.app` deployment. The flattened alternative remains archived on `ui/flat-review`.
 
 ## Preserved product story
 
