@@ -6,13 +6,15 @@ This is a PayPal sandbox build with prepared judge-demo photographs. The image m
 
 - **Live:** https://remedy-recalls.vercel.app. The homepage connects the owner claim, evidence review and company console in a clearly labeled illustrative walkthrough, followed by the workflow, company tools and four prepared demo cases.
 - **Judges' demo:** https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try (a PayPal sandbox login is on the page)
-- **Company console:** https://remedy-recalls.vercel.app/signin (open **Use the demo account**: it is the same sandbox login as the try page)
+- **Company console:** https://remedy-recalls.vercel.app/signin (open **Explore with the demo account**: it is the same sandbox login as the try page)
 
 <!-- Demo video: add the YouTube link here before submitting. -->
 
 I built Remedy solo for the PayPal AI Hackathon 2026. It runs on PayPal's sandbox, so no real money moves. Open source under MIT.
 
 **Built with:** PayPal (Log in with PayPal, Payouts, Webhooks) · OpenAI (GPT-6.1 Sol through the Responses API; gpt-5.4-mini for the Recall analyst) · AG Grid · AG Studio · Next.js · TypeScript · Vercel · the CPSC recalls API
+
+**Submission materials:** [project description and judging instructions](docs/SUBMISSION.md) · [recording and final rehearsal checklist](docs/RECORDING-CHECKLIST.md). The video is pending. A fresh end-to-end recording rehearsal and real phone/handwriting validation remain to be completed; the historical sandbox and model evidence below do not replace those checks.
 
 ---
 
@@ -38,7 +40,7 @@ The real claim flow, with your own camera, a fresh one-time code and its 10-minu
 
 ### Company side (about 30 seconds)
 
-4. Press **See them as Kikea Store sees them**, or open **[/signin](https://remedy-recalls.vercel.app/signin)**. Open **Use the demo account** and log in with PayPal: it is the same sandbox login as the try page, and the console opens on the Kikea recall's seven sample claims plus your own demo round.
+4. Press **See them as Kikea Store sees them**, or open **[/signin](https://remedy-recalls.vercel.app/signin)**. Open **Explore with the demo account** and log in with PayPal: it is the same sandbox login as the try page, and the console opens on the Kikea recall's seven sample claims plus your own demo round.
 5. **Claims:** the queue in AG Grid, with your four claims beside the recall's demo claims. Open any row for the evidence: the photos, every model answer with the text it quoted, the pre-checks and the rule's decision, with the check that decided the claim listed first. Held claims can be approved or rejected, one at a time or in bulk.
 6. **Insights:** the AG Studio report on the recall, and the **Recall analyst**. Ask it about a claim, a chart or why claims were refused.
 7. **New recall:** paste any CPSC recall number or cpsc.gov link. The model drafts the photo checks from the notice for the company to edit and publish.
@@ -57,7 +59,7 @@ When a product is recalled for safety, the company often refunds owners who dest
 
 That is the trap: photo-only refunds raise participation, and AI fakes push firms back to physical returns, which kill it. Remedy keeps the refund easy for real owners. Session admission, photo-reuse checks, code matching and account limits add controls while keeping a short claim path. They do not guarantee that a photograph is genuine.
 
-**Who it's for:** small and mid-size sellers running a CPSC refund recall from an inbox, often marketplace sellers. They are legally required to run the remedy, they review photos by hand, and they absorb the fraudulent refunds. Settlement tools verify the person. Remedy verifies that the product is destroyed.
+**Who it's for:** small and mid-size sellers running a CPSC refund recall from an inbox, often marketplace sellers. They review photos by hand and absorb fraudulent refunds. Remedy checks the submitted destruction evidence, explains the decision and connects eligible claims to a traceable PayPal payout.
 
 ---
 
@@ -284,7 +286,9 @@ The eval photos and raw run files (`eval/photos/`, `eval/out/`) are git-ignored,
 - The `openai` SDK, zod 4 and `sharp`.
 - `@vercel/blob` for storage.
 - three.js, motion and lenis on the homepage; `qrcode` for claim links.
-- Vitest (80 test files, about 670 cases) and Playwright scripts.
+- Vitest (82 test files) and Playwright scripts.
+
+**UI verification, 10 Nov:** the production build and lint passed; a selected pure test suite passed 293 tests, with one existing recording-dependent skip. Headless desktop/mobile, scroll-forward/reverse, reduced-motion and JavaScript-disabled checks passed. Those browser checks blocked application APIs: they establish UI behavior, not a fresh authenticated model or payout run. The full application suite was not rerun in that pass because some tests write persisted state.
 
 ---
 
@@ -323,7 +327,7 @@ npm run dev             # open http://127.0.0.1:3000 (use 127.0.0.1, not localho
 | `APP_URL` | Public base URL, for login returns, webhooks and claim links. Default `http://127.0.0.1:3000` |
 | `SESSION_SECRET` | Signs session cookies, at least 32 characters (`openssl rand -base64 32`). Optional locally, required in production |
 | `BLOB_READ_WRITE_TOKEN` | Optional. A Vercel Blob store; without it data lives in `data/` |
-| `SANDBOX_PERSONAL_EMAIL`, `SANDBOX_PERSONAL_PASSWORD` | Optional. In a sandbox build, shown on `/try` and on `/signin` under **Use the demo account** as the demo login (PayPal refuses a login by the business account that owns the app, so the console's demo login is the personal one) |
+| `SANDBOX_PERSONAL_EMAIL`, `SANDBOX_PERSONAL_PASSWORD` | Optional. In a sandbox build, shown on `/try` and on `/signin` under **Explore with the demo account** as the demo login (PayPal refuses a login by the business account that owns the app, so the console's demo login is the personal one) |
 | `VISION_DAILY_LIMIT`, `DRAFT_DAILY_LIMIT` | Optional. Per UTC day: 100 photo checks and 20 check drafts. Past the photo-check limit, a real claim is held for a person, never lost |
 | `CLAIM_DAILY_LIMIT`, `CLAIM_MONTHLY_LIMIT` | Optional. 10 new real claims a day and 30 in any 30 days. Demo claims don't count |
 | `DEMO_DAILY_LIMIT`, `DEMO_MONTHLY_LIMIT` | Optional. Demo claims across every account: 40 a day and 200 in any 30 days, so the live demo stays inside its storage budget through judging |

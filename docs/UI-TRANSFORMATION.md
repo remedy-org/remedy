@@ -1,6 +1,6 @@
-# Animated UI review
+# Animated UI review and release
 
-10 November 2026. The revised UI is isolated on `ui/animated-review`. `main` remains at the original animated implementation, with its previous deployment restored. The flattened alternative is archived on `ui/flat-review`.
+10 November 2026. The revised UI was reviewed separately on `ui/animated-review` before release approval. The approved version is being promoted to `main` and the canonical `https://remedy-recalls.vercel.app` site as part of submission closeout. The original animated implementation is preserved on `archive/original-ui` at `c37bb9d`, with its own `https://remedy-original-review.vercel.app` deployment. The flattened alternative remains archived on `ui/flat-review`.
 
 ## Preserved product story
 
@@ -24,7 +24,7 @@ Browser reviews run headlessly with API requests blocked. No authenticated conso
 
 The user supplied ABC Diatype Regular/Bold and reported permission from the font team for hackathon use. The WOFF2 binaries are included in CLI deployments but ignored by Git. Clean source checkouts use Inter headings and Work Sans body text, with IBM Plex Mono identifiers.
 
-Deploy this review branch without promoting the canonical aliases. Keep the original and revised URLs independently available until the user aligns on the UI. No API, auth, rule, payment or persisted-state implementation changes belong to this visual iteration.
+The user approved the final release during submission closeout. Use the canonical site for judging, login returns, README links and recording. The separate original and animated-review URLs remain available for comparison. No API, auth, rule, payment or persisted-state implementation changes belong to this visual iteration.
 
 ## Verification results
 
@@ -35,4 +35,6 @@ Deploy this review branch without promoting the canonical aliases. Keep the orig
 - Independent user review: 8.4/10, improved from 7.6 baseline. Independent header fidelity/behavior review: 9.0/10 after a fix-and-retest round. A separate code review reports no remaining blockers. Independent judge simulation: 8.5/10 after two defect fixes and final wheel/held-key retests. Full evidence is retained in the review directory.
 - Actual headless wheel, held-key, reversal, touchscreen and video review supplement unit tests; still screenshots alone are not motion verification.
 
-The existing PayPal OAuth flow uses the canonical APP_URL and returns to the original domain. The review deployment preserves that provider configuration. The revised authenticated screens were reviewed through local fixtures; no fresh authentication/payment completion is claimed for the branch alias.
+The existing PayPal OAuth flow uses the canonical APP_URL. Promoting the approved build to that same domain aligns the public and authenticated UI without changing provider configuration. The revised authenticated screens were reviewed through local fixtures; a fresh live authentication/payment completion remains unverified. See [submission materials](SUBMISSION.md) and the [manual recording checklist](RECORDING-CHECKLIST.md).
+
+The final claim-lane iteration, included in the approved release, docks each 48px photo 20px inside its check row with a 12px result gap and a centered wire. Its scroll-driven landing eases to zero velocity before the verdict reveals. The latest audited pure UI/view suite passed 293 tests, with one existing recording-dependent skip; lint passed again during submission closeout. These are UI checks, not evidence of a new live payout.
