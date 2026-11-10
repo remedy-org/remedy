@@ -14,6 +14,10 @@ Desktop hero copy stays left aligned with the laptop on the right. The checks ma
 
 The opening desktop copy aligns near the laptop's top instead of the viewport's middle. A small recall-specific eyebrow and a ruled evidence → decision → PayPal trail explain the journey before scrolling. The trail shares the copy's existing dolly fade; both additions are omitted on phones.
 
+The first deliberate scroll completes the laptop zoom and rests on the PayPal sign-in step. Its product photo, recall source, hazard and eligible sandbox refund stay together in a content-sized window. Sign-in and one-time code share that window's dimensions; the left guide explains the current step before listing the rest. The logo uses a native top anchor and cancels a pending story gesture so a fresh scroll starts normally.
+
+The exhibit phone's photo window renders the same product and tag through the illustrated phone's rear lens, with a crop that keeps the evidence in frame. Its body, pose, camera controls and surrounding scene stay fixed. This is a live-rendered illustration, not access to a visitor's camera. Reduced-capability stills must show the same view.
+
 ## Tokens
 
 `src/app/globals.css` owns colors and sizing. Keep semantic token names; do not hard-code old warm values in components.

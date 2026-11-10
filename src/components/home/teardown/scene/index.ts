@@ -46,7 +46,10 @@ export interface Exhibit {
   resize(w: number, h: number, dpr: number): void;
   /** Projected screen bounds (CSS px) of every visible part, for the capture tool's collision check. */
   bounds(): { name: string; x0: number; y0: number; x1: number; y1: number }[];
-  info(): { calls: number; triangles: number; tier: Tier; renderer: string };
+  info(): {
+    calls: number; triangles: number; tier: Tier; renderer: string;
+    phoneView: { renders: number; size: number[]; lensError: number; axisDot: number; samples: { name: string; x: number; y: number; z: number }[] } | null;
+  };
   dispose(): void;
 }
 
@@ -115,7 +118,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
   const floorMat = new THREE.ShadowMaterial({ opacity: 0.5, color: 0x0c0b09 });
   floorMat.polygonOffset = true;
   floorMat.polygonOffsetFactor = -1;
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), floorMat);
+  const floor: THREE.Mesh<THREE.PlaneGeometry, THREE.Material> = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
@@ -153,7 +156,19 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
   const drape = drapeLocal.map((v) => v.clone());
 
   await yieldToMain();
-  const phone = buildPhone(THREE, photo);
+  const phoneTarget = new THREE.WebGLRenderTarget(384, 512, {
+    type: renderer.extensions.has("EXT_color_buffer_float") ? THREE.HalfFloatType : THREE.UnsignedByteType,
+    colorSpace: THREE.LinearSRGBColorSpace,
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    depthBuffer: true,
+    stencilBuffer: false,
+  });
+  // A portrait wide rear lens keeps the whole cut product and its nearby tag inside the existing viewfinder.
+  const phoneCamera = new THREE.PerspectiveCamera(96, 3 / 4, 0.005, 10);
+  // The existing ground plane becomes an opaque neutral surface only in the camera image.
+  const phoneFloor = new THREE.MeshStandardMaterial({ color: "#817c75", roughness: 1, envMapIntensity: 0.35 });
+  const phone = buildPhone(THREE, phoneTarget.texture);
   scene.add(phone.group);
   const prints = buildPrints(THREE, photo, earlier, "#f1ebdd");
   scene.add(prints.group);
@@ -172,8 +187,19 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
   let colors = opts.colors;
   let tagPaper = colors.paper;
   let tier: Tier = opts.tier;
+  let phoneDirty = true;
+  let phoneState: ExhibitState | null = null;
+  let phoneRenders = 0;
+  const phoneForward = new THREE.Vector3();
+  const phoneAim = new THREE.Vector3();
+  const phoneRotation = new THREE.Quaternion();
+  const savedClear = new THREE.Color();
+  const phonePoint = new THREE.Vector3();
+  const phoneProjection = new THREE.Matrix4();
+  const phoneLocalProjection = new THREE.Matrix4();
   function applyColors(c: Colors) {
     colors = c;
+    phoneDirty = true;
     // Amber only on the active part's rim (the cut, check 5): a check's one amber is its callout.
     mats.rim.color.set(c.accent);
     if (c.dark) {
@@ -204,6 +230,8 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
 
   function applyTier(t: Tier) {
     tier = t;
+    phoneTarget.setSize(t === 2 ? 384 : 192, t === 2 ? 512 : 256);
+    phoneDirty = true;
     const size = t === 2 ? 1024 : 512;
     if (key.shadow.mapSize.x !== size) {
       key.shadow.mapSize.set(size, size);
@@ -244,6 +272,65 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
     return { x: (P.x * 0.5 + 0.5) * W, y: (-P.y * 0.5 + 0.5) * H };
   };
 
+  function renderPhoneView(s: ExhibitState) {
+    if (!phone.group.visible) return;
+    if (!phoneDirty && phoneState && s.live === phoneState.live && s.cut === phoneState.cut && s.torn === phoneState.torn && s.explode === phoneState.explode && s.code === phoneState.code && s.chars === phoneState.chars && s.charNow === phoneState.charNow) return;
+    // A rear camera looks down the phone's +z axis, with its own +y as up. Its position is the actual lens, not
+    // the main exhibit camera or an unrelated photograph. The rear preview therefore is not selfie-mirrored.
+    phone.lens(phoneCamera.position);
+    phone.group.getWorldQuaternion(phoneRotation);
+    phoneForward.set(0, 0, 1).applyQuaternion(phoneRotation);
+    phoneCamera.up.set(0, 1, 0).applyQuaternion(phoneRotation);
+    phoneCamera.lookAt(phoneAim.copy(phoneCamera.position).add(phoneForward));
+    phoneCamera.updateMatrixWorld(true);
+    // Frame the same view with a sensor crop, rather than rotating the lens or replacing the product with a still.
+    // Equal normalized width/height keeps the fixed 3:4 aspect; the source rays and perspective stay unchanged.
+    phoneCamera.clearViewOffset();
+    phoneProjection.multiplyMatrices(phoneCamera.projectionMatrix, phoneCamera.matrixWorldInverse);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const include = (point: THREE.Vector3) => {
+      x0 = Math.min(x0, point.x); y0 = Math.min(y0, point.y);
+      x1 = Math.max(x1, point.x); y1 = Math.max(y1, point.y);
+    };
+    for (const half of [left, right]) {
+      half.group.updateMatrixWorld(true);
+      const skin = half.group.children[0] as THREE.Mesh<THREE.BufferGeometry>;
+      const positions = skin.geometry.getAttribute("position");
+      phoneLocalProjection.multiplyMatrices(phoneProjection, skin.matrixWorld);
+      // Use the actual curved surface. Projecting a world AABB includes empty corners and shrinks the evidence.
+      for (let i = 0; i < positions.count; i++) include(phonePoint.fromBufferAttribute(positions, i).applyMatrix4(phoneLocalProjection));
+    }
+    for (let i = 0; i < 4; i++) include(tag.mesh.localToWorld(phonePoint.set(((i & 1) - 0.5) * TAG_W, ((i >> 1) - 0.5) * TAG_H, 0)).project(phoneCamera));
+    const span = Math.max(x1 - x0, y1 - y0) * 1.16;
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    phoneCamera.setViewOffset(768, 1024, ((cx - span / 2 + 1) / 2) * 768, ((1 - cy - span / 2) / 2) * 1024, (span / 2) * 768, (span / 2) * 1024);
+    const target = renderer.getRenderTarget();
+    const alpha = renderer.getClearAlpha();
+    renderer.getClearColor(savedClear);
+    const phoneVisible = phone.group.visible;
+    const printsVisible = prints.group.visible;
+    const floorMaterial = floor.material;
+    try {
+      // Exclude the camera itself and the later photo prints; all product/tag/light objects are the same instances.
+      phone.group.visible = false;
+      prints.group.visible = false;
+      floor.material = phoneFloor;
+      renderer.setClearColor(colors.dark ? "#000000" : colors.paper, 1);
+      renderer.setRenderTarget(phoneTarget);
+      // Three r186 leaves offscreen targets linear and untone-mapped. The phone view's material tone-maps once.
+      renderer.render(scene, phoneCamera);
+      phoneRenders++;
+    } finally {
+      renderer.setRenderTarget(target);
+      renderer.setClearColor(savedClear, alpha);
+      phone.group.visible = phoneVisible;
+      prints.group.visible = printsVisible;
+      floor.material = floorMaterial;
+    }
+    phoneState = { ...s };
+    phoneDirty = false;
+  }
+
   function render(s: ExhibitState, rect: Rect): Frame {
     // Halves: cut and spread as in the photo, pushed further for check 5, apart and lifted in the explode.
     const hinge = s.cut * 0.21 + s.torn * 0.08 + s.explode * 0.12;
@@ -268,6 +355,7 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
 
     phone.pose(s.live);
     prints.pose(s.fp, s.hash);
+    renderPhoneView(s);
 
     frame(s.shot, rect);
     renderer.render(scene, camera);
@@ -358,6 +446,20 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
   // Warm every shader before the first visible frame, so scrolling in never stalls on a compile.
   await yieldToMain();
   await renderer.compileAsync(scene, camera);
+  // Also warm the linear capture variants before the phone first appears. No extra animation loop is introduced.
+  phone.group.visible = false;
+  prints.group.visible = false;
+  const warmFloorMaterial = floor.material;
+  floor.material = phoneFloor;
+  renderer.setRenderTarget(phoneTarget);
+  try {
+    await renderer.compileAsync(scene, phoneCamera);
+  } finally {
+    renderer.setRenderTarget(null);
+    floor.material = warmFloorMaterial;
+    phone.group.visible = true;
+    prints.group.visible = true;
+  }
 
   const px = new Uint8Array(4);
   return {
@@ -388,9 +490,30 @@ export async function createExhibit(canvas: HTMLCanvasElement, opts: { tier: Tie
         triangles: renderer.info.render.triangles,
         tier,
         renderer: String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)),
+        phoneView: opts.preserve && phoneState && phone.group.visible ? {
+          renders: phoneRenders,
+          size: [phoneTarget.width, phoneTarget.height],
+          lensError: phoneCamera.position.distanceTo(phone.lens(new THREE.Vector3())),
+          axisDot: phoneCamera.getWorldDirection(new THREE.Vector3()).dot(phone.group.getWorldDirection(new THREE.Vector3())),
+          samples: ([
+            ["left cut", left.rimTop(new THREE.Vector3())],
+            ["right cut", right.rimTop(new THREE.Vector3())],
+            ["tag code", tag.codePoint(new THREE.Vector3())],
+            ...[0, 1, 2, 3].map((i): [string, THREE.Vector3] => [
+              `tag corner ${i + 1}`,
+              tag.mesh.localToWorld(new THREE.Vector3(((i & 1) - 0.5) * TAG_W, ((i >> 1) - 0.5) * TAG_H, 0)),
+            ]),
+          ] as [string, THREE.Vector3][]).map(([name, point]) => {
+            const v = point.project(phoneCamera);
+            return { name, x: v.x, y: v.y, z: v.z };
+          }),
+        } : null,
       };
     },
     dispose() {
+      phone.dispose();
+      phoneTarget.dispose();
+      phoneFloor.dispose();
       renderer.dispose();
       envRT.dispose();
       scene.traverse((o) => {

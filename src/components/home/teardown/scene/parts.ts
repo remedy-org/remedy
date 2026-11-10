@@ -214,11 +214,12 @@ export function buildTag(THREE: Three): Tag {
 }
 
 // ---- Check 1: the phone's live camera. Held off the evidence's front right, its screen toward the viewer: the claim
-// page's camera with the photo it has just taken in a 3:4 frame. The scan line sweeping down that photo alone, as the
+// page's camera with the same scene seen through its rear lens in a 3:4 frame. The scan line sweeping down that view, as the
 // phone's own app checks its capture, is the stage's (scan.ts): this gives it the photo's corners.
 export interface Phone {
   group: T.Group;
   pose(open: number): void;
+  dispose(): void;
   /** The photo's four corners in world space (top left, top right, bottom right, bottom left, as the viewer sees the
    * screen) and how strongly the scan should show over it (0 to 1, up once the phone has all but arrived), or null. */
   photo(): { corners: T.Vector3[]; strength: number } | null;
@@ -236,7 +237,7 @@ const PHONE_SLIDE = 0.08;
 const SCREEN_PX = 440;
 const SHOT = { x: 16, y: 132, w: 408, h: 544 } as const;
 
-export function buildPhone(THREE: Three, photo: T.Texture): Phone {
+export function buildPhone(THREE: Three, view: T.Texture): Phone {
   const group = new THREE.Group();
   const bw = 0.072;
   const bh = 0.15;
@@ -262,21 +263,11 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   screenTex.anisotropy = 4;
   const drawScreen = () => {
     const g = cvs.getContext("2d");
-    const img = photo.image as HTMLImageElement | undefined;
-    if (!g || !img?.width) return;
+    if (!g) return;
     g.fillStyle = "#0b0b0c";
     g.fillRect(0, 0, cvs.width, cvs.height);
-    // The photo just taken, cover-fitted into its 3:4 frame and cropped low, as the claim page's camera frames it
-    // (custody/claim.ts objectPosition 50% 75%): the cut and the tag in the middle of the frame.
-    const k = Math.max(SHOT.w / img.width, SHOT.h / img.height);
-    const dw = img.width * k;
-    const dh = img.height * k;
-    g.save();
-    g.beginPath();
-    g.rect(SHOT.x, SHOT.y, SHOT.w, SHOT.h);
-    g.clip();
-    g.drawImage(img, SHOT.x + (SHOT.w - dw) / 2, SHOT.y + (SHOT.h - dh) * 0.75, dw, dh);
-    g.restore();
+    // The live scene is a separate GPU texture behind this window. Keep the existing camera controls/corners above it.
+    g.clearRect(SHOT.x, SHOT.y, SHOT.w, SHOT.h);
     // The viewfinder's four corners, just inside the photo: the frame the scan stays within, and the still the
     // check rests on once it has passed.
     const c = 34;
@@ -310,10 +301,11 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     screenTex.needsUpdate = true;
   };
   drawScreen();
-  const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false, transparent: true });
+  const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false, transparent: true, depthWrite: false });
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), screenMat);
   screen.position.z = -0.0042;
   screen.rotation.y = Math.PI;
+  screen.renderOrder = 2;
   group.add(screen);
 
   // The photo's frame in the screen's own metres (y up, centred on the screen): check 1's scan line (scan.ts) is drawn
@@ -324,6 +316,14 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     top: sh / 2 - SHOT.y * px,
     h: SHOT.h * px,
   };
+
+  // The target stores linear scene light; the screen applies the scene's tone mapping exactly once when displayed.
+  const viewMat = new THREE.MeshBasicMaterial({ map: view, transparent: true, depthWrite: false });
+  const viewPlane = new THREE.Mesh(new THREE.PlaneGeometry(frame.w, frame.h), viewMat);
+  viewPlane.position.set(0, frame.top - frame.h / 2, -0.00415);
+  viewPlane.rotation.y = Math.PI;
+  viewPlane.renderOrder = 1;
+  group.add(viewPlane);
 
   const lensMat = new THREE.MeshPhysicalMaterial({
     color: "#0b0b0c",
@@ -374,7 +374,7 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
     group.scale.setScalar(Math.max(0.001, 0.5 + 0.5 * open));
     group.position.copy(rest).addScaledVector(az, -PHONE_SLIDE * (1 - open));
     const fade = smooth(Math.min(1, open / 0.4));
-    for (const m of [bodyMat, screenMat, lensMat]) m.opacity = fade;
+    for (const m of [bodyMat, screenMat, viewMat, lensMat]) m.opacity = fade;
     // The scan only once the phone has all but arrived (it is whole and opaque from 40% open), and gone again as it
     // closes, never over a phone still growing in.
     strength = smooth(Math.max(0, Math.min(1, (open - 0.5) / 0.35)));
@@ -382,6 +382,7 @@ export function buildPhone(THREE: Three, photo: T.Texture): Phone {
   return {
     group,
     pose,
+    dispose: () => screenTex.dispose(),
     lens,
     photo: () => {
       if (!group.visible || strength <= 0) return null;

@@ -3,9 +3,10 @@
 //   npx tsx scripts/teardown-capture.ts --base http://127.0.0.1:3417 --out .shots/teardown --at beats
 //   npx tsx scripts/teardown-capture.ts --at 0,0.31,0.5 --sizes 1440x900,1920x1080 --themes dark,light
 //   npx tsx scripts/teardown-capture.ts --posters public/teardown   (the pre-rendered stills, both themes and forms)
-// --at takes p values or "beats" (each beat's hold). --check writes collisions.json: for every DOM text box in the
+//   npx tsx scripts/teardown-capture.ts --posters public/teardown --at live   (only the live beat)
+// --at takes beat IDs, p values or "beats" (each beat's hold). --check writes collisions.json: for every DOM text box in the
 // stage, how many solid scene pixels (alpha > 0.9: the evidence, not its shadow) sit under it. Any > 0 is a fail.
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "@playwright/test";
@@ -28,7 +29,14 @@ const { values } = parseArgs({
 
 const THEME_STORAGE_KEY = "remedy-theme";
 const beatList = BEATS.map((b) => ({ name: b.id, p: holdOf(b.id) }));
-const ats = values.at.split(",").flatMap((v) => (v === "beats" ? beatList : [{ name: `p${v}`, p: Number(v) }]));
+const ats = values.at.split(",").flatMap((value) => {
+  const v = value.trim();
+  if (v === "beats") return beatList;
+  const beat = beatList.find((b) => b.name === v);
+  if (beat) return [beat];
+  if (!v || !Number.isFinite(Number(v))) throw new Error(`Unknown frame: ${v}`);
+  return [{ name: `p${v}`, p: Number(v) }];
+});
 
 // Hides everything in the stage but the canvas, with a transparent page: the poster and collision frames.
 const BARE = `[data-mode] > :not(canvas) { visibility: hidden !important } html, body, body * { background: transparent !important }`;
@@ -118,8 +126,7 @@ async function main() {
         await ctx.close();
         continue;
       }
-      const list = values.posters ? beatList : ats;
-      for (const at of list) {
+      for (const at of ats) {
         // Mobile posters frame the evidence alone in a near-square still. The wide shots (the whole pillow) are framed
         // tight, past the canvas edge where only the shot's margin falls, so on a 375px phone the object fills about
         // 85% of the width instead of a thumbnail's 55%; the macro shots (the print, the tag) keep their margin.
@@ -229,7 +236,11 @@ async function main() {
       await ctx.close();
     }
     if (values.check) await writeFile(join(resolve(values.out), "collisions.json"), JSON.stringify(report, null, 2));
-    if (values.posters) await writeFile(resolve("src/components/home/teardown/poster-frames.json"), JSON.stringify(geometry, null, 2) + "\n");
+    if (values.posters) {
+      const framesPath = resolve("src/components/home/teardown/poster-frames.json");
+      const previous = values.at === "beats" ? {} : JSON.parse(await readFile(framesPath, "utf8"));
+      await writeFile(framesPath, JSON.stringify({ ...previous, ...geometry }, null, 2) + "\n");
+    }
   } finally {
     await browser.close();
   }
