@@ -138,7 +138,9 @@ export function Nav() {
   return (
     <header data-home-nav="" data-scrolled={scrolled || undefined} className={styles.header}>
       <nav aria-label="Main" data-current={current ?? undefined} className={styles.bar}>
-        <Wordmark size="md" href="/" className={styles.wordmark} />
+        <a href="#top" aria-label="Remedy, home" className="inline-flex min-h-11 min-w-11 items-center rounded-control">
+          <Wordmark size="md" className={styles.wordmark} />
+        </a>
         <ul className={styles.links}>
           {NAV_LINKS.map((l) => (
             <li key={l.id}>

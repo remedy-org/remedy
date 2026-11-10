@@ -39,6 +39,12 @@ export function NavMenu<Id extends string>({ links, current, onPick }: { links: 
     lockScroll(true);
   };
   const close = () => dialog.current?.close();
+  const home = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    returnFocus.current = false;
+    lockScroll(false);
+    close();
+  };
 
   // A window wide enough for every link closes the sheet. Leaving the page always unlocks Lenis.
   useEffect(() => {
@@ -83,9 +89,9 @@ export function NavMenu<Id extends string>({ links, current, onPick }: { links: 
     >
       <div className={styles.sheetContent}>
         <div data-sheet-bar="" className={styles.sheetBar}>
-          <span aria-hidden="true">
+          <a href="#top" onClick={home} aria-label="Remedy, home" className="inline-flex min-h-11 min-w-11 items-center rounded-control">
             <Wordmark size="md" className={styles.wordmark} />
-          </span>
+          </a>
           <button ref={closer} type="button" onClick={close} aria-label="Close navigation menu" className={styles.menuButton}>
             <CrossIcon className="size-5" />
           </button>

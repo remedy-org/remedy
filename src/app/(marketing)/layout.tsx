@@ -4,7 +4,7 @@ import { SmoothScroll } from "@/components/home/SmoothScroll";
 // Isolation keeps each scene's physical lighting beneath its content.
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="grain relative isolate min-h-dvh bg-bg text-text">
+    <div id="top" className="grain relative isolate min-h-dvh bg-bg text-text">
       <SmoothScroll />
       {children}
     </div>

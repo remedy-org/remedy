@@ -28,7 +28,13 @@ export function SmoothScroll() {
     const lock = (e: Event) => ((e as CustomEvent<{ locked: boolean }>).detail.locked ? lenis.stop() : lenis.start());
     const onClick = (e: MouseEvent) => {
       const hash = samePageHash(e);
-      if (hash) alignAnchor(hash);
+      if (!hash) return;
+      // A native jump also interrupts free wheel inertia, before Lenis can restore its old target.
+      if (!lenis.isStopped) {
+        lenis.stop();
+        lenis.start();
+      }
+      alignAnchor(hash);
     };
     window.addEventListener(SCROLL_LOCK_EVENT, lock);
     window.addEventListener("click", onClick, { capture: true });

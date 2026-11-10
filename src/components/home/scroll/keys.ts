@@ -1,6 +1,6 @@
 import type Lenis from "lenis";
 import { calm, calmLanding, STORY_MIN } from "./landing";
-import type { Course } from "./gate";
+import { samePageHash, type Course } from "./gate";
 
 // The keyboard's paging on the homepage, on the wheel's own stops (stops.ts). A browser page is about 95% of the
 // screen, so native paging landed between the stops: the Problem sheet mid-unfold, the loop closed skipped, a heading
@@ -102,12 +102,17 @@ export function attachKeys(lenis: Pick<Lenis, "scrollTo" | "isStopped" | "animat
       if (aim === next) next.until = performance.now();
     } });
   };
+  const onClick = (e: MouseEvent) => {
+    if (samePageHash(e)) cancel();
+  };
   // Capture, so the pin's own paging (custody/paging.ts, for when this one isn't running) never pages the same key.
   addEventListener("keydown", onKey, { capture: true });
+  addEventListener("click", onClick, { capture: true });
   addEventListener("wheel", release, { passive: true });
   addEventListener("touchstart", release, { passive: true });
   return () => {
     removeEventListener("keydown", onKey, { capture: true });
+    removeEventListener("click", onClick, { capture: true });
     removeEventListener("wheel", release);
     removeEventListener("touchstart", release);
   };
