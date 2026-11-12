@@ -21,7 +21,7 @@ describe("the demo result's run record", () => {
     expect(html).toContain("Photo check answered in 12.7 s (gpt-6.1-sol)");
     expect(html).toContain(at);
     expect(html).toContain("Sent in the camera session, new photos");
-    expect(html).toContain("Prepared AI-made photo.");
+    expect(html).toContain("Prepared demo photo.");
     expect(html).toContain("is fixed for this prepared sample");
     expect(html).toContain("camera-session condition is simulated");
     expect(html).toContain("compare only genuine claims");

@@ -20,7 +20,7 @@ export function DemoRunEvidence({ claim, sample }: { claim: DemoRunClaim; sample
         : "No photo-model response was recorded for this claim.";
   return (
     <section aria-label="About this demo result" className="flex flex-col gap-2 text-ui text-pretty text-muted">
-      <p>Prepared AI-made photo. {model}</p>
+      <p>Prepared demo photo. {model}</p>
       <details className="group/evidence border-y border-line">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 text-text outline-hidden hover:text-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus [&::-webkit-details-marker]:hidden">
           What ran on this claim
