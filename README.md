@@ -8,13 +8,13 @@ This is a PayPal sandbox build with prepared judge-demo photographs. The image m
 - **Judges' demo:** https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try (a PayPal sandbox login is on the page)
 - **Company console:** https://remedy-recalls.vercel.app/signin (open **Explore with the demo account**: it is the same sandbox login as the try page)
 
-<!-- Demo video: add the YouTube link here before submitting. -->
+- **Demo video (2:40):** https://youtu.be/25YfQlkGHDc
 
 I built Remedy solo for the PayPal AI Hackathon 2026. It runs on PayPal's sandbox, so no real money moves. Open source under MIT.
 
 **Built with:** PayPal (Log in with PayPal, Payouts, Webhooks) · OpenAI (GPT-6.1 Sol through the Responses API; gpt-5.4-mini for the Recall analyst) · AG Grid · AG Studio · Next.js · TypeScript · Vercel · the CPSC recalls API
 
-**Submission materials:** [project description and judging instructions](docs/SUBMISSION.md) · [recording and final rehearsal checklist](docs/RECORDING-CHECKLIST.md). The video is pending. A fresh end-to-end recording rehearsal and real phone/handwriting validation remain to be completed; the historical sandbox and model evidence below do not replace those checks.
+**Submission materials:** [project description and judging instructions](docs/SUBMISSION.md). Real phone photos with real handwriting are not in the eval yet.
 
 ---
 

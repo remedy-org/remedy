@@ -12,7 +12,7 @@ Prepared 10 November 2026. The text below describes the implemented build. Publi
 | Source | https://github.com/remedy-org/remedy |
 | Owner demo | https://remedy-recalls.vercel.app/r/kikea-x-vesolje/try |
 | Company demo | https://remedy-recalls.vercel.app/signin |
-| Video | Pending — add the public YouTube URL after recording and processing. |
+| Video | https://youtu.be/25YfQlkGHDc |
 | Built With | PayPal, OpenAI, AG Grid, AG Studio, Next.js, React, TypeScript, Tailwind CSS, Vercel, Vercel Blob, CPSC API, three.js, Motion, Lenis |
 
 ## Project description
