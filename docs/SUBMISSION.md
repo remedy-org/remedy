@@ -83,7 +83,7 @@ Do not infer success from these expected outcomes: the actual result and PayPal 
 
 - Use the final canonical URL, public source URL and processed public YouTube link consistently.
 - Add current screenshots from the approved release: owner evidence/result, the company evidence queue and Insights. Label prepared or illustrative content in captions.
-- Confirm all actual teammates have accepted their invitations; the README currently describes a solo build.
+- Confirm all teammates have accepted their invitations.
 - Select the sponsor tools actually used. For the AG Grid/AG Studio award, show the custom Studio widgets and Recall analyst integration, not just a stock grid screenshot.
 - Copy the description above into Devpost's matching fields and review the rendered preview. Confirm the source is accessible while signed out.
 - Submit by **12 November 2026, noon PST / 13 November 2026, 01:30 IST**. Keep linked source, README and video unchanged after the deadline until the winner announcement, per the [latest organizer update](https://paypalaihackathon.devpost.com/updates/47308-3-days-left-submissions-close-thursday-at-noon-pst).

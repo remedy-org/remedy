@@ -10,7 +10,7 @@ This is a PayPal sandbox build with prepared judge-demo photographs. The image m
 
 - **Demo video (2:40):** https://youtu.be/25YfQlkGHDc
 
-I built Remedy solo for the PayPal AI Hackathon 2026. It runs on PayPal's sandbox, so no real money moves. Open source under MIT.
+Remedy was built for the PayPal AI Hackathon 2026. It runs on PayPal's sandbox, so no real money moves. Open source under MIT.
 
 **Built with:** PayPal (Log in with PayPal, Payouts, Webhooks) · OpenAI (GPT-6.1 Sol through the Responses API; gpt-5.4-mini for the Recall analyst) · AG Grid · AG Studio · Next.js · TypeScript · Vercel · the CPSC recalls API
 
